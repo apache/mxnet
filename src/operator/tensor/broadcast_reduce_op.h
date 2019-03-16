@@ -129,9 +129,9 @@ struct BroadcastAxesParam : public dmlc::Parameter<BroadcastAxesParam> {
   mxnet::TShape axis;
   mxnet::TShape size;
   DMLC_DECLARE_PARAMETER(BroadcastAxesParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(axis).set_default(mxnet::TShape(0))
       .describe("The axes to perform the broadcasting.");
-    DMLC_DECLARE_FIELD(size).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(size).set_default(mxnet::TShape(0))
       .describe("Target sizes of the broadcasting axes.");
   }
 };
@@ -139,7 +139,7 @@ struct BroadcastAxesParam : public dmlc::Parameter<BroadcastAxesParam> {
 struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
   mxnet::TShape shape;
   DMLC_DECLARE_PARAMETER(BroadcastToParam) {
-    DMLC_DECLARE_FIELD(shape).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(shape).set_default(mxnet::TShape(0))
       .describe("The shape of the desired array."
                 " We can set the dim to zero if it's same as the original."
                 " E.g `A = broadcast_to(B, shape=(10, 0, 0))` "
@@ -223,7 +223,7 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
 inline mxnet::TShape ReduceAxesShapeImpl(const mxnet::TShape& ishape,
                                          const dmlc::optional<mxnet::TShape>& axis,
                                          bool keepdims, bool exclude) {
-  // if axis doesn't have value, treat it same mxnet::TShape().
+  // if axis doesn't have value, treat it same mxnet::TShape(0).
   if (!axis.has_value() || axis.value().ndim() == 0) {
     if (keepdims) {
       return mxnet::TShape(ishape.ndim(), 1);
@@ -256,9 +256,9 @@ inline mxnet::TShape ReduceAxesShapeImpl(const mxnet::TShape& ishape,
   if (keepdims) {
     oshape = mxnet::TShape(ishape);
   } else if (exclude) {
-    oshape = mxnet::TShape(axes.ndim(), -1);
+    oshape = mxnet::TShape(axes.ndim(), 1);
   } else {
-    oshape = mxnet::TShape(std::max(1, ishape.ndim() - axes.ndim()), -1);
+    oshape = mxnet::TShape(std::max(1, ishape.ndim() - axes.ndim()), 1);
   }
 
   if (keepdims && exclude) {
@@ -325,7 +325,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(param.axis.ndim() , param.size.ndim());
   mxnet::TShape &ishape = (*in_attrs)[0];
   mxnet::TShape oshape = ishape;
-  for (index_t i = 0; i < param.axis.ndim(); ++i) {
+  for (int i = 0; i < param.axis.ndim(); ++i) {
     CHECK_EQ(oshape[param.axis[i]], 1U) << "Broadcasting axis must have size 1";
     oshape[param.axis[i]] = param.size[i];
   }
@@ -344,7 +344,7 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(ishape.ndim(), param.shape.ndim())
     << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
   mxnet::TShape oshape = param.shape;
-  for (index_t i = 0; i < ishape.ndim(); ++i) {
+  for (int i = 0; i < ishape.ndim(); ++i) {
     if (oshape[i] != 0) {
       CHECK(ishape[i] == oshape[i] || ishape[i] == 1)
         << "Array cannot be broadcasted from " << ishape << " to " << param.shape;

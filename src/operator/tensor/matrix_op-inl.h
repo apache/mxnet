@@ -59,7 +59,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
     .set_default(false)
     .describe("If true then the special values are inferred from right to left");
     DMLC_DECLARE_FIELD(target_shape)
-    .set_default(mxnet::TShape())
+    .set_default(mxnet::TShape(0))
     .describe("(Deprecated! Use ``shape`` instead.) "
               "Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
@@ -102,28 +102,31 @@ inline mxnet::TShape InferReshapeShape(const mxnet::Tuple<IType>& shape,
     } else if (proposed_dim == -2) {
       // copy all remaining dims from source
       while (src_idx < dshape_len) {
-        size_t dn = dshape_vec[src_idx++];
+        const int dn = dshape_vec[src_idx++];
         tmp.push_back(dn);
       }
     } else if (proposed_dim == -3) {
       // merge two dims from source
       CHECK_LT(src_idx, dshape_len-1);
-      size_t d1 = dshape_vec[src_idx++];
-      size_t d2 = dshape_vec[src_idx++];
-      size_t dn = d1 * d2;
-      tmp.push_back(dn);
+      const int d1 = dshape_vec[src_idx++];
+      const int d2 = dshape_vec[src_idx++];
+      if (d1 == -1 || d2 == -1) {
+        tmp.push_back(-1);
+      } else {
+        tmp.push_back(d1 * d2);
+      }
     } else if (proposed_dim == -4) {
       // split the source dim s into two dims
       // read the left dim and then the right dim (either can be -1)
       CHECK_LT(i + 2, params_len);
       CHECK_LT(src_idx, dshape_len);
-      size_t d0 = dshape_vec[src_idx++];
+      const int d0 = dshape_vec[src_idx++];
       IType d1 = param_shape_vec[++i];
       IType d2 = param_shape_vec[++i];
       CHECK(d1 != -1 || d2 != -1) << "Split dims cannot both be -1.";
-      if (d1 == -1) d1 = d0 / d2;
-      if (d2 == -1) d2 = d0 / d1;
-      CHECK(d1 * d2 == static_cast<IType>(d0) || static_cast<IType>(d0) == IType(0)) <<
+      if (d1 == -1 && d0 >= 0) d1 = d0 / d2;  // d0 must be known to do this
+      if (d2 == -1 && d0 >= 0) d2 = d0 / d1;  // d0 must be known to do this
+      CHECK(d1 * d2 == static_cast<IType>(d0) || static_cast<IType>(d0) == IType(-1)) <<
         "Split dims " << d1 << ", " << d2 << " do not divide original dim " << d0;
       tmp.push_back(d1);
       tmp.push_back(d2);
@@ -135,12 +138,12 @@ inline mxnet::TShape InferReshapeShape(const mxnet::Tuple<IType>& shape,
   }
 
   if (inf_idx >= 0) {
-    if (dshape.Size() > 0) {
+    if (shape_is_known(dshape)) {
       IType new_size = 1;
       for (IType x : tmp) new_size *= x;
       tmp[inf_idx] = dshape.Size() / new_size;
     } else {
-      tmp[inf_idx] = 0;
+      tmp[inf_idx] = -1;
     }
   }
   if (reverse) {
@@ -159,7 +162,7 @@ inline bool ReverseReshapeInferShape(mxnet::TShape *in, const mxnet::TShape& out
     return false;
   } else {
     int zero_axis = -1;
-    int non_zero_prod = 1;
+    int known_dim_size_prod = 1;
     for (int i = 0; i < in->ndim(); i++) {
       if ((*in)[i] == -1) {
         if (zero_axis != -1)
@@ -167,10 +170,10 @@ inline bool ReverseReshapeInferShape(mxnet::TShape *in, const mxnet::TShape& out
         else
           zero_axis = i;
       } else {
-        non_zero_prod *= (*in)[i];
+        known_dim_size_prod *= (*in)[i];
       }
     }
-    (*in)[zero_axis] = out.Size() / non_zero_prod;
+    (*in)[zero_axis] = out.Size() / known_dim_size_prod;
     return true;
   }
 }
@@ -182,7 +185,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape &dshape = (*in_attrs)[0];
-  if (!shape_is_known(dshape)) return false;
+  if (dshape.ndim() == -1) return false;
   mxnet::TShape oshape;
   if (param_.shape.ndim() != 0) {
     oshape = InferReshapeShape(param_.shape, dshape, param_.reverse);
@@ -209,10 +212,12 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
     return shape_is_known((*out_attrs)[0]) && ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
   }
   ReverseReshapeInferShape(&dshape, oshape);
+#if 0
   CHECK_EQ(oshape.Size(), dshape.Size())
     << "Target shape size is different to source. "
     << "Target: " << oshape
     << "\nSource: " << dshape;
+#endif
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
 }

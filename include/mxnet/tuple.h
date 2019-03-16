@@ -387,7 +387,7 @@ class TShape : public Tuple<dim_t> {
    * \param ndim the number of dimension
    * \param value the dimension size for all dims
    */
-  inline TShape(int ndim, int value) {  // NOLINT(*)
+  inline TShape(int ndim, int value = -1) {  // NOLINT(*)
     this->SetDim(ndim);
     if (ndim > 0) {
       std::fill_n(begin(), ndim, value);
@@ -457,7 +457,7 @@ class TShape : public Tuple<dim_t> {
     dim_t size = 1;
     const dim_t* start = begin(), *fin = end();
     for (const dim_t* it = start; it != fin; ++it) {
-      CHECK_GE(*it, 0) << "Shape dim size cannot be -1, which means unknown.";
+      CHECK_GE(*it, 0) << "Shape dim size cannot be a negative value " << *it;
       size *= *it;
     }
     return size;
@@ -472,7 +472,7 @@ class TShape : public Tuple<dim_t> {
     dim_t num = 1;
     const dim_t *d = this->data();
     for (int i = dimstart; i < dimend; ++i) {
-      CHECK_GE(d[i], 0) << "Shape dim size cannot be -1, which means unknown.";
+      CHECK_GE(d[i], 0) << "Shape dim size cannot be a negative value " << d[i];
       num *= d[i];
     }
     return num;
