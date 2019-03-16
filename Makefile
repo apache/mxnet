@@ -147,9 +147,9 @@ endif
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1
-	ifneq ($(USE_OPENCV_INC_PATH), NONE)
+	ifneq ($(filter-out NONE, $(USE_OPENCV_INC_PATH)),)
 		CFLAGS += -I$(USE_OPENCV_INC_PATH)/include
-		ifeq ($(USE_OPENCV_LIB_PATH), NONE)
+		ifeq ($(filter-out NONE, $(USE_OPENCV_LIB_PATH)),)
 $(error Please add the path of OpenCV shared library path into `USE_OPENCV_LIB_PATH`, when `USE_OPENCV_INC_PATH` is not NONE)
 		endif
 		LDFLAGS += -L$(USE_OPENCV_LIB_PATH)

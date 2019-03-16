@@ -882,8 +882,13 @@ def test_import():
     net2 = gluon.SymbolBlock.imports(
         'net1-symbol.json', ['data'], 'net1-0001.params', ctx)
     out2 = net2(data)
+    lines = str(net2).splitlines()
 
     assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert lines[0] == 'SymbolBlock('
+    assert lines[1]
+    assert lines[2] == ')'
+
 
 @with_seed()
 def test_hybrid_stale_cache():
