@@ -61,8 +61,8 @@ class LibraryInitializer {
         Engine::Get()->Stop();
       },
       []() {
-        CustomOperator::Get()->Start();
         Engine::Get()->Start();
+        CustomOperator::Get()->Start();
       },
       []() {
         // Conservative thread management for multiprocess workers
