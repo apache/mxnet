@@ -136,10 +136,6 @@ class CustomOperator {
     cv_.notify_all();
   }
 
-  ~CustomOperator() {
-    this->Stop();
-  }
-
   static CustomOperator* Get() {
     static CustomOperator inst;
     return &inst;
