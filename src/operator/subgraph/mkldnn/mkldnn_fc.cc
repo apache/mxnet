@@ -302,9 +302,8 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
   if (full_param.mkldnn_param.quantized) {
     size_t base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
 
-    // TODO(ciyong): currently, only uint8 fully_connected is upported,
-    // int8 fully_connected will be supported after mkldnn v0.18
-    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kUint8);
+    CHECK(in_types->at(0) == mshadow::kInt8 ||
+          in_types->at(0) == mshadow::kUint8);
     for (size_t i = 1; i < in_types->size(); ++i) {
       if (i < base_num_inputs) {
         TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kInt8);

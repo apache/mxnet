@@ -89,9 +89,7 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_type->size(), 3U);
 
 #if MXNET_USE_MKLDNN == 1
-  // TODO(ciyong): currently, only uint8 fully_connected is upported,
-  // int8 fully_connected will be supported after mkldnn v0.18
-  TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kUint8);
+  CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8);
 #else
   TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
 #endif
@@ -286,11 +284,6 @@ void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs &attrs,
                                          const std::vector<NDArray> &in_data,
                                          const std::vector<OpReqType> &req,
                                          const std::vector<NDArray> &out_data) {
-  if (in_data[fullc::kData].dtype() == mshadow::kInt8) {
-    FallBackCompute(QuantizedFullyConnectedForwardCPU, attrs, ctx, in_data, req, out_data);
-    return;
-  }
-
   MKLDNNQuantizedFullyConnectedForward(attrs, ctx, in_data, req, out_data);
 }
 #endif

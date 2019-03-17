@@ -288,9 +288,6 @@ def test_quantized_fc():
             if hasMKL == False:
                 print('skipped testing quantized_fc on cpu since s8u8s32 is only supported by MKL BLAS library')
                 return
-        elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing test_quantized_fc for mkldnn cpu int8 since it is not supported yet')
-            return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_fc for gpu uint8 since it is not supported yet')
             return

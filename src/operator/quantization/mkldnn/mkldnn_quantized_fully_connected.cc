@@ -51,10 +51,6 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
 
-  CHECK(data.dtype() == mshadow::kUint8)
-    << "MKLDNNQuantizedFullyConnected Op only supports uint8 for now, but got "
-    << mxnet::op::type_string(data.dtype());
-
   const float min_data =
     in_data[num_inputs + quantized_fc_enum::kDataMin].data().dptr<float>()[0];
   const float max_data =
