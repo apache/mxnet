@@ -35,7 +35,7 @@ from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle
+from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int
 from ..base import ctypes2buffer
 from ..context import Context, current_context
 from . import _internal
@@ -146,8 +146,8 @@ def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
     check_call(_LIB.MXNDArrayCreateFromSharedMem(
         ctypes.c_int(shared_pid),
         ctypes.c_int(shared_id),
-        c_array(mx_uint, shape),
-        mx_uint(len(shape)),
+        c_array(mx_int, shape),
+        mx_int(len(shape)),
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         ctypes.byref(hdl)))
     return hdl
@@ -1848,8 +1848,8 @@ fixed-size items.
         >>> y.shape
         (2L, 3L, 4L)
         """
-        ndim = mx_uint()
-        pdata = ctypes.POINTER(mx_uint)()
+        ndim = mx_int()
+        pdata = ctypes.POINTER(mx_int)()
         check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         return tuple(pdata[:ndim.value]) # pylint: disable=invalid-slice-index

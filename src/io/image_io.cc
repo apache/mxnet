@@ -189,7 +189,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
   size_t len = inputs[0].shape().Size();
   CHECK(len > 0) << "Input cannot be an empty buffer";
 
-  mxnet::TShape oshape(3);
+  mxnet::TShape oshape(3, 1);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {
   } else if (get_png_size(str_img, len, &oshape[1], &oshape[0])) {
@@ -229,7 +229,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
   CHECK(file.good()) << "Failed reading image file: '" << param.filename << "' "
             << strerror(errno);
 
-  mxnet::TShape oshape(3);
+  mxnet::TShape oshape(3, 1);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
   } else if (get_png_size(buff.get(), fsize, &oshape[1], &oshape[0])) {

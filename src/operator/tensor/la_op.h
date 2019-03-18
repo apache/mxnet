@@ -384,7 +384,7 @@ mshadow::Tensor<xpu, dim, DType> LaOpFlatten(const TBlob& blob,
   }
   // Collapse ranges [0,axis-1] and [axis+1,ndim-2].
   CHECK_EQ(dim, 4);
-  mxnet::TShape shape(dim);
+  mxnet::TShape shape(dim, -1);
   shape[0] = 1;
   for (int i = 0; i < axis; ++i) {
     shape[0] *= blob.shape_[i];

@@ -25,7 +25,7 @@ import ctypes
 import copy
 import numpy as np
 from .base import _LIB
-from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str
+from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str, mx_int
 from .base import check_call, c_handle_array, c_array_buf, c_str_array
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
@@ -445,8 +445,8 @@ class Executor(object):
                                                       py_array('i', ctx_map_dev_ids)),
                                           mx_uint(len(provided_arg_shape_names)),
                                           c_str_array(provided_arg_shape_names),
-                                          c_array_buf(mx_uint,
-                                                      py_array('I', provided_arg_shape_data)),
+                                          c_array_buf(mx_int,
+                                                      py_array('i', provided_arg_shape_data)),
                                           c_array_buf(mx_uint,
                                                       py_array('I', provided_arg_shape_idx)),
                                           ctypes.byref(num_in_args),

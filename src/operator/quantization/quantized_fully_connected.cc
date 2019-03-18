@@ -47,7 +47,7 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), num_inputs * 3);
   CHECK_EQ(out_shape->size(), 3U);
 
-  CHECK(!shape_is_none(in_shape->at(0)))
+  CHECK(shape_is_known(in_shape->at(0)))
     << "QuantizedFullyConnectedOp input data shape must be given";
   const mxnet::TShape& dshape = in_shape->at(0);
   mxnet::TShape wshape = Shape2(param.num_hidden, dshape.ProdShape(1, dshape.ndim()));

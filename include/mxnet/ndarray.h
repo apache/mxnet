@@ -859,12 +859,15 @@ class NDArray {
     Chunk(mxnet::TShape shape, Context ctx_, bool delay_alloc_, int dtype)
         : static_data(false), delay_alloc(true), ctx(ctx_),
           storage_ref_(Storage::_GetSharedRef()) {
-      auto size = shape.Size();
       storage_shape = shape;
+      if (shape_is_known(storage_shape)) {
+        shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
+      }
       var = Engine::Get()->NewVariable();
-      shandle.size = size * mshadow::mshadow_sizeof(dtype);
       shandle.ctx = ctx_;
-      if (!delay_alloc_) this->CheckAndAlloc();
+      if (!delay_alloc_) {
+        this->CheckAndAlloc();
+      }
     }
 
     Chunk(const TBlob &data, int dev_id)

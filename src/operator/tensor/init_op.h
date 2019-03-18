@@ -49,7 +49,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(InitOpParam) {
     DMLC_DECLARE_FIELD(shape)
-    .set_default(mxnet::TShape())
+    .set_default(mxnet::TShape(0, 1))
     .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -213,8 +213,8 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if ((*out_attrs)[0].ndim() != 0 && param.shape.ndim() == 0) return true;
-  for (unsigned int i=0 ; i < param.shape.ndim() ; ++i) {
+  if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param.shape)) return true;
+  for (int i=0 ; i < param.shape.ndim() ; ++i) {
     if (param.shape[i] < 0U) {
       LOG(FATAL) << "Shape cannot contain negative values " << param.shape;
     }

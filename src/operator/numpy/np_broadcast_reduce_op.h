@@ -59,7 +59,7 @@ inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
         CHECK(axes[0] == 0 || axes[0] == -1);
       }
     }
-    return TShape(0);
+    return TShape(0, -1);
   }
 
   // axis=None, do global reduction
@@ -67,7 +67,7 @@ inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
     if (keepdims) {
       return TShape(ishape.ndim(), 1);
     } else {
-      return TShape(0);
+      return TShape(0, -1);
     }
   }
 
@@ -101,7 +101,7 @@ inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
   if (keepdims) {
     oshape = TShape(ishape);
   } else {
-    oshape = TShape(ishape.ndim() - axes.ndim());
+    oshape = TShape(ishape.ndim() - axes.ndim(), -1);
   }
 
   if (keepdims) {

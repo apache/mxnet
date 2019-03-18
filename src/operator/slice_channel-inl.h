@@ -195,9 +195,9 @@ class SliceChannelProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 1U);
     mxnet::TShape dshape = in_shape->at(slice_enum::kData);
     mxnet::TShape ishape = in_shape->at(slice_enum::kData);
-    if (dshape.ndim() == 0) return false;
+    if (!shape_is_known(dshape)) return false;
     if (param_.axis >= 0) {
-      CHECK_LT(static_cast<size_t>(param_.axis), dshape.ndim());
+      CHECK_LT(param_.axis, dshape.ndim());
     } else {
       CHECK_LT(param_.axis + dshape.ndim(), dshape.ndim());
     }

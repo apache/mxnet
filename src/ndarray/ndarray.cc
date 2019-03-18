@@ -1650,7 +1650,7 @@ bool LegacyTShapeLoad(dmlc::Stream *strm, mxnet::TShape *shape, const uint32_t m
     default:
       // meet legacy mxnet::TShape, magic is ndim here
       uint32_t ndim = magic;
-      *shape = mxnet::TShape(ndim);
+      *shape = mxnet::TShape(ndim, -1);
       std::vector<uint32_t> buffer(ndim);
       size_t nread = ndim * sizeof(uint32_t);
       if (strm->Read(buffer.data(), nread) != nread) return false;
