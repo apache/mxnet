@@ -199,7 +199,7 @@ class Tuple {
    * \return the corresponding dimension size
    */
   inline ValueType& operator[](int i) {
-    CHECK(i >= 0 && i < ndim());
+    CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
     return begin()[i];
   }
   /*!
@@ -208,7 +208,7 @@ class Tuple {
    * \return the corresponding dimension size
    */
   inline const ValueType& operator[](int i) const {
-    CHECK(i >= 0 && i < ndim());
+    CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
     return begin()[i];
   }
   /*!
@@ -271,14 +271,16 @@ class Tuple {
       if (!isspace(ch)) {
         is.setstate(std::ios::failbit);
         return is;
+      }
     }
-    }
-    // Handle empty tuple
+    // Handle empty tuple. A tensor whose shape is an empty tuple
+    // represents a scalar with ndim = 0.
     while (isspace(is.peek())) {
       is.get();
     }
     if (is.peek() == ')' || is.peek() == ']') {
       is.get();
+      t.SetDim(0);
       return is;
     }
     // Handle non-empty tuple
@@ -352,7 +354,7 @@ class Tuple {
       delete [] data_heap_;
       data_heap_ = new ValueType[ndim];
       num_heap_allocated_ = ndim;
-    } else if (ndim == -1 && data_heap_ != nullptr) {
+    } else if (ndim <= 0 && data_heap_ != nullptr) {
       delete [] data_heap_;
       data_heap_ = nullptr;
       num_heap_allocated_ = 0;
@@ -381,14 +383,11 @@ class TShape : public Tuple<dim_t> {
     this->SetDim(-1);
   }
   /*!
-   * constructor to construct a shape with all 1.
-   * TODO(junwu): The value should default to -1. Need to keep 1 for now
-   * for backward compatibility. Change it to -1 in the future when we can
-   * break backward compatibility.
+   * constructor to construct a shape with all `value`.
    * \param ndim the number of dimension
    * \param value the dimension size for all dims
    */
-  inline TShape(int ndim, int value = 1) {  // NOLINT(*)
+  inline TShape(int ndim, int value = -1) {  // NOLINT(*)
     this->SetDim(ndim);
     if (ndim > 0) {
       std::fill_n(begin(), ndim, value);
@@ -458,7 +457,7 @@ class TShape : public Tuple<dim_t> {
     dim_t size = 1;
     const dim_t* start = begin(), *fin = end();
     for (const dim_t* it = start; it != fin; ++it) {
-      CHECK_GE(*it, 0) << "Shape dim size cannot be -1, which means unknown.";
+      CHECK_GE(*it, 0) << "Shape dim size cannot be a negative value " << *it;
       size *= *it;
     }
     return size;
@@ -473,7 +472,7 @@ class TShape : public Tuple<dim_t> {
     dim_t num = 1;
     const dim_t *d = this->data();
     for (int i = dimstart; i < dimend; ++i) {
-      CHECK_GE(d[i], 0) << "Shape dim size cannot be -1, which means unknown.";
+      CHECK_GE(d[i], 0) << "Shape dim size cannot be a negative value " << d[i];
       num *= d[i];
     }
     return num;
@@ -608,6 +607,16 @@ class TShape : public Tuple<dim_t> {
 #endif
 };
 
+/*! brief check if shape is known using the NumPy compatible definition.
+ * zero-dim and zero-size tensors are valid. -1 means unknown.*/
+inline bool shape_is_known(const TShape& x) {
+  if (x.ndim() == -1) return false;
+  for (int i = 0; i < x.ndim(); ++i) {
+    if (x[i] == -1) return false;
+  }
+  return true;
+}
+
 /*! \brief helper function to cast type of container elements */
 template<typename SrcIter, typename DstIter>
 inline DstIter ShapeTypeCast(const SrcIter begin,
@@ -623,7 +632,7 @@ inline DstIter ShapeTypeCast(const SrcIter begin,
 template<typename SrcIter>
 inline TShape ShapeTypeCast(const SrcIter begin, const SrcIter end) {
   size_t ndim = std::distance(begin, end);
-  TShape res(ndim);
+  TShape res(ndim, -1);
   ShapeTypeCast(begin, end, res.begin());
   return res;
 }
@@ -669,7 +678,7 @@ struct hash<mxnet::Tuple<T> > {
   size_t operator()(const mxnet::Tuple<T>& val) const {
     std::hash<uint32_t> hash_uint;
     size_t res = hash_uint(val.ndim());
-    for (uint32_t i = 0; i < val.ndim(); ++i) {
+    for (int i = 0; i < val.ndim(); ++i) {
       res = dmlc::HashCombine(res, val[i]);
     }
     return res;

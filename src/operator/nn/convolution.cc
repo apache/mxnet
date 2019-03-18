@@ -96,7 +96,7 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
   // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
   out_shape->resize(1, mxnet::TShape());
   const mxnet::TShape &dshp = (*in_shape)[conv::kData];
-  if (dshp.ndim() ==  0) return false;
+  if (!shape_is_known(dshp)) return false;
 
   if (param_.kernel.ndim() == 1) {
     // 1d conv

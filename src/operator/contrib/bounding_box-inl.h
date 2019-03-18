@@ -558,7 +558,7 @@ inline bool BoxOverlapShape(const nnvm::NodeAttrs& attrs,
     << rdim << " provided";
 
   // assign output shape
-  mxnet::TShape oshape(lshape.ndim() + rshape.ndim() - 2);
+  mxnet::TShape oshape(lshape.ndim() + rshape.ndim() - 2, -1);
   int idx = 0;
   for (index_t i = 0; i < lshape.ndim() - 1; ++i) {
     oshape[idx++] = lshape[i];
@@ -567,7 +567,7 @@ inline bool BoxOverlapShape(const nnvm::NodeAttrs& attrs,
     oshape[idx++] = rshape[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 struct compute_overlap {
@@ -671,14 +671,14 @@ inline bool MatchingShape(const nnvm::NodeAttrs& attrs,
     << dshape.ndim() << " provided";
 
   // assign output shape
-  mxnet::TShape oshape(dshape.ndim() - 1);
+  mxnet::TShape oshape(dshape.ndim() - 1, -1);
   for (index_t i = 0; i < dshape.ndim() - 1; ++i) {
     oshape[i] = dshape[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   oshape[oshape.ndim() - 1] = dshape[dshape.ndim() - 1];
   SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 struct bipartite_matching {

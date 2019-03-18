@@ -39,39 +39,40 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
   mxnet::TShape dshape;
-  index_t size = 0;
-  bool has_zero = false;
+  dim_t size = 0;
+  bool has_unknown_dim_size = false;
   int axis = -1;
   for (int i = 0; i < param_.num_args; ++i) {
     mxnet::TShape tmp = (*in_shape)[i];
-    if (tmp.ndim()) {
+    if (tmp.ndim() > 0) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      has_zero = tmp[axis] == 0 || has_zero;
+      has_unknown_dim_size = tmp[axis] == -1 || has_unknown_dim_size;
       size += tmp[axis];
-      tmp[axis] = 0;
+      tmp[axis] = -1;
       shape_assign(&dshape, tmp);
     }
   }
 
   mxnet::TShape tmp = (*out_shape)[0];
-  if (tmp.ndim()) {
+  if (tmp.ndim() > 0) {
     axis = CheckAxis(param_.dim, tmp.ndim());
-    tmp[axis] = 0;
+    tmp[axis] = -1;
     shape_assign(&dshape, tmp);
   }
 
-  if (dshape.ndim() == 0) return false;
+  if (dshape.ndim() == -1) return false;
+  CHECK_NE(dshape.ndim(), 0) << "zero-dimensional arrays cannot be concatenated";
 
   for (int i = 0; i < param_.num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))
         << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
   }
 
-  if (!has_zero) dshape[axis] = size;
+  if (!has_unknown_dim_size) dshape[axis] = size;
   CHECK(shape_assign(&(*out_shape)[0], dshape))
       << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
 
-  return dshape.Size() != 0;
+  return shape_is_known(dshape);
 }
 
 // Concat for RNN param deals with the reverse shape inference from output
@@ -109,7 +110,7 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
     shape_assign(&dshape, tmp);
   }
 
-  if (dshape.ndim() == 0) return false;
+  if (!shape_is_known(dshape)) return false;
 
   for (int i = 0; i < param_.num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))
@@ -232,7 +233,7 @@ bool SupportMKLDNNConcat(const std::vector<NDArray> &arrs) {
   for (auto &arr : arrs) {
     if (arr.IsView()) return false;
     if (arr.dtype() != mshadow::kFloat32) return false;
-    unsigned ndim = arr.shape().ndim();
+    int ndim = arr.shape().ndim();
     unsigned mkldnn_ndims =
         static_cast<unsigned>(arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims);
     if (!(ndim == 2 || ndim == 4) || ndim != mkldnn_ndims) return false;
