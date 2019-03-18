@@ -123,24 +123,24 @@ def test_resize():
 def test_crop_resize():
     def _test_crop_resize_with_diff_type(dtype):
         # test normal case
-        data_in = nd.arange(60).reshape((5, 4, 3)).astype('uint8')
+        data_in = nd.arange(60).reshape((5, 4, 3)).astype(dtype)
         out_nd = transforms.CropResize(0, 0, 3, 2)(data_in)
         out_np = out_nd.asnumpy()
         assert(out_np.sum() == 180)
         assert((out_np[0:2,1,1].flatten() == [4, 16]).all())
         # test 4D input
-        data_bath_in = nd.arange(180).reshape((2, 6, 5, 3)).astype('uint8')
+        data_bath_in = nd.arange(180).reshape((2, 6, 5, 3)).astype(dtype)
         out_batch_nd = transforms.CropResize(1, 2, 3, 4)(data_bath_in)
         out_batch_np = out_batch_nd.asnumpy()
         assert(out_batch_np.sum() == 7524)
         assert((out_batch_np[0:2,0:4,1,1].flatten() == [37,  52,  67,  82, 127, 142, 157, 172]).all())
         # test normal case with resize
-        data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype('uint8')
+        data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype)
         out_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 2)(data_in)
         data_expected = image.imresize(nd.slice(data_in, (0, 0, 0), (50, 100 , 3)), 25, 25, 2)
         assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
         # test 4D input with resize
-        data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype('uint8')
+        data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype)
         out_batch_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 2)(data_bath_in)
         for i in range(len(out_batch_nd)):
             assert_almost_equal(image.imresize(nd.slice(data_bath_in[i], (0, 0, 0), (50, 100, 3)), 25, 25, 2).asnumpy(),
@@ -157,7 +157,13 @@ def test_crop_resize():
         assertRaises(MXNetError, transformer, data_bath_in)
 
     for dtype in ['uint8', 'float32', 'float64']:
-        _test_crop_resize_with_diff_type(dtype)    
+        _test_crop_resize_with_diff_type(dtype)  
+    # test for gradient
+    data = mx.sym.Variable('data')
+    slice_sym = mx.sym.slice(data, begin=begin, end=end, step=step)
+    expected_in_grad = np.zeros_like(a_np)
+    expected_in_grad[index] = b_np
+    check_symbolic_backward(slice_sym, [a_np], [b_np], [expected_in_grad])
 
 @with_seed()
 def test_flip_left_right():
