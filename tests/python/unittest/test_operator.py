@@ -876,6 +876,23 @@ def test_sigmoid():
     check_symbolic_backward(y, [xa], [np.ones(shape)], [ya * (1 - ya)])
 
 @with_seed()
+def test_swish():
+    def fswish(a):
+        #return a / (1.0 + np.exp(-a))
+        return np.multiply(a, np.divide(1.0, (1.0 + np.exp(-a))))
+    def fsigmoid(a):
+        return np.divide(1.0, (1.0 + np.exp(-a)))
+    shape = (3, 4)
+    x = mx.symbol.Variable("x")
+    y = mx.sym.swish(x)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    ya = fswish(xa)
+    #check_numeric_gradient(y, [xa], numeric_eps=1E-3)
+    #check_symbolic_forward(y, [xa], [ya])
+    #check_symbolic_backward(y, [xa], [np.ones(shape)], [ya + (fsigmoid(xa) * (1 - ya))])
+    check_symbolic_backward(y, [xa], [np.ones(shape)], [fsigmoid(xa) + ya * (1- fsigmoid(xa))])
+
+@with_seed()
 def test_shape_array():
     for i in range(1,6):
         shape = rand_shape_nd(i)
@@ -6349,6 +6366,10 @@ def test_unary_math_operators():
                     lambda x: 1. / (np.exp(-x) + 1.),
                     lambda x: 1. / (np.exp(-x) + 1.) / (np.exp(x) + 1.),
                     -3.0, 3.0],
+        'swish': [lambda x: mx.sym.swish(x),
+                 lambda x: x / (np.exp(-x) + 1.),
+                 lambda x: (x / (np.exp(-x) + 1.)) + ((1. / (np.exp(-x) + 1.)) * (1. - (x / (np.exp(-x) + 1.)))),
+                 -3.0, 3.0],
         'softsign': [lambda x: mx.sym.softsign(x),
                     lambda x: x / (1. + np.abs(x)),
                     lambda x: 1. / np.square(1. + np.abs(x)),

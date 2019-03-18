@@ -40,6 +40,13 @@ NNVM_REGISTER_OP(_backward_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::sigmoid_grad>>);
 
+NNVM_REGISTER_OP(swish)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::swish>);
+
+NNVM_REGISTER_OP(_backward_swish)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
+  gpu, unary_bwd<mshadow_op::swish_grad>>);
+
 NNVM_REGISTER_OP(hard_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", HardSigmoidForward<gpu>);
 

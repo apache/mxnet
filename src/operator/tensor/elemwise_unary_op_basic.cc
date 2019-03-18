@@ -88,6 +88,7 @@ The storage type of ``relu`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu,
                                                unary_bwd<mshadow_op::relu_grad>);
 
+
 // sigmoid
 MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
 MXNET_ADD_SPARSE_OP_ALIAS(sigmoid)
@@ -104,6 +105,25 @@ The storage type of ``sigmoid`` output is always dense
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
                                                unary_bwd<mshadow_op::sigmoid_grad>);
+
+// swish
+MXNET_OPERATOR_REGISTER_UNARY(swish)
+MXNET_ADD_SPARSE_OP_ALIAS(swish)
+.describe(R"code(Computes swish of x element-wise.
+
+.. math::
+   y = x / (1 + exp(-x))
+
+The storage type of ``swish`` output is always dense
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::swish>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_swish"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_swish,
+                                               unary_bwd<mshadow_op::swish_grad>);
+
+
 
 DMLC_REGISTER_PARAMETER(HardSigmoidParam);
 MXNET_OPERATOR_REGISTER_UNARY(hard_sigmoid)

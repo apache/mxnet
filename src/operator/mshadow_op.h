@@ -123,6 +123,11 @@ MXNET_UNARY_MATH_OP(sigmoid, 1.0f / (1.0f + math::exp(-a)));
 
 MXNET_UNARY_MATH_OP(sigmoid_grad, math::id(a) * (1.0f - math::id(a)));
 
+MXNET_UNARY_MATH_OP(swish, math::id(a) * (1.0f / (1.0f + math::exp(-a))));
+
+// Swish grad => y' = sigmoid(x) + y * (1 - sigmoid(x)) where y = swish(x)
+MXNET_UNARY_MATH_OP(swish_grad, (1.0f / (1.0f + math::exp(-a))) +  math::id(a)* (1.0f / (1.0f + math::exp(-a))) * (1.0f - (1.0f / (1.0f + math::exp(-a)))));
+
 MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
 MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
