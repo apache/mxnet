@@ -139,7 +139,7 @@ def test_initializer():
                                   initializer=mx.init.MSRAPrelu(),
                                   trainers=trainer,
                                   context=ctx)
-        assert len(w) == 1
+        assert 'Network already initialized' in str(w[-1].message)
     est.fit(train_data=train_data,
             epochs=num_epochs,
             batch_size=batch_size)
@@ -163,7 +163,7 @@ def test_trainer():
                                   loss=loss,
                                   metrics=acc,
                                   context=ctx)
-        assert len(w) == 1
+        assert 'No trainer specified' in str(w[-1].message)
     est.fit(train_data=train_data,
             epochs=num_epochs,
             batch_size=batch_size)
