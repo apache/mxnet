@@ -19,6 +19,7 @@
 # pylint: disable=wildcard-import
 """Gluon Estimator"""
 
+import copy
 import warnings
 
 from .event_handler import LoggingHandler
@@ -26,7 +27,6 @@ from ... import gluon, autograd
 from ...context import Context, cpu, gpu, num_gpus
 from ...io import DataIter
 from ...metric import EvalMetric, Loss
-import copy
 
 __all__ = ['Estimator']
 
