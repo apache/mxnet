@@ -19,6 +19,7 @@ from __future__ import print_function
 import sys
 import os
 import tempfile
+import time
 import mxnet as mx
 import multiprocessing as mp
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
@@ -439,7 +440,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
     time_per_iteration.value = (time.time() - start) / num_iterations
 
-def test_bulking(test_bulking_func):
+def _test_bulking(test_bulking_func):
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
     times = {}
@@ -477,7 +478,7 @@ def test_bulking(test_bulking_func):
 
 @with_seed()
 def test_bulking_gluon_gpu():
-    test_bulking(_test_bulking_in_process)
+    _test_bulking(_test_bulking_in_process)
 
 
 if __name__ == '__main__':

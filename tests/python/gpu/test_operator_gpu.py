@@ -41,7 +41,7 @@ from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
 from test_subgraph_op import *
-from test_gluon_gpu import test_bulking
+from test_gluon_gpu import _test_bulking
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
@@ -2155,7 +2155,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
 @with_seed()
 def test_bulking_operator_gpu():
-    test_bulking(_test_bulking_in_process)
+    _test_bulking(_test_bulking_in_process)
 
 
 @with_seed()
