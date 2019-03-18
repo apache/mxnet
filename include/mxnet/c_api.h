@@ -763,8 +763,8 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
-                                mx_uint *out_dim,
-                                const mx_uint **out_pdata);
+                                int *out_dim,
+                                const int **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the ndarray
@@ -1481,16 +1481,16 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  mx_uint num_args,
                                  const char** keys,
                                  const mx_uint *arg_ind_ptr,
-                                 const mx_uint *arg_shape_data,
+                                 const int *arg_shape_data,
                                  mx_uint *in_shape_size,
-                                 const mx_uint **in_shape_ndim,
-                                 const mx_uint ***in_shape_data,
+                                 const int **in_shape_ndim,
+                                 const int ***in_shape_data,
                                  mx_uint *out_shape_size,
-                                 const mx_uint **out_shape_ndim,
-                                 const mx_uint ***out_shape_data,
+                                 const int **out_shape_ndim,
+                                 const int ***out_shape_data,
                                  mx_uint *aux_shape_size,
-                                 const mx_uint **aux_shape_ndim,
-                                 const mx_uint ***aux_shape_data,
+                                 const int **aux_shape_ndim,
+                                 const int ***aux_shape_data,
                                  int *complete);
 /*!
  * \brief partially infer shape of unknown input shapes given the known one.
@@ -1520,16 +1520,16 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
                                         mx_uint num_args,
                                         const char** keys,
                                         const mx_uint *arg_ind_ptr,
-                                        const mx_uint *arg_shape_data,
+                                        const int *arg_shape_data,
                                         mx_uint *in_shape_size,
-                                        const mx_uint **in_shape_ndim,
-                                        const mx_uint ***in_shape_data,
+                                        const int **in_shape_ndim,
+                                        const int ***in_shape_data,
                                         mx_uint *out_shape_size,
-                                        const mx_uint **out_shape_ndim,
-                                        const mx_uint ***out_shape_data,
+                                        const int **out_shape_ndim,
+                                        const int ***out_shape_data,
                                         mx_uint *aux_shape_size,
-                                        const mx_uint **aux_shape_ndim,
-                                        const mx_uint ***aux_shape_data,
+                                        const int **aux_shape_ndim,
+                                        const int ***aux_shape_data,
                                         int *complete);
 
 /*!
@@ -1808,7 +1808,7 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    const char** provided_grad_req_types,
                                    const mx_uint num_provided_arg_shapes,
                                    const char** provided_arg_shape_names,
-                                   const mx_uint* provided_arg_shape_data,
+                                   const int* provided_arg_shape_data,
                                    const mx_uint* provided_arg_shape_idx,
                                    const mx_uint num_provided_arg_dtypes,
                                    const char** provided_arg_dtype_names,
@@ -1862,7 +1862,7 @@ MXNET_DLL int MXExecutorReshape(int partial_shaping,
                                 const int* map_dev_ids,
                                 const mx_uint num_provided_arg_shapes,
                                 const char** provided_arg_shape_names,
-                                const mx_uint* provided_arg_shape_data,
+                                const int* provided_arg_shape_data,
                                 const mx_uint* provided_arg_shape_idx,
                                 mx_uint* num_in_args,
                                 NDArrayHandle** in_args,
@@ -2538,8 +2538,8 @@ MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
  * \param dtype data type of NDArray
  * \param out constructed NDArray
  */
-MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
-                                           mx_uint ndim, int dtype, NDArrayHandle *out);
+MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const int *shape,
+                                           int ndim, int dtype, NDArrayHandle *out);
 
 
 #ifdef __cplusplus

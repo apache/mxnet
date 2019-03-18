@@ -648,7 +648,7 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
       std::move(graph), mxnet::TShape(),
       "FInferShape", "shape_inputs", "shape_attr_key",
       "shape", "shape_num_unknown_nodes",
-      [](const mxnet::TShape& s) { return !mxnet::op::shape_is_known(s); },
+      [](const mxnet::TShape& s) { return !mxnet::shape_is_known(s); },
       [](const mxnet::TShape& s) {
         if (s.ndim() == -1) {
           return static_cast<size_t>(1);
