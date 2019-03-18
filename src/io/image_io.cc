@@ -41,6 +41,7 @@
 
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
+  #include "./opencv_compatibility.h"
 #endif  // MXNET_USE_OPENCV
 
 namespace mxnet {

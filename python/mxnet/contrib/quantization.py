@@ -258,7 +258,7 @@ def _smooth_distribution(p, eps=0.0001):
 
 
 # pylint: disable=line-too-long
-def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
+def _get_optimal_threshold(arr, quantized_dtype, num_bins=8001, num_quantized_bins=255):
     """Given a dataset, find the optimal threshold for quantizing it.
     The reference distribution is `q`, and the candidate distribution is `p`.
     `q` is a truncated version of the original distribution.
@@ -284,6 +284,10 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
     min_val = np.min(arr)
     max_val = np.max(arr)
     th = max(abs(min_val), abs(max_val))
+
+    if min_val >= 0 and quantized_dtype in ['auto', 'uint8']:
+        # We need to move negative bins to positive bins to fit uint8 range.
+        num_quantized_bins = num_quantized_bins * 2 + 1
 
     hist, hist_edges = np.histogram(arr, bins=num_bins, range=(-th, th))
     zero_bin_idx = num_bins // 2
@@ -348,7 +352,7 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
 # pylint: enable=line-too-long
 
 
-def _get_optimal_thresholds(nd_dict, num_bins=8001, num_quantized_bins=255, logger=None):
+def _get_optimal_thresholds(nd_dict, quantized_dtype, num_bins=8001, num_quantized_bins=255, logger=None):
     """Given a ndarray dict, find the optimal threshold for quantizing each value of the key."""
     if stats is None:
         raise ImportError('scipy.stats is required for running entropy mode of calculating'
@@ -364,7 +368,7 @@ def _get_optimal_thresholds(nd_dict, num_bins=8001, num_quantized_bins=255, logg
     for name in layer_names:
         assert name in nd_dict
         min_val, max_val, min_divergence, opt_th = \
-            _get_optimal_threshold(nd_dict[name], num_bins=num_bins,
+            _get_optimal_threshold(nd_dict[name], quantized_dtype, num_bins=num_bins,
                                    num_quantized_bins=num_quantized_bins)
         del nd_dict[name]  # release the memory of ndarray
         if min_val < 0:
@@ -521,7 +525,7 @@ def quantize_model(sym, arg_params, aux_params,
                                                            logger=logger)
             logger.info('Collected layer outputs from FP32 model using %d examples' % num_examples)
             logger.info('Calculating optimal thresholds for quantization')
-            th_dict = _get_optimal_thresholds(nd_dict, logger=logger)
+            th_dict = _get_optimal_thresholds(nd_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
             th_dict, num_examples = _collect_layer_output_min_max(
                 mod, calib_data, include_layer=calib_layer, max_num_examples=num_calib_examples,

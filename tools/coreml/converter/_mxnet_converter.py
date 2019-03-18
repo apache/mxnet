@@ -38,11 +38,14 @@ _MXNET_LAYER_REGISTRY  = {
     'elemwise_add'   : _layers.convert_elementwise_add,
     'Reshape'        : _layers.convert_reshape,
     'Deconvolution'  : _layers.convert_deconvolution,
+    'LeakyReLU'      : _layers.convert_leakyrelu,
 }
 
 _MXNET_SKIP_LAYERS = [
     '_MulScalar',
     'Dropout',
+    '_minus_scalar',
+    '_mul_scalar',
 ]
 
 def _mxnet_remove_batch(input_data):

@@ -213,11 +213,11 @@ def main():
     if system == 'Windows':
         logging.info("Detected Windows platform")
         if 'OpenBLAS_HOME' not in os.environ:
-            os.environ["OpenBLAS_HOME"] = "C:\\mxnet\\openblas"
+            os.environ["OpenBLAS_HOME"] = "C:\\Program Files\\OpenBLAS-v0.2.19"
         if 'OpenCV_DIR' not in os.environ:
-            os.environ["OpenCV_DIR"] = "C:\\mxnet\\opencv_vc14"
+            os.environ["OpenCV_DIR"] = "C:\\Program Files\\OpenCV-v3.4.1\\build"
         if 'CUDA_PATH' not in os.environ:
-            os.environ["CUDA_PATH"] = "C:\\CUDA\\v8.0"
+            os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2"
         windows_build(args)
 
     elif system == 'Linux' or system == 'Darwin':

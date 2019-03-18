@@ -15,7 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Help functions to support for implementing CNN + Highway Network for Text Classification in MXNet"""
+"""
+Help functions to support for implementing CNN + Highway Network for Text Classification in MXNet
+"""
 
 import itertools
 import os
@@ -108,7 +110,9 @@ def build_input_data(sentences, labels, vocabulary):
 
 
 def build_input_data_with_word2vec(sentences, labels, word2vec_list):
-    """Map sentences and labels to vectors based on a pretrained word2vec"""
+    """
+    Map sentences and labels to vectors based on a pretrained word2vec
+    """
     x_vec = []
     for sent in sentences:
         vec = []

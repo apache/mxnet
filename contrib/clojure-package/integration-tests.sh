@@ -26,7 +26,7 @@ lein install
 # then run through the examples 
 EXAMPLES_HOME=${MXNET_HOME}/contrib/clojure-package/examples
 # use AWK pattern for blacklisting
-TEST_CASES=`find ${EXAMPLES_HOME} -name test | awk '!/dontselect1|cnn-text-classification/'`
+TEST_CASES=`find ${EXAMPLES_HOME} -name test | awk '!/dontselect1|cnn-text-classification|gan|neural-style|infer|pre-trained-models/'`
 for i in $TEST_CASES ; do
  cd ${i} && lein test
 done

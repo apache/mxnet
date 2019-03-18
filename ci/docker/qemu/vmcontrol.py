@@ -229,6 +229,7 @@ def qemu_provision(ssh_port=QEMU_SSH_PORT):
     qemu_rsync(ssh_port, '/work/runtime_functions.py','')
     qemu_rsync(ssh_port, '/work/vmcontrol.py','')
     qemu_rsync(ssh_port, 'mxnet/tests', 'mxnet')
+    qemu_rsync(ssh_port, 'mxnet/ci/qemu/test_requirements.txt', 'mxnet/test_requirements.txt')
     logging.info("Provisioning completed successfully.")
 
 

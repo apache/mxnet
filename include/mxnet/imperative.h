@@ -129,14 +129,31 @@ class Imperative {
                                  bool create_graph);
   /*! \return AutogradRuntime singleton */
   static Imperative* Get();
+  /*! \brief Should op execution bulking be employed during inference. */
+  static bool PreferBulkExecInference() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
+  }
+  /*! \brief Should op execution bulking be employed during training. */
+  static bool PreferBulkExecTrain() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", true);
+  }
+  /*! \brief The max number of op nodes in a bulk during forward pass of training. */
+  static int BulkExecMaxNodeTrainFwd() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD",
+                        dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15));
+  }
+  /*! \brief The max number of op nodes in a bulk during backward pass of training. */
+  static int BulkExecMaxNodeTrainBwd() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD",
+                        dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15));
+  }
 
  private:
   friend class NDArray;
   /*! \brief make constructor protected. */
   Imperative() {
-    if (dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1)) {
-      backward_bulk_size_ =  dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
-    }
+    if (PreferBulkExecTrain())
+      backward_bulk_size_ = BulkExecMaxNodeTrainBwd();
   }
   /*! \brief find the input/output ndarrays that are needed for backward */
   void GetBackwardDependency(

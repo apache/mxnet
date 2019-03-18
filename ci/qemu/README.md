@@ -86,3 +86,7 @@ pip3 install -r mxnet_requirements.txt
 
 
 To access qemu control console from tmux: `ctrl-a a c`
+
+# CI and Testing
+
+Formally, [runtime_functions.py](https://github.com/apache/incubator-mxnet/blob/master/ci/docker/qemu/runtime_functions.py) would [run](https://github.com/apache/incubator-mxnet/blob/8beea18e3d9835f90b59d3f9de8f9945ac819423/ci/docker/qemu/runtime_functions.py#L81) *pip install -r [mxnet/tests/requirements.txt](https://github.com/apache/incubator-mxnet/blob/master/tests/requirements.txt)*. If the requirements change, there can be an unfortunate side-effect that there are no wheel files for Raspberry Pi for the new requirement. This would trigger a build from source on the emulator, which can take a long time and cause job timeouts. Therefore, we no longer install the `tests/requirements.txt` requirements, but rather rely on [test_requirements.txt](https://github.com/apache/incubator-mxnet/blob/master/ci/qemu/test_requirements.txt) to maintain the requirements for the qemu tests. Should any requirements changes lead to a job time out, it is incumbent on the submitter to update the image to include the requirement and unblock ci.

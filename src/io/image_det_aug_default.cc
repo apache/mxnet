@@ -203,6 +203,7 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams() {
 }
 
 #if MXNET_USE_OPENCV
+#include "./opencv_compatibility.h"
 using Rect = cv::Rect_<float>;
 
 #ifdef _MSC_VER

@@ -97,7 +97,7 @@ Alternatively, you can use the table below to select the package that suits your
 
 The following table presents the pip packages that are recommended for each version of MXNet.
 
-![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
+![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.4.0.png)
 
 To install an older version of MXNet with one of the packages in the previous table add `==` with the version you require. For example for version 1.1.0 of MXNet with CUDA 8, you would use `pip install mxnet-cu80==1.1.0`.
 
