@@ -1491,7 +1491,7 @@ def check_rnn_consistency(cell1, cell2):
     mod1.forward(batch, is_train=False)
     mod2.forward(batch, is_train=False)
 
-    assert_allclose(mod1.get_outputs()[0], mod2.get_outputs()[0], rtol=1e-2, atol=1e-4)
+    mx.test_utils.assert_allclose(mod1.get_outputs()[0], mod2.get_outputs()[0], rtol=1e-2, atol=1e-4)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -1525,7 +1525,7 @@ def test_lstm_forget_bias():
 
     bias_name = next(x for x in args if x.endswith('f_bias'))
     expected_bias = forget_bias * np.ones(10, )
-    assert_allclose(args[bias_name], expected_bias)
+    mx.test_utils.assert_allclose(args[bias_name], expected_bias)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
