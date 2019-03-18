@@ -1307,7 +1307,9 @@ def test_bool():
 
 
 def test_basic_indexing_is_contiguous():
-    x = np.arange(np.prod((6, 7, 8, 9))).reshape((6, 7, 8, 9))
+    x_np = np.arange(np.prod((6, 7, 8, 9))).reshape((6, 7, 8, 9))
+    x_mx = mx.nd.array(x_np)
+
     slices = [
         slice(None),
         slice(2),
@@ -1324,12 +1326,20 @@ def test_basic_indexing_is_contiguous():
 
     for idx in combinations_with_replacement(slices, 4):
         for slc in permutations(idx):
-            contig_pred = is_contiguous(slc, x.shape)
-            contig_true = x[slc].flags.contiguous
+            # Check helper function
+            contig_pred = is_contiguous(slc, x_np.shape)
+            contig_true = x_np[slc].flags.contiguous
             assert contig_pred == contig_true, (
                 "failed with slc={}, pred ({}) != actual ({})"
                 "".format(slc, contig_pred, contig_true)
             )
+
+            if contig_pred:
+                # Check mutation behavior
+                y_mx = x_mx.copy()
+                y_mx_slc = y_mx[slc]
+                y_mx_slc[:] = 0
+                assert (y_mx[slc].asnumpy() == 0).all()
 
 
 @with_seed()
