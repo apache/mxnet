@@ -315,7 +315,7 @@ class LeakyReLUOp : public Operator {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
   }
   static inline mxnet::TShape expand_shape(const mxnet::TShape& src, const mxnet::TShape& dst) {
-    mxnet::TShape result(dst.ndim());
+    mxnet::TShape result(dst.ndim(), -1);
     int s = src.ndim() - 1;
     for (int i = dst.ndim() - 1; i >= 0; i--) {
       if (s >= 0 && i <= 1 && (dst[i] == src[s] || src[s] == 1)) {

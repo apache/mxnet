@@ -1241,20 +1241,20 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
     if (Ta) {
       L[0] = mshadow::Shape1(lshape[0]);
       L[1] = lshape.ndim() > 1 ?
-             mxnet::TShape(&lshape[1], &lshape[lshape.ndim()]) : mxnet::TShape(1);
+             mxnet::TShape(&lshape[1], lshape.end()) : mxnet::TShape(1, 1);
     } else {
       L[0] = lshape.ndim() > 1 ?
-             mxnet::TShape(&lshape[0], &lshape[lshape.ndim()-1]) : mxnet::TShape(1);
+             mxnet::TShape(&lshape[0], &lshape[lshape.ndim()-1]) : mxnet::TShape(1, 1);
       L[1] = mshadow::Shape1(lshape[lshape.ndim()-1]);
     }
     if (Tb) {
       R[0] = rshape.ndim() > 1 ?
-             mxnet::TShape(&rshape[0], &rshape[rshape.ndim()-1]) : mxnet::TShape(1);
+             mxnet::TShape(&rshape[0], &rshape[rshape.ndim()-1]) : mxnet::TShape(1, 1);
       R[1] = mshadow::Shape1(rshape[rshape.ndim()-1]);
     } else {
       R[0] = mshadow::Shape1(rshape[0]);
       R[1] = rshape.ndim() > 1 ?
-             mxnet::TShape(&rshape[1], &rshape[rshape.ndim()]) : mxnet::TShape(1);
+             mxnet::TShape(&rshape[1], rshape.end()) : mxnet::TShape(1, 1);
     }
 
     if (L[!Ta].Size() != 0 && R[Tb].Size() != 0) {
@@ -1262,8 +1262,8 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
         << "dot shape error: " << lshape << " X " << rshape;
     }
     std::vector<index_t> buf;
-    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], &L[Ta][L[Ta].ndim()]);
-    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], &R[!Tb][R[!Tb].ndim()]);
+    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], L[Ta].end());
+    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], R[!Tb].end());
     mxnet::TShape oshape(buf.begin(), buf.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }

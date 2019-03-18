@@ -213,6 +213,7 @@ __version__ = libinfo.__version__
 _LIB = _load_lib()
 
 # type definitions
+mx_int = ctypes.c_int
 mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
 mx_float_p = ctypes.POINTER(mx_float)

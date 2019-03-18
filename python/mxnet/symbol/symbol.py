@@ -34,7 +34,7 @@ import numpy as _numpy
 
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
-from ..base import mx_uint, py_str, string_types, integer_types
+from ..base import mx_uint, py_str, string_types, integer_types, mx_int
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
@@ -1174,14 +1174,14 @@ class Symbol(SymbolBase):
                 indptr.append(len(sdata))
             keys = c_str_array(str_keys)
         arg_shape_size = mx_uint()
-        arg_shape_ndim = ctypes.POINTER(mx_uint)()
-        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        arg_shape_ndim = ctypes.POINTER(mx_int)()
+        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         out_shape_size = mx_uint()
-        out_shape_ndim = ctypes.POINTER(mx_uint)()
-        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        out_shape_ndim = ctypes.POINTER(mx_int)()
+        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         aux_shape_size = mx_uint()
-        aux_shape_ndim = ctypes.POINTER(mx_uint)()
-        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        aux_shape_ndim = ctypes.POINTER(mx_int)()
+        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         complete = ctypes.c_int()
         if partial:
             infer_func = _LIB.MXSymbolInferShapePartial
@@ -1192,7 +1192,7 @@ class Symbol(SymbolBase):
             mx_uint(len(indptr) - 1),
             keys,
             c_array_buf(mx_uint, array('I', indptr)),
-            c_array_buf(mx_uint, array('I', sdata)),
+            c_array_buf(mx_int, array('i', sdata)),
             ctypes.byref(arg_shape_size),
             ctypes.byref(arg_shape_ndim),
             ctypes.byref(arg_shape_data),
@@ -1576,10 +1576,10 @@ class Symbol(SymbolBase):
                                                  provided_grad_req_types,
                                                  mx_uint(len(provided_arg_shape_names)),
                                                  c_str_array(provided_arg_shape_names),
-                                                 c_array_buf(mx_uint,
+                                                 c_array_buf(mx_int,
                                                              array('I', provided_arg_shape_data)),
                                                  c_array_buf(mx_uint,
-                                                             array('I', provided_arg_shape_idx)),
+                                                             array('i', provided_arg_shape_idx)),
                                                  num_provided_arg_types,
                                                  provided_arg_type_names,
                                                  provided_arg_type_data,

@@ -103,7 +103,7 @@ inline bool DequantizeShape(const nnvm::NodeAttrs& attrs,
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  return !shape_is_none(out_attrs->at(0));
+  return shape_is_known(out_attrs->at(0));
 }
 
 inline bool DequantizeType(const nnvm::NodeAttrs& attrs,

@@ -127,7 +127,7 @@ class DeformableConvolutionOp : public Operator {
     Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
     // calculate the shape of col_buffer
-    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1);
+    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1, -1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
     for (size_t i = 1; i < col_buffer_shape.ndim(); ++i) {
       col_buffer_shape[i] = out_data[0].shape_[i + 1];
@@ -189,7 +189,7 @@ class DeformableConvolutionOp : public Operator {
     Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
     // calculate the shape of col_buffer
-    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1);
+    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1, -1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
     for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
       col_buffer_shape[i] = out_grad[conv::kData].shape_[i + 1];

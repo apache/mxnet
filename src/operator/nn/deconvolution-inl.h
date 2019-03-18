@@ -65,13 +65,13 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   DMLC_DECLARE_PARAMETER(DeconvolutionParam) {
     DMLC_DECLARE_FIELD(kernel).describe("Deconvolution kernel size: (w,), (h, w) or (d, h, w). "
                   "This is same as the kernel size used for the corresponding convolution");
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, 0))
         .describe("The stride used for the corresponding convolution: (w,), (h, w) or (d, h, w). "
                   "Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0, 0))
         .describe("Dilation factor for each dimension of the input: (w,), (h, w) or (d, h, w). "
                   "Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, 0))
         .describe("The amount of implicit zero padding added during convolution for each "
                   "dimension of the input: "
                   "(w,), (h, w) or (d, h, w). "
@@ -79,11 +79,11 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
                   "If `target_shape` is set, "
                   "`pad` will be ignored and a padding that will generate the target shape "
                   "will be used. Defaults to no padding.");
-    DMLC_DECLARE_FIELD(adj).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(adj).set_default(mxnet::TShape(0, 0))
         .describe("Adjustment for output shape: (w,), (h, w) or (d, h, w). "
                   "If `target_shape` is set, "
                   "`adj` will be ignored and computed accordingly.");
-    DMLC_DECLARE_FIELD(target_shape).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(target_shape).set_default(mxnet::TShape(0, 0))
         .describe("Shape of the output tensor: (w,), (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
         .describe("Number of output filters.");
