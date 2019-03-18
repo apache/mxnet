@@ -172,7 +172,7 @@ class Estimator(object):
         for metric in self.test_metrics + self.test_loss_metrics:
             metric.reset()
 
-        for i, batch in enumerate(val_data):
+        for _, batch in enumerate(val_data):
             if not batch_fn:
                 if isinstance(val_data, gluon.data.DataLoader):
                     data, label = self._batch_fn(batch, self.context)
