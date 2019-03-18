@@ -25,19 +25,17 @@ from mxnet.gluon import data
 from mxnet.gluon.estimator import estimator, event_handler
 from mxnet.gluon.model_zoo import vision
 
-def load_data_mnist(batch_size, resize=None, num_workers=None,
-                    root=os.path.join('~', '.mxnet', 'datasets', 'mnist')):
+def load_data_mnist(batch_size, resize=None, num_workers=None):
     '''
     Load MNIST dataset
     '''
-    root = os.path.expanduser(root)  # Expand the user path '~'.
     transformer = []
     if resize:
         transformer += [data.vision.transforms.Resize(resize)]
     transformer += [data.vision.transforms.ToTensor()]
     transformer = data.vision.transforms.Compose(transformer)
-    mnist_train = data.vision.MNIST(root=root, train=True)
-    mnist_test = data.vision.MNIST(root=root, train=False)
+    mnist_train = data.vision.MNIST(train=True)
+    mnist_test = data.vision.MNIST(train=False)
 
     if num_workers is None:
         num_workers = 0 if sys.platform.startswith('win32') else 4
@@ -73,7 +71,7 @@ def test_estimator():
     acc = mx.metric.Accuracy()
     # Hybridize and initialize net
     net.hybridize()
-    net.initialize(mx.init.MSRAPrelu(), ctx=context)
+    net.initialize(mx.init.Xavier(), ctx=context)
     # Define trainer
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': lr})
     # Define estimator

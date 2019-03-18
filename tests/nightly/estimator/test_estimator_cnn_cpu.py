@@ -26,6 +26,7 @@ from mxnet.gluon.model_zoo import vision
 def bilinear_kernel(in_channels, out_channels, kernel_size):
     '''
     Bilinear interpolation using transposed convolution
+    https://github.com/d2l-ai/d2l-en/blob/master/chapter_computer-vision/fcn.md
     '''
     factor = (kernel_size + 1) // 2
     if kernel_size % 2 == 1:
@@ -65,7 +66,7 @@ def test_estimator():
         batch_size = 1
         num_epochs = 1
         lr = 0.001
-        # Get model
+        # Get model and initialize, define loss
         if model_name is 'FCN':
             num_classes = 21
             net = FCN(num_classes=num_classes, ctx=context)
@@ -79,12 +80,12 @@ def test_estimator():
             dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 1, 224, 224)),
                                                       mx.nd.zeros(batch_size))
             loss = gluon.loss.SoftmaxCrossEntropyLoss()
-            net.initialize(mx.init.MSRAPrelu(), ctx=context)
+            net.initialize(mx.init.Xavier(), ctx=context)
 
         train_data = gluon.data.DataLoader(dataset, batch_size=batch_size)
-        # Define loss and evaluation metrics
+        # Define evaluation metrics
         acc = mx.metric.Accuracy()
-        # Hybridize and initialize net
+        # Hybridize net
         net.hybridize()
         # Define trainer
         trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': lr})
