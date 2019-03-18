@@ -909,9 +909,6 @@ class NDArray {
       // aux_handles always reflect the correct number of aux data
       for (size_t i = 0; i < aux_shapes.size(); i++) {
         CheckAndAllocAuxData(i, aux_shapes[i]);
-        // this line is needed in case when aux_shapes[i].Size() = 0
-        // aux_handles[i] will not be updated and take only default value.
-        aux_handles[i].ctx = ctx;
       }
       if (!delay_alloc) {
         CheckAndAllocData(storage_shape, dtype);
@@ -986,8 +983,8 @@ class NDArray {
 #endif
         delay_alloc = false;
       } else if (shandle.size < dbytes) {
-        // free storage if necessary and alloc again
-        if (shandle.size > 0) Storage::Get()->Free(shandle);
+        // free storage
+        Storage::Get()->Free(shandle);
         // init storage
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
 #if MXNET_USE_MKLDNN == 1
@@ -1052,12 +1049,14 @@ class NDArray {
         << "storage type cannot be kDefaultStorage in CheckAndAllocAuxData";
       if (aux_handles.size() <= i) {
         aux_handles.resize(i + 1);
+        // set context for the newly created aux handle
+        aux_handles[i].ctx = ctx;
       }
       size_t aux_bytes = shape.Size() * mshadow::mshadow_sizeof(aux_types[i]);
       if (aux_handles[i].size < aux_bytes) {
-        // free storage if necessary and alloc again
-        if (aux_handles[i].size > 0) Storage::Get()->Free(aux_handles[i]);
-        // init aux storage
+        // free storage
+        Storage::Get()->Free(aux_handles[i]);
+        // init storage
         aux_handles[i] = Storage::Get()->Alloc(aux_bytes, ctx);
       }
       // init shape
