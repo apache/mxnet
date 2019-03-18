@@ -136,6 +136,8 @@ Select API:&nbsp;
             * [Datasets and DataLoaders](/tutorials/gluon/datasets.html)
             * [Applying Data Augmentation](/tutorials/gluon/data_augmentation.html)
             * [Data Augmentation with Masks (for Object Segmentation)](https://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html)
+        * Fit API
+            * [Using Fit API](/tutorials/gluon/fit_api_tutorial.html)
 </div> <!--end of gluon-->
 
 <div class="module">
