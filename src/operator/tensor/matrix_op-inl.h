@@ -367,7 +367,7 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!shape_is_known(in_attrs->at(0)) && !shape_is_known(out_attrs->at(0))) {
+  if (in_attrs->at(0).ndim() == -1 && out_attrs->at(0).ndim() == -1) {
     return false;
   }
 
@@ -401,7 +401,7 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < axis; ++i) ret[i] = oshape[i];
   for (int i = axis+1; i < indim+1; ++i) ret[i-1] = oshape[i];
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, ret);
-  return shape_is_known(ret);
+  return shape_is_known(in_attrs->at(0)) && shape_is_known(out_attrs->at(0));
 }
 
 // Currently MKLDNN only supports step = 1 or step has no value
@@ -2598,7 +2598,7 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   mxnet::TShape dshape = in_attrs->at(split_enum::kData);
   mxnet::TShape ishape = in_attrs->at(split_enum::kData);
-  if (!shape_is_known(dshape)) return false;
+  if (dshape.ndim() == -1) return false;
   if (param.axis >= 0) {
     CHECK_LT(static_cast<size_t>(param.axis), dshape.ndim());
   } else {

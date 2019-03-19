@@ -384,7 +384,7 @@ class RNNCell(BaseRNNCell):
 
     @property
     def state_info(self):
-        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'}]
+        return [{'shape': (-1, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -431,8 +431,8 @@ class LSTMCell(BaseRNNCell):
 
     @property
     def state_info(self):
-        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'},
-                {'shape': (0, self._num_hidden), '__layout__': 'NC'}]
+        return [{'shape': (-1, self._num_hidden), '__layout__': 'NC'},
+                {'shape': (-1, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -490,7 +490,7 @@ class GRUCell(BaseRNNCell):
 
     @property
     def state_info(self):
-        return [{'shape': (0, self._num_hidden),
+        return [{'shape': (-1, self._num_hidden),
                  '__layout__': 'NC'}]
 
     @property
@@ -583,7 +583,7 @@ class FusedRNNCell(BaseRNNCell):
     def state_info(self):
         b = self._bidirectional + 1
         n = (self._mode == 'lstm') + 1
-        return [{'shape': (b*self._num_layers, 0, self._num_hidden), '__layout__': 'LNC'}
+        return [{'shape': (b*self._num_layers, -1, self._num_hidden), '__layout__': 'LNC'}
                 for _ in range(n)]
 
     @property
@@ -942,7 +942,7 @@ class ZoneoutCell(ModifierCell):
         next_output, next_states = cell(inputs, states)
         mask = lambda p, like: symbol.Dropout(symbol.ones_like(like), p=p)
 
-        prev_output = self.prev_output if self.prev_output is not None else symbol.zeros((0, 0))
+        prev_output = self.prev_output if self.prev_output is not None else symbol.zeros((-1, -1))
 
         output = (symbol.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
@@ -1128,7 +1128,7 @@ class BaseConvRNNCell(BaseRNNCell):
                                                dilate=self._i2h_dilate,
                                                layout=conv_layout)
         self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
-        self._state_shape = (0, ) + self._state_shape[1:]
+        self._state_shape = (-1, ) + self._state_shape[1:]
 
         # Get params
         self._iW = self.params.get('i2h_weight', init=i2h_weight_initializer)

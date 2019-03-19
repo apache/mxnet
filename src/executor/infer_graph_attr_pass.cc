@@ -546,7 +546,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       bool is_input_dynamic_shape = false;
       for (uint32_t i = 0; i < ishape.size(); ++i) {
         ishape[i] = rshape[idx.entry_id(inode.inputs[i])];
-        if (ishape[i].ndim() == 0 && is_dynamic[idx.entry_id(inode.inputs[i])]) {
+        if (ishape[i].ndim() == -1 && is_dynamic[idx.entry_id(inode.inputs[i])]) {
           is_input_dynamic_shape = true;
         }
         if (fis_none(ishape[i])) forward_known = false;
@@ -563,7 +563,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       auto finfer = finfer_shape.get(inode.source->op(), fdefault);
       if (finfer == nullptr || is_input_dynamic_shape) {
         for (uint32_t i = 0; i < oshape.size(); ++i) {
-          if (oshape[i].ndim() == 0) {
+          if (oshape[i].ndim() == -1) {
             is_dynamic[idx.entry_id(nid, i)] = 1;
           }
         }

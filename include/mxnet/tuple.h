@@ -610,8 +610,11 @@ class TShape : public Tuple<dim_t> {
 /*! brief check if shape is known using the NumPy compatible definition.
  * zero-dim and zero-size tensors are valid. -1 means unknown.*/
 inline bool shape_is_known(const TShape& x) {
+  CHECK_GE(x.ndim(), -1) << "shape ndim must be >= -1, while received " << x.ndim();
   if (x.ndim() == -1) return false;
   for (int i = 0; i < x.ndim(); ++i) {
+    CHECK_GE(x[i], -1) << "shape dim size must be >= -1, "
+                          "where -1 means unknown, while received " << x[i];
     if (x[i] == -1) return false;
   }
   return true;
