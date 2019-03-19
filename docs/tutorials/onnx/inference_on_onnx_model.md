@@ -144,7 +144,9 @@ print(data_names)
 And load them into a MXNet Gluon symbol block. 
 
 ```python
-net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('data_0'))
+import warnings
+with warnings.catch_warnings():
+    net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('data_0'))
 net_params = net.collect_params()
 for param in arg_params:
     if param in net_params:
