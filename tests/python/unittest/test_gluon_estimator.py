@@ -246,9 +246,3 @@ def test_loss():
                                   metrics=acc,
                                   trainers=trainer,
                                   context=ctx)
-
-
-if __name__ == 'main':
-    import nose
-
-    nose.runmodule()
