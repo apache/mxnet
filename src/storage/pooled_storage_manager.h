@@ -155,6 +155,10 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
 }
 
 void GPUPooledStorageManager::Free(Storage::Handle handle) {
+  // Do nothing if dptr is nullptr. Otherwise, nullptr may be reused
+  // which can cause illegal memory access error.
+  if (handle.dptr == nullptr) return;
+
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = RoundAllocSize(handle.size);
   auto&& reuse_pool = memory_pool_[size];
@@ -312,6 +316,10 @@ void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
 }
 
 void GPUPooledRoundedStorageManager::Free(Storage::Handle handle) {
+  // Do nothing if dptr is nullptr. Otherwise, nullptr may be reused
+  // which can cause illegal memory access error.
+  if (handle.dptr == nullptr) return;
+
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   int bucket = get_bucket(handle.size);
   auto&& reuse_pool = memory_pool_[bucket];

@@ -15,4 +15,11 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-File is moved to [docs/tutorials/mkldnn/MKLDNN_README.md](docs/tutorials/mkldnn/MKLDNN_README.md).
+# Tutorials
+
+```eval_rst
+.. toctree::
+   :glob:
+
+   *
+```

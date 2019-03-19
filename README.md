@@ -50,6 +50,7 @@ How to Contribute
 
 What's New
 ----------
+* [Version 1.4.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.4.0) - MXNet 1.4.0 Release.
 * [Version 1.3.1 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.3.1) - MXNet 1.3.1 Patch Release.
 * [Version 1.3.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.3.0) - MXNet 1.3.0 Release.
 * [Version 1.2.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.2.0) - MXNet 1.2.0 Release.
@@ -65,7 +66,7 @@ What's New
 * [Version 0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
 * [Updated Image Classification with new Pre-trained Models](./example/image-classification)
 * [Notebooks How to Use MXNet](https://github.com/zackchase/mxnet-the-straight-dope)
-* [MKLDNN for Faster CPU Performance](./MKLDNN_README.md)
+* [MKLDNN for Faster CPU Performance](./docs/tutorials/mkldnn/MKLDNN_README.md)
 * [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
 * [Embedding Torch layers and functions in MXNet](https://mxnet.incubator.apache.org/faq/torch.html)

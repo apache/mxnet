@@ -461,6 +461,7 @@ class PySGLD(mx.optimizer.Optimizer):
 
 
 @with_seed()
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14241")
 def test_sgld():
     opt1 = PySGLD
     opt2 = mx.optimizer.SGLD
