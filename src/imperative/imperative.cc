@@ -109,7 +109,7 @@ OpStatePtr Imperative::Invoke(
   OpStatePtr ret = InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
   // the followinng loop is used for finding out the correct shape when some shapes are dynamic
   for (size_t i = 0; i < outputs.size(); i++) {
-    if (outputs[i]->shape().ndim() == 0) {
+    if (!shape_is_known(outputs[i]->shape())) {
       // the WaitToRead overhead here does not seem to be avoidable
       outputs[i]->WaitToRead();
       outputs[i]->SetShapeFromChunk();
