@@ -139,9 +139,6 @@ def test_onnx_fine_tuning_gluon():
 def test_onnx_inference_on_onnx_model():
     assert _test_tutorial_nb('onnx/inference_on_onnx_model')
 
-def test_python_matrix_factorization():
-    assert _test_tutorial_nb('python/matrix_factorization')
-
 def test_python_linear_regression():
     assert _test_tutorial_nb('python/linear-regression')
 
