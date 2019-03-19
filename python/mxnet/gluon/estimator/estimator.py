@@ -244,6 +244,8 @@ class Estimator(object):
                 try:
                     completed_samples = len(train_data._dataset) if i == len(train_data._dataset) - 1 \
                                         else batch_size * (i + 1)
+                    # We need to check if this is the last batch in the current epoch and select
+                    # the value to print appropriately
                     self.train_stats['step'] = "{}/{}".format(completed_samples, len(train_data._dataset))
                 except AttributeError:
                     self.train_stats['step'] = i
