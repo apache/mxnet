@@ -27,6 +27,7 @@
    embedded/index.md
    gluon/index.md
    java/index.md
+   mkldnn/index.md
    nlp/index.md
    onnx/index.md
    python/index.md
@@ -142,6 +143,7 @@ Select API:&nbsp;
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
     * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
     * [Optimizing Deep Learning Computation Graphs with TensorRT](/tutorials/tensorrt/inference_with_trt.html)
+    * [How to build and install MXNet with MKL-DNN backend](/tutorials/mkldnn/MKLDNN_README.html)
 * API Guides
     * Core APIs
         * NDArray
