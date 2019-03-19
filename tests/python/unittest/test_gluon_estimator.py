@@ -17,6 +17,8 @@
 
 ''' Unit tests for Gluon Estimator '''
 
+import unittest
+import sys
 import warnings
 from nose.tools import assert_raises
 import mxnet as mx
@@ -24,10 +26,12 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.estimator import estimator
 
+
 def get_model():
     net = nn.Sequential()
     net.add(nn.Dense(4, activation='relu', flatten=False))
     return net
+
 
 def test_fit():
     ''' test estimator with different train data types '''
@@ -106,6 +110,8 @@ def test_validation():
                 epochs=num_epochs,
                 batch_size=batch_size)
 
+
+@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_initializer():
     ''' test with no initializer, inconsistent initializer '''
     net = get_model()
@@ -144,6 +150,8 @@ def test_initializer():
             epochs=num_epochs,
             batch_size=batch_size)
 
+
+@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_trainer():
     ''' test with no trainer and invalid trainer '''
     net = get_model()
@@ -176,6 +184,7 @@ def test_trainer():
                                   metrics=acc,
                                   trainers=trainer,
                                   context=ctx)
+
 
 def test_metric():
     ''' test with no metric, list of metrics, invalid metric '''
@@ -216,6 +225,7 @@ def test_metric():
                                   trainers=trainer,
                                   context=ctx)
 
+
 def test_loss():
     ''' test with no loss, invalid loss '''
     net = get_model()
@@ -236,3 +246,9 @@ def test_loss():
                                   metrics=acc,
                                   trainers=trainer,
                                   context=ctx)
+
+
+if __name__ == 'main':
+    import nose
+
+    nose.runmodule()
