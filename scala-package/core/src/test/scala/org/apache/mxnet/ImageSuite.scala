@@ -113,9 +113,8 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
       val downLeft = buf.getRGB(coord("xmin"), coord("ymax"))
       val topRight = buf.getRGB(coord("xmax"), coord("ymin"))
       val downRight = buf.getRGB(coord("xmax"), coord("ymax"))
-      require(topLeft == downLeft)
+      require(downLeft == downRight)
       require(topRight == downRight)
-      require(topLeft == downRight)
     }
   }
 
