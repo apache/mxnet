@@ -173,7 +173,14 @@ class SubgraphPropertyRegistry {
                                     << " is not found in SubgraphPropertyRegistry";
     std::vector<SubgraphPropertyPtr> ret;
     ret.reserve(it->second.size());
-    for (auto i : it->second) ret.emplace_back(i());
+     for (auto i : it->second) {
+       auto ptr_it = prop_ptr_map_.find(i);
+       if (ptr_it == prop_ptr_map_.end()) {
+         prop_ptr_map_[i] = i();
+         ptr_it = prop_ptr_map_.find(i);
+       }
+       if (ptr_it->second) ret.emplace_back(ptr_it->second);
+    }
     return ret;
   }
 
@@ -187,6 +194,7 @@ class SubgraphPropertyRegistry {
   SubgraphPropertyRegistry(SubgraphPropertyRegistry&&) = delete;
   SubgraphPropertyRegistry& operator=(const SubgraphPropertyRegistry&) = delete;
   std::unordered_map<std::string, std::vector<SubgraphPropertyCreateFn>> prop_fn_map_;
+  std::unordered_map<SubgraphPropertyCreateFn, SubgraphPropertyPtr> prop_ptr_map_;
 };
 
 // This op name set is for setting the names of operators that should be grouped into
@@ -196,9 +204,14 @@ class SubgraphPropertyRegistry {
 typedef dmlc::ThreadLocalStore<std::unordered_map<std::string, std::unordered_set<std::string>>>
   SubgraphPropertyOpNameSet;
 
+#define DECLEARPROPERTY1(NAME, SubgraphPropertyType, X) \
+  DMLC_ATTRIBUTE_UNUSED auto __make_##SubgraphPropertyType##_##Name##_##X##__
+#define DECLEARPROPERTY(NAME, SubgraphPropertyType, X) \
+  DECLEARPROPERTY1(NAME, SubgraphPropertyType, X)
+
 #define MXNET_REGISTER_SUBGRAPH_PROPERTY(Name, SubgraphPropertyType) \
-  static DMLC_ATTRIBUTE_UNUSED auto __make_ ## SubgraphPropertyType ## _ ## Name ## __ = \
-    SubgraphPropertyRegistry::Get()->__REGISTER__(#Name, &SubgraphPropertyType::Create)
+  static DECLEARPROPERTY(Name, SubgraphPropertyType, __LINE__) =     \
+      SubgraphPropertyRegistry::Get()->__REGISTER__(#Name, &SubgraphPropertyType::Create)
 
 }  // namespace op
 }  // namespace mxnet

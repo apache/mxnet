@@ -140,21 +140,19 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 class SgMKLDNNConvProperty : public SubgraphProperty {
  public:
   SgMKLDNNConvProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", 0);
     disable_conv_bn = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_BN", 0);
     disable_conv_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU", 0);
     disable_conv_sum = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM", 0);
 
-    disable_all = disable_all || (disable_conv_bn && disable_conv_relu && disable_conv_sum);
-    if (disable_all) {
-      LOG(INFO) << "MKLDNN Convolution optimization pass is disabled.";
-    } else {
-      LOG(INFO) << "Start to execute MKLDNN Convolution optimization pass.";
-    }
+    disable_all = disable_conv_bn && disable_conv_relu && disable_conv_sum;
   }
   static SubgraphPropertyPtr Create() {
+    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
+      LOG(INFO) << name_ << "is disabled.";
+      return nullptr;
+    }
     auto property = std::make_shared<SgMKLDNNConvProperty>();
-    property->SetAttr<std::string>("prop_name", "MKLDNN Convolution optimization pass");
+    property->SetAttr<std::string>("property_name", name_);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
@@ -242,6 +240,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   }
 
  private:
+  constexpr static char* name_ = "MKLDNN Convolution optimization pass";
   int disable_all;
   int disable_conv_bn;
   int disable_conv_relu;

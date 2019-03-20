@@ -1519,8 +1519,8 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
     if (subgraph_prop->HasAttr("inference_only") &&
         subgraph_prop->GetAttr<bool>("inference_only") == true) {
       if (need_grad) {
-        auto full_name = subgraph_prop->HasAttr("prop_name")
-                             ? subgraph_prop->GetAttr<std::string>("prop_name")
+        auto full_name = subgraph_prop->HasAttr("property_name")
+                             ? subgraph_prop->GetAttr<std::string>("property_name")
                              : prop_name;
         LOG(INFO) << "Skip subgraph " << full_name << " as it requires `grad_req=null`.";
         continue;
@@ -1620,8 +1620,8 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src, const std::string& p
     if (subgraph_prop->HasAttr("inference_only") &&
         subgraph_prop->GetAttr<bool>("inference_only") == true) {
       if (need_grad) {
-        auto full_name = subgraph_prop->HasAttr("prop_name")
-                             ? subgraph_prop->GetAttr<std::string>("prop_name")
+        auto full_name = subgraph_prop->HasAttr("property_name")
+                             ? subgraph_prop->GetAttr<std::string>("property_name")
                              : prop_name;
         LOG(INFO) << "Skip subgraph " << full_name << " as it requires `grad_req=null`.";
         continue;

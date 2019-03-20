@@ -41,16 +41,14 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
   };
 
  private:
-  bool disable_all;
   SelectStatus status;
   std::vector<const nnvm::Node *> matched_list;
 
  public:
-  explicit SgMKLDNNConvPostQuantizeSelector(int dis_all)
-      : disable_all(dis_all) {}
+  SgMKLDNNConvPostQuantizeSelector() {}
 
   bool Select(const nnvm::Node &n) override {
-    if ((!disable_all) && n.op() && n.op()->name == "_sg_mkldnn_conv") {
+    if (n.op() && n.op()->name == "_sg_mkldnn_conv") {
       auto const &param = nnvm::get<MKLDNNConvFusionParam>(n.attrs.parsed);
       if (param.full_conv_param.mkldnn_param.quantized) {
         status = kStart;
@@ -101,21 +99,15 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
 
 class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
  public:
-  SgMKLDNNConvPostQuantizeProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", 0);
-    if (disable_all) {
-      LOG(INFO) << "MKLDNN Convolution post-quantization optimization pass is disabled.";
-    } else {
-      LOG(INFO) << "Start to execute MKLDNN Convolution post-quantization optimization pass.";
-    }
-  }
+  SgMKLDNNConvPostQuantizeProperty() {}
+
   static SubgraphPropertyPtr Create() {
     auto property = std::make_shared<SgMKLDNNConvPostQuantizeProperty>();
-    property->SetAttr<std::string>("property_name",
-                                   "MKLDNN Convolution post-quantization optimization pass");
+    property->SetAttr<std::string>("property_name", name_);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
+
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
     nnvm::NodePtr conv_node = nullptr;
@@ -145,7 +137,7 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     auto selector =
-        std::make_shared<SgMKLDNNConvPostQuantizeSelector>(disable_all);
+        std::make_shared<SgMKLDNNConvPostQuantizeSelector>();
     return selector;
   }
 
@@ -159,7 +151,7 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
   }
 
  private:
-  int disable_all;
+  constexpr static char *name_ = "MKLDNN Convolution post-quantization optimization pass";
 };
 
 }  // namespace op

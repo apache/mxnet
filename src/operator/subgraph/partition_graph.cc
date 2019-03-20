@@ -740,6 +740,10 @@ Graph PartitionGraph(Graph&& g) {
   }
   using namespace sg;
   const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
+  const std::string& prop_name = subg_prop->HasAttr("property_name")
+                                     ? subg_prop->GetAttr<std::string>("property_name")
+                                     : "partition graph";
+  LOG(INFO) << "start to execute " << prop_name << ".";
   // top sort NodeEntry of all the nodes' inputs
   std::unordered_map<const nnvm::NodeEntry*, size_t> entry_top_order_map;
   TopSortEntries(g, &entry_top_order_map);
