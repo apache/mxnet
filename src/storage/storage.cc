@@ -127,6 +127,9 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
+  // Do nothing if dtpr is nullptr.
+  if (handle.dptr == nullptr) return;
+
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
@@ -140,6 +143,9 @@ void StorageImpl::Free(Storage::Handle handle) {
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
+  // Do nothing if dtpr is nullptr.
+  if (handle.dptr == nullptr) return;
+
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
