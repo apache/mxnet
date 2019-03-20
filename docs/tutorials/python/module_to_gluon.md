@@ -33,12 +33,12 @@ V) Exporting Models
 
 VI) Loading Models for Inference
 
-In the following section we will look at 1:1 mappings between the Module and the Gluon ways of training a neural networks.
+In the following section we will look at 1:1 mappings between the Module and the Gluon ways of training a neural network.
 
 ## I - Data Loading
 
 In this section we will be looking at the difference in loading data between Module and Gluon.
-Let's first import a few python modules.
+Let's first import a few Python modules.
 
 ```python
 from collections import namedtuple
@@ -95,8 +95,8 @@ for batch in data_iter:
 
 With Gluon, the preferred method is to use a [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataloader#mxnet.gluon.data.DataLoader) that makes use of a [`Dataset`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) to asynchronously prefetch the data. 
 
-The Gluon API offers you the ability to efficiently fetch data and separate the concerns of loading versus holding data. The DataLoader role is to request certain indices of the dataset. The Dataset role is to hold onto data.
-The `Dataset` data can be in or out of memory, and the `DataLoader` role is to request certain indices of the dataset, in the main thread or through multi-processing workers and batch the data together. 
+The Gluon API offers you the ability to efficiently fetch data and separate the concerns of loading versus holding data. The DataLoader role is to request certain indices of the dataset. The Dataset has ownership of the data.
+The `Dataset` data can be in or out of memory, and the `DataLoader` role is to request certain indices of the dataset, in the main thread or through multi-processing (or multi-threaded) workers and batch the data together. 
 
 ```python
 dataset = ArrayDataset(train_data, train_label)
