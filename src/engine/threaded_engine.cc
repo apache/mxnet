@@ -449,12 +449,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
       i->var_exception = threaded_opr->opr_exception;
       // add current operator exceptions to global exceptions if not already
       // added
-      auto it = std::find(global_exception_refs_.begin(),
-                          global_exception_refs_.end(),
-                          threaded_opr->opr_exception);
-      if (it == global_exception_refs_.end()) {
-        global_exception_refs_.push_back(threaded_opr->opr_exception);
-      }
+      AddToGlobalExceptions(threaded_opr->opr_exception);
     }
     const bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {

@@ -472,12 +472,7 @@ class ThreadedEngine : public Engine {
     for (auto&& i : threaded_opr->const_vars) {
       if (i->var_exception && *i->var_exception) {
         threaded_opr->opr_exception = i->var_exception;
-        auto it = std::find(global_exception_refs_.begin(),
-                            global_exception_refs_.end(),
-                            threaded_opr->opr_exception);
-        if (it == global_exception_refs_.end()) {
-            global_exception_refs_.push_back(threaded_opr->opr_exception);
-        }
+        AddToGlobalExceptions(threaded_opr->opr_exception);
         break;
       }
     }
@@ -485,12 +480,7 @@ class ThreadedEngine : public Engine {
       for (auto&& i : threaded_opr->mutable_vars) {
         if (i->var_exception && *i->var_exception) {
           threaded_opr->opr_exception = i->var_exception;
-          auto it = std::find(global_exception_refs_.begin(),
-                              global_exception_refs_.end(),
-                              threaded_opr->opr_exception);
-          if (it == global_exception_refs_.end()) {
-            global_exception_refs_.push_back(threaded_opr->opr_exception);
-          }
+          AddToGlobalExceptions(threaded_opr->opr_exception);
           break;
         }
       }
@@ -499,6 +489,18 @@ class ThreadedEngine : public Engine {
 
   static void OnCompleteStatic(Engine *engine, void *threaded_opr,
                                const dmlc::Error* error);
+  /*!
+   * \brief find exception in global_exception_refs and add it if missing
+   * \param opr_exception the exception to be added to global_exception_refs
+   */
+  inline void AddToGlobalExceptions(const ExceptionRef& opr_exception) {
+    auto it = std::find(global_exception_refs_.begin(),
+                        global_exception_refs_.end(), opr_exception);
+    if (it == global_exception_refs_.end()) {
+      global_exception_refs_.push_back(opr_exception);
+    }
+    return;
+  }
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,

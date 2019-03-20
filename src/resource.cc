@@ -190,7 +190,7 @@ class ResourceManagerImpl : public ResourceManager {
     cpu_rand_->Seed(seed);
     cpu_parallel_rand_->Seed(seed);
 #if MXNET_USE_CUDA
-    if (ctx != Context::CPU()) {
+    if (ctx.dev_type == Context::kGPU) {
       gpu_rand_.Get(ctx.dev_id, [ctx, seed, this]() {
         return new ResourceRandom<gpu>(ctx, seed);
       })->Seed(seed);
