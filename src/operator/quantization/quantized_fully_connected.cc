@@ -89,7 +89,9 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_type->size(), 3U);
 
 #if MXNET_USE_MKLDNN == 1
-  CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8);
+  CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8)
+      << "QuantizedFullyConnected only supports int8/uint8 input, while "
+      << in_type->at(0) << " is given.";
 #else
   TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
 #endif
@@ -190,7 +192,7 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
   if (dshape.ndim() != 2)
     CHECK(param.flatten)
         << "QuantizedFullyConnectedForwardCPU only supports flatten=true "
-        << "when input_shape!=2 for now. ";
+        << "when dshape.ndim() != 2 for now.";
 
   Tensor<cpu, 2, int8_t> weight = in_data[fullc::kWeight].get<cpu, 2, int8_t>(s);
   Tensor<cpu, 2, int8_t> data = in_data[fullc::kData].get_with_shape<cpu, 2, int8_t>(

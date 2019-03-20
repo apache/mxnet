@@ -303,7 +303,9 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
     size_t base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
 
     CHECK(in_types->at(0) == mshadow::kInt8 ||
-          in_types->at(0) == mshadow::kUint8);
+          in_types->at(0) == mshadow::kUint8)
+        << "QuantizedFullyConnected only supports int8/uint8 input, while "
+        << in_types->at(0) << " is given.";
     for (size_t i = 1; i < in_types->size(); ++i) {
       if (i < base_num_inputs) {
         TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kInt8);
