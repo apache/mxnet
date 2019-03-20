@@ -24,9 +24,6 @@
  * \author Sebastian Bodenstein
 */
 #include "./rnn-inl.h"
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-#include "./cudnn_rnn-inl.h"
-#endif  // MXNET_USE_CUDNN && CUDNN_MAJOR
 
 namespace mxnet {
 namespace op {
@@ -141,27 +138,6 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
-                                  const int dev_mask,
-                                  DispatchMode* dispatch_mode,
-                                  std::vector<int> *in_attrs,
-                                  std::vector<int> *out_attrs) {
-  DispatchMode wanted_mode = DispatchMode::kFCompute;
-
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
-}
-
-inline static bool BackwardRNNStorageType(const nnvm::NodeAttrs& attrs,
-                                          const int dev_mask,
-                                          DispatchMode* dispatch_mode,
-                                          std::vector<int> *in_attrs,
-                                          std::vector<int> *out_attrs) {
-  DispatchMode wanted_mode = DispatchMode::kFCompute;
-  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                             dispatch_mode, wanted_mode);
-}
-
 struct RNNGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr &n,
@@ -185,84 +161,6 @@ struct RNNGrad {
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
-
-static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
-                                 const Context ctx,
-                                 const mxnet::ShapeVector &in_shapes,
-                                 const std::vector<int> &in_types) {
-  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-  OpStatePtr state = OpStatePtr();
-  #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-    MSHADOW_REAL_TYPE_SWITCH(in_types[rnn_enum::kData], DType, {
-      state = OpStatePtr::Create<CuDNNRNNOp<DType>>(param);
-    return state;
-    });
-  #else
-    MSHADOW_REAL_TYPE_SWITCH(in_types[rnn_enum::kData], DType, {
-      state = OpStatePtr::Create<RNNOp<DType>>(param);
-    return state;
-    });
-  #endif
-  return OpStatePtr();  // should never reach here
-}
-
-template<typename xpu>
-void RNNStatefulCompute(const OpStatePtr& state,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs) {
-  int dtype = inputs[rnn_enum::kData].type_flag_;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    RNNOp<DType>& op = state.get_state<RNNOp<DType>>();
-    op.Forward(ctx, inputs, req, outputs);
-  });
-}
-/*
-index description
-0: x
-1: w
-2: hx
-3: y
-4: dy
-5: hy
-6: dhy
-7: cx
-8: cy
-9: dcy
-*/
-template<typename xpu>
-void RNNStatefulGradCompute(const OpStatePtr& state,
-                            const OpContext& ctx,
-                            const std::vector<TBlob>& inputs,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<TBlob>& outputs) {
-  std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + 3);
-  std::vector<TBlob> out_data{inputs[3]};
-  std::vector<TBlob> out_grad{inputs[4]};
-  const std::vector<TBlob> &in_grad = outputs;
-
-  int dtype = inputs[rnn_enum::kData].type_flag_;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    RNNOp<DType>& op = state.get_state<RNNOp<DType>>();
-    const RNNParam& param = op.param_;
-    int index = 5;
-    if (param.state_outputs) {
-      out_data.push_back(inputs[index++]);
-      out_grad.push_back(inputs[index++]);
-    }
-
-    if (param.mode == rnn_enum::kLstm) {
-      in_data.push_back(inputs[index++]);
-      if (param.state_outputs) {
-        out_data.push_back(inputs[index++]);
-        out_grad.push_back(inputs[index]);
-      }
-    }
-
-    op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
-  });
-}
 
 NNVM_REGISTER_OP(RNN)
 .describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are
@@ -342,7 +240,6 @@ The definition of GRU here is slightly different from paper but compatible with 
 })
 .set_attr<mxnet::FInferShape>("FInferShape", RNNShape)
 .set_attr<nnvm::FInferType>("FInferType", RNNType)
-.set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
 .set_attr<FCreateOpState>("FCreateOpState", CreateRNNState)
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", RNNGrad{"_backward_RNN"})
@@ -365,7 +262,6 @@ NNVM_REGISTER_OP(_backward_RNN)
 .set_attr_parser(ParamParser<RNNParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", BackwardRNNStorageType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
