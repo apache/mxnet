@@ -192,14 +192,17 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
                                  const std::vector<int> &in_types) {
   const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
   OpStatePtr state = OpStatePtr();
-  MSHADOW_REAL_TYPE_SWITCH(in_types[rnn_enum::kData], DType, {
-    #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+  #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+    MSHADOW_REAL_TYPE_SWITCH(in_types[rnn_enum::kData], DType, {
       state = OpStatePtr::Create<CuDNNRNNOp<DType>>(param);
-    #else
-      state = OpStatePtr::Create<RNNOp<DType>>(param);
-    #endif
     return state;
-  });
+    });
+  #else
+    MSHADOW_REAL_TYPE_SWITCH(in_types[rnn_enum::kData], DType, {
+      state = OpStatePtr::Create<RNNOp<DType>>(param);
+    return state;
+    });
+  #endif
   return OpStatePtr();  // should never reach here
 }
 
