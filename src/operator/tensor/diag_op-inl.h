@@ -84,7 +84,7 @@ inline mxnet::TShape DiagShapeImpl(const mxnet::TShape& ishape, const int k,
 
   auto s = std::min(h, w);
   if (s < 0) {
-    s = 0;
+    s = -1;
   }
 
   if (x1 > x2) {
