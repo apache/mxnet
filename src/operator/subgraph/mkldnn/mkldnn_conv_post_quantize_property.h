@@ -102,8 +102,9 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
   SgMKLDNNConvPostQuantizeProperty() {}
 
   static SubgraphPropertyPtr Create() {
+    static const std::string &name = "MKLDNN Convolution post-quantization optimization pass";
     auto property = std::make_shared<SgMKLDNNConvPostQuantizeProperty>();
-    property->SetAttr<std::string>("property_name", name_);
+    property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
@@ -136,8 +137,7 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector =
-        std::make_shared<SgMKLDNNConvPostQuantizeSelector>();
+    auto selector = std::make_shared<SgMKLDNNConvPostQuantizeSelector>();
     return selector;
   }
 
@@ -149,9 +149,6 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
       *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
     }
   }
-
- private:
-  constexpr static char *name_ = "MKLDNN Convolution post-quantization optimization pass";
 };
 
 }  // namespace op

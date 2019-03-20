@@ -142,8 +142,9 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
+    static const std::string &name = "MKLDNN FullyConected post-quantization optimization pass";
     auto property = std::make_shared<SgMKLDNNFCPostQuantizeProperty>();
-    property->SetAttr<std::string>("property_name", name_);
+    property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
@@ -203,7 +204,6 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
   }
 
  private:
-  constexpr static char* name_ = "MKLDNN FullyConected post-quantization optimization pass";
   bool disable_fuse_all;
   bool disable_float_output;
 };

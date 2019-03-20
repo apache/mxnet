@@ -124,12 +124,13 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
   }
 
   static SubgraphPropertyPtr Create() {
+    static const std::string &name = "MKLDNN FullyConnected optimization pass";
     if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_OPT", 0)) {
-      LOG(INFO) << name_ << "is disabled.";
+      LOG(INFO) << name << "is disabled.";
       return nullptr;
     }
     auto property = std::make_shared<SgMKLDNNFCProperty>();
-    property->SetAttr<std::string>("property_name", name_);
+    property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
@@ -179,7 +180,6 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
   }
 
  private:
-  constexpr static char* name_ = "MKLDNN FullyConnected optimization pass";
   bool disable_fc_relu;
 };
 

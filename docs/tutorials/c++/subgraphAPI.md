@@ -98,14 +98,10 @@ class SgProperty : public SubgraphProperty {
   }
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     auto property = std::make_shared<CreateSubgraphSelector>();
-    property->SetAttr<std::string>("property_name", name_);
+    property->SetAttr<std::string>("property_name", "subgraph example pass"); // Optional, better to have it.
     property->SetAttr<bool>("inference_only", true); // Optional, only for inference_only pass.
     return property;
   }
-
- private:
-  constexpr static char* name_ = "subgraph example pass";
-
 };
 ```
 `SetAttr` is optional and developer can define their own attributes to control property behavior.
