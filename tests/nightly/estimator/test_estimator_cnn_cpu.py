@@ -70,19 +70,24 @@ def test_estimator():
         if model_name is 'FCN':
             num_classes = 21
             net = FCN(num_classes=num_classes, ctx=context)
-            dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 3, 320, 480)),
+            train_dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 3, 320, 480)),
+                                                      mx.nd.zeros(shape=(batch_size, 320, 480)))
+            val_dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 3, 320, 480)),
                                                       mx.nd.zeros(shape=(batch_size, 320, 480)))
             loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
             net[-1].initialize(init.Constant(bilinear_kernel(num_classes, num_classes, 64)), ctx=context)
             net[-2].initialize(init=init.Xavier(), ctx=context)
         else:
             net = vision.get_model(model_name, classes=10)
-            dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 1, 224, 224)),
+            train_dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 1, 224, 224)),
+                                                      mx.nd.zeros(batch_size))
+            val_dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 1, 224, 224)),
                                                       mx.nd.zeros(batch_size))
             loss = gluon.loss.SoftmaxCrossEntropyLoss()
             net.initialize(mx.init.Xavier(), ctx=context)
 
-        train_data = gluon.data.DataLoader(dataset, batch_size=batch_size)
+        train_data = gluon.data.DataLoader(train_dataset, batch_size=batch_size)
+        val_data = gluon.data.DataLoader(val_dataset, batch_size=batch_size)
         # Define evaluation metrics
         acc = mx.metric.Accuracy()
         # Hybridize net
@@ -97,7 +102,7 @@ def test_estimator():
                                   context=context)
         # Call fit() to begin training
         est.fit(train_data=train_data,
-                val_data=train_data,
+                val_data=val_data,
                 epochs=num_epochs,
                 batch_size=batch_size)
 
