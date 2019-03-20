@@ -55,8 +55,10 @@ class GPUDeviceStorage {
 };  // class GPUDeviceStorage
 
 inline void* GPUDeviceStorage::Alloc(Storage::Handle* handle) {
-  const size_t size = handle->size;
   void* ret = nullptr;
+  const size_t size = handle->size;
+  if (size == 0) return ret;
+
 #if MXNET_USE_CUDA
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
@@ -73,7 +75,7 @@ inline void* GPUDeviceStorage::Alloc(Storage::Handle* handle) {
 
 inline void GPUDeviceStorage::Free(Storage::Handle handle) {
 #if MXNET_USE_CUDA
-  void * ptr = handle.dptr;
+  void* ptr = handle.dptr;
   mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
