@@ -42,7 +42,7 @@ from mxnet import gluon
 from mxnet.gluon.model_zoo import vision
 from mxnet.gluon.estimator import estimator, event_handler
 
-ctx = mx.gpu(0) # Or mx.cpu(0) if not using a GPU backed machine
+ctx = mx.gpu() if mx.context.num_gpus() > 0 else mx.cpu()
 mx.random.seed(7) # Set a fixed seed
 ```
 
@@ -66,19 +66,18 @@ fashion_mnist_val = gluon.data.vision.FashionMNIST(train=False)
 
 
 ```python
-transformers = [gluon.data.vision.transforms.Resize(224), # We pick 224 as the model we use takes an input of size 224.
-                gluon.data.vision.transforms.ToTensor(), 
-                gluon.data.vision.transforms.Normalize(mean = 0, std = 1)]
+transforms = [gluon.data.vision.transforms.Resize(224), # We pick 224 as the model we use takes an input of size 224.
+                gluon.data.vision.transforms.ToTensor()]
 
 # Now we will stack all these together.
-transform = gluon.data.vision.transforms.Compose(transformers)
+transforms = gluon.data.vision.transforms.Compose(transforms)
 ```
 
 
 ```python
 # Apply the transformations
-fashion_mnist_train = fashion_mnist_train.transform_first(transform)
-fashion_mnist_val = fashion_mnist_val.transform_first(transform)
+fashion_mnist_train = fashion_mnist_train.transform_first(transforms)
+fashion_mnist_val = fashion_mnist_val.transform_first(transforms)
 ```
 
 
@@ -149,7 +148,7 @@ est.fit(train_data=train_data_loader,
 
 ### Advanced Usage
 
-Fit API is also customizable with several ```Event Handlers``` which gives a fine grained control over the steps in training and exposes callback methods for : ```train_begin```, ```train_end```, ```batch_begin```, ```batch_end```, ```epoch_begin``` and ```epoch_end```. 
+Fit API is also customizable with several `Event Handlers` which give a fine grained control over the steps in training and exposes callback methods for : `train_begin`, `train_end`, `batch_begin`, `batch_end`, `epoch_begin` and `epoch_end`.
 
 One can use built-in event handlers such as ```LoggingHandler```, ```CheckpointHandler``` or ```EarlyStoppingHandler``` or to create a custom handler, one can create a new class by inherinting [```EventHandler```](https://github.com/apache/incubator-mxnet/blob/fit-api/python/mxnet/gluon/estimator/event_handler.py#L31).
 
@@ -195,7 +194,7 @@ est.fit(train_data=train_data_loader,
     [Epoch 1] finished in 50.474s: train_accuracy: 0.8871 train_softmaxcrossentropyloss0: 0.3101 <!--notebook-skip-line-->
 
 
-You can load the saved model, by using ```load_parameters``` API in Gluon. For more details refer to the [Loding model parameters from file tutorial](http://mxnet.incubator.apache.org/versions/master/tutorials/gluon/save_load_params.html#saving-model-parameters-to-file)
+You can load the saved model, by using ```load_parameters``` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](http://mxnet.incubator.apache.org/versions/master/tutorials/gluon/save_load_params.html#saving-model-parameters-to-file)
 
 ## Summary
 
