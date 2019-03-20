@@ -380,7 +380,7 @@ void RNNBackward(DType* ws,
 }
 
 #if MXNET_USE_CUDNN_RNN
-template<typename DType>
+template<typename xpu, typename DType>
 class RNNOp {
  public:
   RNNParam param_;
@@ -505,6 +505,7 @@ class RNNOp {
   void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
                const std::vector<OpReqType> &req,
                const std::vector<TBlob> &out_data) {
+#if defined(__CUDACC__)
     using namespace mshadow;
     size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     //  kOut
@@ -516,23 +517,23 @@ class RNNOp {
 
     CHECK_EQ(in_data.size(), num_inputs);
     CHECK_EQ(out_data.size(), num_outputs);
-    Stream<gpu> *s = ctx.get_stream<gpu>();
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     // get input + output tensors
-    Tensor<gpu, 3, DType> x = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
-    Tensor<gpu, 1, DType> w = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
-    Tensor<gpu, 3, DType> hx = in_data[rnn_enum::kState].get<gpu, 3, DType>(s);
-    Tensor<gpu, 3, DType> y = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 3, DType> hx = in_data[rnn_enum::kState].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> y = out_data[rnn_enum::kOut].get<xpu, 3, DType>(s);
 
     void * hy_ptr = NULL;
     if (param_.state_outputs)
-      hy_ptr = out_data[rnn_enum::kStateOut].get<gpu, 3, DType>(s).dptr_;
+      hy_ptr = out_data[rnn_enum::kStateOut].get<xpu, 3, DType>(s).dptr_;
 
     DType * cx_ptr = NULL;
     DType * cy_ptr = NULL;
     if (param_.mode == rnn_enum::kLstm)
-      cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+      cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
     if (param_.mode == rnn_enum::kLstm && param_.state_outputs)
-      cy_ptr = (out_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
+      cy_ptr = (out_data[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
 
     CHECK_EQ(x.CheckContiguous(), true);
     CHECK_EQ(w.CheckContiguous(), true);
@@ -544,8 +545,8 @@ class RNNOp {
     }
     // Get temp space
     int temp_size = workspace_size_;
-    Tensor<gpu, 1, DType> temp_space =
-      ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
+    Tensor<xpu, 1, DType> temp_space =
+      ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
     #if USE_CUDNN_LSTM_PROJ
     std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
@@ -702,6 +703,7 @@ class RNNOp {
                                           workspace_byte_));
       #endif
     }
+#endif
   }
 
   void Backward(const OpContext &ctx,
@@ -710,6 +712,7 @@ class RNNOp {
                 const std::vector<TBlob> &out_data,
                 const std::vector<OpReqType> &req,
                 const std::vector<TBlob> &in_grad) {
+#if defined(__CUDACC__)
     using namespace mshadow;
     size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     //  kOut
@@ -726,23 +729,23 @@ class RNNOp {
     CHECK_EQ(req.size(), num_inputs);
     CHECK_NE(req[rnn_enum::kData], kAddTo) << "AddTo is not supported for data";
     CHECK_NE(req[rnn_enum::kState], kAddTo) << "AddTo is not supported for state";
-    Stream<gpu> *s = ctx.get_stream<gpu>();
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     // get input + output tensors
-    Tensor<gpu, 3, DType> x = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
-    Tensor<gpu, 3, DType> dx = in_grad[rnn_enum::kData].get<gpu, 3, DType>(s);
-    Tensor<gpu, 1, DType> w = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
-    Tensor<gpu, 1, DType> dw = in_grad[rnn_enum::kParams].get<gpu, 1, DType>(s);
-    Tensor<gpu, 3, DType> hx = in_data[rnn_enum::kState].get<gpu, 3, DType>(s);
-    Tensor<gpu, 3, DType> dhx = in_grad[rnn_enum::kState].get<gpu, 3, DType>(s);
-    Tensor<gpu, 3, DType> y = out_data[rnn_enum::kOut].get<gpu, 3, DType>(s);
-    Tensor<gpu, 3, DType> dy = out_grad[rnn_enum::kOut].get<gpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> dx = in_grad[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 1, DType> dw = in_grad[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 3, DType> hx = in_data[rnn_enum::kState].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> dhx = in_grad[rnn_enum::kState].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> y = out_data[rnn_enum::kOut].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> dy = out_grad[rnn_enum::kOut].get<xpu, 3, DType>(s);
     if (req[rnn_enum::kParams] != kAddTo) {
       dw = mshadow::expr::ScalarExp<DType>(0.0f);
     }
     // only need kStateOut grad output_states is true
     void * dhy_ptr = NULL;
     if (param_.state_outputs)
-      dhy_ptr = out_grad[rnn_enum::kStateOut].get<gpu, 3, DType>(s).dptr_;
+      dhy_ptr = out_grad[rnn_enum::kStateOut].get<xpu, 3, DType>(s).dptr_;
 
     // Deal with lstm
     void * dcx_ptr = NULL;
@@ -751,11 +754,11 @@ class RNNOp {
 
     if (param_.mode == rnn_enum::kLstm) {
       CHECK_NE(req[rnn_enum::kStateCell], kAddTo) << "AddTo is not supported for state cell";
-      cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
-      dcx_ptr = (in_grad[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
+      cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
+      dcx_ptr = (in_grad[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
     }
     if ((param_.mode == rnn_enum::kLstm) && param_.state_outputs)
-        dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
+        dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
 
     CHECK_EQ(x.CheckContiguous(), true);
     CHECK_EQ(w.CheckContiguous(), true);
@@ -771,8 +774,8 @@ class RNNOp {
 
     // Get temp space
     int temp_size = workspace_size_;
-    Tensor<gpu, 1, DType> temp_space =
-      ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
+    Tensor<xpu, 1, DType> temp_space =
+      ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
     #if USE_CUDNN_LSTM_PROJ
     CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
@@ -863,13 +866,16 @@ class RNNOp {
                                        reserve_space_.dptr,
                                        reserve_space_byte_));
     #endif
+#endif
   }
 
  private:
-  inline void Init(mshadow::Stream<gpu> *s,
+  inline void Init(mshadow::Stream<xpu> *s,
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {
+#if defined(__CUDACC__)
     using namespace mshadow;
+
     #if CUDNN_MAJOR >= 5
     format_ = CUDNN_TENSOR_NCHW;
     #endif
@@ -887,8 +893,8 @@ class RNNOp {
     if (!init_cudnn_) {
       init_cudnn_ = true;
       // get input + output tensors
-      Tensor<gpu, 3, DType> x = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
-      Tensor<gpu, 1, DType> w = in_data[rnn_enum::kParams].get<gpu, 1, DType>(s);
+      Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
+      Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
       param_.seq_length_ = x.shape_[0];
       param_.batch_size_ = x.shape_[1];
       param_.input_size_ = x.shape_[2];
@@ -1168,6 +1174,7 @@ class RNNOp {
       //   }
       // }
     }
+#endif
   }
 
   cudnnDataType_t dtype_;
@@ -1199,7 +1206,7 @@ class RNNOp {
   #endif
 };
 #else
-template<typename DType>
+template<typename xpu, typename DType>
 class RNNOp {
  public:
   explicit RNNOp(RNNParam p)
@@ -1238,12 +1245,12 @@ class RNNOp {
     }
     CHECK_EQ(in_data.size(), num_inputs);
     CHECK_EQ(out_data.size(), num_outputs);
-    Stream<cpu> *s = ctx.get_stream<cpu>();
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     // get input + output tensor
-    Tensor<cpu, 3, DType> x = in_data[rnn_enum::kData].get<cpu, 3, DType>(s);
-    Tensor<cpu, 1, DType> w = in_data[rnn_enum::kParams].get<cpu, 1, DType>(s);
-    Tensor<cpu, 3, DType> hx = in_data[rnn_enum::kState].get<cpu, 3, DType>(s);
-    Tensor<cpu, 3, DType> y = out_data[rnn_enum::kOut].get<cpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 3, DType> hx = in_data[rnn_enum::kState].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> y = out_data[rnn_enum::kOut].get<xpu, 3, DType>(s);
     CHECK(x.CheckContiguous());
     CHECK(w.CheckContiguous());
     CHECK(hx.CheckContiguous());
@@ -1272,8 +1279,8 @@ class RNNOp {
     // allocate temp space
     const size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                                       param_.state_size, direction, param_.mode);
-    Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-        .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
+    Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
+        .get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s);
     if (ctx.is_train) {
       const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                    param_.seq_length_, param_.batch_size_,
@@ -1356,16 +1363,16 @@ class RNNOp {
     CHECK_EQ(req.size(), num_inputs);
     CHECK_NE(req[rnn_enum::kData], kAddTo) << "AddTo is not supported for data";
     CHECK_NE(req[rnn_enum::kState], kAddTo) << "AddTo is not supported for state";
-    mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     // get input + output tensors
-    Tensor<cpu, 3, DType> x = in_data[rnn_enum::kData].get<cpu, 3, DType>(s);
-    Tensor<cpu, 1, DType> w = in_data[rnn_enum::kParams].get<cpu, 1, DType>(s);
-    Tensor<cpu, 3, DType> hx = in_data[rnn_enum::kState].get<cpu, 3, DType>(s);
-    Tensor<cpu, 3, DType> y = out_data[rnn_enum::kOut].get<cpu, 3, DType>(s);
-    Tensor<cpu, 3, DType> dx = in_grad[rnn_enum::kData].get<cpu, 3, DType>(s);
-    Tensor<cpu, 1, DType> dw = in_grad[rnn_enum::kParams].get<cpu, 1, DType>(s);
-    Tensor<cpu, 3, DType> dhx = in_grad[rnn_enum::kState].get<cpu, 3, DType>(s);
-    Tensor<cpu, 3, DType> dy = out_grad[rnn_enum::kOut].get<cpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 3, DType> hx = in_data[rnn_enum::kState].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> y = out_data[rnn_enum::kOut].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> dx = in_grad[rnn_enum::kData].get<xpu, 3, DType>(s);
+    Tensor<xpu, 1, DType> dw = in_grad[rnn_enum::kParams].get<xpu, 1, DType>(s);
+    Tensor<xpu, 3, DType> dhx = in_grad[rnn_enum::kState].get<xpu, 3, DType>(s);
+    Tensor<xpu, 3, DType> dy = out_grad[rnn_enum::kOut].get<xpu, 3, DType>(s);
     CHECK(x.CheckContiguous());
     CHECK(w.CheckContiguous());
     CHECK(hx.CheckContiguous());
@@ -1404,8 +1411,8 @@ class RNNOp {
     // allocate temp space
     const size_t workspace_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                                       param_.state_size, direction, param_.mode);
-    Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-        .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
+    Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
+        .get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s);
 
     size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                            param_.seq_length_, param_.batch_size_,
@@ -1462,7 +1469,11 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
   const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
   OpStatePtr state = OpStatePtr();
   MSHADOW_REAL_TYPE_SWITCH(in_types[rnn_enum::kData], DType, {
-    state = OpStatePtr::Create<RNNOp<DType>>(param);
+    if (ctx.dev_type == kGPU) {
+      state = OpStatePtr::Create<RNNOp<gpu, DType>>(param);
+    } else {
+      state = OpStatePtr::Create<RNNOp<cpu, DType>>(param);
+    }
   return state;
   });
 
@@ -1477,7 +1488,7 @@ void RNNStatefulCompute(const OpStatePtr& state,
                         const std::vector<TBlob>& outputs) {
   int dtype = inputs[rnn_enum::kData].type_flag_;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    RNNOp<DType>& op = state.get_state<RNNOp<DType>>();
+    RNNOp<xpu, DType>& op = state.get_state<RNNOp<xpu, DType>>();
     op.Forward(ctx, inputs, req, outputs);
   });
 }
@@ -1508,7 +1519,7 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
 
   int dtype = inputs[rnn_enum::kData].type_flag_;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    RNNOp<DType>& op = state.get_state<RNNOp<DType>>();
+    RNNOp<xpu, DType>& op = state.get_state<RNNOp<xpu, DType>>();
     const RNNParam& param = op.param_;
     int index = 5;
     if (param.state_outputs) {
