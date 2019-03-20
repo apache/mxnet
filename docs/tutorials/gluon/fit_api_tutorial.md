@@ -32,7 +32,6 @@ To complete this tutorial, you will need:
 - [MXNet](https://mxnet.incubator.apache.org/install/#overview) (The version of MXNet will be >= 1.5.0)
 - [Jupyter Notebook](https://jupyter.org/index.html) (For interactively running the provided .ipynb file)
 
-This tutorial works with both Python 2 and Python 3.
 
 
 
