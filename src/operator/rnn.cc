@@ -24,27 +24,244 @@
  * \author Sebastian Bodenstein
 */
 #include "./rnn-inl.h"
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+#include "./cudnn_rnn-inl.h"
+#endif  // MXNET_USE_CUDNN && CUDNN_MAJOR
 
 namespace mxnet {
 namespace op {
-template<>
-Operator *CreateOp<cpu>(RNNParam param, int dtype) {
-  Operator *op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new RNNOp<DType>(param);
-  });
-  return op;
-}
-
-Operator *RNNProp::CreateOperatorEx(Context ctx,
-                                  mxnet::ShapeVector *in_shape,
-                                  std::vector<int> *in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
-}
 
 DMLC_REGISTER_PARAMETER(RNNParam);
+static inline std::vector<std::string> ListArguments(const RNNParam& param_) {
+  if (param_.mode == rnn_enum::kLstm) {
+    return {"data", "parameters", "state", "state_cell"};
+  } else {
+    return {"data", "parameters", "state"};
+  }
+}
 
-MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
+static bool RNNShape(const nnvm::NodeAttrs& attrs,
+                     std::vector<TShape> *in_shape,
+                     std::vector<TShape> *out_shape) {
+  const RNNParam& param_ = nnvm::get<RNNParam>(attrs.parsed);
+  using namespace mshadow;
+  if (param_.mode == rnn_enum::kLstm) {
+    CHECK_EQ(in_shape->size(), 4U) << "Needed input:[data, parameters, state, cell_state],"
+        << " got in_shape->size(): " << in_shape->size();
+  } else {
+    CHECK_EQ(in_shape->size(), 3U) <<
+      "Needed input:[data, parameters, state], got in_shape->size(): " << in_shape->size();
+  }
+  const TShape &dshape = (*in_shape)[rnn_enum::kData];
+  if (dshape.ndim() ==  0) return false;
+  CHECK_EQ(dshape.ndim(), 3U) \
+      << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
+  // data: [sequence len, batch, input dimension]
+  int batch_size = dshape[1];
+  int input_size = dshape[2];
+  int numDirections = param_.bidirectional ? 2 : 1;
+  int total_layers = numDirections * param_.num_layers;  // double for bidirectional
+  int layer_size = (param_.projection_size.has_value()) ?
+      param_.projection_size.value() : param_.state_size;
+  SHAPE_ASSIGN_CHECK(*in_shape,
+                     rnn_enum::kState,
+                     Shape3(total_layers, batch_size, layer_size));
+  if (param_.mode == rnn_enum::kLstm) {
+    SHAPE_ASSIGN_CHECK(*in_shape,
+                       rnn_enum::kStateCell,
+                       Shape3(total_layers, batch_size, param_.state_size));
+  }
+
+  // calculate parameter vector length
+  int param_size = GetRnnParamSize(param_.num_layers,
+                                   input_size,
+                                   param_.state_size,
+                                   numDirections,
+                                   param_.mode,
+                                   param_.projection_size);
+  SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
+  out_shape->clear();
+  // output: [sequence len, batch, output size]
+  TShape oshape = dshape;
+  if (param_.projection_size.has_value()) {
+    oshape[2] = numDirections * param_.projection_size.value();
+  } else {
+    oshape[2] = numDirections * param_.state_size;
+  }
+  out_shape->push_back(oshape);
+  if (param_.state_outputs) {
+    // outStateShape: [layer_num, batch, state size]
+    TShape outStateShape = dshape;
+    outStateShape[0] = total_layers;
+    outStateShape[1] = batch_size;
+    if (param_.projection_size.has_value()) {
+      outStateShape[2] = param_.projection_size.value();
+    } else {
+      outStateShape[2] = param_.state_size;
+    }
+    out_shape->push_back(outStateShape);
+    // Deal with lstm cell state
+    if (param_.mode == rnn_enum::kLstm) {
+      TShape cellStateShape = dshape;
+      cellStateShape[0] = total_layers;
+      cellStateShape[1] = batch_size;
+      cellStateShape[2] = param_.state_size;
+      out_shape->push_back(cellStateShape);
+    }
+  }
+  return true;
+}
+
+static bool RNNType(const nnvm::NodeAttrs& attrs,
+                    std::vector<int> *in_type,
+                    std::vector<int> *out_type) {
+  const RNNParam& param_ = nnvm::get<RNNParam>(attrs.parsed);
+  if (param_.mode == rnn_enum::kLstm) {
+    CHECK_EQ(in_type->size(), 4U);
+  } else {
+    CHECK_EQ(in_type->size(), 3U);
+  }
+  int dtype = (*in_type)[0];
+  CHECK_NE(dtype, -1) << "First input must have specified type";
+  for (size_t i = 0; i < in_type->size(); ++i) {
+    if ((*in_type)[i] == -1) {
+      TYPE_ASSIGN_CHECK(*in_type, i, dtype);
+    } else {
+      UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments(param_)[i]);
+    }
+  }
+  out_type->clear();
+  out_type->push_back(dtype);
+  if (param_.state_outputs) {
+    out_type->push_back(dtype);
+    // Deal with lstm cell state
+    if (param_.mode == rnn_enum::kLstm)
+      out_type->push_back(dtype);
+  }
+  return true;
+}
+
+inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
+                                  const int dev_mask,
+                                  DispatchMode* dispatch_mode,
+                                  std::vector<int> *in_attrs,
+                                  std::vector<int> *out_attrs) {
+  DispatchMode wanted_mode = DispatchMode::kFCompute;
+
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                             dispatch_mode, wanted_mode);
+}
+
+inline static bool BackwardRNNStorageType(const nnvm::NodeAttrs& attrs,
+                                          const int dev_mask,
+                                          DispatchMode* dispatch_mode,
+                                          std::vector<int> *in_attrs,
+                                          std::vector<int> *out_attrs) {
+  DispatchMode wanted_mode = DispatchMode::kFCompute;
+  return storage_type_assign(out_attrs, mxnet::kDefaultStorage,
+                             dispatch_mode, wanted_mode);
+}
+
+struct RNNGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr &n,
+          const std::vector<nnvm::NodeEntry> &ograd) const {
+    const RNNParam& params = nnvm::get<RNNParam>(n->attrs.parsed);
+    std::vector<nnvm::NodeEntry> heads{ n->inputs[rnn_enum::kData],
+      n->inputs[rnn_enum::kParams], n->inputs[rnn_enum::kState] };
+    heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kOut, 0});
+    heads.push_back(ograd[rnn_enum::kOut]);
+    if (params.state_outputs) {
+      heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kStateOut, 0});
+      heads.push_back(ograd[rnn_enum::kStateOut]);
+    }
+    if (params.mode == rnn_enum::kLstm) {
+      heads.push_back(n->inputs[rnn_enum::kStateCell]);
+      if (params.state_outputs) {
+        heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kStateCellOut, 0});
+        heads.push_back(ograd[rnn_enum::kStateCellOut]);
+      }
+    }
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
+
+static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
+                                 const Context ctx,
+                                 const mxnet::ShapeVector &in_shapes,
+                                 const std::vector<int> &in_types) {
+  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
+  OpStatePtr state = OpStatePtr();
+  MSHADOW_REAL_TYPE_SWITCH(in_types[rnn_enum::kData], DType, {
+    #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+      state = OpStatePtr::Create<CuDNNRNNOp<DType>>(param);
+    #else
+      state = OpStatePtr::Create<RNNOp<DType>>(param);
+    #endif
+    return state;
+  });
+  return OpStatePtr();  // should never reach here
+}
+
+template<typename xpu>
+void RNNStatefulCompute(const OpStatePtr& state,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  int dtype = inputs[rnn_enum::kData].type_flag_;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    RNNOp<DType>& op = state.get_state<RNNOp<DType>>();
+    op.Forward(ctx, inputs, req, outputs);
+  });
+}
+/*
+index description
+0: x
+1: w
+2: hx
+3: y
+4: dy
+5: hy
+6: dhy
+7: cx
+8: cy
+9: dcy
+*/
+template<typename xpu>
+void RNNStatefulGradCompute(const OpStatePtr& state,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + 3);
+  std::vector<TBlob> out_data{inputs[3]};
+  std::vector<TBlob> out_grad{inputs[4]};
+  const std::vector<TBlob> &in_grad = outputs;
+
+  int dtype = inputs[rnn_enum::kData].type_flag_;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    RNNOp<DType>& op = state.get_state<RNNOp<DType>>();
+    const RNNParam& param = op.param_;
+    int index = 5;
+    if (param.state_outputs) {
+      out_data.push_back(inputs[index++]);
+      out_grad.push_back(inputs[index++]);
+    }
+
+    if (param.mode == rnn_enum::kLstm) {
+      in_data.push_back(inputs[index++]);
+      if (param.state_outputs) {
+        out_data.push_back(inputs[index++]);
+        out_grad.push_back(inputs[index]);
+      }
+    }
+
+    op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
+  });
+}
+
+NNVM_REGISTER_OP(RNN)
 .describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are
 implemented, with both multi-layer and bidirectional support.
 
@@ -97,7 +314,38 @@ The definition of GRU here is slightly different from paper but compatible with 
             z_t = \mathrm{sigmoid}(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
             n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
             h_t = (1 - z_t) * n_t + z_t * h_{(t-1)} \\
-            \end{array})code")
+            \end{array}
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<RNNParam>)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+  return params.mode == rnn_enum::kLstm ? 4 : 3;
+})
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+  //  kOut
+  int num_outputs = 1;
+  if (params.state_outputs) {
+    // kOut, kStateOut, kStateCellOut
+    num_outputs = (params.mode == rnn_enum::kLstm) ? 3 : 2;
+  }
+
+  return num_outputs;
+})
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+  return ListArguments(params);
+})
+.set_attr<mxnet::FInferShape>("FInferShape", RNNShape)
+.set_attr<nnvm::FInferType>("FInferType", RNNType)
+.set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
+.set_attr<FCreateOpState>("FCreateOpState", CreateRNNState)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", RNNGrad{"_backward_RNN"})
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .add_argument("data", "NDArray-or-Symbol", "Input data to RNN")
 .add_argument("parameters", "NDArray-or-Symbol",
               "Vector of all RNN trainable parameters concatenated")
@@ -105,5 +353,19 @@ The definition of GRU here is slightly different from paper but compatible with 
 .add_argument("state_cell", "NDArray-or-Symbol",
               "initial cell state for LSTM networks (only for LSTM)")
 .add_arguments(RNNParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_RNN)
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+  return params.mode == rnn_enum::kLstm ? 4 : 3;
+})
+.set_attr_parser(ParamParser<RNNParam>)
+.set_attr<bool>("TIsLayerOpBackward", true)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", BackwardRNNStorageType)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulGradCompute<cpu>);
 }  // namespace op
 }  // namespace mxnet

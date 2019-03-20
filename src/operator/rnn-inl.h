@@ -160,9 +160,8 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   uint32_t num_layers;
   bool bidirectional, state_outputs;
   int mode;
-  float p, pkeep_;
+  float p;
   int seq_length_, batch_size_, input_size_;
-  bool lstm_q_;  // whether type is lstm
   dmlc::optional<int> projection_size;
   dmlc::optional<double> lstm_state_clip_min, lstm_state_clip_max;
   bool lstm_state_clip_nan;
@@ -212,7 +211,6 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   }
 };
 
-
 /**
  * @params: ws: Temp workspace for gemm's output storage.
  *          rs: Reserve space of forward intermediate data used for training.
@@ -236,6 +234,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
  *                  hy's shape is [num_layers, batch_size, state_size]
  *          cy_ptr: Only used in lstm mode. pointer of tensor cy  containing the cell state
  *                  for t=seq_length. cy' shape is [num_layers, batch_size, state_size]
+ *          dropout: should be 0 <= dropout < 1
  *          mode: Specifies the type of RNN to compute.
  */
 template <typename DType>
@@ -377,7 +376,7 @@ void RNNBackward(DType* ws,
 }
 
 template<typename DType>
-class RNNOp : public Operator{
+class RNNOp {
  public:
   explicit RNNOp(RNNParam p)
     :param_(p), init_space_(false), reserve_space_size_(0) {
@@ -397,23 +396,24 @@ class RNNOp : public Operator{
     }
   }
 
-  virtual void Forward(const OpContext &ctx,
-                       const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  void Forward(const OpContext &ctx,
+               const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK(param_.p >= 0.0f && param_.p < 1.0f)
         << "unsupported dropout value, should be 0 <= dropout < 1";
 
-    size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
-    size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
-    if (!param_.state_outputs) {
-      out_expected = 1;
+    size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
+    //  kOut
+    size_t num_outputs = 1;
+    if (param_.state_outputs) {
+      // kOut, kStateOut, kStateCellOut
+      num_outputs = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
     }
-    CHECK_EQ(in_data.size(), in_expected);
-    CHECK_EQ(out_data.size(), out_expected);
+    CHECK_EQ(in_data.size(), num_inputs);
+    CHECK_EQ(out_data.size(), num_outputs);
     Stream<cpu> *s = ctx.get_stream<cpu>();
     // get input + output tensor
     Tensor<cpu, 3, DType> x = in_data[rnn_enum::kData].get<cpu, 3, DType>(s);
@@ -427,7 +427,6 @@ class RNNOp : public Operator{
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
-
     const int direction = param_.bidirectional ? 2 : 1;
     const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
     DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
@@ -451,7 +450,6 @@ class RNNOp : public Operator{
                                                       param_.state_size, direction, param_.mode);
     Tensor<cpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
         .get_space_typed<cpu, 1, DType>(Shape1(workspace_size), s);
-
     if (ctx.is_train) {
       const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                    param_.seq_length_, param_.batch_size_,
@@ -460,7 +458,6 @@ class RNNOp : public Operator{
         Storage::Get()->Free(reserve_space_);
         init_space_ = false;
       }
-
       if (!init_space_) {
         reserve_space_ = Storage::Get()->Alloc(r_size * sizeof(DType), Context::CPU());
         reserve_space_size_ = r_size;
@@ -468,6 +465,7 @@ class RNNOp : public Operator{
       }
 
       DType* reserve_space_ptr = static_cast<DType*>(reserve_space_.dptr);
+
       RNNForwardTraining<DType>(workspace.dptr_,
                                 reserve_space_ptr,
                                 param_.state_outputs,
@@ -508,28 +506,30 @@ class RNNOp : public Operator{
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  void Backward(const OpContext &ctx,
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<TBlob> &out_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK(param_.p >= 0.0f && param_.p < 1.0f)
         << "unsupported dropout value, should be 0 <= dropout < 1";
 
-    size_t in_expected = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
-    size_t out_expected = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
-    if (!param_.state_outputs) {
-      out_expected = 1;
+    size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
+    //  kOut
+    size_t num_outputs = 1;
+    if (param_.state_outputs) {
+      // kOut, kStateOut, kStateCellOut
+      num_outputs = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
     }
-    CHECK_EQ(in_data.size(), in_expected);
-    CHECK_EQ(out_data.size(), out_expected);
-    CHECK_EQ(in_grad.size(), in_expected);
-    CHECK_EQ(out_grad.size(), out_expected);
-    CHECK_EQ(req.size(), in_expected);
+
+    CHECK_EQ(in_data.size(), num_inputs);
+    CHECK_EQ(out_data.size(), num_outputs);
+    CHECK_EQ(in_grad.size(), num_inputs);
+    CHECK_EQ(out_grad.size(), num_outputs);
+    CHECK_EQ(req.size(), num_inputs);
     CHECK_NE(req[rnn_enum::kData], kAddTo) << "AddTo is not supported for data";
     CHECK_NE(req[rnn_enum::kState], kAddTo) << "AddTo is not supported for state";
     mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
@@ -556,6 +556,7 @@ class RNNOp : public Operator{
 
     const int direction = param_.bidirectional ? 2 : 1;
     const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
+
     DType* db_ptr = dw.dptr_ + w.shape_[0] - bsize;
 
     DType * dhy_ptr = NULL;
@@ -585,6 +586,7 @@ class RNNOp : public Operator{
     size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                            param_.seq_length_, param_.batch_size_,
                                            param_.state_size, param_.mode);
+
     if (!init_space_ || reserve_space_size_ != r_size) {
       LOG(FATAL) << "Check forward init error";
     }
@@ -620,203 +622,15 @@ class RNNOp : public Operator{
                        param_.mode);
   }
 
- private:
   RNNParam param_;
+
+ private:
   bool init_space_;
   size_t reserve_space_size_;
   Storage::Handle reserve_space_;
 };  // class RNNOp
 
-template<typename xpu>
-Operator* CreateOp(RNNParam param, int dtype);
-
-#if DMLC_USE_CXX11
-class RNNProp : public OperatorProperty {
- public:
-  std::vector<std::string> ListArguments() const override {
-    if (param_.mode == rnn_enum::kLstm) {
-      return {"data", "parameters", "state", "state_cell"};
-    } else {
-      return {"data", "parameters", "state"};
-    }
-  }
-
-  std::vector<std::string> ListOutputs() const override {
-    std::vector<std::string> outputs = {"output"};
-    if (!param_.state_outputs)
-      return outputs;
-    else
-      outputs.emplace_back("state");
-    if (param_.mode == rnn_enum::kLstm)
-      outputs.emplace_back("state_cell");
-    return outputs;
-  }
-
-  int NumOutputs() const override {
-    int mode_num = (param_.mode == rnn_enum::kLstm) ? 2 : 1;
-    int num_outputs = param_.state_outputs ? (mode_num + 1) : 1;
-    return num_outputs;
-  }
-
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
-    param_.Init(kwargs);
-  }
-
-  std::map<std::string, std::string> GetParams() const override {
-    return param_.__DICT__();
-  }
-
-  bool InferShape(mxnet::ShapeVector *in_shape,
-                  mxnet::ShapeVector *out_shape,
-                  mxnet::ShapeVector *aux_shape) const override {
-    using namespace mshadow;
-    if (param_.mode == rnn_enum::kLstm) {
-      CHECK_EQ(in_shape->size(), 4U) << "Input:[data, parameters, state, cell_state]";
-    } else {
-      CHECK_EQ(in_shape->size(), 3U) << "Input:[data, parameters, state]";
-    }
-    const mxnet::TShape &dshape = (*in_shape)[rnn_enum::kData];
-    if (dshape.ndim() ==  0) return false;
-    CHECK_EQ(dshape.ndim(), 3U) \
-        << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
-    // data: [sequence len, batch, input dimension]
-    int batch_size = dshape[1];
-    int input_size = dshape[2];
-    int numDirections = param_.bidirectional ? 2 : 1;
-    int total_layers = numDirections * param_.num_layers;  // double for bidirectional
-    int layer_size = (param_.projection_size.has_value()) ?
-                     param_.projection_size.value() : param_.state_size;
-    SHAPE_ASSIGN_CHECK(*in_shape,
-                       rnn_enum::kState,
-                       Shape3(total_layers, batch_size, layer_size));
-    if (param_.mode == rnn_enum::kLstm)
-      SHAPE_ASSIGN_CHECK(*in_shape,
-                         rnn_enum::kStateCell,
-                         Shape3(total_layers, batch_size, param_.state_size));
-
-    // calculate parameter vector length
-    int param_size = GetRnnParamSize(param_.num_layers,
-                                     input_size,
-                                     param_.state_size,
-                                     numDirections,
-                                     param_.mode,
-                                     param_.projection_size);
-    SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
-
-    out_shape->clear();
-    // output: [sequence len, batch, output size]
-    mxnet::TShape oshape = dshape;
-    if (param_.projection_size.has_value()) {
-      oshape[2] = numDirections * param_.projection_size.value();
-    } else {
-      oshape[2] = numDirections * param_.state_size;
-    }
-    out_shape->push_back(oshape);
-    if (!param_.state_outputs) {
-      return true;
-    } else {
-      // outStateShape: [layer_num, batch, state size]
-      mxnet::TShape outStateShape = dshape;
-      outStateShape[0] = total_layers;
-      outStateShape[1] = batch_size;
-      if (param_.projection_size.has_value()) {
-        outStateShape[2] = param_.projection_size.value();
-      } else {
-        outStateShape[2] = param_.state_size;
-      }
-      out_shape->push_back(outStateShape);
-      // Deal with lstm cell state
-      if (param_.mode == rnn_enum::kLstm) {
-        mxnet::TShape cellStateShape = dshape;
-        cellStateShape[0] = total_layers;
-        cellStateShape[1] = batch_size;
-        cellStateShape[2] = param_.state_size;
-        out_shape->push_back(cellStateShape);
-      }
-      return true;
-    }
-  }
-
-  bool InferType(std::vector<int> *in_type,
-                 std::vector<int> *out_type,
-                 std::vector<int> *aux_type) const override {
-    CHECK_GE(in_type->size(), 1U);
-    int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (size_t i = 0; i < in_type->size(); ++i) {
-      if ((*in_type)[i] == -1) {
-        (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
-      }
-    }
-    out_type->clear();
-    out_type->push_back(dtype);
-    if (!param_.state_outputs) {
-      return true;
-    } else {
-      out_type->push_back(dtype);
-      // Deal with lstm cell state
-      if (param_.mode == rnn_enum::kLstm)
-        out_type->push_back(dtype);
-      return true;
-    }
-  }
-
-  OperatorProperty* Copy() const override {
-    auto ptr = new RNNProp();
-    ptr->param_ = param_;
-    return ptr;
-  }
-
-  std::string TypeString() const override {
-    return "RNN";
-  }
-
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
-    std::vector<int> dep = {in_data[rnn_enum::kData], in_data[rnn_enum::kParams],
-        in_data[rnn_enum::kState], out_data[rnn_enum::kOut], out_grad[rnn_enum::kOut]};
-
-    if (param_.state_outputs) {
-      dep.push_back(out_data[rnn_enum::kStateOut]);
-      dep.push_back(out_grad[rnn_enum::kStateOut]);
-    }
-
-    if (param_.mode == rnn_enum::kLstm) {
-      dep.push_back(in_data[rnn_enum::kStateCell]);
-      if (param_.state_outputs) {
-        dep.push_back(out_data[rnn_enum::kStateCellOut]);
-        dep.push_back(out_grad[rnn_enum::kStateCellOut]);
-      }
-    }
-    return dep;
-  }
-
-  std::vector<ResourceRequest> ForwardResource(
-      const mxnet::ShapeVector &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
-  std::vector<ResourceRequest> BackwardResource(
-      const mxnet::ShapeVector &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
-  Operator* CreateOperator(Context ctx) const override {
-    LOG(FATAL) << "Not Implemented";
-    return NULL;
-  }
-
-  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-                             std::vector<int> *in_type) const override;
-
- private:
-  RNNParam param_;
-};  // class RNNProp
-#endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
+
 #endif  // MXNET_OPERATOR_RNN_INL_H_

@@ -27,7 +27,6 @@
 #define MXNET_OPERATOR_CUDNN_RNN_INL_H_
 
 #define USE_CUDNN_LSTM_PROJ MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
-
 #include <mxnet/storage.h>
 #include <vector>
 #include <map>
@@ -40,8 +39,9 @@ namespace mxnet {
 namespace op {
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 template<typename DType>
-class CuDNNRNNOp : public Operator {
+class CuDNNRNNOp {
  public:
+  RNNParam param_;
   explicit CuDNNRNNOp(RNNParam param) {
     this->param_ = param;
     init_cudnn_ = false;
@@ -99,12 +99,6 @@ class CuDNNRNNOp : public Operator {
 #endif
     // RNN Direction
     direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
-    // Other
-    if (param_.mode == rnn_enum::kLstm)
-      param_.lstm_q_ = true;
-    else
-      param_.lstm_q_ = false;
-
     // Create descriptors
     CUDNN_CALL(cudnnCreateTensorDescriptor(&hx_desc_));
     CUDNN_CALL(cudnnCreateTensorDescriptor(&cx_desc_));
@@ -166,18 +160,20 @@ class CuDNNRNNOp : public Operator {
     #endif
   }
 
-  virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &out_data,
-                       const std::vector<TBlob> &aux_args) {
+  void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
+               const std::vector<OpReqType> &req,
+               const std::vector<TBlob> &out_data) {
     using namespace mshadow;
-    size_t in_expected = param_.lstm_q_ ? 4 : 3;
-    size_t out_expected = param_.lstm_q_ ? 3 : 2;
-    if (!param_.state_outputs)
-        out_expected = 1;
+    size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
+    //  kOut
+    size_t num_outputs = 1;
+    if (param_.state_outputs) {
+      // kOut, kStateOut, kStateCellOut
+      num_outputs = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
+    }
 
-    CHECK_EQ(in_data.size(), in_expected);
-    CHECK_EQ(out_data.size(), out_expected);
+    CHECK_EQ(in_data.size(), num_inputs);
+    CHECK_EQ(out_data.size(), num_outputs);
     Stream<gpu> *s = ctx.get_stream<gpu>();
     // get input + output tensors
     Tensor<gpu, 3, DType> x = in_data[rnn_enum::kData].get<gpu, 3, DType>(s);
@@ -191,10 +187,9 @@ class CuDNNRNNOp : public Operator {
 
     DType * cx_ptr = NULL;
     DType * cy_ptr = NULL;
-
-    if (param_.lstm_q_)
+    if (param_.mode == rnn_enum::kLstm)
       cx_ptr = (in_data[rnn_enum::kStateCell].get<gpu, 3, DType>(s)).dptr_;
-    if (param_.lstm_q_ && param_.state_outputs)
+    if (param_.mode == rnn_enum::kLstm && param_.state_outputs)
       cy_ptr = (out_data[rnn_enum::kStateCellOut].get<gpu, 3, DType>(s)).dptr_;
 
     CHECK_EQ(x.CheckContiguous(), true);
@@ -367,24 +362,26 @@ class CuDNNRNNOp : public Operator {
     }
   }
 
-  virtual void Backward(const OpContext &ctx,
-                        const std::vector<TBlob> &out_grad,
-                        const std::vector<TBlob> &in_data,
-                        const std::vector<TBlob> &out_data,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &in_grad,
-                        const std::vector<TBlob> &aux_args) {
+  void Backward(const OpContext &ctx,
+                const std::vector<TBlob> &out_grad,
+                const std::vector<TBlob> &in_data,
+                const std::vector<TBlob> &out_data,
+                const std::vector<OpReqType> &req,
+                const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
-    size_t in_expected = param_.lstm_q_ ? 4 : 3;
-    size_t out_expected = param_.lstm_q_ ? 3 : 2;
-    if (!param_.state_outputs)
-      out_expected = 1;
+    size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
+    //  kOut
+    size_t num_outputs = 1;
+    if (param_.state_outputs) {
+      // kOut, kStateOut, kStateCellOut
+      num_outputs = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
+    }
 
-    CHECK_EQ(in_data.size(), in_expected);
-    CHECK_EQ(out_data.size(), out_expected);
-    CHECK_EQ(in_grad.size(), in_expected);
-    CHECK_EQ(out_grad.size(), out_expected);
-    CHECK_EQ(req.size(), in_expected);
+    CHECK_EQ(in_data.size(), num_inputs);
+    CHECK_EQ(out_data.size(), num_outputs);
+    CHECK_EQ(in_grad.size(), num_inputs);
+    CHECK_EQ(out_grad.size(), num_outputs);
+    CHECK_EQ(req.size(), num_inputs);
     CHECK_NE(req[rnn_enum::kData], kAddTo) << "AddTo is not supported for data";
     CHECK_NE(req[rnn_enum::kState], kAddTo) << "AddTo is not supported for state";
     Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -534,13 +531,17 @@ class CuDNNRNNOp : public Operator {
     #if CUDNN_MAJOR >= 5
     format_ = CUDNN_TENSOR_NCHW;
     #endif
-    size_t in_expected = param_.lstm_q_ ? 4 : 3;
-    size_t out_expected = param_.lstm_q_ ? 3 : 2;
-    if (!param_.state_outputs)
-      out_expected = 1;
 
-    CHECK_EQ(in_data.size(), in_expected);
-    CHECK_EQ(out_data.size(), out_expected);
+    size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
+    //  kOut
+    size_t num_outputs = 1;
+    if (param_.state_outputs) {
+      // kOut, kStateOut, kStateCellOut
+      num_outputs = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
+    }
+
+    CHECK_EQ(in_data.size(), num_inputs);
+    CHECK_EQ(out_data.size(), num_outputs);
     if (!init_cudnn_) {
       init_cudnn_ = true;
       // get input + output tensors
@@ -854,10 +855,8 @@ class CuDNNRNNOp : public Operator {
   #if CUDNN_MAJOR >= 5
   cudnnTensorFormat_t format_;
   #endif
-  RNNParam param_;
 };
-#endif  // __CUDACC__ && CUDNN
+#endif  // CUDNN
 }  // namespace op
 }  // namespace mxnet
-
 #endif  // MXNET_OPERATOR_CUDNN_RNN_INL_H_
