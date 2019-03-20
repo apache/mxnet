@@ -52,7 +52,7 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& dshape = in_shape->at(0);
   index_t num_input;
   if (!param.flatten) {
-    num_input = dshape[dshape.ndim()-1];
+    num_input = dshape[dshape.ndim() - 1];
   } else {
     num_input = dshape.ProdShape(1, dshape.ndim());
   }
@@ -70,7 +70,7 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
 
   if (!param.flatten) {
     TShape result_shape(dshape);
-    result_shape[dshape.ndim()-1] = param.num_hidden;
+    result_shape[dshape.ndim() - 1] = param.num_hidden;
     SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
   } else {
     SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param.num_hidden));
