@@ -125,7 +125,7 @@ object Image {
                         java.util.Map[java.lang.String, java.lang.Integer]],
                       names: java.util.List[java.lang.String]): Unit = {
     val coord = coordinate.asScala.map(
-      ele => ele.asScala.map(ele => (ele._1, Integer2int(ele._2))).toMap).toArray
+      _.asScala.map{case (name, value) => (name, Integer2int(value))}.toMap).toArray
     org.apache.mxnet.Image.drawBoundingBox(src, coord, Option(names.asScala.toArray))
   }
 

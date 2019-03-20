@@ -188,11 +188,11 @@ object Image {
     * @param transparency The transparency level
     * @return Color
     */
-  private def randomColor(transparency: Float) : Color = {
+  private def randomColor(transparency: Option[Float] = Some(1.0f)) : Color = {
     new Color(
       Math.random().toFloat, Math.random().toFloat, Math.random().toFloat,
-      transparency
-    ).darker()
+      transparency.get
+    )
   }
 
   /**
@@ -220,7 +220,7 @@ object Image {
     val fm = g2d.getFontMetrics(newFont)
     for (idx <- coordinate.indices) {
       val map = coordinate(idx)
-      g2d.setColor(randomColor(transparency.get))
+      g2d.setColor(randomColor(transparency).darker())
       g2d.drawRect(map("xmin"), map("ymin"), map("xmax") - map("xmin"), map("ymax") - map("ymin"))
       // Write the name of the bounding box
       if (names.isDefined) {
@@ -234,7 +234,6 @@ object Image {
       }
     }
     g2d.dispose()
-    src
   }
 
 }

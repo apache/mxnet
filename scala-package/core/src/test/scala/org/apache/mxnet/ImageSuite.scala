@@ -108,6 +108,15 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     ImageIO.write(buf, "png", new File(tempDirPath + "/inputImages/out2.png"))
     logger.info(s"converted image stored in ${tempDirPath + "/inputImages/out2.png"}")
+    for (coord <- box) {
+      val topLeft = buf.getRGB(coord("xmin"), coord("ymin"))
+      val downLeft = buf.getRGB(coord("xmin"), coord("ymax"))
+      val topRight = buf.getRGB(coord("xmax"), coord("ymin"))
+      val downRight = buf.getRGB(coord("xmax"), coord("ymax"))
+      require(topLeft == downLeft)
+      require(topRight == downRight)
+      require(topLeft == downRight)
+    }
   }
 
 }
