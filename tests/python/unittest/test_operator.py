@@ -6606,6 +6606,15 @@ def test_slice():
     for index in index_list:
         test_slice_forward_backward(arr, index)
 
+    def test_begin_equals_end(shape, begin, end, step):
+        in_arr = mx.nd.arange(np.prod(shape)).reshape(shape=shape)
+        out_arr = mx.nd.slice(in_arr, begin=begin, end=end, step=step)
+
+    assertRaises(MXNetError, test_begin_equals_end, (4,), (2,), (2,), (1,))
+    assertRaises(MXNetError, test_begin_equals_end, (1, 5), (None, 3), (None, 3), (-1, 1))
+    assertRaises(MXNetError, test_begin_equals_end, (3, 4, 5), (1, 3, 1), (3, 3, 1), (1, -3, 2))
+    assertRaises(MXNetError, test_begin_equals_end, (2, 4), (None, 2), (None, 2), (1, -1))
+
     # check numeric gradient
     in_data = np.arange(36).reshape(2, 2, 3, 3)
     data = mx.sym.Variable('data')
