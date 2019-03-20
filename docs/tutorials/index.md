@@ -90,7 +90,6 @@ Select API:&nbsp;
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
     * [Module to Gluon API](/tutorials/python/module_to_gluon.html)<span style="color:red"> (new!)</span>
-    * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
     * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
 
 * API Guides
