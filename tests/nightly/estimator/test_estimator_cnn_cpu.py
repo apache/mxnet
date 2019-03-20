@@ -97,7 +97,7 @@ def test_estimator():
                                   context=context)
         # Call fit() to begin training
         est.fit(train_data=train_data,
-                # val_data=test_data,
+                val_data=train_data,
                 epochs=num_epochs,
                 batch_size=batch_size)
 
