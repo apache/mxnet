@@ -127,7 +127,8 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
-  // Do nothing if dtpr is nullptr.
+  // Do nothing if dtpr is nullptr because the handle may have already
+  // been freed or have not been allocated memory yet.
   if (handle.dptr == nullptr) return;
 
   const Context &ctx = handle.ctx;
@@ -143,7 +144,8 @@ void StorageImpl::Free(Storage::Handle handle) {
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
-  // Do nothing if dtpr is nullptr.
+  // Do nothing if dtpr is nullptr because the handle may have already
+  // been freed or have not been allocated memory yet.
   if (handle.dptr == nullptr) return;
 
   const Context &ctx = handle.ctx;

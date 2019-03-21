@@ -40,13 +40,12 @@ class CPUDeviceStorage {
  public:
   /*!
    * \brief Aligned allocation on CPU.
-   * \param size Size to allocate.
-   * \return Pointer to the storage.
+   * \param handle Handle struct.
    */
   inline static void* Alloc(Storage::Handle* handle);
   /*!
    * \brief Deallocation.
-   * \param ptr Pointer to deallocate.
+   * \param handle Handle struct.
    */
   inline static void Free(Storage::Handle handle);
 
