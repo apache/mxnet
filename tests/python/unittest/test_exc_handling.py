@@ -99,6 +99,9 @@ def test_exc_gluon():
 @with_seed()
 def test_exc_multiple_waits():
     def multiple_waits(waitall=False):
+        # Test calling failed op followed by wait_to_read or waitall twice
+        # Intention is to test rethrow for multiple wait_to_reads and waitalls
+        # for vars with exceptions in same scope
         caught = False
         try:
             a = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
@@ -108,7 +111,7 @@ def test_exc_multiple_waits():
                 a.wait_to_read()
         except MXNetError:
             caught = True
-        assert caught, "No exception thrown"
+        assert caught, "No exception thrown, exception should be rethrown with wait_to_read/waitall"
         try:
             b = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
             if waitall:
@@ -117,7 +120,7 @@ def test_exc_multiple_waits():
                 b.wait_to_read()
         except MXNetError:
             caught = True
-        assert caught, "No exception thrown"
+        assert caught, "No exception thrown, exception should be rethrown with wait_to_read/waitall"
 
     multiple_waits(waitall=False)
     multiple_waits(waitall=True)
