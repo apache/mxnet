@@ -418,15 +418,13 @@ void ThreadedEngine::WaitForAll() {
   std::exception_ptr tmp;
   if (!global_exception_refs_.empty()) {
     // iterate through all exception refs
-    for (auto itr = global_exception_refs_.begin();
-         itr != global_exception_refs_.end(); ++itr) {
-      const ExceptionRef& ptr = *itr;
+    for (const auto& global_exception_ref : global_exception_refs_) {
       // the first exception will be saved to be rethrown later
-      if (*ptr != nullptr && !tmp) {
-        tmp = *ptr;
+      if (*global_exception_ref != nullptr && tmp == false) {
+        tmp = *global_exception_ref;
       }
       // clear exceptions, WaitToRead following WaitForAll shouldn't throw
-      *ptr = nullptr;
+      *global_exception_ref = nullptr;
     }
     // A waitall following a waitall shouldn't throw any exceptions
     global_exception_refs_.clear();
