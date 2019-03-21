@@ -23,7 +23,7 @@ TIFF_VERSION="4-0-9"
 if [[ ! -f $DEPS_PATH/lib/libtiff.a ]]; then
     # download and build libtiff
     >&2 echo "Building libtiff..."
-    curl -s -L https://gitlab.com/libtiff/libtiff/-/archive/Release-v$TIFF_VERSION/libtiff-Release-v$TIFF_VERSION.zip -o $DEPS_PATH/libtiff.zip
+    curl -v -L https://gitlab.com/libtiff/libtiff/-/archive/Release-v$TIFF_VERSION/libtiff-Release-v$TIFF_VERSION.zip -o $DEPS_PATH/libtiff.zip
     unzip -q $DEPS_PATH/libtiff.zip -d $DEPS_PATH
     pushd .
     cd $DEPS_PATH/libtiff-Release-v$TIFF_VERSION
