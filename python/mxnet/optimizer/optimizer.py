@@ -106,7 +106,8 @@ class Optimizer(object):
         self.wd_mult = {}
         self.begin_num_update = begin_num_update
         self.num_update = begin_num_update
-        self._index_update_count = {}
+        self._all_index_update_counts = {0 : {}}
+        self._index_update_count = self._all_index_update_counts[0]
         self.clip_gradient = clip_gradient
         self.multi_precision = multi_precision
         self.aggregate_num = 0
@@ -379,6 +380,18 @@ class Optimizer(object):
                 if name in attr and '__wd_mult__' in attr[name]:
                     self.wd_mult[name] = float(attr[name]['__wd_mult__'])
         self.wd_mult.update(args_wd_mult)
+
+    def _set_current_context(self, device_id):
+        """Sets the number of the currently handled device.
+
+        Parameters
+        ----------
+        device_id : int
+            The number of current device.
+        """
+        if device_id not in self._all_index_update_counts:
+            self._all_index_update_counts[device_id] = {}
+        self._index_update_count = self._all_index_update_counts[device_id]
 
     def _update_count(self, index):
         """Updates num_update.
@@ -1623,6 +1636,8 @@ class Updater(object):
             indices = index
             grads = grad
             weights = weight
+        if weights:
+            self.optimizer._set_current_context(weights[0].context.device_id)
         for i, idx in enumerate(indices):
             # convert ctypes.char_p.value back to python str if needed
             if isinstance(idx, bytes):

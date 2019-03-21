@@ -50,11 +50,14 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   CHECK(!shape_is_none(in_shape->at(0)))
     << "QuantizedFullyConnectedOp input data shape must be given";
   const mxnet::TShape& dshape = in_shape->at(0);
-  mxnet::TShape wshape = Shape2(param.num_hidden, dshape.ProdShape(1, dshape.ndim()));
-  if (dshape.ndim() != 2) {
-      CHECK(param.flatten)
-        << "QuantizedFullyConnectedOp only supports flatten=true when ishape.ndim()!=2 for now. ";
+  index_t num_input;
+  if (!param.flatten) {
+    num_input = dshape[dshape.ndim() - 1];
+  } else {
+    num_input = dshape.ProdShape(1, dshape.ndim());
   }
+
+  TShape wshape = Shape2(param.num_hidden, num_input);
   SHAPE_ASSIGN_CHECK(*in_shape, 1, wshape);
   if (!param.no_bias) {
     mxnet::TShape bshape = Shape1(param.num_hidden);
@@ -65,7 +68,13 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape{1});
   }
 
-  SHAPE_ASSIGN_CHECK(*out_shape, 0, mxnet::TShape({dshape[0], wshape[0]}));
+  if (!param.flatten) {
+    TShape result_shape(dshape);
+    result_shape[dshape.ndim() - 1] = param.num_hidden;
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
+  } else {
+    SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param.num_hidden));
+  }
   SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));
   SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));
   return true;
@@ -80,9 +89,9 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_type->size(), 3U);
 
 #if MXNET_USE_MKLDNN == 1
-  // TODO(ciyong): currently, only uint8 fully_connected is upported,
-  // int8 fully_connected will be supported after mkldnn v0.18
-  TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kUint8);
+  CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8)
+      << "QuantizedFullyConnected only supports int8/uint8 input, while "
+      << in_type->at(0) << " is given.";
 #else
   TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
 #endif
@@ -182,7 +191,8 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
 
   if (dshape.ndim() != 2)
     CHECK(param.flatten)
-      << "QuantizedFullyConnectedOp only supports flatten=true when input_shape!=2 for now. ";
+        << "QuantizedFullyConnectedForwardCPU only supports flatten=true "
+        << "when dshape.ndim() != 2 for now.";
 
   Tensor<cpu, 2, int8_t> weight = in_data[fullc::kWeight].get<cpu, 2, int8_t>(s);
   Tensor<cpu, 2, int8_t> data = in_data[fullc::kData].get_with_shape<cpu, 2, int8_t>(
@@ -276,11 +286,6 @@ void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs &attrs,
                                          const std::vector<NDArray> &in_data,
                                          const std::vector<OpReqType> &req,
                                          const std::vector<NDArray> &out_data) {
-  if (in_data[fullc::kData].dtype() == mshadow::kInt8) {
-    FallBackCompute(QuantizedFullyConnectedForwardCPU, attrs, ctx, in_data, req, out_data);
-    return;
-  }
-
   MKLDNNQuantizedFullyConnectedForward(attrs, ctx, in_data, req, out_data);
 }
 #endif

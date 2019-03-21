@@ -116,11 +116,6 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
   NDArray output = out_data[fullc::kOut];
-  const mxnet::TShape &ishape = data.shape();
-  if (mkldnn_param.quantized && ishape.ndim() != 2) {
-    CHECK(default_param.flatten)
-      << "QuantizedFullyConnected only supports flatten=true when ishape.ndim() != 2 for now.";
-  }
 
   mkldnn::memory::desc out_md = GetMemDesc(output);
   MKLDNNFCFlattenData(default_param, out_data[fullc::kOut], &data, &out_md);
@@ -307,9 +302,10 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
   if (full_param.mkldnn_param.quantized) {
     size_t base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
 
-    // TODO(ciyong): currently, only uint8 fully_connected is upported,
-    // int8 fully_connected will be supported after mkldnn v0.18
-    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kUint8);
+    CHECK(in_types->at(0) == mshadow::kInt8 ||
+          in_types->at(0) == mshadow::kUint8)
+        << "QuantizedFullyConnected only supports int8/uint8 input, while "
+        << in_types->at(0) << " is given.";
     for (size_t i = 1; i < in_types->size(); ++i) {
       if (i < base_num_inputs) {
         TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kInt8);

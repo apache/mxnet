@@ -124,7 +124,6 @@ def check_quantize(sym, data_shape, out_type, name='conv',
     mod.bind(for_training=False,
             data_shapes=[('data', data_shape)],
             label_shapes=[('softmax_label', label_shape)])
-
   mod.init_params(mx.init.Normal(0.5))
   arg_params, aux_params = mod.get_params()
 
@@ -136,12 +135,10 @@ def check_quantize(sym, data_shape, out_type, name='conv',
       output.wait_to_read()
   ref_out = mod.get_outputs()
 
-  # TODO(ciyong), exclude the second fc due to int8 fully_connected is not
-  # supported before mkldnn 0.18
   excluded_sym_names = []
-  if mx.current_context() == mx.cpu():
+  if mx.current_context() == mx.cpu() and gluon_forward == True:
+    excluded_sym_names += ['sg_mkldnn_fully_connected_0']
     excluded_sym_names += ['fc_softmax']
-    excluded_sym_names += ['sg_mkldnn_fully_connected_1']
 
   calib_data = mx.nd.random.uniform(shape=data_shape)
   calib_data = NDArrayIter(data=calib_data)
@@ -193,11 +190,7 @@ def check_fusion(sym, data_shape, attrs_op, name='conv', check_quantization=True
     assert_almost_equal(exe.outputs[i].asnumpy(), exe_sg.outputs[i].asnumpy(), rtol=1e-3, atol=1e-3)
 
   # fp32 to int8
-  # TODO(ciyong), int8 fully_connected will be supported after mkldnn 0.18
-  if name == 'fc':
-    out_type_list = ['uint8', 'auto']
-  else:
-    out_type_list = ['uint8', 'int8', 'auto']
+  out_type_list = ['uint8', 'int8', 'auto']
 
   if check_quantization:
     for out_type in out_type_list:
