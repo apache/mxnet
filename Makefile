@@ -144,6 +144,12 @@ ifeq ($(USE_MKLDNN), 1)
 	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
 
+ifeq ($(USE_BLAS), mkl)
+	SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
+	CFLAGS += -I$(SPARSE_MATRIX_DIR)
+	LDFLAGS += -L$(SPARSE_MATRIX_DIR) -lsparse_matrix
+endif
+
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1
