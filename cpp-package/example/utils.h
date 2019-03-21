@@ -34,9 +34,6 @@ using namespace mxnet::cpp;
     LG << "Status: FAIL";\
     LG << "With Error: " << MXGetLastError(); \
     return 1; \
-  } catch(...) { \
-    LG << "Status: FAIL";\
-    return 1; \
   }
 
 bool isFileExists(const std::string &filename) {
