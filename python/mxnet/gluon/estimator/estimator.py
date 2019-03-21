@@ -44,8 +44,8 @@ class Estimator(object):
         Metrics for evaluating models
     initializer : Initializer
         initializer to initialize the network
-    trainers : Trainer or list of Trainer
-        Trainers to apply optimizers on network parameters
+    trainer : Trainer
+        Trainer to apply optimizer on network parameters
     context : Context or list of Context
         devices to run the training on
     """
@@ -54,18 +54,17 @@ class Estimator(object):
                  loss=None,
                  metrics=None,
                  initializer=None,
-                 trainers=None,
+                 trainer=None,
                  context=None):
 
         self.net = net
-        self.stop_training = False
 
         if isinstance(loss, gluon.loss.Loss):
             self.loss = [loss]
         else:
             self.loss = loss or []
             for l in self.loss:
-                if not isinstance(loss, gluon.loss.Loss):
+                if not isinstance(l, gluon.loss.Loss):
                     raise ValueError("loss must be a Loss or a list of Loss, refer to gluon.loss.Loss")
 
         if isinstance(metrics, EvalMetric):
@@ -78,23 +77,12 @@ class Estimator(object):
 
         self.initializer = initializer
         # store training statistics
-        self.train_stats = {}
-        self.train_stats['epochs'] = []
-        self.train_stats['learning_rate'] = []
-        # current step of the epoch
-        self.train_stats['step'] = ''
-        for metric in self.metrics:
-            # record a history of metrics over each epoch
-            self.train_stats['train_' + metric.name] = []
-            # only record the latest metric numbers after each batch
-            self.train_stats['batch_' + metric.name] = 0.
+        self.train_history = TrainHistory()
         self.loss_metrics = []
         # using the metric wrapper for loss to record loss value
         for l in self.loss:
             self.loss_metrics.append(Loss(l.name))
-            self.train_stats['train_' + l.name] = []
-            # only record the latest loss numbers after each batch
-            self.train_stats['batch_' + l.name] = 0.
+
 
         # handle context
         if isinstance(context, Context):
@@ -125,16 +113,18 @@ class Estimator(object):
             if not self._is_initialized():
                 self.net.initialize(ctx=self.context)
 
-        # handle trainers
-        if isinstance(trainers, gluon.Trainer):
-            self.trainers = [trainers]
-        else:
-            self.trainers = trainers or []
-        if not self.trainers:
+        # handle trainer
+        if not trainer:
             warnings.warn("No trainer specified, default SGD optimizer "
                           "with learning rate 0.001 is used.")
-            self.trainers = [gluon.Trainer(self.net.collect_params(),
-                                           'sgd', {'learning_rate': 0.001})]
+            self.trainer = gluon.Trainer(self.net.collect_params(),
+                                           'sgd', {'learning_rate': 0.001})
+        elif not isinstance(trainer, gluon.Trainer):
+            raise ValueError("Trainer must be a Gluon Trainer instance, refer to gluon.trainer")
+        else:
+            self.trainer = trainer
+        self.train_history.optimizer = self.trainer.optimizer
+
 
     def _is_initialized(self):
         param_dict = self.net.collect_params()
@@ -186,20 +176,25 @@ class Estimator(object):
         if not batch_size:
             batch_size = 32 * len(self.context)
 
+        self.train_history.max_epoch = epochs
+        self.train_history.batch_size = batch_size
+
         event_handlers = event_handlers or []
         # provide default logging handler
         if not event_handlers or \
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
-            event_handlers.append(LoggingHandler(self))
+            event_handlers.append(LoggingHandler())
 
         # training begin
         for handler in event_handlers:
+            handler.train_history = self.train_history
+            handler.net = self.net
             handler.train_begin()
 
         for epoch in range(epochs):
             # epoch begin
-            self.train_stats['epochs'].append(epoch)
-            self.train_stats['learning_rate'].append(self.trainers[0].learning_rate)
+            self.train_history.epoch = epoch
+            self.train_history.learning_rate = self.trainer.learning_rate
 
             for handler in event_handlers:
                 handler.epoch_begin()
@@ -214,7 +209,7 @@ class Estimator(object):
                     elif isinstance(train_data, DataIter):
                         data, label = self._batch_fn(batch, self.context, is_iterator=True)
                     else:
-                        raise ValueError("You are using a custom iteration, please also provide "
+                        raise ValueError("You are using a custom iterator, please also provide "
                                          "batch_fn to extract data and label")
                 else:
                     data, label = batch_fn(batch, self.context)
@@ -236,32 +231,128 @@ class Estimator(object):
                 # update metrics
                 for metric in self.metrics:
                     metric.update(label, pred)
-                    self.train_stats['batch_' + metric.name] = metric.get()[1]
+                    # get metric name and current value and update train stats
+                    self.train_history.set_batch_stats(*metric.get())
                 for loss, loss_metric, in zip(losses, self.loss_metrics):
                     loss_metric.update(0, [l for l in loss])
-                    self.train_stats['batch_' + loss_metric.name] = loss_metric.get()[1]
+                    self.train_history.set_batch_stats(*loss_metric.get())
 
-                try:
-                    self.train_stats['step'] = "{}/{}".format(batch_size * (i + 1), len(train_data._dataset))
-                except AttributeError:
-                    self.train_stats['step'] = i
+                self.train_history.batch_idx = i
+                # record trained samples v.s. total samples if using Gluon DataLoader
+                if isinstance(train_data, gluon.data.DataLoader):
+                    self.train_history.samples = "{}/{}".format(batch_size * (i + 1), len(train_data._dataset))
 
-                for trainer in self.trainers:
-                    trainer.step(batch_size)
+                self.trainer.step(batch_size)
 
                 # batch end
                 for handler in event_handlers:
                     handler.batch_end()
 
             for metric in self.metrics + self.loss_metrics:
-                self.train_stats['train_' + metric.name].append(metric.get()[1])
+                self.train_history.set_train_stats(*metric.get())
             # epoch end
             for handler in event_handlers:
                 handler.epoch_end()
 
-            if self.stop_training:
+            if self.train_history.stop_training:
                 break
 
         # train end
         for handler in event_handlers:
             handler.train_end()
+
+
+class TrainHistory(object):
+    """TrainStats class for holding hyper-parameters and training statistics
+
+    """
+    def __init__(self):
+        self.max_epoch = 200
+        self.epochs = []
+        self.learning_rates = []
+        self._batch_stats = {}
+        self._train_stats = {}
+        self._val_stats = {}
+        self.stop_training = False
+        self.batch_size = 0
+        self.batch_idx = 0
+        self.samples = ""
+        self.optimizer = None
+
+    @property
+    def epoch(self):
+        return self.epochs[-1] if self.epochs else 0
+
+    @epoch.setter
+    def epoch(self, epoch):
+        # record epochs as a list
+        self.epochs.append(epoch)
+
+    @property
+    def learning_rate(self):
+        if not self.learning_rates:
+            if self.optimizer:
+                return self.optimizer.learning_rate
+            else:
+                raise ValueError("Optimizer has not been initialized yet")
+        else:
+            return self.learning_rates[self.epoch]
+
+
+    @learning_rate.setter
+    def learning_rate(self, lr):
+        # record learning rate history as a list
+        self.learning_rates.append(lr)
+
+    def get_batch_stats(self, key=None):
+        if not key:
+            return self._batch_stats
+        else:
+            return self._batch_stats.get(key)
+
+    def set_batch_stats(self, key, value):
+        self._batch_stats[key] = value
+
+    def get_train_stats(self, key=None, epoch=None):
+        return self._get_stats(self._train_stats, key, epoch)
+
+    def set_train_stats(self, key, value):
+        self._set_stats(self._train_stats, key, value)
+
+    def get_val_stats(self, key=None, epoch=None):
+        return self._get_stats(self._val_stats, key, epoch)
+
+    def set_val_stats(self, key, value):
+        self._set_stats(self._val_stats, key, value)
+
+    def _get_stats(self, stats, key=None, epoch=None):
+        """ Get metric/loss values at certain epoch
+
+        if epoch is None, return values at latest epoch
+        if key is None, return a dictionary of all keys and values of the epoch
+        """
+        if not epoch:
+            # get stats for latest epoch
+            epoch = self.epoch
+        if not key:
+            epoch_stats = {}
+            for key in stats:
+                if not stats.get(key):
+                    # skip this key if no train stats recorded
+                    warnings.warn("No stats recorded for %s at epoch %d" % (key, epoch), RuntimeWarning)
+                else:
+                    epoch_stats[key] = stats.get(key)[epoch]
+            return epoch_stats
+        else:
+            if key in stats:
+                if not stats.get(key):
+                    raise ValueError("No stats recorded for %s at epoch %d" % (key, epoch))
+                else:
+                    return stats.get(key)[epoch]
+            else:
+                raise ValueError("%s not found in train stats, please make sure "
+                                 "you passed the correct metric/loss name" % key)
+
+    def _set_stats(self, stats, key, value):
+        # record a list of stats over the epochs
+        stats.setdefault(key, []).append(value)
