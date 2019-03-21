@@ -52,7 +52,7 @@ Another great resource for learning MXNet is our [examples section](https://gith
 
 We have two types of API available for Python: Gluon APIs and Module APIs. [See here](/api/python/gluon/gluon.html) for a comparison.
 
-A comprehensive introduction to Gluon can be found at [The Straight Dope](http://gluon.mxnet.io/). Structured like a book, it build up from first principles of deep learning and take a theoretical walkthrough of progressively more complex models using the Gluon API. Also check out the [60-Minute Gluon Crash Course](http://gluon-crash-course.mxnet.io/) if you're short on time or have used other deep learning frameworks before.
+A comprehensive introduction to Gluon can be found at [Dive into Deep Learning](http://www.d2l.ai/). Structured like a book, it build up from first principles of deep learning and take a theoretical walkthrough of progressively more complex models using the Gluon API. Also check out the [60-Minute Gluon Crash Course](http://gluon-crash-course.mxnet.io/) if you're short on time or have used other deep learning frameworks before.
 
 Use the tutorial selector below to filter to the relevant tutorials. You might see a download link in the top right corner of some tutorials. Use this to download a Jupyter Notebook version of the tutorial, and re-run and adjust the code as you wish.
 
