@@ -232,10 +232,10 @@ class Estimator(object):
                 for metric in self.metrics:
                     metric.update(label, pred)
                     # get metric name and current value and update train stats
-                    self.train_history.set_batch_stats(*metric.get())
+                    self.train_history.set_batch_status(*metric.get())
                 for loss, loss_metric, in zip(losses, self.loss_metrics):
                     loss_metric.update(0, [l for l in loss])
-                    self.train_history.set_batch_stats(*loss_metric.get())
+                    self.train_history.set_batch_status(*loss_metric.get())
 
                 self.train_history.batch_idx = i
                 # record trained samples v.s. total samples if using Gluon DataLoader
@@ -249,7 +249,7 @@ class Estimator(object):
                     handler.batch_end()
 
             for metric in self.metrics + self.loss_metrics:
-                self.train_history.set_train_stats(*metric.get())
+                self.train_history.set_train_history(*metric.get())
             # epoch end
             for handler in event_handlers:
                 handler.epoch_end()
@@ -263,21 +263,33 @@ class Estimator(object):
 
 
 class TrainHistory(object):
-    """TrainStats class for holding hyper-parameters and training statistics
+    """TrainHistory class for holding hyper-parameters and training statistics
 
     """
     def __init__(self):
         self.max_epoch = 200
         self.epochs = []
         self.learning_rates = []
-        self._batch_stats = {}
-        self._train_stats = {}
-        self._val_stats = {}
         self.stop_training = False
         self.batch_size = 0
         self.batch_idx = 0
         self.samples = ""
         self.optimizer = None
+
+        # store current training status
+        # each key will have only one current value
+        self._status = {}
+        # store a list of status
+        # each key will have a list of values
+        self._history = {}
+        # store the current loss/metric value
+        self._batch_status = {}
+        # store list of training loss/metric value over epochs
+        self._train_history = {}
+        # store list of validation loss/metric value over epochs
+        self._val_history = {}
+
+
 
     @property
     def epoch(self):
@@ -304,55 +316,73 @@ class TrainHistory(object):
         # record learning rate history as a list
         self.learning_rates.append(lr)
 
-    def get_batch_stats(self, key=None):
+
+    def get_status(self, key=None, status=None):
+        """Get value from a status dictionary,
+
+        If no key provided, return the entire dictionary
+        """
+        dict = self._status if not status else status
         if not key:
-            return self._batch_stats
+            return dict
         else:
-            return self._batch_stats.get(key)
+            return dict.get(key)
 
-    def set_batch_stats(self, key, value):
-        self._batch_stats[key] = value
+    def set_status(self, key, value, status=None):
+        """Set value for a status dictionary
+        """
 
-    def get_train_stats(self, key=None, epoch=None):
-        return self._get_stats(self._train_stats, key, epoch)
+        dict = self._status if not status else status
+        dict[key] = value
 
-    def set_train_stats(self, key, value):
-        self._set_stats(self._train_stats, key, value)
-
-    def get_val_stats(self, key=None, epoch=None):
-        return self._get_stats(self._val_stats, key, epoch)
-
-    def set_val_stats(self, key, value):
-        self._set_stats(self._val_stats, key, value)
-
-    def _get_stats(self, stats, key=None, epoch=None):
+    def get_history(self, key=None, epoch=None, history=None):
         """ Get metric/loss values at certain epoch
 
         if epoch is None, return values at latest epoch
         if key is None, return a dictionary of all keys and values of the epoch
         """
-        if not epoch:
-            # get stats for latest epoch
-            epoch = self.epoch
+        dict = self._history if not history else history
+        # get the latest epoch
+        index = self.epoch if not epoch else epoch
+
         if not key:
-            epoch_stats = {}
-            for key in stats:
-                if not stats.get(key):
+            single_history = {}
+            for key in dict:
+                if not dict.get(key):
                     # skip this key if no train stats recorded
-                    warnings.warn("No stats recorded for %s at epoch %d" % (key, epoch), RuntimeWarning)
+                    warnings.warn("No stats recorded for %s at epoch %d" % (key, index), RuntimeWarning)
                 else:
-                    epoch_stats[key] = stats.get(key)[epoch]
-            return epoch_stats
+                    single_history[key] = dict.get(key)[index]
+            return single_history
         else:
-            if key in stats:
-                if not stats.get(key):
-                    raise ValueError("No stats recorded for %s at epoch %d" % (key, epoch))
+            if key in dict:
+                if not dict.get(key):
+                    raise ValueError("No stats recorded for %s at epoch %d" % (key, index))
                 else:
-                    return stats.get(key)[epoch]
+                    return dict.get(key)[index]
             else:
-                raise ValueError("%s not found in train stats, please make sure "
+                raise ValueError("%s not found in history, please make sure "
                                  "you passed the correct metric/loss name" % key)
 
-    def _set_stats(self, stats, key, value):
+    def set_history(self, key, value, history=None):
+        dict = self._history if not history else history
         # record a list of stats over the epochs
-        stats.setdefault(key, []).append(value)
+        dict.setdefault(key, []).append(value)
+
+    def get_batch_status(self, key=None):
+        return self.get_status(key, status=self._batch_status)
+
+    def set_batch_status(self, key, value):
+        self.set_status(key, value, status=self._batch_status)
+
+    def get_train_history(self, key=None, epoch=None):
+        return self.get_history(key, epoch, history=self._train_history)
+
+    def set_train_history(self, key, value):
+        self.set_history(key, value, history=self._train_history)
+
+    def get_val_history(self, key=None, epoch=None):
+        return self.get_history(key, epoch, history=self._val_history)
+
+    def set_val_history(self, key, value):
+        self.set_history(key, value, history=self._val_s_val_history)

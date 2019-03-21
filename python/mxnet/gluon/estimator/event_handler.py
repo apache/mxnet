@@ -119,13 +119,13 @@ class LoggingHandler(EventHandler):
     def train_end(self):
         train_time = time.time() - self.train_start
         epoch = self.train_history.epoch
-        train_stats = self.train_history.get_train_stats(epoch=epoch)
-        val_stats = self.train_history.get_train_stats(epoch=epoch)
-        msg = 'Train finished using total %ds at epoch %d' % (train_time, epoch)
-        for key in train_stats:
-            msg += 'train %s : %.4f ' % (key, train_stats[key])
-        for key in val_stats:
-            msg += 'val %s : %.4f ' % (key, val_stats[key])
+        train_history = self.train_history.get_train_history(epoch=epoch)
+        val_history = self.train_history.get_val_history(epoch=epoch)
+        msg = 'Train finished using total %ds at epoch %d. ' % (train_time, epoch)
+        for key in train_history:
+            msg += 'train %s : %.4f ' % (key, train_history[key])
+        for key in val_history:
+            msg += 'val %s : %.4f ' % (key, val_history[key])
         self.logger.info(msg)
 
     def batch_begin(self):
@@ -139,9 +139,9 @@ class LoggingHandler(EventHandler):
         if self.train_history.samples:
             msg += '[Samples %s] ' % (self.train_history.samples)
         msg += 'time/batch: %.3fs ' % batch_time
-        batch_stats = self.train_history.get_batch_stats()
-        for key in batch_stats:
-            msg += key + ': ' + '%.4f ' % batch_stats[key]
+        batch_status = self.train_history.get_batch_status()
+        for key in batch_status:
+            msg += key + ': ' + '%.4f ' % batch_status[key]
         self.logger.info(msg)
 
     def epoch_begin(self):
@@ -151,12 +151,12 @@ class LoggingHandler(EventHandler):
         epoch_time = time.time() - self.epoch_start
         epoch = self.train_history.epoch
         msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
-        train_stats = self.train_history.get_train_stats(epoch=epoch)
-        val_stats = self.train_history.get_train_stats(epoch=epoch)
-        for key in train_stats:
-            msg += 'train %s : %.4f ' % (key, train_stats[key])
-        for key in val_stats:
-            msg += 'val %s : %.4f ' % (key, val_stats[key])
+        train_history = self.train_history.get_train_history(epoch=epoch)
+        val_history = self.train_history.get_val_history(epoch=epoch)
+        for key in train_history:
+            msg += 'train %s : %.4f ' % (key, train_history[key])
+        for key in val_history:
+            msg += 'val %s : %.4f ' % (key, val_history[key])
         self.logger.info(msg)
 
 
@@ -187,13 +187,15 @@ class CheckpointHandler(EventHandler):
 
     def __init__(self,
                  filepath,
-                 monitor='val_loss',
+                 monitor='acc',
+                 monitor_validation=True,
                  verbose=0,
                  save_best_only=False,
                  mode='auto',
                  period=1):
         super(CheckpointHandler, self).__init__()
         self.monitor = monitor
+        self.monitor_validation =  monitor_validation
         self.verbose = verbose
         self.filepath = filepath
         self.save_best_only = save_best_only
@@ -231,13 +233,17 @@ class CheckpointHandler(EventHandler):
         if self.epochs_since_last_save >= self.period:
             self.epochs_since_last_save = 0
             if self.save_best_only:
-                # check if monitor exists in train_stats
-                if self.monitor not in self.train_history.get_train_stats().keys():
-                    warnings.warn(RuntimeWarning('Unable to find %s in training statistics, make sure '
+                if self.monitor_validation:
+                    history = self.train_history.get_val_history(epoch=epoch)
+                else:
+                    history = self.train_history.get_train_history(epoch=epoch)
+                # check if monitor exists in train history
+                if self.monitor not in history:
+                    warnings.warn(RuntimeWarning('Unable to find %s in training history, make sure '
                                                  'you are passing one of the metric names as monitor', self.monitor))
                     self.net.save_parameters(self.filepath)
                 else:
-                    current = self.train_history.get_train_stats(self.monitor)
+                    current = history[self.monitor]
                     if self.monitor_op(current, self.best):
                         if self.verbose > 0:
                             self.logger.info('\n[Epoch %d] %s improved from %0.5f to %0.5f,'
@@ -276,7 +282,8 @@ class EarlyStoppingHandler(EventHandler):
     """
 
     def __init__(self,
-                 monitor='val_loss',
+                 monitor='loss',
+                 monitor_validation=True,
                  min_delta=0,
                  patience=0,
                  mode='auto',
@@ -284,6 +291,7 @@ class EarlyStoppingHandler(EventHandler):
         super(EarlyStoppingHandler, self).__init__()
 
         self.monitor = monitor
+        self.monitor_validation = monitor_validation
         self.baseline = baseline
         self.patience = patience
         self.min_delta = min_delta
@@ -321,14 +329,15 @@ class EarlyStoppingHandler(EventHandler):
 
     def epoch_end(self):
         epoch = self.train_history.epoch
-        if self.monitor not in self.train_history.get_train_stats().keys():
+        if self.monitor_validation:
+            history = self.train_history.get_val_history(epoch=epoch)
+        else:
+            history = self.train_history.get_train_history(epoch=epoch)
+        if self.monitor not in history:
             warnings.warn(RuntimeWarning('Unable to find %s in training statistics, make sure '
                                          'you are passing one of the metric names as monitor' % self.monitor))
         else:
-            current = self.train_history.get_train_stats(self.monitor)
-            if current is None:
-                return
-
+            current = history[self.monitor]
             if self.monitor_op(current - self.min_delta, self.best):
                 self.best = current
                 self.wait = 0
@@ -336,7 +345,7 @@ class EarlyStoppingHandler(EventHandler):
                 self.wait += 1
                 if self.wait >= self.patience:
                     self.stopped_epoch = epoch
-                    self.train_history.stop_training(True)
+                    self.train_history.stop_training = True
 
     def train_end(self):
         if self.stopped_epoch > 0:
