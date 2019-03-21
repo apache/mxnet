@@ -48,8 +48,10 @@ class ResourceScope extends AutoCloseable {
     */
   override def close(): Unit = {
     ResourceScope.removeFromThreadLocal(this)
-    resourceQ.foreach(resource => if (resource != null) resource.dispose(false) )
-    resourceQ.clear()
+    if (!ResourceScope.threadLocalScopes.get().contains(this)) {
+      resourceQ.foreach(resource => if (resource != null) resource.dispose(false))
+      resourceQ.clear()
+    }
   }
 
   /**
@@ -105,10 +107,7 @@ object ResourceScope {
   // TODO: we should move to the Scala util's Using method when we move to Scala 2.13
   def using[A](scope: ResourceScope = null)(body: => A): A = {
 
-    val curScope = if (scope != null) {
-      ResourceScope.addToThreadLocal(scope)
-      scope
-    } else new ResourceScope()
+    val curScope = if (scope != null) scope else new ResourceScope()
 
     @inline def resourceInGeneric(g: scala.collection.Iterable[_]) = {
       g.foreach( n =>
@@ -149,19 +148,11 @@ object ResourceScope {
     } finally {
       var toThrow: Throwable = retThrowable
       if (retThrowable eq null) {
-        if (scope == null) {
-          curScope.close()
-        } else {
-          ResourceScope.removeFromThreadLocal(scope)
-        }
+        curScope.close
       }
       else {
         try {
-          if (scope == null) {
-            curScope.close
-          } else {
-            ResourceScope.removeFromThreadLocal(scope)
-          }
+          curScope.close
         } catch {
           case closeThrowable: Throwable =>
             if (NonFatal(retThrowable) && !NonFatal(closeThrowable)) toThrow = closeThrowable
@@ -177,6 +168,7 @@ object ResourceScope {
     if (scope == None) {
       body
     } else {
+      ResourceScope.addToThreadLocal(scope.get)
       ResourceScope.using(scope.get){
         body
       }
