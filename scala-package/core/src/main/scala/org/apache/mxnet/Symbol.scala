@@ -810,8 +810,9 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
         key -> new Context(value.deviceType, value.deviceId)
       }
 
+    // If this is in a scope then we want to create the clone in the same scope
     var newSymbol: Symbol = null
-    ResourceScope.using(this.scope.get) {
+    ResourceScope.usingIfScopeExists(this.scope) {
       newSymbol = this.clone()
     }
 

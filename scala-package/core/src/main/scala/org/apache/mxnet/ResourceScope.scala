@@ -47,7 +47,6 @@ class ResourceScope extends AutoCloseable {
     * the associated`'org.apache.mxnet.NativeResource.close()` method
     */
   override def close(): Unit = {
-    print("in close\n")
     ResourceScope.removeFromThreadLocal(this)
     resourceQ.foreach(resource => if (resource != null) resource.dispose(false) )
     resourceQ.clear()
@@ -111,11 +110,6 @@ object ResourceScope {
       scope
     } else new ResourceScope()
 
-    if (scope != null) {
-      print("in non null using\n")
-    } else {
-      print("in null using\n")
-    }
     @inline def resourceInGeneric(g: scala.collection.Iterable[_]) = {
       g.foreach( n =>
         n match {
@@ -140,12 +134,14 @@ object ResourceScope {
 
     try {
       val ret = body
-       ret match {
+      if (scope == null) {
+        ret match {
           // don't de-allocate if returning any collection that contains NativeResource.
-        case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
-        case nRes: NativeResource => curScope.moveToOuterScope(nRes)
-        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => curScope.moveToOuterScope(nd) )
-        case _ => // do nothing
+          case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
+          case nRes: NativeResource => curScope.moveToOuterScope(nRes)
+          case ndRet: NDArrayFuncReturn => ndRet.arr.foreach(nd => curScope.moveToOuterScope(nd))
+          case _ => // do nothing
+        }
       }
       ret
     } catch {
@@ -175,6 +171,16 @@ object ResourceScope {
         } finally {
           throw toThrow
         }
+      }
+    }
+  }
+
+  private[mxnet] def usingIfScopeExists[A](scope: Option[ResourceScope])(body: => A): A = {
+    if (scope == None) {
+      body
+    } else {
+      ResourceScope.using(scope.get){
+        body
       }
     }
   }

@@ -57,54 +57,53 @@ class Adam(val learningRate: Float = 0.002f, beta1: Float = 0.9f, beta2: Float =
    *              The auxiliary state used in optimization.
    */
   override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
-    ResourceScope.using(state.asInstanceOf[(NDArray, NDArray)]._1.scope.get) {
+    ResourceScope.using() {
+      var lr =
+        (if (lrScheduler != null) {
+          val scheduledLr = lrScheduler(numUpdate)
+          updateCount(index)
+          scheduledLr
+        } else {
+          this.learningRate
+        })
+      lr = getLr(index, lr)
+
       val (mean, variance) = state.asInstanceOf[(NDArray, NDArray)]
-      ResourceScope.using() {
-        var lr =
-          (if (lrScheduler != null) {
-            val scheduledLr = lrScheduler(numUpdate)
-            updateCount(index)
-            scheduledLr
-          } else {
-            this.learningRate
-          })
-        lr = getLr(index, lr)
 
-        // increment time only when the first parameters is called
-        timeFirstIndex match {
-          case Some(idx) =>
-            if (idx == index) time += 1
-          case None =>
-            timeFirstIndex = Option(index)
-            time = 0 // all parameters share the same time
-        }
-
-        val t1: Int = time + 1
-        val learningRate = (lr *
-          math.sqrt(1.0 - math.pow(beta2, t1)) /
-          (1.0 - math.pow(beta1, t1))).toFloat
-        val beta1t = beta1 * math.pow(decayFactor, t1 - 1).toFloat
-
-        var resdGrad = grad * rescaleGrad
-        if (clipGradient != 0f) {
-          val oldResdGrad = resdGrad
-          resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
-        }
-
-        val meanT = (beta1t * mean + (1.0 - beta1t) * resdGrad)
-        val varianceT = (beta2 * variance + (1.0f - beta2) * resdGrad * resdGrad)
-        val step = (learningRate * meanT / (NDArray.sqrt(varianceT) + epsilon))
-
-        val wd = this.getWd(index, this.wd)
-        if (wd > 0.0f) {
-          val stepDelta = lr * wd * weight
-          step += stepDelta
-        }
-
-        weight -= step
-        mean.set(meanT)
-        variance.set(varianceT)
+      // increment time only when the first parameters is called
+      timeFirstIndex match {
+        case Some(idx) =>
+          if (idx == index) time += 1
+        case None =>
+          timeFirstIndex = Option(index)
+          time = 0 // all parameters share the same time
       }
+
+      val t1: Int = time + 1
+      val learningRate = (lr * math.sqrt(1.0 - math.pow(beta2, t1)) /
+        (1.0 - math.pow(beta1, t1))).toFloat
+      val beta1t = beta1 * math.pow(decayFactor, t1 - 1).toFloat
+
+      var resdGrad = grad * rescaleGrad
+      if (clipGradient != 0f) {
+        val oldResdGrad = resdGrad
+        resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
+      }
+
+      val meanT = (beta1t * mean + (1.0 - beta1t) * resdGrad)
+      val varianceT = (beta2 * variance + (1.0f - beta2) * resdGrad * resdGrad)
+      val step = (learningRate * meanT / (NDArray.sqrt(varianceT) + epsilon))
+
+      val wd = this.getWd(index, this.wd)
+      if (wd > 0.0f) {
+        val stepDelta = lr * wd * weight
+        step += stepDelta
+      }
+
+      weight -= step
+      mean.set(meanT)
+      variance.set(varianceT)
+      (mean, variance)
     }
   }
 
