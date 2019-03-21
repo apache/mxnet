@@ -78,7 +78,6 @@ def _normalize_sequence(length, inputs, layout, merge, in_layout=None):
 class RNNParams(object):
     """Container for holding variables.
     Used by RNN cells for parameter sharing between cells.
-
     Parameters
     ----------
     prefix : str
@@ -91,7 +90,6 @@ class RNNParams(object):
 
     def get(self, name, **kwargs):
         """Get the variable given a name if one exists or create a new one if missing.
-
         Parameters
         ----------
         name : str
@@ -107,7 +105,6 @@ class RNNParams(object):
 
 class BaseRNNCell(object):
     """Abstract base class for RNN cells
-
     Parameters
     ----------
     prefix : str, optional
@@ -140,14 +137,12 @@ class BaseRNNCell(object):
 
     def __call__(self, inputs, states):
         """Unroll the RNN for one time step.
-
         Parameters
         ----------
         inputs : sym.Variable
             input symbol, 2D, batch * num_units
         states : list of sym.Variable
             RNN state from previous step or the output of begin_state().
-
         Returns
         -------
         output : Symbol
@@ -158,7 +153,6 @@ class BaseRNNCell(object):
             The type of this symbol is same as the output of begin_state().
             This can be used as input state to the next time step
             of this RNN.
-
         See Also
         --------
         begin_state: This function can provide the states for the first time step.
@@ -189,7 +183,6 @@ class BaseRNNCell(object):
 
     def begin_state(self, func=symbol.zeros, **kwargs):
         """Initial state for this cell.
-
         Parameters
         ----------
         func : callable, default symbol.zeros
@@ -200,7 +193,6 @@ class BaseRNNCell(object):
         **kwargs :
             more keyword arguments passed to func. For example
             mean, std, dtype, etc.
-
         Returns
         -------
         states : nested list of Symbol
@@ -225,25 +217,21 @@ class BaseRNNCell(object):
     def unpack_weights(self, args):
         """Unpack fused weight matrices into separate
         weight matrices.
-
         For example, say you use a module object `mod` to run a network that has an lstm cell.
         In `mod.get_params()[0]`, the lstm parameters are all represented as a single big vector.
         `cell.unpack_weights(mod.get_params()[0])` will unpack this vector into a dictionary of
         more readable lstm parameters - c, f, i, o gates for i2h (input to hidden) and
         h2h (hidden to hidden) weights.
-
         Parameters
         ----------
         args : dict of str -> NDArray
             Dictionary containing packed weights.
             usually from `Module.get_params()[0]`.
-
         Returns
         -------
         args : dict of str -> NDArray
             Dictionary with unpacked weights associated with
             this cell.
-
         See Also
         --------
         pack_weights: Performs the reverse operation of this function.
@@ -265,12 +253,10 @@ class BaseRNNCell(object):
     def pack_weights(self, args):
         """Pack separate weight matrices into a single packed
         weight.
-
         Parameters
         ----------
         args : dict of str -> NDArray
             Dictionary containing unpacked weights.
-
         Returns
         -------
         args : dict of str -> NDArray
@@ -294,7 +280,6 @@ class BaseRNNCell(object):
 
     def unroll(self, length, inputs, begin_state=None, layout='NTC', merge_outputs=None):
         """Unroll an RNN cell across time steps.
-
         Parameters
         ----------
         length : int
@@ -304,7 +289,6 @@ class BaseRNNCell(object):
             of Embedding symbol), it should have shape
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
-
             If `inputs` is a list of symbols (usually output of
             previous unroll), they should all have shape
             (batch_size, ...).
@@ -322,14 +306,12 @@ class BaseRNNCell(object):
             (batch_size, length, ...) if layout == 'NTC',
             or (length, batch_size, ...) if layout == 'TNC'.
             If None, output whatever is faster.
-
         Returns
         -------
         outputs : list of Symbol or Symbol
             Symbol (if `merge_outputs` is True) or list of Symbols
             (if `merge_outputs` is False) corresponding to the output from
             the RNN from this unrolling.
-
         states : nested list of Symbol
             The new state of this RNN after this unrolling.
             The type of this symbol is same as the output of begin_state().
@@ -361,7 +343,6 @@ class BaseRNNCell(object):
 
 class RNNCell(BaseRNNCell):
     """Simple recurrent neural network cell.
-
     Parameters
     ----------
     num_hidden : int
@@ -384,7 +365,7 @@ class RNNCell(BaseRNNCell):
 
     @property
     def state_info(self):
-        return [{'shape': (-1, self._num_hidden), '__layout__': 'NC'}]
+        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -407,7 +388,6 @@ class RNNCell(BaseRNNCell):
 
 class LSTMCell(BaseRNNCell):
     """Long-Short Term Memory (LSTM) network cell.
-
     Parameters
     ----------
     num_hidden : int
@@ -431,8 +411,8 @@ class LSTMCell(BaseRNNCell):
 
     @property
     def state_info(self):
-        return [{'shape': (-1, self._num_hidden), '__layout__': 'NC'},
-                {'shape': (-1, self._num_hidden), '__layout__': 'NC'}]
+        return [{'shape': (0, self._num_hidden), '__layout__': 'NC'},
+                {'shape': (0, self._num_hidden), '__layout__': 'NC'}]
 
     @property
     def _gate_names(self):
@@ -470,7 +450,6 @@ class GRUCell(BaseRNNCell):
     """Gated Rectified Unit (GRU) network cell.
     Note: this is an implementation of the cuDNN version of GRUs
     (slight modification compared to Cho et al. 2014).
-
     Parameters
     ----------
     num_hidden : int
@@ -490,7 +469,7 @@ class GRUCell(BaseRNNCell):
 
     @property
     def state_info(self):
-        return [{'shape': (-1, self._num_hidden),
+        return [{'shape': (0, self._num_hidden),
                  '__layout__': 'NC'}]
 
     @property
@@ -537,7 +516,6 @@ class FusedRNNCell(BaseRNNCell):
     """Fusing RNN layers across time step into one kernel.
     Improves speed but is less flexible. Currently only
     supported if using cuDNN on GPU.
-
     Parameters
     ----------
     num_hidden : int
@@ -583,7 +561,7 @@ class FusedRNNCell(BaseRNNCell):
     def state_info(self):
         b = self._bidirectional + 1
         n = (self._mode == 'lstm') + 1
-        return [{'shape': (b*self._num_layers, -1, self._num_hidden), '__layout__': 'LNC'}
+        return [{'shape': (b*self._num_layers, 0, self._num_hidden), '__layout__': 'LNC'}
                 for _ in range(n)]
 
     @property
@@ -713,7 +691,6 @@ class FusedRNNCell(BaseRNNCell):
 
     def unfuse(self):
         """Unfuse the fused RNN in to a stack of rnn cells.
-
         Returns
         -------
         cell : mxnet.rnn.SequentialRNNCell
@@ -747,7 +724,6 @@ class FusedRNNCell(BaseRNNCell):
 
 class SequentialRNNCell(BaseRNNCell):
     """Sequantially stacking multiple RNN cells.
-
     Parameters
     ----------
     params : RNNParams, default None
@@ -760,7 +736,6 @@ class SequentialRNNCell(BaseRNNCell):
 
     def add(self, cell):
         """Append a cell into the stack.
-
         Parameters
         ----------
         cell : BaseRNNCell
@@ -826,7 +801,6 @@ class SequentialRNNCell(BaseRNNCell):
 
 class DropoutCell(BaseRNNCell):
     """Apply dropout on input.
-
     Parameters
     ----------
     dropout : float
@@ -868,7 +842,6 @@ class ModifierCell(BaseRNNCell):
     """Base class for modifier cells. A modifier
     cell takes a base cell, apply modifications
     on it (e.g. Zoneout), and returns a new cell.
-
     After applying modifiers the base cell should
     no longer be called directly. The modifer cell
     should be used instead.
@@ -908,7 +881,6 @@ class ModifierCell(BaseRNNCell):
 
 class ZoneoutCell(ModifierCell):
     """Apply Zoneout on base cell.
-
     Parameters
     ----------
     base_cell : BaseRNNCell
@@ -942,7 +914,7 @@ class ZoneoutCell(ModifierCell):
         next_output, next_states = cell(inputs, states)
         mask = lambda p, like: symbol.Dropout(symbol.ones_like(like), p=p)
 
-        prev_output = self.prev_output if self.prev_output is not None else symbol.zeros((-1, -1))
+        prev_output = self.prev_output if self.prev_output is not None else symbol.zeros((0, 0))
 
         output = (symbol.where(mask(p_outputs, next_output), next_output, prev_output)
                   if p_outputs != 0. else next_output)
@@ -957,9 +929,7 @@ class ZoneoutCell(ModifierCell):
 class ResidualCell(ModifierCell):
     """Adds residual connection as described in Wu et al, 2016
     (https://arxiv.org/abs/1609.08144).
-
     Output of the cell is output of the base cell plus input.
-
     Parameters
     ----------
     base_cell : BaseRNNCell
@@ -983,7 +953,7 @@ class ResidualCell(ModifierCell):
         self.base_cell._modified = True
 
         merge_outputs = isinstance(outputs, symbol.Symbol) if merge_outputs is None else \
-                        merge_outputs
+            merge_outputs
         inputs, _ = _normalize_sequence(length, inputs, layout, merge_outputs)
         if merge_outputs:
             outputs = symbol.elemwise_add(outputs, inputs, name="%s_plus_residual" % outputs.name)
@@ -997,7 +967,6 @@ class ResidualCell(ModifierCell):
 
 class BidirectionalCell(BaseRNNCell):
     """Bidirectional RNN cell.
-
     Parameters
     ----------
     l_cell : BaseRNNCell
@@ -1128,7 +1097,7 @@ class BaseConvRNNCell(BaseRNNCell):
                                                dilate=self._i2h_dilate,
                                                layout=conv_layout)
         self._state_shape = self._state_shape.infer_shape(data=input_shape)[1][0]
-        self._state_shape = (-1, ) + self._state_shape[1:]
+        self._state_shape = (0, ) + self._state_shape[1:]
 
         # Get params
         self._iW = self.params.get('i2h_weight', init=i2h_weight_initializer)
@@ -1175,7 +1144,6 @@ class BaseConvRNNCell(BaseRNNCell):
 
 class ConvRNNCell(BaseConvRNNCell):
     """Convolutional RNN cells
-
     Parameters
     ----------
     input_shape : tuple of int
@@ -1252,11 +1220,9 @@ class ConvRNNCell(BaseConvRNNCell):
 
 class ConvLSTMCell(BaseConvRNNCell):
     """Convolutional LSTM network cell.
-
     References
     ----------
         Xingjian et al. NIPS2015
-
     Parameters
     ----------
     input_shape : tuple of int
@@ -1348,7 +1314,6 @@ class ConvLSTMCell(BaseConvRNNCell):
 
 class ConvGRUCell(BaseConvRNNCell):
     """Convolutional Gated Rectified Unit (GRU) network cell.
-
     Parameters
     ----------
     input_shape : tuple of int
