@@ -322,7 +322,7 @@ You can also find more ways to run inference and deploy your models here:
 ## References
 
 1. [Transfer Learning for Oxford102 Flower Dataset](https://github.com/Arsey/keras-transfer-learning-for-oxford102)
-2. [Gluon book on fine-tuning](https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html)
+2. [Gluon book on fine-tuning](https://www.d2l.ai/chapter_computer-vision/fine-tuning.html)
 3. [Gluon CV transfer learning tutorial](https://gluon-cv.mxnet.io/build/examples_classification/transfer_learning_minc.html)
 4. [Gluon crash course](https://gluon-crash-course.mxnet.io/)
 5. [Gluon CPP inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)

@@ -136,7 +136,21 @@ class CustomOperator {
     cv_.notify_all();
   }
 
-  ~CustomOperator() {
+  static CustomOperator* Get() {
+    static CustomOperator inst;
+    return &inst;
+  }
+
+  void Start() {
+    num_free_threads = 0;
+    destructing_ = false;
+    naive_engine_ = true;
+    if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
+      naive_engine_ = false;
+    }
+  }
+
+  void Stop() {
     if (naive_engine_) return;
     {
       std::unique_lock<std::mutex> lock(mutex_);
@@ -145,17 +159,12 @@ class CustomOperator {
     }
     for (auto &worker : workers_)
       worker.join();
+    workers_.clear();
   }
 
-  static CustomOperator* Get();
-
  private:
-  CustomOperator() : num_free_threads(0) {
-    destructing_ = false;
-    naive_engine_ = true;
-    if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
-      naive_engine_ = false;
-    }
+  CustomOperator() {
+    this->Start();
   }
   void ThreadTarget() {
     std::unique_lock<std::mutex> lock(mutex_);

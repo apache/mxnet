@@ -461,7 +461,6 @@ class PySGLD(mx.optimizer.Optimizer):
 
 
 @with_seed()
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14241")
 def test_sgld():
     opt1 = PySGLD
     opt2 = mx.optimizer.SGLD
@@ -518,7 +517,9 @@ def test_sgld():
                 if (dtype == np.float16 and ('multi_precision' not in kwarg or
                     not kwarg['multi_precision'])):
                     continue
-                compare_optimizer_noise_seeded(opt1(**kwarg), opt2(**kwarg), shape, dtype, seed)
+                atol = 1e-2 if dtype == np.float16 else 1e-3
+                rtol = 1e-4 if dtype == np.float16 else 1e-5
+                compare_optimizer_noise_seeded(opt1(**kwarg), opt2(**kwarg), shape, dtype, seed, atol=atol, rtol=rtol)
 
 
 
