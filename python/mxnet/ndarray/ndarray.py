@@ -1853,7 +1853,7 @@ fixed-size items.
         check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         if ndim.value == -1:
-            return "UNKNOWN_SHAPE"
+            return None
         else:
             return tuple(pdata[:ndim.value])  # pylint: disable=invalid-slice-index
 

@@ -668,7 +668,7 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       }
     }
 
-    if (len) {
+    if (len > 0) {
       if (param_begin[i].has_value()) {
         b = param_begin[i].value();
         if (b < 0) {
@@ -731,7 +731,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (!shape_is_known(dshape)) return false;
+  if (dshape.ndim() == -1) return false;
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   mxnet::TShape oshape = dshape;
 
@@ -1122,9 +1122,9 @@ inline void GetSliceAxisParams(const SliceAxisParam& param, const mxnet::TShape&
                            int* axis, index_t* begin, index_t* end) {
   *axis = param.axis;
   if (*axis < 0) {
-    *axis += static_cast<int>(ishape.ndim());
+    *axis += ishape.ndim();
   }
-  CHECK(*axis < static_cast<int>(ishape.ndim()) && *axis >= 0) <<
+  CHECK(*axis < ishape.ndim() && *axis >= 0) <<
     "Transformed axis must be smaller than the source ndim and larger than zero! Recieved axis=" <<
     param.axis << ", src_ndim=" << ishape.ndim() << ", transformed axis=" << *axis;
   index_t axis_size = static_cast<index_t>(ishape[*axis]);
@@ -1133,7 +1133,7 @@ inline void GetSliceAxisParams(const SliceAxisParam& param, const mxnet::TShape&
   if (*begin < 0) {
     *begin += axis_size;
   }
-  if (axis_size) {
+  if (axis_size > 0) {
     if (!static_cast<bool>(param.end)) {
       *end = axis_size;
     } else {
