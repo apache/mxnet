@@ -33,7 +33,8 @@ namespace mxnet {
 namespace op {
 
 bool ConcatSetShape(std::vector<TShape>* in_shape,
-                    std::vector<TShape>* out_shape, int num_args, int dim) {
+                    std::vector<TShape>* out_shape,
+                    int num_args, int dim) {
   CHECK_EQ(in_shape->size(), static_cast<size_t>(num_args));
   TShape dshape;
   index_t size = 0;
@@ -58,13 +59,11 @@ bool ConcatSetShape(std::vector<TShape>* in_shape,
   if (dshape.ndim() == 0) return false;
   for (int i = 0; i < num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))
-        << "Incompatible input shape: expected " << dshape << ", got "
-        << (*in_shape)[i];
+        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
   }
   if (!has_zero) dshape[axis] = size;
   CHECK(shape_assign(&(*out_shape)[0], dshape))
-      << "Incompatible output shape: expected " << dshape << ", got "
-      << (*out_shape)[0];
+      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
   return dshape.Size() != 0;
 }
 

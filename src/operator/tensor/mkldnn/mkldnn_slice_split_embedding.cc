@@ -24,6 +24,7 @@
 
 namespace mxnet {
 namespace op {
+
 bool ConcatSetShape(std::vector<TShape>* in_shape,
                     std::vector<TShape>* out_shape, int num_args, int dim);
 // call from SliceOpShape
@@ -51,6 +52,7 @@ static EmbeddingParam GetEmbeddedParam(
   embedding_param.sparse_grad = false;
   return embedding_param;
 }
+
 static bool SliceSplitEmbeddingConcatOpShape(const nnvm::NodeAttrs& attrs,
                                              std::vector<TShape>* in_shape,
                                              std::vector<TShape>* out_shape) {
@@ -75,7 +77,7 @@ static bool SliceSplitEmbeddingConcatOpShape(const nnvm::NodeAttrs& attrs,
                          param_.num_outputs, 1, param_.squeeze_axis);
   std::vector<TShape> embed_out_shapes;
 
-  for (int i = 0; i < param_.num_outputs; i++) {
+  for (int i = 0; i < param_.num_outputs; ++i) {
     nnvm::NodeAttrs em_attrs;
     em_attrs.parsed = GetEmbeddedParam(param_, i);
     std::vector<TShape> e_in;
@@ -92,6 +94,7 @@ static bool SliceSplitEmbeddingConcatOpShape(const nnvm::NodeAttrs& attrs,
                  param_.concat_dim);
   return ret;
 }
+
 inline bool SliceSplitEmbeddingConcatOpType(const nnvm::NodeAttrs& attrs,
                                             std::vector<int>* in_type,
                                             std::vector<int>* out_type) {
@@ -101,6 +104,7 @@ inline bool SliceSplitEmbeddingConcatOpType(const nnvm::NodeAttrs& attrs,
   for (int i = 1; i < in_size; i++) (*in_type)[i] = (*out_type)[0];
   return ret;
 }
+
 inline bool SliceSplitEmbeddingConcatOpStorageType(
     const nnvm::NodeAttrs& attrs, const int dev_mask,
     DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
@@ -113,6 +117,7 @@ inline bool SliceSplitEmbeddingConcatOpStorageType(
 
   return dispatched;
 }
+
 template <int ndim, int req, typename xpu>
 struct slice_forward_window;
 template <int ndim, int req>
@@ -129,9 +134,8 @@ struct slice_forward_window<ndim, req, cpu> {
     const int step_last_dim = step[ndim - 1];
     const int begin_last_dim = begin[ndim - 1];
     int out_offset = i * out_last_dim_size;
-    for (int j = 0; j < out_count_per_row;
-         ++j) {      // The only difference is out_count_per_row
-      int irow = 0;  // row id of flattend 2D data
+    for (int j = 0; j < out_count_per_row; ++j) {
+      int irow = 0;
       int stride = 1;
       int idx = i;
 #pragma unroll
@@ -215,7 +219,7 @@ void SliceSplitEmbeddingConcatOpForward(const nnvm::NodeAttrs& attrs,
       new TakeCPUInfoWindow<IType, DType>[param_.num_outputs];
   DType* out_data = out.dptr<DType>();
   IType* idx = data.dptr<IType>();
-  for (int em = 0; em < param_.num_outputs; em++) {
+  for (int em = 0; em < param_.num_outputs; ++em) {
     const TBlob& w = (inputs)[em + 1];
     const TShape& wshape = w.shape_;
     takecpu_info[em].idx_offset = em * emb_in_last_dim_size;
@@ -230,7 +234,7 @@ void SliceSplitEmbeddingConcatOpForward(const nnvm::NodeAttrs& attrs,
   int i = 0;
   int N = batch_size;
 #pragma omp parallel for num_threads(omp_threads) collapse(2)
-  for (em = 0; em < param_.num_outputs; em++)
+  for (em = 0; em < param_.num_outputs; ++em)
     for (i = 0; i < N; ++i) {
       int64_t j = static_cast<int64_t>(
           *(idx + takecpu_info[em].idx_offset + i * data_last_dim_size));
@@ -259,12 +263,12 @@ static void MxnetFallBackCompute(FCompute fn, const nnvm::NodeAttrs& attrs,
                                  const std::vector<NDArray>& outputs) {
   std::vector<TBlob> in_blobs(inputs.size());
   std::vector<NDArray> in_bufs;
-  for (size_t i = 0; i < in_blobs.size(); i++) {
+  for (size_t i = 0; i < in_blobs.size(); ++i) {
     in_blobs[i] = inputs[i].data();
   }
 
   std::vector<TBlob> out_blobs(outputs.size());
-  for (size_t i = 0; i < out_blobs.size(); i++) {
+  for (size_t i = 0; i < out_blobs.size(); ++i) {
     NDArray output = outputs[i];
     out_blobs[i] = output.data();
   }

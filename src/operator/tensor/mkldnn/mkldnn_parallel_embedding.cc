@@ -30,8 +30,7 @@
 namespace mxnet {
 namespace op {
 
-static EmbeddingParam GetEmbeddedParam(const ParallelEmbeddingParam& param_,
-                                       int i) {
+static EmbeddingParam GetEmbeddedParam(const ParallelEmbeddingParam& param_, int i) {
   EmbeddingParam embedding_param;
   embedding_param.input_dim = param_.input_dims[i];
   embedding_param.output_dim = param_.output_dims[i];
@@ -48,7 +47,7 @@ inline bool ParallelEmbeddingOpForwardStorageType(const nnvm::NodeAttrs& attrs,
   const ParallelEmbeddingParam& param_ =
       nnvm::get<ParallelEmbeddingParam>(attrs.parsed);
   bool ret = true;
-  for (int i = 0; i < param_.num_args; i++) {
+  for (int i = 0; i < param_.num_args; ++i) {
     nnvm::NodeAttrs attrs;
     attrs.parsed = GetEmbeddedParam(param_, i);
     std::vector<int> e_in;

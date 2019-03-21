@@ -143,7 +143,7 @@ class SliceChannelOp : public Operator {
   int axis_;
 };  // class SliceChannelOp
 
-template <typename xpu>
+template<typename xpu>
 Operator *CreateOp(SliceChannelParam param, int dtype);
 inline bool SliceChannelInferShape(std::vector<TShape> *in_shape,
                                    std::vector<TShape> *out_shape,
