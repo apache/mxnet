@@ -242,7 +242,11 @@ class Estimator(object):
                     self.train_stats['batch_' + loss_metric.name] = loss_metric.get()[1]
 
                 try:
-                    self.train_stats['step'] = "{}/{}".format(batch_size * (i + 1), len(train_data._dataset))
+                    completed_samples = len(train_data._dataset) if i == len(train_data._dataset) - 1 \
+                                        else batch_size * (i + 1)
+                    # We need to check if this is the last batch in the current epoch and select
+                    # the value to print appropriately
+                    self.train_stats['step'] = "{}/{}".format(completed_samples, len(train_data._dataset))
                 except AttributeError:
                     self.train_stats['step'] = i
 
