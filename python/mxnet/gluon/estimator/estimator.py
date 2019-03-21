@@ -73,10 +73,9 @@ class Estimator(object):
             self.train_metrics = [metrics]
         else:
             self.train_metrics = metrics or []
-            for metric in self.train_metrics:
-                if not isinstance(metric, EvalMetric):
-                    raise ValueError("metrics must be a Metric or a list of Metric, "
-                                     "refer to mxnet.metric.EvalMetric:{}".format(metric))
+            if not all([isinstance(metric, EvalMetric) for metric in self.train_metrics]):
+                raise ValueError("metrics must be a Metric or a list of Metric, "
+                                 "refer to mxnet.metric.EvalMetric:{}".format(metrics))
 
         # Use same metrics for validation
         self.val_metrics = copy.deepcopy(self.train_metrics)
@@ -193,7 +192,9 @@ class Estimator(object):
                     data, label = self._batch_fn(batch, self.context, is_iterator=True)
                 else:
                     raise ValueError("You are using a custom iteration, please also provide "
-                                     "batch_fn to extract data and label")
+                                     "batch_fn to extract data and label. Alternatively, you "
+                                     "can provide the data as gluon.data.DataLoader or "
+                                     "mx.io.DataIter")
             else:
                 data, label = batch_fn(batch, self.context)
             pred = [self.net(x) for x in data]
@@ -266,7 +267,9 @@ class Estimator(object):
                         data, label = self._batch_fn(batch, self.context, is_iterator=True)
                     else:
                         raise ValueError("You are using a custom iteration, please also provide "
-                                         "batch_fn to extract data and label")
+                                         "batch_fn to extract data and label. Alternatively, you "
+                                         "can provide the data as gluon.data.DataLoader or "
+                                         "mx.io.DataIter")
                 else:
                     data, label = batch_fn(batch, self.context)
 
