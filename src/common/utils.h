@@ -748,12 +748,12 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
  * \param shape to be converted.
  */
 inline void ConvertToNumpyShape(mxnet::TShape* shape) {
-  if (shape->ndim() == 0) {
+  if (shape->ndim() == 0) {  // legacy shape ndim = 0 means unknown
     *shape = mxnet::TShape();  // unknown shape ndim = -1
   } else {
     for (int j = 0; j < shape->ndim(); ++j) {
       CHECK_GE((*shape)[j], 0) << "Legacy shape cannot have dim size < 0";
-      if ((*shape)[j] == 0) {
+      if ((*shape)[j] == 0) {  // legacy shape dim_size = 0 means unknown
         (*shape)[j] = -1;  // unknown dim size = -1
       }
     }
@@ -771,12 +771,11 @@ inline void ConvertToNumpyShape(mxnet::ShapeVector* shapes) {
  * the infer shape functions/pass to the legacy shape definition.
  */
 inline void ConvertToLegacyShape(mxnet::TShape* shape) {
-  if (shape->ndim() == -1) {
+  if (!mxnet::ndim_is_known(*shape)) {
     *shape = mxnet::TShape(0);
   } else {
     for (int j = 0; j < shape->ndim(); ++j) {
-      CHECK_GE((*shape)[j], -1);
-      if ((*shape)[j] == -1) {
+      if (!mxnet::dim_size_is_known(*shape, j)) {
         (*shape)[j] = 0;
       }
     }

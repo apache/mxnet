@@ -46,7 +46,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
     mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim() > 0) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      has_unknown_dim_size = tmp[axis] == -1 || has_unknown_dim_size;
+      has_unknown_dim_size = !mxnet::dim_size_is_known(tmp, axis) || has_unknown_dim_size;
       size += tmp[axis];
       tmp[axis] = -1;
       shape_assign(&dshape, tmp);
@@ -93,7 +93,7 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
     mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim() > 0) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      if (tmp[axis] == -1) {
+      if (!mxnet::dim_size_is_known(tmp, axis)) {
         zero_indices.emplace_back(i);
       } else {
         CHECK_GE(tmp[axis], 0);
@@ -111,7 +111,7 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
     shape_assign(&dshape, tmp);
   }
 
-  if (dshape.ndim() == -1) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
 
   for (int i = 0; i < param_.num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))

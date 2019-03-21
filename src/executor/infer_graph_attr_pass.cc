@@ -556,7 +556,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       bool is_input_dynamic_shape = false;
       for (uint32_t i = 0; i < ishape.size(); ++i) {
         ishape[i] = rshape[idx.entry_id(inode.inputs[i])];
-        if (ishape[i].ndim() == -1 && is_dynamic[idx.entry_id(inode.inputs[i])]) {
+        if (!mxnet::ndim_is_known(ishape[i]) && is_dynamic[idx.entry_id(inode.inputs[i])]) {
           is_input_dynamic_shape = true;
         }
         if (fis_none(ishape[i])) forward_known = false;
@@ -573,7 +573,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       auto finfer = finfer_shape.get(inode.source->op(), fdefault);
       if (finfer == nullptr || is_input_dynamic_shape) {
         for (uint32_t i = 0; i < oshape.size(); ++i) {
-          if (oshape[i].ndim() == -1) {
+          if (!mxnet::ndim_is_known(oshape[i].ndim())) {
             is_dynamic[idx.entry_id(nid, i)] = 1;
           }
         }
@@ -660,12 +660,12 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
       "shape", "shape_num_unknown_nodes",
       [](const mxnet::TShape& s) { return !mxnet::shape_is_known(s); },
       [](const mxnet::TShape& s) {
-        if (s.ndim() == -1) {
+        if (!mxnet::ndim_is_known(s)) {
           return static_cast<size_t>(1);
         }
         size_t ret = 0;
         for (const auto& val : s) {
-          if (val == -1) {
+          if (!mxnet::dim_size_is_known(val)) {
             ++ret;
           }
         }

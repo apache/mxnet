@@ -48,7 +48,7 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
 
   const int channelCount = dshape[axis];
 
-  if (dshape.ndim() == -1) {
+  if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
 

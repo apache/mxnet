@@ -96,14 +96,14 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
   // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
   out_shape->resize(1, mxnet::TShape());
   const mxnet::TShape &dshp = (*in_shape)[conv::kData];
-  if (dshp.ndim() == -1) return false;
+  if (!mxnet::ndim_is_known(dshp)) return false;
 
   if (param_.kernel.ndim() == 1) {
     // 1d conv
     CHECK_EQ(dshp.ndim(), 3U) << "Input data should be 3D in batch-num_filter-x";
     Shape<3> dshape = ConvertLayout(dshp.get<3>(), param_.layout.value(), kNCW);
     Shape<3> wshape = Shape3(param_.num_filter / param_.num_group,
-        dshape[1] == -1 ? -1 : dshape[1] / param_.num_group,
+        mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
         param_.kernel[0]);
     wshape = ConvertLayout(wshape, kNCW, param_.layout.value());
     if (wshape[0] >= 0) {
@@ -153,7 +153,7 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
       << "Input data should be 4D in batch-num_filter-y-x";
     Shape<4> dshape = ConvertLayout(dshp.get<4>(), param_.layout.value(), kNCHW);
     Shape<4> wshape = Shape4(param_.num_filter / param_.num_group,
-        dshape[1] == -1 ? -1 : dshape[1] / param_.num_group,
+        mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
         param_.kernel[0], param_.kernel[1]);
     wshape = ConvertLayout(wshape, kNCHW, param_.layout.value());
     if (wshape[0] >= 0) {
@@ -212,7 +212,7 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
       << "Input data should be 5D in batch-num_filter-depth-y-x";
     Shape<5> dshape = ConvertLayout(dshp.get<5>(), param_.layout.value(), kNCDHW);
     Shape<5> wshape = Shape5(param_.num_filter / param_.num_group,
-        dshape[1] == -1 ? -1 : dshape[1] / param_.num_group,
+        mxnet::dim_size_is_known(dshape, 1) ? dshape[1] / param_.num_group : -1,
         param_.kernel[0], param_.kernel[1], param_.kernel[2]);
     wshape = ConvertLayout(wshape, kNCDHW, param_.layout.value());
     if (wshape[0] >= 0) {

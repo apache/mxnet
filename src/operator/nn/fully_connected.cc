@@ -46,7 +46,7 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape dshape = (*in_shape)[fullc::kData];
   mxnet::TShape oshape = (*out_shape)[0];
   // require data to be known
-  if (dshape.ndim() == -1) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
 
   index_t num_input;
   if (!param.flatten) {

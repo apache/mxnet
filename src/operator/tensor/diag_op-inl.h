@@ -114,7 +114,7 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(out_attrs->size(), 1U);
 
     const mxnet::TShape& ishape = (*in_attrs)[0];
-    if (ishape.ndim() == -1) {
+    if (!mxnet::ndim_is_known(ishape)) {
       return false;
     }
 

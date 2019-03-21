@@ -110,7 +110,7 @@ inline mxnet::TShape InferReshapeShape(const mxnet::Tuple<IType>& shape,
       CHECK_LT(src_idx, dshape_len-1);
       const int d1 = dshape_vec[src_idx++];
       const int d2 = dshape_vec[src_idx++];
-      if (d1 == -1 || d2 == -1) {
+      if (!mxnet::dim_size_is_known(d1) || !mxnet::dim_size_is_known(d2)) {
         tmp.push_back(-1);
       } else {
         tmp.push_back(d1 * d2);
@@ -164,7 +164,7 @@ inline bool ReverseReshapeInferShape(mxnet::TShape *in, const mxnet::TShape& out
     int zero_axis = -1;
     int known_dim_size_prod = 1;
     for (int i = 0; i < in->ndim(); i++) {
-      if ((*in)[i] == -1) {
+      if (!mxnet::dim_size_is_known(*in, i)) {
         if (zero_axis != -1)
           return false;  // more than 1 zero found.
         else
@@ -185,7 +185,7 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape &dshape = (*in_attrs)[0];
-  if (dshape.ndim() == -1) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   mxnet::TShape oshape;
   if (param_.shape.ndim() != 0) {
     oshape = InferReshapeShape(param_.shape, dshape, param_.reverse);
@@ -314,7 +314,7 @@ void Transpose(const nnvm::NodeAttrs& attrs,
                const std::vector<TBlob>& outputs) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
   CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
-  if (param.axes.ndim() == -1) {
+  if (!mxnet::ndim_is_known(param.axes)) {
     mxnet::TShape axes(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {
       axes[i] = axes.ndim() - 1 - i;
@@ -334,7 +334,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& shp = (*in_attrs)[0];
   CHECK_LE(shp.ndim(), 6U) << "Transpose support at most 6 dimensions";
   mxnet::TShape ret(shp.ndim(), -1);
-  if (param.axes.ndim() == -1) {
+  if (!mxnet::ndim_is_known(param.axes)) {
     for (int i = 0; i < shp.ndim(); ++i) {
       ret[i] = shp[shp.ndim()-1-i];
     }
@@ -367,7 +367,7 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (in_attrs->at(0).ndim() == -1 && out_attrs->at(0).ndim() == -1) {
+  if (!mxnet::ndim_is_known(in_attrs->at(0)) && !mxnet::ndim_is_known(out_attrs->at(0))) {
     return false;
   }
 
@@ -731,7 +731,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == -1) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   mxnet::TShape oshape = dshape;
 
@@ -2598,7 +2598,7 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   mxnet::TShape dshape = in_attrs->at(split_enum::kData);
   mxnet::TShape ishape = in_attrs->at(split_enum::kData);
-  if (dshape.ndim() == -1) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   if (param.axis >= 0) {
     CHECK_LT(static_cast<size_t>(param.axis), dshape.ndim());
   } else {

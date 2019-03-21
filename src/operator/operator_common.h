@@ -160,14 +160,14 @@ inline std::string type_string(const int& x) {
  * \return whether x and y are compatible.
  */
 inline bool shape_assign(mxnet::TShape *y, const mxnet::TShape& x) {
-  if (y->ndim() == -1) {
+  if (!mxnet::ndim_is_known(*y)) {
     *y = x;
     return true;
   } else if (y->ndim() != x.ndim()) {
-    return x.ndim() == -1;
+    return !mxnet::ndim_is_known(x);
   } else {
     for (int i = 0; i < y->ndim(); ++i) {
-      if ((*y)[i] == -1) {
+      if (!mxnet::dim_size_is_known(*y, i)) {
         (*y)[i] = x[i];
       } else if ((*y)[i] != x[i] && x[i] >= 0) {
         return false;
