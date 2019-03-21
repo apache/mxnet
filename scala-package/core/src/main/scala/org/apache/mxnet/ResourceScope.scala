@@ -134,14 +134,12 @@ object ResourceScope {
 
     try {
       val ret = body
-      if (scope == null) {
-        ret match {
+       ret match {
           // don't de-allocate if returning any collection that contains NativeResource.
-          case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
-          case nRes: NativeResource => curScope.moveToOuterScope(nRes)
-          case ndRet: NDArrayFuncReturn => ndRet.arr.foreach(nd => curScope.moveToOuterScope(nd))
-          case _ => // do nothing
-        }
+        case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
+        case nRes: NativeResource => curScope.moveToOuterScope(nRes)
+        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach(nd => curScope.moveToOuterScope(nd))
+        case _ => // do nothing
       }
       ret
     } catch {
