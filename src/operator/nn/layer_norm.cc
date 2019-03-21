@@ -48,7 +48,7 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
 
   const int channelCount = dshape[axis];
 
-  if (!shape_is_known(dshape)) {
+  if (dshape.ndim() == -1) {
     return false;
   }
 

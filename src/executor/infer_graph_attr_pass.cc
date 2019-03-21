@@ -24,6 +24,7 @@
 
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
+#include <mxnet/imperative.h>
 #include "./exec_pass.h"
 #include "../operator/operator_common.h"
 #include "../common/exec_utils.h"
@@ -467,6 +468,12 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   std::vector<AttrType> ishape, oshape;
   // whether a shape is dynamic
   std::vector<int> is_dynamic(rshape.size(), 0);
+
+  // convert to numpy compatible shape to use operator's infer shape function
+  if (!Imperative::Get()->is_np_comp()) {
+    common::ConvertToNumpyShape(&rshape);
+  }
+
   // inference step function for nid
   auto infer_step = [&](uint32_t nid, bool last_iter) {
     const auto& inode = idx[nid];
@@ -483,6 +490,9 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
         if (it != inode.source->attrs.dict.end()) {
           std::istringstream is(it->second);
           CHECK(is >> rshape[out_ent_id]) << "Invalid attribute";
+          if (!Imperative::Get()->is_np_comp()) {
+            common::ConvertToNumpyShape(&rshape[out_ent_id]);
+          }
         }
       }
       // assign a default value to node attribute

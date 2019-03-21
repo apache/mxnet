@@ -85,7 +85,7 @@ static bool SoftmaxOutputShape(const nnvm::NodeAttrs& attrs,
   const SoftmaxOutputParam& param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
   const mxnet::TShape &dshape = in_shape->at(0);
-  if (!shape_is_known(dshape)) return false;
+  if (dshape.ndim() == -1) return false;
 
   // label.shape == data.shape: use probability as label
   if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
