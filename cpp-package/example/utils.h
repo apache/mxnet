@@ -30,9 +30,12 @@ using namespace mxnet::cpp;
 #define TRY \
   try {
 #define CATCH \
-  } catch(...) { \
+  } catch(dmlc::Error &err) { \
     LG << "Status: FAIL";\
     LG << "With Error: " << MXGetLastError(); \
+    return 1; \
+  } catch(...) { \
+    LG << "Status: FAIL";\
     return 1; \
   }
 
