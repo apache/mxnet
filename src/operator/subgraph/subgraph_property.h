@@ -204,13 +204,13 @@ class SubgraphPropertyRegistry {
 typedef dmlc::ThreadLocalStore<std::unordered_map<std::string, std::unordered_set<std::string>>>
   SubgraphPropertyOpNameSet;
 
-#define DECLEARPROPERTY1(NAME, SubgraphPropertyType, X) \
+#define DECLAREPROPERTY1(NAME, SubgraphPropertyType, X) \
   DMLC_ATTRIBUTE_UNUSED auto __make_##SubgraphPropertyType##_##Name##_##X##__
-#define DECLEARPROPERTY(NAME, SubgraphPropertyType, X) \
-  DECLEARPROPERTY1(NAME, SubgraphPropertyType, X)
+#define DECLAREPROPERTY(NAME, SubgraphPropertyType, X) \
+  DECLAREPROPERTY1(NAME, SubgraphPropertyType, X)
 
 #define MXNET_REGISTER_SUBGRAPH_PROPERTY(Name, SubgraphPropertyType) \
-  static DECLEARPROPERTY(Name, SubgraphPropertyType, __LINE__) =     \
+  static DECLAREPROPERTY(Name, SubgraphPropertyType, __LINE__) =     \
       SubgraphPropertyRegistry::Get()->__REGISTER__(#Name, &SubgraphPropertyType::Create)
 
 }  // namespace op
