@@ -137,7 +137,7 @@ object ResourceScope {
           // don't de-allocate if returning any collection that contains NativeResource.
         case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
         case nRes: NativeResource => curScope.moveToOuterScope(nRes)
-        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach(nd => curScope.moveToOuterScope(nd))
+        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => curScope.moveToOuterScope(nd) )
         case _ => // do nothing
       }
       ret
@@ -147,9 +147,7 @@ object ResourceScope {
         null.asInstanceOf[A] // we'll throw in finally
     } finally {
       var toThrow: Throwable = retThrowable
-      if (retThrowable eq null) {
-        curScope.close
-      }
+      if (retThrowable eq null) curScope.close
       else {
         try {
           curScope.close
@@ -194,7 +192,6 @@ object ResourceScope {
     * @param r ResourceScope to remove
     */
   private[mxnet] def removeFromThreadLocal(r: ResourceScope): Unit = {
-    // threadLocalScopes.get() -= r
     threadLocalScopes.get().remove(threadLocalScopes.get().lastIndexOf(r))
   }
 
