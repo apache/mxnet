@@ -45,7 +45,7 @@ class GPUDeviceStorage {
    * \brief Allocation.
    * \param handle Handle struct.
    */
-  inline static void* Alloc(Storage::Handle* handle);
+  inline static void Alloc(Storage::Handle* handle);
   /*!
    * \brief Deallocation.
    * \param handle Handle struct.
@@ -53,10 +53,13 @@ class GPUDeviceStorage {
   inline static void Free(Storage::Handle handle);
 };  // class GPUDeviceStorage
 
-inline void* GPUDeviceStorage::Alloc(Storage::Handle* handle) {
+inline void GPUDeviceStorage::Alloc(Storage::Handle* handle) {
   void* ret = nullptr;
   const size_t size = handle->size;
-  if (size == 0) return ret;
+  if (size == 0) {
+    handle->dptr = ret;
+    return;
+  }
 
 #if MXNET_USE_CUDA
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
@@ -69,7 +72,7 @@ inline void* GPUDeviceStorage::Alloc(Storage::Handle* handle) {
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
-  return ret;
+  handle->dptr = ret;
 }
 
 inline void GPUDeviceStorage::Free(Storage::Handle handle) {

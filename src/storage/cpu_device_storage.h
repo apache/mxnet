@@ -42,7 +42,7 @@ class CPUDeviceStorage {
    * \brief Aligned allocation on CPU.
    * \param handle Handle struct.
    */
-  inline static void* Alloc(Storage::Handle* handle);
+  inline static void Alloc(Storage::Handle* handle);
   /*!
    * \brief Deallocation.
    * \param handle Handle struct.
@@ -62,10 +62,13 @@ class CPUDeviceStorage {
 #endif
 };  // class CPUDeviceStorage
 
-inline void* CPUDeviceStorage::Alloc(Storage::Handle* handle) {
+inline void CPUDeviceStorage::Alloc(Storage::Handle* handle) {
   void* ptr = nullptr;
   const size_t size = handle->size;
-  if (size == 0) return ptr;
+  if (size == 0) {
+    handle->dptr = ptr;
+    return;
+  }
 
 #if _MSC_VER
   ptr = _aligned_malloc(size, alignment_);
@@ -74,7 +77,7 @@ inline void* CPUDeviceStorage::Alloc(Storage::Handle* handle) {
   int ret = posix_memalign(&ptr, alignment_, size);
   if (ret != 0) LOG(FATAL) << "Failed to allocate CPU Memory";
 #endif
-  return ptr;
+  handle->dptr = ptr;
 }
 
 inline void CPUDeviceStorage::Free(Storage::Handle handle) {

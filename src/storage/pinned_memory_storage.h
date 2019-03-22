@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file cpu_device_storage.h
+ * \file pinned_memory_storage.h
  * \brief CPU storage with pinned memory
  */
 #ifndef MXNET_STORAGE_PINNED_MEMORY_STORAGE_H_
@@ -40,7 +40,7 @@ class PinnedMemoryStorage {
    * \brief Allocation.
    * \param handle Handle struct.
    */
-  inline static void* Alloc(Storage::Handle* handle);
+  inline static void Alloc(Storage::Handle* handle);
 
   /*!
    * \brief Deallocation.
@@ -49,10 +49,13 @@ class PinnedMemoryStorage {
   inline static void Free(Storage::Handle handle);
 };
 
-inline void* PinnedMemoryStorage::Alloc(Storage::Handle* handle) {
+inline void PinnedMemoryStorage::Alloc(Storage::Handle* handle) {
   void* ret = nullptr;
   const size_t size = handle->size;
-  if (size == 0) return ret;
+  if (size == 0) {
+    handle->dptr = ret;
+    return;
+  }
 
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
@@ -60,7 +63,7 @@ inline void* PinnedMemoryStorage::Alloc(Storage::Handle* handle) {
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
   // make the memory available across all devices
   CUDA_CALL(cudaHostAlloc(&ret, size, cudaHostAllocPortable));
-  return ret;
+  handle->dptr = ret;
 }
 
 inline void PinnedMemoryStorage::Free(Storage::Handle handle) {
