@@ -466,7 +466,9 @@ class RNNOp {
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
     #endif
     #else
-    LOG(FATAL) << "RNN on GPU is only available for cuDNN at the moment.";
+    if (ctx_.dev_type == kGPU) {
+      LOG(FATAL) << "RNN on GPU is only available for cuDNN at the moment.";
+    }
     #endif
 
     if (ctx_.dev_type == kCPU) {
