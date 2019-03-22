@@ -142,12 +142,11 @@ ifeq ($(USE_MKLDNN), 1)
 	endif
 	CFLAGS += -I$(MKLDNNROOT)/include
 	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
-endif
-
 ifeq ($(USE_BLAS), mkl)
 	SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
 	CFLAGS += -I$(SPARSE_MATRIX_DIR)
 	LDFLAGS += -L$(SPARSE_MATRIX_DIR) -lsparse_matrix
+endif
 endif
 
 # setup opencv
