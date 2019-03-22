@@ -42,6 +42,7 @@ from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from ..ndarray import _ndarray_cls
 from ..executor import Executor
+from ..numpy import is_np_comp
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
@@ -1078,7 +1079,11 @@ class Symbol(SymbolBase):
                 arg_names = self.list_arguments()
                 unknowns = []
                 for name, shape in zip(arg_names, arg_shapes):
-                    if not shape or not _numpy.prod(shape):
+                    if is_np_comp():
+                        shape_is_none = not shape or -1 in shape
+                    else:
+                        shape_is_none = not shape or 0 in shape
+                    if shape_is_none:
                         if len(unknowns) >= 10:
                             unknowns.append('...')
                             break
@@ -1204,12 +1209,15 @@ class Symbol(SymbolBase):
             ctypes.byref(aux_shape_data),
             ctypes.byref(complete)))
         if complete.value != 0:
-            arg_shapes = [
-                tuple(arg_shape_data[i][:arg_shape_ndim[i]]) for i in range(arg_shape_size.value)]
-            out_shapes = [
-                tuple(out_shape_data[i][:out_shape_ndim[i]]) for i in range(out_shape_size.value)]
-            aux_shapes = [
-                tuple(aux_shape_data[i][:aux_shape_ndim[i]]) for i in range(aux_shape_size.value)]
+            arg_shapes = [tuple(arg_shape_data[i][:arg_shape_ndim[i]])
+                          if arg_shape_ndim[i] >= 0 else None
+                          for i in range(arg_shape_size.value)]
+            out_shapes = [tuple(out_shape_data[i][:out_shape_ndim[i]])
+                          if out_shape_ndim[i] >= 0 else None
+                          for i in range(out_shape_size.value)]
+            aux_shapes = [tuple(aux_shape_data[i][:aux_shape_ndim[i]])
+                          if aux_shape_ndim[i] >= 0 else None
+                          for i in range(aux_shape_size.value)]
             return (arg_shapes, out_shapes, aux_shapes)
         else:
             return (None, None, None)

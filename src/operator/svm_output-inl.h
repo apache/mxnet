@@ -143,7 +143,7 @@ class SVMOutputProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
     const mxnet::TShape &dshape = in_shape->at(0);
-    if (!shape_is_known(dshape)) return false;
+    if (!mxnet::ndim_is_known(dshape)) return false;
     mxnet::TShape label_shape(dshape.ndim() - 1, -1);
     for (int i = 0; i + 1 < dshape.ndim(); ++i)
       label_shape[i] = dshape[i];

@@ -25,8 +25,10 @@
 #include <mxnet/base.h>
 #include <mxnet/c_api.h>
 #include <mxnet/executor.h>
+#include <mxnet/imperative.h>
 #include "./c_api_common.h"
 #include "../executor/graph_executor.h"
+#include "../common/utils.h"
 #if MXNET_USE_TENSORRT
 #include "../executor/trt_graph_executor.h"
 #endif  // MXNET_USE_TENSORRT
@@ -415,6 +417,11 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
     CHECK(p.second) << "Duplicate shapes are provided for argument "
       << provided_arg_shape_names[i] << " in simple_bind";
+  }
+  if (!Imperative::Get()->is_np_comp()) {
+    for (auto &kv : arg_shape_map) {
+      common::ConvertToNumpyShape(&kv.second);
+    }
   }
 
   // create para name set for sharing data array memory

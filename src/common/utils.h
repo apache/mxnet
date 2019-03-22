@@ -734,6 +734,60 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
   }
 }
 
+/*!
+ * \brief If numpy compatibility is turned off (default), the shapes passed in
+ * by users follow the legacy shape definition:
+ * 1. 0 ndim means the shape is completely unknown.
+ * 2. 0 dim size means the dim size is unknown.
+ * We need to convert those shapes to use the numpy shape definition:
+ * 1. 0 ndim means it's a scalar tensor.
+ * 2. -1 ndim means the shape is unknown.
+ * 3. 0 dim size means no elements in that dimension.
+ * 4. -1 dim size means the dimension's size is unknown.
+ * so that operator's infer shape function can work in backend.
+ * \param shape to be converted.
+ */
+inline void ConvertToNumpyShape(mxnet::TShape* shape) {
+  if (shape->ndim() == 0) {  // legacy shape ndim = 0 means unknown
+    *shape = mxnet::TShape();  // unknown shape ndim = -1
+  } else {
+    for (int j = 0; j < shape->ndim(); ++j) {
+      CHECK_GE((*shape)[j], 0) << "Legacy shape cannot have dim size < 0";
+      if ((*shape)[j] == 0) {  // legacy shape dim_size = 0 means unknown
+        (*shape)[j] = -1;  // unknown dim size = -1
+      }
+    }
+  }
+}
+
+inline void ConvertToNumpyShape(mxnet::ShapeVector* shapes) {
+  for (size_t i = 0; i < shapes->size(); ++i) {
+    ConvertToNumpyShape(&(shapes->at(i)));
+  }
+}
+
+/*!
+ * \brief This is function is used to convert shapes returned by
+ * the infer shape functions/pass to the legacy shape definition.
+ */
+inline void ConvertToLegacyShape(mxnet::TShape* shape) {
+  if (!mxnet::ndim_is_known(*shape)) {
+    *shape = mxnet::TShape(0);
+  } else {
+    for (int j = 0; j < shape->ndim(); ++j) {
+      if (!mxnet::dim_size_is_known(*shape, j)) {
+        (*shape)[j] = 0;
+      }
+    }
+  }
+}
+
+inline void ConvertToLegacyShape(mxnet::ShapeVector* shapes) {
+  for (size_t i = 0; i < shapes->size(); ++i) {
+    ConvertToLegacyShape(&(shapes->at(i)));
+  }
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_

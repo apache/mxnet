@@ -46,7 +46,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
     mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim() > 0) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      has_unknown_dim_size = tmp[axis] == -1 || has_unknown_dim_size;
+      has_unknown_dim_size = !mxnet::dim_size_is_known(tmp, axis) || has_unknown_dim_size;
       size += tmp[axis];
       tmp[axis] = -1;
       shape_assign(&dshape, tmp);
@@ -91,26 +91,27 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
   int axis = -1;
   for (int i = 0; i < param_.num_args; ++i) {
     mxnet::TShape tmp = (*in_shape)[i];
-    if (tmp.ndim()) {
+    if (tmp.ndim() > 0) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      if (tmp[axis] == 0) {
+      if (!mxnet::dim_size_is_known(tmp, axis)) {
         zero_indices.emplace_back(i);
       } else {
+        CHECK_GE(tmp[axis], 0);
         size += tmp[axis];
       }
-      tmp[axis] = 0;
+      tmp[axis] = -1;
       shape_assign(&dshape, tmp);
     }
   }
 
   mxnet::TShape tmp = (*out_shape)[0];
-  if (tmp.ndim()) {
+  if (tmp.ndim() > 0) {
     axis = CheckAxis(param_.dim, tmp.ndim());
-    tmp[axis] = 0;
+    tmp[axis] = -1;
     shape_assign(&dshape, tmp);
   }
 
-  if (!shape_is_known(dshape)) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
 
   for (int i = 0; i < param_.num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))
@@ -120,21 +121,21 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
   if (zero_indices.empty()) dshape[axis] = size;
   CHECK(shape_assign(&(*out_shape)[0], dshape))
       << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
-  if ((*out_shape)[0][axis] != 0 && !zero_indices.empty()) {
+  if ((*out_shape)[0][axis] != -1 && !zero_indices.empty()) {
     int residual = (*out_shape)[0][axis] - size;
     CHECK_GE(residual, 0)
         << "Input size already exceeds output size. Residual: " << residual;
-    CHECK(zero_indices.size() <= 2 && zero_indices.size() >= 0)
+    CHECK(zero_indices.size() <= 2 && zero_indices.size() > 0)
         << "Expecting 1 or 2 inputs that need shape inference. Got: " << zero_indices.size();
-    bool need_infer = !(*out_shape)[0].Size();
+    bool need_infer = !shape_is_known((*out_shape)[0]);
     for (int i : zero_indices) {
       (*in_shape)[i][axis] = residual / zero_indices.size();
-      need_infer = need_infer || !(*in_shape)[i].Size();
+      need_infer = need_infer || !shape_is_known((*in_shape)[i]);
     }
     return !need_infer;
   }
 
-  return dshape.Size() != 0;
+  return shape_is_known(dshape);
 }
 
 static bool ConcatType(const nnvm::NodeAttrs& attrs,

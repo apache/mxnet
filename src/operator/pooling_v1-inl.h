@@ -247,7 +247,7 @@ class PoolingV1Prop : public OperatorProperty {
     CHECK_LE(dshape.ndim(), 5U) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
                                << "Or 5D in (batch, channel, d, y, x)";
     mxnet::TShape oshape = dshape;
-    if (dshape.ndim() ==  0) return false;
+    if (dshape.ndim() ==  -1) return false;
     if (param_.global_pool) {
       if (dshape.ndim() == 4) {
         oshape[2] = 1;

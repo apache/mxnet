@@ -48,7 +48,7 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& rhs = (*in_attrs)[1];
 
   // avoid pre-mature shape inference.
-  if (lhs.ndim() == -1 || rhs.ndim() == -1) return false;
+  if (!mxnet::ndim_is_known(lhs) || !mxnet::ndim_is_known(rhs)) return false;
 
   if (lhs == rhs) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, lhs);

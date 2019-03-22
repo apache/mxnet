@@ -2265,7 +2265,7 @@ def test_reshape():
 
         for i in range(len(src_shape)):
             holdout_src_shape = list(src_shape)
-            holdout_src_shape[i] = -1
+            holdout_src_shape[i] = 0
             holdout_src_shape = tuple(holdout_src_shape)
             net = mx.sym.Variable('data')
             net = mx.sym.elemwise_add(net.reshape(shape_args, reverse=reverse), mx.sym.ones(shape=dst_shape))
@@ -4398,7 +4398,8 @@ def test_tile():
         assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
 
     test_normal_case()
-    test_empty_tensor()
+    with mx.numpy.enable_np_comp():
+        test_empty_tensor()
     test_empty_reps()
     test_tile_backward()
     test_tile_numeric_gradient()
@@ -4458,7 +4459,8 @@ def test_one_hot():
     test_normal_case(index_type=np.float64)
     test_normal_case(index_type=np.float32)
     test_normal_case(index_type=np.float16)
-    test_empty_indices()
+    with mx.numpy.enable_np_comp():
+        test_empty_indices()
     test_zero_depth()
 
 
