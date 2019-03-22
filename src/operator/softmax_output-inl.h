@@ -349,7 +349,7 @@ class SoftmaxOutputProp : public OperatorProperty {
           lshape2[i-1] = dshape[i];
         mxnet::TShape lshape3 = dshape;
         lshape3[1] = 1;
-        if (in_shape->at(softmaxout_enum::kLabel).ndim() == -1) {
+        if (!mxnet::ndim_is_known(in_shape->at(softmaxout_enum::kLabel))) {
           in_shape->at(softmaxout_enum::kLabel) = lshape1;
         } else if (in_shape->at(softmaxout_enum::kLabel) == lshape1) {
         } else if (in_shape->at(softmaxout_enum::kLabel) == lshape2) {

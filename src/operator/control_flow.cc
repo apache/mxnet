@@ -301,7 +301,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < params.num_out_data; i++) {
     mxnet::TShape shape = subg_out_shape[i];
     // If we don't have shape info, we don't need to do anything.
-    if (!shape_is_known(shape))
+    if (!mxnet::ndim_is_known(shape))
       continue;
     subg_out_shape[i] = SliceFirstDim(shape);
   }
@@ -317,7 +317,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < params.num_out_data; i++) {
     // If the output shape isn't inferred, we don't need to propogate the info.
     const auto& g_out_shape = subg_out_shape[i];
-    if (!shape_is_known(g_out_shape))
+    if (!mxnet::ndim_is_known(g_out_shape))
       continue;
 
     auto out = mxnet::TShape(g_out_shape.ndim() + 1, -1);
@@ -336,7 +336,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     const auto &shape = subg_in_shape[loc];
     // If the input data shape isn't inferred, we don't need to propogate the
     // info.
-    if (!shape_is_known(shape))
+    if (!mxnet::ndim_is_known(shape))
       continue;
 
     if (data_1d[i]) {

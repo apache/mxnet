@@ -332,7 +332,7 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
 
   const int channelCount = dshape[channelAxis];
 
-  if (!shape_is_known(dshape)) {
+  if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
 

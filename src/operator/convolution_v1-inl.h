@@ -405,7 +405,7 @@ class ConvolutionV1Prop : public OperatorProperty {
     // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
     out_shape->resize(1, mxnet::TShape());
     const mxnet::TShape &dshp = (*in_shape)[conv_v1::kData];
-    if (!shape_is_known(dshp)) return false;
+    if (!mxnet::ndim_is_known(dshp)) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv_v1
       CHECK_EQ(dshp.ndim(), 4U) \
