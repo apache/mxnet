@@ -466,6 +466,24 @@ class RNNOp {
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
     #endif
     #endif
+
+    #if !MXNET_USE_CUDNN_RNN || !defined(__CUDACC__)
+    //  GPU NO CUDNN
+    if (ctx_.dev_type == kGPU) {
+      this->init_space_ = false;
+      this->reserve_cpu_space_size_ = 0;
+      if (param_.projection_size.has_value()) {
+        LOG(FATAL) <<
+            "hidden layer projection is only supported for GPU with CuDNN later than 7.1.1";
+      }
+      if (param_.lstm_state_clip_min.has_value()
+          || param_.lstm_state_clip_max.has_value()) {
+        LOG(FATAL) << "LSTM state clipping is only supported for GPU with CuDNN later than 7.2.1";
+      }
+    }
+    #endif
+
+    //  if dev_type is CPU, run CPU code
     if (ctx_.dev_type == kCPU) {
       this->init_space_ = false;
       this->reserve_cpu_space_size_ = 0;
@@ -517,6 +535,18 @@ class RNNOp {
     CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
     #endif
     #endif
+
+    #if !MXNET_USE_CUDNN_RNN || !defined(__CUDACC__)
+    //  GPU NO CUDNN
+    if (ctx_.dev_type == kGPU) {
+      if (init_space_) {
+        Storage::Get()->Free(reserve_cpu_space_);
+        init_space_ = false;
+      }
+    }
+    #endif
+
+    //  if dev_type is CPU, run CPU code
     if (ctx_.dev_type == kCPU) {
       if (init_space_) {
         Storage::Get()->Free(reserve_cpu_space_);
@@ -576,27 +606,6 @@ class RNNOp {
     const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                                       param_.state_size, direction, param_.mode);
     DType* work_cpu_space = NULL;
-    #if MXNET_USE_CUDNN_RNN
-    LOG(INFO) << "MXNET_USE_CUDNN_RNN:true";
-    #else
-    LOG(INFO) << "MXNET_USE_CUDNN_RNN:false";
-    #endif
-    #if defined(__CUDACC__)
-    LOG(INFO) << "defined(__CUDACC__):true";
-    #else
-    LOG(INFO) << "defined(__CUDACC__):false";
-    #endif
-    #if MXNET_USE_CUDNN == 1
-    LOG(INFO) << "MXNET_USE_CUDNN == 1:true";
-    #else
-    LOG(INFO) << "MXNET_USE_CUDNN == 1:false";
-    #endif
-    #if CUDNN_VERSION >= 7200
-    LOG(INFO) << "CUDNN_VERSION >= 7200:true";
-    #else
-    LOG(INFO) << "CUDNN_VERSION >= 7200:false";
-    #endif
-
     #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
       Init(s, in_data, out_data);
@@ -764,8 +773,72 @@ class RNNOp {
                                           workspace_byte_));
       #endif
     }
+    #else
+    //  GPU NO CUDNN
+    if (ctx_.dev_type == kGPU) {
+      if (!work_cpu_space) {
+        Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
+          .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
+        work_cpu_space = workspace.dptr_;
+      }
+      if (ctx.is_train) {
+        const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
+                                                     param_.seq_length_, param_.batch_size_,
+                                                     param_.state_size, param_.mode);
+        if (init_space_ && reserve_cpu_space_size_ < r_size) {
+          Storage::Get()->Free(reserve_cpu_space_);
+          init_space_ = false;
+        }
+        if (!init_space_) {
+          reserve_cpu_space_ = Storage::Get()->Alloc(r_size * sizeof(DType), Context::CPU());
+          reserve_cpu_space_size_ = r_size;
+          init_space_ = true;
+        }
+
+        DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.dptr);
+
+        RNNForwardTraining<DType>(work_cpu_space,
+                                  reserve_space_ptr,
+                                  param_.state_outputs,
+                                  param_.num_layers,
+                                  direction,
+                                  param_.seq_length_,
+                                  param_.batch_size_,
+                                  param_.input_size_,
+                                  param_.state_size,
+                                  x.dptr_,
+                                  hx.dptr_,
+                                  cx_ptr,
+                                  w.dptr_,
+                                  b_ptr,
+                                  y.dptr_,
+                                  hy_ptr,
+                                  cy_ptr,
+                                  param_.p,
+                                  param_.mode);
+      } else {
+        RNNForwardInference<DType>(work_cpu_space,
+                                   param_.state_outputs,
+                                   param_.num_layers,
+                                   direction,
+                                   param_.seq_length_,
+                                   param_.batch_size_,
+                                   param_.input_size_,
+                                   param_.state_size,
+                                   x.dptr_,
+                                   hx.dptr_,
+                                   cx_ptr,
+                                   w.dptr_,
+                                   b_ptr,
+                                   y.dptr_,
+                                   hy_ptr,
+                                   cy_ptr,
+                                   param_.mode);
+      }
+    }
     #endif
 
+    //  if dev_type is CPU, run CPU code
     if (ctx_.dev_type == kCPU) {
       if (!work_cpu_space) {
         Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
@@ -1009,8 +1082,56 @@ class RNNOp {
                                        reserve_space_.dptr,
                                        reserve_space_byte_));
     #endif
+
+    #else
+    //  GPU NO CUDNN
+    if (ctx_.dev_type == kGPU) {
+      if (!work_cpu_space) {
+        Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
+          .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
+        work_cpu_space = workspace.dptr_;
+      }
+      size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
+                                             param_.seq_length_, param_.batch_size_,
+                                             param_.state_size, param_.mode);
+
+      if (!init_space_ || reserve_cpu_space_size_ != r_size) {
+        LOG(FATAL) << "Check forward init error";
+      }
+
+      DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.dptr);
+      RNNBackward<DType>(work_cpu_space,
+                         reserve_space_ptr,
+                         param_.num_layers,
+                         direction,
+                         param_.seq_length_,
+                         param_.batch_size_,
+                         param_.input_size_,
+                         param_.state_size,
+                         x.dptr_,
+                         hx.dptr_,
+                         cx_ptr,
+                         w.dptr_,
+                         y.dptr_,
+                         dy.dptr_,
+                         dhy_ptr,
+                         dcy_ptr,
+                         dx.dptr_,
+                         dhx.dptr_,
+                         dcx_ptr,
+                         dw.dptr_,
+                         db_ptr,
+                         req[rnn_enum::kData],
+                         req[rnn_enum::kParams],
+                         req[rnn_enum::kState],
+                         // State cell should be present for LSTMs, but is absent for other RNNs.
+                         param_.mode == rnn_enum::kLstm ? req[rnn_enum::kStateCell] : kNullOp,
+                         param_.p,
+                         param_.mode);
+    }
     #endif
 
+    //  if dev_type is CPU, run CPU code
     if (ctx_.dev_type == kCPU) {
       if (!work_cpu_space) {
         Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
