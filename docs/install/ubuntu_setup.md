@@ -175,7 +175,7 @@ If building on CPU and using OpenBLAS:
     make -j $(nproc)
 ```
 
-If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)):
+If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md)):
 
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git

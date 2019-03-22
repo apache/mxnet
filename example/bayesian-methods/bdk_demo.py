@@ -58,7 +58,7 @@ class CrossEntropySoftmax(mx.operator.NumpyOp):
 
 
 class LogSoftmax(mx.operator.NumpyOp):
-    """Generate helper functions to evaluate softmax loss function"""
+    """Generate helper functions to calculate the logarithm of softmax"""
     def __init__(self):
         super(LogSoftmax, self).__init__(False)
 

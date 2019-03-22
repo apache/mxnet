@@ -5198,6 +5198,45 @@ def test_custom_op():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
     assert_almost_equal(x.asnumpy(), np.ones(shape=(10, 10), dtype=np.float32))
 
+    # test custom operator fork
+    # see https://github.com/apache/incubator-mxnet/issues/14396
+    if not sys.platform.startswith('win'):  # no fork in windows
+        class AdditionOP(mx.operator.CustomOp):
+            def __init__(self):
+                super(AdditionOP, self).__init__()
+            def forward(self, is_train, req, in_data, out_data, aux):
+                out_data[0][:] = in_data[0] + in_data[1]
+            def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+                in_grad[0][:] = out_grad[0]
+                in_grad[1][:] = out_grad[0]
+
+        @mx.operator.register("AdditionOP")
+        class AdditionOPProp(mx.operator.CustomOpProp):
+            def __init__(self):
+                super(AdditionOPProp, self).__init__()
+            def list_arguments(self):
+                return ['a', 'b']
+            def list_outputs(self):
+                return ['output']
+            def infer_shape(self, in_shape):
+                return in_shape, [in_shape[0]]
+            def create_operator(self, ctx, shapes, dtypes):
+                return AdditionOP()
+
+        def custom_add():
+            a = mx.nd.array([1, 2, 3])
+            b = mx.nd.array([4, 5, 6])
+            c = mx.nd.Custom(a, b, op_type='AdditionOP')
+            assert_almost_equal((a + b).asnumpy(), c.asnumpy())
+
+        custom_add()
+        from multiprocessing import Process
+        p = Process(target=custom_add)
+        p.daemon = True
+        p.start()
+        p.join(5)
+        assert not p.is_alive(), "deadlock may exist in custom operator"
+
 @with_seed()
 def test_psroipooling():
     for num_rois in [1, 2]:
@@ -6605,6 +6644,15 @@ def test_slice():
                   (slice(10, 0, -2), slice(5, 2, -1), slice(7, None, 3), slice(None, 12, 4))]
     for index in index_list:
         test_slice_forward_backward(arr, index)
+
+    def test_begin_equals_end(shape, begin, end, step):
+        in_arr = mx.nd.arange(np.prod(shape)).reshape(shape=shape)
+        out_arr = mx.nd.slice(in_arr, begin=begin, end=end, step=step)
+
+    assertRaises(MXNetError, test_begin_equals_end, (4,), (2,), (2,), (1,))
+    assertRaises(MXNetError, test_begin_equals_end, (1, 5), (None, 3), (None, 3), (-1, 1))
+    assertRaises(MXNetError, test_begin_equals_end, (3, 4, 5), (1, 3, 1), (3, 3, 1), (1, -3, 2))
+    assertRaises(MXNetError, test_begin_equals_end, (2, 4), (None, 2), (None, 2), (1, -1))
 
     # check numeric gradient
     in_data = np.arange(36).reshape(2, 2, 3, 3)
