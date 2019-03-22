@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,29 +16,24 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-unameOut="$(uname -s)"
-case "${unameOut}" in
-    Linux*)     CMD='wget';;
-    Darwin*)    CMD='curl -o';;
-    CYGWIN*)    CMD='wget';;
-    MINGW*)     CMD='wget';;
-    *)          CMD=""
-esac
 
-if [ ! -d "./data" ]; then
-    mkdir data
-fi
+CURL_OPTIONS='--connect-timeout 5 --max-time 10 --retry 3 --retry-delay 0 --retry-max-time 40 -L'
 
-if [ ! -d "./data/mnist_data" ]; then
-  mkdir ./data/mnist_data
+mkdir -p data/mnist_data
+cd data/mnist_data
 
-  (cd data/mnist_data; $CMD train-images-idx3-ubyte.gz https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz)
-  (cd data/mnist_data; $CMD train-labels-idx1-ubyte.gz https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz)
-  (cd data/mnist_data; $CMD t10k-images-idx3-ubyte.gz  https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz)
-  (cd data/mnist_data; $CMD t10k-labels-idx1-ubyte.gz  https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz)
-  (cd data/mnist_data; $CMD mnist_train.csv.gz         http://data.mxnet.io/data/mnist_train.csv.gz)
-  (cd data/mnist_data; gzip -d *.gz)
-fi
+curl ${CURL_OPTIONS} https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz \
+    -o train-images-idx3-ubyte.gz
 
+curl ${CURL_OPTIONS} https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz \
+    -o train-labels-idx1-ubyte.gz
 
+curl ${CURL_OPTIONS} https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz \
+    -o t10k-images-idx3-ubyte.gz
 
+curl ${CURL_OPTIONS} https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz \
+    -o t10k-labels-idx1-ubyte.gz
+
+curl ${CURL_OPTIONS} http://data.mxnet.io/data/mnist_train.csv.gz \
+    -o mnist_train.csv.gz
+gzip -d *.gz

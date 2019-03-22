@@ -20,11 +20,13 @@
 # This is a convenience script for calling the build scripts of all dependency libraries.
 # Environment variables should be set beforehand.
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+set -ex
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+CURL_OPTIONS='--connect-timeout 5 --max-time 10 --retry 3 --retry-delay 0 --retry-max-time 40 -L'
 
 if [[ ! $PLATFORM == 'darwin' ]]; then
-    source $DIR/openblas.sh
+    source ${DIR}/openblas.sh
 fi
 source $DIR/libz.sh
 source $DIR/libturbojpeg.sh
