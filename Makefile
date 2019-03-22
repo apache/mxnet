@@ -557,7 +557,9 @@ endif
 endif
 
 ifeq ($(USE_BLAS), mkl)
+ifeq ($(UNAME_S), Darwin)
 	install_name_tool -change '@rpath/libsparse_matrix.dylib' '@loader_path/libsparse_matrix.dylib' $@
+endif
 endif
 
 $(PS_PATH)/build/libps.a: PSLITE
