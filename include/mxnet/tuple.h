@@ -607,12 +607,36 @@ class TShape : public Tuple<dim_t> {
 #endif
 };
 
+/*! brief check if a shape's ndim is known. */
+inline bool ndim_is_known(const int ndim) {
+  CHECK_GE(ndim, -1) << "shape ndim must be >= -1, while received " << ndim;
+  return ndim != -1;
+}
+
+/*! brief check if a shape's ndim is known. */
+inline bool ndim_is_known(const TShape& x) {
+  return ndim_is_known(x.ndim());
+}
+
+/*! brief check if a shape's dim size is known. */
+inline bool dim_size_is_known(const int dim_size) {
+  CHECK_GE(dim_size, -1) << "shape dim size must be >= -1, while received " << dim_size;
+  return dim_size != -1;
+}
+
+/*! brief check if a shape's dim size is known. */
+inline bool dim_size_is_known(const TShape& x, const int idx) {
+  CHECK(idx >= 0 && idx < x.ndim())
+      << "idx = " << idx << " exceeds shape dimension range [0, " << x.ndim() << ")";
+  return dim_size_is_known(x[idx]);
+}
+
 /*! brief check if shape is known using the NumPy compatible definition.
  * zero-dim and zero-size tensors are valid. -1 means unknown.*/
 inline bool shape_is_known(const TShape& x) {
-  if (x.ndim() == -1) return false;
+  if (!ndim_is_known(x)) return false;
   for (int i = 0; i < x.ndim(); ++i) {
-    if (x[i] == -1) return false;
+    if (!dim_size_is_known(x, i)) return false;
   }
   return true;
 }

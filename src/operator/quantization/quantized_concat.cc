@@ -55,7 +55,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_sha
     shape_assign(&dshape, tmp);
   }
 
-  if (dshape.ndim() == -1) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
 
   for (int i = 0; i < param_.num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))

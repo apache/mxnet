@@ -44,9 +44,11 @@
 #include "mxnet/rtc.h"
 #include "mxnet/storage.h"
 #include "mxnet/libinfo.h"
+#include "mxnet/imperative.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
+#include "../common/utils.h"
 
 using namespace mxnet;
 
@@ -499,15 +501,23 @@ int MXNDArrayGetShape(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    const mxnet::TShape &s = arr->shape();
+    mxnet::TShape s = arr->shape();
+    if (!Imperative::Get()->is_np_comp()) {
+      common::ConvertToLegacyShape(&s);
+    }
     *out_dim = s.ndim();
-    CHECK_GE(s.ndim(), 0);
-    std::vector<int>& buffer = ret->arg_shape_buffer;
-    buffer.resize(s.ndim());
-    mxnet::ShapeTypeCast(s.begin(), s.end(), buffer.data());
-    *out_pdata = buffer.data();
+    if (s.ndim() >= 0) {
+      std::vector<int> &buffer = ret->arg_shape_buffer;
+      buffer.resize(s.ndim());
+      mxnet::ShapeTypeCast(s.begin(), s.end(), buffer.data());
+      *out_pdata = buffer.data();
+    }
   } else {
-    *out_dim = 0;
+    if (Imperative::Get()->is_np_comp()) {
+      *out_dim = -1;
+    } else {
+      *out_dim = 0;
+    }
   }
   API_END();
 }

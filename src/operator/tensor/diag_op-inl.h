@@ -84,7 +84,7 @@ inline mxnet::TShape DiagShapeImpl(const mxnet::TShape& ishape, const int k,
 
   auto s = std::min(h, w);
   if (s < 0) {
-    s = 0;
+    s = -1;
   }
 
   if (x1 > x2) {
@@ -114,7 +114,7 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(out_attrs->size(), 1U);
 
     const mxnet::TShape& ishape = (*in_attrs)[0];
-    if (!shape_is_known(ishape)) {
+    if (!mxnet::ndim_is_known(ishape)) {
       return false;
     }
 
