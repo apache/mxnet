@@ -570,6 +570,8 @@ ifeq ($(USE_INTEL_PATH), NONE)
 else
 	$(MAKE) -C $(SPARSE_MATRIX_DIR) USE_INTEL_PATH=$(USE_INTEL_PATH)
 endif
+	mkdir -p $(ROOTDIR)/lib
+	cp $(SPARSE_MATRIX_DIR)/libsparse_matrix.so $(ROOTDIR)/lib/
 endif
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
