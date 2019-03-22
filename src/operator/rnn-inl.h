@@ -467,9 +467,15 @@ class RNNOp {
     #endif
     #endif
 
+    #if MXNET_USE_CUDNN_RNN
+    LOG(INFO) << "MXNET_USE_CUDNN_RNN:true";
+    #else
+    LOG(INFO) << "MXNET_USE_CUDNN_RNN:false";
+    #endif
     #if !MXNET_USE_CUDNN_RNN || !defined(__CUDACC__)
     //  GPU NO CUDNN
     if (ctx_.dev_type == kGPU) {
+      LOG(INFO) << "ctx_.dev_type == kGPU:true";
       this->init_space_ = false;
       this->reserve_cpu_space_size_ = 0;
       if (param_.projection_size.has_value()) {
@@ -777,6 +783,7 @@ class RNNOp {
     //  GPU NO CUDNN
     if (ctx_.dev_type == kGPU) {
       if (!work_cpu_space) {
+        LOG(INFO) << "work_cpu_space is null, allocate";
         Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
           .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
         work_cpu_space = workspace.dptr_;
