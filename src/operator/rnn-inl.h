@@ -576,6 +576,26 @@ class RNNOp {
     const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                                       param_.state_size, direction, param_.mode);
     DType* work_cpu_space = NULL;
+    #if MXNET_USE_CUDNN_RNN
+    LOG(INFO) << "MXNET_USE_CUDNN_RNN:true";
+    #else
+    LOG(INFO) << "MXNET_USE_CUDNN_RNN:false";
+    #endif
+    #if defined(__CUDACC__)
+    LOG(INFO) << "defined(__CUDACC__):true";
+    #else
+    LOG(INFO) << "defined(__CUDACC__):false";
+    #endif
+    #if MXNET_USE_CUDNN == 1
+    LOG(INFO) << "MXNET_USE_CUDNN == 1:true";
+    #else
+    LOG(INFO) << "MXNET_USE_CUDNN == 1:false";
+    #endif
+    #if CUDNN_VERSION >= 7200
+    LOG(INFO) << "CUDNN_VERSION >= 7200:true";
+    #else
+    LOG(INFO) << "CUDNN_VERSION >= 7200:false";
+    #endif
 
     #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
