@@ -24,6 +24,7 @@
  */
 #include "mxnet/base.h"
 #include "mxnet/c_api.h"
+#include "mxnet/imperative.h"
 #include "nnvm/c_api.h"
 #include "nnvm/pass.h"
 #include "nnvm/pass_functions.h"
@@ -543,8 +544,14 @@ int MXSymbolInferShape(SymbolHandle sym,
     throw dmlc::Error(err.msg);
   }
 
+  // if use legacy shape definition, need to convert numpy shape to legacy shape
+  mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+  if (!Imperative::Get()->is_np_comp()) {
+    common::ConvertToLegacyShape(&shapes);
+  }
+
   // copy back
-  CopyAttr(g.indexed_graph(), g.GetAttr<mxnet::ShapeVector>("shape"),
+  CopyAttr(g.indexed_graph(), shapes,
            &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
 
   // copy data back

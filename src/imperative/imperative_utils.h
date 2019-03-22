@@ -121,7 +121,24 @@ inline void SetShapeType(const Context& ctx,
   if (!infershape.count(attrs.op)) {
     is_dynamic_shape_existing = true;
   } else {
-    CHECK(infershape[attrs.op](attrs, &in_shapes, &out_shapes));
+    if (!Imperative::Get()->is_np_comp()) {
+      common::ConvertToNumpyShape(&in_shapes);
+      common::ConvertToNumpyShape(&out_shapes);
+    }
+    const bool success = infershape[attrs.op](attrs, &in_shapes, &out_shapes);
+    if (!success) {
+      std::stringstream os;
+      os << "Operator " << attrs.op->name << " inferring shapes failed.\n";
+      os << "input shapes:\n";
+      for (auto& nd : inputs) {
+        os << nd->shape() << '\n';
+      }
+      os << "output shapes:\n";
+      for (auto& nd : outputs) {
+        os << nd->shape() << '\n';
+      }
+      LOG(FATAL) << os.str();
+    }
     CHECK_EQ(out_shapes.size(), outputs.size());
   }
   // infer type

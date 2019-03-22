@@ -676,7 +676,7 @@ class RNNProp : public OperatorProperty {
       CHECK_EQ(in_shape->size(), 3U) << "Input:[data, parameters, state]";
     }
     const mxnet::TShape &dshape = (*in_shape)[rnn_enum::kData];
-    if (!shape_is_known(dshape)) return false;
+    if (!mxnet::ndim_is_known(dshape)) return false;
     CHECK_EQ(dshape.ndim(), 3U) \
         << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
     // data: [sequence len, batch, input dimension]
@@ -712,9 +712,7 @@ class RNNProp : public OperatorProperty {
       oshape[2] = numDirections * param_.state_size;
     }
     out_shape->push_back(oshape);
-    if (!param_.state_outputs) {
-      return true;
-    } else {
+    if (param_.state_outputs) {
       // outStateShape: [layer_num, batch, state size]
       mxnet::TShape outStateShape = dshape;
       outStateShape[0] = total_layers;
@@ -733,8 +731,8 @@ class RNNProp : public OperatorProperty {
         cellStateShape[2] = param_.state_size;
         out_shape->push_back(cellStateShape);
       }
-      return true;
     }
+    return shape_is_known(dshape);
   }
 
   bool InferType(std::vector<int> *in_type,

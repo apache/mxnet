@@ -339,13 +339,13 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!shape_is_known(ishape)) return false;
+  if (!mxnet::ndim_is_known(ishape)) return false;
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
   CHECK_EQ(ishape.ndim(), param.shape.ndim())
     << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
   mxnet::TShape oshape = param.shape;
   for (int i = 0; i < ishape.ndim(); ++i) {
-    if (oshape[i] != 0) {
+    if (oshape[i] != -1) {
       CHECK(ishape[i] == oshape[i] || ishape[i] == 1)
         << "Array cannot be broadcasted from " << ishape << " to " << param.shape;
     } else {
@@ -364,7 +364,7 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& lhs_shape = (*in_attrs)[0];
   mxnet::TShape& rhs_shape = (*in_attrs)[1];
 
-  if (!shape_is_known(lhs_shape) || !shape_is_known(lhs_shape)) {
+  if (!mxnet::ndim_is_known(lhs_shape) || !mxnet::ndim_is_known(rhs_shape)) {
     return false;
   }
 
@@ -378,7 +378,7 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
 
     oshape = mxnet::TShape(rhs_shape);
     for (int i = 0; i < lhs_shape.ndim(); ++i) {
-      if (rhs_shape[i] != 0) {
+      if (rhs_shape[i] != -1) {
         CHECK(lhs_shape[i] == rhs_shape[i] || lhs_shape[i] == 1)
           << "Array cannot be broadcasted from " << lhs_shape << " to " << rhs_shape;
       } else {

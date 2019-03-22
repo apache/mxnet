@@ -28,6 +28,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator_util.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/imperative.h>
 #include <dmlc/parameter.h>
 #include <dmlc/optional.h>
 #include <vector>
@@ -213,14 +214,13 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param.shape)) return true;
-  for (int i=0 ; i < param.shape.ndim() ; ++i) {
-    if (param.shape[i] < 0U) {
-      LOG(FATAL) << "Shape cannot contain negative values " << param.shape;
-    }
+  mxnet::TShape param_shape = param.shape;
+  if (!Imperative::Get()->is_np_comp()) {
+    common::ConvertToNumpyShape(&param_shape);
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
-  return true;
+  if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param_shape)) return true;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param_shape);
+  return shape_is_known(out_attrs->at(0));
 }
 
 template<typename ParamType>

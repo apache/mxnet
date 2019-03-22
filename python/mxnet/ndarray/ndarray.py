@@ -1852,7 +1852,10 @@ fixed-size items.
         pdata = ctypes.POINTER(mx_int)()
         check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
-        return tuple(pdata[:ndim.value]) # pylint: disable=invalid-slice-index
+        if ndim.value == -1:
+            return None
+        else:
+            return tuple(pdata[:ndim.value])  # pylint: disable=invalid-slice-index
 
 
     @property
