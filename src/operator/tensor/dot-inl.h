@@ -777,9 +777,10 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   }
 
   using nnvm::dim_t;
+#if (MSHADOW_USE_MKL == 1)
   TShape lhs_shape = lhs.shape();
   TShape rhs_shape = rhs.shape_;
-
+#endif
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
