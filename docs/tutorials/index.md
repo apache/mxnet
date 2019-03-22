@@ -137,7 +137,6 @@ Select API:&nbsp;
     * [MNIST Handwritten Digit Classification](/tutorials/python/mnist.html)
     * [Movie Review Classification using Convolutional Networks](/tutorials/nlp/cnn.html)
     * [Generative Adversarial Networks (GANs)](/tutorials/unsupervised_learning/gan.html)
-    * [Recommender Systems using Matrix Factorization](/tutorials/python/matrix_factorization.html)
     * [Speech Recognition with Connectionist Temporal Classification Loss](/tutorials/speech_recognition/ctc.html)
 * Practitioner Guides
     * [Predicting on new images using a pre-trained ImageNet model](/tutorials/python/predict_image.html)
