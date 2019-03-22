@@ -50,22 +50,9 @@ $(MKLDNN_LIBFILE):
 	cp $(MKLML_LIBFILE) $(MXNET_LIBDIR)
 	cp $(MKLDNN_LIBFILE) $(MXNET_LIBDIR)
 
-ifeq ($(USE_BLAS), mkl)
-ifeq ($(USE_INTEL_PATH), NONE)
-	$(MAKE) -C $(SPARSE_MATRIX_DIR)
-else
-	$(MAKE) -C $(SPARSE_MATRIX_DIR) USE_INTEL_PATH=$(USE_INTEL_PATH)
-endif
-	cp $(SPARSE_MATRIX_DIR)/libsparse_matrix.so $(MXNET_LIBDIR)
-endif
-
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
 	$(RM) -r $(MKLDNNROOT)
-
-ifeq ($(USE_BLAS), mkl)
-	$(MAKE) -C $(SPARSE_MATRIX_DIR) clean
-endif
 
 ifeq ($(USE_MKLDNN), 1)
 mkldnn: mkldnn_build
