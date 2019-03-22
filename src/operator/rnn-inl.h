@@ -468,7 +468,7 @@ class RNNOp {
     #endif
     if (ctx_.dev_type == kCPU) {
       this->init_space_ = false;
-      this->reserve_space_size_ = 0;
+      this->reserve_cpu_space_size_ = 0;
       if (param_.projection_size.has_value()) {
         LOG(FATAL) <<
             "hidden layer projection is only supported for GPU with CuDNN later than 7.1.1";
@@ -528,11 +528,10 @@ class RNNOp {
   void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
                const std::vector<OpReqType> &req,
                const std::vector<TBlob> &out_data) {
+    using namespace mshadow;
     using namespace mshadow::expr;
     CHECK(param_.p >= 0.0f && param_.p < 1.0f)
         << "unsupported dropout value, should be 0 <= dropout < 1";
-
-    using namespace mshadow;
     size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     //  kOut
     size_t num_outputs = 1;
@@ -574,11 +573,11 @@ class RNNOp {
     CHECK_EQ(y.CheckContiguous(), true);
 
     // allocate temp space
-    const size_t workspace_size_cpu = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+    const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                                       param_.state_size, direction, param_.mode);
+    DType* work_cpu_space = NULL;
 
-    DType* workspace_cpu = NULL;
-    #if MXNET_USE_CUDNN_RNN && (USE_CUDNN_LSTM_PROJ || defined(__CUDACC__))
+    #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
       Init(s, in_data, out_data);
     }
@@ -586,9 +585,9 @@ class RNNOp {
     int temp_size = workspace_size_;
     Tensor<xpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
-                              mshadow::Shape1(temp_size + workspace_size_cpu), s);
+                              mshadow::Shape1(temp_size + work_cpu_space_size), s);
 
-    workspace_cpu = temp_space.dptr_ + temp_size;
+    work_cpu_space = temp_space.dptr_ + temp_size;
 
     #if USE_CUDNN_LSTM_PROJ
     std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
@@ -748,28 +747,28 @@ class RNNOp {
     #endif
 
     if (ctx_.dev_type == kCPU) {
-      if (!workspace_cpu) {
+      if (!work_cpu_space) {
         Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-          .get_space_typed<xpu, 1, DType>(Shape1(workspace_size_cpu), s);
-        workspace_cpu = workspace.dptr_;
+          .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
+        work_cpu_space = workspace.dptr_;
       }
       if (ctx.is_train) {
         const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                      param_.seq_length_, param_.batch_size_,
                                                      param_.state_size, param_.mode);
-        if (init_space_ && reserve_space_size_ < r_size) {
+        if (init_space_ && reserve_cpu_space_size_ < r_size) {
           Storage::Get()->Free(reserve_cpu_space_);
           init_space_ = false;
         }
         if (!init_space_) {
           reserve_cpu_space_ = Storage::Get()->Alloc(r_size * sizeof(DType), Context::CPU());
-          reserve_space_size_ = r_size;
+          reserve_cpu_space_size_ = r_size;
           init_space_ = true;
         }
 
         DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.dptr);
 
-        RNNForwardTraining<DType>(workspace_cpu,
+        RNNForwardTraining<DType>(work_cpu_space,
                                   reserve_space_ptr,
                                   param_.state_outputs,
                                   param_.num_layers,
@@ -789,7 +788,7 @@ class RNNOp {
                                   param_.p,
                                   param_.mode);
       } else {
-        RNNForwardInference<DType>(workspace_cpu,
+        RNNForwardInference<DType>(work_cpu_space,
                                    param_.state_outputs,
                                    param_.num_layers,
                                    direction,
@@ -886,11 +885,11 @@ class RNNOp {
         dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
 
     // allocate temp space
-    const size_t workspace_size_cpu =
+    const size_t work_cpu_space_size =
         GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                             param_.state_size, direction, param_.mode);
-    DType* workspace_cpu = NULL;
-    #if MXNET_USE_CUDNN_RNN && (USE_CUDNN_LSTM_PROJ || defined(__CUDACC__))
+    DType* work_cpu_space = NULL;
+    #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
       Init(s, in_data, out_data);
     }
@@ -899,8 +898,8 @@ class RNNOp {
     int temp_size = workspace_size_;
     Tensor<xpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
-                              mshadow::Shape1(temp_size + workspace_size_cpu), s);
-    workspace_cpu = temp_space.dptr_ + temp_size;
+                              mshadow::Shape1(temp_size + work_cpu_space_size), s);
+    work_cpu_space = temp_space.dptr_ + temp_size;
     #if USE_CUDNN_LSTM_PROJ
     CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
                                       rnn_desc_,
@@ -993,21 +992,21 @@ class RNNOp {
     #endif
 
     if (ctx_.dev_type == kCPU) {
-      if (!workspace_cpu) {
+      if (!work_cpu_space) {
         Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-          .get_space_typed<xpu, 1, DType>(Shape1(workspace_size_cpu), s);
-        workspace_cpu = workspace.dptr_;
+          .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
+        work_cpu_space = workspace.dptr_;
       }
       size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                              param_.seq_length_, param_.batch_size_,
                                              param_.state_size, param_.mode);
 
-      if (!init_space_ || reserve_space_size_ != r_size) {
+      if (!init_space_ || reserve_cpu_space_size_ != r_size) {
         LOG(FATAL) << "Check forward init error";
       }
 
       DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.dptr);
-      RNNBackward<DType>(workspace_cpu,
+      RNNBackward<DType>(work_cpu_space,
                          reserve_space_ptr,
                          param_.num_layers,
                          direction,
@@ -1043,13 +1042,7 @@ class RNNOp {
   inline void Init(mshadow::Stream<xpu> *s,
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {
-    #if MXNET_USE_CUDNN_RNN && (USE_CUDNN_LSTM_PROJ || defined(__CUDACC__))
     using namespace mshadow;
-
-    #if CUDNN_MAJOR >= 5
-    format_ = CUDNN_TENSOR_NCHW;
-    #endif
-
     size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
     //  kOut
     size_t num_outputs = 1;
@@ -1060,6 +1053,12 @@ class RNNOp {
 
     CHECK_EQ(in_data.size(), num_inputs);
     CHECK_EQ(out_data.size(), num_outputs);
+
+    #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
+    #if CUDNN_MAJOR >= 5
+    format_ = CUDNN_TENSOR_NCHW;
+    #endif
+
     if (!init_cudnn_) {
       init_cudnn_ = true;
       // get input + output tensors
@@ -1373,7 +1372,7 @@ class RNNOp {
   #endif
   #endif
   bool init_space_;
-  size_t reserve_space_size_;
+  size_t reserve_cpu_space_size_;
   Storage::Handle reserve_cpu_space_;
 };  //  class RNNOp
 
