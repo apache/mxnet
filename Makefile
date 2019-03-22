@@ -98,7 +98,7 @@ ifeq ($(DEBUG), 1)
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
-CFLAGS += -I$(TPARTYDIR)/mshadow/  -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
+CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
@@ -416,7 +416,7 @@ ifeq ($(USE_BLAS), mkl)
 	SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
 	LIB_DEP += $(SPARSE_MATRIX_DIR)/libsparse_matrix.so
 	CFLAGS += -I$(SPARSE_MATRIX_DIR)
-	LDFLAGS += -L$(SPARSE_MATRIX_DIR) -lsparse_matrix
+	LDFLAGS += -L$(SPARSE_MATRIX_DIR) -lsparse_matrix -Wl,-rpath,'$${ORIGIN}'
 endif
 
 .PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
@@ -556,6 +556,10 @@ ifeq ($(UNAME_S), Darwin)
 endif
 endif
 
+ifeq ($(USE_BLAS), mkl)
+	install_name_tool -change '@rpath/libsparse_matrix.dylib' '@loader_path/libsparse_matrix.dylib' $@
+endif
+
 $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
@@ -648,6 +652,10 @@ rpkg:
 		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
 		cp -rf lib/libiomp5.so R-package/inst/libs; \
 		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
+	fi
+
+	if [ -e "lib/libsparse_matrix.so" ]; then \
+		cp -rf lib/libsparse_matrix.so R-package/inst/libs; \
 	fi
 
 	mkdir -p R-package/inst/include
