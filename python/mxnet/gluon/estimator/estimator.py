@@ -26,7 +26,7 @@ from .event_handler import LoggingHandler
 from ... import gluon, autograd
 from ...context import Context, cpu, gpu, num_gpus
 from ...io import DataIter
-from ...metric import EvalMetric, Loss
+from ...metric import EvalMetric, Loss, Accuracy
 
 __all__ = ['Estimator']
 
@@ -77,6 +77,10 @@ class Estimator(object):
                 raise ValueError("metrics must be a Metric or a list of Metric, "
                                  "refer to mxnet.metric.EvalMetric:{}".format(metrics))
 
+        # Use default mx.metric.Accuracy() for gluon.loss.SoftmaxCrossEntropyLoss()
+        if not self.train_metrics and any([isinstance(l, gluon.loss.SoftmaxCrossEntropyLoss) for l in self.loss]):
+            self.train_metrics = [Accuracy()]
+
         # Use same metrics for validation
         self.val_metrics = copy.deepcopy(self.train_metrics)
 
@@ -107,7 +111,9 @@ class Estimator(object):
         # handle context
         if isinstance(context, Context):
             self.context = [context]
-        if not context:
+        elif isinstance(context, list) and all([isinstance(c, Context) for c in context]):
+            self.context = context
+        elif not context:
             if num_gpus() > 0:
                 # only use 1 GPU by default
                 if num_gpus() > 1:
@@ -117,6 +123,10 @@ class Estimator(object):
                 self.context = [gpu(0)]
             else:
                 self.context = [cpu()]
+        else:
+            raise ValueError("context must be a Context or a list of Context, "
+                             "refer to mxnet.Context:{}".format(context))
+
 
         # initialize the network
         self.initializer = initializer
@@ -137,15 +147,13 @@ class Estimator(object):
         # handle trainers
         if isinstance(trainers, gluon.Trainer):
             self.trainers = [trainers]
+        elif not trainers:
+            warnings.warn("No trainer specified, default SGD optimizer "
+                          "with learning rate 0.001 is used.")
+            self.trainers = [gluon.Trainer(self.net.collect_params(),
+                                           'sgd', {'learning_rate': 0.001})]
         else:
-            self.trainers = trainers or []
-            if not self.trainers:
-                warnings.warn("No trainer specified, default SGD optimizer "
-                              "with learning rate 0.001 is used.")
-                self.trainers = [gluon.Trainer(self.net.collect_params(),
-                                               'sgd', {'learning_rate': 0.001})]
-            else:
-                raise ValueError("Invalid trainer specified, please provide a valid gluon.Trainer")
+            raise ValueError("Invalid trainer specified, please provide a valid gluon.Trainer")
 
     def _is_initialized(self):
         param_dict = self.net.collect_params()

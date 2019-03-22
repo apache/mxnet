@@ -224,6 +224,13 @@ def test_metric():
                                   metrics='acc',
                                   trainers=trainer,
                                   context=ctx)
+    # test default metric
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
+    est = estimator.Estimator(net=net,
+                              loss=loss,
+                              trainers=trainer,
+                              context=ctx)
+    assert isinstance(est.train_metrics[0], mx.metric.Accuracy)
 
 
 def test_loss():
@@ -246,3 +253,25 @@ def test_loss():
                                   metrics=acc,
                                   trainers=trainer,
                                   context=ctx)
+
+def test_context():
+    ''' test with no context, list of context, invalid context '''
+    net = get_model()
+    loss = gluon.loss.L2Loss()
+    metrics = mx.metric.Accuracy()
+    # input no context
+    est = estimator.Estimator(net=net,
+                              loss=loss,
+                              metrics=metrics)
+    # input list of context
+    ctx = [mx.gpu(0), mx.gpu(1)]
+    est = estimator.Estimator(net=net,
+                              loss=loss,
+                              metrics=metrics,
+                              context=ctx)
+    # input invalid context
+    with assert_raises(ValueError):
+        est = estimator.Estimator(net=net,
+                                  loss=loss,
+                                  metrics=metrics,
+                                  context='cpu')
