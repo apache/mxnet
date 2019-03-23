@@ -1522,7 +1522,8 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
         auto full_name = subgraph_prop->HasAttr("property_name")
                              ? subgraph_prop->GetAttr<std::string>("property_name")
                              : prop_name;
-        LOG(INFO) << "Skip subgraph " << full_name << " as it requires `grad_req=null`.";
+        LOG(INFO) << "skip partitioning graph with subgraph property " << full_name
+                  << " as it requires `grad_req=null`.";
         continue;
       }
     }
