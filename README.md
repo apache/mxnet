@@ -65,7 +65,7 @@ What's New
 * [Version 0.9.1 Release (NNVM refactor)](./docs/architecture/release_note_0_9.md) - NNVM branch is merged into master now. An official release will be made soon.
 * [Version 0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
 * [Updated Image Classification with new Pre-trained Models](./example/image-classification)
-* [Notebooks How to Use MXNet](https://github.com/zackchase/mxnet-the-straight-dope)
+* [Notebooks How to Use MXNet](https://github.com/d2l-ai/d2l-en)
 * [MKLDNN for Faster CPU Performance](./docs/tutorials/mkldnn/MKLDNN_README.md)
 * [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
 * [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
