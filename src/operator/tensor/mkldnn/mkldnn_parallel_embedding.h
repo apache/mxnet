@@ -26,7 +26,7 @@ struct ParallelEmbeddingParam : public dmlc::Parameter<ParallelEmbeddingParam> {
   nnvm::Tuple<int> input_dims;
   nnvm::Tuple<int> output_dims;
   nnvm::Tuple<int> dtypes;
-  nnvm::Tuple<bool> sparse_grads;
+  nnvm::Tuple<int> sparse_grads;
   int num_args;
   DMLC_DECLARE_PARAMETER(ParallelEmbeddingParam) {
     DMLC_DECLARE_FIELD(input_dims)

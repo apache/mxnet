@@ -49,7 +49,7 @@ static EmbeddingParam GetEmbeddedParam(
   embedding_param.input_dim = param_.input_dims[i];
   embedding_param.output_dim = param_.output_dims[i];
   embedding_param.dtype = mshadow::kFloat32;
-  embedding_param.sparse_grad = false;
+  embedding_param.sparse_grad = 0;
   return embedding_param;
 }
 
