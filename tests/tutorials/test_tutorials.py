@@ -139,9 +139,6 @@ def test_onnx_fine_tuning_gluon():
 def test_onnx_inference_on_onnx_model():
     assert _test_tutorial_nb('onnx/inference_on_onnx_model')
 
-def test_python_matrix_factorization():
-    assert _test_tutorial_nb('python/matrix_factorization')
-
 def test_python_linear_regression():
     assert _test_tutorial_nb('python/linear-regression')
 
@@ -168,6 +165,9 @@ def test_python_data_augmentation_with_masks():
 
 def test_python_kvstore():
     assert _test_tutorial_nb('python/kvstore')
+
+def test_module_to_gluon():
+    assert _test_tutorial_nb('python/module_to_gluon')
 
 def test_python_types_of_data_augmentation():
     assert _test_tutorial_nb('python/types_of_data_augmentation')
@@ -198,4 +198,3 @@ def test_vision_cnn_visualization():
 
 def test_control_flow():
     assert _test_tutorial_nb('control_flow/ControlFlowTutorial')
-    
