@@ -44,9 +44,9 @@ brew install opencv
 Run the following commands to install the prerequisites on Ubuntu.
 
 ```bash
-wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_core.sh
+wget https://raw.githubusercontent.com/apache/incubator-mxnet/master/ci/docker/install/ubuntu_core.sh
 sudo ./ubuntu_core.sh
-wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_scala.sh
+wget https://raw.githubusercontent.com/apache/incubator-mxnet/master/ci/docker/install/ubuntu_scala.sh
 sudo ./ubuntu_scala.sh
 ```
 
