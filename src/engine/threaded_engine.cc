@@ -415,12 +415,12 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
-  std::exception_ptr exception_to_rethrow;
+  std::exception_ptr exception_to_rethrow = nullptr;
   if (!global_exception_refs_.empty()) {
     // iterate through all exception refs
     for (const auto& global_exception_ref : global_exception_refs_) {
       // the first exception will be saved to be rethrown later
-      if (*global_exception_ref != nullptr && exception_to_rethrow == false) {
+      if (*global_exception_ref != nullptr && exception_to_rethrow == nullptr) {
         exception_to_rethrow = *global_exception_ref;
       }
       // clear exceptions, WaitToRead following WaitForAll shouldn't throw
