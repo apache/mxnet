@@ -59,13 +59,13 @@ static bool SliceSplitEmbeddingConcatOpShape(const nnvm::NodeAttrs& attrs,
   const SliceSplitEmbeddingConcatFuseParam& param_ =
       nnvm::get<SliceSplitEmbeddingConcatFuseParam>(attrs.parsed);
   bool ret = true;
-  TShape& dshape = (*in_shape)[0];
+  const mxnet::TShape& dshape = (*in_shape)[0];
 
   nnvm::Tuple<dmlc::optional<int>> param_step;
-  TShape cont_slice_oshape = dshape;
+  mxnet::TShape cont_slice_oshape = dshape;
   get_slice_output_shape(param_.cont_begin, param_.cont_end, param_step,
                          cont_slice_oshape, dshape);
-  TShape split_slice_oshape = dshape;
+  mxnet::TShape split_slice_oshape = dshape;
   get_slice_output_shape(param_.embed_begin, param_.embed_end, param_step,
                          split_slice_oshape, dshape);
   std::vector<TShape> split_in_shapes;
@@ -233,7 +233,11 @@ void SliceSplitEmbeddingConcatOpForward(const nnvm::NodeAttrs& attrs,
   int em = 0;
   int i = 0;
   int N = batch_size;
-#pragma omp parallel for num_threads(omp_threads) collapse(2)
+#ifdef _MSC_VER
+  #pragma omp parallel for num_threads(omp_threads)
+#else
+  #pragma omp parallel for num_threads(omp_threads) collapse(2)
+#endif  // _MSC_VER
   for (em = 0; em < param_.num_outputs; ++em)
     for (i = 0; i < N; ++i) {
       int64_t j = static_cast<int64_t>(
@@ -304,9 +308,9 @@ NNVM_REGISTER_OP(SliceSplitEmbeddingConcatFuse)
   const SliceSplitEmbeddingConcatFuseParam& params =
         nnvm::get<SliceSplitEmbeddingConcatFuseParam>(attrs.parsed);
   std::vector<std::string> ret;
-  ret.push_back(std::string("dns_data"));
+  ret.emplace_back(std::string("dns_data"));
   for (int i = 0; i < params.num_outputs; ++i) {
-    ret.push_back(std::string("embed_") + std::to_string(i) + std::string("_weight"));
+    ret.emplace_back(std::string("embed_") + std::to_string(i) + std::string("_weight"));
   }
   return ret;
 })

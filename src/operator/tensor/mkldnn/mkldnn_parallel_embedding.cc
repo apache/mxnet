@@ -180,7 +180,11 @@ void ParallelSparseEmbeddingOpForwardEx(const nnvm::NodeAttrs& attrs,
   int i = 0;
   int N = takecpu_info[0].N;
   const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-#pragma omp parallel for num_threads(omp_threads) collapse(2)
+#ifdef _MSC_VER
+  #pragma omp parallel for num_threads(omp_threads)
+#else
+  #pragma omp parallel for num_threads(omp_threads) collapse(2)
+#endif  // _MSC_VER
   for (em = 0; em < param_.num_args; em++)
     for (i = 0; i < N; ++i) {
       int64_t j = static_cast<int64_t>(takecpu_info[em].idx[i]);
