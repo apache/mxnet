@@ -25,9 +25,9 @@ if [[ ! -e $DEPS_PATH/lib/libopenblas.a ]]; then
     # download and build openblas
     >&2 echo "Building openblas..."
 
-    curl ${CURL_OPTIONS} \
+    download \
         https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.zip \
-        -o ${DEPS_PATH}/openblas.zip
+        ${DEPS_PATH}/openblas.zip
     unzip -q $DEPS_PATH/openblas.zip -d $DEPS_PATH
     pushd .
     cd $DEPS_PATH/OpenBLAS-$OPENBLAS_VERSION

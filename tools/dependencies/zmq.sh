@@ -23,9 +23,9 @@ ZEROMQ_VERSION=4.2.2
 if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
     # Download and build zmq
     >&2 echo "Building zmq..."
-    curl ${CURL_OPTIONS} \
+    download \
         https://github.com/zeromq/libzmq/archive/v${ZEROMQ_VERSION}.zip \
-        -o ${DEPS_PATH}/zeromq.zip
+        ${DEPS_PATH}/zeromq.zip
     unzip -q $DEPS_PATH/zeromq.zip -d $DEPS_PATH
     mkdir -p $DEPS_PATH/libzmq-$ZEROMQ_VERSION/build
     pushd .

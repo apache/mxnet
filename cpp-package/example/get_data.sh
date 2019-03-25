@@ -17,23 +17,47 @@
 # specific language governing permissions and limitations
 # under the License.
 
-CURL_OPTIONS='--connect-timeout 5 --max-time 10 --retry 3 --retry-delay 0 --retry-max-time 40 -L'
+set -e
 
 mkdir -p data/mnist_data
 cd data/mnist_data
 
-curl ${CURL_OPTIONS} https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz \
-    -o train-images-idx3-ubyte.gz
+download () {
+    local URL=$1
+    local GZ_FILE_NAME="${URL##*/}"
 
-curl ${CURL_OPTIONS} https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz \
-    -o train-labels-idx1-ubyte.gz
+    local FILE_NAME="${GZ_FILE_NAME%.*}"
+    if [[ -f "${FILE_NAME}" ]]; then
+        echo "File ${FILE_NAME} already downloaded."
+        return 0
+    fi
 
-curl ${CURL_OPTIONS} https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz \
-    -o t10k-images-idx3-ubyte.gz
+    echo "Downloading ${URL} ..."
+    local CURL_OPTIONS="--connect-timeout 10 \
+              --max-time 300 \
+              --retry-delay 10 \
+              --retry 3 \
+              --retry-delay 0 \
+              --location \
+              --silent"
+    curl ${CURL_OPTIONS} ${URL} -o ${GZ_FILE_NAME}
 
-curl ${CURL_OPTIONS} https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz \
-    -o t10k-labels-idx1-ubyte.gz
+    if [[ ! -f "${GZ_FILE_NAME}" ]]; then
+        echo "File ${URL} couldn't be downloaded!"
+        exit 1
+    fi
 
-curl ${CURL_OPTIONS} http://data.mxnet.io/data/mnist_train.csv.gz \
-    -o mnist_train.csv.gz
-gzip -d *.gz
+    gzip -d ${GZ_FILE_NAME}
+    (($? != 0)) && exit 1 || return 0
+}
+
+FILES=(
+    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz"
+    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz"
+    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz"
+    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz"
+    "http://data.mxnet.io/data/mnist_train.csv.gz")
+
+for FILE in ${FILES[@]}; do
+    download ${FILE}
+done

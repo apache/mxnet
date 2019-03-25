@@ -27,7 +27,6 @@ The scripts use the following environment variables for setting behavior:
 
 `DEPS_PATH`: the location in which the libraries are downloaded, built, and installed.
 `PLATFORM`: name of the OS in lower case. Supported options are 'linux' and 'darwin'.
-`CURL_OPTIONS`: options for curl downloads to be set (retries, for example).
 
 It also expects the following build tools in path: make, cmake, tar, unzip, autoconf, nasm
 
