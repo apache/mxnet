@@ -142,6 +142,7 @@ class Estimator(object):
         else:
             data = batch[0]
             label = batch[1]
+        #TODO handle data size < len(ctx)
         data = gluon.utils.split_and_load(data, ctx_list=ctx, batch_axis=0)
         label = gluon.utils.split_and_load(label, ctx_list=ctx, batch_axis=0)
         return data, label
