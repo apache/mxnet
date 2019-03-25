@@ -354,8 +354,8 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayLoadFromRawBytes
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject ndimRef, jobject dataBuf) {
-  mx_uint ndim;
-  const mx_uint *pdata;
+  int ndim;
+  const int *pdata;
   int ret = MXNDArrayGetShape(reinterpret_cast<NDArrayHandle>(ndArrayPtr), &ndim, &pdata);
 
   // fill dataBuf
@@ -1529,7 +1529,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolCreateFromFile
 
 int FillSymbolInferShape
   (JNIEnv *env, jmethodID listAppend, jobject joutData,
-    mx_uint shapeSize, const mx_uint *shapeNdim, const mx_uint **shapeData) {
+    int shapeSize, const int *shapeNdim, const int **shapeData) {
   for (size_t i = 0; i < shapeSize; ++i) {
     jintArray jshape = env->NewIntArray(shapeNdim[i]);
     if (jshape == NULL) {
@@ -1557,17 +1557,17 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
     }
   }
 
-  mx_uint inShapeSize;
-  const mx_uint *inShapeNdim;
-  const mx_uint **inShapeData;
+  int inShapeSize;
+  const int *inShapeNdim;
+  const int **inShapeData;
 
-  mx_uint outShapeSize;
-  const mx_uint *outShapeNdim;
-  const mx_uint **outShapeData;
+  int outShapeSize;
+  const int *outShapeNdim;
+  const int **outShapeData;
 
-  mx_uint auxShapeSize;
-  const mx_uint *auxShapeNdim;
-  const mx_uint **auxShapeData;
+  int auxShapeSize;
+  const int *auxShapeNdim;
+  const int **auxShapeData;
 
   int complete;
 
@@ -1576,8 +1576,8 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   int ret = MXSymbolInferShape(reinterpret_cast<SymbolHandle>(symbolPtr),
                                static_cast<mx_uint>(jnumArgs),
                                keys,
-                               reinterpret_cast<const mx_uint *>(argIndPtr),
-                               reinterpret_cast<const mx_uint *>(argShapeData),
+                               reinterpret_cast<const int *>(argIndPtr),
+                               reinterpret_cast<const int *>(argShapeData),
                                &inShapeSize,
                                &inShapeNdim,
                                &inShapeData,
