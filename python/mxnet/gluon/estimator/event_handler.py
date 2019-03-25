@@ -118,7 +118,7 @@ class LoggingHandler(EventHandler):
         epoch = self._estimator.train_stats['epochs'][-1]
         msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
         for key in self._estimator.train_stats.keys():
-            if key.startswith('train_') or key.startswith('test_'):
+            if key.startswith('train_') or key.startswith('val_'):
                 msg += key + ': ' + '%.4f ' % self._estimator.train_stats[key][epoch]
         self.logger.info(msg)
 
