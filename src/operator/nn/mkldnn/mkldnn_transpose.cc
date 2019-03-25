@@ -38,55 +38,6 @@
 namespace mxnet {
 namespace op {
 
-// for 2D, 01-OI, 10-IO
-// for 3D, 012-NCW, 021-NWC
-// for 3D, 012-OIW, 210-WIO
-// for 4D, 0123-NCHW, 0231-NHWC, 1230-CHWN
-// for 4D, 0123-OIHW, 2310-HWIO, 1230-IHWO, 1023-IOHW
-std::pair<mkldnn::memory::format, mkldnn::memory::format>
-GetFormatFromAxes(const mxnet::TShape &axes) {
-  auto src_fmt = mkldnn::memory::format::format_undef;
-  auto dst_fmt = mkldnn::memory::format::format_undef;
-
-  if (axes.ndim() == 2) {
-    if (axes == mxnet::TShape({1, 0})) {
-      src_fmt = mkldnn::memory::format::oi;
-      dst_fmt = mkldnn::memory::format::io;
-    }
-  } else if (axes.ndim() == 3) {
-    if (axes == mxnet::TShape({0, 2, 1})) {
-      src_fmt = mkldnn::memory::format::ncw;
-      dst_fmt = mkldnn::memory::format::nwc;
-    } else if (axes == mxnet::TShape({2, 1, 0})) {
-      src_fmt = mkldnn::memory::format::oiw;
-      dst_fmt = mkldnn::memory::format::wio;
-    } else {
-      // do nothing
-    }
-  } else if (axes.ndim() == 4) {
-    if (axes == mxnet::TShape({0, 2, 3, 1})) {
-      src_fmt = mkldnn::memory::format::nchw;
-      dst_fmt = mkldnn::memory::format::nhwc;
-    } else if (axes == mxnet::TShape({1, 2, 3, 0})) {
-      src_fmt = mkldnn::memory::format::nchw;
-      dst_fmt = mkldnn::memory::format::chwn;
-    } else if (axes == mxnet::TShape({2, 3, 1, 0})) {
-      src_fmt = mkldnn::memory::format::oihw;
-      dst_fmt = mkldnn::memory::format::hwio;
-    // } else if (axes == mxnet::TShape({1, 0, 2, 3})) {
-    //   src_fmt = mkldnn::memory::format::oihw;
-    //   dst_fmt = mkldnn::memory::format::iohw;
-    } else {
-      // do nothing
-    }
-  }  else {
-    // do nothing"
-  }
-
-  return std::make_pair(src_fmt, dst_fmt);
-}
-
-
 bool SupportMKLDNNTranspose(const TransposeParam& param,
                             const NDArray &data) {
   auto data_ndim = data.shape().ndim();
@@ -105,13 +56,6 @@ bool SupportMKLDNNTranspose(const TransposeParam& param,
   }
 
   CHECK_EQ(axes.ndim(), data_ndim);
-
-  auto fmt_pair = GetFormatFromAxes(axes);
-  if (fmt_pair.first == mkldnn::memory::format::format_undef ||
-      fmt_pair.second == mkldnn::memory::format::format_undef) {
-    return false;
-  }
-
   return true;
 }
 
@@ -128,9 +72,9 @@ class MKLDNNTransposeForward {
   MKLDNNTransposeForward(const TransposeParam& param,
                          const OpReqType &req,
                          const NDArray &data) {
-    auto data_ndim = data.shape().ndim();
+    auto shape = data.shape();
+    auto data_ndim = shape.ndim();
     auto axes_ndim = param.axes.ndim();
-
     auto axes = mxnet::TShape(data_ndim);
     if (axes_ndim == 0) {
       for (size_t i = 0; i < data_ndim; i++) {
@@ -140,16 +84,34 @@ class MKLDNNTransposeForward {
       axes = param.axes;
     }
 
-    auto fmt_pair = GetFormatFromAxes(axes);
-
     auto engine = CpuEngine::Get()->get_engine();
-    auto dims = mkldnn::memory::dims(data.shape().begin(), data.shape().end());
-    auto src_md = mkldnn::memory::desc(dims, get_mkldnn_type(data.dtype()), fmt_pair.first);
-    auto src_pd = mkldnn::memory::primitive_desc(src_md, engine);
+    auto in_mem = data.GetMKLDNNData();
+    auto src_pd = in_mem->get_primitive_desc();
     data_ = std::make_shared<mkldnn::memory>(src_pd, nullptr);
 
-    auto dst_md = mkldnn::memory::desc(dims, get_mkldnn_type(data.dtype()), fmt_pair.second);
-    dst_pd_ = std::make_shared<mkldnn::memory::primitive_desc>(dst_md, engine);
+    // destination
+    mkldnn_memory_desc_t dst_fmt;
+    dst_fmt.primitive_kind = mkldnn_memory;
+    dst_fmt.ndims = data_ndim;
+    dst_fmt.data_type = mkldnn_f32;
+    dst_fmt.format = mkldnn_blocked;
+
+    for (size_t i = 0; i < data_ndim; i++)
+      dst_fmt.dims[i] = shape[i];
+
+    unsigned int total_stride = 1;
+    for (int i = data_ndim - 1; i >= 0; i--) {
+      dst_fmt.layout_desc.blocking.padding_dims[i] = shape[i];
+      dst_fmt.layout_desc.blocking.block_dims[i] = 1;
+      dst_fmt.layout_desc.blocking.offset_padding_to_data[i]= 0;
+      dst_fmt.layout_desc.blocking.strides[0][axes[i]] = total_stride;
+      dst_fmt.layout_desc.blocking.strides[1][axes[i]] = 1;
+
+      total_stride *= shape[axes[i]];
+    }
+
+    dst_fmt.layout_desc.blocking.offset_padding = 0;
+    dst_pd_ = std::make_shared<mkldnn::memory::primitive_desc>(dst_fmt, engine);
     out_ = std::make_shared<mkldnn::memory>(*dst_pd_, nullptr);
 
     transpose_ = std::make_shared<mkldnn::reorder>(*data_, *out_);
