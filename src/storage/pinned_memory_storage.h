@@ -50,29 +50,24 @@ class PinnedMemoryStorage {
 };
 
 inline void PinnedMemoryStorage::Alloc(Storage::Handle* handle) {
-  void* ret = nullptr;
+  handle->dptr = nullptr;
   const size_t size = handle->size;
-  if (size == 0) {
-    handle->dptr = ret;
-    return;
-  }
+  if (size == 0) return;
 
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
 #endif
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
   // make the memory available across all devices
-  CUDA_CALL(cudaHostAlloc(&ret, size, cudaHostAllocPortable));
-  handle->dptr = ret;
+  CUDA_CALL(cudaHostAlloc(&handle->dptr, size, cudaHostAllocPortable));
 }
 
 inline void PinnedMemoryStorage::Free(Storage::Handle handle) {
-  void* ptr = handle.dptr;
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
 #endif
   mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
-  cudaError_t err = cudaFreeHost(ptr);
+  cudaError_t err = cudaFreeHost(handle.dptr);
   // ignore unloading error, as memory has already been recycled
   if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
     LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
