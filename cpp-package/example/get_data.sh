@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,29 +16,48 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-unameOut="$(uname -s)"
-case "${unameOut}" in
-    Linux*)     CMD='wget';;
-    Darwin*)    CMD='curl -o';;
-    CYGWIN*)    CMD='wget';;
-    MINGW*)     CMD='wget';;
-    *)          CMD=""
-esac
 
-if [ ! -d "./data" ]; then
-    mkdir data
-fi
+set -e
 
-if [ ! -d "./data/mnist_data" ]; then
-  mkdir ./data/mnist_data
+mkdir -p data/mnist_data
+cd data/mnist_data
 
-  (cd data/mnist_data; $CMD train-images-idx3-ubyte.gz https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz)
-  (cd data/mnist_data; $CMD train-labels-idx1-ubyte.gz https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz)
-  (cd data/mnist_data; $CMD t10k-images-idx3-ubyte.gz  https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz)
-  (cd data/mnist_data; $CMD t10k-labels-idx1-ubyte.gz  https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz)
-  (cd data/mnist_data; $CMD mnist_train.csv.gz         http://data.mxnet.io/data/mnist_train.csv.gz)
-  (cd data/mnist_data; gzip -d *.gz)
-fi
+download () {
+    local URL=$1
+    local GZ_FILE_NAME="${URL##*/}"
 
+    local FILE_NAME="${GZ_FILE_NAME%.*}"
+    if [[ -f "${FILE_NAME}" ]]; then
+        echo "File ${FILE_NAME} already downloaded."
+        return 0
+    fi
 
+    echo "Downloading ${URL} ..."
+    local CURL_OPTIONS="--connect-timeout 10 \
+              --max-time 300 \
+              --retry-delay 10 \
+              --retry 3 \
+              --retry-delay 0 \
+              --location \
+              --silent"
+    curl ${CURL_OPTIONS} ${URL} -o ${GZ_FILE_NAME}
 
+    if [[ ! -f "${GZ_FILE_NAME}" ]]; then
+        echo "File ${URL} couldn't be downloaded!"
+        exit 1
+    fi
+
+    gzip -d ${GZ_FILE_NAME}
+    (($? != 0)) && exit 1 || return 0
+}
+
+FILES=(
+    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz"
+    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz"
+    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz"
+    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz"
+    "http://data.mxnet.io/data/mnist_train.csv.gz")
+
+for FILE in ${FILES[@]}; do
+    download ${FILE}
+done
