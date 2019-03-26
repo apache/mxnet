@@ -511,9 +511,6 @@ class RNNOp {
       init_cudnn_ = false;
 
       Storage::Get()->Free(reserve_space_);
-      if (param_.p > 0) {
-        Storage::Get()->Free(dropout_states_);
-      }
     }
     #if USE_CUDNN_LSTM_PROJ
     CUDNN_CALL(cudnnDestroyRNNDataDescriptor(x_data_desc_));
@@ -584,7 +581,7 @@ class RNNOp {
     DType* work_cpu_space = NULL;
     #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
-      Init(s, in_data, out_data);
+      Init(ctx, s, in_data, out_data);
     }
     // Get temp space
     int temp_size = workspace_size_;
@@ -896,7 +893,7 @@ class RNNOp {
     DType* work_cpu_space = NULL;
     #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
-      Init(s, in_data, out_data);
+      Init(ctx, s, in_data, out_data);
     }
 
     // Get temp space
@@ -1044,7 +1041,8 @@ class RNNOp {
 
 
  private:
-  inline void Init(mshadow::Stream<xpu> *s,
+  inline void Init(const OpContext &ctx,
+                   mshadow::Stream<xpu> *s,
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {
     using namespace mshadow;
@@ -1218,18 +1216,21 @@ class RNNOp {
                                             strideA));
 
       // Create Dropout descriptors
+      DType* dropout_states_ = NULL;
       if (param_.p > 0) {
         CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_, &dropout_byte_));
         dropout_size_ = dropout_byte_ / sizeof(DType);
-        dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU(s->dev_id));
+        dropout_states_ = ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
+            mshadow::Shape1(dropout_size_), s).dptr_;
       } else {
-        dropout_states_ = {};
         dropout_byte_ = 0;
       }
+
       CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
                                            param_.p,  // discard probability
-                                           dropout_states_.dptr, dropout_byte_,
+                                           dropout_states_, dropout_byte_,
                                            seed_));
+
       // RNN descriptors
       #if CUDNN_MAJOR >= 6
       cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
@@ -1355,7 +1356,7 @@ class RNNOp {
   cudnnDirectionMode_t direction_;
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  Storage::Handle dropout_states_, reserve_space_;
+  Storage::Handle reserve_space_;
   uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_, dropout_size_;
