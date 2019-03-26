@@ -186,7 +186,7 @@ void NaiveRunGraph(
       Imperative::Get()->InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs,
                                   req, dispatch_mode, state);
       for (size_t j = 0; j < ndoutputs.size(); ++j) {
-        if (ndoutputs[j]->shape().ndim() == 0) {
+        if (ndoutputs[j]->shape().ndim() == -1) {
           ndoutputs[j]->WaitToRead();
           ndoutputs[j]->SetShapeFromChunk();
         }
