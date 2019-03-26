@@ -722,14 +722,15 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
-  nnvm::Graph g = Symbol2Graph(*s);
-  mxnet::op::SubgraphPropertyPtr property =
-      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(
-          backend);
-  g.attrs["subgraph_property"] =
-      std::make_shared<nnvm::any>(std::move(property));
-  g = ApplyPass(std::move(g), "PartitionGraph");
-  s->outputs = g.outputs;
+  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
+      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(backend);
+  for (auto property : properties) {
+    nnvm::Graph g = Symbol2Graph(*s);
+    property->SetAttr("graph", g);
+    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
+    g = nnvm::ApplyPass(std::move(g), "PartitionGraph");
+    s->outputs = g.outputs;
+  }
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }

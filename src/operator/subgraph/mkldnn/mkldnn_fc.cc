@@ -423,6 +423,9 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 .set_attr<FCreateOpState>("FCreateOpState", CreateSgMKLDNNFCState)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNFCForward)
 .set_attr<bool>("TIsMKLDNN", true)
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
