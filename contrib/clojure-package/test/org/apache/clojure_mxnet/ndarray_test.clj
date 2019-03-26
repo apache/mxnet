@@ -146,6 +146,18 @@
     (is (= [0.0 0.0 0.5 0.5 1.0 1.0 1.5 1.5 2.0 2.0 2.5 2.5 3.0 3.0 3.5 3.5 4.0 4.0 4.5 4.5]
            (->vec (ndarray/arange start stop {:step step :repeat repeat}))))))
 
+(deftest test->ndarray
+  (let [nda1 (ndarray/->ndarray [5.0 -4.0])
+        nda2 (ndarray/->ndarray [[1 2 3]
+                                 [4 5 6]])
+        nda3 (ndarray/->ndarray [[[7.0] [8.0]]])]
+    (is (= [5.0 -4.0] (->vec nda1)))
+    (is (= [2] (mx-shape/->vec (shape nda1))))
+    (is (= [1.0 2.0 3.0 4.0 5.0 6.0] (->vec nda2)))
+    (is (= [2 3] (mx-shape/->vec (shape nda2))))
+    (is (= [7.0 8.0] (->vec nda3)))
+    (is (= [1 2 1] (mx-shape/->vec (shape nda3))))))
+
 (deftest test-power
   (let [nda (ndarray/array [3 5] [2 1])]
 
@@ -473,3 +485,15 @@
     (is (= [2 2] (ndarray/->int-vec nda)))
     (is (= [2.0 2.0] (ndarray/->double-vec nda)))
     (is (= [(byte 2) (byte 2)] (ndarray/->byte-vec nda)))))
+
+(deftest test->nd-vec
+  (is (= [[[1.0]]]
+         (ndarray/->nd-vec (ndarray/array [1] [1 1 1]))))
+  (is (= [[[1.0]] [[2.0]] [[3.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3] [3 1 1]))))
+  (is (= [[[1.0 2.0]] [[3.0 4.0]] [[5.0 6.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3 4 5 6] [3 1 2]))))
+  (is (= [[[1.0] [2.0]] [[3.0] [4.0]] [[5.0] [6.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3 4 5 6] [3 2 1]))))
+  (is (thrown-with-msg? Exception #"Invalid input array"
+                         (ndarray/->nd-vec [1 2 3 4 5]))))

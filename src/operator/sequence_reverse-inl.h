@@ -220,14 +220,14 @@ class SequenceReverseProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
     CHECK_EQ(param_.axis, 0) << "Current implementation expects axis to be 0.";
 
-    const TShape &dshape = (*in_shape)[seq_reverse::kData];
+    const mxnet::TShape &dshape = (*in_shape)[seq_reverse::kData];
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
     // seq length vector is same as batch size
@@ -235,7 +235,7 @@ class SequenceReverseProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape, seq_reverse::kSequenceLength,
                          Shape1(dshape[1]));
 
-    const TShape &oshape = dshape;
+    const mxnet::TShape &oshape = dshape;
     out_shape->clear();
     out_shape->push_back(oshape);
     return true;
@@ -275,7 +275,7 @@ class SequenceReverseProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -284,7 +284,7 @@ class SequenceReverseProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

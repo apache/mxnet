@@ -882,6 +882,81 @@ class Symbol(SymbolBase):
             List of auxiliary state types.
             The order is same as the order of list_auxiliary_states().
         """
+        try:
+            res = self._infer_type_impl(False, *args, **kwargs)
+            if res[1] is None:
+                arg_shapes, _, _ = self._infer_type_impl(True, *args, **kwargs)
+                arg_names = self.list_arguments()
+                unknowns = []
+                for name, dtype in zip(arg_names, arg_shapes):
+                    if not dtype:
+                        if len(unknowns) >= 10:
+                            unknowns.append('...')
+                            break
+                        unknowns.append('%s: %s' % (name, str(dtype)))
+                warnings.warn(
+                    "Cannot decide type for the following arguments. " +
+                    "Consider providing them as input:\n\t" +
+                    "\n\t".join(unknowns), stacklevel=2)
+            return res
+        except MXNetError:
+            print("infer_type error. Arguments:")
+            for i, arg in enumerate(args):
+                print("  #%d: %s" % (i, arg))
+            for k, v in kwargs.items():
+                print("  %s: %s" % (k, v))
+            raise
+
+    def infer_type_partial(self, *args, **kwargs):
+        """Infers the type partially.
+
+        This functions works the same way as `infer_type`,
+        except that this function can return partial results.
+
+        In the following example, information about fc2 is not available. So, `infer_shape`
+        will return a tuple of `None` values but `infer_shape_partial` will return partial values.
+
+        Example
+        -------
+        >>> data = mx.sym.Variable('data')
+        >>> prev = mx.sym.Variable('prev')
+        >>> casted_prev  = mx.sym.cast(prev, dtype='float32')
+        >>> out  = mx.sym.Activation(data=mx.sym.elemwise_add(data, casted_prev), act_type='relu')
+        >>> out.list_arguments()
+        ['data', 'prev']
+        >>> out.infer_type(data='float32')
+        (None, None, None)
+        >>> out.infer_type_partial(data='float32')
+        ([numpy.float32, None], [numpy.float32], [])
+        >>> # infers type if you give information about prev
+        >>> out.infer_type(data='float32', prev='float16')
+        ([numpy.float32, numpy.float16], [numpy.float32], [])
+
+        Parameters
+        ----------
+        *args :
+            Type of known arguments in a positional way.
+            Unknown type can be marked as None.
+
+        **kwargs :
+            Keyword arguments of known types.
+
+        Returns
+        -------
+        arg_types : list of numpy.dtype or None
+            List of argument types.
+            The order is same as the order of list_arguments().
+        out_types : list of numpy.dtype or None
+            List of output types.
+            The order is same as the order of list_outputs().
+        aux_types : list of numpy.dtype or None
+            List of auxiliary state types.
+            The order is same as the order of list_auxiliary_states().
+        """
+        return self._infer_type_impl(True, *args, **kwargs)
+
+    def _infer_type_impl(self, partial, *args, **kwargs):
+        """The actual implementation for calling type inference API."""
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
@@ -912,7 +987,11 @@ class Symbol(SymbolBase):
         aux_type_size = mx_uint()
         aux_type_data = ctypes.POINTER(ctypes.c_int)()
         complete = ctypes.c_int()
-        check_call(_LIB.MXSymbolInferType(
+        if partial:
+            infer_func = _LIB.MXSymbolInferTypePartial
+        else:
+            infer_func = _LIB.MXSymbolInferType
+        check_call(infer_func(
             self.handle,
             mx_uint(len(sdata)),
             keys,
@@ -2833,6 +2912,7 @@ def hypot(left, right):
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
+
 def eye(N, M=0, k=0, dtype=None, **kwargs):
     """Returns a new symbol of 2-D shpae, filled with ones on the diagonal and zeros elsewhere.
 
@@ -2923,11 +3003,16 @@ def full(shape, val, dtype=None, **kwargs):
 def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 
+    Values are generated within the half-open interval [`start`, `stop`). In other
+    words, the interval includes `start` but excludes `stop`. The function is
+    similar to the built-in Python function `range` and to `numpy.arange`,
+    but returns a `Symbol`.
+
     Parameters
     ----------
-    start : number
+    start : number, optional
         Start of interval. The interval includes this value. The default start value is 0.
-    stop : number, optional
+    stop : number
         End of interval. The interval does not include this value.
     step : number, optional
         Spacing between values.

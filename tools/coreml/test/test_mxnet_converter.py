@@ -192,6 +192,33 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.sym.Activation(net, name='tanh1', act_type="tanh")
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
+    def test_tiny_elu_leakyrelu_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 10)
+        net = mx.sym.Variable('data')
+        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
+        slope = 0.1
+        net = mx.sym.LeakyReLU(net, name='elu1', act_type="elu", slope=slope)
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    def test_tiny_leaky_leakyrelu_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 10)
+        net = mx.sym.Variable('data')
+        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
+        slope = 0.1
+        net = mx.sym.LeakyReLU(net, name='leaky1', act_type="leaky", slope=slope)
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    def test_tiny_prelu_leakyrelu_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 10)
+        net = mx.sym.Variable('data')
+        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
+        gamma = mx.sym.Variable('gamma')
+        net = mx.sym.LeakyReLU(net, gamma=gamma, name='prelu1', act_type="prelu")
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
     def test_really_tiny_conv_random_input(self):
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
@@ -408,6 +435,26 @@ class SingleLayerTest(unittest.TestCase):
         )
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
+    def test_really_tiny_conv_random_input_multi_group(self):
+        np.random.seed(1988)
+        input_shape = (1, 16, 10, 10)
+        num_filter = 16
+        num_group = 4
+        kernel = (1, 1)
+        stride = (1, 1)
+        pad = (0, 0)
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Convolution(
+            data=net,
+            num_filter=num_filter,
+            num_group=num_group,
+            kernel=kernel,
+            stride=stride,
+            pad=pad,
+            name='conv_1'
+        )
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
     def test_tiny_conv_random_3d_input(self):
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
@@ -437,6 +484,26 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.symbol.Convolution(
             data=net,
             num_filter=num_filter,
+            kernel=kernel,
+            stride=stride,
+            pad=pad,
+            name='conv_1'
+        )
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    def test_tiny_conv_random_input_multi_group(self):
+        np.random.seed(1988)
+        input_shape = (1, 16, 10, 10)
+        num_filter = 16
+        num_group = 4
+        kernel = (5, 5)
+        stride = (1, 1)
+        pad = (0, 0)
+        net = mx.sym.Variable('data')
+        net = mx.symbol.Convolution(
+            data=net,
+            num_filter=num_filter,
+            num_group=num_group,
             kernel=kernel,
             stride=stride,
             pad=pad,

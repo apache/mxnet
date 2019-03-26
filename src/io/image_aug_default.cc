@@ -32,6 +32,7 @@
 #include "../common/utils.h"
 
 #if MXNET_USE_OPENCV
+#include "./opencv_compatibility.h"
 // Registers
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mxnet::io::ImageAugmenterReg);
@@ -96,7 +97,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   /*! \brief padding size */
   int pad;
   /*! \brief shape of the image data*/
-  TShape data_shape;
+  mxnet::TShape data_shape;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {

@@ -19,6 +19,8 @@ import subprocess
 import os
 import errno
 
+import mxnet as mx
+
 def download_file(url, local_fname=None, force_write=False):
     # requests is not default installed
     import requests
@@ -49,8 +51,4 @@ def get_gpus():
     """
     return a list of GPUs
     """
-    try:
-        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
-    except OSError:
-        return []
-    return range(len([i for i in re.split('\n') if 'GPU' in i]))
+    return range(mx.util.get_gpu_count())

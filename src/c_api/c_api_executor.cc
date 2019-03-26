@@ -408,10 +408,10 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   }
 
   // create shape map for in_args and aux_states
-  std::unordered_map<std::string, TShape> arg_shape_map(num_provided_arg_shapes);
+  std::unordered_map<std::string, mxnet::TShape> arg_shape_map(num_provided_arg_shapes);
   for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
     auto p = arg_shape_map.emplace(provided_arg_shape_names[i],
-        TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
+        mxnet::TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
     CHECK(p.second) << "Duplicate shapes are provided for argument "
       << provided_arg_shape_names[i] << " in simple_bind";
@@ -562,10 +562,10 @@ int MXExecutorReshape(int partial_shaping,
   API_BEGIN();
   *out = nullptr;  // ensure we can know whether to free executor on early abort
   // create shape map for in_args and aux_states
-  std::unordered_map<std::string, TShape> kwargs(num_provided_arg_shapes);
+  std::unordered_map<std::string, mxnet::TShape> kwargs(num_provided_arg_shapes);
   for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
     auto p = kwargs.emplace(provided_arg_shape_names[i],
-        TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
+        mxnet::TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
     CHECK(p.second) << "Duplicate shapes are provided for argument "
       << provided_arg_shape_names[i] << " in reshape of executor";

@@ -24,7 +24,9 @@ if [[ ! -f $DEPS_PATH/lib/libssl.a ]] || [[ ! -f $DEPS_PATH/lib/libcrypto.a ]]; 
     # download and build openssl
     >&2 echo "Building openssl..."
     OPENSSL_VERSION=$(echo $OPENSSL_VERSION | sed 's/\./_/g')
-    curl -s -L https://github.com/openssl/openssl/archive/OpenSSL_$OPENSSL_VERSION.zip -o $DEPS_PATH/openssl.zip
+    download \
+        https://github.com/openssl/openssl/archive/OpenSSL_${OPENSSL_VERSION}.zip \
+        ${DEPS_PATH}/openssl.zip
     unzip -q $DEPS_PATH/openssl.zip -d $DEPS_PATH
     pushd .
     cd $DEPS_PATH/openssl-OpenSSL_$OPENSSL_VERSION

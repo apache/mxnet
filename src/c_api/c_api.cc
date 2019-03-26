@@ -111,6 +111,7 @@ int MXRandomSeedContext(int seed, int dev_type, int dev_id) {
 
 int MXNotifyShutdown() {
   API_BEGIN();
+  mxnet::op::custom::CustomOperator::Get()->Stop();
   Engine::Get()->NotifyShutdown();
   API_END();
 }
@@ -170,7 +171,7 @@ int MXNDArrayCreate(const mx_uint *shape,
                     NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(
-      TShape(shape, shape + ndim),
+      mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0);
   API_END();
@@ -185,7 +186,7 @@ int MXNDArrayCreateEx(const mx_uint *shape,
                     NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(
-      TShape(shape, shape + ndim),
+      mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0,
       dtype);
@@ -206,7 +207,7 @@ int MXNDArrayCreateSparseEx(int storage_type,
                     NDArrayHandle *out) {
   API_BEGIN();
   std::vector<int> aux_types;
-  std::vector<TShape> aux_shapes;
+  mxnet::ShapeVector aux_shapes;
   auto shape_start = aux_shape;
   for (size_t i = 0; i < num_aux; i++) {
     // types
@@ -217,7 +218,7 @@ int MXNDArrayCreateSparseEx(int storage_type,
   }
   *out = new NDArray(
       NDArrayStorageType(storage_type),
-      TShape(shape, shape + ndim),
+      mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0,
       dtype, aux_types, aux_shapes);
@@ -433,7 +434,7 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   NDArray *ptr = new NDArray();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
-  TShape new_shape(dims, dims+ndim);
+  mxnet::TShape new_shape(dims, dims+ndim);
   int size = 1;
   int pos = -1;
   for (int i = 0; i < ndim; ++i) {
@@ -473,7 +474,7 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
   nnvm::Tuple<dim_t> shape(dims, dims+ndim);
   CHECK_GT(arr->shape().Size(), 0) << "Source ndarray's shape is undefined. Input shape: "
     << arr->shape();
-  TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
+  mxnet::TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
   *ptr = arr->ReshapeWithRecord(new_shape);
   *out = ptr;
   API_END_HANDLE_ERROR(delete ptr);
@@ -498,7 +499,7 @@ int MXNDArrayGetShape(NDArrayHandle handle,
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    const TShape &s = arr->shape();
+    const mxnet::TShape &s = arr->shape();
     *out_dim = s.ndim();
     std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
     buffer.resize(s.ndim());
@@ -789,7 +790,7 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   NDArray* pndarray = new NDArray();
   // temp hack to make label 1D
   // TODO(tianjun) make label 1D when label_width=0
-  TShape shape = db.data[1].shape();
+  mxnet::TShape shape = db.data[1].shape();
   if (shape[1] == 1) {
     *pndarray = db.data[1].Reshape(mshadow::Shape1(shape[0]));
   } else {
@@ -1397,6 +1398,6 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
 int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
                                  mx_uint ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(shared_pid, shared_id, TShape(shape, shape + ndim), dtype);
+  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   API_END();
 }
