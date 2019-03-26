@@ -70,11 +70,8 @@
                (util/option->value)))))
 
 (deftest test-keyword->snake-case
-  ;; FIXME
-  #_(is (= [:foo-bar :foo2 :bar-bar]
-         ; FIXME
-         ; ["foo_bar" "foo2" "bar_bar"]
-         (util/keyword->snake-case [:foo_bar :foo2 :bar-bar]))))
+  (is (= ["foo_bar" "foo2" "bar_bar"]
+         (mapv util/keyword->snake-case [:foo_bar :foo2 :bar-bar]))))
 
 (deftest test-convert-tuple
   (is (instance? Tuple1 (util/convert-tuple [1])))

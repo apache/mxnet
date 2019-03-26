@@ -57,7 +57,7 @@
         mlp (sym/softmax-output "softmax" {:data fc1})
         [arg out aux] (sym/infer-type mlp {:data dtype/FLOAT64})]
     (is (= [dtype/FLOAT64 dtype/FLOAT32 dtype/FLOAT32 dtype/FLOAT32] (util/buffer->vec arg)))
-    (is (= [dtype/FLOAT32 ] (util/buffer->vec out)))
+    (is (= [dtype/FLOAT32] (util/buffer->vec out)))
     (is (= [] (util/buffer->vec aux)))))
 
 (deftest test-copy
