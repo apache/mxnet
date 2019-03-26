@@ -26,40 +26,117 @@
 #include "../softmax-inl.h"
 #include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
-#include "../../tensor/broadcast_reduce_op.h"
 
 #if MXNET_USE_MKLDNN == 1
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNSoftmax(const SoftmaxParam &param) {
+bool SupportMKLDNNSoftmax(const SoftmaxParam &param,
+                          const NDArray &data,
+                          const NDArray &output) {
+  int ndim = data.shape().ndim();
+  int in_dtype = data.dtype();
+  int out_dtype = output.dtype();
+
   // MKLDNN does not support temperature argument in their softmax function
   // now. Need update this once they start to support it.
-  if (param.temperature.has_value()) {
+  if (param.temperature.has_value() ||
+      in_dtype != mshadow::kFloat32 ||
+      in_dtype != out_dtype) {
     return false;
   }
-  return true;
+  // only support ndim = 1, 2, 3, 4 for now
+  return (ndim >= 1 && ndim <= 4);
 }
 
-void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                          const NDArray &in_data, const OpReqType &req,
+static mkldnn::softmax_forward::primitive_desc GetSoftmaxFwdPd(const int axis,
+                                                               const bool is_train,
+                                                               const mkldnn::memory &input) {
+  auto data_md = input.get_primitive_desc().desc();
+  auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
+  auto desc = mkldnn::softmax_forward::desc(prop, data_md, axis);
+  auto pd = mkldnn::softmax_forward::primitive_desc(desc, CpuEngine::Get()->get_engine());
+  return pd;
+}
+
+/*
+class MKLDNNSoftmaxFwd {
+ public:
+  mkldnn::softmax_forward::primitive_desc pd_;
+  MKLDNNSoftmaxFwd(const int axis,
+                   const bool is_train,
+                   const mkldnn::memory &input) : pd_(GetSoftmaxFwdPd(axis, is_train, input)) {
+    data_ = std::make_shared<mkldnn::memory>(pd_.src_primitive_desc(), nullptr);
+    output_ = std::make_shared<mkldnn::memory>(pd_.dst_primitive_desc(), nullptr);
+    fwd_ = std::make_shared<mkldnn::softmax_forward>(pd_, *data_, *output_);
+  }
+
+  void SetNewMem(const mkldnn::memory &data,
+                 const mkldnn::memory &output) {
+    data_->set_data_handle(data.get_data_handle());
+    output_->set_data_handle(output.get_data_handle());
+  }
+
+  const mkldnn::softmax_forward &GetFwd() const {
+    return *fwd_;
+  }
+
+ private:
+  std::shared_ptr<mkldnn::memory> data_;
+  std::shared_ptr<mkldnn::memory> output_;
+  std::shared_ptr<mkldnn::softmax_forward> fwd_;
+};
+
+
+static MKLDNNSoftmaxFwd &GetSoftmaxFwd(const SoftmaxParam &param,
+                                       const int real_axis,
+                                       const bool is_train,
+                                       const NDArray &data,
+                                       const NDArray &output) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxFwd, OpHash> fwds;
+#endif
+
+  MKLDNNSoftmaxSignature key(param);
+  key.AddSign(real_axis);
+  key.AddSign(is_train);
+  key.AddSign(data);
+  key.AddSign(output);
+
+  auto it = fwds.find(key);
+  if (it == fwds.end()) {
+    MKLDNNSoftmaxFwd fwd(real_axis, is_train, *(data.GetMKLDNNData()));
+    it = AddToCache(&fwd, key, fwd);
+  }
+  return it->second;
+}
+*/
+
+void MKLDNNSoftmaxForward(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &in_data,
+                          const OpReqType &req,
                           const NDArray &out_data) {
+  if (req == kNullOp) return;
+  CHECK_NE(req, kAddTo);
+  // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace for now.
+
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  auto input_mem = in_data.GetMKLDNNData();
-  mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
-  mkldnn::memory::desc data_md = data_mpd.desc();
   int axis = CheckAxis(param.axis, in_data.shape().ndim());
 
-  auto cpu_engine = data_mpd.get_engine();
-  auto prop = ctx.is_train
-    ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
-  mkldnn::softmax_forward::desc desc = mkldnn::softmax_forward::desc(prop,
-      data_md, axis);
-  mkldnn::softmax_forward::primitive_desc pdesc(desc, cpu_engine);
+  NDArray data = in_data;
+  if (in_data.IsView() && in_data.IsMKLDNNData())
+    data = in_data.Reorder2Default();
 
-  auto output_memory = out_data.GetMKLDNNData();
+  auto data_mem = data.GetMKLDNNData();
+  auto pd = GetSoftmaxFwdPd(axis, ctx.is_train, *data_mem);
+  CHECK(data_mem->get_primitive_desc() == pd.src_primitive_desc());
+  auto out_mem = out_data.GetMKLDNNData(pd.dst_primitive_desc());
+
   MKLDNNStream *stream = MKLDNNStream::Get();
-  stream->RegisterPrim(mkldnn::softmax_forward(pdesc, *input_mem, *output_memory));
+  stream->RegisterPrim(mkldnn::softmax_forward(pd, *data_mem, *out_mem));
   stream->Submit();
 }
 
