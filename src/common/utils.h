@@ -752,7 +752,6 @@ inline void ConvertToNumpyShape(mxnet::TShape* shape) {
     *shape = mxnet::TShape();  // unknown shape ndim = -1
   } else {
     for (int j = 0; j < shape->ndim(); ++j) {
-      CHECK_GE((*shape)[j], 0) << "Legacy shape cannot have dim size < 0";
       if ((*shape)[j] == 0) {  // legacy shape dim_size = 0 means unknown
         (*shape)[j] = -1;  // unknown dim size = -1
       }
