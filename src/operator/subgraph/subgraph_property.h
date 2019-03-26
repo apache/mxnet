@@ -114,28 +114,31 @@ class SubgraphSelectorV2 {
   /*!
    * \brief Determines if to search for other nodes to form a subgraph from the seed_node.
    */
-  virtual bool Select(const BiDirectionalNode &seed_node) = 0;
+  virtual bool Select(const BiDirectionalNode& seed_node) = 0;
   /*!
    * \brief Determines if to select input_node when traverse to the cur_node.
    * \param cur_node the node for determining whether its input_node should be selected
    * \param input_node the input node of the cur_node
    * \return true if input_node is selected
    */
-  virtual bool SelectInput(const BiDirectionalNode &cur_node, const BiDirectionalNode &input_node) = 0;
+  virtual bool SelectInput(const BiDirectionalNode& cur_node,
+                           const BiDirectionalNode& input_node) = 0;
   /*!
    * \brief Determines if to select output_node when traverse to the cur_node.
    * \param cur_node the node for determining whether its output_node should be selected
    * \param output_node the output node of the cur_node
    * \return true if output_node is selected
    */
-  virtual bool SelectOutput(const BiDirectionalNode &cur_node, const BiDirectionalNode &output_node) = 0;
+  virtual bool SelectOutput(const BiDirectionalNode& cur_node,
+                            const BiDirectionalNode& output_node) = 0;
   /*!
    * \brief Post processes pre-selected subgraph nodes. Return a list of nodes that
    *        users want to keep in subgraph(s).
    * \param candidates re-selected subgraph nodes to filt
    * \return a list of nodes to keep
    */
-  virtual std::vector<BiDirectionalNode*> Filter(const std::vector<BiDirectionalNode*>& candidates) {
+  virtual std::vector<BiDirectionalNode*> Filter(
+      const std::vector<BiDirectionalNode*>& candidates) {
     return candidates;
   }
 };
@@ -148,17 +151,22 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
 
   virtual ~SubgraphSelectorV2Bridge() {}
 
-  bool Select(const BiDirectionalNode& seed_node) override { return ss_ptr_->Select(*seed_node.node); }
+  bool Select(const BiDirectionalNode& seed_node) override {
+    return ss_ptr_->Select(*seed_node.node);
+  }
 
-  bool SelectInput(const BiDirectionalNode& cur_node, const BiDirectionalNode& input_node) override {
+  bool SelectInput(const BiDirectionalNode& cur_node,
+                   const BiDirectionalNode& input_node) override {
     return ss_ptr_->SelectInput(*cur_node.node, *input_node.node);
   }
 
-  bool SelectOutput(const BiDirectionalNode& cur_node, const BiDirectionalNode& output_node) override {
+  bool SelectOutput(const BiDirectionalNode& cur_node,
+                    const BiDirectionalNode& output_node) override {
     return ss_ptr_->SelectOutput(*cur_node.node, *output_node.node);
   }
 
-  std::vector<BiDirectionalNode*> Filter(const std::vector<BiDirectionalNode*>& candidates) override {
+  std::vector<BiDirectionalNode*> Filter(
+      const std::vector<BiDirectionalNode*>& candidates) override {
     std::unordered_map<nnvm::Node*, BiDirectionalNode*> node_2_snode_map;
     std::vector<nnvm::Node*> n_candidates;
     for (auto i : candidates) {

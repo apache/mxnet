@@ -84,9 +84,10 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  virtual std::vector<BiDirectionalNode*> Filter(const std::vector<BiDirectionalNode*>& candidates) {
+  virtual std::vector<BiDirectionalNode *> Filter(
+      const std::vector<BiDirectionalNode *> &candidates) {
     if (matched_list_.size() < 2) {
-      return std::vector<BiDirectionalNode*>(0);
+      return std::vector<BiDirectionalNode *>(0);
     } else {
       std::vector<BiDirectionalNode *> ret;
       for (auto i : matched_list_) {
