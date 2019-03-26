@@ -17,8 +17,12 @@
  * under the License.
  */
 
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <string>
+#include <vector>
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../nn/activation-inl.h"
@@ -136,21 +140,20 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 class SgMKLDNNConvProperty : public SubgraphProperty {
  public:
   SgMKLDNNConvProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", 0);
     disable_conv_bn = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_BN", 0);
     disable_conv_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU", 0);
     disable_conv_sum = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM", 0);
 
-    disable_all = disable_all || (disable_conv_bn && disable_conv_relu && disable_conv_sum);
-    if (disable_all) {
-      LOG(INFO) << "MKLDNN Convolution optimization pass is disabled.";
-    } else {
-      LOG(INFO) << "Start to execute MKLDNN Convolution optimization pass.";
-    }
+    disable_all = disable_conv_bn && disable_conv_relu && disable_conv_sum;
   }
   static SubgraphPropertyPtr Create() {
+    static const std::string &name = "MKLDNN convolution optimization pass";
+    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_CONV_OPT", 0)) {
+      LOG(INFO) << name << " is disabled.";
+      return nullptr;
+    }
     auto property = std::make_shared<SgMKLDNNConvProperty>();
-    property->SetAttr<std::string>("prop_name", "MKLDNN Convolution optimization pass");
+    property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
@@ -244,9 +247,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   int disable_conv_sum;
 };
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
-
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_

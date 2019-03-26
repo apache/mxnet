@@ -24,8 +24,12 @@
  * \author Ciyong Chen
 */
 
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <string>
+#include <vector>
 #include "../common.h"
 #include "../subgraph_property.h"
 
@@ -42,19 +46,16 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   };
 
  private:
-  bool disable_all;
   bool disable_fc_relu;
   SelectStatus status;
   std::vector<const nnvm::Node *> matched_list;
 
  public:
-  SgMKLDNNFCSelector(const bool dis_all, const bool dis_fc_relu)
-      : disable_all(dis_all),
-        disable_fc_relu(dis_fc_relu) {}
+  explicit SgMKLDNNFCSelector(const bool dis_fc_relu) : disable_fc_relu(dis_fc_relu) {}
 
   bool Select(const nnvm::Node &n) override {
     if (n.op() == Op::Get("FullyConnected")) {
-      status = disable_all ? kSuccess : kStart;
+      status = disable_fc_relu ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
       return true;
@@ -86,8 +87,7 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 
     switch (status) {
       case kStart:
-        if ((!disable_fc_relu) &&
-            new_node.op() == Op::Get("Activation") &&
+        if (new_node.op() == Op::Get("Activation") &&
             new_node.attrs.dict.at("act_type") == "relu") {
           matched_list.push_back(&new_node);
           status = kSuccess;
@@ -120,19 +120,19 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 class SgMKLDNNFCProperty : public SubgraphProperty {
  public:
   SgMKLDNNFCProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", false);
     disable_fc_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_FC_RELU", false);
-
-    disable_all = disable_all || disable_fc_relu;
-    if (disable_all) {
-      LOG(INFO) << "MKLDNN FullyConnected optimization pass is disabled.";
-    } else {
-      LOG(INFO) << "Start to execute MKLDNN FullyConnected optimization pass.";
-    }
   }
 
   static SubgraphPropertyPtr Create() {
-    return std::make_shared<SgMKLDNNFCProperty>();
+    static const std::string &name = "MKLDNN FullyConnected optimization pass";
+    if (dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FC_OPT", 0)) {
+      LOG(INFO) << name << " is disabled.";
+      return nullptr;
+    }
+    auto property = std::make_shared<SgMKLDNNFCProperty>();
+    property->SetAttr<std::string>("property_name", name);
+    property->SetAttr<bool>("inference_only", true);
+    return property;
   }
 
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
@@ -165,8 +165,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgMKLDNNFCSelector>(
-        disable_all, disable_fc_relu);
+    auto selector = std::make_shared<SgMKLDNNFCSelector>(disable_fc_relu);
     return selector;
   }
 
@@ -181,13 +180,11 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
   }
 
  private:
-  bool disable_all;
   bool disable_fc_relu;
 };
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_FC, SgMKLDNNFCProperty);
 
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
