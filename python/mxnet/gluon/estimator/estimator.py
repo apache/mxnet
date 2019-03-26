@@ -22,7 +22,7 @@
 import copy
 import warnings
 
-from .event_handler import LoggingHandler
+from .event_handler import *
 from ... import gluon, autograd
 from ...context import Context, cpu, gpu, num_gpus
 from ...io import DataIter
@@ -240,10 +240,34 @@ class Estimator(object):
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
             event_handlers.append(LoggingHandler())
 
-        # training begin
+        # categorize handlers into 6 event lists to avoid calling empty methods
+        # for example, only eventhandlers with train_begin implemented will be called at train begin
+        train_begin_handlers = []
+        epoch_begin_handlers = []
+        batch_begin_handlers = []
+        batch_end_handlers = []
+        epoch_end_handlers = []
+        train_end_handlers = []
+        base_handler = EventHandler()
         for handler in event_handlers:
             handler.train_history = self.train_history
             handler.net = self.net
+            if not handler.__class_.train_begin == base_handler.__class__.train_begin:
+                train_begin_handlers.append(handler)
+            if not handler.__class_.epoch_begin == base_handler.__class__.epoch_begin:
+                epoch_begin_handlers.append(handler)
+            if not handler.__class_.batch_begin == base_handler.__class__.batch_begin:
+                batch_begin_handlers.append(handler)
+            if not handler.__class_.batch_end == base_handler.__class__.batch_end:
+                batch_end_handlers.append(handler)
+            if not handler.__class_.epoch_end == base_handler.__class__.epoch_end:
+                epoch_end_handlers.append(handler)
+            if not handler.__class_.train_end == base_handler.__class__.train_end:
+                train_end_handlers.append(handler)
+
+
+        # training begin
+        for handler in train_begin_handlers:
             handler.train_begin()
 
         for epoch in range(epochs):
@@ -251,7 +275,7 @@ class Estimator(object):
             self.train_history.epoch = epoch
             self.train_history.learning_rate = self.trainer.learning_rate
 
-            for handler in event_handlers:
+            for handler in epoch_begin_handlers:
                 handler.epoch_begin()
 
             for metric in self.train_metrics + self.train_loss_metrics:
@@ -272,7 +296,7 @@ class Estimator(object):
                     data, label = batch_fn(batch, self.context)
 
                 # batch begin
-                for handler in event_handlers:
+                for handler in batch_begin_handlers:
                     handler.batch_begin()
 
                 with autograd.record():
@@ -301,7 +325,7 @@ class Estimator(object):
 
                 self.trainer.step(batch_size)
                 # batch end
-                for handler in event_handlers:
+                for handler in batch_end_handlers:
                     handler.batch_end()
 
             if val_data:
@@ -313,14 +337,14 @@ class Estimator(object):
                 self.train_history.set_val_history(*metric.get())
 
             # epoch end
-            for handler in event_handlers:
+            for handler in epoch_end_handlers:
                 handler.epoch_end()
 
             if self.train_history.stop_training:
                 break
 
         # train end
-        for handler in event_handlers:
+        for handler in train_end_handlers:
             handler.train_end()
 
 
