@@ -59,7 +59,7 @@ static bool SliceSplitEmbeddingConcatOpShape(const nnvm::NodeAttrs& attrs,
   const SliceSplitEmbeddingConcatFuseParam& param_ =
       nnvm::get<SliceSplitEmbeddingConcatFuseParam>(attrs.parsed);
   bool ret = true;
-  TShape& dshape = (*in_shape)[0];
+  TShape dshape = (*in_shape)[0];
 
   nnvm::Tuple<dmlc::optional<int>> param_step;
   TShape cont_slice_oshape = dshape;
