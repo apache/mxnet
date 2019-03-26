@@ -2550,3 +2550,20 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxDumpProfile
   (JNIEnv *env, jobject obj, jint finished) {
   return MXDumpProfile(finished);
 }
+
+// Numpy
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyCompatible
+  (JNIEnv *env, jobject obj, jobject compatibleRef) {
+  bool isCompatible;
+  int ret = MXIsNumpyCompatible(&isCompatible);
+  SetIntField(env, compatibleRef, static_cast<int>(isCompatible));
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyCompatible
+  (JNIEnv *env, jobject obj, jint isNpComp, jobject prevRef) {
+  int prev;
+  int ret = MXSetIsNumpyCompatible(isNpComp, &prev);
+  SetIntField(env, prevRef, prev);
+  return ret;
+}

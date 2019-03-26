@@ -321,4 +321,8 @@ private[mxnet] class LibInfo {
   @native def mxSetProfilerConfig(keys: Array[String], vals: Array[String]): Int
   @native def mxSetProfilerState(state: Int): Int
   @native def mxDumpProfile(finished: Int): Int
+
+  // Numpy
+  @native def mxIsNumpyCompatible(compatible: RefInt): Int
+  @native def mxSetIsNumpyCompatible(isNpComp: Int, prev: RefInt): Int
 }
