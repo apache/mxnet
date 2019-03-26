@@ -23,7 +23,9 @@ PNG_VERSION=1.6.34
 if [[ ! -f $DEPS_PATH/lib/libpng.a ]]; then
     # download and build libpng
     >&2 echo "Building libpng..."
-    curl -s -L https://github.com/glennrp/libpng/archive/v$PNG_VERSION.zip -o $DEPS_PATH/libpng.zip
+    download \
+        https://github.com/glennrp/libpng/archive/v${PNG_VERSION}.zip \
+        ${DEPS_PATH}/libpng.zip
     unzip -q $DEPS_PATH/libpng.zip -d $DEPS_PATH
     mkdir -p $DEPS_PATH/libpng-$PNG_VERSION/build
     pushd .
