@@ -77,6 +77,10 @@ Install the dependencies, required for MXNet, with the following commands:
 
 ```bash
 	brew update
+    brew install python3
+	brew install cmake
+	brew install ninja
+	brew install ccache
 	brew install pkg-config
 	brew install graphviz
 	brew install openblas
@@ -91,7 +95,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	# For visualization of network graphs
 	pip install graphviz==0.8.4
 	# Jupyter notebook
-	pip install jupyter
+	pip3 install jupyter
 ```
 
 ### Build MXNet Shared Library
@@ -102,12 +106,8 @@ The file called ```osx.mk``` has the configuration required for building MXNet o
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet ~/mxnet
     cd ~/mxnet
-    cp make/osx.mk ./config.mk
-    echo "USE_BLAS = openblas" >> ./config.mk
-    echo "ADD_CFLAGS += -I/usr/local/opt/openblas/include" >> ./config.mk
-    echo "ADD_LDFLAGS += -L/usr/local/opt/openblas/lib" >> ./config.mk
-    echo "ADD_LDFLAGS += -L/usr/local/lib/graphviz/" >> ./config.mk
-    make -j$(sysctl -n hw.ncpu)
+    cp cmake/cmake_options_osx.yml cmake_options.yml
+    ./dev_menu.py menu 1
 ```
 
 To build with MKLDNN
