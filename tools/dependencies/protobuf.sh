@@ -31,7 +31,9 @@ LIBPROTOC="$DEPS_PATH/lib/libprotoc.$DY_EXT"
 if [[ ! -e $LIBPROTOBUF ]] || [[ ! -e $LIBPROTOC ]]; then
     # Download and build protobuf
     >&2 echo "Building protobuf..."
-    curl -s -L https://github.com/google/protobuf/archive/v$PROTOBUF_VERSION.zip -o $DEPS_PATH/protobuf.zip
+    download \
+        https://github.com/google/protobuf/archive/v${PROTOBUF_VERSION}.zip \
+        ${DEPS_PATH}/protobuf.zip
     unzip -q $DEPS_PATH/protobuf.zip -d $DEPS_PATH
     pushd .
     cd $DEPS_PATH/protobuf-$PROTOBUF_VERSION

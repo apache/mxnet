@@ -23,7 +23,9 @@ LIBCURL_VERSION=7.61.0
 if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
     # download and build libcurl
     >&2 echo "Building libcurl..."
-    curl -s -L https://curl.haxx.se/download/curl-$LIBCURL_VERSION.zip -o $DEPS_PATH/libcurl.zip
+    download \
+        https://curl.haxx.se/download/curl-${LIBCURL_VERSION}.zip \
+        ${DEPS_PATH}/libcurl.zip
     unzip -q $DEPS_PATH/libcurl.zip -d $DEPS_PATH
     pushd .
     cd $DEPS_PATH/curl-$LIBCURL_VERSION

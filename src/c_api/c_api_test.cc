@@ -40,16 +40,19 @@ int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
   }
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(sym_handle);
   *s = sym->Copy();
-  nnvm::Graph g;
-  g.outputs = s->outputs;
   if (!op_name_set.empty()) {
-    mxnet::op::SubgraphPropertyPtr property
-        = mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
-    property->SetAttr("op_names", op_name_set);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
+    std::vector<mxnet::op::SubgraphPropertyPtr> properties =
+        mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
+    for (auto property : properties) {
+      nnvm::Graph g;
+      g.outputs = s->outputs;
+      property->SetAttr("graph", g);
+      property->SetAttr("op_names", op_name_set);
+      g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
+      g = nnvm::ApplyPass(std::move(g), "PartitionGraph");
+      s->outputs = g.outputs;
+    }
   }
-  g = nnvm::ApplyPass(std::move(g), "PartitionGraph");
-  s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }

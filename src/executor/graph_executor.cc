@@ -1443,47 +1443,20 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
 // Given input attr arrays, partition the graph using the backend name equal to prop_name.
 // This is a common function for bind and simple_bind flows.
 static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
-                                   const std::string& prop_name,
+                                   mxnet::op::SubgraphPropertyPtr subgraph_prop,
                                    const mxnet::ShapeVector& arg_shapes,
                                    const nnvm::DTypeVector& arg_dtypes,
                                    const StorageTypeVector& arg_stypes,
                                    const Context& default_ctx,
                                    const std::map<std::string, Context>& ctx_map,
                                    const std::vector<Context>& in_arg_ctxes,
-                                   const std::vector<Context>& aux_state_ctxes,
-                                   const std::vector<OpReqType>& grad_req_types) {
-  auto subgraph_prop = op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
-  bool need_grad = false;
-  for (OpReqType req : grad_req_types) {
-    if (req != kNullOp) {
-      need_grad = true;
-      break;
-    }
-  }
-  if (subgraph_prop->HasAttr("inference_only") &&
-      subgraph_prop->GetAttr<bool>("inference_only") == true) {
-    if (need_grad) {
-      auto full_name = subgraph_prop->HasAttr("prop_name")
-                            ? subgraph_prop->GetAttr<std::string>("prop_name")
-                            : prop_name;
-      LOG(INFO) << "Skip subgraph " << full_name << " as it requires `grad_req=null`.";
-      return src;
-    }
-  }
+                                   const std::vector<Context>& aux_state_ctxes) {
   nnvm::Symbol ret = src.Copy();
   nnvm::Graph g;
   g.outputs = ret.outputs;
-  g = InferForwardAttrs(g, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
-                        ctx_map, in_arg_ctxes, aux_state_ctxes);
+  g = InferForwardAttrs(g, arg_shapes, arg_dtypes, arg_stypes, default_ctx, ctx_map, in_arg_ctxes,
+                        aux_state_ctxes);
   subgraph_prop->SetAttr("graph", g);
-  auto it = op::SubgraphPropertyOpNameSet::Get()->find(prop_name);
-  // assign a op name set to the subgraph property if it has been provided by users
-  if (it != op::SubgraphPropertyOpNameSet::Get()->end()) {
-    LOG(INFO) << "SubgraphPropertyOpNameSet for subgraph property " << prop_name
-              << " has been assigned a value. Please make sure it is initialized"
-                 " only for the testing purpose.";
-    subgraph_prop->SetAttr("op_names", it->second);
-  }
   g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(subgraph_prop));
   g = ApplyPass(std::move(g), "PartitionGraph");
   ret.outputs = g.outputs;
@@ -1500,91 +1473,221 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                                    const std::unordered_map<std::string, int>& arg_stype_map,
                                    const Context& default_ctx,
                                    const std::map<std::string, Context>& ctx_map,
-                                   const std::vector<Context>& in_arg_ctxes,
-                                   const std::vector<Context>& aux_state_ctxes,
-                                   const std::vector<OpReqType>& grad_req_types) {
-  const std::vector<std::string> input_names = src.ListInputNames(Symbol::kAll);
-  mxnet::ShapeVector arg_shapes(input_names.size(), mxnet::TShape());
-  nnvm::DTypeVector arg_dtypes(input_names.size(), -1);
-  StorageTypeVector arg_stypes(input_names.size(), kUndefinedStorage);
-  for (size_t i = 0; i < input_names.size(); ++i) {
-    auto it1 = arg_shape_map.find(input_names[i]);
-    if (arg_shape_map.end() != it1) {
-      arg_shapes[i] = it1->second;
-    }
-    auto it2 = arg_dtype_map.find(input_names[i]);
-    if (arg_dtype_map.end() != it2) {
-      arg_dtypes[i] = it2->second;
-    }
-    auto it3 = arg_stype_map.find(input_names[i]);
-    if (arg_stype_map.end() != it3) {
-      arg_stypes[i] = it3->second;
+                                   std::vector<Context>* in_arg_ctxes,
+                                   std::vector<Context>* arg_grad_ctxes,
+                                   std::vector<OpReqType>* grad_req_types,
+                                   std::vector<Context>* aux_state_ctxes) {
+  // setup map for in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes and grad_req_types
+  std::unordered_map<std::string, Context> in_arg_ctx_map;
+  std::unordered_map<std::string, Context> arg_grad_ctx_map;
+  std::unordered_map<std::string, Context> aux_state_ctx_map;
+  std::unordered_map<std::string, OpReqType> grad_req_type_map;
+
+  auto arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+  auto aux_names = src.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+  for (size_t i = 0; i < arg_names.size(); ++i) {
+    auto name = arg_names[i];
+    in_arg_ctx_map[name] = in_arg_ctxes->at(i);
+    arg_grad_ctx_map[name] = arg_grad_ctxes->at(i);
+    grad_req_type_map[name] = grad_req_types->at(i);
+  }
+
+  for (size_t i = 0; i < aux_names.size(); ++i) {
+    aux_state_ctx_map[aux_names[i]] = aux_state_ctxes->at(i);
+  }
+
+  bool need_grad = false;
+  for (OpReqType req : *grad_req_types) {
+    if (req != kNullOp) {
+      need_grad = true;
+      break;
     }
   }
-  return PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes,
-                        default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes, grad_req_types);
+  nnvm::Symbol ret = src.Copy();
+  std::unordered_set<std::string> op_names_set;
+  auto it = op::SubgraphPropertyOpNameSet::Get()->find(prop_name);
+  // assign a op name set to the subgraph property if it has been provided by users
+  if (it != op::SubgraphPropertyOpNameSet::Get()->end()) {
+    LOG(INFO) << "SubgraphPropertyOpNameSet for subgraph property " << prop_name
+              << " has been assigned a value. Please make sure it is initialized"
+                 " only for the testing purpose.";
+    op_names_set = it->second;
+  }
+  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
+      op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
+  for (auto subgraph_prop : properties) {
+    if (subgraph_prop->HasAttr("inference_only") &&
+        subgraph_prop->GetAttr<bool>("inference_only") == true) {
+      if (need_grad) {
+        auto full_name = subgraph_prop->HasAttr("property_name")
+                             ? subgraph_prop->GetAttr<std::string>("property_name")
+                             : prop_name;
+        LOG(INFO) << "skip partitioning graph with subgraph property " << full_name
+                  << " as it requires `grad_req=null`.";
+        continue;
+      }
+    }
+    subgraph_prop->SetAttr("op_names", op_names_set);
+    const std::vector<std::string> input_names = ret.ListInputNames(Symbol::kAll);
+    mxnet::ShapeVector arg_shapes(input_names.size(), mxnet::TShape());
+    nnvm::DTypeVector arg_dtypes(input_names.size(), -1);
+    StorageTypeVector arg_stypes(input_names.size(), kUndefinedStorage);
+    for (size_t i = 0; i < input_names.size(); ++i) {
+      const auto& input_name = input_names[i];
+      auto it1 = arg_shape_map.find(input_name);
+      if (arg_shape_map.end() != it1) {
+        arg_shapes[i] = it1->second;
+      }
+      auto it2 = arg_dtype_map.find(input_name);
+      if (arg_dtype_map.end() != it2) {
+        arg_dtypes[i] = it2->second;
+      }
+      auto it3 = arg_stype_map.find(input_name);
+      if (arg_stype_map.end() != it3) {
+        arg_stypes[i] = it3->second;
+      }
+    }
+    ret = PartitionGraph(ret, subgraph_prop, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
+                         ctx_map, *in_arg_ctxes, *aux_state_ctxes);
+    // Reorder in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes and grad_req_types according to
+    // partitioned symbol input sequence
+    in_arg_ctxes->clear();
+    arg_grad_ctxes->clear();
+    aux_state_ctxes->clear();
+    grad_req_types->clear();
+    auto new_arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+    auto new_aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+    for (auto arg_name : new_arg_names) {
+      CHECK(in_arg_ctx_map.count(arg_name));
+      in_arg_ctxes->push_back(in_arg_ctx_map[arg_name]);
+      arg_grad_ctxes->push_back(arg_grad_ctx_map[arg_name]);
+      grad_req_types->push_back(grad_req_type_map[arg_name]);
+    }
+    for (auto arg_name : new_aux_names) {
+      CHECK(aux_state_ctx_map.count(arg_name));
+      aux_state_ctxes->push_back(aux_state_ctx_map[arg_name]);
+    }
+  }
+  return ret;
 }
 
 // Given input ndarrays, partition the graph using the backend name equal to prop_name.
 // This is for bind flow.
-static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
-                                   const std::string& prop_name,
-                                   std::vector<NDArray> *in_args,
-                                   const std::vector<NDArray> &aux_states,
+static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src, const std::string& prop_name,
                                    const Context& default_ctx,
                                    const std::map<std::string, Context>& ctx_map,
-                                   const std::vector<OpReqType>& grad_req_types) {
-  const std::vector<std::string> input_names = src.ListInputNames(Symbol::kAll);
+                                   std::vector<NDArray>* in_args,
+                                   std::vector<NDArray>* arg_grad_store,
+                                   std::vector<OpReqType>* grad_req_type,
+                                   std::vector<NDArray>* aux_states) {
+  // setup map for in_args, arg_grad_store, grad_req_type and aux_states
+  std::unordered_map<std::string, NDArray> in_args_map;
+  std::unordered_map<std::string, NDArray> arg_grad_store_map;
+  std::unordered_map<std::string, OpReqType> grad_req_type_map;
+  std::unordered_map<std::string, NDArray> aux_states_map;
   const std::vector<std::string> arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
   const std::vector<std::string> aux_names = src.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
-  CHECK_EQ(arg_names.size(), in_args->size());
-  CHECK_EQ(aux_names.size(), aux_states.size());
-  mxnet::ShapeVector arg_shapes;  // all input shapes
-  arg_shapes.reserve(input_names.size());
-  nnvm::DTypeVector arg_dtypes;  // all input dtypes
-  arg_dtypes.reserve(input_names.size());
-  StorageTypeVector arg_stypes;  // all input stypes
-  arg_stypes.reserve(input_names.size());
-  std::vector<Context> in_arg_ctxes(in_args->size());
-  std::vector<Context> aux_state_ctxes(aux_states.size());
+  for (size_t i = 0; i < arg_names.size(); ++i) {
+    auto name = arg_names[i];
+    in_args_map[name] = in_args->at(i);
+    arg_grad_store_map[name] = arg_grad_store->at(i);
+    grad_req_type_map[name] = grad_req_type->at(i);
+  }
 
-  size_t i1 = 0, i2 = 0;
-  for (const auto& input_name : input_names) {
-    if (i2 < aux_names.size() && aux_names[i2] == input_name) {
-      arg_shapes.push_back(aux_states[i2].shape());
-      arg_dtypes.push_back(aux_states[i2].dtype());
-      arg_stypes.push_back(aux_states[i2].storage_type());
-      aux_state_ctxes[i2] = aux_states[i2].ctx();
-      ++i2;
-    } else {
-      CHECK(i1 < arg_names.size());
-      CHECK_EQ(arg_names[i1], input_name);
-      arg_shapes.push_back(in_args->at(i1).shape());
-      arg_dtypes.push_back(in_args->at(i1).dtype());
-      arg_stypes.push_back(in_args->at(i1).storage_type());
-      in_arg_ctxes[i1] = in_args->at(i1).ctx();
-      ++i1;
+  for (size_t i = 0; i < aux_names.size(); ++i) {
+    aux_states_map[aux_names[i]] = aux_states->at(i);
+  }
+
+  bool need_grad = false;
+  for (OpReqType req : *grad_req_type) {
+    if (req != kNullOp) {
+      need_grad = true;
+      break;
     }
   }
-
-  // setup in_args_map
-  std::unordered_map<std::string, NDArray> in_args_map;
-  for (size_t i = 0; i < in_args->size(); ++i) {
-    in_args_map[arg_names[i]] = in_args->at(i);
+  nnvm::Symbol ret = src.Copy();
+  std::unordered_set<std::string> op_names_set;
+  auto it = op::SubgraphPropertyOpNameSet::Get()->find(prop_name);
+  // assign a op name set to the subgraph property if it has been provided by users
+  if (it != op::SubgraphPropertyOpNameSet::Get()->end()) {
+    LOG(INFO) << "SubgraphPropertyOpNameSet for subgraph property " << prop_name
+              << " has been assigned a value. Please make sure it is initialized"
+                 " only for the testing purpose.";
+    op_names_set = it->second;
   }
-  auto result = PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
-                               ctx_map, in_arg_ctxes, aux_state_ctxes, grad_req_types);
-  // Reorder in_args into new_in_args according to partitioned symbol input sequence
-  std::vector<NDArray> new_in_args(in_args->size());
-  // get new symbol in_arg names
-  std::vector<std::string> new_arg_names = result.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
+      op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
+  for (auto subgraph_prop : properties) {
+    if (subgraph_prop->HasAttr("inference_only") &&
+        subgraph_prop->GetAttr<bool>("inference_only") == true) {
+      if (need_grad) {
+        auto full_name = subgraph_prop->HasAttr("property_name")
+                             ? subgraph_prop->GetAttr<std::string>("property_name")
+                             : prop_name;
+        LOG(INFO) << "Skip subgraph " << full_name << " as it requires `grad_req=null`.";
+        continue;
+      }
+    }
+    subgraph_prop->SetAttr("op_names", op_names_set);
+    const std::vector<std::string> input_names = ret.ListInputNames(Symbol::kAll);
+    const std::vector<std::string> arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+    const std::vector<std::string> aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+    CHECK_EQ(arg_names.size(), in_args_map.size());
+    CHECK_EQ(aux_names.size(), aux_states_map.size());
+    mxnet::ShapeVector arg_shapes;  // all input shapes
+    arg_shapes.reserve(input_names.size());
+    nnvm::DTypeVector arg_dtypes;  // all input dtypes
+    arg_dtypes.reserve(input_names.size());
+    StorageTypeVector arg_stypes;  // all input stypes
+    arg_stypes.reserve(input_names.size());
+    std::vector<Context> in_arg_ctxes(in_args_map.size());
+    std::vector<Context> aux_state_ctxes(aux_states_map.size());
+
+    size_t i1 = 0, i2 = 0;
+    for (const auto& input_name : input_names) {
+      if (i2 < aux_names.size() && aux_names[i2] == input_name) {
+        const auto &aux_st = aux_states_map[input_name];
+        arg_shapes.push_back(aux_st.shape());
+        arg_dtypes.push_back(aux_st.dtype());
+        arg_stypes.push_back(aux_st.storage_type());
+        aux_state_ctxes[i2] = aux_st.ctx();
+        ++i2;
+      } else {
+        CHECK(i1 < arg_names.size());
+        CHECK_EQ(arg_names[i1], input_name);
+        const auto &in_arg = in_args_map[input_name];
+        arg_shapes.push_back(in_arg.shape());
+        arg_dtypes.push_back(in_arg.dtype());
+        arg_stypes.push_back(in_arg.storage_type());
+        in_arg_ctxes[i1] = in_arg.ctx();
+        ++i1;
+      }
+    }
+
+    ret = PartitionGraph(ret, subgraph_prop, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
+                         ctx_map, in_arg_ctxes, aux_state_ctxes);
+  }
+  // Reorder in_args, arg_grad_store, grad_req_type and aux_states according to partitioned symbol
+  // input sequence
+  const auto new_arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+  const auto new_aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+  CHECK_EQ(arg_names.size(), new_arg_names.size());
   CHECK_EQ(arg_names.size(), new_arg_names.size());
   in_args->clear();
+  arg_grad_store->clear();
+  grad_req_type->clear();
+  aux_states->clear();
   for (auto arg_name : new_arg_names) {
     CHECK(in_args_map.count(arg_name));
     in_args->push_back(in_args_map[arg_name]);
+    arg_grad_store->push_back(arg_grad_store_map[arg_name]);
+    grad_req_type->push_back(grad_req_type_map[arg_name]);
   }
-  return result;
+  for (auto arg_name : new_aux_names) {
+    CHECK(aux_states_map.count(arg_name));
+    aux_states->push_back(aux_states_map[arg_name]);
+  }
+  return ret;
 }
 }  // namespace exec
 
@@ -1605,17 +1708,18 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                std::unordered_map<std::string, NDArray>* shared_buffer,
                                Executor* shared_exec) {
   auto exec = new exec::GraphExecutor();
+  std::vector<Context> tmp_in_arg_ctxes = in_arg_ctxes;
+  std::vector<Context> tmp_arg_grad_ctxes = arg_grad_ctxes;
+  std::vector<Context> tmp_aux_state_ctxes = aux_state_ctxes;
+  std::vector<OpReqType> tmp_grad_req_types = grad_req_types;
   if (!exec->subgraph_property().empty()) {
     symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), arg_shape_map, arg_dtype_map,
-                                  arg_stype_map, default_ctx, group2ctx, in_arg_ctxes,
-                                  aux_state_ctxes, grad_req_types);
+                                  arg_stype_map, default_ctx, group2ctx, &tmp_in_arg_ctxes,
+                                  &tmp_arg_grad_ctxes, &tmp_grad_req_types, &tmp_aux_state_ctxes);
   }
-  exec->Init(symbol, default_ctx, group2ctx,
-             in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
-             arg_shape_map, arg_dtype_map, arg_stype_map,
-             grad_req_types, shared_arg_names,
-             in_args, arg_grads, aux_states,
-             shared_buffer, shared_exec);
+  exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
+             tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map, tmp_grad_req_types,
+             shared_arg_names, in_args, arg_grads, aux_states, shared_buffer, shared_exec);
   return exec;
 }
 
@@ -1629,13 +1733,17 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
                          Executor* shared_exec) {
   auto exec = new exec::GraphExecutor();
   std::vector<NDArray> tmp_in_args = in_args;
+  std::vector<NDArray> tmp_arg_grad_store = arg_grad_store;
+  std::vector<OpReqType> tmp_grad_req_type = grad_req_type;
+  std::vector<NDArray> tmp_aux_states = aux_states;
+
   if (!exec->subgraph_property().empty()) {
-    symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), &tmp_in_args, aux_states,
-                                  default_ctx, group2ctx, grad_req_type);
+    symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), default_ctx, group2ctx,
+                                  &tmp_in_args, &tmp_arg_grad_store, &tmp_grad_req_type,
+                                  &tmp_aux_states);
   }
-  exec->Init(symbol, default_ctx, group2ctx,
-             tmp_in_args, arg_grad_store, grad_req_type, aux_states,
-             reinterpret_cast<Executor*>(shared_exec));
+  exec->Init(symbol, default_ctx, group2ctx, tmp_in_args, tmp_arg_grad_store, tmp_grad_req_type,
+             tmp_aux_states, reinterpret_cast<Executor*>(shared_exec));
   return exec;
 }
 }  // namespace mxnet
