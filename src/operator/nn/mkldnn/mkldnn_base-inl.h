@@ -464,7 +464,7 @@ mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc p
                                                 mkldnn_memory_format_t format);
 
 inline bool same_shape(const mxnet::TShape &shape, const mkldnn_dims_t dims, int ndims) {
-  if (shape.ndim() != (size_t)ndims)
+  if (shape.ndim() != ndims)
     return false;
   for (int i = 0; i < ndims; i++)
     if (shape[i] != dims[i])
