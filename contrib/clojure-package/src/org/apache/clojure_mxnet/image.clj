@@ -23,6 +23,7 @@
             [org.apache.clojure-mxnet.util :as util]
             [clojure.spec.alpha :as s])
   (:import (org.apache.mxnet Image NDArray)
+           (java.awt.image BufferedImage)
            (java.io InputStream)))
 
 ;; Flags for conversion of images
@@ -199,3 +200,49 @@
   [input]
   (util/validate! ::to-image-ndarray input "Invalid input array")
   (Image/toImage input))
+
+(s/def ::buffered-image #(instance? BufferedImage %))
+(s/def ::xmin integer?)
+(s/def ::xmax integer?)
+(s/def ::ymin integer?)
+(s/def ::ymax integer?)
+(s/def ::coordinate (s/keys :req-un [::xmin ::xmax ::ymin ::ymax]))
+(s/def ::coordinates (s/coll-of ::coordinate))
+(s/def ::names (s/nilable (s/coll-of string?)))
+(s/def ::stroke integer?)
+(s/def ::font-size-mult float?)
+(s/def ::transparency float?)
+(s/def ::coordinates-names
+  (fn [[coordinates names]] (= (count coordinates) (count names))))
+
+(defn draw-bounding-box!
+  "Draw bounding boxes on `buffered-image`. It mutates the image.
+   `buffered-image`: BufferedImage
+   `coordinates`: collection of {:xmin int :xmax int :ymin int :ymax int}
+   `stroke`: int - thickness of the bounding box
+   `font-size-mult`: float - Font size multiplier
+   `transparency`: float - Transparency of the bounding box
+   returns: nil
+   Ex:
+     (draw-bounding-box! img [{:xmin 0 :xmax 100 :ymin 0 :ymax 100}] {})"
+  [buffered-image coordinates
+   {:keys [names stroke font-size-mult transparency]
+    :or {stroke 3 font-size-mult 1.0 transparency 1.0}
+    :as opts}]
+  (util/validate! ::buffered-image buffered-image "Invalid input image")
+  (util/validate! ::coordinates coordinates "Invalid input coordinates")
+  (util/validate! ::names names "Invalid input names")
+  (util/validate! ::stroke stroke "Invalid input stroke")
+  (util/validate! ::font-size-mult font-size-mult "Invalid input font-size-mult")
+  (util/validate! ::transparency transparency "Invalid input transparency")
+  (when (pos? (count names))
+    (util/validate!
+      ::coordinates-names
+      [coordinates names]
+      "Invalid number of names"))
+  (Image/drawBoundingBox buffered-image
+                         (into-array coordinates)
+                         (util/->option names)
+                         (util/->option stroke)
+                         (util/->option font-size-mult)
+                         (util/->option transparency)))
