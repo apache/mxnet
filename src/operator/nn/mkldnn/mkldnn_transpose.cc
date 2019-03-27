@@ -23,17 +23,10 @@
  * \author
 */
 
-#include <dmlc/logging.h>
-#include <dmlc/parameter.h>
-#include <mxnet/operator.h>
-#include <vector>
-#include "../../operator_common.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "./mkldnn_base-inl.h"
-
 #if MXNET_USE_MKLDNN == 1
 
 #include <mkldnn.hpp>
+#include "../../tensor/matrix_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -41,24 +34,12 @@ namespace op {
 bool SupportMKLDNNTranspose(const TransposeParam& param,
                             const NDArray &data) {
   auto data_ndim = data.shape().ndim();
-  auto axes_ndim = param.axes.ndim();
 
-  // currently, we dont support transposion for any internal format
-  if (data.IsMKLDNNData()) return false;
+  if (data_ndim > 4 || data.dtype() != mshadow::kFloat32)
+    return false;
 
-  auto axes = mxnet::TShape(data_ndim);
-  if (axes_ndim == 0) {
-    for (size_t i = 0; i < data_ndim; i++) {
-      axes[i] = data_ndim - i - 1;
-    }
-  } else {
-    axes = param.axes;
-  }
-
-  CHECK_EQ(axes.ndim(), data_ndim);
   return true;
 }
-
 
 typedef ParamOpSign<TransposeParam> MKLDNNTransposeSignature;
 
@@ -118,10 +99,14 @@ class MKLDNNTransposeForward {
   }
 
   void SetNewMem(const NDArray &data, const NDArray &output) {
-    MSHADOW_TYPE_SWITCH(data.dtype(), DTYPE, {
-      this->data_->set_data_handle(data.data().dptr<DTYPE>());
-      this->out_->set_data_handle(output.data().dptr<DTYPE>());
-    });
+    if (data.IsMKLDNNData()) {
+      this->data_->set_data_handle(data.GetMKLDNNData()->get_data_handle());  
+    } else {
+      this->data_->set_data_handle(data.data().dptr<float>());
+    }
+
+    CHECK(! output.IsMKLDNNData());
+    this->out_->set_data_handle(output.data().dptr<float>());
   }
 
   const mkldnn::reorder &GetFwd() const {
@@ -156,10 +141,9 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpReqType &req,
                             const NDArray &output) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-
   CHECK_EQ(req, kWriteTo) << "Transpose does not support inplace";
 
-  auto *stream = MKLDNNStream::Get();
+  auto stream = MKLDNNStream::Get();
   auto fwd = GetTransposeForward(param, req, data);
 
   fwd.SetNewMem(data, output);
@@ -168,5 +152,4 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
 }
 }  // namespace op
 }  // namespace mxnet
-
 #endif
