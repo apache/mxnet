@@ -46,7 +46,7 @@ def test_fit():
     est = estimator.Estimator(net=net,
                               loss=loss,
                               metrics=acc,
-                              trainers=trainer,
+                              trainer=trainer,
                               context=ctx)
     in_data = mx.nd.random.uniform(shape=(10, 3))
     out_data = mx.nd.random.uniform(shape=(10, 4))
@@ -83,7 +83,7 @@ def test_validation():
     est = estimator.Estimator(net=net,
                               loss=loss,
                               metrics=acc,
-                              trainers=trainer,
+                              trainer=trainer,
                               context=ctx)
     in_data = mx.nd.random.uniform(shape=(10, 3))
     out_data = mx.nd.random.uniform(shape=(10, 4))
@@ -143,7 +143,7 @@ def test_initializer():
                                   loss=loss,
                                   metrics=acc,
                                   initializer=mx.init.MSRAPrelu(),
-                                  trainers=trainer,
+                                  trainer=trainer,
                                   context=ctx)
         assert 'Network already initialized' in str(w[-1].message)
     est.fit(train_data=train_data,
@@ -182,7 +182,7 @@ def test_trainer():
         est = estimator.Estimator(net=net,
                                   loss=loss,
                                   metrics=acc,
-                                  trainers=trainer,
+                                  trainer=trainer,
                                   context=ctx)
 
 
@@ -202,7 +202,7 @@ def test_metric():
     # input no metric
     est = estimator.Estimator(net=net,
                               loss=loss,
-                              trainers=trainer,
+                              trainer=trainer,
                               context=ctx)
     est.fit(train_data=train_data,
             epochs=num_epochs,
@@ -212,7 +212,7 @@ def test_metric():
     est = estimator.Estimator(net=net,
                               loss=loss,
                               metrics=metrics,
-                              trainers=trainer,
+                              trainer=trainer,
                               context=ctx)
     est.fit(train_data=train_data,
             epochs=num_epochs,
@@ -222,13 +222,13 @@ def test_metric():
         est = estimator.Estimator(net=net,
                                   loss=loss,
                                   metrics='acc',
-                                  trainers=trainer,
+                                  trainer=trainer,
                                   context=ctx)
     # test default metric
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     est = estimator.Estimator(net=net,
                               loss=loss,
-                              trainers=trainer,
+                              trainer=trainer,
                               context=ctx)
     assert isinstance(est.train_metrics[0], mx.metric.Accuracy)
 
@@ -243,7 +243,7 @@ def test_loss():
     # input no loss
     with assert_raises(ValueError):
         est = estimator.Estimator(net=net,
-                                  trainers=trainer,
+                                  trainer=trainer,
                                   metrics=acc,
                                   context=ctx)
     # input invalid loss
@@ -251,7 +251,7 @@ def test_loss():
         est = estimator.Estimator(net=net,
                                   loss='mse',
                                   metrics=acc,
-                                  trainers=trainer,
+                                  trainer=trainer,
                                   context=ctx)
 
 def test_context():

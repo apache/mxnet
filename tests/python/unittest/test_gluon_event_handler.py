@@ -45,7 +45,7 @@ def test_checkpoint_handler():
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-    checkpoint_handler = [event_handler.CheckpointHandler(est, file_path,
+    checkpoint_handler = [event_handler.CheckpointHandler(file_path,
                                                           save_best_only=save_best_only,
                                                           mode=mode)]
     est.fit(test_data, event_handlers=checkpoint_handler, epochs=1)

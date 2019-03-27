@@ -41,24 +41,16 @@ class EventHandler(object):
             The :py:class:`Estimator` to get training statistics
         """
     def __init__(self):
-        self._history = None
-        self._net = None
+        self._estimator = None
 
     @property
-    def train_history(self):
-        return self._history
+    def estimator(self):
+        return self._estimator
 
-    @train_history.setter
-    def train_history(self, history):
-        self._history = history
+    @estimator.setter
+    def estimator(self, estimator):
+        self._estimator = estimator
 
-    @property
-    def net(self):
-        return self._net
-
-    @net.setter
-    def net(self, net):
-        self._net = net
 
     def train_begin(self):
         pass
@@ -95,7 +87,7 @@ class LoggingHandler(EventHandler):
         file location to save the logs
     """
 
-    def __init__(self, file_name=None, file_location=None, ):
+    def __init__(self, file_name=None, file_location=None):
         super(LoggingHandler, self).__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
@@ -112,20 +104,17 @@ class LoggingHandler(EventHandler):
         self.train_start = time.time()
         self.logger.info("Training begin: using optimizer %s "
                          "with current learning rate %.4f "
-                         % (self.train_history.optimizer.__class__.__name__,
-                            self.train_history.learning_rate))
-        self.logger.info("Train for %d epochs." % self.train_history.max_epoch)
+                         % (self.estimator.trainer.optimizer.__class__.__name__,
+                            self.estimator.trainer.learning_rate))
+        self.logger.info("Train for %d epochs." % self.estimator.max_epoch)
 
     def train_end(self):
         train_time = time.time() - self.train_start
-        epoch = self.train_history.epoch
-        train_history = self.train_history.get_train_history(epoch=epoch)
-        val_history = self.train_history.get_val_history(epoch=epoch)
+        epoch = self.estimator.current_epoch
         msg = 'Train finished using total %ds at epoch %d. ' % (train_time, epoch)
-        for key in train_history:
-            msg += 'train %s : %.4f ' % (key, train_history[key])
-        for key in val_history:
-            msg += 'val %s : %.4f ' % (key, val_history[key])
+        # log every result in train stats including train/validation loss & metrics
+        for key in self.estimator.train_stats:
+            msg += '%s : %.4f ' % (key, self.estimator.train_stats[key])
         self.logger.info(msg)
 
     def batch_begin(self):
@@ -133,15 +122,16 @@ class LoggingHandler(EventHandler):
 
     def batch_end(self):
         batch_time = time.time() - self.batch_start
-        epoch = self.train_history.epoch
-        batch = self.train_history.batch_idx
+        epoch = self.estimator.current_epoch
+        batch = self.estimator.batch_idx
         msg = '[Epoch %d] [Batch %d] ' % (epoch, batch)
-        if self.train_history.samples:
-            msg += '[Samples %s] ' % (self.train_history.samples)
+        if self.estimator.samples:
+            msg += '[Samples %s] ' % (self.estimator.samples)
         msg += 'time/batch: %.3fs ' % batch_time
-        batch_status = self.train_history.get_batch_status()
-        for key in batch_status:
-            msg += key + ': ' + '%.4f ' % batch_status[key]
+        for key in self.estimator.train_stats:
+            # only log current training loss & metric after each batch
+            if key.startswith('train_'):
+                msg += key + ': ' + '%.4f ' % self.estimator.train_stats[key]
         self.logger.info(msg)
 
     def epoch_begin(self):
@@ -149,14 +139,11 @@ class LoggingHandler(EventHandler):
 
     def epoch_end(self):
         epoch_time = time.time() - self.epoch_start
-        epoch = self.train_history.epoch
+        epoch = self.estimator.current_epoch
         msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
-        train_history = self.train_history.get_train_history(epoch=epoch)
-        val_history = self.train_history.get_val_history(epoch=epoch)
-        for key in train_history:
-            msg += 'train %s : %.4f ' % (key, train_history[key])
-        for key in val_history:
-            msg += 'val %s : %.4f ' % (key, val_history[key])
+        # log every result in train stats including train/validation loss & metrics
+        for key in self.estimator.train_stats:
+            msg += '%s : %.4f ' % (key, self.estimator.train_stats[key])
         self.logger.info(msg)
 
 
@@ -187,15 +174,13 @@ class CheckpointHandler(EventHandler):
 
     def __init__(self,
                  filepath,
-                 monitor='acc',
-                 monitor_validation=True,
+                 monitor='val_accuracy',
                  verbose=0,
                  save_best_only=False,
                  mode='auto',
                  period=1):
         super(CheckpointHandler, self).__init__()
         self.monitor = monitor
-        self.monitor_validation =  monitor_validation
         self.verbose = verbose
         self.filepath = filepath
         self.save_best_only = save_best_only
@@ -225,7 +210,7 @@ class CheckpointHandler(EventHandler):
                 self.best = np.Inf
 
     def epoch_end(self, ):
-        epoch = self.train_history.epoch
+        epoch = self.estimator.current_epoch
         # add extension for weights
         if '.params' not in self.filepath:
             self.filepath += '.params'
@@ -233,24 +218,21 @@ class CheckpointHandler(EventHandler):
         if self.epochs_since_last_save >= self.period:
             self.epochs_since_last_save = 0
             if self.save_best_only:
-                if self.monitor_validation:
-                    history = self.train_history.get_val_history(epoch=epoch)
+                # check if monitor exists in train stats
+                if self.monitor not in self.estimator.train_stats:
+                    warnings.warn(RuntimeWarning('Unable to find %s in training statistics, make sure the monitor value'
+                                                 'starts with `train_ `or `val_` and contains loss/metric name, ',
+                                                 'for example val_accuracy', self.monitor))
+                    self.estimator.net.save_parameters(self.filepath)
                 else:
-                    history = self.train_history.get_train_history(epoch=epoch)
-                # check if monitor exists in train history
-                if self.monitor not in history:
-                    warnings.warn(RuntimeWarning('Unable to find %s in training history, make sure '
-                                                 'you are passing one of the metric names as monitor', self.monitor))
-                    self.net.save_parameters(self.filepath)
-                else:
-                    current = history[self.monitor]
+                    current = self.estimator.train_stats[self.monitor]
                     if self.monitor_op(current, self.best):
                         if self.verbose > 0:
                             self.logger.info('\n[Epoch %d] %s improved from %0.5f to %0.5f,'
                                              ' saving model to %s',
                                              epoch, self.monitor, self.best, current, self.filepath)
                         self.best = current
-                        self.net.save_parameters(self.filepath)
+                        self.estimator.net.save_parameters(self.filepath)
                     else:
                         if self.verbose > 0:
                             self.logger.info('\n[Epoch %d] %s did not improve from %0.5f, skipping save model',
@@ -258,7 +240,7 @@ class CheckpointHandler(EventHandler):
             else:
                 if self.verbose > 0:
                     logging.info('\nEpoch %d: saving model to %s', epoch, self.filepath)
-                self.net.save_parameters(self.filepath)
+                self.estimator.net.save_parameters(self.filepath)
 
 
 class EarlyStoppingHandler(EventHandler):
@@ -282,8 +264,7 @@ class EarlyStoppingHandler(EventHandler):
     """
 
     def __init__(self,
-                 monitor='loss',
-                 monitor_validation=True,
+                 monitor='val_accuracy',
                  min_delta=0,
                  patience=0,
                  mode='auto',
@@ -291,7 +272,6 @@ class EarlyStoppingHandler(EventHandler):
         super(EarlyStoppingHandler, self).__init__()
 
         self.monitor = monitor
-        self.monitor_validation = monitor_validation
         self.baseline = baseline
         self.patience = patience
         self.min_delta = min_delta
@@ -328,16 +308,13 @@ class EarlyStoppingHandler(EventHandler):
             self.best = np.Inf if self.monitor_op == np.less else -np.Inf
 
     def epoch_end(self):
-        epoch = self.train_history.epoch
-        if self.monitor_validation:
-            history = self.train_history.get_val_history(epoch=epoch)
+        epoch = self.estimator.current_epoch
+        if self.monitor not in self.estimator.train_stats:
+            warnings.warn(RuntimeWarning('Unable to find %s in training statistics, make sure the monitor value'
+                                         'starts with `train_ `or `val_` and contains loss/metric name, ',
+                                         'for example val_accuracy', self.monitor))
         else:
-            history = self.train_history.get_train_history(epoch=epoch)
-        if self.monitor not in history:
-            warnings.warn(RuntimeWarning('Unable to find %s in training statistics, make sure '
-                                         'you are passing one of the metric names as monitor' % self.monitor))
-        else:
-            current = history[self.monitor]
+            current = self.estimator.train_stats[self.monitor]
             if self.monitor_op(current - self.min_delta, self.best):
                 self.best = current
                 self.wait = 0
@@ -345,7 +322,7 @@ class EarlyStoppingHandler(EventHandler):
                 self.wait += 1
                 if self.wait >= self.patience:
                     self.stopped_epoch = epoch
-                    self.train_history.stop_training = True
+                    self.estimator.stop_training = True
 
     def train_end(self):
         if self.stopped_epoch > 0:

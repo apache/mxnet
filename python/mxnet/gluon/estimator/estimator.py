@@ -84,7 +84,9 @@ class Estimator(object):
         self.val_metrics = copy.deepcopy(self.train_metrics)
 
         # store training statistics
-        self.train_history = TrainHistory()
+        self.train_stats = {}
+
+        # separate train and validation
         self.train_loss_metrics = []
         self.val_loss_metrics = []
         # using the metric wrapper for loss to record loss value
@@ -138,7 +140,6 @@ class Estimator(object):
             raise ValueError("Trainer must be a Gluon Trainer instance, refer to gluon.trainer")
         else:
             self.trainer = trainer
-        self.train_history.optimizer = self.trainer.optimizer
 
     def _is_initialized(self):
         param_dict = self.net.collect_params()
@@ -197,8 +198,13 @@ class Estimator(object):
             # update metrics
             for metric in self.val_metrics:
                 metric.update(label, pred)
+                name, value = metric.get()
+                self.train_stats['val_' + name] = value
             for loss, loss_metric, in zip(losses, self.val_loss_metrics):
                 loss_metric.update(0, [l for l in loss])
+                name, value = loss_metric.get()
+                self.train_stats['val_' + name] = value
+
 
     def fit(self, train_data,
             val_data=None,
@@ -216,9 +222,6 @@ class Estimator(object):
             validation data with data and labels
         epochs : int, default 1
             number of epochs to iterate on the training data.
-        batch_size : int
-            number of samples per gradient update.
-            default will be 32 per device
         event_handlers : EventHandler or list of EventHandler
             list of EventHandlers to apply during training
         batch_fn : function
@@ -227,12 +230,14 @@ class Estimator(object):
         """
 
 
-        self.epochs = epochs
+        self.max_epoch = epochs
         if not batch_size:
-            batch_size = 32 * len(self.context)
-
-        self.train_history.max_epoch = epochs
-        self.train_history.batch_size = batch_size
+            self.batch_size = 32 * len(self.context)
+        else:
+            self.batch_size = batch_size
+        self.stop_training = False
+        self.samples = None
+        self.batch_idx = 0
 
         event_handlers = event_handlers or []
         # provide default logging handler
@@ -240,42 +245,23 @@ class Estimator(object):
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
             event_handlers.append(LoggingHandler())
 
-        # categorize handlers into 6 event lists to avoid calling empty methods
-        # for example, only eventhandlers with train_begin implemented will be called at train begin
-        train_begin_handlers = []
-        epoch_begin_handlers = []
-        batch_begin_handlers = []
-        batch_end_handlers = []
-        epoch_end_handlers = []
-        train_end_handlers = []
-        base_handler = EventHandler()
-        for handler in event_handlers:
-            handler.train_history = self.train_history
-            handler.net = self.net
-            if not handler.__class_.train_begin == base_handler.__class__.train_begin:
-                train_begin_handlers.append(handler)
-            if not handler.__class_.epoch_begin == base_handler.__class__.epoch_begin:
-                epoch_begin_handlers.append(handler)
-            if not handler.__class_.batch_begin == base_handler.__class__.batch_begin:
-                batch_begin_handlers.append(handler)
-            if not handler.__class_.batch_end == base_handler.__class__.batch_end:
-                batch_end_handlers.append(handler)
-            if not handler.__class_.epoch_end == base_handler.__class__.epoch_end:
-                epoch_end_handlers.append(handler)
-            if not handler.__class_.train_end == base_handler.__class__.train_end:
-                train_end_handlers.append(handler)
+        train_begin, epoch_begin, batch_begin, \
+        batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
 
+        # passing estimator to event handlers so they can access estimator information
+        # when a event is triggered
+        for handler in event_handlers:
+            handler.estimator = self
 
         # training begin
-        for handler in train_begin_handlers:
+        for handler in train_begin:
             handler.train_begin()
 
-        for epoch in range(epochs):
+        for epoch in range(self.max_epoch):
             # epoch begin
-            self.train_history.epoch = epoch
-            self.train_history.learning_rate = self.trainer.learning_rate
+            self.current_epoch = epoch
 
-            for handler in epoch_begin_handlers:
+            for handler in epoch_begin:
                 handler.epoch_begin()
 
             for metric in self.train_metrics + self.train_loss_metrics:
@@ -296,7 +282,7 @@ class Estimator(object):
                     data, label = batch_fn(batch, self.context)
 
                 # batch begin
-                for handler in batch_begin_handlers:
+                for handler in batch_begin:
                     handler.batch_begin()
 
                 with autograd.record():
@@ -313,162 +299,64 @@ class Estimator(object):
                 for metric in self.train_metrics:
                     metric.update(label, pred)
                     # get metric name and current value and update train stats
-                    self.train_history.set_batch_status(*metric.get())
+                    name, value = metric.get()
+                    self.train_stats['train_' + name] = value
+
+                # update loss
                 for loss, loss_metric, in zip(losses, self.train_loss_metrics):
                     loss_metric.update(0, [l for l in loss])
-                    self.train_history.set_batch_status(*loss_metric.get())
+                    name, value = loss_metric.get()
+                    self.train_stats['train_' + name] = value
 
-                self.train_history.batch_idx = i
+                self.batch_idx = i
                 # record trained samples v.s. total samples if using Gluon DataLoader
                 if isinstance(train_data, gluon.data.DataLoader):
-                    self.train_history.samples = "{}/{}".format(batch_size * (i + 1), len(train_data._dataset))
+                    self.samples = "{}/{}".format(self.batch_size * (i + 1), len(train_data._dataset))
 
-                self.trainer.step(batch_size)
+                self.trainer.step(self.batch_size)
                 # batch end
-                for handler in batch_end_handlers:
+                for handler in batch_end:
                     handler.batch_end()
 
             if val_data:
                 self.evaluate(val_data, batch_fn)
 
-            for metric in self.train_metrics + self.train_loss_metrics:
-                self.train_history.set_train_history(*metric.get())
-            for metric in self.val_metrics + self.val_loss_metrics:
-                self.train_history.set_val_history(*metric.get())
-
             # epoch end
-            for handler in epoch_end_handlers:
+            for handler in epoch_end:
                 handler.epoch_end()
 
-            if self.train_history.stop_training:
+            if self.stop_training:
                 break
 
         # train end
-        for handler in train_end_handlers:
+        for handler in train_end:
             handler.train_end()
 
-
-class TrainHistory(object):
-    """TrainHistory class for holding hyper-parameters and training statistics
-
-    """
-    def __init__(self):
-        self.max_epoch = 200
-        self.epochs = []
-        self.learning_rates = []
-        self.stop_training = False
-        self.batch_size = 0
-        self.batch_idx = 0
-        self.samples = ""
-        self.optimizer = None
-
-        # store current training status
-        # each key will have only one current value
-        self._status = {}
-        # store a list of status
-        # each key will have a list of values
-        self._history = {}
-        # store the current loss/metric value
-        self._batch_status = {}
-        # store list of training loss/metric value over epochs
-        self._train_history = {}
-        # store list of validation loss/metric value over epochs
-        self._val_history = {}
-
-
-
-    @property
-    def epoch(self):
-        return self.epochs[-1] if self.epochs else 0
-
-    @epoch.setter
-    def epoch(self, epoch):
-        # record epochs as a list
-        self.epochs.append(epoch)
-
-    @property
-    def learning_rate(self):
-        if not self.learning_rates:
-            if self.optimizer:
-                return self.optimizer.learning_rate
-            else:
-                raise ValueError("Optimizer has not been initialized yet")
-        else:
-            return self.learning_rates[self.epoch]
-
-
-    @learning_rate.setter
-    def learning_rate(self, lr):
-        # record learning rate history as a list
-        self.learning_rates.append(lr)
-
-
-    def get_status(self, key=None, status=None):
-        """Get value from a status dictionary,
-
-        If no key provided, return the entire dictionary
-        """
-        dict = self._status if not status else status
-        if not key:
-            return dict
-        else:
-            return dict.get(key)
-
-    def set_status(self, key, value, status=None):
-        """Set value for a status dictionary
+    def _categorize_handlers(self, event_handlers):
+        """        
+        categorize handlers into 6 event lists to avoid calling empty methods
+        for example, only event handlers with train_begin method
+        implemented will be called at train begin
         """
 
-        dict = self._status if not status else status
-        dict[key] = value
-
-    def get_history(self, key=None, epoch=None, history=None):
-        """ Get metric/loss values at certain epoch
-
-        if epoch is None, return values at latest epoch
-        if key is None, return a dictionary of all keys and values of the epoch
-        """
-        dict = self._history if not history else history
-        # get the latest epoch
-        index = self.epoch if not epoch else epoch
-
-        if not key:
-            single_history = {}
-            for key in dict:
-                if not dict.get(key):
-                    # skip this key if no train stats recorded
-                    warnings.warn("No stats recorded for %s at epoch %d" % (key, index), RuntimeWarning)
-                else:
-                    single_history[key] = dict.get(key)[index]
-            return single_history
-        else:
-            if key in dict:
-                if not dict.get(key):
-                    raise ValueError("No stats recorded for %s at epoch %d" % (key, index))
-                else:
-                    return dict.get(key)[index]
-            else:
-                raise ValueError("%s not found in history, please make sure "
-                                 "you passed the correct metric/loss name" % key)
-
-    def set_history(self, key, value, history=None):
-        dict = self._history if not history else history
-        # record a list of stats over the epochs
-        dict.setdefault(key, []).append(value)
-
-    def get_batch_status(self, key=None):
-        return self.get_status(key, status=self._batch_status)
-
-    def set_batch_status(self, key, value):
-        self.set_status(key, value, status=self._batch_status)
-
-    def get_train_history(self, key=None, epoch=None):
-        return self.get_history(key, epoch, history=self._train_history)
-
-    def set_train_history(self, key, value):
-        self.set_history(key, value, history=self._train_history)
-
-    def get_val_history(self, key=None, epoch=None):
-        return self.get_history(key, epoch, history=self._val_history)
-
-    def set_val_history(self, key, value):
-        self.set_history(key, value, history=self._val_s_val_history)
+        train_begin = []
+        epoch_begin = []
+        batch_begin = []
+        batch_end = []
+        epoch_end = []
+        train_end = []
+        base_handler = EventHandler()
+        for handler in event_handlers:
+            if not handler.__class__.train_begin == base_handler.__class__.train_begin:
+                train_begin.append(handler)
+            if not handler.__class__.epoch_begin == base_handler.__class__.epoch_begin:
+                epoch_begin.append(handler)
+            if not handler.__class__.batch_begin == base_handler.__class__.batch_begin:
+                batch_begin.append(handler)
+            if not handler.__class__.batch_end == base_handler.__class__.batch_end:
+                batch_end.append(handler)
+            if not handler.__class__.epoch_end == base_handler.__class__.epoch_end:
+                epoch_end.append(handler)
+            if not handler.__class__.train_end == base_handler.__class__.train_end:
+                train_end.append(handler)
+        return  train_begin, epoch_begin, batch_begin, batch_end, epoch_end, train_end
