@@ -48,8 +48,9 @@ inline void AllFiniteCPU(const nnvm::NodeAttrs& attrs,
   Stream<cpu>* s = ctx.get_stream<cpu>();
   const AllFiniteParam& op_param = nnvm::get<AllFiniteParam>(attrs.parsed);
   Tensor<cpu, 2, float> out = outputs[0].FlatTo2D<cpu, float>(s);
-  if (op_param.init_output)
+  if (op_param.init_output) {
     out = 1.;
+  }
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<cpu, 2, DType> in = inputs[0].FlatTo2D<cpu, DType>(s);
     const int n = in.shape_.Size();

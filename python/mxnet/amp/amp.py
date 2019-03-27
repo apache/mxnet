@@ -208,7 +208,7 @@ def init():
     global _loss_scaler
     if not _amp_initialized:
         _amp_initialized = True
-        print("AMP init!")
+        logging.info("Using AMP")
         _wrap_symbol_functions(symbol)
         _wrap_symbol_functions(Symbol)
         _wrap_symbol_functions(symbol_contrib)

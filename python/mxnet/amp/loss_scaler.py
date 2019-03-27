@@ -17,6 +17,8 @@
 
 # coding: utf-8
 """Dynamic loss scaler for AMP."""
+import logging
+
 from ..ndarray import multi_all_finite
 from ..ndarray import ndarray as nd
 from .. import autograd as ag
@@ -64,14 +66,12 @@ class LossScaler(object):
             if self._has_overflow:
                 self._next_loss_scale = self._loss_scale / 2.
                 self._unskipped = 0
-                print("_HAS_OVERFLOW")
-                print("loss scale is %f, but will be %f next iteration" % (self._loss_scale, self._next_loss_scale))
+                logging.info("AMP: decreasing loss scale to %f", self._next_loss_scale)
             else:
                 self._unskipped += 1
             if self._unskipped == self._scale_seq_len:
                 self._unskipped = 0
                 self._next_loss_scale = min(self._max_loss_scale, self._loss_scale * 2.)
-                print("SCALE UP")
-                print("loss scale is %f, but will be %f next iteration" % (self._loss_scale, self._next_loss_scale))
+                logging.info("AMP: increasing loss scale to %f", self._next_loss_scale)
             self._wait_for_outputs = False
         return self._has_overflow
