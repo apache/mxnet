@@ -130,6 +130,32 @@ def test_ndarray_setitem():
 
 
 @with_seed()
+def test_ndarray_getitem():
+    x = mx.nd.array(range(5))
+    # test normal case with ndarray as index
+    idx = mx.nd.array(range(5))
+    same(x.asnumpy(), x[idx].asnumpy())
+    # test normal case with ndarray as index
+    idx = np.array(range(5))
+    same(x.asnumpy(), x[idx].asnumpy())
+    # test normal case with python slice
+    idx = slice(0, 5, 1)
+    same(x.asnumpy(), x[idx].asnumpy())
+    # test normal case with python list
+    idx = list(range(5))
+    same(x.asnumpy(), x[idx].asnumpy())
+    # test invalid index
+    def _test_list_out_of_bound(idx):
+        x[idx]
+    assertRaises(IndexError, _test_list_out_of_bound, 6)
+    assertRaises(IndexError, _test_list_out_of_bound, [6])
+    assertRaises(IndexError, _test_list_out_of_bound, [2,6,1])
+    assertRaises(IndexError, _test_list_out_of_bound, mx.nd.array([1,2,3,6]))
+    assertRaises(IndexError, _test_list_out_of_bound, np.array([1,2,3,6]))
+    assertRaises(IndexError, _test_list_out_of_bound, slice(7))
+
+
+@with_seed()
 def test_ndarray_elementwise():
     nrepeat = 10
     maxdim = 4

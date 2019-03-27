@@ -527,6 +527,10 @@ fixed-size items.
             return not isinstance(index, py_slice)
 
         if isinstance(key, (NDArray, np.ndarray, list, integer_types, py_slice)):
+            # check if key is out of bound
+            for k in key:
+                if k >= self.shape[0]:
+                    raise IndexError('index {} is out of bounds for axis 0 with size {}'.format(k, self.shape[0]))
             key = (key,)
 
         assert isinstance(key, tuple),\
