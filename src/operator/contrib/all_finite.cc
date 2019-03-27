@@ -101,7 +101,7 @@ NNVM_REGISTER_OP(all_finite)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AllFiniteParam>)
-.set_attr<nnvm::FInferShape>("FInferShape",
+.set_attr<mxnet::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,
      std::vector<TShape> *out_attrs){
@@ -136,7 +136,7 @@ NNVM_REGISTER_OP(multi_all_finite)
   })
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<MultiAllFiniteParam>)
-.set_attr<nnvm::FInferShape>("FInferShape",
+.set_attr<mxnet::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<TShape> *in_attrs,
      std::vector<TShape> *out_attrs) {

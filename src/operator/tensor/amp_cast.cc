@@ -36,7 +36,7 @@ NNVM_REGISTER_OP(amp_cast)
 It casts only between FP16/FP32 and does not do anything for other types.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<AMPCastParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", AMPCastType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -78,7 +78,7 @@ It casts only between FP16/FP32 and does not do anything for other types.
     return static_cast<uint32_t>(param.num_outputs);
   })
 .set_attr_parser(ParamParser<AMPMultiCastParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", AMPMultiCastShape)
+.set_attr<mxnet::FInferShape>("FInferShape", AMPMultiCastShape)
 .set_attr<nnvm::FInferType>("FInferType", AMPMultiCastType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
