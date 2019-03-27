@@ -746,6 +746,11 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
  * 4. -1 dim size means the dimension's size is unknown.
  * so that operator's infer shape function can work in backend.
  * \param shape to be converted.
+ * Note: It is possible that the shape to be converted is already
+ * numpy compatible. For example, when a subgraph operator's infer
+ * shape function is called from the infer shape pass of the whole
+ * graph, its input/output shapes have been converted to numpy
+ * compatible shapes.
  */
 inline void ConvertToNumpyShape(mxnet::TShape* shape) {
   if (shape->ndim() == 0) {  // legacy shape ndim = 0 means unknown

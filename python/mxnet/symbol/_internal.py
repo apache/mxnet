@@ -22,8 +22,6 @@
 import sys as _sys
 import os as _os
 
-import numpy as np
-
 try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from .._ctypes.symbol import SymbolBase, _set_symbol_class

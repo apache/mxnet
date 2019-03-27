@@ -355,10 +355,10 @@ class LeakyReLUProp : public OperatorProperty {
       CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
     }
     const mxnet::TShape &dshape = in_shape->at(leakyrelu::kData);
-    if (dshape.ndim() == 0) return false;
+    if (!mxnet::ndim_is_known(dshape)) return false;
     if (param_.act_type == leakyrelu::kPReLU) {
       const mxnet::TShape &gshape = in_shape->at(leakyrelu::kGamma);
-      if (gshape.ndim() == 0) {
+      if (!mxnet::ndim_is_known(gshape)) {
         in_shape->at(leakyrelu::kGamma) = mxnet::TShape(Shape1(dshape[1]));
       }
       if (dshape == gshape) {
