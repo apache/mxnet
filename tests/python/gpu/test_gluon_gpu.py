@@ -340,6 +340,8 @@ def test_sync_batchnorm():
     for i in range(10):
         _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
+        _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 3, 4, 4)),
+                                num_devices=ndev, cuda=True)
 
 
 @with_seed()
