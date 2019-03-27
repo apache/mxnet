@@ -19,6 +19,7 @@
 
 #include "./imperative_utils.h"
 #include "./cached_op.h"
+#include "../operator/operator_common.h"
 
 namespace mxnet {
 namespace imperative {
@@ -186,7 +187,7 @@ void NaiveRunGraph(
       Imperative::Get()->InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs,
                                   req, dispatch_mode, state);
       for (size_t j = 0; j < ndoutputs.size(); ++j) {
-        if (ndoutputs[j]->shape().ndim() == 0) {
+        if (mxnet::op::shape_is_none(ndoutputs[j]->shape())) {
           ndoutputs[j]->WaitToRead();
           ndoutputs[j]->SetShapeFromChunk();
         }
