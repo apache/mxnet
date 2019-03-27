@@ -577,14 +577,13 @@ def test_poisson_generator():
             buckets = [(-1.0, lam - 0.5), (lam - 0.5, 2 * lam + 0.5), (2 * lam + 0.5, np.inf)]
             probs = [ss.poisson.cdf(bucket[1], lam) - ss.poisson.cdf(bucket[0], lam) for bucket in buckets]
             generator_mx = lambda x: mx.nd.random.poisson(lam, shape=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, success_rate=0.2)
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
             generator_mx_same_seed = \
                 lambda x: np.concatenate(
                     [mx.nd.random.poisson(lam, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
                      for _ in range(10)])
-            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=0.2)
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
-@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13506")
 @with_seed()
 def test_negative_binomial_generator():
     ctx = mx.context.current_context()
