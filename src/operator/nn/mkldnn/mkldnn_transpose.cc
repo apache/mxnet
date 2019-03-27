@@ -100,12 +100,12 @@ class MKLDNNTransposeForward {
 
   void SetNewMem(const NDArray &data, const NDArray &output) {
     if (data.IsMKLDNNData()) {
-      this->data_->set_data_handle(data.GetMKLDNNData()->get_data_handle());  
+      this->data_->set_data_handle(data.GetMKLDNNData()->get_data_handle());
     } else {
       this->data_->set_data_handle(data.data().dptr<float>());
     }
 
-    CHECK(! output.IsMKLDNNData());
+    CHECK(!output.IsMKLDNNData());
     this->out_->set_data_handle(output.data().dptr<float>());
   }
 

@@ -240,7 +240,7 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   }
 
   bool operator==(const TransposeParam &other) const {
-    return this->axes == other.axes; 
+    return this->axes == other.axes;
   }
 };
 
@@ -2845,7 +2845,6 @@ inline uint32_t SplitNumOutputs(const NodeAttrs& attrs) {
 }  // namespace op
 }  // namespace mxnet
 
-
 namespace std {
 template<>
 struct hash<mxnet::op::TransposeParam> {
@@ -2856,6 +2855,5 @@ struct hash<mxnet::op::TransposeParam> {
   }
 };
 }  // namespace std
-
 
 #endif  // MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
