@@ -63,7 +63,6 @@ class SgMKLDNNFCOp {
   nnvm::Symbol subgraph_sym_;
   MKLDNNFCFullParam full_param_;
   std::shared_ptr<MKLDNNFullyConnectedForward> fwd_;
-  NDArray cached_weight_;
   NDArray cached_bias_;
   float cached_min_data_;
   float cached_max_data_;
@@ -71,6 +70,8 @@ class SgMKLDNNFCOp {
   float cached_max_weight_;
   float cached_min_bias_;
   float cached_max_bias_;
+  float cached_min_output_;
+  float cached_max_output_;
 };
 
 void SgMKLDNNFCOp::Forward(const OpContext &ctx,
@@ -91,23 +92,19 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   float max_weight = 0.0;
   float min_bias = 0.0;
   float max_bias = 0.0;
-  float *min_output_ptr = nullptr;
-  float *max_output_ptr = nullptr;
 
   if (mkldnn_param.quantized) {
     total_num_inputs = base_num_inputs * 3;
-    min_data = in_data[base_num_inputs].data().dptr<float>()[0];
-    max_data = in_data[base_num_inputs + 1].data().dptr<float>()[0];
-    min_weight = in_data[base_num_inputs + 2].data().dptr<float>()[0];
-    max_weight = in_data[base_num_inputs + 3].data().dptr<float>()[0];
+    min_data = in_data[base_num_inputs + quantized_fullc::kDataMin].data().dptr<float>()[0];
+    max_data = in_data[base_num_inputs + quantized_fullc::kDataMax].data().dptr<float>()[0];
+    min_weight = in_data[base_num_inputs + quantized_fullc::kWeightMin].data().dptr<float>()[0];
+    max_weight = in_data[base_num_inputs + quantized_fullc::kWeightMax].data().dptr<float>()[0];
     if (has_bias) {
-      min_bias = in_data[base_num_inputs + 4].data().dptr<float>()[0];
-      max_bias = in_data[base_num_inputs + 5].data().dptr<float>()[0];
+      min_bias = in_data[base_num_inputs + quantized_fullc::kBiasMin].data().dptr<float>()[0];
+      max_bias = in_data[base_num_inputs + quantized_fullc::kBiasMax].data().dptr<float>()[0];
     }
     if (!mkldnn_param.enable_float_output) {
       total_num_outputs = base_num_outputs * 3;
-      min_output_ptr = out_data[1].data().dptr<float>();
-      max_output_ptr = out_data[2].data().dptr<float>();
     }
   }
   CHECK_EQ(in_data.size(), total_num_inputs);
@@ -135,6 +132,8 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
     cached_max_weight_ = max_weight;
     if (has_bias) {
       cached_bias_ = in_data[fullc::kBias];
+      cached_min_bias_ = min_bias;
+      cached_max_bias_ = max_bias;
     } else {
       cached_bias_ = NDArray();
     }
@@ -149,7 +148,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       if (has_bias) {
         NDArray bias = in_data[fullc::kBias];
         float bias_int32_rescale = data_scale * weight_scale *
-            MaxAbs(min_bias, max_bias) / kInt8Range;
+            MaxAbs(cached_min_bias_, cached_max_bias_) / kInt8Range;
 
         cached_bias_ = NDArray(bias.storage_type(), bias.shape(),
                                bias.ctx(), true, mshadow::kInt32);
@@ -168,15 +167,16 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       } else if (mkldnn_param.min_calib_range.has_value() &&
                  mkldnn_param.max_calib_range.has_value()) {
         full_param_.output_scales.resize(0);
-        *min_output_ptr = mkldnn_param.min_calib_range.value();
-        *max_output_ptr = mkldnn_param.max_calib_range.value();
+        cached_min_output_ = mkldnn_param.min_calib_range.value();
+        cached_max_output_ = mkldnn_param.max_calib_range.value();
 
         full_param_.requantize_scales[0] = quantized_out_range /
-          MaxAbs(*min_output_ptr, *max_output_ptr) / data_scale / weight_scale;
+          MaxAbs(cached_min_output_, cached_max_output_) / data_scale / weight_scale;
       } else {
         Stream<cpu> *s = ctx.get_stream<cpu>();
-        mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
-          min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
+        mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(
+          s, 1, &cached_min_output_, &cached_max_output_,
+          &min_data, &max_data, &min_weight, &max_weight);
       }
     }
 
@@ -195,6 +195,13 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   }
 
   MKLDNNFCForwardFullFeature(full_param_, ctx, fwd_.get(), new_inputs, new_req, out_data);
+
+  if (mkldnn_param.quantized && !mkldnn_param.enable_float_output) {
+    float *min_output_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
+    float *max_output_ptr = out_data[quantized_fullc::kOutMax].data().dptr<float>();
+    *min_output_ptr = cached_min_output_;
+    *max_output_ptr = cached_max_output_;
+  }
 }
 
 static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
