@@ -34,7 +34,7 @@ At its core, MXNet contains a dynamic dependency scheduler that automatically pa
 A graph optimization layer on top of that makes symbolic execution fast and memory efficient.
 MXNet is portable and lightweight, scaling effectively to multiple GPUs and multiple machines.
 
-MXNet is also more than a deep learning project. It is also a collection of
+MXNet is more than a deep learning project. It is a collection of
 [blue prints and guidelines](https://mxnet.incubator.apache.org/architecture/index.html#deep-learning-system-design-concepts) for building
 deep learning systems, and interesting insights of DL systems for hackers.
 
