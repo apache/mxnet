@@ -118,6 +118,7 @@ class ResourceScopeSuite extends FunSuite with BeforeAndAfterAll with Matchers {
           c = new TestNativeResource()
           ResourceScope.using() {
             d = new TestNativeResource()
+            assert(c.scope == a.scope)
           }
           assert(d.isDisposed == true)
         }
