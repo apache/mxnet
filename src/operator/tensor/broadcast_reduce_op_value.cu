@@ -39,7 +39,7 @@ void L2NormComputeEx<gpu>(const nnvm::NodeAttrs& attrs,
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
   const NDArrayStorageType istype = inputs[0].storage_type();
-  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+  const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape();
   if ((istype == kRowSparseStorage || istype == kCSRStorage) && axis.ndim() == 0 &&
        param.ord == 2) {
     // l2 norm on the entire array

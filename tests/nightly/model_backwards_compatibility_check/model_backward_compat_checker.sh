@@ -27,4 +27,5 @@ cd tests/nightly/model_backwards_compatibility_check
 echo `pwd`
 
 echo '=========================='
+export MXNET_ENFORCE_DETERMINISM=1
 python model_backwards_compat_inference.py

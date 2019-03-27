@@ -37,19 +37,19 @@ namespace mxnet {
 namespace op {
 
 struct RavelParam : public dmlc::Parameter<RavelParam> {
-  TShape shape;
+  mxnet::TShape shape;
   DMLC_DECLARE_PARAMETER(RavelParam) {
     DMLC_DECLARE_FIELD(shape)
-      .set_default(TShape())
+      .set_default(mxnet::TShape())
       .describe("Shape of the array into which the multi-indices apply.");
   }
 };
 
 inline bool RavelOpShape(const nnvm::NodeAttrs& attrs,
-                         std::vector<TShape>* in_attrs,
-                         std::vector<TShape>* out_attrs) {
+                         mxnet::ShapeVector* in_attrs,
+                         mxnet::ShapeVector* out_attrs) {
   using namespace mshadow;
-  const TShape& shape = nnvm::get<RavelParam>(attrs.parsed).shape;
+  const mxnet::TShape& shape = nnvm::get<RavelParam>(attrs.parsed).shape;
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   CHECK_GT(shape.ndim(), 0) << "Empty shape parameter for ravel operator.";
@@ -69,10 +69,10 @@ inline bool RavelOpShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool UnravelOpShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape>* in_attrs,
-                           std::vector<TShape>* out_attrs) {
+                           mxnet::ShapeVector* in_attrs,
+                           mxnet::ShapeVector* out_attrs) {
   using namespace mshadow;
-  const TShape& shape = nnvm::get<RavelParam>(attrs.parsed).shape;
+  const mxnet::TShape& shape = nnvm::get<RavelParam>(attrs.parsed).shape;
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   CHECK_GT(shape.ndim(), 0) << "Empty shape parameter for unravel operator.";
@@ -110,11 +110,12 @@ struct unravel_index {
                                   DType *unravelled, DType *ravelled) {
     index_t idx(ravelled[i]);
     #pragma unroll
-    for (int j = ndim; j--; ) {
+    for (int j = ndim-1; j > 0; --j) {
       index_t tmp = idx / shape[j];
       unravelled[i+j*N] = idx - tmp*shape[j];
       idx = tmp;
     }
+    unravelled[i] = idx;
   }
 };
 
@@ -126,7 +127,7 @@ void RavelForward(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TShape& shape = nnvm::get<RavelParam>(attrs.parsed).shape;
+  const mxnet::TShape& shape = nnvm::get<RavelParam>(attrs.parsed).shape;
   std::vector<index_t> buffer(shape.data(), shape.data()+shape.ndim());
   Tensor<xpu, 1, index_t> work
     = ctx.requested[0].get_space_typed<xpu, 1, index_t>(Shape1(shape.ndim()), s);
@@ -147,7 +148,7 @@ void UnravelForward(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TShape& shape = nnvm::get<RavelParam>(attrs.parsed).shape;
+  const mxnet::TShape& shape = nnvm::get<RavelParam>(attrs.parsed).shape;
   std::vector<index_t> buffer(shape.data(), shape.data()+shape.ndim());
   Tensor<xpu, 1, index_t> work
     = ctx.requested[0].get_space_typed<xpu, 1, index_t>(Shape1(shape.ndim()), s);

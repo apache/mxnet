@@ -63,7 +63,7 @@ OpStatePtr GetPtrMapping(nvinfer1::ICudaEngine* trt_engine,
 }
 
 OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context /*ctx*/,
-                          const std::vector<TShape>& /*ishape*/,
+                          const mxnet::ShapeVector& /*ishape*/,
                           const std::vector<int>& /*itype*/) {
   const auto& node_param = nnvm::get<ONNXParam>(attrs.parsed);
 
@@ -110,8 +110,8 @@ void TRTParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param_);
 }
 
-inline bool TRTInferShape(const NodeAttrs& attrs, std::vector<TShape>* /*in_shape*/,
-                          std::vector<TShape>* out_shape) {
+inline bool TRTInferShape(const NodeAttrs& attrs, mxnet::ShapeVector* /*in_shape*/,
+                          mxnet::ShapeVector* out_shape) {
   const auto &node_param = nnvm::get<ONNXParam>(attrs.parsed);
   for (auto& el : node_param.output_map) {
     (*out_shape)[std::get<0>(el.second)] = std::get<1>(el.second);
@@ -168,7 +168,7 @@ NNVM_REGISTER_OP(_trt_op)
       return node_param.output_map.size();
     })
     .set_attr_parser(TRTParamParser)
-    .set_attr<nnvm::FInferShape>("FInferShape", TRTInferShape)
+    .set_attr<mxnet::FInferShape>("FInferShape", TRTInferShape)
     .set_attr<nnvm::FInferType>("FInferType", TRTInferType)
     .set_attr<nnvm::FListInputNames>("FListInputNames", TRTListInputNames)
     .set_attr<nnvm::FListOutputNames>("FListOutputNames", TRTListOutputNames)

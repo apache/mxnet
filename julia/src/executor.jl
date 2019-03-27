@@ -169,7 +169,7 @@ function simple_bind(self::SymbolicNode, ctx::Context;
     end
   end
 
-  aux_arrays = [zeros(shape, ctx) for shape in aux_shapes]
+  aux_arrays = NDArray[zeros(shape, ctx) for shape in aux_shapes]
   return bind(self, ctx, arg_arrays, args_grad=grad_arrays, grad_req=grad_req, aux_states=aux_arrays)
 end
 

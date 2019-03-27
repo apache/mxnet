@@ -103,12 +103,13 @@ Examples::
     param.keepdims = false;
     attrs->parsed = param;
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ReduceAxisShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ReduceAxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
 .add_argument("data", "NDArray-or-Symbol", "The input array");
 
 NNVM_REGISTER_OP(pick)
+.add_alias("choose_element_0index")
 .describe(R"code(Picks elements from an input array according to the input indices along the given axis.
 
 Given an input array of shape ``(d0, d1)`` and indices of shape ``(i0,)``, the result will be
@@ -158,7 +159,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "index"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", PickOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", PickOpShape)
 .set_attr<nnvm::FInferType>("FInferType", PickOpType)
 .set_attr<FCompute>("FCompute<cpu>", PickOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",

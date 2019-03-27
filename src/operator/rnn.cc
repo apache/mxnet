@@ -37,7 +37,7 @@ Operator *CreateOp<cpu>(RNNParam param, int dtype) {
 }
 
 Operator *RNNProp::CreateOperatorEx(Context ctx,
-                                  std::vector<TShape> *in_shape,
+                                  mxnet::ShapeVector *in_shape,
                                   std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }

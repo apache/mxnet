@@ -56,6 +56,11 @@ private[infer] trait PredictBase {
    */
   def predictWithNDArray(input: IndexedSeq[NDArray]): IndexedSeq[NDArray]
 
+  /**
+    * Get model output shapes.
+    * @return   model output shapes.
+    */
+  def outputShapes: IndexedSeq[(String, Shape)]
 }
 
 /**
@@ -121,6 +126,8 @@ class Predictor(modelPathPrefix: String,
   protected[infer] val mxNetHandler = MXNetHandler()
 
   protected[infer] val mod = loadModule()
+
+  override def outputShapes: IndexedSeq[(String, Shape)] = mod.outputShapes
 
   /**
    * Takes input as IndexedSeq one dimensional arrays and creates the NDArray needed for inference

@@ -60,7 +60,7 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
                             std::vector<Context> *in_arg_ctxes,
                             std::vector<Context> *arg_grad_ctxes,
                             std::vector<Context> *aux_state_ctxes,
-                            std::unordered_map<std::string, TShape> *arg_shape_map,
+                            std::unordered_map<std::string, mxnet::TShape> *arg_shape_map,
                             std::unordered_map<std::string, int> *arg_dtype_map,
                             std::unordered_map<std::string, int> *arg_stype_map,
                             std::vector<OpReqType> *grad_req_types,
@@ -95,7 +95,7 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
   // Initialize arg_shapes and arg_dtypes for shape and type inferences.
   // It contains all in_args and aux_states' shapes and types in a certain order.
   const nnvm::IndexedGraph& idx = g.indexed_graph();
-  nnvm::ShapeVector arg_shapes(idx.input_nodes().size(), TShape());
+  mxnet::ShapeVector arg_shapes(idx.input_nodes().size(), mxnet::TShape());
   nnvm::DTypeVector arg_dtypes(idx.input_nodes().size(), -1);
   StorageTypeVector arg_stypes(idx.input_nodes().size(), kUndefinedStorage);
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
@@ -117,7 +117,7 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
-                          g.GetAttr<nnvm::ShapeVector>("shape"));
+                          g.GetAttr<mxnet::ShapeVector>("shape"));
   }
 
   g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
@@ -142,7 +142,7 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
     }
   }
 
-  InitArguments(g.indexed_graph(), g.GetAttr<nnvm::ShapeVector>("shape"),
+  InitArguments(g.indexed_graph(), g.GetAttr<mxnet::ShapeVector>("shape"),
                 g.GetAttr<nnvm::DTypeVector>("dtype"),
                 g.GetAttr<StorageTypeVector>("storage_type"),
                 *in_arg_ctxes, *arg_grad_ctxes, *aux_state_ctxes,
@@ -165,7 +165,7 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
  * and shared_exec if available.
  */
 void TrtGraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
-                                  const nnvm::ShapeVector& inferred_shapes,
+                                  const mxnet::ShapeVector& inferred_shapes,
                                   const nnvm::DTypeVector& inferred_dtypes,
                                   const StorageTypeVector& inferred_stypes,
                                   const std::vector<Context>& in_arg_ctxes,
@@ -185,7 +185,7 @@ void TrtGraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const uint32_t eid = idx.entry_id(nid, 0);
-    const TShape& inferred_shape = inferred_shapes[eid];
+    const mxnet::TShape& inferred_shape = inferred_shapes[eid];
     const int inferred_dtype = inferred_dtypes[eid];
     const auto inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
@@ -319,7 +319,7 @@ Graph TrtGraphExecutor::ReinitGraph(Graph&& g, const Context &default_ctx,
                                  std::vector<Context> *arg_grad_ctxes,
                                  std::vector<Context> *aux_state_ctxes,
                                  std::vector<OpReqType> *grad_req_types,
-                                 std::unordered_map<std::string, TShape> *arg_shape_map,
+                                 std::unordered_map<std::string, mxnet::TShape> *arg_shape_map,
                                  std::unordered_map<std::string, int> *arg_dtype_map,
                                  std::unordered_map<std::string, int> *arg_stype_map,
                                  std::unordered_map<std::string, NDArray> *params_map) {
@@ -356,7 +356,7 @@ Graph TrtGraphExecutor::ReinitGraph(Graph&& g, const Context &default_ctx,
     num_forward_nodes_ = std::max(
         num_forward_nodes_, static_cast<size_t>(idx.outputs()[i].node_id + 1));
   }
-  nnvm::ShapeVector arg_shapes(idx.input_nodes().size(), TShape());
+  mxnet::ShapeVector arg_shapes(idx.input_nodes().size(), mxnet::TShape());
   nnvm::DTypeVector arg_dtypes(idx.input_nodes().size(), -1);
   StorageTypeVector arg_stypes(idx.input_nodes().size(), kUndefinedStorage);
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
@@ -378,7 +378,7 @@ Graph TrtGraphExecutor::ReinitGraph(Graph&& g, const Context &default_ctx,
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
-                          g.GetAttr<nnvm::ShapeVector>("shape"));
+                          g.GetAttr<mxnet::ShapeVector>("shape"));
   }
 
   g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
@@ -415,7 +415,8 @@ Executor *TrtGraphExecutor::TensorRTBind(nnvm::Symbol symbol,
                                          std::vector<Context> *in_arg_ctxes,
                                          std::vector<Context> *arg_grad_ctxes,
                                          std::vector<Context> *aux_state_ctxes,
-                                         std::unordered_map<std::string, TShape> *arg_shape_map,
+                                         std::unordered_map<std::string, mxnet::TShape>
+                                                                              *arg_shape_map,
                                          std::unordered_map<std::string, int> *arg_dtype_map,
                                          std::unordered_map<std::string, int> *arg_stype_map,
                                          std::vector<OpReqType> *grad_req_types,

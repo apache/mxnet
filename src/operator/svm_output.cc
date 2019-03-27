@@ -79,7 +79,7 @@ Operator *CreateOp<cpu>(SVMOutputParam param, int dtype) {
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *SVMOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *SVMOutputProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                      std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
