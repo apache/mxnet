@@ -91,8 +91,9 @@ struct MXAPIThreadLocalEntry {
     data->resize(shapes.size());
     size_t size = 0;
     for (const auto& s : shapes) {
-      if (s.ndim() > 0);
-      size += s.ndim();
+      if (s.ndim() > 0) {
+        size += s.ndim();
+      }
     }
     buffer->resize(size);
     int *ptr = buffer->data();
