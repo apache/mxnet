@@ -22,7 +22,7 @@
 import copy
 import warnings
 
-from .event_handler import *
+from .event_handler import EventHandler, LoggingHandler
 from ... import gluon, autograd
 from ...context import Context, cpu, gpu, num_gpus
 from ...io import DataIter
@@ -113,7 +113,6 @@ class Estimator(object):
             raise ValueError("context must be a Context or a list of Context, "
                              "refer to mxnet.Context:{}".format(context))
 
-
         # initialize the network
         self.initializer = initializer
         if self.initializer:
@@ -121,7 +120,7 @@ class Estimator(object):
                 # if already initialized, re-init with user specified initializer
                 warnings.warn("Network already initialized, re-initializing with %s. "
                               "You don't need to pass initializer if you already "
-                              "initialized your net."% type(self.initializer).__name__)
+                              "initialized your net." % type(self.initializer).__name__)
                 self.net.initialize(init=self.initializer, ctx=self.context, force_reinit=True)
             else:
                 # initialize with user specified initializer
@@ -135,9 +134,10 @@ class Estimator(object):
             warnings.warn("No trainer specified, default SGD optimizer "
                           "with learning rate 0.001 is used.")
             self.trainer = gluon.Trainer(self.net.collect_params(),
-                                           'sgd', {'learning_rate': 0.001})
+                                         'sgd', {'learning_rate': 0.001})
         elif not isinstance(trainer, gluon.Trainer):
-            raise ValueError("Trainer must be a Gluon Trainer instance, refer to gluon.trainer")
+            raise ValueError("Trainer must be a Gluon Trainer instance, refer to "
+                             "gluon.Trainer:{}".format(trainer))
         else:
             self.trainer = trainer
 
@@ -205,7 +205,6 @@ class Estimator(object):
                 name, value = loss_metric.get()
                 self.train_stats['val_' + name] = value
 
-
     def fit(self, train_data,
             val_data=None,
             epochs=1,
@@ -228,7 +227,6 @@ class Estimator(object):
             custom batch function to extract data and label
             from a data batch and load into contexts(devices)
         """
-
 
         self.max_epoch = epochs
         if not batch_size:
@@ -333,7 +331,7 @@ class Estimator(object):
             handler.train_end()
 
     def _categorize_handlers(self, event_handlers):
-        """        
+        """
         categorize handlers into 6 event lists to avoid calling empty methods
         for example, only event handlers with train_begin method
         implemented will be called at train begin
@@ -359,4 +357,4 @@ class Estimator(object):
                 epoch_end.append(handler)
             if not handler.__class__.train_end == base_handler.__class__.train_end:
                 train_end.append(handler)
-        return  train_begin, epoch_begin, batch_begin, batch_end, epoch_end, train_end
+        return train_begin, epoch_begin, batch_begin, batch_end, epoch_end, train_end

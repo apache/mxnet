@@ -40,6 +40,7 @@ class EventHandler(object):
         estimator : Estimator
             The :py:class:`Estimator` to get training statistics
         """
+
     def __init__(self):
         self._estimator = None
 
@@ -50,7 +51,6 @@ class EventHandler(object):
     @estimator.setter
     def estimator(self, estimator):
         self._estimator = estimator
-
 
     def train_begin(self):
         pass
@@ -103,10 +103,10 @@ class LoggingHandler(EventHandler):
     def train_begin(self):
         self.train_start = time.time()
         self.logger.info("Training begin: using optimizer %s "
-                         "with current learning rate %.4f "
-                         % (self.estimator.trainer.optimizer.__class__.__name__,
-                            self.estimator.trainer.learning_rate))
-        self.logger.info("Train for %d epochs." % self.estimator.max_epoch)
+                         "with current learning rate %.4f ",
+                         self.estimator.trainer.optimizer.__class__.__name__,
+                         self.estimator.trainer.learning_rate)
+        self.logger.info("Train for %d epochs.", self.estimator.max_epoch)
 
     def train_end(self):
         train_time = time.time() - self.train_start
