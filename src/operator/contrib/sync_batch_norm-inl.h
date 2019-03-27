@@ -279,14 +279,11 @@ class SyncBatchNorm : public Operator {
       data = in_data[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
       out = out_data[syncbatchnorm::kOut].get<xpu, 4, real_t>(s);
     } else {
-      index_t num_channels = in_data[syncbatchnorm::kData].shape_[1];
-      if (in_data[syncbatchnorm::kData].ndim() > 4) {
-        // ignore the last two axes
-        for (index_t i = 2; i < in_data[syncbatchnorm::kData].Size() - 2; ++i)
-          num_channels *= in_data[syncbatchnorm::kData].shape_[i];
-      }
+      index_t spatial_size = in_data[syncbatchnorm::kData].Size() / (
+          in_data[syncbatchnorm::kData].shape_[0] *
+          in_data[syncbatchnorm::kData].shape_[1]);
       Shape<4> dshape = Shape4(in_data[syncbatchnorm::kData].shape_[0],
-                               num_channels, 1, 1);
+                               in_data[syncbatchnorm::kData].shape_[1], 1, spatial_size);
       data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       out = out_data[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
     }
@@ -365,17 +362,14 @@ class SyncBatchNorm : public Operator {
       grad = out_grad[syncbatchnorm::kOut].get<xpu, 4, real_t>(s);
       grad_in = in_grad[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
     } else {
-      index_t num_channels = out_grad[syncbatchnorm::kOut].shape_[1];
-      if (out_grad[syncbatchnorm::kOut].ndim() > 4) {
-        // ignore the last two axes
-        for (index_t i = 2; i < out_grad[syncbatchnorm::kOut].Size() - 2; ++i)
-          num_channels *= out_grad[syncbatchnorm::kOut].shape_[i];
-      }
+      index_t spatial_size = out_grad[syncbatchnorm::kOut].Size() / (
+          out_grad[syncbatchnorm::kOut].shape_[0] *
+          out_grad[syncbatchnorm::kOut].shape_[1]);
       Shape<4> dshape = Shape4(out_grad[syncbatchnorm::kOut].shape_[0],
-                               num_channels, 1, 1);
+                               out_grad[syncbatchnorm::kOut].shape_[1], 1, spatial_size);
       data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad = out_grad[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
-      grad_in = in_grad[syncbatchnorm::kData].ge4_with_shape<xpu, 4, real_t>(dshape, s);
+      grad_in = in_grad[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
     }
 
     Tensor<xpu, 1> mean = out_data[syncbatchnorm::kMean].get<xpu, 1, real_t>(s);
