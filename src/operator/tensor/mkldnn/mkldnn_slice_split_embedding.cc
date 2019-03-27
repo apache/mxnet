@@ -28,11 +28,11 @@ namespace op {
 bool ConcatSetShape(std::vector<TShape>* in_shape,
                     std::vector<TShape>* out_shape, int num_args, int dim);
 // call from SliceOpShape
-static void get_slice_output_shape(
+static TShape get_slice_output_shape(
     const nnvm::Tuple<dmlc::optional<int>>& _pbegin,
     const nnvm::Tuple<dmlc::optional<int>>& _pend,
-    const nnvm::Tuple<dmlc::optional<int>>& _pstep, mxnet::TShape oshape,
-    mxnet::TShape dshape) {
+    const nnvm::Tuple<dmlc::optional<int>>& _pstep, const mxnet::TShape& dshape) {
+    TShape oshape(dshape);
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
     common::StaticArray<int64_t, ndim> begin, end, step;
     GetIndexRange(dshape, _pbegin, _pend, _pstep, &begin, &end, &step);
@@ -41,6 +41,7 @@ static void get_slice_output_shape(
       SetSliceOpOutputDimSize(i, b, e, s, &oshape);
     }
   });
+  return oshape;
 }
 
 static EmbeddingParam GetEmbeddedParam(
@@ -62,12 +63,10 @@ static bool SliceSplitEmbeddingConcatOpShape(const nnvm::NodeAttrs& attrs,
   TShape& dshape = (*in_shape)[0];
 
   nnvm::Tuple<dmlc::optional<int>> param_step;
-  TShape cont_slice_oshape(dshape);
-  get_slice_output_shape(param_.cont_begin, param_.cont_end, param_step,
-                         cont_slice_oshape, dshape);
-  TShape split_slice_oshape(dshape);
-  get_slice_output_shape(param_.embed_begin, param_.embed_end, param_step,
-                         split_slice_oshape, dshape);
+  TShape cont_slice_oshape = get_slice_output_shape(param_.cont_begin,
+                        param_.cont_end, param_step, dshape);
+  TShape split_slice_oshape = get_slice_output_shape(param_.embed_begin,
+                        param_.embed_end, param_step, dshape);
   std::vector<TShape> split_in_shapes;
   split_in_shapes.push_back(split_slice_oshape);
   std::vector<TShape> split_out_shapes;
@@ -177,9 +176,8 @@ void SliceSplitEmbeddingConcatOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& data = inputs[0];
   const TBlob& out = outputs[0];
   nnvm::Tuple<dmlc::optional<int>> param_step;
-  TShape cont_slice_oshape = dshape;
-  get_slice_output_shape(param_.cont_begin, param_.cont_end, param_step,
-                         cont_slice_oshape, dshape);
+  TShape cont_slice_oshape = get_slice_output_shape(param_.cont_begin, param_.cont_end,
+                         param_step, dshape);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<int64_t, ndim> begin, end, step;
     GetIndexRange(data.shape_, param_.cont_begin, param_.cont_end, param_step,
