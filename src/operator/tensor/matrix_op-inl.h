@@ -594,7 +594,7 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
   mxnet::TShape begin(N, -1), end(N, -1);
   for (int i = 0; i < N; ++i) {
     int s = 0;
-    if (param.begin[i]) {
+    if (i < param.begin.ndim() && param.begin[i]) {
       s = *param.begin[i];
       if (s < 0) s += ishape[i];
     }
