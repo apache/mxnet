@@ -43,16 +43,10 @@ brew install opencv
 
 Run the following commands to install the prerequisites on Ubuntu.
 
-```bash
-wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_core.sh
-sudo ./ubuntu_core.sh
-wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_scala.sh
-sudo ./ubuntu_scala.sh
+```
+sudo apt-get install openjdk-8-java maven
 ```
 
-Note : You might need to run `chmod u+x ubuntu_core.sh` and `chmod u+x ubuntu_scala` before running the scripts.
-
-The `ubuntu_scala.sh` installs the common dependencies required for both MXNet Scala and MXNet Java packages.
 
 ## Set Up Your Project
 

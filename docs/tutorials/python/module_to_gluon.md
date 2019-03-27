@@ -334,7 +334,10 @@ print("Output probabilities: {}".format(prob))
 For the Gluon API, it is a lot simpler. You can just load a serialized model in a [`SymbolBlock`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html?highlight=symbolblo#mxnet.gluon.SymbolBlock) and run inference directly.
 
 ```python
-net = gluon.SymbolBlock.imports('module-model-symbol.json', ['data', 'softmax_label'], 'module-model-0005.params')
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    net = gluon.SymbolBlock.imports('module-model-symbol.json', ['data', 'softmax_label'], 'module-model-0005.params')
 prob = net(mx.nd.ones((1,1,28,28)), mx.nd.ones(1)) # note the second argument here to account for the softmax_label symbol
 print("Output probabilities: {}".format(prob.asnumpy()))
 ```
