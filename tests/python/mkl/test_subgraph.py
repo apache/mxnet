@@ -631,7 +631,8 @@ def test_pos_concat_scale_align():
   for data_shape in DATA_SHAPE:
     for out_type in ('uint8', 'int8', 'auto'):
       net = concat_scale_align(data_shape)
-      check_quantize(net, data_shape, out_type, check_conv=False, check_scale_align=True)
+      check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True)
+      check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True, gluon_forward=True)
 
 @with_seed()
 def test_neg_conv_bn():

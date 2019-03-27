@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
 #include <string>
@@ -29,11 +31,9 @@ namespace op {
 
 class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
  public:
-  explicit SgMKLDNNConcatPostQuantizeSelector(int dis_all) : disable_all_(dis_all) {}
-
   bool Select(const BiDirectionalNode &sn) override {
     const auto &n = *sn.node;
-    if ((!disable_all_) && n.op() == Op::Get("_contrib_quantized_concat")) {
+    if (n.op() == Op::Get("_contrib_quantized_concat")) {
       matched_list_.clear();
       visit_list_.clear();
       visit_list_.insert(&n);
@@ -98,7 +98,6 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
   }
 
  private:
-  bool disable_all_;
   bool select_output_;
   std::vector<const BiDirectionalNode *> matched_list_;
   std::unordered_set<const nnvm::Node*> visit_list_;
@@ -106,21 +105,16 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
 
 class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
  public:
-  SgMKLDNNPostQuantizeAlignScaleProperty() : SubgraphProperty(kAdjust) {
-    disable_all_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", 0);
-    if (disable_all_) {
-      LOG(INFO) << "MKLDNN post-quantization scale alignment optimization pass is disabled.";
-    } else {
-      LOG(INFO) << "Start to execute MKLDNN post-quantization scale alignment optimization pass.";
-    }
-  }
+  SgMKLDNNPostQuantizeAlignScaleProperty() : SubgraphProperty(kAdjust) {}
+
   static SubgraphPropertyPtr Create() {
+    static const std::string &name = "MKLDNN post-quantization scale alignment optimization pass";
     auto property = std::make_shared<SgMKLDNNPostQuantizeAlignScaleProperty>();
-    property->SetAttr<std::string>("prop_name",
-                                   "MKLDNN post-quantization scale alignment optimization pass");
+    property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
+
   void AdjustSubgraphNode(const std::vector<nnvm::Node *> &subgraph_nodes,
                           const SubgraphSelectorV2Ptr &subgraph_selector,
                           const int subgraph_id = 0) const override {
@@ -141,18 +135,13 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
   }
 
   SubgraphSelectorV2Ptr CreateSubgraphSelectorV2() const override {
-    auto selector = std::make_shared<SgMKLDNNConcatPostQuantizeSelector>(disable_all_);
+    auto selector = std::make_shared<SgMKLDNNConcatPostQuantizeSelector>();
     return selector;
   }
-
- private:
-  int disable_all_;
 };
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_POST_QUANTIZE_ALIGN_SCALE,
-                                 SgMKLDNNPostQuantizeAlignScaleProperty);
 
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
