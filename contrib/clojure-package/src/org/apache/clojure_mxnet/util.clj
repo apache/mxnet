@@ -74,9 +74,6 @@
 (defn option->value [opt]
   ($/view opt))
 
-(defn keyword->snake-case [vals]
-  (mapv (fn [v] (if (keyword? v) (string/replace (name v) "-" "_") v)) vals))
-
 (defn keyword->snake-case
   "Transforms a keyword `kw` into a snake-case string.
   `kw`: keyword
