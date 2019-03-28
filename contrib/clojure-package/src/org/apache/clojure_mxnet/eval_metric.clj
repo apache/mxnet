@@ -84,7 +84,11 @@
 (defn get
   "Get the values of the metric in as a map of {name value} pairs"
   [metric]
-  (apply zipmap (-> (.get metric) util/tuple->vec)))
+  (let [m (apply zipmap (-> (.get metric)
+                            util/tuple->vec))]
+    (if-not (instance? CompositeEvalMetric metric)
+      (first m)
+      m)))
 
 (defn reset
   "clear the internal statistics to an initial state"
