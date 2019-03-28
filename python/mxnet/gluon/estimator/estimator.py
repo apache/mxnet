@@ -39,7 +39,7 @@ class Estimator(object):
 
     Parameters
     ----------
-    loss : Loss or list of Loss
+    loss : gluon.loss.Loss or list of gluon.loss.Loss
         Loss(objective functions) to calculate during training
     metrics : EvalMetric or list of EvalMetric
         Metrics for evaluating models
@@ -52,7 +52,7 @@ class Estimator(object):
     """
 
     def __init__(self, net,
-                 loss=None,
+                 loss,
                  metrics=None,
                  initializer=None,
                  trainer=None,
@@ -221,6 +221,9 @@ class Estimator(object):
             validation data with data and labels
         epochs : int, default 1
             number of epochs to iterate on the training data.
+        batch_size : int
+            number of samples per gradient update.
+            default will be 32 per device
         event_handlers : EventHandler or list of EventHandler
             list of EventHandlers to apply during training
         batch_fn : function
@@ -330,7 +333,7 @@ class Estimator(object):
         for handler in train_end:
             handler.train_end()
 
-    def _categorize_handlers(self, event_handlers):
+    def categorize_handlers(self, event_handlers):
         """
         categorize handlers into 6 event lists to avoid calling empty methods
         for example, only event handlers with train_begin method
