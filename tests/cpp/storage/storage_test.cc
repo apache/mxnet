@@ -36,9 +36,14 @@ TEST(Storage, Basic_CPU) {
   EXPECT_EQ(handle.ctx, context_cpu);
   EXPECT_EQ(handle.size, kSize);
   storage->Free(handle);
+
   handle = storage->Alloc(kSize, context_cpu);
   EXPECT_EQ(handle.ctx, context_cpu);
   EXPECT_EQ(handle.size, kSize);
+  storage->Free(handle);
+
+  handle = storage->Alloc(0, context_cpu);
+  EXPECT_EQ(handle.dptr, nullptr);
   storage->Free(handle);
 }
 
@@ -47,6 +52,7 @@ TEST(Storage_GPU, Basic_GPU) {
   if (mxnet::test::unitTestsWithCuda) {
     putenv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF=20");
     putenv("MXNET_GPU_MEM_POOL_TYPE=Round");
+
     auto &&storage = mxnet::Storage::Get();
     mxnet::Context context_gpu = mxnet::Context::GPU(0);
     auto &&handle = storage->Alloc(32, context_gpu);
@@ -71,6 +77,11 @@ TEST(Storage_GPU, Basic_GPU) {
     EXPECT_EQ(handle2.size, 3145728);
     EXPECT_EQ(handle2.dptr, ptr2);
     storage->Free(handle2);
+
+    handle = storage->Alloc(0, context_gpu);
+    EXPECT_EQ(handle.dptr, nullptr);
+    storage->Free(handle);
+
     unsetenv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF");
     unsetenv("MXNET_GPU_MEM_POOL_TYPE");
   }
@@ -87,6 +98,10 @@ TEST(Storage_GPU, Basic_GPU) {
     EXPECT_EQ(handle.ctx, context_gpu);
     EXPECT_EQ(handle.size, kSize);
     EXPECT_EQ(handle.dptr, ptr);
+    storage->Free(handle);
+
+    handle = storage->Alloc(0, context_gpu);
+    EXPECT_EQ(handle.dptr, nullptr);
     storage->Free(handle);
   }
 }
