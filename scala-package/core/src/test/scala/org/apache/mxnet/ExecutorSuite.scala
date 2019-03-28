@@ -59,6 +59,7 @@ class ExecutorSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("reshape") {
+    assert(false)
     val x = Symbol.Variable("x")
     val y = Symbol.FullyConnected()()(Map("data" -> x, "num_hidden" -> 4))
 

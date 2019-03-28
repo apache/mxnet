@@ -187,6 +187,22 @@ private[mxnet] class LibInfo {
                                  grads: Array[NDArrayHandle]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
   @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
+  // scalastyle:off parameterNum
+  @native def mxExecutorReshape(partialShaping: Int,
+                                allowUpSizing: Int,
+                                devType: Int,
+                                devId: Int,
+                                mapKeys: Array[String],
+                                mapDevTypes: Array[Int],
+                                mapDevIds: Array[Int],
+                                providedArgShapeNames: Array[String],
+                                providedArgShapeData: Array[Int],
+                                inArgs: ArrayBuffer[NDArrayHandle],
+                                argGrads: ArrayBuffer[NDArrayHandle],
+                                auxStates: ArrayBuffer[NDArrayHandle],
+                                sharedExec: ExecutorHandle,
+                                out: ExecutorHandleRef): Int
+  // scalastyle:on parameterNum
 
   // Symbols
   @native def mxSymbolListAtomicSymbolCreators(symbolList: ListBuffer[SymbolHandle]): Int
