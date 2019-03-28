@@ -67,9 +67,30 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
         <inherited>false</inherited>
-        <configuration>
-          <skip>false</skip>
-        </configuration>
+        <executions>
+          <execution>
+            <id>deploy-file</id>
+            <phase>deploy</phase>
+            <goals>
+              <goal>deploy-file</goal>
+            </goals>
+            <configuration>
+              <description>
+                Scala Package for Apache MXNet (Incubating) - flexible and efficient library for deep learning.
+              </description>
+              <repositoryId>apache.snapshots.https</repositoryId>
+              <url>https://github.com/apache/incubator-mxnet/</url>
+              <groupId>org.apache.mxnet</groupId>
+              <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+              <version>1.3.1-SNAPSHOT</version>
+              <packaging>jar</packaging>
+              <pomFile>${basedir}/src/main/deploy/deploy.xml</pomFile>
+              <file>${basedir}/target/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT.jar</file>
+              <sources>${basedir}/target/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT-src.jar</sources>
+              <javadoc>${basedir}/target/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT-bundle.jar</javadoc>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
