@@ -25,7 +25,7 @@ There are two Jenkins pipelines that run these tests -
 2. Tests on built binaries ([link](http://jenkins.mxnet-ci.amazon-ml.com/job/NightlyTestsForBinaries/))
 
 ### Adding a new Nightly Test
-Add your test script to the mxnet repo tests/nightly folder. Make sure to describe in a readme or
+Add your test script to the MXNet repo's `tests/nightly/` folder. Make sure to describe in a readme or in the 
 comments the purpose of the test. 
 
 #### Setting up the Docker Container 
