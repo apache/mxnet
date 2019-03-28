@@ -21,7 +21,7 @@ These are some longer running tests that are scheduled to run every night, for m
 
 ### Description
 There are two Jenkins pipelines that run these tests - 
-1. Tests on source code ([link](http://jenkins.mxnet-ci.amazon-ml.com/job/NightlyTests/))
+1. [Tests on source code](http://jenkins.mxnet-ci.amazon-ml.com/job/NightlyTests/)
 2. Tests on built binaries ([link](http://jenkins.mxnet-ci.amazon-ml.com/job/NightlyTestsForBinaries/))
 
 ### Adding a new Nightly Test
