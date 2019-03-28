@@ -668,7 +668,7 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-  if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
+  if (false && !param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       GetCuDNNOp<DType>(param).Forward(ctx, in_data, req, outputs, aux_states);
