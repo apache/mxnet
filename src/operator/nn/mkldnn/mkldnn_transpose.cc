@@ -51,7 +51,6 @@ class MKLDNNTransposeForward {
 
  public:
   MKLDNNTransposeForward(const TransposeParam& param,
-                         const OpReqType &req,
                          const NDArray &data) {
     auto shape = data.shape();
     auto data_ndim = shape.ndim();
@@ -102,11 +101,15 @@ class MKLDNNTransposeForward {
     if (data.IsMKLDNNData()) {
       this->data_->set_data_handle(data.GetMKLDNNData()->get_data_handle());
     } else {
-      this->data_->set_data_handle(data.data().dptr<float>());
+      MSHADOW_TYPE_SWITCH(data.dtype(), DTYPE, {
+        this->data_->set_data_handle(data.data().dptr<DTYPE>());
+      });
     }
 
     CHECK(!output.IsMKLDNNData());
-    this->out_->set_data_handle(output.data().dptr<float>());
+    MSHADOW_TYPE_SWITCH(output.dtype(), DTYPE, {
+      this->out_->set_data_handle(output.data().dptr<DTYPE>());
+    });
   }
 
   const mkldnn::reorder &GetFwd() const {
@@ -115,7 +118,6 @@ class MKLDNNTransposeForward {
 };
 
 static MKLDNNTransposeForward &GetTransposeForward(const TransposeParam& param,
-                                                   const OpReqType &req,
                                                    const NDArray &data) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNTransposeSignature,
@@ -129,7 +131,7 @@ static MKLDNNTransposeForward &GetTransposeForward(const TransposeParam& param,
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    MKLDNNTransposeForward fwd(param, req, data);
+    MKLDNNTransposeForward fwd(param, data);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
@@ -141,10 +143,9 @@ void MKLDNNTransposeForward(const nnvm::NodeAttrs& attrs,
                             const OpReqType &req,
                             const NDArray &output) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req, kWriteTo) << "Transpose does not support inplace";
 
   auto stream = MKLDNNStream::Get();
-  auto fwd = GetTransposeForward(param, req, data);
+  auto fwd = GetTransposeForward(param, data);
 
   fwd.SetNewMem(data, output);
   stream->RegisterPrim(fwd.GetFwd());
