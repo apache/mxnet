@@ -54,10 +54,11 @@ class GPUPooledStorageManager final : public StorageManager {
   /*!
    * \brief Default constructor.
    */
-  GPUPooledStorageManager() {
+  GPUPooledStorageManager(int dev_id) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     large_alloc_round_size_ = dmlc::GetEnv("MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE", 2 * 1024 * 1024);
+    dev_id_ = dev_id;
     if (large_alloc_round_size_ <= 0) {
       LOG(FATAL) << "MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE cannot be set to a value <= 0, found: "
                  << large_alloc_round_size_;
@@ -123,6 +124,8 @@ class GPUPooledStorageManager final : public StorageManager {
   int reserve_;
   // number of devices
   const size_t NDEV = 32;
+  // device id
+  int dev_id_;
   // memory pool
   std::unordered_map<size_t, std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(GPUPooledStorageManager);
@@ -177,6 +180,7 @@ void GPUPooledStorageManager::ReleaseAll() {
       Storage::Handle handle;
       handle.dptr = j;
       handle.size = i.first;
+      handle.ctx = Context::GPU(dev_id_);
       DirectFreeNoLock(handle);
     }
   }
@@ -202,10 +206,11 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   /*!
    * \brief Default constructor.
    */
-  GPUPooledRoundedStorageManager() {
+  GPUPooledRoundedStorageManager(int dev_id) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     cut_off_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF", 24);
+    dev_id_ = dev_id;
     if (page_size_ < 32) {
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_PAGE_SIZE cannot be set to a value smaller than 32. " \
                  << "Got: " << page_size_ << ".";
@@ -290,6 +295,8 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   size_t cut_off_;
   // percentage of reserved memory
   int reserve_;
+  // device id
+  int dev_id_;
   // memory pool
   std::vector<std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(GPUPooledRoundedStorageManager);
@@ -345,6 +352,7 @@ void GPUPooledRoundedStorageManager::ReleaseAll() {
       Storage::Handle handle;
       handle.size = size;
       handle.dptr = j;
+      handle.ctx = Context::GPU(dev_id_);
       DirectFreeNoLock(handle);
     }
     memory_pool_[i].clear();
