@@ -273,8 +273,10 @@ class CuDNNBatchNormOp {
 
  private:
   void Init(const TBlob &in_data) {
-    if (in_data.ndim() == 4) shape_ = in_data.shape_;
-    else {
+    if (in_data.ndim() == 4) {
+      for (int i = 0; i < 4; ++i)
+        shape_[i] = in_data.shape_[i];
+    } else {
       // when in_data.ndim() != 4
       shape_[0] = in_data.shape_[0];
       shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
