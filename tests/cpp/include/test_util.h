@@ -70,11 +70,9 @@ class BlobMemory {
     return handle_.dptr;
   }
   void Free() {
-    if (handle_.dptr) {
-      Storage *storage = mxnet::Storage::Get();
-      storage->DirectFree(handle_);
-      handle_.dptr = nullptr;
-    }
+    mxnet::Storage::Get()->DirectFree(handle_);
+    handle_.dptr = nullptr;
+    handle_.size = 0;
   }
   size_t Size() const {
     return handle_.size;

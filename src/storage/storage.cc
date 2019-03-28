@@ -127,6 +127,10 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
+  // Do nothing if dtpr is nullptr because the handle may have already
+  // been freed or have not been allocated memory yet.
+  if (handle.dptr == nullptr) return;
+
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
@@ -140,6 +144,10 @@ void StorageImpl::Free(Storage::Handle handle) {
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
+  // Do nothing if dtpr is nullptr because the handle may have already
+  // been freed or have not been allocated memory yet.
+  if (handle.dptr == nullptr) return;
+
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
