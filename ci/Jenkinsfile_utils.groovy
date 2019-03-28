@@ -203,7 +203,7 @@ def update_github_commit_status(state, message) {
         ]
       ])
 
-      if (attempt < 3) {
+      if (attempt <= 2) {
         sleep 1
       }
     }
