@@ -273,12 +273,13 @@ class CuDNNBatchNormOp {
 
  private:
   void Init(const TBlob &in_data) {
-    for (int i = 0; i < 4; ++i) {
-      if (i < in_data.ndim()) {
-        shape_[i] = in_data.shape_[i];
-      } else {
-        shape_[i] = 1;
-      }
+    if (in_data.ndim() == 4) shape_ = in_data.shape_;
+    else {
+      // when in_data.ndim() != 4
+      shape_[0] = in_data.shape_[0];
+      shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
+      shape_[2] = 1;
+      shape_[3] = in_data.Size() / (shape_[0] * shape_[1]);
     }
 
     CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,
