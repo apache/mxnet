@@ -279,11 +279,12 @@ class SyncBatchNorm : public Operator {
       data = in_data[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
       out = out_data[syncbatchnorm::kOut].get<xpu, 4, real_t>(s);
     } else {
+      index_t num_channels = in_data[syncbatchnorm::kData].ndim() > 1 ?
+        in_data[syncbatchnorm::kData].shape_[1] : 1;
       index_t spatial_size = in_data[syncbatchnorm::kData].Size() / (
-          in_data[syncbatchnorm::kData].shape_[0] *
-          in_data[syncbatchnorm::kData].shape_[1]);
+          in_data[syncbatchnorm::kData].shape_[0] * num_channels);
       Shape<4> dshape = Shape4(in_data[syncbatchnorm::kData].shape_[0],
-                               in_data[syncbatchnorm::kData].shape_[1], 1, spatial_size);
+                               num_channels, 1, spatial_size);
       data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       out = out_data[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
     }
@@ -362,11 +363,12 @@ class SyncBatchNorm : public Operator {
       grad = out_grad[syncbatchnorm::kOut].get<xpu, 4, real_t>(s);
       grad_in = in_grad[syncbatchnorm::kData].get<xpu, 4, real_t>(s);
     } else {
+      index_t num_channels = out_grad[syncbatchnorm::kOut].ndim() > 1 ?
+        out_grad[syncbatchnorm::kOut].shape_[1] : 1;
       index_t spatial_size = out_grad[syncbatchnorm::kOut].Size() / (
-          out_grad[syncbatchnorm::kOut].shape_[0] *
-          out_grad[syncbatchnorm::kOut].shape_[1]);
+          out_grad[syncbatchnorm::kOut].shape_[0] * num_channels);
       Shape<4> dshape = Shape4(out_grad[syncbatchnorm::kOut].shape_[0],
-                               out_grad[syncbatchnorm::kOut].shape_[1], 1, spatial_size);
+                               num_channels, 1, spatial_size);
       data = in_data[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad = out_grad[syncbatchnorm::kOut].get_with_shape<xpu, 4, real_t>(dshape, s);
       grad_in = in_grad[syncbatchnorm::kData].get_with_shape<xpu, 4, real_t>(dshape, s);
