@@ -77,7 +77,7 @@ template <typename T>
 static std::string int_vector_to_attr(T v) {
     std::stringstream ss;
     ss << "[";
-    int i = 0;
+    index_t i = 0;
     for (; i < v.size()-1; i++) {
         ss << v[i] << ",";
     }
