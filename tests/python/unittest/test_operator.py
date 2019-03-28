@@ -456,6 +456,31 @@ def test_slice_channel():
     check_slice_channel(data_ndim=5, axis=-2, num_outputs=3, squeeze_axis=True)
 
 @with_seed()
+def test_SliceSplitEmbeddingConcatFuse():
+    DATA_SHAPE = [(1000, 26000)]
+    num_embed_features = 26
+    num_cont_features = 13
+    input_dims = 1000
+    hidden_units = 32
+
+    dns_data = mx.symbol.Variable("dns_data", shape=DATA_SHAPE[0])
+    x = mx.symbol.slice(data=dns_data, begin=(0, 0),
+                        end=(None, num_embed_features))
+    embeds = mx.symbol.split(data=x, num_outputs=num_embed_features, squeeze_axis=1)
+    x = mx.symbol.slice(data=dns_data, begin=(0, num_embed_features),
+                        end=(None, num_embed_features + num_cont_features))
+    features = [x]
+    for i, embed in enumerate(embeds):
+        embed_weight = mx.symbol.Variable('embed_%d_weight' % i, stype='row_sparse')
+        features.append(mx.symbol.sparse.Embedding(data=embed, weight=embed_weight,
+                        input_dim=input_dims, output_dim=hidden_units, sparse_grad=True))
+    hidden = mx.symbol.concat(*features, dim=1)
+    sym = mx.symbol.SoftmaxOutput(hidden, name='model')
+
+    sym_sg = sym.get_backend_symbol('MKLDNN_WIDE_AND_DEEP_INPUT_FUSE')
+    assert ''.join(sym_sg.attr_dict().keys()).find('SliceSplitEmbeddingConcatFuse') != -1
+
+@with_seed()
 def test_regression():
     ''' test regression operator '''
     def check_regression(symbol, forward, backward, shape, stype='default', densities=[0, 0.5, 1]):
