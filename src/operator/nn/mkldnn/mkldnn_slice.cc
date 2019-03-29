@@ -42,7 +42,7 @@ MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam &param,
   mkldnn::memory::dims offsets(N);
   for (uint32_t i = 0; i < N; ++i) {
     int s = 0;
-    if (param.begin[i]) {
+    if (i < param.begin.ndim() &&  param.begin[i]) {
       s = *param.begin[i];
       if (s < 0) s += ishape[i];
     }
