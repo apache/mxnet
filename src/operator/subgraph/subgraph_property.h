@@ -146,7 +146,7 @@ class SubgraphProperty {
     return nnvm::get<T>(*it->second);
   }
   /*!
-   * \brief Check if the attr exist.
+   * \brief Check if the attr exists.
    */
   bool HasAttr(const std::string& name) const {
     auto it = attrs_.find(name);
@@ -167,35 +167,34 @@ class SubgraphPropertyRegistry {
     return &inst;
   }
 
-  SubgraphPropertyPtr CreateSubgraphProperty(const std::string& name) {
+  std::vector<SubgraphPropertyPtr> CreateSubgraphProperty(const std::string& name) {
     auto it = prop_fn_map_.find(name);
     CHECK(it != prop_fn_map_.end()) << "SubgraphProperty " << name
                                     << " is not found in SubgraphPropertyRegistry";
-    return it->second();
-  }
-
-  SubgraphPropertyCreateFn __REGISTER_OR_GET__(const std::string& name,
-                                               SubgraphPropertyCreateFn fn) {
-    if (prop_fn_map_.count(name) == 0U) {
-      return __REGISTER__(name, fn);
-    } else {
-      return prop_fn_map_.at(name);
+    std::vector<SubgraphPropertyPtr> ret;
+    ret.reserve(it->second.size());
+     for (auto i : it->second) {
+       auto ptr_it = prop_ptr_map_.find(i);
+       if (ptr_it == prop_ptr_map_.end()) {
+         prop_ptr_map_[i] = i();
+         ptr_it = prop_ptr_map_.find(i);
+       }
+       if (ptr_it->second) ret.emplace_back(ptr_it->second);
     }
+    return ret;
   }
 
- private:
   SubgraphPropertyCreateFn __REGISTER__(const std::string& name, SubgraphPropertyCreateFn fn) {
-    CHECK_EQ(prop_fn_map_.count(name), 0U) << "Subgraph property " << name
-                                           << " has been registered";
-    prop_fn_map_[name] = fn;
-    return prop_fn_map_[name];
+    prop_fn_map_[name].push_back(fn);
+    return fn;
   }
 
   SubgraphPropertyRegistry() = default;
   SubgraphPropertyRegistry(const SubgraphPropertyRegistry&) = delete;
   SubgraphPropertyRegistry(SubgraphPropertyRegistry&&) = delete;
   SubgraphPropertyRegistry& operator=(const SubgraphPropertyRegistry&) = delete;
-  std::unordered_map<std::string, SubgraphPropertyCreateFn> prop_fn_map_;
+  std::unordered_map<std::string, std::vector<SubgraphPropertyCreateFn>> prop_fn_map_;
+  std::unordered_map<SubgraphPropertyCreateFn, SubgraphPropertyPtr> prop_ptr_map_;
 };
 
 // This op name set is for setting the names of operators that should be grouped into
@@ -205,9 +204,14 @@ class SubgraphPropertyRegistry {
 typedef dmlc::ThreadLocalStore<std::unordered_map<std::string, std::unordered_set<std::string>>>
   SubgraphPropertyOpNameSet;
 
+#define DECLARE_PROPERTY_EX(NAME, SubgraphPropertyType, X) \
+  static const DMLC_ATTRIBUTE_UNUSED auto __make_##SubgraphPropertyType##_##Name##_##X##__
+#define DECLARE_PROPERTY(NAME, SubgraphPropertyType, X) \
+  DECLARE_PROPERTY_EX(NAME, SubgraphPropertyType, X)
+
 #define MXNET_REGISTER_SUBGRAPH_PROPERTY(Name, SubgraphPropertyType) \
-  static DMLC_ATTRIBUTE_UNUSED auto __make_ ## SubgraphPropertyType ## _ ## Name ## __ = \
-    SubgraphPropertyRegistry::Get()->__REGISTER_OR_GET__(#Name, &SubgraphPropertyType::Create)
+  DECLARE_PROPERTY(Name, SubgraphPropertyType, __LINE__) =           \
+      SubgraphPropertyRegistry::Get()->__REGISTER__(#Name, &SubgraphPropertyType::Create)
 
 }  // namespace op
 }  // namespace mxnet

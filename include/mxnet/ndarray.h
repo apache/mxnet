@@ -986,8 +986,8 @@ class NDArray {
 #endif
         delay_alloc = false;
       } else if (shandle.size < dbytes) {
-        // free storage if necessary and alloc again
-        if (shandle.size > 0) Storage::Get()->Free(shandle);
+        // free storage
+        Storage::Get()->Free(shandle);
         // init storage
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
 #if MXNET_USE_MKLDNN == 1
@@ -1055,8 +1055,8 @@ class NDArray {
       }
       size_t aux_bytes = shape.Size() * mshadow::mshadow_sizeof(aux_types[i]);
       if (aux_handles[i].size < aux_bytes) {
-        // free storage if necessary and alloc again
-        if (aux_handles[i].size > 0) Storage::Get()->Free(aux_handles[i]);
+        // free storage
+        Storage::Get()->Free(aux_handles[i]);
         // init aux storage
         aux_handles[i] = Storage::Get()->Alloc(aux_bytes, ctx);
       }

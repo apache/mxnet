@@ -146,6 +146,7 @@ And load them into a MXNet Gluon symbol block.
 ```python
 import warnings
 with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
     net = gluon.nn.SymbolBlock(outputs=sym, inputs=mx.sym.var('data_0'))
 net_params = net.collect_params()
 for param in arg_params:
