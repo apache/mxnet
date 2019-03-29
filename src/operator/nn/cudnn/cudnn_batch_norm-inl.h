@@ -84,7 +84,6 @@ class CuDNNBatchNormOp {
     }
     CHECK_EQ(req[cudnnbatchnorm::kOut], kWriteTo);
     CHECK_GE(in_data[cudnnbatchnorm::kData].ndim(), 2);
-    CHECK_LE(in_data[cudnnbatchnorm::kData].ndim(), 4);
 
     Init(in_data[cudnnbatchnorm::kData]);
     Stream<gpu> *s = ctx.get_stream<gpu>();
