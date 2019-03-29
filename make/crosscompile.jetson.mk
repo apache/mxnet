@@ -191,6 +191,10 @@ EXTRA_OPERATORS =
 # Create C++ interface package
 USE_CPP_PACKAGE = 0
 
+# Use int64_t type for tensor size.
+# This will cause performance degradation reported in issue #14496
+USE_INT64_TENSOR_SIZE = 0
+
 #----------------------------
 # plugins
 #----------------------------

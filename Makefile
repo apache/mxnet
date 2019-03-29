@@ -188,6 +188,11 @@ ifeq ($(USE_OPERATOR_TUNING), 1)
 	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
 
+ifeq ($(USE_INT64_TENSOR_SIZE), 1)
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=1
+else
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=0
+endif
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this
