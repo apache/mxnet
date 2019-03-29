@@ -137,7 +137,8 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape()) && req[0] != kAddTo) {
+  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape()) &&
+      req[0] == kWriteTo) {
     MKLDNNReshape(inputs[0], outputs[0]);
     return;
   }
@@ -234,7 +235,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-#else
+#endif
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -243,7 +244,6 @@ If the argument `reverse` is set to 1, then the special values are inferred from
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-#endif
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
