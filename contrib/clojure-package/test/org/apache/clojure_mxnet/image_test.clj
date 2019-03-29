@@ -81,8 +81,8 @@
 
 (deftest test-draw-bounding-box!
   (let [new-img  (-> (ImageIO/read (new File image-path))
-                     (image/draw-bounding-box! [{:xmin 190 :xmax 850 :ymin 50 :ymax 450}
-                                                {:xmin 200 :xmax 350 :ymin 440 :ymax 530}]
+                     (image/draw-bounding-box! [{:x-min 190 :x-max 850 :y-min 50 :y-max 450}
+                                                {:x-min 200 :x-max 350 :y-min 440 :y-max 530}]
                                                {:stroke 2
                                                 :names ["pug" "cookie"]
                                                 :transparency 0.8

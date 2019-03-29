@@ -17,13 +17,15 @@
 (ns infer.objectdetector-example
   (:require [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
+            [org.apache.clojure-mxnet.image :as image]
             [org.apache.clojure-mxnet.infer :as infer]
             [org.apache.clojure-mxnet.layout :as layout]
             [clojure.java.io :as io]
-            [infer.draw :as draw]
-            [clojure.string :refer [join]]
+            [clojure.string :as string]
             [clojure.tools.cli :refer [parse-opts]])
-  (:gen-class))
+  (:gen-class)
+  (:import (javax.imageio ImageIO)
+           (java.io File)))
 
 (defn check-valid-dir
   "Check that the input directory exists"
@@ -54,27 +56,30 @@
     :validate [check-valid-dir "Input directory not found"]]
    ["-h" "--help"]])
 
-(defn result->map [{:keys [class prob x-min y-min x-max y-max]}]
-  (hash-map
-   :label class
-   :confidence (int (* 100 prob))
-   :top-left [x-min y-min]
-   :bottom-right [x-max y-max]))
-
-(defn print-results [results]
-  (doseq [_r results]
-    (println (format "Class: %s Confidence=%s Coords=(%s, %s)"
-                     (_r :label)
-                     (_r :confidence)
-                     (_r :top-left)
-                     (_r :bottom-right)))))
-
 (defn process-results [images results output-dir]
-  (dotimes [i (count images)]
-    (let [image (nth images i) _results (map result->map (nth results i))]
-      (println "processing: " image)
-      (print-results _results)
-      (draw/draw-bounds image _results output-dir))))
+  (mapv (fn [image-path result]
+          (println "looking at image" image-path)
+          (println "result: " result)
+          (let [buf (ImageIO/read (new File image-path))
+                width (.getWidth buf)
+                height (.getHeight buf)
+                names (mapv :class result)
+                coords (mapv (fn [result]
+                               (-> result
+                                   (update :x-min #(* width %))
+                                   (update :x-max #(* width %))
+                                   (update :y-min #(* height %))
+                                   (update :y-max #(* height %))))
+                             result)
+                new-img  (-> (ImageIO/read (new File image-path))
+                             (image/draw-bounding-box! coords
+                                                       {:stroke 2
+                                                        :names (mapv #(str (:class %) "-" (:prob %))
+                                                                     result)
+                                                        :transparency 0.5
+                                                        :font-size-mult 1.0}))]
+            (ImageIO/write new-img "jpg" (io/file output-dir (last (string/split image-path #"\/"))))))
+        images results))
 
 (defn detect-single-image
   "Detect objects in a single image and print top-5 predictions"
@@ -109,7 +114,7 @@
     (apply concat
      (for [image-files image-file-batches]
        (let [image-batch (infer/load-image-paths image-files) 
-             topk 5 
+             topk 5
              res (infer/detect-objects-batch detector image-batch topk) ]
          (process-results
           image-files
@@ -143,5 +148,5 @@
         (parse-opts args cli-options)]
     (cond
       (:help options) (println summary)
-      (some? errors) (println (join "\n" errors))
+      (some? errors) (println (string/join "\n" errors))
       :else (run-detector options))))
