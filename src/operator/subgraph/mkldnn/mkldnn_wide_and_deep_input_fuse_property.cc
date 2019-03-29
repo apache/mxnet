@@ -75,15 +75,15 @@ class SgMKLDNNWideAndDeepInputFuseSelector : public SubgraphSelector {
 };
 template <typename T>
 static std::string int_vector_to_attr(T v) {
-    std::stringstream ss;
-    ss << "[";
-    index_t i = 0;
-    for (; i < v.size()-1; i++) {
-        ss << v[i] << ",";
-    }
-    ss << v[i];
-    ss << "]";
-    return ss.str();
+  std::stringstream ss;
+  ss << "[";
+  size_t i = 0;
+  for (; i < v.size()-1; i++) {
+      ss << v[i] << ",";
+  }
+  ss << v[i];
+  ss << "]";
+  return ss.str();
 }
 static std::string int_vector_to_tuple_attr(nnvm::Tuple<dmlc::optional<int>> v) {
   std::stringstream ss;
@@ -120,10 +120,10 @@ class SgMKLDNNWideAndDeepInputFuseProperty : public SubgraphProperty {
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                   const int subgraph_id = 0) const override {
     std::vector<nnvm::NodePtr> emb_nodes;
-  std::vector<nnvm::NodePtr> slice_nodes;
-  nnvm::NodePtr split_nodes;
+    std::vector<nnvm::NodePtr> slice_nodes;
+    nnvm::NodePtr split_nodes;
     nnvm::NodePtr concat_node = nullptr;
-  DFSVisit(sym.outputs, [&](const nnvm::NodePtr &node) {
+    DFSVisit(sym.outputs, [&](const nnvm::NodePtr &node) {
       if (node->is_variable()) return;
       auto &op_name = node->op()->name;
 
@@ -141,36 +141,45 @@ class SgMKLDNNWideAndDeepInputFuseProperty : public SubgraphProperty {
       if (op_name == "SliceChannel") {
           split_nodes = node;
       }
-  });
-  nnvm::NodePtr pe = nnvm::Node::Create();
-  pe->attrs.name = "SliceSplitEmbeddingConcatFuse_0";
-  pe->attrs.op = Op::Get("SliceSplitEmbeddingConcatFuse");
-  CHECK(pe->attrs.op);
-  std::vector<int> v_in_dims;
-  std::vector<int> v_out_dims;
-  std::vector<int> v_types;
-  std::vector<bool> v_sparse_grads;
-  std::vector<nnvm::NodePtr>::iterator it;
-  for (it = emb_nodes.begin(); it != emb_nodes.end(); it++) {
-      nnvm::NodePtr em_node = *it;
-      const EmbeddingParam &param = nnvm::get<EmbeddingParam>(em_node->attrs.parsed);
-      v_in_dims.push_back(param.input_dim);
-      v_out_dims.push_back(param.output_dim);
-      v_types.push_back(param.dtype);
-      v_sparse_grads.push_back(param.sparse_grad);
-  }
-  pe->attrs.dict["input_dims"] = int_vector_to_attr<std::vector<int> >(v_in_dims);
-  pe->attrs.dict["output_dims"] = int_vector_to_attr<std::vector<int> >(v_out_dims);
-  const ConcatParam &concat_param = nnvm::get<ConcatParam>(concat_node->attrs.parsed);
-  pe->attrs.dict["concat_dim"] = std::to_string(concat_param.dim);
-  pe->attrs.dict["num_outputs"] = get_value_from_op_prop(split_nodes->attrs.dict, "num_outputs");
-  pe->attrs.dict["squeeze_axis"] = get_value_from_op_prop(split_nodes->attrs.dict, "squeeze_axis");
-  const SliceParam &sclie_1_param = nnvm::get<SliceParam>(slice_nodes[0]->attrs.parsed);
-  pe->attrs.dict["cont_begin"] = int_vector_to_tuple_attr(sclie_1_param.begin);
-  pe->attrs.dict["cont_end"] = int_vector_to_tuple_attr(sclie_1_param.end);
-  const SliceParam &sclie_0_param = nnvm::get<SliceParam>(slice_nodes[1]->attrs.parsed);
-  pe->attrs.dict["embed_begin"] = int_vector_to_tuple_attr(sclie_0_param.begin);
-  pe->attrs.dict["embed_end"] = int_vector_to_tuple_attr(sclie_0_param.end);
+    });
+    nnvm::NodePtr pe = nnvm::Node::Create();
+    pe->attrs.name = "SliceSplitEmbeddingConcatFuse_0";
+    pe->attrs.op = Op::Get("SliceSplitEmbeddingConcatFuse");
+    CHECK(pe->attrs.op);
+    std::vector<int> v_in_dims;
+    std::vector<int> v_out_dims;
+    std::vector<int> v_types;
+    std::vector<bool> v_sparse_grads;
+    std::vector<nnvm::NodePtr>::iterator it;
+    for (it = emb_nodes.begin(); it != emb_nodes.end(); it++) {
+        nnvm::NodePtr em_node = *it;
+        const EmbeddingParam &param = nnvm::get<EmbeddingParam>(em_node->attrs.parsed);
+        v_in_dims.push_back(param.input_dim);
+        v_out_dims.push_back(param.output_dim);
+        v_types.push_back(param.dtype);
+        v_sparse_grads.push_back(param.sparse_grad);
+    }
+    pe->attrs.dict["input_dims"] =
+        int_vector_to_attr<std::vector<int>>(v_in_dims);
+    pe->attrs.dict["output_dims"] =
+        int_vector_to_attr<std::vector<int>>(v_out_dims);
+    const ConcatParam& concat_param =
+        nnvm::get<ConcatParam>(concat_node->attrs.parsed);
+    pe->attrs.dict["concat_dim"] = std::to_string(concat_param.dim);
+    pe->attrs.dict["num_outputs"] =
+        get_value_from_op_prop(split_nodes->attrs.dict, "num_outputs");
+    pe->attrs.dict["squeeze_axis"] =
+        get_value_from_op_prop(split_nodes->attrs.dict, "squeeze_axis");
+    const SliceParam& sclie_1_param =
+        nnvm::get<SliceParam>(slice_nodes[0]->attrs.parsed);
+    pe->attrs.dict["cont_begin"] = int_vector_to_tuple_attr(sclie_1_param.begin);
+    pe->attrs.dict["cont_end"] = int_vector_to_tuple_attr(sclie_1_param.end);
+    const SliceParam& sclie_0_param =
+        nnvm::get<SliceParam>(slice_nodes[1]->attrs.parsed);
+    pe->attrs.dict["embed_begin"] = int_vector_to_tuple_attr(sclie_0_param.begin);
+    pe->attrs.dict["embed_end"] = int_vector_to_tuple_attr(sclie_0_param.end);
+
+    pe->op()->attr_parser(&(pe->attrs));
     return pe;
   }
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
@@ -208,6 +217,7 @@ class SgMKLDNNWideAndDeepInputFuseProperty : public SubgraphProperty {
  private:
   int disable_all;
 };
+
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_WIDE_AND_DEEP_INPUT_FUSE,
                                  SgMKLDNNWideAndDeepInputFuseProperty);
 }  // namespace op
