@@ -122,7 +122,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     // Modified by Li.bs
     // Use tag to control the calculation of pad
     bool bCal = false;
-    if (target_shape.ndim() != 0) {
+    if (!mxnet::op::shape_is_none(target_shape)) {
       for (index_t i = 0; i < target_shape.ndim(); i++) {
         if (target_shape[i] != 0) bCal = true;
       }
@@ -143,9 +143,9 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
         }
       }
     } else {
-      for (size_t i = 0; i < ndim; i++) {
-        o_pad[i] = pad[i];
-        o_adj[i] = adj[i];
+      for (int i = 0; i < (int) ndim; i++) {
+        o_pad[i] = i < pad.ndim() ? pad[i] : 0;
+        o_adj[i] = i < adj.ndim() ? adj[i] : 0;
       }
     }
   }
