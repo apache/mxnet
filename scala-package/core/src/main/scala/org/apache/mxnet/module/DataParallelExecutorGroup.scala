@@ -299,7 +299,6 @@ class DataParallelExecutorGroup private[module](
 
   private var batchSize: Int = -1
   private var slices: Array[(Int, Int)] = null
-  private var _defaultExecs: Array[Executor] = null
   private var execs: Array[Executor] = null
   private var dataArrays: Seq[Array[((Int, Int), NDArray)]] = null
   private var labelArrays: Option[Seq[Array[((Int, Int), NDArray)]]] = None
@@ -373,7 +372,12 @@ class DataParallelExecutorGroup private[module](
         val labelShapesSliced = labelShapes.map(slicedShape(_, i, labelLayouts))
         val inputShapes
           = dataShapesSliced.toMap ++ labelShapesSliced.getOrElse(Map.empty[String, Shape])
-        execs(i) = _defaultExecs(i).reshape(allowUpSizing = true, kwargs = inputShapes)
+
+        ResourceScope.usingIfScopeExists(execs(i).scope) {
+          val tmpExec = execs(i).reshape(allowUpSizing = true, kwargs = inputShapes)
+          execs(i).dispose()
+          execs(i) = tmpExec
+        }
       }
     } else {
       execs = (0 until contexts.length).map(i =>
@@ -434,9 +438,6 @@ class DataParallelExecutorGroup private[module](
    */
   def reshape(dataShapes: IndexedSeq[DataDesc], labelShapes: Option[IndexedSeq[DataDesc]]): Unit = {
     if (!(dataShapes == this.dataShapes && labelShapes == this.labelShapes)) {
-      if (this._defaultExecs == null) {
-        this._defaultExecs = this.execs.map(x => x)
-      }
       this.bindExec(dataShapes, labelShapes, None, reshape = true)
     }
   }
