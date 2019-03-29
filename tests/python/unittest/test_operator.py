@@ -1603,7 +1603,7 @@ def test_batchnorm():
     momentum = 0.9
     epsilon = 1e-5
     for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
-        for shape in [(4, 2), (4, 3, 4), (4, 4, 4, 4), (4, 5, 6, 4, 4)]:
+        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
             for axis in range(len(shape)):
                 kwargs = dict()
                 if op == mx.nd.contrib.SyncBatchNorm:
@@ -1672,7 +1672,7 @@ def test_batchnorm():
                     dW = (ograd * nx).sum(axis=axis, exclude=True)
                     db = ograd.sum(axis=axis, exclude=True)
 
-                    #assert_almost_equal(output.asnumpy(), target_output.asnumpy(), atol=1e-3, rtol=1e-3)
+                    assert_almost_equal(output.asnumpy(), target_output.asnumpy(), atol=1e-3, rtol=1e-3)
                     assert_almost_equal(bn_running_mean.asnumpy(
                     ), running_mean.asnumpy(), atol=1e-3, rtol=1e-3)
                     assert_almost_equal(bn_running_var.asnumpy(

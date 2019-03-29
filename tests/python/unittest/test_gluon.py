@@ -662,7 +662,7 @@ def test_sync_batchnorm():
         cfgs.append((i, True))
     for ndev, cuda in cfgs:
         # check with unsync version
-        for shape in [(4, 2), (4, 3, 4), (4, 4, 4, 4), (4, 5, 6, 4, 4)]:
+        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
             for i in range(10):
                 _check_batchnorm_result(mx.nd.random.uniform(shape=shape,
                                                              ctx=mx.cpu(0)),
