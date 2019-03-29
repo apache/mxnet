@@ -17,7 +17,7 @@
 
 # coding: utf-8
 """Functions for enabling AMP (automatic mixed precision)."""
-__all__ = ['init', 'init_trainer', 'scale_loss']
+__all__ = ['init', 'init_trainer', 'scale_loss', 'unscale']
 
 from types import MethodType
 import logging
@@ -254,6 +254,29 @@ def init_trainer(optimizer_or_trainer):
             self._old_update(ignore_stale_grad)
         optimizer_or_trainer._update = MethodType(new_update, optimizer_or_trainer)
 
+    elif isinstance(optimizer_or_trainer, opt.Optimizer):
+        # TODO(ptredak): make it work with the optimizer
+        raise TypeError("AMP is currently only compatible with Gluon Trainer")
+    else:
+        raise TypeError("optimizer_or_trainer should be a Gluon Trainer or "
+                        "an optimizer, instead is %s" % type(optimizer_or_trainer))
+
+def unscale(optimizer_or_trainer):
+    """Check and unscale the gradients manually. This function should only be used
+    if accessing gradients is necessary, e.g. for gradient clipping.
+
+    Parameters
+    ----------
+    optimizer_or_trainer : Optimizer or Trainer
+        MXNet optimizer or Gluon Trainer used when scaling the gradients
+    """
+    if isinstance(optimizer_or_trainer, trainer.Trainer):
+        valid_grads = [p._grad for p in optimizer_or_trainer._params if p._grad is not None]
+        for grads in valid_grads:
+            # TODO(ptredak): make a bulked unscale
+            for g in grads:
+                g[:] *= optimizer_or_trainer._scale
+        optimizer_or_trainer._scale = 1.
     elif isinstance(optimizer_or_trainer, opt.Optimizer):
         # TODO(ptredak): make it work with the optimizer
         raise TypeError("AMP is currently only compatible with Gluon Trainer")
