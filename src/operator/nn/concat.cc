@@ -32,6 +32,108 @@
 namespace mxnet {
 namespace op {
 
+struct ConcatenateCPU {
+  template<typename DType>
+  static void Map(int i,
+                  DType **data,
+                  DType *out,
+                  const size_t *indices,
+                  const size_t num_inputs,
+                  const size_t out_mid_size,
+                  const size_t trailing) {
+    size_t out_mid_idx = i % out_mid_size;
+    size_t src_idx = 0;
+    for (size_t section = 0;
+         section < num_inputs && indices[section] <= out_mid_idx;
+         src_idx = section++) {}
+    size_t local_mid_idx = out_mid_idx - indices[src_idx];
+    size_t src_mid_size = indices[src_idx + 1] - indices[src_idx];
+    size_t src_prefix = (i / out_mid_size * src_mid_size + local_mid_idx) * trailing;
+    size_t out_prefix = i * trailing;
+    for (size_t idx = 0; idx < trailing; ++idx) {
+      out[out_prefix + idx] = data[src_idx][src_prefix + idx];
+    }
+  }
+};
+
+template<typename DType>
+void ConcatForwardImpl(const OpContext &ctx,
+                       std::vector<mshadow::Tensor<cpu, 3, DType>>& data,
+                       mshadow::Tensor<cpu, 3, DType>& out) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  std::vector<size_t> sizes(data.size(), 0);
+  std::vector<size_t> indices(data.size() + 1, 0);
+  std::vector<DType*> data_ptrs(data.size(), nullptr);
+  size_t leading = out.shape_[0];
+  size_t out_mid_size = out.shape_[1];
+  size_t trailing = out.shape_[2];
+  size_t restsize = leading * trailing;
+  for (size_t i = 0; i < data.size(); ++i) {
+    sizes[i] = data[i].shape_.Size() / restsize;
+    data_ptrs[i] = data[i].dptr_;
+  }
+  for (size_t i = 0; i < data.size(); ++i) {
+    indices[i + 1] = indices[i] + sizes[i];
+  }
+
+  Kernel<ConcatenateCPU, cpu>::Launch(
+    s, leading * out_mid_size, data_ptrs.data(), out.dptr_, indices.data(),
+    data.size(), out_mid_size, trailing);
+}
+
+struct SplitCPU {
+  template<typename DType>
+  static void Map(int i,
+                  DType **outs,
+                  DType *data,
+                  const size_t *indices,
+                  const size_t num_inputs,
+                  const size_t data_mid_size,
+                  const size_t trailing) {
+    size_t data_mid_idx = i % data_mid_size;
+    size_t target_idx = 0;
+    for (size_t section = 0;
+         section < num_inputs && indices[section] <= data_mid_idx;
+         target_idx = section++) {}
+    size_t local_mid_idx = data_mid_idx - indices[target_idx];
+    size_t target_mid_size = indices[target_idx + 1] - indices[target_idx];
+    size_t target_prefix = (i / data_mid_size * target_mid_size + local_mid_idx) * trailing;
+    size_t data_prefix = i * trailing;
+    for (size_t idx = 0; idx < trailing; ++idx) {
+      outs[target_idx][target_prefix + idx] = data[data_prefix + idx];
+    }
+  }
+};
+
+template<typename DType>
+void ConcatBackwardImpl(const OpContext &ctx,
+                        std::vector<mshadow::Tensor<cpu, 3, DType>>& grad_in,
+                        mshadow::Tensor<cpu, 3, DType>& grad) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  std::vector<size_t> sizes(grad_in.size(), 0);
+  std::vector<size_t> indices(grad_in.size() + 1, 0);
+  std::vector<DType*> grad_in_ptrs(grad_in.size(), nullptr);
+  size_t leading = grad.shape_[0];
+  size_t grad_mid_size = grad.shape_[1];
+  size_t trailing = grad.shape_[2];
+  size_t restsize = leading * trailing;
+  for (size_t i = 0; i < grad_in.size(); ++i) {
+    sizes[i] = grad_in[i].shape_.Size() / restsize;
+    grad_in_ptrs[i] = grad_in[i].dptr_;
+  }
+  for (size_t i = 0; i < grad_in.size(); ++i) {
+    indices[i + 1] = indices[i] + sizes[i];
+  }
+
+  Kernel<SplitCPU, cpu>::Launch(
+    s, leading * grad_mid_size, grad_in_ptrs.data(), grad.dptr_, indices.data(),
+    grad_in.size(), grad_mid_size, trailing);
+}
+
 static bool ConcatShape(const nnvm::NodeAttrs& attrs,
                         mxnet::ShapeVector *in_shape,
                         mxnet::ShapeVector *out_shape) {
@@ -369,10 +471,10 @@ Example::
                          [ 5.,  5.,  8.,  8.]]
 
 )code" ADD_FILELINE)
-#if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+#if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
 CONCAT_FORWARD_ATTRS
@@ -386,11 +488,9 @@ NNVM_REGISTER_OP(_backward_Concat)
   return params.num_args;
 })
 .set_attr_parser(ParamParser<ConcatParam>)
-#if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-#endif
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardConcatStorageType)
 #if MXNET_USE_MKLDNN == 1

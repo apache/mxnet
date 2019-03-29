@@ -57,6 +57,28 @@ struct ConcatParam : public dmlc::Parameter<ConcatParam> {
   }
 };  // struct ConcatParam
 
+template<typename DType>
+void ConcatForwardImpl(const OpContext &ctx,
+                       std::vector<mshadow::Tensor<cpu, 3, DType>>& data,
+                       mshadow::Tensor<cpu, 3, DType>& out);
+
+template<typename DType>
+void ConcatBackwardImpl(const OpContext &ctx,
+                        std::vector<mshadow::Tensor<cpu, 3, DType>>& grad_in,
+                        mshadow::Tensor<cpu, 3, DType>& grad);
+
+#ifdef __CUDACC__
+template<typename DType>
+void ConcatForwardImpl(const OpContext &ctx,
+                       std::vector<mshadow::Tensor<gpu, 3, DType>>& data,
+                       mshadow::Tensor<gpu, 3, DType>& out);
+
+template<typename DType>
+void ConcatBackwardImpl(const OpContext &ctx,
+                        std::vector<mshadow::Tensor<gpu, 3, DType>>& grad_in,
+                        mshadow::Tensor<gpu, 3, DType>& grad);
+#endif
+
 template<typename xpu, typename DType>
 class ConcatOp {
  public:
@@ -92,7 +114,7 @@ class ConcatOp {
       Shape<3> dshape = Shape3(leading, in_data[i].shape_[axis], trailing);
       data[i] = in_data[i].get_with_shape<xpu, 3, DType>(dshape, s);
     }
-    Concatenate(data, &out, 1, req[concat_enum::kOut]);
+    ConcatForwardImpl(ctx, data, out);
   }
 
   void Backward(const OpContext &ctx, const TBlob &out_grad,
@@ -120,7 +142,7 @@ class ConcatOp {
       Shape<3> dshape = Shape3(leading, in_grad[i].shape_[axis], trailing);
       grad_in[i] = in_grad[i].get_with_shape<xpu, 3, DType>(dshape, s);
     }
-    Split(grad, &grad_in, 1, req);
+    ConcatBackwardImpl(ctx, grad_in, grad);
   }
 
  private:
