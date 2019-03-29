@@ -33,7 +33,7 @@ template <typename DType>
 __global__ void AllFiniteGPUKernel(const int size, const DType* in, float* out) {
   bool is_finite = true;
   CUDA_KERNEL_LOOP(i, size) {
-    is_finite = isfinite(in[i]) ? is_finite : false;
+    is_finite = isfinite(float(in[i])) ? is_finite : false;
   }
   __syncthreads();
   if (!is_finite) {
@@ -67,7 +67,7 @@ __global__ void MultiAllFiniteGPUKernel(const MultiAllFiniteKernelParam<DType> p
   bool is_finite = true;
   for (int index = 0; index < param.count; ++index) {
     CUDA_KERNEL_LOOP(i, param.sizes[index]) {
-      is_finite = isfinite(param.arrays[index][i]) ? is_finite : false;
+      is_finite = isfinite(float(param.arrays[index][i])) ? is_finite : false;
     }
   }
   __syncthreads();

@@ -38,6 +38,7 @@
    tensorrt/index.md
    unsupervised_learning/index.md
    vision/index.md
+   amp/index.md
 ```
 
 MXNet tutorials can be found in this section. A variety of language bindings are available for MXNet (including Python, Scala, C++ and R) and we have a different tutorial section for each language.
