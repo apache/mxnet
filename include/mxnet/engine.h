@@ -120,6 +120,10 @@ class MXNET_API Engine {
   typedef std::function<void(RunContext)> SyncFn;
   /*! \brief Asynchronous operation to pass to engine. */
   typedef std::function<void(RunContext, CallbackOnComplete)> AsyncFn;
+  /*! \brief Synchronous operation (function pointer) to pass to engine. */
+  typedef void (*SyncFnPtr)(RunContext, const std::shared_ptr<void>&);
+  /*! \brief Asynchronous operation (function pointer) to pass to engine. */
+  typedef void (*AsyncFnPtr)(RunContext, CallbackOnComplete, const std::shared_ptr<void>&);
   /*! \brief Variable pointer */
   typedef engine::VarHandle VarHandle;
   /*! \brief Operator pointer */
@@ -206,6 +210,43 @@ class MXNET_API Engine {
                          int priority = 0,
                          const char* opr_name = nullptr,
                          bool wait = false) = 0;
+  /*!
+   * \brief Push an asynchronous operation to the engine.
+   * \param exec_fn_ptr Execution function, this function takes a parameter
+   *                    on_complete that must be called when the execution
+   *                    completes.
+   * \param param the parameter set on calling exec_fn_ptr.
+   * \param exec_ctx Execution context.
+   * \param const_vars The variables that current operation will use but not
+   *                   mutate.
+   * \param mutable_vars The variables that current operation will mutate.
+   * \param prop Property of the function.
+   * \param priority Priority of the action, as hint to the engine.
+   * \param opr_name The operator name.
+   * \param wait Whether this is a WaitForVar operation.
+   */
+  void PushAsyncPtr(AsyncFnPtr exec_fn_ptr, const std::shared_ptr<void>& param,
+                    Context exec_ctx, std::vector<VarHandle> const& const_vars,
+                    std::vector<VarHandle> const& mutable_vars,
+                    FnProperty prop = FnProperty::kNormal, int priority = 0,
+                    const char* opr_name = nullptr, bool wait = false);
+  /*!
+   * \brief Push an synchronous operation to the engine.
+   * \param exec_fn_ptr Execution function that executes the operation.
+   * \param param the parameter set on calling exec_fn_ptr.
+   * \param exec_ctx Execution context.
+   * \param const_vars The variables that current operation will use but not
+   *                   mutate.
+   * \param mutable_vars The variables that current operation will mutate.
+   * \param prop Property of the function.
+   * \param priority Priority of the action, as hint to the engine.
+   * \param opr_name The operator name.
+   */
+  void PushSyncPtr(SyncFnPtr exec_fn_ptr, const std::shared_ptr<void>& param,
+                   Context exec_ctx, std::vector<VarHandle> const& const_vars,
+                   std::vector<VarHandle> const& mutable_vars,
+                   FnProperty prop = FnProperty::kNormal, int priority = 0,
+                   const char* opr_name = nullptr);
   /*!
    * \brief Schedule the deletion of a variable.
    *

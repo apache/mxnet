@@ -67,4 +67,26 @@ Engine* Engine::Get() {
   static Engine *inst = _GetSharedRef().get();
   return inst;
 }
+
+void Engine::PushAsyncPtr(AsyncFnPtr exec_fn_ptr, const std::shared_ptr<void>& param,
+                          Context exec_ctx, std::vector<VarHandle> const& const_vars,
+                          std::vector<VarHandle> const& mutable_vars,
+                          FnProperty prop, int priority,
+                          const char* opr_name, bool wait) {
+  auto exec_fn = [exec_fn_ptr, param](RunContext rctx,
+                                      CallbackOnComplete on_complete) {
+    exec_fn_ptr(rctx, on_complete, param);
+  };
+  PushAsync(exec_fn, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name, wait);
+}
+
+void Engine::PushSyncPtr(SyncFnPtr exec_fn_ptr, const std::shared_ptr<void>& param,
+                         Context exec_ctx, std::vector<VarHandle> const& const_vars,
+                         std::vector<VarHandle> const& mutable_vars,
+                         FnProperty prop, int priority, const char* opr_name) {
+  auto exec_fn = [exec_fn_ptr, param](RunContext rctx) {
+    exec_fn_ptr(rctx, param);
+  };
+  PushSync(exec_fn, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
+}
 }  // namespace mxnet

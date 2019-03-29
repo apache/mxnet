@@ -11,6 +11,8 @@
         Java_org_apache_mxnet*;
         *NDArray*;
         *Engine*Get*;
+        *Engine*PushAsyncPtr*;
+        *Engine*PushSyncPtr*;
         *Storage*Get*;
         *on_enter_api*;
         *on_exit_api*;
