@@ -116,7 +116,7 @@ static bool test_multiple_key() {
   for (size_t j=0; j < results[0].Size(); j++) {
     if (results[0].GetData()[j] == grads[0].GetData()[j]) {
       LG << "Error: wrong gradient data, expect " << grads[0].GetData()[j]
-          << " got " << result[0].GetData()[j];
+          << " got " << results[0].GetData()[j];
       return false;
     }
   }
@@ -126,7 +126,7 @@ static bool test_multiple_key() {
     if (results[1].GetData()[j] == (grads[1].GetData()[j] + grads[2].GetData()[j])) {
       LG << "Error: wrong reduced gradient data, expect "
           << (grads[1].GetData()[j] + grads[2].GetData()[j])
-          << " got " << result[1].GetData()[j];
+          << " got " << results[1].GetData()[j];
       return false;
     }
   }
