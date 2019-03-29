@@ -636,21 +636,56 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     output2 = mx.nd.concat(*[output.as_in_context(input.context)
                              for output in output2], dim=0)
+    # check bn1
+
+    momentum = 0.9
+    epsilon = 1e-5
+    axis = 1
+    running_mean = mx.nd.zeros(nch)
+    running_var = mx.nd.ones(nch)
+    data = input1
+
+    data_mean = data.mean(
+        axis=axis, exclude=True, keepdims=True)
+    data_var = (data - data_mean).square().mean(axis=axis,
+                                                exclude=True, keepdims=True)
+
+    target_output = (data - data_mean) / (data_var + epsilon).sqrt()
+
+    # squeeze data_mean and data_var
+    data_mean_flat = data_mean.squeeze()
+    data_var_flat = data_var.squeeze()
+
+    running_mean = running_mean * momentum + \
+        data_mean_flat * (1 - momentum)
+    running_var = running_var * momentum + \
+        data_var_flat * (1 - momentum)
+
+    atol = 1e-2
+    rtol = 1e-2
+    assert_almost_equal(output1.asnumpy(), target_output.asnumpy(),
+                        atol=atol, rtol=rtol)
+    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
+                        running_mean.asnumpy(),
+                        atol=atol, rtol=rtol)
+    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
+                        running_var.asnumpy(),
+                        atol=atol, rtol=rtol)
     # assert forwarding
     assert_almost_equal(input1.asnumpy(), input2.asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=atol, rtol=rtol)
     assert_almost_equal(output1.asnumpy(),
-                        output2.asnumpy(), atol=1e-3, rtol=1e-3)
+                        output2.asnumpy(), atol=atol, rtol=rtol)
     assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
                         _find_bn(bn2).running_mean.data(ctx_list[0]).asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=atol, rtol=rtol)
     assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
                         _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
-                        atol=1e-3, rtol=1e-3)
+                        atol=atol, rtol=rtol)
     input2grad = mx.nd.concat(
         *[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
     assert_almost_equal(input1.grad.asnumpy(),
-                        input2grad.asnumpy(), atol=1e-3, rtol=1e-3)
+                        input2grad.asnumpy(), atol=atol, rtol=rtol)
 
 
 @with_seed()
