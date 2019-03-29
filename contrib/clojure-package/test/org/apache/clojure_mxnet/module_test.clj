@@ -246,6 +246,7 @@
         d-shape1 [10 3 64 64]
         d-shape2 [10 3 32 32]
         l-shape [10]
+
         mod (m/module my-sym {:data-names ["data1" "data2"]})
         data-batch {:data [(ndarray/random-uniform 0 9 (str (mx-shape/->shape d-shape1)))
                            (ndarray/random-uniform 5 15 (str (mx-shape/->shape d-shape2)))]
@@ -280,9 +281,8 @@
                         :index nil
                         :pad 0}]
       (-> mod
-          (m/forward data-batch))
-      ;; FIXME
-      #_(is (= [(first l-shape) num-class]
+          (m/forward data-batch-2))
+      (is (= [(first l-shape) num-class]
              (-> mod
                  (m/outputs-merged)
                  (first)
@@ -301,9 +301,8 @@
                         :index nil
                         :pad 0}]
       (-> mod
-          (m/forward data-batch))
-      ;; FIXME
-      #_(is (= [(first l-shape) num-class]
+          (m/forward data-batch-2))
+      (is (= [(first l-shape) num-class]
              (-> mod
                  (m/outputs-merged)
                  (first)

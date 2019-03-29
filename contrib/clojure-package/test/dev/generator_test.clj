@@ -86,19 +86,17 @@
     (is (= "LRN" (-> lrn-info vals ffirst :name str)))))
 
 (deftest test-symbol-vector-args
-  ;; FIXME
-  #_(is (= `(if (clojure.core/map? kwargs-map-or-vec-or-sym)
+  (is (= '(if (clojure.core/map? kwargs-map-or-vec-or-sym)
             (util/empty-list)
             (util/coerce-param
-              kwargs-map-or-vec-or-sym
-              #{"scala.collection.Seq"}))
+             kwargs-map-or-vec-or-sym
+             #{"scala.collection.Seq"}))
          (gen/symbol-vector-args))))
 
 (deftest test-symbol-map-args
-  ;; FIXME
-  #_(is (= `(if (clojure.core/map? kwargs-map-or-vec-or-sym)
+  (is (= '(if (clojure.core/map? kwargs-map-or-vec-or-sym)
             (org.apache.clojure-mxnet.util/convert-symbol-map
-              kwargs-map-or-vec-or-sym)
+             kwargs-map-or-vec-or-sym)
             nil)
          (gen/symbol-map-args))))
 
@@ -160,14 +158,13 @@
                        :exception-types [],
                        :flags #{:public}}]}
         function-name (symbol "div")]
-    ;; FIXME
-    #_(is (= '(([sym sym-or-Object]
+    (is (= '(([sym sym-or-object]
               (util/coerce-return
-                (.$div
-                  sym
-                  (util/nil-or-coerce-param
-                    sym-or-Object
-                    #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
+               (.$div
+                sym
+                (util/nil-or-coerce-param
+                 sym-or-object
+                 #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
            (gen/gen-symbol-function-arity op-name op-values function-name)))))
 
 (deftest test-gen-ndarray-function-arity
@@ -210,5 +207,4 @@
                                fname)
           good-contents (slurp "test/good-test-ndarray.clj")
           contents (slurp fname)]
-      ;; FIXME
-      #_(is (= good-contents contents)))))
+      (is (= good-contents contents)))))
