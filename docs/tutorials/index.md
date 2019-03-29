@@ -92,6 +92,7 @@ Select API:&nbsp;
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
     * [Module to Gluon API](/tutorials/python/module_to_gluon.html)<span style="color:red"> (new!)</span>
     * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
+    * [Automatic Mixed Precision in Gluon](/tutorials/amp/amp_tutorial.html)
 
 * API Guides
     * Core APIs
