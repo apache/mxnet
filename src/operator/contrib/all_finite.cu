@@ -67,7 +67,7 @@ __global__ void MultiAllFiniteGPUKernel(const MultiAllFiniteKernelParam<DType> p
   bool is_finite = true;
   for (int index = 0; index < param.count; ++index) {
     CUDA_KERNEL_LOOP(i, param.sizes[index]) {
-      is_finite = isfinite(static_cast<float>float(param.arrays[index][i])) ? is_finite : false;
+      is_finite = isfinite(static_cast<float>(param.arrays[index][i])) ? is_finite : false;
     }
   }
   __syncthreads();
