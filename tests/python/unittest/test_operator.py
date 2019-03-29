@@ -1672,18 +1672,20 @@ def test_batchnorm():
                     dW = (ograd * nx).sum(axis=axis, exclude=True)
                     db = ograd.sum(axis=axis, exclude=True)
 
-                    assert_almost_equal(output.asnumpy(), target_output.asnumpy(), atol=1e-3, rtol=1e-3)
+                    atol = 1e-2
+                    rtol = 1e-2
+                    assert_almost_equal(output.asnumpy(), target_output.asnumpy(), atol=atol, rtol=rtol)
                     assert_almost_equal(bn_running_mean.asnumpy(
-                    ), running_mean.asnumpy(), atol=1e-3, rtol=1e-3)
+                    ), running_mean.asnumpy(), atol=atol, rtol=rtol)
                     assert_almost_equal(bn_running_var.asnumpy(
-                    ), running_var.asnumpy(), atol=1e-3, rtol=1e-3)
+                    ), running_var.asnumpy(), atol=atol, rtol=rtol)
 
                     assert_almost_equal(data.grad.asnumpy(),
-                                        dX.asnumpy(), atol=1e-3, rtol=1e-3)
+                                        dX.asnumpy(), atol=atol, rtol=rtol)
                     assert_almost_equal(
-                        bn_gamma.grad.asnumpy(), dW.asnumpy(), atol=1e-3, rtol=1e-3)
+                        bn_gamma.grad.asnumpy(), dW.asnumpy(), atol=atol, rtol=rtol)
                     assert_almost_equal(
-                        bn_beta.grad.asnumpy(), db.asnumpy(), atol=1e-3, rtol=1e-3)
+                        bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
 
 
 @with_seed()
