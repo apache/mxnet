@@ -20,7 +20,8 @@
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [clojure.java.io :as io]
             [clojure.test :refer :all])
-  (:import (javax.imageio ImageIO)))
+  (:import (javax.imageio ImageIO)
+           (java.io File)))
 
 (def tmp-dir (System/getProperty "java.io.tmpdir"))
 (def image-path (.getAbsolutePath (io/file tmp-dir "Pug-Cookie.jpg")))
@@ -76,4 +77,14 @@
   (let [img-arr (image/read-image image-path)
         resized-arr (image/resize-image img-arr 224 224)
         new-img (image/to-image resized-arr)]
-    (is (= true (ImageIO/write new-img "png" (io/file tmp-dir "out.png"))))))
+    (is (true? (ImageIO/write new-img "png" (io/file tmp-dir "out.png"))))))
+
+(deftest test-draw-bounding-box!
+  (let [new-img  (-> (ImageIO/read (new File image-path))
+                     (image/draw-bounding-box! [{:xmin 190 :xmax 850 :ymin 50 :ymax 450}
+                                                {:xmin 200 :xmax 350 :ymin 440 :ymax 530}]
+                                               {:stroke 2
+                                                :names ["pug" "cookie"]
+                                                :transparency 0.8
+                                                :font-size-mult 2.0}))]
+    (is (true? (ImageIO/write new-img "png" (io/file tmp-dir "out.png"))))))
