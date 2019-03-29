@@ -20,10 +20,10 @@
 """Custom convolutional neural network layers in model_zoo."""
 __all__ = ['Deformable_Convolution']
 
-from python.mxnet import symbol
-from python.mxnet.gluon.block import HybridBlock
-from python.mxnet.base import numeric_types
-from python.mxnet.gluon.nn import Activation
+from .... import symbol
+from ...block import HybridBlock
+from ....base import numeric_types
+from ...nn import Activation
 
 class Deformable_Convolution(HybridBlock):
     """2-D Deformable Convolution v_1
