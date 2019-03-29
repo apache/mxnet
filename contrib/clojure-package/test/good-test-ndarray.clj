@@ -35,4 +35,3 @@
      ndarray-or-double-or-float
      #{"org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE"
        "org.apache.mxnet.NDArray"})))))
-
