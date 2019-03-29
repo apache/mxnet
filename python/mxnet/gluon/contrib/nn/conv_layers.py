@@ -37,22 +37,22 @@ class Deformable_Convolution(HybridBlock):
     channels : int,
         The dimensionality of the output space
         i.e. the number of output channels in the convolution.
-    kernel_size : int or tuple/list of 2 ints, (Default value = (1,1)) 
+    kernel_size : int or tuple/list of 2 ints, (Default value = (1,1))
         Specifies the dimensions of the convolution window.
-    strides : int or tuple/list of 2 ints, (Default value = (1,1)) 
+    strides : int or tuple/list of 2 ints, (Default value = (1,1))
         Specifies the strides of the convolution.
-    padding : int or tuple/list of 2 ints, (Default value = (0,0)) 
+    padding : int or tuple/list of 2 ints, (Default value = (0,0))
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points.
-    dilation : int or tuple/list of 2 ints, (Default value = (1,1)) 
+    dilation : int or tuple/list of 2 ints, (Default value = (1,1))
         Specifies the dilation rate to use for dilated convolution.
-    groups : int, (Default value = 1) 
+    groups : int, (Default value = 1)
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two convolution
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    num_deformable_group : int, (Default value = 1) 
+    num_deformable_group : int, (Default value = 1)
         Number of deformable group partitions.
     layout : str, (Default value = NCHW)
         Dimension ordering of data and weight. Can be 'NCW', 'NWC', 'NCHW',
@@ -64,7 +64,7 @@ class Deformable_Convolution(HybridBlock):
     in_channels : int, (Default value = 0)
         The number of input channels to this layer. If not specified,
         initialization will be deferred to the first time `forward` is called
-        and `in_channels` will be inferred from the shape of input data.
+        and input channels will be inferred from the shape of input data.
     activation : str, (Default value = None)
         Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
