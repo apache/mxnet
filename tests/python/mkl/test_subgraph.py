@@ -48,8 +48,8 @@ config =  {
   'fc': {
     OP_NAME: 'sg_mkldnn_fully_connected',
     QUANTIZED_OP_NAME: 'quantized_sg_mkldnn_fully_connected',
-    SG_PASS_NAME: 'MKLDNN_FC',
-    POST_SG_PASS_NAME: 'MKLDNN_POST_FC_QUANTIZE'
+    SG_PASS_NAME: 'MKLDNN',
+    POST_SG_PASS_NAME: 'MKLDNN_POST_QUANTIZE'
   }
 }
 

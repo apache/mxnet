@@ -132,7 +132,7 @@ class ObjectDetector(modelPathPrefix: String,
     if (topK.isDefined) {
       var sortedIndices = predictResult.zipWithIndex.sortBy(-_._1(1)).map(_._2)
       sortedIndices = sortedIndices.take(topK.get)
-      // takeRight(5) would provide the output as Array[Accuracy, Xmin, Ymin, Xmax, Ymax
+      // takeRight(5) would provide the output as Array[Accuracy, Xmin, Ymin, Xmax, Ymax]
       result = sortedIndices.map(idx
       => (synset(predictResult(idx)(0).toInt),
           predictResult(idx).takeRight(5))).toIndexedSeq

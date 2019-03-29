@@ -129,6 +129,12 @@ class GPUPooledStorageManager final : public StorageManager {
 };  // class GPUPooledStorageManager
 
 void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
+  // Set dptr to nullptr when handle size is 0.
+  if (handle->size == 0) {
+    handle->dptr = nullptr;
+    return;
+  }
+
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = RoundAllocSize(handle->size);
   auto&& reuse_it = memory_pool_.find(size);
@@ -290,6 +296,12 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
 };  // class GPUPooledRoundedStorageManager
 
 void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
+  // Set dptr to nullptr when handle size is 0.
+  if (handle->size == 0) {
+    handle->dptr = nullptr;
+    return;
+  }
+
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   int bucket = get_bucket(handle->size);
   size_t size = get_size(bucket);

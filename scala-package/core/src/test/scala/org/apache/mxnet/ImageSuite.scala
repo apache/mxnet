@@ -97,4 +97,25 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
     logger.info(s"converted image stored in ${tempDirPath + "/inputImages/out.png"}")
   }
 
+  test("Test draw Bounding box") {
+    val buf = ImageIO.read(new File(imLocation))
+    val box = Array(
+      Map("xmin" -> 190, "xmax" -> 850, "ymin" -> 50, "ymax" -> 450),
+      Map("xmin" -> 200, "xmax" -> 350, "ymin" -> 440, "ymax" -> 530)
+    )
+    val names = Array("pug", "cookie")
+    Image.drawBoundingBox(buf, box, Some(names), fontSizeMult = Some(1.4f))
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    ImageIO.write(buf, "png", new File(tempDirPath + "/inputImages/out2.png"))
+    logger.info(s"converted image stored in ${tempDirPath + "/inputImages/out2.png"}")
+    for (coord <- box) {
+      val topLeft = buf.getRGB(coord("xmin"), coord("ymin"))
+      val downLeft = buf.getRGB(coord("xmin"), coord("ymax"))
+      val topRight = buf.getRGB(coord("xmax"), coord("ymin"))
+      val downRight = buf.getRGB(coord("xmax"), coord("ymax"))
+      require(downLeft == downRight)
+      require(topRight == downRight)
+    }
+  }
+
 }

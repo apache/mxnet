@@ -17,6 +17,7 @@
 
 package org.apache.mxnet
 // scalastyle:off
+import java.awt.{BasicStroke, Color, Graphics2D}
 import java.awt.image.BufferedImage
 // scalastyle:on
 import java.io.InputStream
@@ -180,6 +181,59 @@ object Image {
       })
     })
     img
+  }
+
+  /**
+    * Helper function to generate ramdom colors
+    * @param transparency The transparency level
+    * @return Color
+    */
+  private def randomColor(transparency: Option[Float] = Some(1.0f)) : Color = {
+    new Color(
+      Math.random().toFloat, Math.random().toFloat, Math.random().toFloat,
+      transparency.get
+    )
+  }
+
+  /**
+    * Method to draw bounding boxes for an image
+    * @param src Source of the buffered image
+    * @param coordinate Contains Map of xmin, xmax, ymin, ymax
+    *                   corresponding to top-left and down-right points
+    * @param names The name set of the bounding box
+    * @param stroke Thickness of the bounding box
+    * @param fontSizeMult Font size multiplier
+    * @param transparency Transparency of the bounding box
+    */
+  def drawBoundingBox(src: BufferedImage, coordinate: Array[Map[String, Int]],
+                      names: Option[Array[String]] = None,
+                      stroke : Option[Int] = Some(3),
+                      fontSizeMult : Option[Float] = Some(1.0f),
+                      transparency: Option[Float] = Some(1.0f)): Unit = {
+    val g2d : Graphics2D = src.createGraphics()
+    g2d.setStroke(new BasicStroke(stroke.get))
+    // Increase the size of font
+    val currentFont = g2d.getFont
+    val newFont = currentFont.deriveFont(currentFont.getSize * fontSizeMult.get)
+    g2d.setFont(newFont)
+    // Get font metrics to draw the font box
+    val fm = g2d.getFontMetrics(newFont)
+    for (idx <- coordinate.indices) {
+      val map = coordinate(idx)
+      g2d.setColor(randomColor(transparency).darker())
+      g2d.drawRect(map("xmin"), map("ymin"), map("xmax") - map("xmin"), map("ymax") - map("ymin"))
+      // Write the name of the bounding box
+      if (names.isDefined) {
+        val x = map("xmin") - stroke.get
+        val y = map("ymin")
+        val h = fm.getHeight
+        val w = fm.charsWidth(names.get(idx).toCharArray, 0, names.get(idx).length())
+        g2d.fillRect(x, y - h, w, h)
+        g2d.setColor(Color.WHITE)
+        g2d.drawString(names.get(idx), x, y)
+      }
+    }
+    g2d.dispose()
   }
 
 }
