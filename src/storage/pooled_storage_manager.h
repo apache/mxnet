@@ -56,11 +56,11 @@ class GPUPooledStorageManager final : public StorageManager {
    *
    * \param initial_context context used by this Storage Manager
    */
-  explicit GPUPooledStorageManager(Context initial_context) {
+  explicit GPUPooledStorageManager(Context initial_context) :
+    initial_context_(initial_context) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     large_alloc_round_size_ = dmlc::GetEnv("MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE", 2 * 1024 * 1024);
-    initial_context_ = initial_context;
     if (large_alloc_round_size_ <= 0) {
       LOG(FATAL) << "MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE cannot be set to a value <= 0, found: "
                  << large_alloc_round_size_;
@@ -127,7 +127,7 @@ class GPUPooledStorageManager final : public StorageManager {
   // number of devices
   const size_t NDEV = 32;
   // context used by this Storage Manager
-  Context initial_context_;
+  const Context initial_context_;
   // memory pool
   std::unordered_map<size_t, std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(GPUPooledStorageManager);
@@ -210,11 +210,11 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
    *
    * \param initial_context context used by this Storage Manager
    */
-  explicit GPUPooledRoundedStorageManager(Context initial_context) {
+  explicit GPUPooledRoundedStorageManager(Context initial_context) :
+    initial_context_(initial_context) {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
     cut_off_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF", 24);
-    initial_context_ = initial_context;
     if (page_size_ < 32) {
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_PAGE_SIZE cannot be set to a value smaller than 32. " \
                  << "Got: " << page_size_ << ".";
@@ -300,7 +300,7 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   // percentage of reserved memory
   int reserve_;
   // context used by this Storage Manager
-  Context initial_context_;
+  const Context initial_context_;
   // memory pool
   std::vector<std::vector<void*>> memory_pool_;
   DISALLOW_COPY_AND_ASSIGN(GPUPooledRoundedStorageManager);
