@@ -22,6 +22,7 @@ FP16_FUNCS = [
     'Convolution',
     'Deconvolution',
     'FullyConnected',
+    'RNN',
     ]
 
 FP32_FUNCS = [
