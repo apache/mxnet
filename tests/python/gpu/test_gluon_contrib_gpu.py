@@ -19,7 +19,7 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon import nn
 from mxnet.gluon import contrib
-from mxnet.gluon.contrib.nn import Deformable_Convolution
+from mxnet.gluon.contrib.cnn import Deformable_Convolution
 
 
 def test_deformable_convolution():

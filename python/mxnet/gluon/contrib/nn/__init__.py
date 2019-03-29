@@ -20,9 +20,6 @@
 """Contributed neural network modules."""
 
 from . import basic_layers
-from . import conv_layers
-
 from .basic_layers import *
-from .conv_layers import *
 
-__all__ = basic_layers.__all__ + conv_layers.__all__
+__all__ = basic_layers.__all__

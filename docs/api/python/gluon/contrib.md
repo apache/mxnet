@@ -62,7 +62,7 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
 ### Convolutional neural network
 
 ```eval_rst
-.. currentmodule:: mxnet.gluon.contrib.nn
+.. currentmodule:: mxnet.gluon.contrib.cnn
 
 .. autosummary::
     :nosignatures:
