@@ -1600,11 +1600,14 @@ def test_batchnorm_training():
 
 @with_seed()
 def test_batchnorm():
+    import logging
     momentum = 0.9
     epsilon = 1e-5
     for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
         for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
             for axis in range(len(shape)):
+                logging.info(str((op, shape, axis)))
+                print(str((op, shape, axis)))
                 kwargs = dict()
                 if op == mx.nd.contrib.SyncBatchNorm:
                     if axis != 1:
