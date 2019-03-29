@@ -282,6 +282,7 @@ class CuDNNBatchNormOp {
       shape_[2] = 1;
       shape_[3] = in_data.shape_.ProdShape(2, in_data.ndim());
     }
+    LOG(INFO)<<shape_<<"SSSSSSSS";
 
     CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,
                                           CUDNN_TENSOR_NCHW,
