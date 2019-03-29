@@ -69,7 +69,6 @@ struct SyncBatchNormParam : public dmlc::Parameter<SyncBatchNormParam> {
     DMLC_DECLARE_FIELD(ndev).set_default(1)
       .describe("The count of GPU devices");
     DMLC_DECLARE_FIELD(key)
-      .set_default("")
       .describe("Hash key for synchronization, please set the same hash key for same layer, "
                 "Block.prefix is typically used as in :class:`gluon.nn.contrib.SyncBatchNorm`.");
   }
