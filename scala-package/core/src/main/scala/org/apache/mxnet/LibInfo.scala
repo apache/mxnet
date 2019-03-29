@@ -255,11 +255,20 @@ private[mxnet] class LibInfo {
                                  numArgs: MXUint,
                                  keys: Array[String],
                                  argIndPtr: Array[MXUint],
-                                 argShapeData: Array[MXUint],
+                                 argShapeData: Array[Int],
                                  inShapeData: ListBuffer[Array[Int]],
                                  outShapeData: ListBuffer[Array[Int]],
                                  auxShapeData: ListBuffer[Array[Int]],
                                  complete: RefInt): Int
+  @native def mxSymbolInferShapePartial(handle: SymbolHandle,
+                                        numArgs: MXUint,
+                                        keys: Array[String],
+                                        argIndPtr: Array[MXUint],
+                                        argShapeData: Array[Int],
+                                        inShapeData: ListBuffer[Array[Int]],
+                                        outShapeData: ListBuffer[Array[Int]],
+                                        auxShapeData: ListBuffer[Array[Int]],
+                                        complete: RefInt): Int
   @native def mxSymbolGetOutput(handle: SymbolHandle, index: Int, out: SymbolHandleRef): Int
   @native def mxSymbolSaveToJSON(handle: SymbolHandle, out: RefString): Int
   @native def mxSymbolCreateFromJSON(json: String, handle: SymbolHandleRef): Int

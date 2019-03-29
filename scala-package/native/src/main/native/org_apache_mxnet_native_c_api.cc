@@ -1633,21 +1633,24 @@ int FillSymbolInferShape
   (JNIEnv *env, jmethodID listAppend, jobject joutData,
     int shapeSize, const int *shapeNdim, const int **shapeData) {
   for (int i = 0; i < shapeSize; ++i) {
-    jintArray jshape = env->NewIntArray(shapeNdim[i]);
-    if (jshape == NULL) {
-      // TODO(Yizhi): out of memory error thrown, return a specific error code ?
-      return -1;
+    jintArray jshape = NULL;
+    if (shapeNdim[i] >= 0) {
+      jshape = env->NewIntArray(shapeNdim[i]);
+      if (jshape == NULL) {
+        // TODO(Yizhi): out of memory error thrown, return a specific error code ?
+        return -1;
+      }
+      env->SetIntArrayRegion(jshape, 0, shapeNdim[i], reinterpret_cast<const jint *>(shapeData[i]));
     }
-    env->SetIntArrayRegion(jshape, 0, shapeNdim[i], reinterpret_cast<const jint *>(shapeData[i]));
     env->CallObjectMethod(joutData, listAppend, jshape);
     env->DeleteLocalRef(jshape);
   }
   return 0;
 }
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
-  (JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
-    jintArray jargIndPtr, jintArray jargShapeData,
-    jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
+
+int SymbolInferShapeHelper(JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
+                            jintArray jargIndPtr, jintArray jargShapeData, jobject jinShapeData,
+                            jobject joutShapeData, jobject jauxShapeData, jobject jcomplete, bool partial) {
   const char **keys = NULL;
   if (jkeys != NULL) {
     keys = new const char *[jnumArgs];
@@ -1675,21 +1678,40 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
 
   jint *argIndPtr = env->GetIntArrayElements(jargIndPtr, NULL);
   jint *argShapeData = env->GetIntArrayElements(jargShapeData, NULL);
-  int ret = MXSymbolInferShape(reinterpret_cast<SymbolHandle>(symbolPtr),
-                               static_cast<mx_uint>(jnumArgs),
-                               keys,
-                               reinterpret_cast<mx_uint *>(argIndPtr),
-                               reinterpret_cast<const int *>(argShapeData),
-                               &inShapeSize,
-                               &inShapeNdim,
-                               &inShapeData,
-                               &outShapeSize,
-                               &outShapeNdim,
-                               &outShapeData,
-                               &auxShapeSize,
-                               &auxShapeNdim,
-                               &auxShapeData,
-                               &complete);
+  int ret;
+  if (!partial) {
+    ret = MXSymbolInferShape(reinterpret_cast<SymbolHandle>(symbolPtr),
+                              static_cast<mx_uint>(jnumArgs),
+                              keys,
+                              reinterpret_cast<mx_uint *>(argIndPtr),
+                              reinterpret_cast<const int *>(argShapeData),
+                              &inShapeSize,
+                              &inShapeNdim,
+                              &inShapeData,
+                              &outShapeSize,
+                              &outShapeNdim,
+                              &outShapeData,
+                              &auxShapeSize,
+                              &auxShapeNdim,
+                              &auxShapeData,
+                              &complete);
+  } else {
+    ret = MXSymbolInferShapePartial(reinterpret_cast<SymbolHandle>(symbolPtr),
+                                    static_cast<mx_uint>(jnumArgs),
+                                    keys,
+                                    reinterpret_cast<mx_uint *>(argIndPtr),
+                                    reinterpret_cast<const int *>(argShapeData),
+                                    &inShapeSize,
+                                    &inShapeNdim,
+                                    &inShapeData,
+                                    &outShapeSize,
+                                    &outShapeNdim,
+                                    &outShapeData,
+                                    &auxShapeSize,
+                                    &auxShapeNdim,
+                                    &auxShapeData,
+                                    &complete);
+  }
   env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
 
@@ -1728,6 +1750,24 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   }
 
   return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
+    jintArray jargIndPtr, jintArray jargShapeData,
+    jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
+
+  return SymbolInferShapeHelper(env, obj, symbolPtr, jnumArgs, jkeys, jargIndPtr, jargShapeData,
+                                jinShapeData, joutShapeData, jauxShapeData jcomplete, false);
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShapePartial
+  (JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
+    jintArray jargIndPtr, jintArray jargShapeData,
+    jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
+
+  return SymbolInferShapeHelper(env, obj, symbolPtr, jnumArgs, jkeys, jargIndPtr, jargShapeData,
+                                jinShapeData, joutShapeData, jauxShapeData jcomplete, true);
 }
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorBindX
