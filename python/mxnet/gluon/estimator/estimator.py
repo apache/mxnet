@@ -247,7 +247,7 @@ class Estimator(object):
             event_handlers.append(LoggingHandler())
 
         train_begin, epoch_begin, batch_begin, \
-        batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
+        batch_end, epoch_end, train_end = self.categorize_handlers(event_handlers)
 
         # passing estimator to event handlers so they can access estimator information
         # when a event is triggered

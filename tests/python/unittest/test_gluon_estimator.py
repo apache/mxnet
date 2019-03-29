@@ -235,18 +235,12 @@ def test_metric():
 
 
 def test_loss():
-    ''' test with no loss, invalid loss '''
+    ''' test with invalid loss '''
     net = get_model()
     ctx = mx.cpu()
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    # input no loss
-    with assert_raises(ValueError):
-        est = Estimator(net=net,
-                        trainer=trainer,
-                        metrics=acc,
-                        context=ctx)
     # input invalid loss
     with assert_raises(ValueError):
         est = Estimator(net=net,
