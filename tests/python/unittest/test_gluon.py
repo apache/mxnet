@@ -611,10 +611,9 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
         ctx_list = [mx.cpu(0) for _ in range(num_devices)]
 
     nch = input.shape[1] if input.ndim > 1 else 1
-    prefix = str(input.shape)
-    bn1 = mx.gluon.nn.BatchNorm(in_channels=nch, prefix='bn_' + prefix)
+    bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
     bn2 = mx.gluon.contrib.nn.SyncBatchNorm(
-        in_channels=nch, num_devices=num_devices, prefix='sync_bn_' + prefix)
+        in_channels=nch, num_devices=num_devices)
 
     bn1.initialize(ctx=ctx_list[0])
     bn2.initialize(ctx=ctx_list)

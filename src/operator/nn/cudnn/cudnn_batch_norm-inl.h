@@ -281,7 +281,7 @@ class CuDNNBatchNormOp {
       shape_[0] = in_data.shape_[0];
       shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
       shape_[2] = 1;
-      shape_[3] = in_data.Size() / (shape_[0] * shape_[1]);
+      shape_[3] = in_data.shape_.ProdShape(2, in_data.ndim());
     }
 
     CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,
