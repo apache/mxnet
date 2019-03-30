@@ -673,15 +673,18 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       GetCuDNNOp<DType>(param).Forward(ctx, in_data, req, outputs, aux_states);
     })
+    LOG(INFO) << "cudnn";
   } else {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
       BatchNormForward<gpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
     })
+    LOG(INFO) << "fwd1";
   }
 #else
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
     BatchNormForward<gpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
   });
+  LOG(INFO) << "fwd2";
 #endif
 }
 
@@ -697,7 +700,7 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-  if (!param.use_global_stats && !param.cudnn_off && shape.ndim() <= 4
+  if (!param.use_global_stats && !param.cudnn_off
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       GetCuDNNOp<DType>(param).Backward(ctx, inputs, req, outputs);
