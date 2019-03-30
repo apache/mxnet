@@ -1608,7 +1608,7 @@ def test_batchnorm():
             for axis in range(len(shape)):
                 logging.info(str((op, shape, axis)))
                 print(str((op, shape, axis)))
-                kwargs = dict()
+                kwargs = dict(cudnn_off=True)
                 if op == mx.nd.contrib.SyncBatchNorm:
                     if axis != 1:
                         continue
