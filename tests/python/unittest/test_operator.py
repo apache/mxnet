@@ -1608,14 +1608,14 @@ def test_batchnorm():
             for axis in range(len(shape)):
                 logging.info(str((op, shape, axis)))
                 print(str((op, shape, axis)))
-                kwargs = dict(cudnn_off=True)
+                kwargs = dict()
                 if op == mx.nd.contrib.SyncBatchNorm:
                     if axis != 1:
                         continue
                     key = str(op) + str(shape) + str(axis)
                     kwargs.update(dict(key=key))
                 else:
-                    kwargs.update(dict(axis=axis))
+                    kwargs.update(dict(axis=axis, cudnn_off=True))
                 nch = shape[axis]
 
                 bn_gamma = mx.nd.random.uniform(shape=(nch,))
