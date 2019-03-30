@@ -42,7 +42,7 @@ namespace op {
 namespace sg {  // sg stands for subgraph
 
 #if DEBUG_SUBGRAPH
-void PrintSubgraph(const std::vector<BiDirectionalNode*>& simple_nodes) {
+void PrintSubgraph(const std::vector<BiDirectedNode*>& simple_nodes) {
   std::string op_names = "";
   for (size_t i = 0; i < simple_nodes.size(); ++i) {
     op_names += simple_nodes[i]->node->attrs.name + ' ';
@@ -69,11 +69,11 @@ void PrintNodeEntries(const std::vector<nnvm::NodeEntry*>& entries) {
  * \param simple_nodes the nodes of undirected graph in top sorted order
  */
 void CreateSimpleGraph(const nnvm::Graph& g,
-                       std::vector<BiDirectionalNodePtr>* simple_nodes) {
+                       std::vector<BiDirectedNodePtr>* simple_nodes) {
   const auto& indexed_graph = g.indexed_graph();
   simple_nodes->reserve(indexed_graph.num_nodes());
   DFSVisit(g.outputs, [&](const nnvm::NodePtr& node) {
-    BiDirectionalNodePtr sn = BiDirectionalNode::Create();
+    BiDirectedNodePtr sn = BiDirectedNode::Create();
     sn->node = node.get();
     for (size_t i = 0; i < sn->node->inputs.size(); ++i) {
       const auto& e = sn->node->inputs[i];
@@ -96,8 +96,8 @@ void CreateSimpleGraph(const nnvm::Graph& g,
  * and clear the vector of subgraph nodes.
  */
 void ResetNodeLabels(const nnvm::Graph& g,
-                     const std::vector<BiDirectionalNodePtr>& simple_nodes,
-                     std::vector<BiDirectionalNode*>* subgraph_nodes) {
+                     const std::vector<BiDirectedNodePtr>& simple_nodes,
+                     std::vector<BiDirectedNode*>* subgraph_nodes) {
   for (auto n : *subgraph_nodes) {
     const auto nid = g.indexed_graph().node_id(n->node);
     simple_nodes[nid]->label = -1;
@@ -121,22 +121,14 @@ void ResetNodeLabels(const nnvm::Graph& g,
  * \excluded_nodes set of nodes that should be excluded from the current subgraph
  */
 bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector, const int label,
-                   const size_t snid, const std::vector<BiDirectionalNodePtr>& simple_nodes,
-                   std::vector<BiDirectionalNode*>* subgraph_nodes,
-                   std::unordered_set<const BiDirectionalNode*>* excluded_nodes) {
+                   const size_t snid, const std::vector<BiDirectedNodePtr>& simple_nodes,
+                   std::vector<BiDirectedNode*>* subgraph_nodes,
+                   std::unordered_set<const BiDirectedNode*>* excluded_nodes) {
   const auto& indexed_graph = g.indexed_graph();
-  std::queue<BiDirectionalNode*> node_queue;
+  std::queue<BiDirectedNode*> node_queue;
   CHECK_EQ(simple_nodes[snid]->label, -1);
   simple_nodes[snid]->label = label;
   node_queue.push(simple_nodes[snid].get());
-  struct hash_pair {
-    inline size_t operator()(
-        const std::pair<const BiDirectionalNode*, const BiDirectionalNode*>& v) const {
-      size_t value = std::hash<const void*>()(v.first);
-      value ^= std::hash<const void*>()(v.second) + 0x9e3779b9 + (value << 6) + (value >> 2);
-      return value;
-    }
-  };
   // key: nodes that serve as input/output nodes to the subgraph
   // value: pair of vectors of nodes in the subgraph. The first vector contains the
   // output nodes of the key in the subgraph, and the second vector contains the
@@ -150,7 +142,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
     std::pair<std::vector<const nnvm::Node*>,
               std::vector<const nnvm::Node*>>> non_subgraph_node_map;
   while (!node_queue.empty()) {
-    auto cur_node = node_queue.front();
+    BiDirectedNode* cur_node = node_queue.front();
     node_queue.pop();
     subgraph_nodes->push_back(cur_node);
     // get qualified adjacent input nodes
@@ -204,7 +196,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
   }
   // check whether there is a cycle between the subgraph and its input/output nodes
   auto is_ancestor = [&](const nnvm::Node* ancestor, const nnvm::Node* descendant,
-                         const std::vector<BiDirectionalNode*>& snodes) {
+                         const std::vector<BiDirectedNode*>& snodes) {
     if (ancestor == descendant) return true;
     std::unordered_set<nnvm::Node*> snode_set;
     for (const auto& sn : snodes) {
@@ -271,7 +263,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
     ResetNodeLabels(g, simple_nodes, subgraph_nodes);
     return false;
   }
-  auto sim_node_cmp = [&] (const BiDirectionalNode* node1, const BiDirectionalNode* node2) {
+  auto sim_node_cmp = [&] (const BiDirectedNode* node1, const BiDirectedNode* node2) {
     return indexed_graph.node_id(node1->node) < indexed_graph.node_id(node2->node);
   };
   std::sort(subgraph_nodes->begin(), subgraph_nodes->end(), sim_node_cmp);
@@ -290,9 +282,9 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
  */
 void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector,
                             const int label, const size_t snid,
-                            const std::vector<BiDirectionalNodePtr>& simple_nodes,
-                            std::vector<BiDirectionalNode*>* subgraph_nodes) {
-  std::unordered_set<const BiDirectionalNode*> excluded_nodes;
+                            const std::vector<BiDirectedNodePtr>& simple_nodes,
+                            std::vector<BiDirectedNode*>* subgraph_nodes) {
+  std::unordered_set<const BiDirectedNode*> excluded_nodes;
   const size_t max_num_retry = simple_nodes.size() * simple_nodes.size();
   size_t count = 0;
   bool success = false;
@@ -324,22 +316,22 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
 }
 
 void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector,
-                         const std::vector<BiDirectionalNodePtr>& simple_nodes,
-                         std::vector<std::vector<BiDirectionalNode*>>* subgraph_nodes,
+                         const std::vector<BiDirectedNodePtr>& simple_nodes,
+                         std::vector<std::vector<BiDirectedNode*>>* subgraph_nodes,
                          std::vector<SubgraphSelectorV2Ptr>* subgraph_selectors,
-                         const BiDirectionalNode* node, const size_t snid, size_t* subgraph_id) {
+                         const BiDirectedNode* node, const size_t snid, size_t* subgraph_id) {
   const auto& indexed_graph = g->indexed_graph();
-  auto node_cmp = [&] (const BiDirectionalNode* node1, const BiDirectionalNode* node2) {
+  auto node_cmp = [&] (const BiDirectedNode* node1, const BiDirectedNode* node2) {
     return indexed_graph.node_id(node1->node) < indexed_graph.node_id(node2->node);
   };
   if (simple_nodes[snid]->label == -1 && subgraph_selector->Select(*node)) {
     // pre-select nodes that can be grouped in a subgraph
-    std::vector<BiDirectionalNode*> preselected_nodes;
+    std::vector<BiDirectedNode*> preselected_nodes;
     PreSelectSubgraphNodes(*g, subgraph_selector, *subgraph_id, snid, simple_nodes,
                            &preselected_nodes);
 
     // filter out unqualified pre-selected nodes
-    std::vector<BiDirectionalNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
+    std::vector<BiDirectedNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
 
     // reset node labels that are not in filtered nodes
     for (const auto n : preselected_nodes) {
@@ -375,8 +367,8 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
  */
 void FindSubgraphs(nnvm::Graph* g,
                    const SubgraphProperty &subg_prop,
-                   const std::vector<BiDirectionalNodePtr>& simple_nodes,
-                   std::vector<std::vector<BiDirectionalNode*>>* subgraph_nodes,
+                   const std::vector<BiDirectedNodePtr>& simple_nodes,
+                   std::vector<std::vector<BiDirectedNode*>>* subgraph_nodes,
                    std::vector<SubgraphSelectorV2Ptr>* subgraph_selectors) {
   const auto& indexed_graph = g->indexed_graph();
   CHECK_EQ(indexed_graph.num_nodes(), simple_nodes.size());
@@ -417,8 +409,8 @@ void SortEntries(const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry
  * \param input_entries input entries of the subgraph
  */
 void FindInputEntries(const nnvm::Graph& g,
-                      const std::vector<BiDirectionalNodePtr>& simple_nodes,
-                      const std::vector<BiDirectionalNode*>& subgraph_nodes,
+                      const std::vector<BiDirectedNodePtr>& simple_nodes,
+                      const std::vector<BiDirectedNode*>& subgraph_nodes,
                       const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry_top_order_map,
                       std::vector<nnvm::NodeEntry*>* input_entries) {
   const auto& indexed_graph = g.indexed_graph();
@@ -457,8 +449,8 @@ void FindInputEntries(const nnvm::Graph& g,
  * \param output_entries output entries of the subgraph
  */
 void FindOutputEntries(nnvm::Graph* g,
-                       const std::vector<BiDirectionalNodePtr>& simple_nodes,
-                       const std::vector<BiDirectionalNode*>& subgraph_nodes,
+                       const std::vector<BiDirectedNodePtr>& simple_nodes,
+                       const std::vector<BiDirectedNode*>& subgraph_nodes,
                        const std::unordered_map<const nnvm::NodeEntry*, size_t>&
                          entry_top_order_map,
                        std::vector<nnvm::NodeEntry*>* output_entries) {
@@ -546,12 +538,11 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
 
 /*!
  * \brief Replace a set of nodes belonging to the same subgraph with a subgrpah node
- * and keep the subgraph in the subgraph node. The input entries and output entries
- * of the subgraph node are kept in the same order as the subgraph's.
+ * and keep the subgraph in the subgraph node.
  */
 void CreateSubgraphNode(nnvm::Graph* g,
-                        const std::vector<BiDirectionalNodePtr>& simple_nodes,
-                        const std::vector<BiDirectionalNode*>& subgraph_nodes,
+                        const std::vector<BiDirectedNodePtr>& simple_nodes,
+                        const std::vector<BiDirectedNode*>& subgraph_nodes,
                         const SubgraphSelectorV2Ptr& subgraph_selector,
                         const size_t subgraph_id,
                         std::unordered_map<const nnvm::NodeEntry*, size_t>* entry_top_order_map) {
@@ -593,8 +584,8 @@ void CreateSubgraphNode(nnvm::Graph* g,
     nnvm::Node* node = e.node.get();
     if (indexed_graph.exist(node)) {
       const auto nid = indexed_graph.node_id(node);
-      BiDirectionalNode* sn = simple_nodes[nid].get();
-      for (BiDirectionalNode* dest_node : subgraph_nodes) {
+      BiDirectedNode* sn = simple_nodes[nid].get();
+      for (BiDirectedNode* dest_node : subgraph_nodes) {
         sn->outputs.erase(dest_node->node);
       }
       sn->outputs[n.get()].push_back(i);
@@ -606,10 +597,13 @@ void CreateSubgraphNode(nnvm::Graph* g,
 }
 
 /*!
- * \brief Adjust a set of nodes belonging to the same subgraph.
+ * \brief Adjust a set of nodes belonging to the same subgraph. No new node is created, but
+ * adjust selected nodes' attributes.
+ * This can be used to implement peephole optimization. For example, adjust calibration information
+ * of quantized nodes.
  */
 void AdjustSubgraphNode(nnvm::Graph* g,
-                        const std::vector<BiDirectionalNode*>& subgraph_nodes,
+                        const std::vector<BiDirectedNode*>& subgraph_nodes,
                         const SubgraphSelectorV2Ptr& subgraph_selector,
                         const size_t subgraph_id) {
   std::vector<nnvm::Node*> node_list;
@@ -694,16 +688,15 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   TopSortEntries(g, &entry_top_order_map);
 
   // Create double directional graph for ease of finding subgraphs
-  std::vector<BiDirectionalNodePtr> simple_nodes;
+  std::vector<BiDirectedNodePtr> simple_nodes;
   CreateSimpleGraph(g, &simple_nodes);
-  std::vector<std::vector<BiDirectionalNode*>> subgraph_nodes;
+  std::vector<std::vector<BiDirectedNode*>> subgraph_nodes;
   std::vector<SubgraphSelectorV2Ptr> subgraph_selectors;
   FindSubgraphs(&g, *subg_prop, simple_nodes, &subgraph_nodes, &subgraph_selectors);
   CHECK_EQ(subgraph_nodes.size(), subgraph_selectors.size());
   for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
 #if DEBUG_SUBGRAPH
-    std::set<BiDirectionalNode*> simple_node_set(subgraph_nodes[i].begin(),
-                                                 subgraph_nodes[i].end());
+    std::set<BiDirectedNode*> simple_node_set(subgraph_nodes[i].begin(), subgraph_nodes[i].end());
     CHECK_EQ(simple_node_set.size(), subgraph_nodes[i].size());
     PrintSubgraph(subgraph_nodes[i]);
 #endif
@@ -714,8 +707,8 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
     } else {
       CHECK_EQ(ptype, SubgraphProperty::SgPropertyType::kAdjust);
       AdjustSubgraphNode(&g, subgraph_nodes[i], subgraph_selectors[i], i);
-      }
     }
+  }
   return g;
 }
 

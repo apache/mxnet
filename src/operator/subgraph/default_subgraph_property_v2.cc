@@ -34,17 +34,17 @@ class ContainOpSelectorV2: public SubgraphSelectorV2 {
   explicit ContainOpSelectorV2(const std::unordered_set<std::string>& op_names)
     : op_names_(op_names) {}
 
-  bool Select(const BiDirectionalNode &sn) override {
+  bool Select(const BiDirectedNode &sn) override {
     const auto &seed_node = *sn.node;
     return !seed_node.is_variable() && op_names_.count(seed_node.op()->name);
   }
 
-  bool SelectInput(const BiDirectionalNode &sn, const BiDirectionalNode &snew_node) override {
+  bool SelectInput(const BiDirectedNode &sn, const BiDirectedNode &snew_node) override {
     const auto &input_node = *snew_node.node;
     return !input_node.is_variable() && op_names_.count(input_node.op()->name);
   }
 
-  bool SelectOutput(const BiDirectionalNode &sn, const BiDirectionalNode &snew_node) override {
+  bool SelectOutput(const BiDirectedNode &sn, const BiDirectedNode &snew_node) override {
     const auto &output_node = *snew_node.node;
     return !output_node.is_variable() && op_names_.count(output_node.op()->name);
   }
