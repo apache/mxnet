@@ -673,18 +673,15 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       GetCuDNNOp<DType>(param).Forward(ctx, in_data, req, outputs, aux_states);
     })
-    LOG(INFO) << "cudnn";
   } else {
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DType, AccReal, {
       BatchNormForward<gpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
     })
-    LOG(INFO) << "fwd1";
   }
 #else
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
     BatchNormForward<gpu, DType, AccReal>(ctx, param, in_data, req, outputs, aux_states);
   });
-  LOG(INFO) << "fwd2";
 #endif
 }
 
