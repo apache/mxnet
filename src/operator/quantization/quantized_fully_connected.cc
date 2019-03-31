@@ -222,20 +222,26 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
     shiftdata.dptr_[i] = data_temp[i] + shift;
   }
 
-  Tensor<cpu, 1, float> min_output = out_data[1].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> max_output = out_data[2].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> min_data = in_data[num_inputs].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> max_data = in_data[num_inputs + 1].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> min_weight = in_data[num_inputs + 2].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> max_weight = in_data[num_inputs + 3].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> min_output = out_data[quantized_fullc::kOutMin].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> max_output = out_data[quantized_fullc::kOutMax].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> min_data =
+    in_data[num_inputs + quantized_fullc::kDataMin].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> max_data =
+    in_data[num_inputs + quantized_fullc::kDataMax].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> min_weight =
+    in_data[num_inputs + quantized_fullc::kWeightMin].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> max_weight =
+    in_data[num_inputs + quantized_fullc::kWeightMax].get<cpu, 1, float>(s);
 
   Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1, min_output.dptr_,
       max_output.dptr_, min_data.dptr_, max_data.dptr_, min_weight.dptr_, max_weight.dptr_);
   if (!param.no_bias) {
     Tensor<cpu, 1, int8_t> bias = in_data[fullc::kBias].get_with_shape<cpu, 1, int8_t>(
       Shape1(wshape[0]), s);
-    Tensor<cpu, 1, float> min_bias = in_data[num_inputs + 4].get<cpu, 1, float>(s);
-    Tensor<cpu, 1, float> max_bias = in_data[num_inputs + 5].get<cpu, 1, float>(s);
+    Tensor<cpu, 1, float> min_bias =
+      in_data[num_inputs + quantized_fullc::kBiasMin].get<cpu, 1, float>(s);
+    Tensor<cpu, 1, float> max_bias =
+      in_data[num_inputs + quantized_fullc::kBiasMax].get<cpu, 1, float>(s);
 
     Kernel<QuantizedSumInitKernelWithBias, cpu>::Launch(s, n, out.dptr_,
         bias.dptr_, min_output.dptr_, max_output.dptr_, min_bias.dptr_, max_bias.dptr_);
