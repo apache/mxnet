@@ -48,6 +48,11 @@ namespace mxnet {
 namespace op {
 namespace custom {
 
+struct CustomTask {
+  std::function<void(void)> fn;
+  mxnet::engine::CallbackOnComplete on_complete;
+};
+
 class CustomOperator {
  public:
   void Register(const std::string &op_type, CustomOpPropCreator creator) {
@@ -92,7 +97,7 @@ class CustomOperator {
       return;
     }
     std::unique_lock<std::mutex> lock(mutex_);
-    q_.push([=]() mutable {
+    q_.push({[=]() mutable {
       bool prev_recording = Imperative::Get()->set_is_recording(recording);
       bool prev_training = Imperative::Get()->set_is_training(training);
 
@@ -129,7 +134,7 @@ class CustomOperator {
           },
           ctx.run_ctx.ctx, vars, vars2, FnProperty::kNormal, 0,
           "CustomOperator");
-    });
+    }, ctx.async_on_complete});
     // increase num_threads if there is not enough threads to execute custom operator
     if (q_.size() > num_free_threads)
       CreateThreads(q_.size() - num_free_threads);
@@ -145,6 +150,7 @@ class CustomOperator {
     num_free_threads = 0;
     destructing_ = false;
     naive_engine_ = true;
+    exception_ = nullptr;
     if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
       naive_engine_ = false;
     }
@@ -162,6 +168,14 @@ class CustomOperator {
     workers_.clear();
   }
 
+  inline void ThrowException() {
+    if (exception_ && *exception_) {
+      std::exception_ptr tmp = *exception_;
+      exception_ = nullptr;
+      std::rethrow_exception(tmp);
+    }
+  }
+
  private:
   CustomOperator() {
     this->Start();
@@ -172,10 +186,16 @@ class CustomOperator {
       cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
       while (!q_.empty()) {
         --num_free_threads;
-        auto fn = q_.front();
+        auto task = q_.front();
         q_.pop();
         lock.unlock();
-        fn();
+        try {
+          task.fn();
+        } catch (dmlc::Error& e) {
+          exception_ =
+              std::make_shared<std::exception_ptr>(std::current_exception());
+          task.on_complete();
+        }
         ++num_free_threads;
         lock.lock();
       }
@@ -197,7 +217,8 @@ class CustomOperator {
   std::condition_variable cv_;
   std::vector<std::thread> workers_;
   std::atomic<uint32_t> num_free_threads;
-  std::queue<std::function<void(void)> > q_;
+  std::queue<CustomTask> q_;
+  std::shared_ptr<std::exception_ptr> exception_;
   bool naive_engine_;
   bool destructing_;
 };
