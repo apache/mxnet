@@ -29,6 +29,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
+from nose.tools import assert_raises
 import unittest
 import os
 
@@ -5200,29 +5201,29 @@ def test_custom_op():
 
     # test custom operator fork
     # see https://github.com/apache/incubator-mxnet/issues/14396
+    class AdditionOP(mx.operator.CustomOp):
+        def __init__(self):
+            super(AdditionOP, self).__init__()
+        def forward(self, is_train, req, in_data, out_data, aux):
+            out_data[0][:] = in_data[0] + in_data[1]
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            in_grad[0][:] = out_grad[0]
+            in_grad[1][:] = out_grad[0]
+
+    @mx.operator.register("AdditionOP")
+    class AdditionOPProp(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(AdditionOPProp, self).__init__()
+        def list_arguments(self):
+            return ['a', 'b']
+        def list_outputs(self):
+            return ['output']
+        def infer_shape(self, in_shape):
+            return in_shape, [in_shape[0]]
+        def create_operator(self, ctx, shapes, dtypes):
+            return AdditionOP()
+
     if not sys.platform.startswith('win'):  # no fork in windows
-        class AdditionOP(mx.operator.CustomOp):
-            def __init__(self):
-                super(AdditionOP, self).__init__()
-            def forward(self, is_train, req, in_data, out_data, aux):
-                out_data[0][:] = in_data[0] + in_data[1]
-            def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-                in_grad[0][:] = out_grad[0]
-                in_grad[1][:] = out_grad[0]
-
-        @mx.operator.register("AdditionOP")
-        class AdditionOPProp(mx.operator.CustomOpProp):
-            def __init__(self):
-                super(AdditionOPProp, self).__init__()
-            def list_arguments(self):
-                return ['a', 'b']
-            def list_outputs(self):
-                return ['output']
-            def infer_shape(self, in_shape):
-                return in_shape, [in_shape[0]]
-            def create_operator(self, ctx, shapes, dtypes):
-                return AdditionOP()
-
         def custom_add():
             a = mx.nd.array([1, 2, 3])
             b = mx.nd.array([4, 5, 6])
@@ -5236,6 +5237,17 @@ def test_custom_op():
         p.start()
         p.join(5)
         assert not p.is_alive(), "deadlock may exist in custom operator"
+
+    # test except handling
+    # see https://github.com/apache/incubator-mxnet/pull/14575
+    def custom_add_exc():
+        a = mx.nd.array([1, 2, 3])
+        b = mx.nd.array([4, 5])
+        c = mx.nd.Custom(a, b, op_type='AdditionOP')
+        c.wait_to_read()
+
+    assert_raises(MXNetError, custom_add_exc)
+
 
 @with_seed()
 def test_psroipooling():
