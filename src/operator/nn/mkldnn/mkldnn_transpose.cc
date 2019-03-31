@@ -19,8 +19,8 @@
 
 /*!
  * \file mkldnn_transpose.cc
- * \brief
- * \author
+ * \brief Implement transpose operator via MKL-DNN reorder primitive
+ * \author Tao Lv
 */
 
 #if MXNET_USE_MKLDNN == 1
@@ -70,6 +70,9 @@ class MKLDNNTransposeForward {
     data_ = std::make_shared<mkldnn::memory>(src_pd, nullptr);
 
     // destination
+    // Not all formats are well defined with a certain name in MKL-DNN.
+    // For example, transpose(NCHW, (0, 2, 1, 3)) -> NHCW, which is not explicitly defined in
+    // MKL-DNN. To support general transposing, we need create destination format from scratch.
     mkldnn_memory_desc_t dst_fmt;
     dst_fmt.primitive_kind = mkldnn_memory;
     dst_fmt.ndims = data_ndim;
@@ -84,7 +87,9 @@ class MKLDNNTransposeForward {
       dst_fmt.layout_desc.blocking.padding_dims[i] = shape[i];
       dst_fmt.layout_desc.blocking.block_dims[i] = 1;
       dst_fmt.layout_desc.blocking.offset_padding_to_data[i]= 0;
+      // strides[0]: stride between the first elements of adjacent blocks.
       dst_fmt.layout_desc.blocking.strides[0][axes[i]] = total_stride;
+      // strides[1]: strides between elements in the same block.
       dst_fmt.layout_desc.blocking.strides[1][axes[i]] = 1;
 
       total_stride *= shape[axes[i]];
