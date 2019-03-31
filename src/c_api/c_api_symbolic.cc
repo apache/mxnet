@@ -728,7 +728,7 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
     nnvm::Graph g = Symbol2Graph(*s);
     property->SetAttr("graph", g);
     g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
-    g = nnvm::ApplyPass(std::move(g), "PartitionGraph");
+    g = ApplyPass(std::move(g), "BuildSubgraph");
     s->outputs = g.outputs;
   }
   *ret_sym_handle = s;
