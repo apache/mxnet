@@ -272,12 +272,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
         }
         if (shapeIsNone) s"$name: $shape" else ""
       }
-      unknown.filter(_ != "")
       logger.warn("Cannot decide shape for the following arguments. " +
         "Consider providing them as input: \n\t{}",
         unknown.filter(_ != "").mkString("\n\t"))
-      res
     }
+    res
   }
 
   private def inferShapeImpl(partial: Boolean,

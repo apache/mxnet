@@ -197,6 +197,7 @@ private[mxnet] class LibInfo {
                                 mapDevIds: Array[Int],
                                 providedArgShapeNames: Array[String],
                                 providedArgShapeData: Array[Int],
+                                providedArgShapeIdx: Array[Int],
                                 inArgs: ArrayBuffer[NDArrayHandle],
                                 argGrads: ArrayBuffer[NDArrayHandle],
                                 auxStates: ArrayBuffer[NDArrayHandle],

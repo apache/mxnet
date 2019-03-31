@@ -891,7 +891,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorBackward
   return ret;
 }
 
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_MXExecutorReshape
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorReshape
   (JNIEnv * env, jobject obj,
     jint partialReshaping, jint allowUpSizing, jint devType, jint devId,
     jobjectArray jmapKeys, jintArray jmapDevTypes, jintArray jmapDevIds,
@@ -904,28 +904,34 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_MXExecutorReshape
   int numMapKeys = env->GetArrayLength(jmapKeys);
   jint *mapDevTypes = env->GetIntArrayElements(jmapDevTypes, NULL);
   jint *mapDevIds = env->GetIntArrayElements(jmapDevIds, NULL);
-  const char **mapKeys = new const char*[numMapKeys];
-  for (int i = 0; i < numMapKeys; ++i) {
-    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jmapKeys, i));
-    mapKeys[i] = env->GetStringUTFChars(jkey, 0);
-    env->DeleteLocalRef(jkey);
+  const char **mapKeys = NULL;
+  if (numMapKeys > 0) {
+    mapKeys = new const char*[numMapKeys];
+    for (int i = 0; i < numMapKeys; ++i) {
+      jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jmapKeys, i));
+      mapKeys[i] = env->GetStringUTFChars(jkey, 0);
+      env->DeleteLocalRef(jkey);
+    }
   }
 
   int numProvidedArgShapes = env->GetArrayLength(jprovidedArgShapeNames);
   jint *providedArgShapeData = env->GetIntArrayElements(jprovidedArgShapeData, NULL);
   jint *providedArgShapeIdx = env->GetIntArrayElements(jprovidedArgShapeIdx, NULL);
-  const char **providedArgShapeNames = new const char*[numProvidedArgShapes];
-  for (int i = 0; i < numProvidedArgShapes; ++i) {
-    jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jprovidedArgShapeNames, i));
-    providedArgShapeNames[i] = env->GetStringUTFChars(jkey, 0);
-    env->DeleteLocalRef(jkey);
+  const char **providedArgShapeNames = NULL;
+  if (numProvidedArgShapes > 0) {
+    providedArgShapeNames = new const char*[numProvidedArgShapes];
+    for (int i = 0; i < numProvidedArgShapes; ++i) {
+      jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jprovidedArgShapeNames, i));
+      providedArgShapeNames[i] = env->GetStringUTFChars(jkey, 0);
+      env->DeleteLocalRef(jkey);
+    }
   }
 
-  mx_uint numInArgs;
+  mx_uint numInArgs = 0;
   NDArrayHandle *inArgs;
   NDArrayHandle *argGrads;
 
-  mx_uint numAuxStates;
+  mx_uint numAuxStates = 0;
   NDArrayHandle *auxStates;
 
   ExecutorHandle out;
@@ -981,14 +987,18 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_MXExecutorReshape
     env->ReleaseStringUTFChars(jkey, mapKeys[i]);
     env->DeleteLocalRef(jkey);
   }
-  delete[] mapKeys;
+  if (mapKeys != NULL) {
+    delete[] mapKeys;
+  }
 
   for (int i = 0; i < numProvidedArgShapes; i++) {
     jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jprovidedArgShapeNames, i));
     env->ReleaseStringUTFChars(jkey, providedArgShapeNames[i]);
     env->DeleteLocalRef(jkey);
   }
-  delete[] providedArgShapeNames;
+  if (providedArgShapeNames != NULL) {
+    delete[] providedArgShapeNames;
+  }
 
   return ret;
 }
@@ -1758,7 +1768,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
     jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
 
   return SymbolInferShapeHelper(env, obj, symbolPtr, jnumArgs, jkeys, jargIndPtr, jargShapeData,
-                                jinShapeData, joutShapeData, jauxShapeData jcomplete, false);
+                                jinShapeData, joutShapeData, jauxShapeData, jcomplete, false);
 }
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShapePartial
@@ -1767,7 +1777,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShapePartial
     jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
 
   return SymbolInferShapeHelper(env, obj, symbolPtr, jnumArgs, jkeys, jargIndPtr, jargShapeData,
-                                jinShapeData, joutShapeData, jauxShapeData jcomplete, true);
+                                jinShapeData, joutShapeData, jauxShapeData, jcomplete, true);
 }
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorBindX
