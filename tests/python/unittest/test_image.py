@@ -355,6 +355,18 @@ class TestImage(unittest.TestCase):
         for batch in det_iter:
             pass
 
+    @with_seed()
+    def test_random_size_crop(self):
+        width = np.random.randint(100, 500)
+        height = np.random.randint(100, 500)
+        src = np.random.rand(height, width, 3) * 255.
+        ratio = (3/4, 1)
+        out, (x0, y0, new_w, new_h) = mx.image.random_size_crop(mx.nd.array(src), size=(width, height), area=0.08, ratio=ratio)
+        _, pts = mx.image.center_crop(mx.nd.array(src), size=(width, height))
+        if (x0, y0, new_w, new_h) != pts:
+            assert ratio[0] <= new_w/new_h <= ratio[1]
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
