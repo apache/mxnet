@@ -55,7 +55,7 @@ public class ImageTest {
                 imLocation, 3);
     }
 
-    //@Test
+    @Test
     public void testImageProcess() {
         NDArray nd = Image.imRead(imLocation, 1, true);
         assertArrayEquals(nd.shape().toArray(), new int[]{576, 1024, 3});

@@ -19,7 +19,7 @@ package org.apache.mxnet
 
 import org.apache.mxnet.Base._
 
-object Numpy {
+object NumpyScope {
   def setNumpyCompatible(isNpComp: Boolean): Boolean = {
     val prev = new RefInt()
     checkCall(_LIB.mxSetIsNumpyCompatible(if (isNpComp) 1 else 0, prev))
@@ -32,26 +32,26 @@ object Numpy {
     if (curr.value != 0) true else false
   }
 
-  def enableNumpyCompatible: Numpy = {
-    new Numpy(true)
+  def enableNumpyCompatible: NumpyScope = {
+    new NumpyScope(true)
   }
 
 
-  def disableNumpyCompatible: Numpy = {
-    new Numpy(false)
+  def disableNumpyCompatible: NumpyScope = {
+    new NumpyScope(false)
   }
 }
 
-class Numpy(var isCompatible: Boolean) {
+class NumpyScope(var isCompatible: Boolean) {
   private var prev: Boolean = false
 
   def withScope[T](body: => T): T = {
-    prev = Numpy.setNumpyCompatible(isCompatible)
+    prev = NumpyScope.setNumpyCompatible(isCompatible)
     try {
       body
     } finally {
       if (prev != isCompatible) {
-        Numpy.setNumpyCompatible(prev)
+        NumpyScope.setNumpyCompatible(prev)
       }
     }
   }

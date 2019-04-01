@@ -17,6 +17,18 @@
 
 package org.apache.mxnet
 
-class NumpyCompatibleSuite {
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
+class NumpyScopeSuite extends FunSuite with BeforeAndAfterAll {
+  test("compatible") {
+    NumpyScope.enableNumpyCompatible.withScope {
+      assert(NumpyScope.isNumpyCompatible === true)
+    }
+  }
+
+  test("incompatible") {
+    NumpyScope.disableNumpyCompatible.withScope {
+      assert(NumpyScope.isNumpyCompatible === false)
+    }
+  }
 }
