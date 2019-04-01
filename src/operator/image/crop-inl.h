@@ -145,12 +145,12 @@ inline void CropBackwardImpl(int x,
       begin[1] = y;
       begin[2] = x;
     }
-    MSHADOW_TYPE_SWITCH(input_grad.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(output_grad.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         size_t num_threads = output_grad.shape_.FlatTo2D()[0];
         mxnet_op::Kernel<slice_assign<ndim, Req, cpu>, cpu>::Launch(s, num_threads,
           input_grad.dptr<DType>(), output_grad.dptr<DType>(),
-          output_grad.shape_.get<ndim>(), input_grad.shape_.get<ndim>(), begin, step);
+          input_grad.shape_.get<ndim>(), output_grad.shape_.get<ndim>(), begin, step);
       })
     })
   })
