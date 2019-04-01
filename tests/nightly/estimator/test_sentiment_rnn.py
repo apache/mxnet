@@ -26,9 +26,9 @@ import tarfile
 import random
 import collections
 import mxnet as mx
-from mxnet import nd
+from mxnet import nd, gluon
 from mxnet.contrib import text
-from mxnet.gluon import data as gdata, loss as gloss, utils as gutils, nn, rnn
+from mxnet.gluon import nn, rnn
 from mxnet.gluon.estimator import estimator as est
 
 
@@ -97,7 +97,7 @@ class BiRNN(nn.Block):
         return outputs
 
 
-def download_imdb(data_dir='./data'):
+def download_imdb(data_dir='/tmp/data'):
     '''
     Download and extract the IMDB dataset
     '''
@@ -107,7 +107,7 @@ def download_imdb(data_dir='./data'):
         os.makedirs(data_dir)
     file_path = os.path.join(data_dir, 'aclImdb_v1.tar.gz')
     if not os.path.isfile(file_path):
-        file_path = gutils.download(url, data_dir, sha1_hash=sha1)
+        file_path = gluon.utils.download(url, data_dir, sha1_hash=sha1)
     with tarfile.open(file_path, 'r') as f:
         f.extractall(data_dir)
 
@@ -118,7 +118,7 @@ def read_imdb(folder='train'):
     '''
     data = []
     for label in ['pos', 'neg']:
-        folder_name = os.path.join('./data/aclImdb/', folder, label)
+        folder_name = os.path.join('/tmp/data/aclImdb/', folder, label)
         for file in os.listdir(folder_name):
             with open(os.path.join(folder_name, file), 'rb') as f:
                 review = f.read().decode('utf-8').replace('\n', '').lower()
@@ -178,9 +178,9 @@ def test_estimator_cpu():
     val_data = mx.nd.random.randint(low=0, high=100, shape=(batch_size, 500))
     val_label = mx.nd.random.randint(low=0, high=2, shape=(batch_size,))
 
-    train_dataloader = gdata.DataLoader(dataset=gdata.ArrayDataset(train_data, train_label),
+    train_dataloader = gluon.data.DataLoader(dataset=gluon.data.ArrayDataset(train_data, train_label),
                                         batch_size=batch_size, shuffle=True)
-    val_dataloader = gdata.DataLoader(dataset=gdata.ArrayDataset(val_data, val_label),
+    val_dataloader = gluon.data.DataLoader(dataset=gluon.data.ArrayDataset(val_data, val_label),
                                       batch_size=batch_size)
     vocab_list = mx.nd.zeros(shape=(100,))
 
@@ -196,7 +196,7 @@ def test_estimator_cpu():
         # Define trainer
         trainer = mx.gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
         # Define loss and evaluation metrics
-        loss = gloss.SoftmaxCrossEntropyLoss()
+        loss = gluon.loss.SoftmaxCrossEntropyLoss()
         acc = mx.metric.Accuracy()
 
         # Define estimator
@@ -218,20 +218,17 @@ def test_estimator_gpu():
     embed_size = 100
 
     # Set context
-    if mx.context.num_gpus() > 0:
-        ctx = mx.gpu(0)
-    else:
-        ctx = mx.cpu()
+    ctx = mx.gpu() if mx.context.num_gpus() > 0 else mx.cpu()
 
     # data
     download_imdb()
     train_data, test_data = read_imdb('train'), read_imdb('test')
     vocab = get_vocab_imdb(train_data)
 
-    train_set = gdata.ArrayDataset(*preprocess_imdb(train_data, vocab))
-    test_set = gdata.ArrayDataset(*preprocess_imdb(test_data, vocab))
-    train_dataloader = gdata.DataLoader(train_set, batch_size, shuffle=True)
-    test_dataloader = gdata.DataLoader(test_set, batch_size)
+    train_set = gluon.data.ArrayDataset(*preprocess_imdb(train_data, vocab))
+    test_set = gluon.data.ArrayDataset(*preprocess_imdb(test_data, vocab))
+    train_dataloader = gluon.data.DataLoader(train_set, batch_size, shuffle=True)
+    test_dataloader = gluon.data.DataLoader(test_set, batch_size)
 
     # Model
     num_hiddens, num_layers = 100, 2
@@ -247,7 +244,7 @@ def test_estimator_gpu():
     # Define Trainer
     trainer = mx.gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
     # Define loss and evaluation metrics
-    loss = gloss.SoftmaxCrossEntropyLoss()
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
 
     # Define estimator
@@ -260,13 +257,12 @@ def test_estimator_gpu():
     assert e.train_stats['train_' + acc.name][num_epochs - 1] > 0.70
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='test gluon estimator')
-    parser.add_argument('--type', type=str, default='cpu')
-    opt = parser.parse_args()
-    if opt.type == 'cpu':
-        test_estimator_cpu()
-    elif opt.type == 'gpu':
-        test_estimator_gpu()
-    else:
-        raise RuntimeError("Unknown test type")
+parser = argparse.ArgumentParser(description='test gluon estimator')
+parser.add_argument('--type', type=str, default='cpu')
+opt = parser.parse_args()
+if opt.type == 'cpu':
+    test_estimator_cpu()
+elif opt.type == 'gpu':
+    test_estimator_gpu()
+else:
+    raise RuntimeError("Unknown test type")
