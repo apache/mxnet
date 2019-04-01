@@ -236,7 +236,7 @@ class Tuple {
    */
   friend std::ostream &operator<<(std::ostream &os, const Tuple<ValueType> &t) {
     if (t.ndim() == -1) {
-      os << "UNKNOWN_SHAPE";
+      os << "[?]";
       return os;
     }
     os << '[';
@@ -275,12 +275,22 @@ class Tuple {
     }
     // Handle empty tuple. A tensor whose shape is an empty tuple
     // represents a scalar with ndim = 0.
+    // and shape=[?] represents an unknown-dim shape
     while (isspace(is.peek())) {
+      is.get();
+    }
+    int ndim = 0;
+    while (is.peek() == '?') {
+      ndim = -1;
       is.get();
     }
     if (is.peek() == ')' || is.peek() == ']') {
       is.get();
-      t.SetDim(0);
+      t.SetDim(ndim);
+      return is;
+    } else if (ndim == -1) {
+      // does not support parsing [?, ...] for now.
+      is.setstate(std::ios::failbit);
       return is;
     }
     // Handle non-empty tuple

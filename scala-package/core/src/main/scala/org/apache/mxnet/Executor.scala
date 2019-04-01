@@ -72,7 +72,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   }
 
   /**
-   * FIXME: should call MXExecutorReshape in c_api instead.
    * Return a new executor with the same symbol and shared memory,
    * but different input/output shapes.
    * For runtime reshaping, variable length sequences, etc.
