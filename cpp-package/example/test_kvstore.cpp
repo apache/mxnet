@@ -54,7 +54,7 @@ static bool test_single_key() {
 
   // compare
   for (size_t j=0; j < result.Size(); j++) {
-    if (result.GetData()[j] == grad.GetData()[j]) {
+    if (result.GetData()[j] != grad.GetData()[j]) {
       LG << "Error: wrong gradient data in singlekeytest, expect "
           << grad.GetData()[j] << " got " << result.GetData()[j];
       return false;
@@ -87,7 +87,7 @@ static bool test_multiple_key() {
   // compare
   for (size_t i=0; i < results.size(); i++) {
     for (size_t j=0; j < results[i].Size(); j++) {
-      if (results[i].GetData()[j] == data[i].GetData()[j]) {
+      if (results[i].GetData()[j] != data[i].GetData()[j]) {
         LG << "Error: wrong initialized data in multikeytest, expect "
             << data[i].GetData()[j] << " got " << results[i].GetData()[j];
         return false;
@@ -114,8 +114,8 @@ static bool test_multiple_key() {
 
   // compare the first
   for (size_t j=0; j < results[0].Size(); j++) {
-    if (results[0].GetData()[j] == grads[0].GetData()[j]) {
-      LG << "Error: wrong gradient data, expect " << grads[0].GetData()[j]
+    if (results[0].GetData()[j] != grads[0].GetData()[j]) {
+      LG << "Error: wrong gradient data in multikeytest, expect " << grads[0].GetData()[j]
           << " got " << results[0].GetData()[j];
       return false;
     }
@@ -123,8 +123,8 @@ static bool test_multiple_key() {
 
   // compare the second
   for (size_t j=0; j < results[1].Size(); j++) {
-    if (results[1].GetData()[j] == (grads[1].GetData()[j] + grads[2].GetData()[j])) {
-      LG << "Error: wrong reduced gradient data, expect "
+    if (results[1].GetData()[j] != (grads[1].GetData()[j] + grads[2].GetData()[j])) {
+      LG << "Error: wrong reduced gradient data in multikeytest, expect "
           << (grads[1].GetData()[j] + grads[2].GetData()[j])
           << " got " << results[1].GetData()[j];
       return false;
@@ -137,9 +137,11 @@ static bool test_multiple_key() {
 int main(int argc, char** argv) {
   KVStore::SetType("local");
 
-  bool ret1 = test_single_key();
-  bool ret2 = test_multiple_key();
+  bool success1 = test_single_key();
+  bool success2 = test_multiple_key();
+
+  int ret = (success1 && success2) ? 1 : 0;
 
   MXNotifyShutdown();
-  return ret1 + ret2;
+  return ret;
 }
