@@ -87,6 +87,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [MXNet C++ API](http://mxnet.incubator.apache.org/api/c++/index.html)
    - [C++ examples](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp) - Example code for using C++ interface, including NDArray, symbolic layer and models.
 * [MXNet Python API](http://mxnet.incubator.apache.org/api/python/index.html)
+* [MXNet Java API](http://mxnet.incubator.apache.org/api/java/index.html)
 * [MXNet Scala API](http://mxnet.incubator.apache.org/api/scala/index.html)
 * [MXNet R API](http://mxnet.incubator.apache.org/api/r/index.html)
 * [MXNet Julia API](http://mxnet.incubator.apache.org/api/julia/index.html)

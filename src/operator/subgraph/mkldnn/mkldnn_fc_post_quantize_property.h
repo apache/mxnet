@@ -24,12 +24,16 @@
  * \author Ciyong Chen
 */
 
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
-#include "../common.h"
-#include "../subgraph_property.h"
+#include <string>
+#include <vector>
 #include "../../nn/fully_connected-inl.h"
 #include "../../quantization/requantize-inl.h"
+#include "../common.h"
+#include "../subgraph_property.h"
 
 namespace mxnet {
 namespace op {
@@ -133,20 +137,16 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
 class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
  public:
   SgMKLDNNFCPostQuantizeProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_POST_OPT", false);
     disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL", false);
     disable_float_output = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QFC_FLOAT_OUTPUT", false);
-
-    disable_all = disable_all || disable_fuse_all;
-    if (disable_all) {
-      LOG(INFO) << "MKLDNN FullyConnected post-quantization optimization pass is disabled.";
-    } else {
-      LOG(INFO) << "Start to execute MKLDNN FullyConected post-quantization optimization pass.";
-    }
   }
 
   static SubgraphPropertyPtr Create() {
-    return std::make_shared<SgMKLDNNFCPostQuantizeProperty>();
+    static const std::string &name = "MKLDNN FullyConected post-quantization optimization pass";
+    auto property = std::make_shared<SgMKLDNNFCPostQuantizeProperty>();
+    property->SetAttr<std::string>("property_name", name);
+    property->SetAttr<bool>("inference_only", true);
+    return property;
   }
 
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
@@ -189,7 +189,7 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     auto selector =
-        std::make_shared<SgMKLDNNFCPostQuantizeSelector>(disable_all,
+        std::make_shared<SgMKLDNNFCPostQuantizeSelector>(disable_fuse_all,
                                                          disable_float_output);
     return selector;
   }
@@ -204,14 +204,12 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
   }
 
  private:
-  bool disable_all;
   bool disable_fuse_all;
   bool disable_float_output;
 };
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_POST_FC_QUANTIZE, SgMKLDNNFCPostQuantizeProperty);
 
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
