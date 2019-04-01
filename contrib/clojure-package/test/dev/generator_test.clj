@@ -86,18 +86,19 @@
     (is (= "LRN" (-> lrn-info vals ffirst :name str)))))
 
 (deftest test-symbol-vector-args
-  (is (= `(if (clojure.core/map? kwargs-map-or-vec-or-sym)
+  (is (= '(if (clojure.core/map? kwargs-map-or-vec-or-sym)
             (util/empty-list)
             (util/coerce-param
              kwargs-map-or-vec-or-sym
-             #{"scala.collection.Seq"}))) (gen/symbol-vector-args)))
+             #{"scala.collection.Seq"}))
+         (gen/symbol-vector-args))))
 
 (deftest test-symbol-map-args
-  (is (= `(if (clojure.core/map? kwargs-map-or-vec-or-sym)
+  (is (= '(if (clojure.core/map? kwargs-map-or-vec-or-sym)
             (org.apache.clojure-mxnet.util/convert-symbol-map
              kwargs-map-or-vec-or-sym)
-            nil))
-      (gen/symbol-map-args)))
+            nil)
+         (gen/symbol-map-args))))
 
 (deftest test-add-symbol-arities
   (let [params (map symbol ["sym-name" "kwargs-map" "symbol-list" "kwargs-map-1"])
@@ -112,36 +113,36 @@
            ar1))
     (is (= '([sym-name kwargs-map-or-vec-or-sym]
              (foo
-              sym-name
-              nil
-              (if
-               (clojure.core/map? kwargs-map-or-vec-or-sym)
-                (util/empty-list)
-                (util/coerce-param
-                 kwargs-map-or-vec-or-sym
-                 #{"scala.collection.Seq"}))
-              (if
-               (clojure.core/map? kwargs-map-or-vec-or-sym)
-                (org.apache.clojure-mxnet.util/convert-symbol-map
-                 kwargs-map-or-vec-or-sym)
-                nil))))
-        ar2)
+               sym-name
+               nil
+               (if
+                 (clojure.core/map? kwargs-map-or-vec-or-sym)
+                 (util/empty-list)
+                 (util/coerce-param
+                   kwargs-map-or-vec-or-sym
+                   #{"scala.collection.Seq"}))
+               (if
+                 (clojure.core/map? kwargs-map-or-vec-or-sym)
+                 (org.apache.clojure-mxnet.util/convert-symbol-map
+                   kwargs-map-or-vec-or-sym)
+                 nil)))
+           ar2))
     (is (= '([kwargs-map-or-vec-or-sym]
              (foo
-              nil
-              nil
-              (if
-               (clojure.core/map? kwargs-map-or-vec-or-sym)
-                (util/empty-list)
-                (util/coerce-param
-                 kwargs-map-or-vec-or-sym
-                 #{"scala.collection.Seq"}))
-              (if
-               (clojure.core/map? kwargs-map-or-vec-or-sym)
-                (org.apache.clojure-mxnet.util/convert-symbol-map
-                 kwargs-map-or-vec-or-sym)
-                nil))))
-        ar3)))
+               nil
+               nil
+               (if
+                 (clojure.core/map? kwargs-map-or-vec-or-sym)
+                 (util/empty-list)
+                 (util/coerce-param
+                   kwargs-map-or-vec-or-sym
+                   #{"scala.collection.Seq"}))
+               (if
+                 (clojure.core/map? kwargs-map-or-vec-or-sym)
+                 (org.apache.clojure-mxnet.util/convert-symbol-map
+                   kwargs-map-or-vec-or-sym)
+                 nil)))
+           ar3))))
 
 (deftest test-gen-symbol-function-arity
   (let [op-name (symbol "$div")
@@ -157,14 +158,14 @@
                        :exception-types [],
                        :flags #{:public}}]}
         function-name (symbol "div")]
-    (is (= '(([sym sym-or-Object]
+    (is (= '(([sym sym-or-object]
               (util/coerce-return
                (.$div
                 sym
                 (util/nil-or-coerce-param
-                 sym-or-Object
-                 #{"org.apache.mxnet.Symbol" "java.lang.Object"}))))))
-        (gen/gen-symbol-function-arity op-name op-values function-name))))
+                 sym-or-object
+                 #{"org.apache.mxnet.Symbol" "java.lang.Object"})))))
+           (gen/gen-symbol-function-arity op-name op-values function-name)))))
 
 (deftest test-gen-ndarray-function-arity
   (let [op-name (symbol "$div")
@@ -182,12 +183,12 @@
                        :flags #{:public}}]}]
     (is (= '(([ndarray num-or-ndarray]
               (util/coerce-return
-               (.$div
-                ndarray
-                (util/coerce-param
-                 num-or-ndarray
-                 #{"float" "org.apache.mxnet.NDArray"}))))))
-        (gen/gen-ndarray-function-arity op-name op-values))))
+                (.$div
+                  ndarray
+                  (util/coerce-param
+                    num-or-ndarray
+                    #{"float" "org.apache.mxnet.NDArray"})))))
+           (gen/gen-ndarray-function-arity op-name op-values)))))
 
 (deftest test-write-to-file
   (testing "symbol"
