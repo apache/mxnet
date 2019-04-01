@@ -247,11 +247,11 @@ class Estimator(object):
             if total_samples == 0:
                 raise ValueError("DataLoader is Empty. Please refer to gluon.data.DataLoader "
                                  "for more detail")
-            for dt, lb in train_data:
+            for dt, _ in train_data:
                 batch_size = dt.shape[0]
                 break
         else:
-            raise ValueError("Please provide a data as gluon.data.DataLoader")
+            raise ValueError("Please provide the data as gluon.data.DataLoader")
 
         if isinstance(self.context, list):
             if batch_size < len(self.context):
