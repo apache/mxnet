@@ -166,6 +166,7 @@ WIDEST_TYPE_CASTS = [
     'dgl_subgraph',
     'edge_id',
     'where',
+    '_rnn_concat_param',
     ]
 
 LOSS_OUTPUT_FUNCTIONS = [

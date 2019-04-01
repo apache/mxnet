@@ -210,9 +210,11 @@ def init():
         _amp_initialized = True
         logging.info("Using AMP")
         _wrap_symbol_functions(symbol)
+        _wrap_symbol_functions(symbol._internal)
         _wrap_symbol_functions(Symbol)
         _wrap_symbol_functions(symbol_contrib)
         _wrap_symbol_functions(ndarray)
+        _wrap_symbol_functions(ndarray._internal)
         _wrap_symbol_functions(NDArray)
         _wrap_symbol_functions(ndarray_contrib)
         _loss_scaler = LossScaler()
