@@ -149,7 +149,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/estimator-test-rnn-cpu') {
           utils.unpack_and_init('cpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_estimator_test_rnn_cpu', true)
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_estimator_test_rnn_cpu', false)
         }
       }
     }
