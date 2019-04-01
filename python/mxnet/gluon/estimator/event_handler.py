@@ -76,14 +76,20 @@ class LoggingHandler(EventHandler):
         file name to save the logs
     file_location: str
         file location to save the logs
+    verbose: int, default 0
+        Limit the display level of training progress
+        verbose=0: display nothing(silent)
+        verbose=1: display metrics every epoch
+        verbose=2: display metrics every batch and epoch
     """
 
-    def __init__(self, estimator, file_name=None, file_location=None, ):
+    def __init__(self, estimator, file_name=None, file_location=None, verbose=1):
         super(LoggingHandler, self).__init__(estimator)
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
         stream_handler = logging.StreamHandler()
         self.logger.addHandler(stream_handler)
+        self.verbose = verbose
         # save logger to file only if file name or location is specified
         if file_name or file_location:
             file_name = file_name or 'estimator_log'
@@ -98,29 +104,33 @@ class LoggingHandler(EventHandler):
         pass
 
     def batch_begin(self):
-        self.batch_start = time.time()
+        if self.verbose == 2:
+            self.batch_start = time.time()
 
     def batch_end(self):
-        batch_time = time.time() - self.batch_start
-        epoch = self._estimator.train_stats['epochs'][-1]
-        step = self._estimator.train_stats['step']
-        msg = '[Epoch %d] [Step %s] time/step: %.3fs ' % (epoch, step, batch_time)
-        for key in self._estimator.train_stats.keys():
-            if key.startswith('batch_'):
-                msg += key[6:] + ': ' + '%.4f ' % self._estimator.train_stats[key]
-        self.logger.info(msg)
+        if self.verbose == 2:
+            batch_time = time.time() - self.batch_start
+            epoch = self._estimator.train_stats['epochs'][-1]
+            step = self._estimator.train_stats['step']
+            msg = '[Epoch %d] [Step %s] time/step: %.3fs ' % (epoch, step, batch_time)
+            for key in self._estimator.train_stats.keys():
+                if key.startswith('batch_') and 'batch_size' not in key:
+                    msg += key[6:] + ': ' + '%.4f ' % self._estimator.train_stats[key]
+            self.logger.info(msg)
 
     def epoch_begin(self):
-        self.epoch_start = time.time()
+        if self.verbose > 0:
+            self.epoch_start = time.time()
 
     def epoch_end(self):
-        epoch_time = time.time() - self.epoch_start
-        epoch = self._estimator.train_stats['epochs'][-1]
-        msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
-        for key in self._estimator.train_stats.keys():
-            if key.startswith('train_') or key.startswith('val_'):
-                msg += key + ': ' + '%.4f ' % self._estimator.train_stats[key][epoch]
-        self.logger.info(msg)
+        if self.verbose > 0:
+            epoch_time = time.time() - self.epoch_start
+            epoch = self._estimator.train_stats['epochs'][-1]
+            msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
+            for key in self._estimator.train_stats.keys():
+                if key.startswith('train_') or key.startswith('val_'):
+                    msg += key + ': ' + '%.4f ' % self._estimator.train_stats[key][epoch]
+            self.logger.info(msg)
 
 
 class CheckpointHandler(EventHandler):

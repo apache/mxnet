@@ -254,6 +254,7 @@ def test_loss():
                                   trainers=trainer,
                                   context=ctx)
 
+
 def test_context():
     ''' test with no context, list of context, invalid context '''
     net = get_model()
@@ -275,3 +276,45 @@ def test_context():
                                   loss=loss,
                                   metrics=metrics,
                                   context='cpu')
+
+
+def test_batch_size():
+    '''Test batch size'''
+    num_samples = 32
+
+    # No Data Loader
+    data = mx.nd.random.uniform(shape=(num_samples, 3, 28, 28))
+    label = mx.nd.random.randint(low=0, high=2, shape=(num_samples,))
+    data_iter = mx.io.NDArrayIter(data=data, label=label, batch_size=16)
+    net = get_model()
+    loss = mx.gluon.loss.L2Loss()
+    ctx = mx.cpu()
+    est = estimator.Estimator(net=net, loss=loss, context=ctx)
+    with assert_raises(ValueError):
+        est.fit(train_data=data_iter)
+
+    # Empty data loader
+    data = mx.nd.random.uniform(shape=(0,))
+    label = mx.nd.random.randint(low=0, high=2, shape=(0,))
+    batch_size = 2
+    data_arr = mx.gluon.data.dataset.ArrayDataset(data, label)
+    data_loader = mx.gluon.data.DataLoader(data_arr, batch_size=batch_size)
+    est = estimator.Estimator(net=net, loss=loss, context=ctx)
+    with assert_raises(ValueError):
+        est.fit(train_data=data_loader)
+
+    # Batch size less than context
+    ctx = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+    data = mx.nd.random.uniform(shape=(num_samples, 3, 28, 28))
+    label = mx.nd.random.randint(low=0, high=2, shape=(num_samples,))
+    batch_size = 2
+    data_arr = mx.gluon.data.dataset.ArrayDataset(data, label)
+    data_loader = mx.gluon.data.DataLoader(data_arr, batch_size=batch_size)
+    est = estimator.Estimator(net=net, loss=loss, context=ctx)
+    with assert_raises(ValueError):
+        est.fit(train_data=data_loader)
+
+    # Correct batch size verification
+    for dt, lb in data_loader:
+        assert batch_size == dt.shape[0]
+        break

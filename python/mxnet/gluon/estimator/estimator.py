@@ -127,7 +127,6 @@ class Estimator(object):
             raise ValueError("context must be a Context or a list of Context, "
                              "refer to mxnet.Context:{}".format(context))
 
-
         # initialize the network
         self.initializer = initializer
         if self.initializer:
@@ -135,7 +134,7 @@ class Estimator(object):
                 # if already initialized, re-init with user specified initializer
                 warnings.warn("Network already initialized, re-initializing with %s. "
                               "You don't need to pass initializer if you already "
-                              "initialized your net."% type(self.initializer).__name__)
+                              "initialized your net." % type(self.initializer).__name__)
                 self.net.initialize(init=self.initializer, ctx=self.context, force_reinit=True)
             else:
                 # initialize with user specified initializer
@@ -241,16 +240,35 @@ class Estimator(object):
             from a data batch and load into contexts(devices)
         """
 
-
         self.epochs = epochs
-        if not batch_size:
-            batch_size = 32 * len(self.context)
+        if isinstance(train_data, gluon.data.DataLoader):
+            num_batches = len(train_data)
+            total_samples = len(train_data._dataset)
+            if total_samples == 0:
+                raise ValueError("DataLoader is Empty. Please refer to gluon.data.DataLoader "
+                                 "for more detail")
+            for dt, lb in train_data:
+                batch_size = dt.shape[0]
+                break
+        else:
+            raise ValueError("Please provide a data as gluon.data.DataLoader")
+
+        if isinstance(self.context, list):
+            if batch_size < len(self.context):
+                raise ValueError("The batch size value is small in comparison to the provided"
+                                 "CPU/GPU context. Please provide the batch size value(power of 2) "
+                                 "greater than the number of GPUs in your system")
+
+        self.train_stats['batch_size'] = batch_size
 
         event_handlers = event_handlers or []
         # provide default logging handler
         if not event_handlers or \
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
-            event_handlers.append(LoggingHandler(self))
+            event_handlers.append(LoggingHandler(self, verbose=1))
+            warnings.warn("No Event Handler specified, default logging handler "
+                          "is used with verbose=1. Please see gluon.estimator.event_handler"
+                          "for more detail.")
 
         # training begin
         for handler in event_handlers:
@@ -303,11 +321,14 @@ class Estimator(object):
                     loss_metric.update(0, [l for l in loss])
                     self.train_stats['batch_' + loss_metric.name] = loss_metric.get()[1]
 
+                # last batch size may be different from the rest
+                if i == num_batches - 1:
+                    batch_size = total_samples - (batch_size * i)
+                    completed_samples = total_samples
+                else:
+                    completed_samples = batch_size * (i + 1)
+
                 try:
-                    completed_samples = len(train_data._dataset) if i == len(train_data._dataset) - 1 \
-                                        else batch_size * (i + 1)
-                    # We need to check if this is the last batch in the current epoch and select
-                    # the value to print appropriately
                     self.train_stats['step'] = "{}/{}".format(completed_samples, len(train_data._dataset))
                 except AttributeError:
                     self.train_stats['step'] = i
@@ -333,6 +354,9 @@ class Estimator(object):
 
             if self.stop_training:
                 break
+
+            # Reset batch size since last batch size may be different
+            batch_size = self.train_stats['batch_size']
 
         # train end
         for handler in event_handlers:
