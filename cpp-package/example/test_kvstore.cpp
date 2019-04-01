@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include "mxnet/c_api.h" // MXGetGPUCount()
+#include "mxnet/c_api.h"  // MXGetGPUCount()
 #include "mxnet-cpp/MxNetCpp.h"
 
 using namespace mxnet::cpp;
@@ -182,16 +182,14 @@ int main(int argc, char** argv) {
   bool success4 = true;
 
   int gpu_count = 0;
-  if (MXGetGPUCount(&gpu_count) != 0)
-  {
+  if (MXGetGPUCount(&gpu_count) != 0) {
     LG << "Error: MXGetGPUCount";
 
     MXNotifyShutdown();
     return 1;
   }
 
-  if (gpu_count > 0)
-  {
+  if (gpu_count > 0) {
     success3 = test_single_key(Context::gpu(), "gpu");
     success4 = test_multiple_key(Context::gpu(), "gpu");
   }
