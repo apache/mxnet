@@ -357,6 +357,7 @@ class TestImage(unittest.TestCase):
 
     @with_seed()
     def test_random_size_crop(self):
+        # test aspect ratio within bounds
         width = np.random.randint(100, 500)
         height = np.random.randint(100, 500)
         src = np.random.rand(height, width, 3) * 255.
