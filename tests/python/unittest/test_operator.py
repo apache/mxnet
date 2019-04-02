@@ -1599,6 +1599,128 @@ def test_batchnorm_training():
 
 
 @with_seed()
+def test_batchnorm():
+    momentum = 0.9
+    epsilon = 1e-5
+
+    def _test_batchnorm_impl(op, shape, axis, cudnn_off, output_mean_var):
+        print(str((op, shape, axis, cudnn_off)))
+
+        kwargs = dict(output_mean_var=output_mean_var)
+        if op == mx.nd.contrib.SyncBatchNorm:
+            if axis != 1:
+                return
+            key = str(op) + str(shape) + str(axis)
+            kwargs.update(dict(key=key))
+            if cudnn_off:
+                return
+        else:
+            kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
+        nch = shape[axis]
+
+        bn_gamma = mx.nd.random.uniform(shape=(nch,))
+        bn_gamma.attach_grad()
+
+        bn_beta = mx.nd.random.uniform(shape=(nch,))
+        bn_beta.attach_grad()
+
+        bn_running_mean = mx.nd.zeros(nch)
+        bn_running_var = mx.nd.ones(nch)
+
+        running_mean = mx.nd.zeros(nch)
+        running_var = mx.nd.ones(nch)
+        num_iters = 10
+        expand_shape = [1] * len(shape)
+        expand_shape[axis] = shape[axis]
+        for _ in range(num_iters):
+            data = mx.nd.random.uniform(shape=shape)
+            data.attach_grad()
+            ograd = mx.nd.random.uniform(shape=shape)
+            with mx.autograd.record():
+                output = op(data, bn_gamma, bn_beta,
+                            bn_running_mean, bn_running_var,
+                            momentum=momentum, eps=epsilon,
+                            fix_gamma=False, **kwargs)
+                if output_mean_var:
+                    output, output_mean, output_std = output
+                output.backward(ograd)
+            mx.nd.waitall()
+
+            data_mean = data.mean(
+                axis=axis, exclude=True, keepdims=True)
+            data_var = (data - data_mean).square().mean(axis=axis,
+                                                        exclude=True,
+                                                        keepdims=True)
+
+            target_output = (data - data_mean) / \
+                (data_var + epsilon).sqrt() * \
+                bn_gamma.reshape(expand_shape) + \
+                bn_beta.reshape(expand_shape)
+
+            # squeeze data_mean and data_var
+            data_mean_flat = data_mean.squeeze()
+            data_var_flat = data_var.squeeze()
+
+            running_mean = running_mean * momentum + \
+                data_mean_flat * (1 - momentum)
+            running_var = running_var * momentum + \
+                data_var_flat * (1 - momentum)
+
+            W = bn_gamma.reshape(expand_shape)
+            dnx = ograd * W
+            xsm = data - data_mean
+            nd = 1.0 / mx.nd.sqrt(data_var + epsilon)
+            nx = xsm * nd
+            m = np.prod(shape) / shape[axis]
+            dvar = (dnx * xsm).sum(axis=axis, keepdims=True,
+                                   exclude=True) * (-0.5) * mx.nd.power(nd, 3)
+            dmean = -nd * dnx.sum(axis=axis, keepdims=True, exclude=True) - \
+                dvar * xsm.mean(axis=axis, keepdims=True,
+                                exclude=True) * 2.0
+            dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
+            dW = (ograd * nx).sum(axis=axis, exclude=True)
+            db = ograd.sum(axis=axis, exclude=True)
+
+            atol = 1e-2
+            rtol = 1e-2
+
+            if output_mean_var:
+                assert_almost_equal(output_mean.asnumpy(),
+                                    data_mean_flat.asnumpy(),
+                                    atol=atol, rtol=rtol)
+                if op != mx.nd.contrib.SyncBatchNorm:
+                    assert_almost_equal(output_std.asnumpy(),
+                                        (1.0 / (data_var_flat +
+                                                epsilon).sqrt()).asnumpy(),
+                                        atol=atol, rtol=rtol)
+                else:
+                    assert_almost_equal(output_std.asnumpy(),
+                                        data_var_flat.asnumpy(),
+                                        atol=atol, rtol=rtol)
+            assert_almost_equal(output.asnumpy(), target_output.asnumpy(),
+                                atol=atol, rtol=rtol)
+            assert_almost_equal(bn_running_mean.asnumpy(
+            ), running_mean.asnumpy(), atol=atol, rtol=rtol)
+            assert_almost_equal(bn_running_var.asnumpy(
+            ), running_var.asnumpy(), atol=atol, rtol=rtol)
+
+            assert_almost_equal(data.grad.asnumpy(),
+                                dX.asnumpy(), atol=atol, rtol=rtol)
+            assert_almost_equal(
+                bn_gamma.grad.asnumpy(), dW.asnumpy(), atol=atol, rtol=rtol)
+            assert_almost_equal(
+                bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
+
+    for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
+        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
+            for axis in range(len(shape)):
+                for cudnn_off in [False, True]:
+                    for output_mean_var in [False, True]:
+                        _test_batchnorm_impl(op, shape, axis,
+                                             cudnn_off, output_mean_var)
+
+
+@with_seed()
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
         num_filter = 4
