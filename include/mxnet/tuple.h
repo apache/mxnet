@@ -177,7 +177,7 @@ class Tuple {
     return ndim_ <= kStackCache ? (data_stack_ + ndim_): (data_heap_ + ndim_);
   }
   /*! \return number of dimension of the tuple */
-  inline uint32_t ndim() const {
+  inline int ndim() const {
     return ndim_;
   }
   /*!
@@ -316,17 +316,17 @@ class Tuple {
 
  protected:
   // stack cache size
-  static const uint32_t kStackCache = 4;
+  static const int kStackCache = 4;
   /*! \brief number of dimension of the tuple */
-  uint32_t ndim_{0};
+  int ndim_{0};
   /*! \brief number of cells allocated in data_heap_ */
-  uint32_t num_heap_allocated_{0};
+  int num_heap_allocated_{0};
   /*! \brief in stack space used to store shape when it is small */
   ValueType data_stack_[kStackCache];
   /*! \brief space to store shape when dimension is big*/
   ValueType* data_heap_{nullptr};
   // internal function to change the dimension
-  inline void SetDim(uint32_t ndim) {
+  inline void SetDim(int ndim) {
     if (ndim > kStackCache &&
         ndim > num_heap_allocated_) {
       delete [] data_heap_;
@@ -348,7 +348,7 @@ class TShape : public Tuple<dim_t> {
    * constructor to construct a shape with all 1.
    * \param ndim the number of dimension
    */
-  inline TShape(uint32_t ndim) {  // NOLINT(*)
+  inline TShape(int ndim) {  // NOLINT(*)
     this->SetDim(ndim);
     std::fill_n(begin(), ndim, 1);
   }
@@ -460,7 +460,7 @@ class TShape : public Tuple<dim_t> {
    */
   template<int dim>
   inline mshadow::Shape<dim> get() const {
-    CHECK_EQ(dim, static_cast<int>(ndim()))
+    CHECK_EQ(dim, ndim())
         << "dimension do not match target dimension " << dim << " vs " << ndim();
     const dim_t *d = this->data();
     mshadow::Shape<dim> s;
@@ -479,7 +479,7 @@ class TShape : public Tuple<dim_t> {
     const dim_t *d = this->data();
     s.shape_[1] = d[ndim() - 1];
     dim_t ymax = 1;
-    for (size_t i = 1; i < ndim(); ++i) {
+    for (int i = 1; i < ndim(); ++i) {
       ymax *= d[i - 1];
     }
     s.shape_[0] = ymax;
@@ -491,7 +491,7 @@ class TShape : public Tuple<dim_t> {
    * \param axis_end The ending axis specified.
    * \return the flat 3d shape
    */
-  inline mshadow::Shape<3> FlatTo3D(size_t axis_begin, size_t axis_end) const {
+  inline mshadow::Shape<3> FlatTo3D(int axis_begin, int axis_end) const {
     CHECK(axis_end >= axis_begin);
     mshadow::Shape<3> s;
     if (ndim() == 0) return mshadow::Shape3(0, 0, 0);
@@ -500,13 +500,13 @@ class TShape : public Tuple<dim_t> {
     s.shape_[1] = 1;
     s.shape_[2] = 1;
 
-    for (size_t i = 0; i < axis_begin; ++i) {
+    for (int i = 0; i < axis_begin; ++i) {
       s.shape_[0] *= d[i];
     }
-    for (size_t i = axis_begin; i <= axis_end; ++i) {
+    for (int i = axis_begin; i <= axis_end; ++i) {
       s.shape_[1] *= d[i];
     }
-    for (size_t i = axis_end + 1; i < ndim(); ++i) {
+    for (int i = axis_end + 1; i < ndim(); ++i) {
       s.shape_[2] *= d[i];
     }
     return s;
@@ -516,7 +516,7 @@ class TShape : public Tuple<dim_t> {
    * \param axis The axis specified.
    * \return the flat 3d shape
    */
-  inline mshadow::Shape<3> FlatTo3D(size_t axis) const {
+  inline mshadow::Shape<3> FlatTo3D(int axis) const {
     return FlatTo3D(axis, axis);
   }
   inline bool operator==(const TShape &s) const {
@@ -611,9 +611,9 @@ template<typename T>
 struct hash<mxnet::Tuple<T> > {
   /*! \brief hash a Tuple into unsigned int */
   size_t operator()(const mxnet::Tuple<T>& val) const {
-    std::hash<uint32_t> hash_uint;
-    size_t res = hash_uint(val.ndim());
-    for (uint32_t i = 0; i < val.ndim(); ++i) {
+    std::hash<int> hash_int;
+    size_t res = hash_int(val.ndim());
+    for (int i = 0; i < val.ndim(); ++i) {
       res = dmlc::HashCombine(res, val[i]);
     }
     return res;
@@ -625,9 +625,9 @@ template<>
 struct hash<mxnet::TShape> {
   /*! \brief hash a TShape into unsigned int */
   size_t operator()(const mxnet::TShape& val) const {
-    std::hash<uint32_t> hash_uint;
-    size_t res = hash_uint(val.ndim());
-    for (uint32_t i = 0; i < val.ndim(); ++i) {
+    std::hash<int> hash_int;
+    size_t res = hash_int(val.ndim());
+    for (int i = 0; i < val.ndim(); ++i) {
       res = dmlc::HashCombine(res, val[i]);
     }
     return res;

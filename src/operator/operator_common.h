@@ -165,7 +165,7 @@ inline bool shape_assign(mxnet::TShape *y, const mxnet::TShape& x) {
   } else if (y->ndim() != x.ndim()) {
     return x.ndim() == 0;
   } else {
-    for (size_t i = 0; i < y->ndim(); ++i) {
+    for (int i = 0; i < y->ndim(); ++i) {
       if ((*y)[i] == 0) {
         (*y)[i] = x[i];
       } else if ((*y)[i] != x[i] && x[i] != 0) {
@@ -563,7 +563,7 @@ class OpSignature {
   }
 
   void AddSign(const mxnet::TShape &shape) {
-    for (size_t i = 0; i < shape.ndim(); i++) {
+    for (int i = 0; i < shape.ndim(); i++) {
       hash = hash * 2 + shape[i];
       eles.push_back(shape[i]);
     }
