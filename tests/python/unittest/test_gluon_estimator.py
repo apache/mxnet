@@ -304,7 +304,7 @@ def test_batch_size():
         est.fit(train_data=data_loader)
 
     # Batch size less than context
-    ctx = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
+    ctx = [mx.gpu(i) for i in range(4)]
     data = mx.nd.random.uniform(shape=(num_samples, 3, 28, 28))
     label = mx.nd.random.randint(low=0, high=2, shape=(num_samples,))
     batch_size = 2
@@ -314,7 +314,6 @@ def test_batch_size():
     with assert_raises(ValueError):
         est.fit(train_data=data_loader)
 
-    # Correct batch size verification
-    for data in data_loader:
-        assert batch_size == data[0].shape[0]
-        break
+    # Batch size verification
+    _, _, inferred_batch_size = est.infer_data_info(data_loader)
+    assert inferred_batch_size == batch_size, "Batch size mismatch"
