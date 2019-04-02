@@ -568,6 +568,7 @@ def test_exponential_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=0.20)
 
+@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13584")
 @with_seed()
 def test_poisson_generator():
     ctx = mx.context.current_context()
