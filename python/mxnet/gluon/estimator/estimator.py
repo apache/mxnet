@@ -174,6 +174,37 @@ class Estimator(object):
         label = gluon.utils.split_and_load(label, ctx_list=ctx, batch_axis=0)
         return data, label
 
+    def infer_data_info(self, data):
+        """Retrieve the data information such as batch size,
+        Number of batches, and total number of samples
+
+        Parameters
+        ----------
+        data : DataLoader
+            A DataLoader instance with data and/or label
+
+        Returns
+        -------
+        num_batches: int
+            Number of batches the data is divided into
+        total_samples: int
+            Total Number of samples
+        batch_size: int
+            Batch size
+        """
+        if isinstance(data, gluon.data.DataLoader):
+            num_batches = len(data)
+            total_samples = len(data._dataset)
+            if total_samples == 0:
+                raise ValueError("DataLoader is Empty. Please refer to gluon.data.DataLoader "
+                                 "for more detail on how to contruct a DataLoader")
+            for batch in data:
+                batch_size = batch[0].shape[0]
+                break
+        else:
+            raise ValueError("Please provide the data as gluon.data.DataLoader")
+        return num_batches, total_samples, batch_size
+
     def evaluate(self,
                  val_data,
                  batch_fn=None):
@@ -241,33 +272,21 @@ class Estimator(object):
         """
 
         self.epochs = epochs
-        if isinstance(train_data, gluon.data.DataLoader):
-            num_batches = len(train_data)
-            total_samples = len(train_data._dataset)
-            if total_samples == 0:
-                raise ValueError("DataLoader is Empty. Please refer to gluon.data.DataLoader "
-                                 "for more detail")
-            for dt, _ in train_data:
-                batch_size = dt.shape[0]
-                break
-        else:
-            raise ValueError("Please provide the data as gluon.data.DataLoader")
+        num_batches, total_samples, batch_size = self.infer_data_info(train_data)
 
         if isinstance(self.context, list):
             if batch_size < len(self.context):
-                raise ValueError("The batch size value is small in comparison to the provided"
-                                 "CPU/GPU context. Please provide the batch size value(power of 2) "
-                                 "greater than the number of GPUs in your system")
-
-        self.train_stats['batch_size'] = batch_size
+                raise ValueError("Batch size is too small to be split and loaded into the list "
+                                 "of devices you provided in context. Please provide the batch size value"
+                                 "greater than the number of devices in your system")
 
         event_handlers = event_handlers or []
         # provide default logging handler
         if not event_handlers or \
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
             event_handlers.append(LoggingHandler(self, verbose=1))
-            warnings.warn("No Event Handler specified, default logging handler "
-                          "is used with verbose=1. Please see gluon.estimator.event_handler"
+            warnings.warn("No Event Handler specified, default `LoggingHandler()` "
+                          "is used with verbose=1. Please look at gluon.estimator.event_handler"
                           "for more detail.")
 
         # training begin
@@ -284,6 +303,8 @@ class Estimator(object):
 
             for metric in self.train_metrics + self.train_loss_metrics:
                 metric.reset()
+
+            current_batch_size = batch_size
 
             for i, batch in enumerate(train_data):
                 if not batch_fn:
@@ -323,18 +344,18 @@ class Estimator(object):
 
                 # last batch size may be different from the rest
                 if i == num_batches - 1:
-                    batch_size = total_samples - (batch_size * i)
+                    current_batch_size = total_samples - (batch_size * i)
                     completed_samples = total_samples
                 else:
                     completed_samples = batch_size * (i + 1)
 
                 try:
-                    self.train_stats['step'] = "{}/{}".format(completed_samples, len(train_data._dataset))
+                    self.train_stats['step'] = "{}/{}".format(completed_samples, total_samples)
                 except AttributeError:
                     self.train_stats['step'] = i
 
                 for trainer in self.trainers:
-                    trainer.step(batch_size)
+                    trainer.step(current_batch_size)
 
                 # batch end
                 for handler in event_handlers:
@@ -354,9 +375,6 @@ class Estimator(object):
 
             if self.stop_training:
                 break
-
-            # Reset batch size since last batch size may be different
-            batch_size = self.train_stats['batch_size']
 
         # train end
         for handler in event_handlers:

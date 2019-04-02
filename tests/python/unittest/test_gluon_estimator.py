@@ -315,6 +315,6 @@ def test_batch_size():
         est.fit(train_data=data_loader)
 
     # Correct batch size verification
-    for dt, lb in data_loader:
-        assert batch_size == dt.shape[0]
+    for data in data_loader:
+        assert batch_size == data[0].shape[0]
         break

@@ -76,7 +76,7 @@ class LoggingHandler(EventHandler):
         file name to save the logs
     file_location: str
         file location to save the logs
-    verbose: int, default 0
+    verbose: int, default 1
         Limit the display level of training progress
         verbose=0: display nothing(silent)
         verbose=1: display metrics every epoch
@@ -114,7 +114,7 @@ class LoggingHandler(EventHandler):
             step = self._estimator.train_stats['step']
             msg = '[Epoch %d] [Step %s] time/step: %.3fs ' % (epoch, step, batch_time)
             for key in self._estimator.train_stats.keys():
-                if key.startswith('batch_') and 'batch_size' not in key:
+                if key.startswith('batch_'):
                     msg += key[6:] + ': ' + '%.4f ' % self._estimator.train_stats[key]
             self.logger.info(msg)
 
