@@ -27,7 +27,6 @@ import random
 import logging
 import json
 import warnings
-import math
 import numpy as np
 
 
@@ -586,8 +585,8 @@ def random_size_crop(src, size, area, ratio, interp=2, **kwargs):
         area = (area, 1.0)
     for _ in range(10):
         target_area = random.uniform(area[0], area[1]) * src_area
-        log_ratio = (math.log(ratio[0]), math.log(ratio[1]))
-        new_ratio = math.exp(random.uniform(*log_ratio))
+        log_ratio = (np.log(ratio[0]), np.log(ratio[1]))
+        new_ratio = np.exp(random.uniform(*log_ratio))
 
         new_w = int(round(np.sqrt(target_area * new_ratio)))
         new_h = int(round(np.sqrt(target_area / new_ratio)))

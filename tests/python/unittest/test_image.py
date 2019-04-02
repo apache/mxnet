@@ -365,7 +365,7 @@ class TestImage(unittest.TestCase):
         out, (x0, y0, new_w, new_h) = mx.image.random_size_crop(mx.nd.array(src), size=(width, height), area=0.08, ratio=ratio)
         _, pts = mx.image.center_crop(mx.nd.array(src), size=(width, height))
         if (x0, y0, new_w, new_h) != pts:
-            assert ratio[0] <= new_w/new_h <= ratio[1]
+            assert ratio[0] <= float(new_w)/new_h <= ratio[1]
 
 
 if __name__ == '__main__':
