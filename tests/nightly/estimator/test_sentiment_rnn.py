@@ -29,7 +29,7 @@ import mxnet as mx
 from mxnet import nd, gluon
 from mxnet.contrib import text
 from mxnet.gluon import nn, rnn
-from mxnet.gluon.estimator import estimator as est
+from mxnet.gluon.estimator import estimator
 
 
 class TextCNN(nn.Block):
@@ -162,16 +162,38 @@ def preprocess_imdb(data, vocab):
     return features, labels
 
 
-def test_estimator_cpu():
+def run(net, train_dataloader, test_dataloader, **kwargs):
+    '''
+    Train a test sentiment model
+    '''
+    num_epochs = kwargs['epochs']
+    ctx = kwargs['ctx']
+    batch_size = kwargs['batch_size']
+    lr = kwargs['lr']
+
+    # Define trainer
+    trainer = mx.gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
+    # Define loss and evaluation metrics
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
+    acc = mx.metric.Accuracy()
+
+    # Define estimator
+    est = estimator.Estimator(net=net, loss=loss, metrics=acc,
+                              trainers=trainer, context=ctx)
+    # Begin training
+    est.fit(train_data=train_dataloader, val_data=test_dataloader,
+            epochs=num_epochs, batch_size=batch_size)
+    return est
+
+
+def test_estimator_cpu(**kwargs):
     '''
     Test estimator by doing one pass over each model with synthetic data
     '''
     models = ['TextCNN', 'BiRNN']
-    context = mx.cpu()
-    batch_size = 64
-    num_epochs = 1
-    lr = 0.01
-    embed_size = 100
+    ctx = kwargs['ctx']
+    batch_size = kwargs['batch_size']
+    embed_size = kwargs['embed_size']
 
     train_data = mx.nd.random.randint(low=0, high=100, shape=(2 * batch_size, 500))
     train_label = mx.nd.random.randint(low=0, high=2, shape=(2 * batch_size,))
@@ -179,9 +201,9 @@ def test_estimator_cpu():
     val_label = mx.nd.random.randint(low=0, high=2, shape=(batch_size,))
 
     train_dataloader = gluon.data.DataLoader(dataset=gluon.data.ArrayDataset(train_data, train_label),
-                                        batch_size=batch_size, shuffle=True)
+                                             batch_size=batch_size, shuffle=True)
     val_dataloader = gluon.data.DataLoader(dataset=gluon.data.ArrayDataset(val_data, val_label),
-                                      batch_size=batch_size)
+                                           batch_size=batch_size)
     vocab_list = mx.nd.zeros(shape=(100,))
 
     # Get the model
@@ -192,33 +214,20 @@ def test_estimator_cpu():
         else:
             num_hiddens, num_layers = 100, 2
             net = BiRNN(vocab_list, embed_size, num_hiddens, num_layers)
-        net.initialize(mx.init.Xavier(), ctx=context)
-        # Define trainer
-        trainer = mx.gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
-        # Define loss and evaluation metrics
-        loss = gluon.loss.SoftmaxCrossEntropyLoss()
-        acc = mx.metric.Accuracy()
+        net.initialize(mx.init.Xavier(), ctx=ctx)
 
-        # Define estimator
-        e = est.Estimator(net=net, loss=loss, metrics=acc,
-                          trainers=trainer, context=context)
-        # Begin training
-        e.fit(train_data=train_dataloader, val_data=val_dataloader,
-              epochs=num_epochs, batch_size=batch_size)
+        run(net, train_dataloader, val_dataloader, **kwargs)
 
 
-def test_estimator_gpu():
+def test_estimator_gpu(**kwargs):
     '''
     Test estimator by training Bidirectional RNN for 5 epochs on the IMDB dataset
     and verify accuracy
     '''
-    batch_size = 64
-    num_epochs = 5
-    lr = 0.01
-    embed_size = 100
-
-    # Set context
-    ctx = mx.gpu() if mx.context.num_gpus() > 0 else mx.cpu()
+    ctx = kwargs['ctx']
+    batch_size = kwargs['batch_size']
+    num_epochs = kwargs['epochs']
+    embed_size = kwargs['embed_size']
 
     # data
     download_imdb()
@@ -241,28 +250,27 @@ def test_estimator_gpu():
     net.embedding.weight.set_data(glove_embedding.idx_to_vec)
     net.embedding.collect_params().setattr('grad_req', 'null')
 
-    # Define Trainer
-    trainer = mx.gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
-    # Define loss and evaluation metrics
-    loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    acc = mx.metric.Accuracy()
+    est = run(net, train_dataloader, test_dataloader, **kwargs)
 
-    # Define estimator
-    e = est.Estimator(net=net, loss=loss, metrics=acc,
-                      trainers=trainer, context=ctx)
-    # Begin training
-    e.fit(train_data=train_dataloader, val_data=test_dataloader,
-          epochs=num_epochs)
-
-    assert e.train_stats['train_' + acc.name][num_epochs - 1] > 0.70
+    assert est.train_stats['train_accuracy'][num_epochs - 1] > 0.70
 
 
 parser = argparse.ArgumentParser(description='test gluon estimator')
 parser.add_argument('--type', type=str, default='cpu')
 opt = parser.parse_args()
+kwargs = {
+    'batch_size': 64,
+    'lr': 0.01,
+    'embed_size': 100
+}
+
 if opt.type == 'cpu':
-    test_estimator_cpu()
+    kwargs['ctx'] = mx.cpu()
+    kwargs['epochs'] = 1
+    test_estimator_cpu(**kwargs)
 elif opt.type == 'gpu':
-    test_estimator_gpu()
+    kwargs['ctx'] = mx.gpu()
+    kwargs['epochs'] = 5
+    test_estimator_gpu(**kwargs)
 else:
     raise RuntimeError("Unknown test type")
