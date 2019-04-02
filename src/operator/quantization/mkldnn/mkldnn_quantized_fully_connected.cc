@@ -31,11 +31,6 @@
 namespace mxnet {
 namespace op {
 
-namespace quantized_fc_enum {
-enum QuantizedFCInputMinMax { kDataMin, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax };
-enum QuantizedFCOutputs { kOut, kOutMin, kOutMax };
-}
-
 void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
                                           const OpContext &ctx,
                                           const std::vector<NDArray> &in_data,
@@ -50,28 +45,17 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
 
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
-  const TShape &ishape = data.shape();
-
-  CHECK(data.dtype() == mshadow::kUint8)
-    << "MKLDNNQuantizedFullyConnected Op only supports uint8 for now, but got "
-    << mxnet::op::type_string(data.dtype());
-
-  if (ishape.ndim() != 2) {
-    CHECK(param.flatten)
-      << "QuantizedFullyConnected Op only supports flatten=true when ishape.ndim()!=2 for now.";
-    data = data.MKLDNNDataReshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
-  }
 
   const float min_data =
-    in_data[num_inputs + quantized_fc_enum::kDataMin].data().dptr<float>()[0];
+    in_data[num_inputs + quantized_fullc::kDataMin].data().dptr<float>()[0];
   const float max_data =
-    in_data[num_inputs + quantized_fc_enum::kDataMax].data().dptr<float>()[0];
+    in_data[num_inputs + quantized_fullc::kDataMax].data().dptr<float>()[0];
   const float min_weight =
-    in_data[num_inputs + quantized_fc_enum::kWeightMin].data().dptr<float>()[0];
+    in_data[num_inputs + quantized_fullc::kWeightMin].data().dptr<float>()[0];
   const float max_weight =
-    in_data[num_inputs + quantized_fc_enum::kWeightMax].data().dptr<float>()[0];
-  float *min_output_ptr = out_data[quantized_fc_enum::kOutMin].data().dptr<float>();
-  float *max_output_ptr = out_data[quantized_fc_enum::kOutMax].data().dptr<float>();
+    in_data[num_inputs + quantized_fullc::kWeightMax].data().dptr<float>()[0];
+  float *min_output_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
+  float *max_output_ptr = out_data[quantized_fullc::kOutMax].data().dptr<float>();
 
   auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
   float data_scale = data_range / MaxAbs(min_data, max_data);
@@ -80,8 +64,8 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   NDArray quantized_bias;
   if (!param.no_bias) {
     NDArray bias = in_data[fullc::kBias];
-    float min_bias = in_data[num_inputs + quantized_fc_enum::kBiasMin].data().dptr<float>()[0];
-    float max_bias = in_data[num_inputs + quantized_fc_enum::kBiasMax].data().dptr<float>()[0];
+    float min_bias = in_data[num_inputs + quantized_fullc::kBiasMin].data().dptr<float>()[0];
+    float max_bias = in_data[num_inputs + quantized_fullc::kBiasMax].data().dptr<float>()[0];
     float bias_int32_rescale = data_scale * weight_scale * MaxAbs(min_bias, max_bias) / kInt8Range;
 
     quantized_bias = NDArray(bias.storage_type(), bias.shape(),

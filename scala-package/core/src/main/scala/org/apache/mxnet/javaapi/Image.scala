@@ -20,15 +20,16 @@ package org.apache.mxnet.javaapi
 import java.awt.image.BufferedImage
 // scalastyle:on
 import java.io.InputStream
+import scala.collection.JavaConverters._
 
 object Image {
   /**
     * Decode image with OpenCV.
     * Note: return image in RGB by default, instead of OpenCV's default BGR.
-    * @param buf    Buffer containing binary encoded image
-    * @param flag   Convert decoded image to grayscale (0) or color (1).
+    * @param buf   Buffer containing binary encoded image
+    * @param flag  Convert decoded image to grayscale (0) or color (1).
     * @param toRGB Whether to convert decoded image
-    *               to mxnet's default RGB format (instead of opencv's default BGR).
+    *              to mxnet's default RGB format (instead of opencv's default BGR).
     * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imDecode(buf: Array[Byte], flag: Int, toRGB: Boolean): NDArray = {
@@ -43,8 +44,8 @@ object Image {
     * Same imageDecode with InputStream
     *
     * @param inputStream the inputStream of the image
-    * @param flag   Convert decoded image to grayscale (0) or color (1).
-    * @param toRGB Whether to convert decoded image
+    * @param flag        Convert decoded image to grayscale (0) or color (1).
+    * @param toRGB       Whether to convert decoded image
     * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imDecode(inputStream: InputStream, flag: Int, toRGB: Boolean): NDArray = {
@@ -60,7 +61,7 @@ object Image {
     * Note: return image in RGB by default, instead of OpenCV's default BGR.
     * @param filename Name of the image file to be loaded.
     * @param flag     Convert decoded image to grayscale (0) or color (1).
-    * @param toRGB   Whether to convert decoded image to mxnet's default RGB format
+    * @param toRGB    Whether to convert decoded image to mxnet's default RGB format
     *                 (instead of opencv's default BGR).
     * @return org.apache.mxnet.NDArray in HWC format with DType [[DType.UInt8]]
     */
@@ -74,10 +75,10 @@ object Image {
 
   /**
     * Resize image with OpenCV.
-    * @param src     source image in NDArray
-    * @param w       Width of resized image.
-    * @param h       Height of resized image.
-    * @param interp  Interpolation method (default=cv2.INTER_LINEAR).
+    * @param src    source image in NDArray
+    * @param w      Width of resized image.
+    * @param h      Height of resized image.
+    * @param interp Interpolation method (default=cv2.INTER_LINEAR).
     * @return org.apache.mxnet.NDArray
     */
   def imResize(src: NDArray, w: Int, h: Int, interp: Integer): NDArray = {
@@ -92,10 +93,10 @@ object Image {
   /**
     * Do a fixed crop on the image
     * @param src Src image in NDArray
-    * @param x0 starting x point
-    * @param y0 starting y point
-    * @param w width of the image
-    * @param h height of the image
+    * @param x0  starting x point
+    * @param y0  starting y point
+    * @param w   width of the image
+    * @param h   height of the image
     * @return cropped NDArray
     */
   def fixedCrop(src: NDArray, x0: Int, y0: Int, w: Int, h: Int): NDArray = {
@@ -111,4 +112,21 @@ object Image {
   def toImage(src: NDArray): BufferedImage = {
     org.apache.mxnet.Image.toImage(src)
   }
+
+  /**
+    * Draw bounding boxes on the image
+    * @param src        buffered image to draw on
+    * @param coordinate Contains Map of xmin, xmax, ymin, ymax
+    *                   corresponding to top-left and down-right points
+    * @param names      The name set of the bounding box
+    */
+  def drawBoundingBox(src: BufferedImage,
+                      coordinate: java.util.List[
+                        java.util.Map[java.lang.String, java.lang.Integer]],
+                      names: java.util.List[java.lang.String]): Unit = {
+    val coord = coordinate.asScala.map(
+      _.asScala.map{case (name, value) => (name, Integer2int(value))}.toMap).toArray
+    org.apache.mxnet.Image.drawBoundingBox(src, coord, Option(names.asScala.toArray))
+  }
+
 }
