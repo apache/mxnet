@@ -284,7 +284,7 @@ class Estimator(object):
         # provide default logging handler
         if not event_handlers or \
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
-            event_handlers.append(LoggingHandler(self, verbose=1))
+            event_handlers.append(LoggingHandler(self))
             warnings.warn("No Event Handler specified, default `LoggingHandler()` "
                           "is used with verbose=1. Please look at gluon.estimator.event_handler"
                           "for more detail.")
