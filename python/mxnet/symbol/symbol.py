@@ -90,7 +90,7 @@ class Symbol(SymbolBase):
         <Symbol d>
         <Symbol _plus0>
         """
-        return (self[i] for i in self.list_outputs())
+        return (self[i] for i in range(len(self)))
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y
