@@ -43,8 +43,7 @@ public class BertQA {
     @Option(name = "--seq-length", usage = "the maximum length of the sequence")
     private int seqLength = 384;
 
-
-    final static Logger logger = LoggerFactory.getLogger(BertQA.class);
+    private final static Logger logger = LoggerFactory.getLogger(BertQA.class);
     private static NDArray$ NDArray = NDArray$.MODULE$;
 
     private static int argmax(float[] prob) {
@@ -55,12 +54,21 @@ public class BertQA {
         return maxIdx;
     }
 
-    static void postProcessing(NDArray result, List<String> tokens) {
-        NDArray output = NDArray.split(
-                NDArray.new splitParam(result, 2).setAxis(2))[0];
+    /**
+     * Do the post processing on the output, apply softmax to get the probabilities
+     * reshape and get the most probable index
+     * @param result prediction result
+     * @param tokens word tokens
+     * @return Answers clipped from the original paragraph
+     */
+    static List<String> postProcessing(NDArray result, List<String> tokens) {
+        NDArray[] output = NDArray.split(
+                NDArray.new splitParam(result, 2).setAxis(2));
         // Get the formatted logits result
-        NDArray startLogits = output.at(0).reshape(new int[]{0, -3});
-        NDArray endLogits = output.at(1).reshape(new int[]{0, -3});
+        NDArray startLogits = NDArray.reshape(
+                NDArray.new reshapeParam(output[0]).setShape(new Shape(new int[]{0, -3})))[0];
+        NDArray endLogits = NDArray.reshape(
+                NDArray.new reshapeParam(output[1]).setShape(new Shape(new int[]{0, -3})))[0];
         // Get Probability distribution
         float[] startProb = NDArray.softmax(
                 NDArray.new softmaxParam(startLogits))[0].toArray();
@@ -68,8 +76,7 @@ public class BertQA {
                 NDArray.new softmaxParam(endLogits))[0].toArray();
         int startIdx = argmax(startProb);
         int endIdx = argmax(endProb);
-        String[] answer = (String[]) tokens.subList(startIdx, endIdx + 1).toArray();
-        logger.info("Answer: ", Arrays.toString(answer));
+        return tokens.subList(startIdx, endIdx + 1);
     }
 
     public static void main(String[] args) throws Exception{
@@ -78,13 +85,15 @@ public class BertQA {
         parser.parseArgument(args);
         BertUtil util = new BertUtil();
         Context context = Context.cpu();
-        logger.info("Question: ", inst.inputQ);
-        logger.info("Answer paragraph: ", inst.inputA);
+        if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+                Integer.valueOf(System.getenv("SCALA_TEST_ON_GPU")) == 1) {
+            context = Context.gpu();
+        }
         // pre-processing - tokenize sentence
         List<String> tokenQ = util.tokenizer(inst.inputQ.toLowerCase());
         List<String> tokenA = util.tokenizer(inst.inputA.toLowerCase());
         int validLength = tokenQ.size() + tokenA.size();
-        logger.info("Valid length: ", validLength);
+        logger.info("Valid length: " + validLength);
         // generate token types [0000...1111....0000]
         List<Float> QAEmbedded = new ArrayList<>();
         util.pad(QAEmbedded, 0f, tokenQ.size()).addAll(
@@ -97,7 +106,7 @@ public class BertQA {
         tokenA.add("[SEP]");
         tokenQ.addAll(tokenA);
         List<String> tokens = util.pad(tokenQ, "[PAD]", inst.seqLength);
-        logger.info("Pre-processed tokens: ", Arrays.toString(tokens.toArray()));
+        logger.info("Pre-processed tokens: " + Arrays.toString(tokenQ.toArray()));
         // pre-processing - token to index translation
         util.parseJSON(inst.modelVocab);
         List<Integer> indexes = util.token2idx(tokens);
@@ -129,6 +138,9 @@ public class BertQA {
         Predictor bertQA = new Predictor(inst.modelPathPrefix, inputDescs, contexts, inst.epoch);
         // Start prediction
         NDArray result = bertQA.predictWithNDArray(inputBatch).get(0);
-        postProcessing(result, tokens);
+        List<String> answer = postProcessing(result, tokens);
+        logger.info("Question: " + inst.inputQ);
+        logger.info("Answer paragraph: " + inst.inputA);
+        logger.info("Answer: " + Arrays.toString(answer.toArray()));
     }
 }
