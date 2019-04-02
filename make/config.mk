@@ -216,6 +216,7 @@ USE_CPP_PACKAGE = 0
 
 # Use int64_t type for tensor size.
 # This will cause performance degradation reported in issue #14496
+# Set to 1 for large tensor size greater than 2 billion
 USE_INT64_TENSOR_SIZE = 0
 
 #----------------------------
