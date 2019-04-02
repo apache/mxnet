@@ -467,8 +467,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
     time_per_iteration.value = (time.time() - start) / num_iterations
 
-@with_seed()
-def test_bulking():
+def _test_bulking(test_bulking_func):
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0, 0, True), (1, 1, True), (15, 15, False),
                   (15, 0, True), (0, 15, True), (15, 15, True)]
@@ -478,7 +477,7 @@ def test_bulking():
         # Create shared variable to return measured time from test process
         time_per_iteration = mp.Manager().Value('d', 0.0)
 
-        if not run_in_spawned_process(_test_bulking_in_process,
+        if not run_in_spawned_process(test_bulking_func,
                                       {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': seg_sizes[0],
                                        'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': seg_sizes[1],
                                        'MXNET_EXEC_BULK_EXEC_TRAIN': seg_sizes[2]},
@@ -490,8 +489,7 @@ def test_bulking():
             '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
                 seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
 
-    fastest_non_bulked_time = min(
-        times[(0, 0, True)], times[(1, 1, True)], times[(15, 15, False)])
+    fastest_non_bulked_time = min(times[(0, 0, True)], times[(1, 1, True)], times[(15, 15, False)])
     slowest_half_bulked_time = max(times[(0, 15, True)], times[(15, 0, True)])
     fastest_half_bulked_time = min(times[(0, 15, True)], times[(15, 0, True)])
     fully_bulked_time = times[(15, 15, True)]
