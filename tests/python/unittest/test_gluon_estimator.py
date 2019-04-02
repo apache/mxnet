@@ -316,7 +316,7 @@ def test_categorize_handlers():
     est = Estimator(net, loss=loss)
     event_handlers = [CustomHandler1(), CustomHandler2(), CustomHandler3()]
     train_begin, epoch_begin, batch_begin, \
-    batch_end, epoch_end, train_end = est.categorize_handlers(event_handlers)
+    batch_end, epoch_end, train_end = est._categorize_handlers(event_handlers)
     assert len(train_begin) == 1
     assert len(epoch_begin) == 2
     assert len(batch_begin) == 2

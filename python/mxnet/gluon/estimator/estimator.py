@@ -247,7 +247,7 @@ class Estimator(object):
             event_handlers.append(LoggingHandler())
 
         train_begin, epoch_begin, batch_begin, \
-        batch_end, epoch_end, train_end = self.categorize_handlers(event_handlers)
+        batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
 
         # passing estimator to event handlers so they can access estimator information
         # when a event is triggered
@@ -333,7 +333,7 @@ class Estimator(object):
         for handler in train_end:
             handler.train_end()
 
-    def categorize_handlers(self, event_handlers):
+    def _categorize_handlers(self, event_handlers):
         """
         categorize handlers into 6 event lists to avoid calling empty methods
         for example, only event handlers with train_begin method
@@ -346,18 +346,17 @@ class Estimator(object):
         batch_end = []
         epoch_end = []
         train_end = []
-        base_handler = EventHandler()
         for handler in event_handlers:
-            if not handler.__class__.train_begin == base_handler.__class__.train_begin:
+            if not handler.__class__.train_begin == EventHandler.train_begin:
                 train_begin.append(handler)
-            if not handler.__class__.epoch_begin == base_handler.__class__.epoch_begin:
+            if not handler.__class__.epoch_begin == EventHandler.epoch_begin:
                 epoch_begin.append(handler)
-            if not handler.__class__.batch_begin == base_handler.__class__.batch_begin:
+            if not handler.__class__.batch_begin == EventHandler.batch_begin:
                 batch_begin.append(handler)
-            if not handler.__class__.batch_end == base_handler.__class__.batch_end:
+            if not handler.__class__.batch_end == EventHandler.batch_end:
                 batch_end.append(handler)
-            if not handler.__class__.epoch_end == base_handler.__class__.epoch_end:
+            if not handler.__class__.epoch_end == EventHandler.epoch_end:
                 epoch_end.append(handler)
-            if not handler.__class__.train_end == base_handler.__class__.train_end:
+            if not handler.__class__.train_end == EventHandler.train_end:
                 train_end.append(handler)
         return train_begin, epoch_begin, batch_begin, batch_end, epoch_end, train_end
