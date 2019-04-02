@@ -104,10 +104,21 @@ After you have installed the dependencies, pull the MXNet source code from Git a
 The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
 
 ```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet ~/mxnet
-    cd ~/mxnet
-    cp cmake/cmake_options_osx.yml cmake_options.yml
-    ./dev_menu.py menu 1
+git clone --recursive https://github.com/apache/incubator-mxnet ~/mxnet
+cd ~/mxnet
+mkdir build && cd build
+cmake \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+    -DUSE_MKL_IF_AVAILABLE=O \
+    -DUSE_CPP_PACKAGE=ON \
+    -DUSE_CUDA=OFF \
+    -DUSE_OPENMP=OFF \
+    -DUSE_OPENCV=ON \
+    -DUSE_SIGNAL_HANDLER=ON \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -GNinja ..
+ninja
 ```
 
 To build with MKLDNN
@@ -145,10 +156,11 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 To install the MXNet Python binding navigate to the root of the MXNet folder then run the following:
 
 ```bash
-$ cd python
-$ pip install -e .
+virtualenv -p`which python3` py3_venv
+source py3_venv/bin/activate
+pip install -e python
 ```
-
+First we create a [virtualenv](https://docs.python-guide.org/dev/virtualenvs/#lower-level-virtualenv) to isolate this installation from our global environment.
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
 ## Install the MXNet Package for R
