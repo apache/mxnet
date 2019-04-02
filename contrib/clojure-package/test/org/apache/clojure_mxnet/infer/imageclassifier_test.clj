@@ -48,7 +48,7 @@
     (is (= 10 (count predictions-with-default-dtype)))
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
-    (is (= (< 0 (:prob (first predictions)) 1)))))
+    (is (< 0 (:prob (first predictions)) 1))))
 
 (deftest test-batch-classification
   (let [classifier (create-classifier)
@@ -61,7 +61,7 @@
     (is (= 10 (count batch-predictions-with-default-dtype)))
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
-    (is (= (< 0 (:prob (first predictions)) 1)))))
+    (is (< 0 (:prob (first predictions)) 1))))
 
 (deftest test-single-classification-with-ndarray
   (let [classifier (create-classifier)
@@ -74,7 +74,7 @@
     (is (= 1000 (count predictions-all)))
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
-    (is (= (< 0 (:prob (first predictions)) 1)))))
+    (is (< 0 (:prob (first predictions)) 1))))
 
 (deftest test-single-classify
   (let [classifier (create-classifier)
@@ -87,7 +87,7 @@
     (is (= 1000 (count predictions-all)))
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
-    (is (= (< 0 (:prob (first predictions)) 1)))))
+    (is (< 0 (:prob (first predictions)) 1))))
 
 (deftest test-base-classification-with-ndarray
   (let [descriptors [{:name "data"
@@ -105,7 +105,7 @@
     (is (= 1000 (count predictions-all)))
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
-    (is (= (< 0 (:prob (first predictions)) 1)))))
+    (is (< 0 (:prob (first predictions)) 1))))
 
 (deftest test-base-single-classify
   (let [descriptors [{:name "data"
@@ -123,6 +123,6 @@
     (is (= 1000 (count predictions-all)))
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
-    (is (= (< 0 (:prob (first predictions)) 1)))))
+    (is (< 0 (:prob (first predictions)) 1))))
 
 

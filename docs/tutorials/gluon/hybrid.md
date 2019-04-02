@@ -157,6 +157,7 @@ to gluon with `SymbolBlock`:
 import warnings
 
 with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
     net2 = gluon.SymbolBlock.imports('model-symbol.json', ['data'], 'model-0001.params')
 ```
 

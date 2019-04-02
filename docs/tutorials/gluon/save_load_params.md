@@ -262,6 +262,7 @@ Serialized Hybrid networks (saved as .JSON and .params file) can be loaded and u
 ```python
 import warnings
 with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
     deserialized_net = gluon.nn.SymbolBlock.imports("lenet-symbol.json", ['data'], "lenet-0001.params", ctx=ctx)
 ```
 
