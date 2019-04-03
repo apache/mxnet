@@ -45,7 +45,7 @@ def test_checkpoint_handler():
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-    checkpoint_handler = [event_handler.CheckpointHandler(est, file_path,
+    checkpoint_handler = [event_handler.CheckpointHandler(file_path,
                                                           save_best_only=save_best_only,
                                                           mode=mode)]
     est.fit(test_data, event_handlers=checkpoint_handler, epochs=1)
@@ -63,15 +63,15 @@ def test_early_stopping():
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-    early_stopping = [event_handler.EarlyStoppingHandler(est, monitor,
+    early_stopping = [event_handler.EarlyStoppingHandler(monitor,
                                                          patience=patience,
-                                                          mode=mode)]
-    est.fit(test_data, event_handlers=early_stopping, epochs=1)
+                                                         mode=mode)]
+    est.fit(test_data, event_handlers=early_stopping, epochs=3)
 
     mode = 'auto'
     monitor = 'train_accuracy'
     patience = 2
-    early_stopping = [event_handler.EarlyStoppingHandler(est, monitor,
+    early_stopping = [event_handler.EarlyStoppingHandler(monitor,
                                                          patience=patience,
                                                           mode=mode)]
     est.fit(test_data, event_handlers=early_stopping, epochs=1)
@@ -86,7 +86,7 @@ def test_logging():
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-    logging_handler = [event_handler.LoggingHandler(est, file_name=file_name, file_location=tmpdir)]
+    logging_handler = [event_handler.LoggingHandler(file_name=file_name, file_location=tmpdir)]
     est.fit(test_data, event_handlers=logging_handler, epochs=1)
     assert os.path.isfile(output_dir)
     os.remove(output_dir)
