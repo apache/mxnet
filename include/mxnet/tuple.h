@@ -236,7 +236,10 @@ class Tuple {
    */
   friend std::ostream &operator<<(std::ostream &os, const Tuple<ValueType> &t) {
     if (t.ndim() == -1) {
-      os << "UNKNOWN_SHAPE";
+      // If t is an unknown shape, return string "None".
+      // This is consistent with returning unknown shape in Python and generating
+      // C++ operator APIs by OpWrapperGenerator.py (defaultString) in cpp-package.
+      os << "None";
       return os;
     }
     os << '[';
@@ -727,6 +730,7 @@ struct hash<mxnet::TShape> {
 namespace dmlc {
 /*! \brief description for optional TShape */
 DMLC_DECLARE_TYPE_NAME(optional<mxnet::TShape>, "Shape or None");
+DMLC_DECLARE_TYPE_NAME(optional<mxnet::Tuple<int>>, "Shape or None");
 // avoid low version of MSVC
 #if !defined(_MSC_VER)
 template<typename T>
