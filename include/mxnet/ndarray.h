@@ -956,7 +956,7 @@ class NDArray {
     /*! \brief set the shape for ith aux data, and update storage shape if necessary */
     inline void set_aux_shape(const size_t i, const mxnet::TShape& shape) {
       aux_shapes[i] = shape;
-      if (storage_shape.ndim() > 0) {
+      if (storage_shape.ndim() >= 0) {
         if (storage_type == kRowSparseStorage && i == rowsparse::kIdx) {
           storage_shape[0] = shape[0];
         } else if (storage_type == kCSRStorage && i == csr::kIdx) {
