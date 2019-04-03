@@ -137,7 +137,7 @@ It is recommended that you review the general [build from source](build_from_sou
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
-**Step 1:** Install build tools and git.
+**Step 1:** Install prerequisite packages.
 ```bash
     sudo apt-get update
     sudo apt-get install -y build-essential git ninja-build ccache
