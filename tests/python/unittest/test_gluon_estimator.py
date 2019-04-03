@@ -59,9 +59,10 @@ def test_fit():
 
     # Input dataiter
     train_dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
-    est.fit(train_data=train_dataiter,
-            epochs=num_epochs,
-            batch_size=batch_size)
+    with assert_raises(ValueError):
+        est.fit(train_data=train_dataiter,
+                epochs=num_epochs,
+                batch_size=batch_size)
 
     # Input NDArray
     with assert_raises(ValueError):
@@ -99,10 +100,11 @@ def test_validation():
     # Input dataiter
     train_dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
     val_dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
-    est.fit(train_data=train_dataiter,
-            val_data=val_dataiter,
-            epochs=num_epochs,
-            batch_size=batch_size)
+    with assert_raises(ValueError):
+        est.fit(train_data=train_dataiter,
+                val_data=val_dataiter,
+                epochs=num_epochs,
+                batch_size=batch_size)
     # Input NDArray
     with assert_raises(ValueError):
         est.fit(train_data=[in_data, out_data],
