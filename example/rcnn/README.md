@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Faster R-CNN in MXNet
 
 Please redirect any issue or question of using this symbolic example of Faster R-CNN to https://github.com/ijkguo/mx-rcnn.
@@ -32,6 +49,7 @@ Make a directory `data` and follow `py-faster-rcnn` for data preparation instruc
 ### Training and evaluation
 Use `python3 train.py --dataset $Dataset$ --network $Network$ --pretrained $IMAGENET_MODEL_FILE$ --gpus $GPUS$` to train,
 for example, `python3 train.py --dataset voc --network vgg16 --pretrained model/vgg16-0000.params --gpus 0,1`.
+use `python3 train.py --dataset voc --imageset 2007_trainval+2012_trainval --network vgg16 --pretrained model/vgg16-0000.params --gpus 0,1` to train on both of voc2007 and voc2012.
 Use `python3 test.py --dataset $Dataset$ --network $Network$ --params $MODEL_FILE$ --gpu $GPU$` to evaluate,
 for example, `python3 test.py --dataset voc --network vgg16 --params model/vgg16-0010.params --gpu 0`.
 

@@ -194,14 +194,18 @@ class Trainer(object):
 
             if config['update_on_kvstore'] is not None:
                 update_on_kvstore = config['update_on_kvstore']
+
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
             self._distributed = 'dist' in kvstore.type
             if self._distributed:
                 # kv.pull(row_sparse_grad) is not supported for dist kvstore
+                # Captures condition for dist_async, dist_device_sync or based on config for
+                # update_on_kvstore
                 update_on_kvstore = self._contains_sparse_weight or self._contains_sparse_grad \
-                                    or 'async' in kvstore.type
+                                    or 'device' in kvstore.type or 'async' in kvstore.type \
+                                    or config['update_on_kvstore']
             if update_on_kvstore:
                 # optimizer preferably needs to be set before init for multiprecision
                 kvstore.set_optimizer(self._optimizer)
@@ -269,12 +273,19 @@ class Trainer(object):
             If true, ignores Parameters with stale gradient (gradient that has not
             been updated by `backward` after last step) and skip update.
         """
+        rescale_grad = self._scale / batch_size
+        if self._update_on_kvstore and self._distributed and \
+           self._optimizer.rescale_grad != rescale_grad:
+            raise UserWarning('Possible change in the `batch_size` from previous `step` detected.' \
+                            'Optimizer gradient normalizing factor will not change w.r.t new batch_size when ' \
+                            'update_on_kvstore=True and when distributed `kvstore` is used.')
+
+        self._optimizer.rescale_grad = rescale_grad
+
         if not self._kv_initialized:
             self._init_kvstore()
         if self._params_to_init:
             self._init_params()
-
-        self._optimizer.rescale_grad = self._scale / batch_size
 
         self._allreduce_grads()
         self._update(ignore_stale_grad)

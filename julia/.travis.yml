@@ -1,0 +1,59 @@
+# Documentation: http://docs.travis-ci.com/user/languages/julia/
+sudo: false
+
+language: julia
+
+os:
+  - linux
+  - osx
+osx_image: xcode8
+
+julia:
+  - 0.6
+#  - nightly 0.6 supports depends on #170
+
+branches:
+  only:
+    - master
+    - stable
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/  # for tagging
+
+cache:
+  directories:
+    - $TRAVIS_BUILD_DIR/deps/src
+
+# dependent apt packages
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - doxygen
+      - wget
+      - git
+      - libcurl4-openssl-dev
+      - unzip
+      - libatlas-base-dev
+      - libatlas-dev
+      - libopencv-dev
+      - gcc-4.8
+      - g++-4.8
+
+before_install:
+  - export TRAVIS_DIR=test/travis
+  - source ${TRAVIS_DIR}/setup_env.sh
+
+notifications:
+  email: false
+
+script:
+  - ${TRAVIS_DIR}/run_test.sh
+
+after_success:
+  # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
+  - julia -e 'using MXNet; mx._sig_checker()'
+
+  - source ${TRAVIS_DIR}/run_coverage.sh
+  - echo $TRAVIS_JULIA_VERSION
+  - julia -e 'Pkg.add("Documenter")'
+  - julia -e 'cd(Pkg.dir("MXNet")); include(joinpath("docs", "make.jl"))'

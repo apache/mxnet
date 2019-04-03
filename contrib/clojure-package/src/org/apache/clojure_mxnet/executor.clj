@@ -34,7 +34,8 @@
    (do (.forward executor)
        executor))
   ([executor is-train kwargs]
-   (do (.forward executor is-train (util/nil-or-coerce-param kwargs #{"scala.collection.immutable.Map"})))))
+   (do (.forward executor is-train (util/map->scala-tuple-seq kwargs))
+       executor)))
 
 (defn backward
   "* Do backward pass to get the gradient of arguments.

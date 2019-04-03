@@ -26,11 +26,11 @@ pip install pygame
 
 # Install arcade learning environment
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    sudo apt-get install libsdl1.2-dev libsdl-gfx1.2-dev libsdl-image1.2-dev cmake
+    sudo apt-get install libsdl1.2-dev libsdl-gfx1.2-dev libsdl-image1.2-dev cmake ninja-build
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     brew install sdl sdl_image sdl_mixer sdl_ttf portmidi
 fi
-git clone git@github.com:mgbellemare/Arcade-Learning-Environment.git || true
+git clone https://github.com/mgbellemare/Arcade-Learning-Environment || true
 pushd .
 cd Arcade-Learning-Environment
 mkdir -p build
@@ -43,6 +43,6 @@ popd
 cp Arcade-Learning-Environment/ale.cfg .
 
 # Copy roms
-git clone git@github.com:npow/atari.git || true
+git clone https://github.com/npow/atari || true
 cp -R atari/roms .
 

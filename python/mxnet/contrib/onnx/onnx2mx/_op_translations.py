@@ -118,11 +118,21 @@ def add_n(attrs, inputs, proto_obj):
 # Sorting and Searching
 def argmax(attrs, inputs, proto_obj):
     """Returns indices of the maximum values along an axis"""
-    return 'argmax', attrs, inputs
+    axis = attrs.get('axis', 0)
+    keepdims = attrs.get('keepdims', 1)
+    argmax_op = symbol.argmax(inputs[0], axis=axis, keepdims=keepdims)
+    # onnx argmax operator always expects int64 as output type
+    cast_attrs = {'dtype': 'int64'}
+    return 'cast', cast_attrs, argmax_op
 
 def argmin(attrs, inputs, proto_obj):
     """Returns indices of the minimum values along an axis."""
-    return 'argmin', attrs, inputs
+    axis = attrs.get('axis', 0)
+    keepdims = attrs.get('keepdims', 1)
+    argmin_op = symbol.argmin(inputs[0], axis=axis, keepdims=keepdims)
+    # onnx argmax operator always expects int64 as output type
+    cast_attrs = {'dtype': 'int64'}
+    return 'cast', cast_attrs, argmin_op
 
 def maximum(attrs, inputs, proto_obj):
     """
@@ -231,6 +241,7 @@ def batch_norm(attrs, inputs, proto_obj):
 def instance_norm(attrs, inputs, proto_obj):
     """Instance Normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'epsilon' : 'eps'})
+    new_attrs['eps'] = attrs.get('epsilon', 1e-5)
     return 'InstanceNorm', new_attrs, inputs
 
 def leaky_relu(attrs, inputs, proto_obj):
@@ -253,6 +264,11 @@ def _elu(attrs, inputs, proto_obj):
 def _prelu(attrs, inputs, proto_obj):
     """PRelu function"""
     new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'prelu'})
+    return 'LeakyReLU', new_attrs, inputs
+
+def _selu(attrs, inputs, proto_obj):
+    """Selu function"""
+    new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'selu'})
     return 'LeakyReLU', new_attrs, inputs
 
 def softmax(attrs, inputs, proto_obj):
@@ -422,8 +438,13 @@ def reshape(attrs, inputs, proto_obj):
 
 def cast(attrs, inputs, proto_obj):
     """ Cast input to a given dtype"""
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
     new_attrs = translation_utils._fix_attribute_names(attrs, {'to' : 'dtype'})
-    new_attrs['dtype'] = new_attrs['dtype'].lower()
+    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attrs['dtype'])]
     return 'cast', new_attrs, inputs
 
 def split(attrs, inputs, proto_obj):
@@ -518,10 +539,15 @@ def squareroot(attrs, inputs, proto_obj):
 def power(attrs, inputs, proto_obj):
     """Returns element-wise result of base element raised to powers from exp element."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'exponent':'exp'})
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+    if 'broadcast' in attrs:
         new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
-        return 'broadcast_power', new_attrs, inputs
-    return 'pow', new_attrs, inputs
+        if attrs['broadcast'] == 1:
+            return 'broadcast_power', new_attrs, inputs
+        else:
+            mxnet_op = symbol.pow(inputs[0], inputs[1])
+            return mxnet_op, new_attrs, inputs
+    mxnet_op = symbol.broadcast_power(inputs[0], inputs[1])
+    return mxnet_op, new_attrs, inputs
 
 def exponent(attrs, inputs, proto_obj):
     """Elementwise exponent of input array."""
@@ -672,3 +698,15 @@ def max_roi_pooling(attrs, inputs, proto_obj):
                                                         'spatial_scale': 'spatial_scale'
                                                        })
     return 'ROIPooling', new_attrs, inputs
+
+def depthtospace(attrs, inputs, proto_obj):
+    """Rearranges data from depth into blocks of spatial data."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
+
+    return "depth_to_space", new_attrs, inputs
+
+def spacetodepth(attrs, inputs, proto_obj):
+    """Rearranges blocks of spatial data into depth."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
+
+    return "space_to_depth", new_attrs, inputs

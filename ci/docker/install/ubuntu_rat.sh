@@ -20,7 +20,7 @@
 set -ex
 
 echo "Install dependencies"
-apt-get update
+apt-get update || true
 apt-get install -y subversion maven openjdk-8-jdk openjdk-8-jre
 
 echo "download RAT"

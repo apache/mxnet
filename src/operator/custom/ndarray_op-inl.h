@@ -87,7 +87,7 @@ class NDArrayOpProp : public OperatorProperty {
     CHECK(param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
-      ret.push_back(args[i]);
+      ret.emplace_back(args[i]);
     }
     return ret;
   }
@@ -97,7 +97,7 @@ class NDArrayOpProp : public OperatorProperty {
     CHECK(param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
-      ret.push_back(args[i]);
+      ret.emplace_back(args[i]);
     }
     return ret;
   }
@@ -131,10 +131,10 @@ class NDArrayOpProp : public OperatorProperty {
     for (const auto& s : *in_shape) size += s.ndim();
     std::vector<uint32_t> shapes_buffer(size);
     uint32_t *ptr = shapes_buffer.data();
-    for (auto iter = in_shape->begin(); iter != in_shape->end(); ++iter) {
+    for (const auto& shape : *in_shape) {
       shapes.push_back(ptr);
-      ndims.push_back(iter->ndim());
-      ptr = nnvm::ShapeTypeCast(iter->begin(), iter->end(), ptr);
+      ndims.push_back(shape.ndim());
+      ptr = nnvm::ShapeTypeCast(shape.begin(), shape.end(), ptr);
     }
     shapes.resize(param_.num_inputs_+param_.num_outputs_);
     ndims.resize(param_.num_inputs_+param_.num_outputs_);

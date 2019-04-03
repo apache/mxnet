@@ -17,6 +17,10 @@
  * under the License.
  */
 
+/*!
+ * \file elemwise_binary_broadcast_op-inl.cuh
+ * \brief CUDA specific Function definition of elementwise binary broadcast operators
+ */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_CUH_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_CUH_
 #include <mxnet/operator_util.h>

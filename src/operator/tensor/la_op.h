@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file la_op.h
- * \brief Operators for advanced linear algebra.
+ * \brief Function definition of Operators for advanced linear algebra.
  */
 #ifndef MXNET_OPERATOR_TENSOR_LA_OP_H_
 #define MXNET_OPERATOR_TENSOR_LA_OP_H_
@@ -81,10 +81,22 @@ struct LaMatrixMultParam : public dmlc::Parameter<LaMatrixMultParam> {
   }
 };
 
+// Parameters for Cholesky factorization and matrix inversion
+struct LaCholeskyParam : public dmlc::Parameter<LaCholeskyParam> {
+  bool lower;
+  DMLC_DECLARE_PARAMETER(LaCholeskyParam) {
+    DMLC_DECLARE_FIELD(lower)
+      .set_default(true)
+      .describe
+         ("True if the triangular matrix is lower triangular, false if it is upper triangular.");
+  }
+};
+
 // Parameters for matrix-matrix multiplication where one is a triangular matrix.
 struct LaTriangMatrixMultParam : public dmlc::Parameter<LaTriangMatrixMultParam> {
   bool transpose;
   bool rightside;
+  bool lower;
   double alpha;
   DMLC_DECLARE_PARAMETER(LaTriangMatrixMultParam) {
     DMLC_DECLARE_FIELD(transpose)
@@ -93,6 +105,10 @@ struct LaTriangMatrixMultParam : public dmlc::Parameter<LaTriangMatrixMultParam>
     DMLC_DECLARE_FIELD(rightside)
       .set_default(false)
       .describe("Multiply triangular matrix from the right to non-triangular one.");
+    DMLC_DECLARE_FIELD(lower)
+      .set_default(true)
+      .describe
+         ("True if the triangular matrix is lower triangular, false if it is upper triangular.");
     DMLC_DECLARE_FIELD(alpha)
       .set_default(1.0)
       .describe("Scalar factor to be applied to the result.");

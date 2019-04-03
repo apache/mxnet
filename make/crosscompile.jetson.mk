@@ -57,10 +57,10 @@ DEBUG = 0
 USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
-ADD_LDFLAGS = -L${CROSS_ROOT}/lib
+ADD_LDFLAGS = -L${CROSS_ROOT}/lib -L/usr/lib/aarch64-linux-gnu/
 
 # the additional compile flags you want to add
-ADD_CFLAGS = -I${CROSS_ROOT}/include
+ADD_CFLAGS = -I${CROSS_ROOT}/include -I/usr/include/aarch64-linux-gnu/
 
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
@@ -164,8 +164,14 @@ USE_OPERATOR_TUNING = 1
 # Use gperftools if found
 USE_GPERFTOOLS = 1
 
+# path to gperftools (tcmalloc) library in case of a non-standard installation
+USE_GPERFTOOLS_PATH =
+
 # Use JEMalloc if found, and not using gperftools
 USE_JEMALLOC = 1
+
+# path to jemalloc library in case of a non-standard installation
+USE_JEMALLOC_PATH =
 
 #----------------------------
 # additional operators

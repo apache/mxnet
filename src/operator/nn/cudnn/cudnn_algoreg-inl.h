@@ -30,6 +30,8 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <functional>
+#include <utility>
 #include "../../../common/cuda_utils.h"
 #include "../convolution-inl.h"
 #include "../deconvolution-inl.h"
@@ -65,7 +67,11 @@ class CuDNNAlgo {
 template<typename ParamType>
 class CuDNNAlgoReg {
  public:
-  bool Find(const ParamType &param,
+  using AlgoSetter_t = std::function<void(CuDNNAlgo<cudnnConvolutionFwdAlgo_t> *,
+                            CuDNNAlgo<cudnnConvolutionBwdDataAlgo_t> *,
+                            CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> *)>;
+
+  void FindOrElseRegister(const ParamType &param,
             const std::vector<TShape> &in_shape,
             const std::vector<TShape> &out_shape,
             cudnnDataType_t cudnn_data_type,
@@ -75,7 +81,8 @@ class CuDNNAlgoReg {
             bool add_to_weight,
             CuDNNAlgo<cudnnConvolutionFwdAlgo_t> *fwd,
             CuDNNAlgo<cudnnConvolutionBwdDataAlgo_t> *bwd,
-            CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> *flt) {
+            CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> *flt,
+            const AlgoSetter_t &algo_setter) {
     CHECK(in_shape.size() == 2 || in_shape.size() == 3);
     ParamKey key{param, in_shape[0], in_shape[1], out_shape[0], cudnn_data_type,
                  cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch, add_to_weight};
@@ -85,45 +92,28 @@ class CuDNNAlgoReg {
       *fwd = i->second.fwd;
       *bwd = i->second.bwd;
       *flt = i->second.flt;
-      return true;
-    }
-    return false;
-  }
-
-  void Register(const ParamType &param,
-                const std::vector<TShape> &in_shape,
-                const std::vector<TShape> &out_shape,
-                cudnnDataType_t cudnn_data_type,
-                cudnnDataType_t cudnn_forward_compute_type,
-                cudnnDataType_t cudnn_backward_compute_type,
-                int sm_arch,
-                bool add_to_weight,
-                const CuDNNAlgo<cudnnConvolutionFwdAlgo_t> &fwd,
-                const CuDNNAlgo<cudnnConvolutionBwdDataAlgo_t> &bwd,
-                const CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> &flt) {
-    CHECK(in_shape.size() == 2 || in_shape.size() == 3);
-    ParamKey key{param, in_shape[0], in_shape[1], out_shape[0], cudnn_data_type,
-                 cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch, add_to_weight};
-    std::lock_guard<std::mutex> guard(lock_);
-    if (param.cudnn_tune.value() && reg_.size() % 50 == 0) {
-      LOG(INFO) << "Running performance tests to find the best convolution "
-                   "algorithm, "
-                   "this can take a while... (setting env variable "
-                   "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)";
-      if (reg_.size() >= 1000) {
-        // Many people are very concerned about this warning, so change the warning once.
-        if (!is_warning_autotune_) {
-          LOG(INFO)
-            << "If you see this message in the middle of training, you are "
-            "probably using bucketing. Consider setting env variable "
-            "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable cudnn tuning.";
-          is_warning_autotune_ = true;
+    } else {
+      if (param.cudnn_tune.value() && reg_.size() % 50 == 0) {
+        LOG(INFO) << "Running performance tests to find the best convolution "
+            "algorithm, "
+            "this can take a while... (setting env variable "
+            "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)";
+        if (reg_.size() >= 1000) {
+          // Many people are very concerned about this warning, so change the warning once.
+          if (!is_warning_autotune_) {
+            LOG(INFO)
+                << "If you see this message in the middle of training, you are "
+                    "probably using bucketing. Consider setting env variable "
+                    "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable cudnn tuning.";
+            is_warning_autotune_ = true;
+          }
         }
       }
+      // Call provided function to determine the algos- likely uses cudnnFind() or cudnnGet()
+      algo_setter(fwd, bwd, flt);
+      // Save result so future lookups hit in this registry
+      reg_.insert(std::pair<ParamKey, CudnnAlgorithms>(key, CudnnAlgorithms{*fwd, *bwd, *flt}));
     }
-    reg_[key].fwd = fwd;
-    reg_[key].bwd = bwd;
-    reg_[key].flt = flt;
   }
 
   static CuDNNAlgoReg *Get();

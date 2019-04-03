@@ -62,7 +62,7 @@ def _add_conv_dw(out, dw_channels, channels, stride, relu6=False):
 class LinearBottleneck(nn.HybridBlock):
     r"""LinearBottleneck used in MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
-      Mobile Networks for Classification, Detection and Segmentation"
+    Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
@@ -138,7 +138,7 @@ class MobileNet(HybridBlock):
 class MobileNetV2(nn.HybridBlock):
     r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
-      Mobile Networks for Classification, Detection and Segmentation"
+    Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
@@ -223,7 +223,7 @@ def get_mobilenet_v2(multiplier, pretrained=False, ctx=cpu(),
                      root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
-      Mobile Networks for Classification, Detection and Segmentation"
+    Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
@@ -269,7 +269,7 @@ def mobilenet1_0(**kwargs):
 def mobilenet_v2_1_0(**kwargs):
     r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
-      Mobile Networks for Classification, Detection and Segmentation"
+    Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
@@ -300,7 +300,7 @@ def mobilenet0_75(**kwargs):
 def mobilenet_v2_0_75(**kwargs):
     r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
-      Mobile Networks for Classification, Detection and Segmentation"
+    Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
@@ -331,7 +331,7 @@ def mobilenet0_5(**kwargs):
 def mobilenet_v2_0_5(**kwargs):
     r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
-      Mobile Networks for Classification, Detection and Segmentation"
+    Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters
@@ -362,7 +362,7 @@ def mobilenet0_25(**kwargs):
 def mobilenet_v2_0_25(**kwargs):
     r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
-      Mobile Networks for Classification, Detection and Segmentation"
+    Mobile Networks for Classification, Detection and Segmentation"
     <https://arxiv.org/abs/1801.04381>`_ paper.
 
     Parameters

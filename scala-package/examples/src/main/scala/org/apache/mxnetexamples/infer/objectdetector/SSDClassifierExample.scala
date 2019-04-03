@@ -16,7 +16,11 @@
  */
 
 package org.apache.mxnetexamples.infer.objectdetector
+// scalastyle:off
+import java.awt.image.BufferedImage
 
+import org.apache.mxnetexamples.benchmark.CLIParserBase
+// scalastyle:on
 import java.io.File
 
 import org.apache.mxnet._
@@ -26,6 +30,8 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import java.nio.file.{Files, Paths}
+
+import org.apache.mxnetexamples.InferBase
 
 import scala.collection.mutable.ListBuffer
 
@@ -37,15 +43,6 @@ import scala.collection.mutable.ListBuffer
   * @see <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/objectdetector" target="_blank">Instructions to run this example</a>
   */
 // scalastyle:on
-class SSDClassifierExample {
-  @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
-  private val modelPathPrefix: String = "/model/ssd_resnet50_512"
-  @Option(name = "--input-image", usage = "the input image")
-  private val inputImagePath: String = "/images/dog.jpg"
-  @Option(name = "--input-dir", usage = "the input batch of images directory")
-  private val inputImageDir: String = "/images/"
-}
-
 object SSDClassifierExample {
 
   private val logger = LoggerFactory.getLogger(classOf[SSDClassifierExample])
@@ -111,7 +108,7 @@ object SSDClassifierExample {
   }
 
   def main(args: Array[String]): Unit = {
-    val inst = new SSDClassifierExample
+    val inst = new CLIParser
     val parser : CmdLineParser = new CmdLineParser(inst)
     parser.parseArgument(args.toList.asJava)
     val mdprefixDir = inst.modelPathPrefix
@@ -185,12 +182,73 @@ object SSDClassifierExample {
   def checkExist(arr : Array[String]) : Boolean = {
     var exist : Boolean = true
     for (item <- arr) {
-      exist = Files.exists(Paths.get(item)) && exist
-      if (!exist) {
+      if (!(Files.exists(Paths.get(item)))) {
         logger.error("Cannot find: " + item)
+        exist = false
       }
     }
     exist
   }
 
+}
+
+class CLIParser extends CLIParserBase {
+  @Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
+  val modelPathPrefix: String = "/model/ssd_resnet50_512"
+  @Option(name = "--input-image", usage = "the input image")
+  val inputImagePath: String = "/images/dog.jpg"
+  @Option(name = "--input-dir", usage = "the input batch of images directory")
+  val inputImageDir: String = "/images/"
+}
+
+class SSDClassifierExample(CLIParser: CLIParser)
+  extends InferBase {
+  override def loadModel(context: Array[Context], batchInference: Boolean = false): Any = {
+    val dType = DType.Float32
+    val batchSize = if (batchInference) CLIParser.batchSize else 1
+    val inputShape = Shape(batchSize, 3, 512, 512)
+    val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
+    new ObjectDetector(CLIParser.modelPathPrefix, inputDescriptors, context)
+  }
+  override def loadSingleData(): Any = {
+    val img = ImageClassifier.loadImageFromFile(CLIParser.inputImagePath)
+    img
+  }
+
+  override def runSingleInference(loadedModel: Any, input: Any): Any = {
+    val detector = loadedModel.asInstanceOf[ObjectDetector]
+    val imgInput = input.asInstanceOf[BufferedImage]
+    detector.imageObjectDetect(imgInput)
+  }
+
+  override def loadInputBatch(inputPaths: Any): Any = {
+    val batchFile = inputPaths.asInstanceOf[List[String]]
+    ImageClassifier.loadInputBatch(batchFile)
+  }
+
+  override def loadBatchFileList(batchSize: Int): List[Any] = {
+    val dir = new File(CLIParser.inputImageDir)
+    require(dir.exists && dir.isDirectory,
+      "input image directory: %s not found".format(CLIParser.inputImageDir))
+    val output = ListBuffer[List[String]]()
+    var batch = ListBuffer[String]()
+    for (imgFile: File <- dir.listFiles()){
+      batch += imgFile.getPath
+      if (batch.length == batchSize) {
+        output += batch.toList
+        batch = ListBuffer[String]()
+      }
+    }
+    if (batch.length > 0) {
+      output += batch.toList
+    }
+    output.toList
+  }
+
+  override def runBatchInference(loadedModel: Any, input: Any): Any = {
+    val model = loadedModel.asInstanceOf[ObjectDetector]
+    val imgInput = input.asInstanceOf[Traversable[BufferedImage]]
+    val output = model.imageBatchObjectDetect(imgInput, Some(5))
+    output
+  }
 }

@@ -15,8 +15,11 @@
 ;; limitations under the License.
 ;;
 
-(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "1.3.0-SNAPSHOT"
+(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "1.4.0-SNAPSHOT"
   :description "Clojure package for MXNet"
+  :url "https://github.com/apache/incubator-mxnet"
+  :license {:name "Apache License"
+            :url "http://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [t6/from-scala "0.3.0"]
 
@@ -26,14 +29,14 @@
                  ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.1"]
 
                  ;;; CI
-                 [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.3.0-SNAPSHOT"]
+                 [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.4.0-SNAPSHOT"]
 
                  [org.clojure/tools.logging "0.4.0"]
                  [org.apache.logging.log4j/log4j-core "2.8.1"]
                  [org.apache.logging.log4j/log4j-api "2.8.1"]
                  [org.slf4j/slf4j-log4j12 "1.7.25" :exclusions [org.slf4j/slf4j-api]]]
   :pedantic? :skip
-  :plugins [[lein-codox "0.10.3" :exclusions [org.clojure/clojure]]
+  :plugins [[lein-codox "0.10.6" :exclusions [org.clojure/clojure]]
             [lein-cloverage "1.0.10" :exclusions [org.clojure/clojure]]
             [lein-cljfmt "0.5.7"]]
   :codox {:namespaces [#"^org\.apache\.clojure-mxnet\.(?!gen).*"]}

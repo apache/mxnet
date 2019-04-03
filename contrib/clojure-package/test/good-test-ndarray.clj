@@ -1,6 +1,7 @@
 (ns org.apache.clojure-mxnet.ndarray
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
-                            min repeat reverse set sort take to-array empty shuffle])
+                            min repeat reverse set sort take to-array empty shuffle
+                            ref])
   (:import (org.apache.mxnet NDArray Shape)))
 
 ;; Do not edit - this is auto-generated

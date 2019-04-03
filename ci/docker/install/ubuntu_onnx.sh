@@ -27,8 +27,9 @@ set -e
 set -x
 
 echo "Installing libprotobuf-dev and protobuf-compiler ..."
+apt-get update || true
 apt-get install -y libprotobuf-dev protobuf-compiler
 
 echo "Installing pytest, pytest-cov, protobuf, Pillow, ONNX and tabulate ..."
-pip2 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.5.2 onnx==1.2.1 Pillow==5.0.0 tabulate==0.7.5
-pip3 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.5.2 onnx==1.2.1 Pillow==5.0.0 tabulate==0.7.5
+pip2 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.5.2 onnx==1.3.0 Pillow==5.0.0 tabulate==0.7.5
+pip3 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.5.2 onnx==1.3.0 Pillow==5.0.0 tabulate==0.7.5

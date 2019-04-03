@@ -22,7 +22,9 @@
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.shape :as mx-shape]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [org.apache.clojure-mxnet.dtype :as dtype]
+            [org.apache.clojure-mxnet.layout :as layout]))
 
 (deftest test-mnsit-iter-and-mnist-pack
   (let [_ (when-not (.exists (io/file "data/train-images-idx3-ubyte"))
@@ -58,6 +60,31 @@
             data1 (-> (mx-io/iter-data mnist-iter) first (ndarray/->vec))]
         (is (= label1 label0))
         (is (= data1 data0))))))
+
+(deftest test-provide-data-and-label
+  (let [test-data (mx-io/mnist-iter {:image "data/train-images-idx3-ubyte"
+                                     :label "data/train-labels-idx1-ubyte"
+                                     :label-name "softmax_label"
+                                     :data-shape [1 28 28]
+                                     :label-shape [1 1 10]
+                                     :batch-size 100
+                                     :shuffle true
+                                     :flat false
+                                     :silent false
+                                     :seed 10})]
+    (is (= [{:name "data", :shape [100 1 28 28]}]
+           (mx-io/provide-data test-data)))
+    (is (= [{:name "softmax_label", :shape [100]}]
+           (mx-io/provide-label test-data)))
+    (is (= [{:name "data", :shape [100 1 28 28]
+             :dtype dtype/FLOAT32
+             :layout layout/UNDEFINED}]
+           (mx-io/provide-data-desc test-data)))
+    (is (= [{:name "softmax_label"
+             :shape [100]
+             :dtype dtype/FLOAT32
+             :layout layout/UNDEFINED}]
+           (mx-io/provide-label-desc test-data)))))
 
 (deftest test-image-record-iter
   (let [_ (when-not (.exists (io/file "data/cifar/train.rec"))
@@ -162,4 +189,26 @@
                                                :last-batch-handle "discard"})
           nbatch2 7]
       (is (= nbatch2 (mx-io/reduce-batches data-iter2 (fn [result batch] (inc result)))))
-      (is (= [] (mx-io/iter-init-label data-iter2))))))
+      (is (= [] (mx-io/iter-init-label data-iter2))))
+
+    ;;; testing with a specified layout
+    (let [label-desc (mx-io/data-desc {:name "label"
+                                       :shape [2 2]
+                                       :dtype dtype/INT32
+                                       :layout layout/NT})
+          data-desc (mx-io/data-desc {:name "data"
+                                      :shape [2 2 2]
+                                      :dtype dtype/FLOAT32
+                                      :layout layout/NTC})
+          label (ndarray/ones [2 2] {:dtype dtype/INT32})
+          data (ndarray/ones [2 2 2] {:dtype dtype/FLOAT32})
+          data-iter3 (mx-io/ndarray-iter {data-desc data}
+                                         {:label {label-desc label}})]
+      (is (= {:dtype dtype/FLOAT32 :layout layout/NTC}
+             (-> (mx-io/provide-data-desc data-iter3)
+                 first
+                 (select-keys [:dtype :layout]))))
+      (is (= {:dtype dtype/INT32 :layout layout/NT}
+             (-> (mx-io/provide-label-desc data-iter3)
+                 first
+                 (select-keys [:dtype :layout])))))))

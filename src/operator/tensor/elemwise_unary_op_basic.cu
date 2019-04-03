@@ -18,8 +18,8 @@
  */
 
 /*!
- * \file elemwise_unary_op_trig.cu
- * \brief GPU Implementation of unary trigometric functions.
+ * \file elemwise_unary_op_basic.cu
+ * \brief GPU Implementation of unary functions.
  */
 #include "./elemwise_binary_op.h"
 
@@ -53,6 +53,14 @@ NNVM_REGISTER_OP(softsign)
 NNVM_REGISTER_OP(_backward_softsign)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::softsign_grad>>);
+
+// erf
+NNVM_REGISTER_OP(erf)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::erf>);
+
+NNVM_REGISTER_OP(_backward_erf)
+.set_attr<FCompute>("FCompute<gpu>",
+                    ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::erf_grad>>);
 
 // copy
 NNVM_REGISTER_OP(_copy)

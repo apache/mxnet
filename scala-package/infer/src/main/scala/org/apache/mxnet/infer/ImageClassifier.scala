@@ -76,13 +76,16 @@ class ImageClassifier(modelPathPrefix: String,
                     topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
-    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
+    val imageShape = inputShape.drop(1)
+    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+    val imgWithBatchNum = NDArray.api.expand_dims(pixelsNDArray, 0)
     inputImage.flush()
     scaledImage.flush()
-
-    val output = super.classifyWithNDArray(IndexedSeq(pixelsNDArray), topK)
-
     handler.execute(pixelsNDArray.dispose())
+
+    val output = super.classifyWithNDArray(IndexedSeq(imgWithBatchNum), topK)
+
+    handler.execute(imgWithBatchNum.dispose())
 
     IndexedSeq(output(0))
   }
@@ -97,14 +100,16 @@ class ImageClassifier(modelPathPrefix: String,
   def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
 
-    val imageBatch = ListBuffer[NDArray]()
-    for (image <- inputBatch) {
-      val scaledImage = ImageClassifier.reshapeImage(image, width, height)
-      val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
-      imageBatch += pixelsNDArray
-    }
+    val inputBatchSeq = inputBatch.toIndexedSeq
+    val imageBatch = inputBatchSeq.indices.par.map(idx => {
+      val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
+      val imageShape = inputShape.drop(1)
+      val imgND = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+      val imgWithBatch = NDArray.api.expand_dims(imgND, 0).get
+      handler.execute(imgND.dispose())
+      imgWithBatch
+    }).toList
     val op = NDArray.concatenate(imageBatch)
-
     val result = super.classifyWithNDArray(IndexedSeq(op), topK)
     handler.execute(op.dispose())
     handler.execute(imageBatch.foreach(_.dispose()))
@@ -147,9 +152,9 @@ object ImageClassifier {
     * returned by this method after the use.
     * </p>
     * @param resizedImage     BufferedImage to get pixels from
-    * @param inputImageShape  Input shape; for example for resnet it is (1,3,224,224).
+    * @param inputImageShape  Input shape; for example for resnet it is (3,224,224).
                               Should be same as inputDescriptor shape.
-    * @return                 NDArray pixels array
+    * @return                 NDArray pixels array with shape (3, 224, 224) in CHW format
     */
   def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape): NDArray = {
     // Get height and width of the image

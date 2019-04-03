@@ -146,11 +146,11 @@ class Classifier(modelPathPrefix: String,
   private[infer] def getSynsetFilePath(modelPathPrefix: String): String = {
     val dirPath = modelPathPrefix.substring(0, 1 + modelPathPrefix.lastIndexOf(File.separator))
     val d = new File(dirPath)
-    require(d.exists && d.isDirectory, "directory: %s not found".format(dirPath))
+    require(d.exists && d.isDirectory, s"directory: $dirPath not found")
 
     val s = new File(dirPath + "synset.txt")
-    require(s.exists() && s.isFile, "File synset.txt should exist inside modelPath: %s".format
-    (dirPath + "synset.txt"))
+    require(s.exists() && s.isFile,
+      s"File synset.txt should exist inside modelPath: ${dirPath + "synset.txt"}")
 
     s.getCanonicalPath
   }

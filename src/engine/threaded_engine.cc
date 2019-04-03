@@ -130,6 +130,9 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
     assert(pending_write_ != nullptr);
     CHECK_EQ(num_pending_reads_, kWriteTriggered);
 
+    // increment version number
+    ++version_;
+
     // really delete
     if (to_delete_) {
       VersionedVarBlock *head = pending_write_->next;
@@ -164,7 +167,7 @@ inline bool ThreadedVar::CompleteWriteDependency(Dispatcher dispatcher) {
   }
   // This is outside of lock scope
   // Be very carful, pending_write_ and num_pending_reads_
-  // can change now, do not reply ont the two variables.
+  // can change now, do not rely on these two variables.
   // The linked list \in [old_pending_write, end_of_read_chain)
   // is already detached from this Var.
   // So it is safe to modify these
@@ -194,6 +197,11 @@ inline void ThreadedVar::SetToDelete() {
 inline bool ThreadedVar::ready_to_read() {
   std::lock_guard<std::mutex> lock{mutex_};
   return this->is_ready_to_read();
+}
+
+inline size_t ThreadedVar::version() {
+  std::lock_guard<std::mutex> lock{mutex_};
+  return this->version_;
 }
 
 // implementation of threaded engine
@@ -470,10 +478,14 @@ inline void ThreadedEngine::ThrowException(ThreadedVar* threaded_var) {
   return;
 }
 
-void ThreadedEngine::OnCompleteStatic(
-    Engine *engine, void *opr_block_) {
+void ThreadedEngine::OnCompleteStatic(Engine *engine, void *opr_block_,
+                                      const dmlc::Error* error) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
   ThreadedOpr *threaded_opr = opr_block->opr;
+  if (error != nullptr) {
+    auto ex_p = std::make_exception_ptr(*error);
+    threaded_opr->opr_exception = std::make_shared<std::exception_ptr>(ex_p);
+  }
   if (opr_block->profiling && threaded_opr->opr_name) {
     // record operator end timestamp
     opr_block->opr_profile->stop();

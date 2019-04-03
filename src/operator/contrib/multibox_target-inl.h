@@ -218,15 +218,15 @@ class MultiBoxTargetProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 3) << "Input: [anchor, label, clsPred]";
     TShape ashape = in_shape->at(mboxtarget_enum::kAnchor);
     CHECK_EQ(ashape.ndim(), 3) << "Anchor should be batch shared N*4 tensor";
-    CHECK_EQ(ashape[0], 1) << "Anchors are shared across batches, first dim=1";
-    CHECK_GT(ashape[1], 0) << "Number boxes should > 0";
-    CHECK_EQ(ashape[2], 4) << "Box dimension should be 4: [xmin-ymin-xmax-ymax]";
+    CHECK_EQ(ashape[0], 1) << "Anchors are shared across batches, first dimension should be 1";
+    CHECK_GT(ashape[1], 0) << "Number boxes should be greater than 0";
+    CHECK_EQ(ashape[2], 4) << "Box dimension should be 4: [xmin, ymin, xmax, ymax]";
     TShape lshape = in_shape->at(mboxtarget_enum::kLabel);
-    CHECK_EQ(lshape.ndim(), 3) << "Label should be [batch-num_labels-(>=5)] tensor";
-    CHECK_GT(lshape[1], 0) << "Padded label should > 0";
-    CHECK_GE(lshape[2], 5) << "Label width must >=5";
+    CHECK_EQ(lshape.ndim(), 3) << "Label should be [batch, num_labels, label_width] tensor";
+    CHECK_GT(lshape[1], 0) << "Padded label should be greater than 0";
+    CHECK_GE(lshape[2], 5) << "Label width should be greater than or equal to 5";
     TShape pshape = in_shape->at(mboxtarget_enum::kClsPred);
-    CHECK_EQ(pshape.ndim(), 3) << "Prediction: [nbatch-num_classes-num_anchors]";
+    CHECK_EQ(pshape.ndim(), 3) << "Prediction: [batch, num_classes, num_anchors]";
     CHECK_EQ(pshape[2], ashape[1]) << "Number of anchors mismatch";
     TShape loc_shape = Shape2(lshape[0], ashape.Size());  // batch - (num_box * 4)
     TShape lm_shape = loc_shape;

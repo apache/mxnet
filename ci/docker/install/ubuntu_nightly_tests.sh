@@ -25,12 +25,12 @@ set -ex
 # Adding ppas frequently fails due to busy gpg servers, retry 5 times with 5 minute delays.
 for i in 1 2 3 4 5; do add-apt-repository -y ppa:ubuntu-toolchain-r/test && break || sleep 300; done
 
-apt-get update
+apt-get update || true
 apt-get -y install time
 
 # Install for RAT License Check Nightly Test
 apt-get install -y subversion maven -y #>/dev/null
 
 # Packages needed for the Straight Dope Nightly tests.
-pip2 install pandas scikit-image
-pip3 install pandas scikit-image
+pip2 install pandas scikit-image prompt_toolkit
+pip3 install pandas scikit-image prompt_toolkit

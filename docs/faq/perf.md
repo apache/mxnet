@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Some Tips for Improving MXNet Performance
 Even after fixing the training or deployment environment and parallelization scheme,
 a number of configuration settings and data-handling choices can impact the _MXNet_ performance.
@@ -18,12 +35,15 @@ Performance is mainly affected by the following 4 factors:
 ## Intel CPU
 
 For using Intel Xeon CPUs for training and inference, we suggest enabling
-`USE_MKLDNN = 1` in`config.mk`. 
+`USE_MKLDNN = 1` in `config.mk`. 
 
-We also find that setting the following two environment variables can help:
-- `export KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
-- `export OMP_NUM_THREADS=vCPUs / 2` in which `vCPUs` is the number of virtual CPUs.
-  Whe using Linux, we can access this information by running `cat /proc/cpuinfo  | grep processor | wc -l`
+We also find that setting the following environment variables can help:
+
+| Variable  | Description |
+| :-------- | :---------- |
+| `OMP_NUM_THREADS`            | Suggested value: `vCPUs / 2` in which `vCPUs` is the number of virtual CPUs. For more information, please see the guide for [setting the number of threads using an OpenMP environment variable](https://software.intel.com/en-us/mkl-windows-developer-guide-setting-the-number-of-threads-using-an-openmp-environment-variable) |
+| `KMP_AFFINITY`               | Suggested value: `granularity=fine,compact,1,0`.  For more information, please see the guide for [Thread Affinity Interface (Linux* and Windows*)](https://software.intel.com/en-us/node/522691). |
+| `MXNET_SUBGRAPH_BACKEND` | Set to MKLDNN to enable the [subgraph feature](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN) for better performance. For more information please see [Build/Install MXNet with MKL-DNN](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)|
 
 Note that _MXNet_ treats all CPUs on a single machine as a single device.
 So whether you specify `cpu(0)` or `cpu()`, _MXNet_ will use all CPU cores on the machine.

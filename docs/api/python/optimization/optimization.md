@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Optimization: initialize and update weights
 
 ## Overview
@@ -133,18 +150,18 @@ straightforward.
 For `initializer`, create a subclass of ``Initializer`` and define the
 `_init_weight` method. We can also change the default behaviors to initialize
 other parameters such as `_init_bias`. See
-[`initializer.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/initializer.py)
+[`initializer.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/initializer.py)
 for examples.
 
 For ``optimizer``, create a subclass of ``Optimizer``
 and implement two methods ``create_state`` and ``update``. Also add
 ``@mx.optimizer.Optimizer.register`` before this class. See
-[`optimizer.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/optimizer.py)
+[`optimizer.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/optimizer/optimizer.py)
 for examples.
 
 For `lr_scheduler`, create a subclass of `LRScheduler` and then implement the
 `__call__` method. See
-[`lr_scheduler.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/lr_scheduler.py)
+[`lr_scheduler.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/lr_scheduler.py)
 for examples.
 
 ## API Reference

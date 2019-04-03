@@ -26,6 +26,7 @@ from ..ndarray_doc import _build_doc
 from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null # pylint: disable=unused-import
 
 
+# pylint: disable=too-many-locals
 def _generate_ndarray_function_code(handle, name, func_name, signature_only=False):
     """Generate function for ndarray op by handle and function name."""
     real_name = ctypes.c_char_p()

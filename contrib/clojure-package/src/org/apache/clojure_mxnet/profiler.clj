@@ -36,7 +36,7 @@
   ([state]
    (Profiler/profilerSetState state))
   ([]
-   (profiler-set-state false)))
+   (profiler-set-state "stop")))
 
 (defn dump-profile
   " Dump profile and stop profiler. Use this to save profile

@@ -23,7 +23,8 @@ from .import_onnx import GraphProto
 
 def import_model(model_file):
     """Imports the ONNX model file, passed as a parameter, into MXNet symbol and parameters.
-    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
+    Operator support and coverage -
+    https://cwiki.apache.org/confluence/display/MXNET/MXNet-ONNX+Integration
 
     Parameters
     ----------
@@ -40,6 +41,11 @@ def import_model(model_file):
 
     aux_params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
         Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+
+    Notes
+    -----
+    This method is available when you ``import mxnet.contrib.onnx``
+
     """
     graph = GraphProto()
 
@@ -49,13 +55,17 @@ def import_model(model_file):
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
     # loads model file and returns ONNX protobuf object
-    model_proto = onnx.load(model_file)
+    model_proto = onnx.load_model(model_file)
     sym, arg_params, aux_params = graph.from_onnx(model_proto.graph)
     return sym, arg_params, aux_params
 
 def get_model_metadata(model_file):
     """
     Returns the name and shape information of input and output tensors of the given ONNX model file.
+
+    Notes
+    -----
+    This method is available when you ``import mxnet.contrib.onnx``
 
     Parameters
     ----------
@@ -66,20 +76,18 @@ def get_model_metadata(model_file):
     -------
     model_metadata : dict
         A dictionary object mapping various metadata to its corresponding value.
-        The dictionary will have the following template.
-        {
-            'input_tensor_data' : <list of tuples representing the shape of the input paramters>,
-            'output_tensor_data' : <list of tuples representing the shape of the output
-                                    of the model>
-        }
+        The dictionary will have the following template::
 
+          'input_tensor_data' : list of tuples representing the shape of the input paramters
+          'output_tensor_data' : list of tuples representing the shape of the output of the model
     """
     graph = GraphProto()
+
     try:
         import onnx
     except ImportError:
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
-    model_proto = onnx.load(model_file)
+    model_proto = onnx.load_model(model_file)
     metadata = graph.get_graph_metadata(model_proto.graph)
     return metadata

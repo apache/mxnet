@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory
 import scala.annotation.varargs
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
+import scala.language.implicitConversions
 /**
  * IO iterators for loading training & validation data
  */
@@ -114,8 +115,9 @@ object IO {
                                   defaultName: String,
                                   defaultDType: DType,
                                   defaultLayout: String): IndexedSeq[(DataDesc, NDArray)] = {
-    require(data != null)
-    require(data != IndexedSeq.empty || allowEmpty)
+    require(data != null, "data is required.")
+    require(data != IndexedSeq.empty || allowEmpty,
+      s"data should not be empty when allowEmpty is false")
     if (data == IndexedSeq.empty) {
       IndexedSeq()
     } else if (data.length == 1) {
@@ -339,11 +341,11 @@ abstract class DataIter extends Iterator[DataBatch] {
   def getIndex(): IndexedSeq[Long]
 
   // The name and shape of data provided by this iterator
-  @deprecated
+  @deprecated("Use provideDataDesc instead", "1.3.0")
   def provideData: ListMap[String, Shape]
 
   // The name and shape of label provided by this iterator
-  @deprecated
+  @deprecated("Use provideLabelDesc instead", "1.3.0")
   def provideLabel: ListMap[String, Shape]
 
   // Provide type:DataDesc of the data
@@ -372,9 +374,7 @@ abstract class DataPack() extends Iterable[DataBatch] {
 case class DataDesc(name: String, shape: Shape,
                     dtype: DType = DType.Float32, layout: String = Layout.UNDEFINED) {
   require(layout == Layout.UNDEFINED || shape.length == layout.length,
-    ("number of dimensions in shape :%d with" +
-    " shape: %s should match the length of the layout: %d with layout: %s").
-    format(shape.length, shape.toString, layout.length, layout))
+    s"number of dimensions in $shape should match the layout $layout")
 
   override def toString(): String = {
     s"DataDesc[$name,$shape,$dtype,$layout]"
@@ -405,7 +405,7 @@ object DataDesc {
     }
   }
 
-  @deprecated
+  @deprecated("Please use DataDesc methods instead", "1.3.0")
   implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {
     if (shapes != null) {
       shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq

@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cc
- * \brief elementwise sum operator
+ * \brief CPU implementation of elementwise sum operator
 */
 #include "./elemwise_sum.h"
 #include "../../ndarray/ndarray_function.h"
@@ -179,6 +179,9 @@ The storage type of ``add_n`` output depends on storage types of inputs
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+#endif
 .set_attr<nnvm::FInferShape>("FInferShape", ElementWiseSumShape)
 .set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)
 .set_attr<FInferStorageType>("FInferStorageType", ElementWiseSumForwardInferStorageType)

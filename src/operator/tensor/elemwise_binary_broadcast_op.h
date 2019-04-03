@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file elementwise_binary_broadcast_op.h
- * \brief Function definition of elementwise unary operators
+ * \file elemwise_binary_broadcast_op.h
+ * \brief Function definition of elementwise binary broadcast operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_

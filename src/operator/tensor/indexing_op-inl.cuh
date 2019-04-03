@@ -213,10 +213,10 @@ inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
   const int num_unique_est = min(num_rows, src.size(0));
   const int max_nthread = 128;
-  const int num_y = max(src.size(0)/num_unique_est, 1);
+  const int num_y = max(static_cast<int>(src.size(0))/num_unique_est, 1);
   const int block_dim_x = kWarpSize;
   const int block_dim_y = min(num_y, max_nthread/block_dim_x);
-  const int SZ = min((src.size(1) + block_dim_x - 1) / block_dim_x, 4);
+  const int SZ = min((static_cast<int>(src.size(1)) + block_dim_x - 1) / block_dim_x, 4);
   const int grid_dim_x = (src.size(1) + block_dim_x * SZ - 1) / (block_dim_x * SZ);
   const int grid_dim_y = min(num_unique_est, mshadow::cuda::kBaseGridNum);
   dim3 dimBlock(block_dim_x, block_dim_y);

@@ -121,6 +121,7 @@ __global__ void BilinearSamplingBackwardKernel(const int i_c, const int i_h,
       if (between(top_left_x, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
         atomicAdd((g_input + data_index + i_w),
                   *(grad + grad_index) * (1.0 - top_left_y_w) * top_left_x_w);
+        bottom_left_v = *(data + data_index + i_w);
       }
       if (between(top_left_x+1, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
         atomicAdd((g_input + data_index + i_w + 1),
@@ -194,7 +195,11 @@ Operator* CreateOp<gpu>(SpatialTransformerParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new CuDNNSpatialTransformerOp<DType>(param);
+    if (param.cudnn_off.has_value() && param.cudnn_off.value()) {
+      op = new SpatialTransformerOp<gpu, DType>(param);
+    } else {
+      op = new CuDNNSpatialTransformerOp<DType>(param);
+    }
   })
 #else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {

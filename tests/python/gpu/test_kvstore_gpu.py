@@ -21,7 +21,7 @@ import os
 import mxnet as mx
 import numpy as np
 import unittest
-from mxnet.test_utils import assert_almost_equal, default_context
+from mxnet.test_utils import assert_almost_equal, default_context, EnvManager
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown
@@ -29,22 +29,6 @@ from common import setup_module, with_seed, teardown
 shape = (4, 4)
 keys = [5, 7, 11]
 str_keys = ['b', 'c', 'd']
-
-class EnvManager:
-    def __init__(self, key, val):
-        self._key = key
-        self._next_val = val
-        self._prev_val = None
-
-    def __enter__(self):
-        try:
-            self._prev_val = os.environ[self._key]
-        except KeyError:
-            self._prev_val = ''
-        os.environ[self._key] = self._next_val
-
-    def __exit__(self, ptype, value, trace):
-        os.environ[self._key] = self._prev_val
 
 def init_kv_with_str(stype='default', kv_type='local'):
     """init kv """
@@ -58,6 +42,7 @@ def init_kv_with_str(stype='default', kv_type='local'):
 # Test seed 89411477 (module seed 1829754103) resulted in a py3-gpu CI runner core dump.
 # Not reproducible, so this test is back on random seeds.
 @with_seed()
+@unittest.skipIf(mx.context.num_gpus() < 2, "test_rsp_push_pull needs more than 1 GPU")
 def test_rsp_push_pull():
     def check_rsp_push_pull(kv_type, sparse_pull, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)
@@ -65,7 +50,8 @@ def test_rsp_push_pull():
         push_ctxs = [mx.cpu(i) if is_push_cpu else mx.gpu(i) for i in range(2)]
         kv.push('e', [mx.nd.ones(shape, ctx=context).tostype('row_sparse') for context in push_ctxs])
 
-        def check_rsp_pull(kv, count, ctxs, sparse_pull, is_same_rowid=False, use_slice=False):
+        def check_rsp_pull(kv, ctxs, sparse_pull, is_same_rowid=False, use_slice=False):
+            count = len(ctxs)
             num_rows = shape[0]
             row_ids = []
             all_row_ids = np.arange(num_rows)
@@ -100,14 +86,14 @@ def test_rsp_push_pull():
                     expected_val[:] = 2
                     assert_almost_equal(retained, expected_val)
 
-        check_rsp_pull(kv, 1, [mx.gpu(0)], sparse_pull)
-        check_rsp_pull(kv, 1, [mx.cpu(0)], sparse_pull)
-        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], sparse_pull)
-        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], sparse_pull, is_same_rowid=True)
-        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], sparse_pull)
-        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], sparse_pull, is_same_rowid=True)
-        check_rsp_pull(kv, 4, [mx.gpu(i//2) for i in range(4)], sparse_pull, use_slice=True)
-        check_rsp_pull(kv, 4, [mx.cpu(i) for i in range(4)], sparse_pull, use_slice=True)
+        check_rsp_pull(kv, [mx.gpu(0)], sparse_pull)
+        check_rsp_pull(kv, [mx.cpu(0)], sparse_pull)
+        check_rsp_pull(kv, [mx.gpu(i//2) for i in range(4)], sparse_pull)
+        check_rsp_pull(kv, [mx.gpu(i//2) for i in range(4)], sparse_pull, is_same_rowid=True)
+        check_rsp_pull(kv, [mx.cpu(i) for i in range(4)], sparse_pull)
+        check_rsp_pull(kv, [mx.cpu(i) for i in range(4)], sparse_pull, is_same_rowid=True)
+        check_rsp_pull(kv, [mx.gpu(i//2) for i in range(4)], sparse_pull, use_slice=True)
+        check_rsp_pull(kv, [mx.cpu(i) for i in range(4)], sparse_pull, use_slice=True)
 
     envs = ["","1"]
     key  = "MXNET_KVSTORE_USETREE"

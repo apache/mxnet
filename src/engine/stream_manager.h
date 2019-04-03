@@ -65,6 +65,9 @@ template <std::size_t kNumGpus, std::size_t kStreams>
 RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
     Context const& ctx) {
   RunContext ret;
+#if MXNET_USE_CUDA
+  mxnet::common::cuda::DeviceStore device_store;
+#endif
   switch (ctx.dev_mask()) {
     case cpu::kDevMask:
       ret = RunContext{ctx, nullptr};
@@ -72,7 +75,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
       std::size_t use_counter;
-      CUDA_CALL(cudaSetDevice(ctx.dev_id));
+      device_store.SetDevice(ctx.dev_id);
       {
         std::lock_guard<std::mutex> lock{mutex_};
         auto&& counter = gpu_cnt_.at(ctx.dev_id);
@@ -101,13 +104,16 @@ template <std::size_t kNumGpus, std::size_t kStreams>
 RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
     Context const& ctx) {
   RunContext ret;
+#if MXNET_USE_CUDA
+  mxnet::common::cuda::DeviceStore device_store;
+#endif
   switch (ctx.dev_mask()) {
     case cpu::kDevMask:
       ret = RunContext{ctx, nullptr};
       break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
-      CUDA_CALL(cudaSetDevice(ctx.dev_id));
+      device_store.SetDevice(ctx.dev_id);
       {
         std::lock_guard<std::mutex> lock{mutex_};
         if (gpu_io_streams_.at(ctx.dev_id) == nullptr) {

@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet Model Zoo
 
 MXNet features fast implementations of many state-of-the-art models reported in the academic literature. This Model Zoo is an
@@ -41,7 +58,7 @@ For instructions on using these models, see [the python tutorial on using pre-tr
 | [SqueezeNet v1.1](http://data.dmlc.ml/models/imagenet/squeezenet/squeezenet_v1.1-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/squeezenet/squeezenet_v1.1-0000.params) | [Iandola et al.., 2016](https://arxiv.org/pdf/1602.07360v4.pdf) | @jspisak |
 | [VGG16](http://data.dmlc.ml/models/imagenet/vgg/vgg16-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/vgg/vgg16-0000.params)| [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | @jspisak |
 | [VGG19](http://data.dmlc.ml/models/imagenet/vgg/vgg19-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/vgg/vgg19-0000.params) | [Simonyan et al.., 2015](https://arxiv.org/pdf/1409.1556v6.pdf) | @jspisak |
-| [Inception v3 w/BatchNorm](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-0126.params) | [Szegedy et al.., 2015](https://arxiv.org/pdf/1512.00567.pdf) | @jspisak |
+| [Inception w/ BatchNorm](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-0126.params) | [Szegedy et al.., 2015](https://arxiv.org/pdf/1502.03167.pdf) | @jspisak |
 | [ResidualNet152](http://data.dmlc.ml/models/imagenet/resnet/152-layers/resnet-152-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/resnet/152-layers/resnet-152-0000.params) | [He et al.., 2015](https://arxiv.org/pdf/1512.03385v1.pdf) | @jspisak |
 | [ResNext101-64x4d](http://data.dmlc.ml/models/imagenet/resnext/101-layers/resnext-101-64x4d-symbol.json) | ImageNet | [Param File](http://data.dmlc.ml/models/imagenet/resnext/101-layers/resnext-101-64x4d-0000.params) | [Xie et al.., 2016](https://arxiv.org/pdf/1611.05431.pdf) | @Jerryzcn |
 | Fast-RCNN | PASCAL VOC | [Param File] | [Girshick, 2015](https://arxiv.org/pdf/1504.08083v2.pdf) | |

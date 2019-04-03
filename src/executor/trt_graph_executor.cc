@@ -21,7 +21,7 @@
 
 #include "trt_graph_executor.h"
 
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 #include <NvInfer.h>
 #include "./onnx_to_tensorrt.h"
 #include "../operator/contrib/tensorrt-inl.h"

@@ -1,9 +1,40 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet - Scala API
+
 MXNet supports the Scala programming language. The MXNet Scala package brings flexible and efficient GPU
 computing and state-of-art deep learning to Scala. It enables you to write seamless tensor/matrix computation with multiple GPUs in Scala. It also lets you construct and customize the state-of-art deep learning models in Scala, and apply them to tasks, such as image classification and data science challenges.
 
 See the [MXNet Scala API Documentation](docs/index.html#org.apache.mxnet.package) for detailed API information.
 
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   infer.md
+   io.md
+   kvstore.md
+   model.md
+   module.md
+   ndarray.md
+   symbol_in_pictures.md
+   symbol.md
+```
 
 ## Image Classification with the Scala Infer API
 The Infer API can be used for single and batch image classification. More information can be found at the following locations:

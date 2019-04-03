@@ -21,12 +21,14 @@
 
 from __future__ import absolute_import, print_function
 
+import sys
 import os
 import random
 import logging
 import json
 import warnings
 import numpy as np
+
 
 try:
     import cv2
@@ -72,12 +74,12 @@ def imread(filename, *args, **kwargs):
 
     Set `flag` parameter to 0 to get grayscale output
 
-    >>> mx.img.imdecode("flower.jpg", flag=0)
+    >>> mx.img.imread("flower.jpg", flag=0)
     <NDArray 224x224x1 @cpu(0)>
 
     Set `to_rgb` parameter to 0 to get output in OpenCV format (BGR)
 
-    >>> mx.img.imdecode(str_image, to_rgb=0)
+    >>> mx.img.imread("flower.jpg", to_rgb=0)
     <NDArray 224x224x3 @cpu(0)>
     """
     return _internal._cvimread(filename, *args, **kwargs)
@@ -91,7 +93,7 @@ def imdecode(buf, *args, **kwargs):
 
     Parameters
     ----------
-    buf : str/bytes or numpy.ndarray
+    buf : str/bytes/bytearray or numpy.ndarray
         Binary image data as string or numpy ndarray.
     flag : int, optional, default=1
         1 for three channel color output. 0 for grayscale output.
@@ -133,7 +135,11 @@ def imdecode(buf, *args, **kwargs):
     <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
+        if sys.version_info[0] == 3 and not isinstance(buf, (bytes, bytearray, np.ndarray)):
+            raise ValueError('buf must be of type bytes, bytearray or numpy.ndarray,'
+                             'if you would like to input type str, please convert to bytes')
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
+
     return _internal._cvimdecode(buf, *args, **kwargs)
 
 
@@ -1139,7 +1145,7 @@ class ImageIter(io.DataIter):
         self.shuffle = shuffle
         if self.imgrec is None:
             self.seq = imgkeys
-        elif shuffle or num_parts > 1:
+        elif shuffle or num_parts > 1 or path_imgidx:
             assert self.imgidx is not None
             self.seq = self.imgidx
         else:
@@ -1255,7 +1261,7 @@ class ImageIter(io.DataIter):
             i = self._cache_idx
             # clear the cache data
         else:
-            batch_data = nd.empty((batch_size, c, h, w))
+            batch_data = nd.zeros((batch_size, c, h, w))
             batch_label = nd.empty(self.provide_label[0][1])
             i = self._batchify(batch_data, batch_label)
         # calculate the padding
@@ -1279,6 +1285,7 @@ class ImageIter(io.DataIter):
                     self._cache_data = None
                     self._cache_label = None
                     self._cache_idx = None
+
         return io.DataBatch([batch_data], [batch_label], pad=pad)
 
     def check_data_shape(self, data_shape):
@@ -1316,8 +1323,8 @@ class ImageIter(io.DataIter):
 
     def read_image(self, fname):
         """Reads an input image `fname` and returns the decoded raw bytes.
-        Example usage:
-        ----------
+        Examples
+        --------
         >>> dataIter.read_image('Face.jpg') # returns decoded raw bytes.
         """
         with open(os.path.join(self.path_root, fname), 'rb') as fin:

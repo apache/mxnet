@@ -152,7 +152,6 @@ def train(epoch, ctx, train_data, dev_data):
     net.embed.weight.set_data(vocab.embed.as_in_context(ctx[0]))
     train_data.set_context(ctx[0])
     dev_data.set_context(ctx[0])
-
     # set up trainer for optimizing the network.
     trainer = gluon.Trainer(net.collect_params(), optimizer, {'learning_rate': opt.lr, 'wd': opt.wd})
 

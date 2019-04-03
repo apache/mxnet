@@ -22,6 +22,8 @@
   (if (and (number? x) (number? y))
     (let [diff (Math/abs (- x y))]
       (< diff tolerance))
-    (reduce (fn [x y] (and x y))
-            (map #(approx= tolerance %1 %2) x y))))
+    (and
+     (= (count x) (count y))
+     (reduce (fn [x y] (and x y))
+             (map #(approx= tolerance %1 %2) x y)))))
 

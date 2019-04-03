@@ -19,7 +19,7 @@
 
 /*!
  * \file ravel.cu
- * \brief GPU-Operators for ravel/unravel.
+ * \brief GPU implementation of Operators for ravel/unravel.
  */
 #include "./ravel.h"
 

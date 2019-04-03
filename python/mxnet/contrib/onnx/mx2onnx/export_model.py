@@ -36,7 +36,8 @@ def export_model(sym, params, input_shape, input_type=np.float32,
                  onnx_file_path='model.onnx', verbose=False):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
-    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
+    Operator support and coverage -
+    https://cwiki.apache.org/confluence/display/MXNET/MXNet-ONNX+Integration
 
     Parameters
     ----------
@@ -57,6 +58,11 @@ def export_model(sym, params, input_shape, input_type=np.float32,
     -------
     onnx_file_path : str
         Onnx file path
+
+    Notes
+    -----
+    This method is available when you ``import mxnet.contrib.onnx``
+
     """
 
     try:

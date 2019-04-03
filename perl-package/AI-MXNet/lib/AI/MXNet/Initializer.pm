@@ -86,7 +86,7 @@ has '_print_func' => (is => 'rw', isa => 'CodeRef', lazy => 1,
     mx->init->One        Initializes weights to one.
     mx->init->Constant   Initializes the weights to a given value.
     mx->init->Orthogonal Initialize weight as orthogonal matrix.
-    mx->init->Xavier     Returns an initializer performing “Xavier” initialization for weights.
+    mx->init->Xavier     Returns an initializer performing Xavier initialization for weights.
     mx->init->MSRAPrelu  Initialize the weight according to a MSRA paper.
     mx->init->Bilinear   Initialize weight for upsampling layers.
     mx->init->FusedRNN   Initialize parameters for fused rnn layers.

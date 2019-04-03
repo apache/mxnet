@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 
 # Module - Neural network training and inference
 
@@ -39,11 +56,16 @@ training examples each time. A separate iterator is also created for test data.
 
 ```python
 import logging
+import random
 logging.getLogger().setLevel(logging.INFO)
+
 import mxnet as mx
 import numpy as np
 
 mx.random.seed(1234)
+np.random.seed(1234)
+random.seed(1234)
+
 fname = mx.test_utils.download('https://s3.us-east-2.amazonaws.com/mxnet-public/letter_recognition/letter-recognition.data')
 data = np.genfromtxt(fname, delimiter=',')[:,1:]
 label = np.array([ord(l.split(',')[0])-ord('A') for l in open(fname, 'r')])
@@ -64,7 +86,7 @@ net = mx.sym.FullyConnected(net, name='fc1', num_hidden=64)
 net = mx.sym.Activation(net, name='relu1', act_type="relu")
 net = mx.sym.FullyConnected(net, name='fc2', num_hidden=26)
 net = mx.sym.SoftmaxOutput(net, name='softmax')
-mx.viz.plot_network(net)
+mx.viz.plot_network(net, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 
@@ -135,11 +157,17 @@ for epoch in range(5):
     print('Epoch %d, Training %s' % (epoch, metric.get()))
 ```
 
-    Epoch 0, Training ('accuracy', 0.4554375)
-    Epoch 1, Training ('accuracy', 0.6485625)
-    Epoch 2, Training ('accuracy', 0.7055625)
-    Epoch 3, Training ('accuracy', 0.7396875)
-    Epoch 4, Training ('accuracy', 0.764375)
+
+Expected output:
+
+
+```
+Epoch 0, Training ('accuracy', 0.434625)
+Epoch 1, Training ('accuracy', 0.6516875)
+Epoch 2, Training ('accuracy', 0.6968125)
+Epoch 3, Training ('accuracy', 0.7273125)
+Epoch 4, Training ('accuracy', 0.7575625)
+```
 
 
 To learn more about these APIs, visit [Module API](http://mxnet.io/api/python/module/module.html).
@@ -172,34 +200,36 @@ mod.fit(train_iter,
         optimizer='sgd',
         optimizer_params={'learning_rate':0.1},
         eval_metric='acc',
-        num_epoch=8)
+        num_epoch=7)
 ```
 
-    INFO:root:Epoch[0] Train-accuracy=0.364625
-    INFO:root:Epoch[0] Time cost=0.388
-    INFO:root:Epoch[0] Validation-accuracy=0.557250
-    INFO:root:Epoch[1] Train-accuracy=0.633625
-    INFO:root:Epoch[1] Time cost=0.470
-    INFO:root:Epoch[1] Validation-accuracy=0.634750
-    INFO:root:Epoch[2] Train-accuracy=0.697187
-    INFO:root:Epoch[2] Time cost=0.402
-    INFO:root:Epoch[2] Validation-accuracy=0.665500
-    INFO:root:Epoch[3] Train-accuracy=0.735062
-    INFO:root:Epoch[3] Time cost=0.402
-    INFO:root:Epoch[3] Validation-accuracy=0.713000
-    INFO:root:Epoch[4] Train-accuracy=0.762563
-    INFO:root:Epoch[4] Time cost=0.408
-    INFO:root:Epoch[4] Validation-accuracy=0.742000
-    INFO:root:Epoch[5] Train-accuracy=0.782312
-    INFO:root:Epoch[5] Time cost=0.400
-    INFO:root:Epoch[5] Validation-accuracy=0.778500
-    INFO:root:Epoch[6] Train-accuracy=0.797188
-    INFO:root:Epoch[6] Time cost=0.392
-    INFO:root:Epoch[6] Validation-accuracy=0.798250
-    INFO:root:Epoch[7] Train-accuracy=0.807750
-    INFO:root:Epoch[7] Time cost=0.401
-    INFO:root:Epoch[7] Validation-accuracy=0.789250
 
+Expected output:
+
+
+```
+INFO:root:Epoch[0] Train-accuracy=0.325437
+INFO:root:Epoch[0] Time cost=0.550
+INFO:root:Epoch[0] Validation-accuracy=0.568500
+INFO:root:Epoch[1] Train-accuracy=0.622188
+INFO:root:Epoch[1] Time cost=0.552
+INFO:root:Epoch[1] Validation-accuracy=0.656500
+INFO:root:Epoch[2] Train-accuracy=0.694375
+INFO:root:Epoch[2] Time cost=0.566
+INFO:root:Epoch[2] Validation-accuracy=0.703500
+INFO:root:Epoch[3] Train-accuracy=0.732187
+INFO:root:Epoch[3] Time cost=0.562
+INFO:root:Epoch[3] Validation-accuracy=0.748750
+INFO:root:Epoch[4] Train-accuracy=0.755375
+INFO:root:Epoch[4] Time cost=0.484
+INFO:root:Epoch[4] Validation-accuracy=0.761500
+INFO:root:Epoch[5] Train-accuracy=0.773188
+INFO:root:Epoch[5] Time cost=0.383
+INFO:root:Epoch[5] Validation-accuracy=0.715000
+INFO:root:Epoch[6] Train-accuracy=0.794687
+INFO:root:Epoch[6] Time cost=0.378
+INFO:root:Epoch[6] Validation-accuracy=0.802250
+```
 
 By default, `fit` function has `eval_metric` set to `accuracy`, `optimizer` to `sgd`
 and optimizer_params to `(('learning_rate', 0.01),)`.
@@ -225,11 +255,16 @@ It can be used as follows:
 ```python
 score = mod.score(val_iter, ['acc'])
 print("Accuracy score is %f" % (score[0][1]))
-assert score[0][1] > 0.77, "Achieved accuracy (%f) is less than expected (0.77)" % score[0][1]
+assert score[0][1] > 0.76, "Achieved accuracy (%f) is less than expected (0.76)" % score[0][1]
 ```
 
-    Accuracy score is 0.789250
 
+Expected output:
+
+
+```
+Accuracy score is 0.802250
+```
 
 Some of the other metrics which can be used are `top_k_acc`(top-k-accuracy),
 `F1`, `RMSE`, `MSE`, `MAE`, `ce`(CrossEntropy). To learn more about the metrics,
@@ -252,22 +287,27 @@ mod = mx.mod.Module(symbol=net)
 mod.fit(train_iter, num_epoch=5, epoch_end_callback=checkpoint)
 ```
 
-    INFO:root:Epoch[0] Train-accuracy=0.101062
-    INFO:root:Epoch[0] Time cost=0.422
-    INFO:root:Saved checkpoint to "mx_mlp-0001.params"
-    INFO:root:Epoch[1] Train-accuracy=0.263313
-    INFO:root:Epoch[1] Time cost=0.785
-    INFO:root:Saved checkpoint to "mx_mlp-0002.params"
-    INFO:root:Epoch[2] Train-accuracy=0.452188
-    INFO:root:Epoch[2] Time cost=0.624
-    INFO:root:Saved checkpoint to "mx_mlp-0003.params"
-    INFO:root:Epoch[3] Train-accuracy=0.544125
-    INFO:root:Epoch[3] Time cost=0.427
-    INFO:root:Saved checkpoint to "mx_mlp-0004.params"
-    INFO:root:Epoch[4] Train-accuracy=0.605250
-    INFO:root:Epoch[4] Time cost=0.399
-    INFO:root:Saved checkpoint to "mx_mlp-0005.params"
 
+Expected output:
+
+
+```
+INFO:root:Epoch[0] Train-accuracy=0.098437
+INFO:root:Epoch[0] Time cost=0.421
+INFO:root:Saved checkpoint to "mx_mlp-0001.params"
+INFO:root:Epoch[1] Train-accuracy=0.257437
+INFO:root:Epoch[1] Time cost=0.520
+INFO:root:Saved checkpoint to "mx_mlp-0002.params"
+INFO:root:Epoch[2] Train-accuracy=0.457250
+INFO:root:Epoch[2] Time cost=0.562
+INFO:root:Saved checkpoint to "mx_mlp-0003.params"
+INFO:root:Epoch[3] Train-accuracy=0.558187
+INFO:root:Epoch[3] Time cost=0.434
+INFO:root:Saved checkpoint to "mx_mlp-0004.params"
+INFO:root:Epoch[4] Train-accuracy=0.617750
+INFO:root:Epoch[4] Time cost=0.414
+INFO:root:Saved checkpoint to "mx_mlp-0005.params"
+```
 
 To load the saved module parameters, call the `load_checkpoint` function. It
 loads the Symbol and the associated parameters. We can then set the loaded
@@ -299,16 +339,25 @@ mod.fit(train_iter,
 assert score[0][1] > 0.77, "Achieved accuracy (%f) is less than expected (0.77)" % score[0][1]        
 ```
 
-    INFO:root:Epoch[3] Train-accuracy=0.544125
-    INFO:root:Epoch[3] Time cost=0.398
-    INFO:root:Epoch[4] Train-accuracy=0.605250
-    INFO:root:Epoch[4] Time cost=0.545
-    INFO:root:Epoch[5] Train-accuracy=0.644312
-    INFO:root:Epoch[5] Time cost=0.592
-    INFO:root:Epoch[6] Train-accuracy=0.675000
-    INFO:root:Epoch[6] Time cost=0.491
-    INFO:root:Epoch[7] Train-accuracy=0.695812
-    INFO:root:Epoch[7] Time cost=0.363
+
+Expected output:
+
+
+```
+INFO:root:Epoch[3] Train-accuracy=0.555438
+INFO:root:Epoch[3] Time cost=0.377
+INFO:root:Epoch[4] Train-accuracy=0.616625
+INFO:root:Epoch[4] Time cost=0.457
+INFO:root:Epoch[5] Train-accuracy=0.658438
+INFO:root:Epoch[5] Time cost=0.518
+...........................................
+INFO:root:Epoch[18] Train-accuracy=0.788687
+INFO:root:Epoch[18] Time cost=0.532
+INFO:root:Epoch[19] Train-accuracy=0.789562
+INFO:root:Epoch[19] Time cost=0.531
+INFO:root:Epoch[20] Train-accuracy=0.796250
+INFO:root:Epoch[20] Time cost=0.531
+```
 
 
 

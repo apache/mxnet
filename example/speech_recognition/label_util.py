@@ -29,7 +29,7 @@ class LabelUtil:
 
     # dataPath
     def __init__(self):
-        self._log = LogUtil().getlogger()
+        self._log = LogUtil.getInstance().getlogger()
         self._log.debug("LabelUtil init")
 
     def load_unicode_set(self, unicodeFilePath):

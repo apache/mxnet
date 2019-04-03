@@ -160,7 +160,8 @@ object Model {
                                        argParams: Map[String, NDArray],
                                        paramNames: IndexedSeq[String],
                                        updateOnKVStore: Boolean): Unit = {
-    require(paramArrays.length == paramNames.length)
+    require(paramArrays.length == paramNames.length,
+      s"Provided parameter arrays does not match parameter names")
     for (idx <- 0 until paramArrays.length) {
       val paramOnDevs = paramArrays(idx)
       val name = paramNames(idx)
@@ -258,7 +259,9 @@ object Model {
                                       workLoadList: Seq[Float] = Nil,
                                       monitor: Option[Monitor] = None,
                                       symGen: SymbolGenerator = null): Unit = {
-    val executorManager = new DataParallelExecutorManager(
+    ResourceScope.using() {
+
+      val executorManager = new DataParallelExecutorManager(
         symbol = symbol,
         symGen = symGen,
         ctx = ctx,
@@ -268,17 +271,17 @@ object Model {
         auxNames = auxNames,
         workLoadList = workLoadList)
 
-    monitor.foreach(executorManager.installMonitor)
-    executorManager.setParams(argParams, auxParams)
+      monitor.foreach(executorManager.installMonitor)
+      executorManager.setParams(argParams, auxParams)
 
-    // updater for updateOnKVStore = false
-    val updaterLocal = Optimizer.getUpdater(optimizer)
+      // updater for updateOnKVStore = false
+      val updaterLocal = Optimizer.getUpdater(optimizer)
 
-    kvStore.foreach(initializeKVStore(_, executorManager.paramArrays,
-      argParams, executorManager.paramNames, updateOnKVStore))
-    if (updateOnKVStore) {
-      kvStore.foreach(_.setOptimizer(optimizer))
-    }
+      kvStore.foreach(initializeKVStore(_, executorManager.paramArrays,
+        argParams, executorManager.paramNames, updateOnKVStore))
+      if (updateOnKVStore) {
+        kvStore.foreach(_.setOptimizer(optimizer))
+      }
 
     // Now start training
     for (epoch <- beginEpoch until endEpoch) {
@@ -289,45 +292,46 @@ object Model {
       var epochDone = false
       // Iterate over training data.
       trainData.reset()
-      while (!epochDone) {
-        var doReset = true
-        while (doReset && trainData.hasNext) {
-          val dataBatch = trainData.next()
-          executorManager.loadDataBatch(dataBatch)
-          monitor.foreach(_.tic())
-          executorManager.forward(isTrain = true)
-          executorManager.backward()
-          if (updateOnKVStore) {
-            updateParamsOnKVStore(executorManager.paramArrays,
-              executorManager.gradArrays,
-              kvStore, executorManager.paramNames)
-          } else {
-            updateParams(executorManager.paramArrays,
-              executorManager.gradArrays,
-              updaterLocal, ctx.length,
-              executorManager.paramNames,
-              kvStore)
+      ResourceScope.using() {
+        while (!epochDone) {
+          var doReset = true
+          while (doReset && trainData.hasNext) {
+            val dataBatch = trainData.next()
+            executorManager.loadDataBatch(dataBatch)
+            monitor.foreach(_.tic())
+            executorManager.forward(isTrain = true)
+            executorManager.backward()
+            if (updateOnKVStore) {
+              updateParamsOnKVStore(executorManager.paramArrays,
+                executorManager.gradArrays,
+                kvStore, executorManager.paramNames)
+            } else {
+              updateParams(executorManager.paramArrays,
+                executorManager.gradArrays,
+                updaterLocal, ctx.length,
+                executorManager.paramNames,
+                kvStore)
+            }
+            monitor.foreach(_.tocPrint())
+            // evaluate at end, so out_cpu_array can lazy copy
+            executorManager.updateMetric(evalMetric, dataBatch.label)
+
+            nBatch += 1
+            batchEndCallback.foreach(_.invoke(epoch, nBatch, evalMetric))
+
+            // this epoch is done possibly earlier
+            if (epochSize != -1 && nBatch >= epochSize) {
+              doReset = false
+            }
           }
-          monitor.foreach(_.tocPrint())
-          // evaluate at end, so out_cpu_array can lazy copy
-          executorManager.updateMetric(evalMetric, dataBatch.label)
-
-          nBatch += 1
-          batchEndCallback.foreach(_.invoke(epoch, nBatch, evalMetric))
-
-          // this epoch is done possibly earlier
-          if (epochSize != -1 && nBatch >= epochSize) {
-            doReset = false
+          if (doReset) {
+            trainData.reset()
           }
-        }
-        if (doReset) {
-          trainData.reset()
-        }
 
-        // this epoch is done
-        epochDone = (epochSize == -1 || nBatch >= epochSize)
+          // this epoch is done
+          epochDone = (epochSize == -1 || nBatch >= epochSize)
+        }
       }
-
       val (name, value) = evalMetric.get
       name.zip(value).foreach { case (n, v) =>
         logger.info(s"Epoch[$epoch] Train-$n=$v")
@@ -335,20 +339,22 @@ object Model {
       val toc = System.currentTimeMillis
       logger.info(s"Epoch[$epoch] Time cost=${toc - tic}")
 
-      evalData.foreach { evalDataIter =>
-        evalMetric.reset()
-        evalDataIter.reset()
-        // TODO: make DataIter implement Iterator
-        while (evalDataIter.hasNext) {
-          val evalBatch = evalDataIter.next()
-          executorManager.loadDataBatch(evalBatch)
-          executorManager.forward(isTrain = false)
-          executorManager.updateMetric(evalMetric, evalBatch.label)
-        }
+      ResourceScope.using() {
+        evalData.foreach { evalDataIter =>
+          evalMetric.reset()
+          evalDataIter.reset()
+          // TODO: make DataIter implement Iterator
+          while (evalDataIter.hasNext) {
+            val evalBatch = evalDataIter.next()
+            executorManager.loadDataBatch(evalBatch)
+            executorManager.forward(isTrain = false)
+            executorManager.updateMetric(evalMetric, evalBatch.label)
+          }
 
-        val (name, value) = evalMetric.get
-        name.zip(value).foreach { case (n, v) =>
-          logger.info(s"Epoch[$epoch] Train-$n=$v")
+          val (name, value) = evalMetric.get
+          name.zip(value).foreach { case (n, v) =>
+            logger.info(s"Epoch[$epoch] Validation-$n=$v")
+          }
         }
       }
 
@@ -358,8 +364,7 @@ object Model {
       epochEndCallback.foreach(_.invoke(epoch, symbol, argParams, auxParams))
     }
 
-    updaterLocal.dispose()
-    executorManager.dispose()
+    }
   }
   // scalastyle:on parameterNum
 }
