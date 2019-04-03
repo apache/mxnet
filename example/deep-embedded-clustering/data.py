@@ -18,10 +18,8 @@
 # pylint: disable=missing-docstring
 from __future__ import print_function
 
-import os
-
-import mxnet as mx
 import numpy as np
+import mxnet as mx
 
 
 def get_mnist():
@@ -35,7 +33,3 @@ def get_mnist():
     X = X[p].reshape((X.shape[0], -1)).astype(np.float32)*5
     Y = Y[p]
     return X, Y
-
-
-
-

@@ -72,7 +72,7 @@ struct GPUStreamScope {
     : opContext_(*opContext) {
     CHECK_EQ(opContext_.run_ctx.stream == nullptr, true)
       << "Invalid runtime context stream state";
-    opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true);
+    opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true, opContext_.run_ctx.ctx.dev_id);
     CHECK_EQ(opContext_.run_ctx.stream != nullptr, true)
       << "Unable to allocate a GPU stream";
   }

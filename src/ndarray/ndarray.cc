@@ -121,9 +121,9 @@ NDArray::Chunk::~Chunk() {
         CHECK_EQ(mem.mem->GetDataHandle(), mem.h.dptr);
       }
 #endif
-      if (mem.h.size > 0) Storage::Get()->Free(mem.h);
+      Storage::Get()->Free(mem.h);
       for (const auto& aux : mem.aux_h) {
-        if (aux.size > 0) Storage::Get()->Free(aux);
+        Storage::Get()->Free(aux);
       }
     }
   }, shandle.ctx, var);
@@ -134,8 +134,8 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
       << "data is expected to be allocated after aux_data";
   auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
   if (shandle.size < dbytes) {
-    // free storage if necessary and alloc again
-    if (shandle.size > 0) Storage::Get()->Free(shandle);
+    // free storage
+    Storage::Get()->Free(shandle);
     // init storage
     shandle = Storage::Get()->Alloc(dbytes, ctx);
 #if MXNET_USE_MKLDNN == 1
@@ -2027,11 +2027,6 @@ MXNET_REGISTER_NDARRAY_FUN(_set_value)
 MXNET_REGISTER_NDARRAY_FUN(_onehot_encode)
 .set_function(BinaryOp<ndarray::OneHotEncode>);
 
-MXNET_REGISTER_NDARRAY_FUN(choose_element_0index)
-.set_function(BinaryOp<ndarray::MatChooseRowElem>)
-.describe("Choose one element from each line(row for python, column for R/Julia)"
-          " in lhs according to index indicated by rhs."
-          " This function assume rhs uses 0-based index.");
 
 MXNET_REGISTER_NDARRAY_FUN(fill_element_0index)
 .set_function(TernaryOp<ndarray::MatFillRowElem>)

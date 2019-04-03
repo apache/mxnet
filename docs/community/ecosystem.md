@@ -41,7 +41,7 @@ Community contributions to MXNet have added many new valuable features and funct
 
 * [Gluon 60 Minute Crash Course](https://gluon-crash-course.mxnet.io/) - deep learning practitioners can learn Gluon quickly with these six 10-minute tutorials.
     - [YouTube Series](https://www.youtube.com/playlist?list=PLkEvNnRk8uVmVKRDgznk3o3LxmjFRaW7s)
-* [The Straight Dope](https://gluon.mxnet.io/) - a series of notebooks designed to teach deep learning using the Gluon Python API for MXNet.
+* [Dive into Deep Learning](https://www.d2l.ai/) - a series of notebooks designed to teach deep learning using the Gluon Python API for MXNet.
 
 
 ## MXNet APIs

@@ -14,6 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
 """Generate helper functions to load Caffe into MXNet"""
 import argparse
 import mxnet as mx
@@ -86,8 +87,7 @@ def get_network_from_json_file(file_name):
 
 
 def parse_args():
-    """Parse the arguments
-    """
+    """Parse the arguments"""
     parser = argparse.ArgumentParser(description='train an image classifier on mnist')
     parser.add_argument('--network', type=str, default='lenet',
                         help='the cnn to use (mlp | lenet | <path to network json file>')
