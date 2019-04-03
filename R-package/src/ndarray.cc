@@ -179,8 +179,8 @@ Rcpp::RObject NDArrayPacker::CreateNDArrayPacker() {
 }
 
 Rcpp::Dimension NDArray::dim() const {
-  mx_uint ndim;
-  const mx_uint *pshape;
+  int ndim;
+  const int *pshape;
   MX_CALL(MXNDArrayGetShape(
       ptr_->handle, &ndim, &pshape));
   Rcpp::IntegerVector dat(pshape, pshape + ndim);
