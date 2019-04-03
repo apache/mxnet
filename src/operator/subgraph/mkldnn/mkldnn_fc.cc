@@ -174,7 +174,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
           MaxAbs(cached_min_output_, cached_max_output_) / data_scale / weight_scale;
       } else {
         Stream<cpu> *s = ctx.get_stream<cpu>();
-        mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(
+        mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
           s, 1, &cached_min_output_, &cached_max_output_,
           &min_data, &max_data, &min_weight, &max_weight);
       }

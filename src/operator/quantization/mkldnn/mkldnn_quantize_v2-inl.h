@@ -70,7 +70,7 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
     }
   }
 
-  auto out_type = GetOutputType(param);
+  auto out_type = GetQuantizeOutputType(param);
   if (out_type == mshadow::kUint8) {
     real_range = std::max<SrcType>(0.f, data_max);
     quantized_range = MaxValue<DstType>();
@@ -141,7 +141,7 @@ static void MKLDNNQuantizeV2Compute(const nnvm::NodeAttrs& attrs, const OpContex
       MKLDNNStream::Get()->Submit();
     }
   } else {
-    auto out_type = GetOutputType(param);
+    auto out_type = GetQuantizeOutputType(param);
     if (out_type == mshadow::kUint8) {
       MKLDNNQuantizeComputeKer<float, uint8_t>(inputs, outputs, param, req);
     } else if (out_type == mshadow::kInt8) {

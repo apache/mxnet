@@ -80,7 +80,7 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   }
 
   Stream<cpu> *s = ctx.get_stream<cpu>();
-  mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
+  mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(s, 1,
     min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
 
   bool is_train = false;
