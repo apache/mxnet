@@ -232,6 +232,7 @@ class CropResize(HybridBlock):
     r"""Crop the input image with and optionally resize it.
 
     Makes a crop of the original image then optionally resize it to the specified size.
+
     Parameters
     ----------
     x : int
@@ -247,6 +248,7 @@ class CropResize(HybridBlock):
     interpolation : int, optional
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
+        https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=resize#resize
         Note that the Resize on gpu use contrib.bilinearResize2D operator
         which only support bilinear interpolation(1). The result would be slightly
         different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
