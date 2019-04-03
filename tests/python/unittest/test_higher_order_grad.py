@@ -37,25 +37,50 @@ def test_elemwise_mul():
 
 @with_seed()
 def test_sin():
+    def sin(x):
+        return nd.sin(x)
+
     x = nd.array([1, 2, 3])
-    x.attach_grad()
-    with autograd.record():
-        y = nd.sin(x)
-        y_grad = autograd.grad(y, x, create_graph=True, retain_graph=True)[0]
-    y_grad.backward()
     expect_grad = -nd.sin(x)
-    assert_almost_equal(expect_grad.asnumpy(), x.grad.asnumpy())
+    check_second_order_unary(x, sin, expect_grad)
 
 
 @with_seed()
 def test_cos():
+    def cos(x):
+        return nd.cos(x)
+
     x = nd.array([1, 2, 3])
+    expect_grad = -nd.cos(x)
+    check_second_order_unary(x, cos, expect_grad)
+
+
+@with_seed()
+def test_negative():
+    def negative(x):
+        return nd.negative(x)
+
+    x = nd.array([1, 2, 3])
+    expect_grad = nd.zeros_like(x)
+    check_second_order_unary(x, negative, expect_grad)
+
+
+@with_seed()
+def test_relu():
+    def relu(x):
+        return nd.relu(x)
+
+    x = nd.array([1, 2, 3])
+    expect_grad = nd.zeros_like(x)
+    check_second_order_unary(x, relu, expect_grad)
+
+
+def check_second_order_unary(x, op, expect_grad):
     x.attach_grad()
     with autograd.record():
-        y = nd.cos(x)
+        y = op(x)
         y_grad = autograd.grad(y, x, create_graph=True, retain_graph=True)[0]
     y_grad.backward()
-    expect_grad = -nd.cos(x)
     assert_almost_equal(expect_grad.asnumpy(), x.grad.asnumpy())
 
 
