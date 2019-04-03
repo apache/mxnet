@@ -46,8 +46,6 @@ From the `scala-package/examples/scripts/infer/bert/` folder run:
 ./get_bert_data.sh
 ```
 
-**Note**: You may need to run `chmod +x get_bert_data.sh` before running this script.
-
 ### Step 2: Setup data path of the model
 
 ### Setup Datapath and Parameters
@@ -80,7 +78,7 @@ To learn more about how BERT works in MXNet, please follow this [tutorial](https
 
 The model was extracted from the GluonNLP with static length settings.
 
-[Download link for the scrtipt](https://gluon-nlp.mxnet.io/_downloads/bert.zip)
+[Download link for the script](https://gluon-nlp.mxnet.io/_downloads/bert.zip)
 
 The original description can be found in [here](https://gluon-nlp.mxnet.io/model_zoo/bert/index.html#bert-base-on-squad-1-1).
 ```bash

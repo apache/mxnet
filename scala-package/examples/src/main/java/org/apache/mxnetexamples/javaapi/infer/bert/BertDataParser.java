@@ -25,7 +25,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-public class BertUtil {
+public class BertDataParser {
 
     private Map<String, Integer> token2idx;
     private List<String> idx2token;

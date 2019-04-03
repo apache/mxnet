@@ -65,10 +65,8 @@ public class BertQA {
         NDArray[] output = NDArray.split(
                 NDArray.new splitParam(result, 2).setAxis(2));
         // Get the formatted logits result
-        NDArray startLogits = NDArray.reshape(
-                NDArray.new reshapeParam(output[0]).setShape(new Shape(new int[]{0, -3})))[0];
-        NDArray endLogits = NDArray.reshape(
-                NDArray.new reshapeParam(output[1]).setShape(new Shape(new int[]{0, -3})))[0];
+        NDArray startLogits = output[0].reshape(new int[]{0, -3});
+        NDArray endLogits = output[1].reshape(new int[]{0, -3});
         // Get Probability distribution
         float[] startProb = NDArray.softmax(
                 NDArray.new softmaxParam(startLogits))[0].toArray();
@@ -83,7 +81,7 @@ public class BertQA {
         BertQA inst = new BertQA();
         CmdLineParser parser = new CmdLineParser(inst);
         parser.parseArgument(args);
-        BertUtil util = new BertUtil();
+        BertDataParser util = new BertDataParser();
         Context context = Context.cpu();
         if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
                 Integer.valueOf(System.getenv("SCALA_TEST_ON_GPU")) == 1) {
@@ -115,26 +113,25 @@ public class BertQA {
             indexesFloat.add((float) integer);
         }
         // Preparing the input data
-        NDArray inputs = new NDArray(indexesFloat,
-                new Shape(new int[]{1, inst.seqLength}), context);
-        NDArray tokenTypesND = new NDArray(tokenTypes,
-                new Shape(new int[]{1, inst.seqLength}), context);
-        NDArray validLengthND = new NDArray(new float[] {(float) validLength},
-                new Shape(new int[]{1}), context);
-        List<NDArray> inputBatch = new ArrayList<>();
-        inputBatch.add(inputs);
-        inputBatch.add(tokenTypesND);
-        inputBatch.add(validLengthND);
+        List<NDArray> inputBatch = Arrays.asList(
+                new NDArray(indexesFloat,
+                        new Shape(new int[]{1, inst.seqLength}), context),
+                new NDArray(tokenTypes,
+                        new Shape(new int[]{1, inst.seqLength}), context),
+                new NDArray(new float[] { validLength },
+                        new Shape(new int[]{1}), context)
+        );
         // Build the model
-        List<DataDesc> inputDescs = new ArrayList<>();
         List<Context> contexts = new ArrayList<>();
         contexts.add(context);
-        inputDescs.add(new DataDesc("data0",
-                new Shape(new int[]{1, inst.seqLength}), DType.Float32(), "NT"));
-        inputDescs.add(new DataDesc("data1",
-                new Shape(new int[]{1, inst.seqLength}), DType.Float32(), "NT"));
-        inputDescs.add(new DataDesc("data2",
-                new Shape(new int[]{1}), DType.Float32(), "N"));
+        List<DataDesc> inputDescs = Arrays.asList(
+                new DataDesc("data0",
+                        new Shape(new int[]{1, inst.seqLength}), DType.Float32(), Layout.NT()),
+                new DataDesc("data1",
+                        new Shape(new int[]{1, inst.seqLength}), DType.Float32(), Layout.NT()),
+                new DataDesc("data2",
+                        new Shape(new int[]{1}), DType.Float32(), Layout.N())
+        );
         Predictor bertQA = new Predictor(inst.modelPathPrefix, inputDescs, contexts, inst.epoch);
         // Start prediction
         NDArray result = bertQA.predictWithNDArray(inputBatch).get(0);
