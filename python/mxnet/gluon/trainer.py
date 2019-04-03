@@ -255,6 +255,13 @@ class Trainer(object):
         else:
             return self._optimizer.learning_rate
 
+    @property
+    def optimizer(self):
+        if isinstance(self._optimizer, opt.Optimizer):
+            return self._optimizer
+        else:
+            raise UserWarning("Optimizer has not been initialized yet")
+
     def set_learning_rate(self, lr):
         """Sets a new learning rate of the optimizer.
 
