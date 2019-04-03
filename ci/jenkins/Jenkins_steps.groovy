@@ -195,7 +195,7 @@ def compile_unix_full_gpu() {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda100_cudnn7', false)
             utils.pack_lib('gpu', mx_lib_cpp_examples, true)
           }
         }
