@@ -136,6 +136,22 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_javascript', false)
         }
       }
+    },
+    'estimator: RNN GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/estimator-test-rnn-gpu') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator_test_rnn_gpu', true)
+        }
+      }
+    },
+    'estimator: RNN CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/estimator-test-rnn-cpu') {
+          utils.unpack_and_init('cpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_estimator_test_rnn_cpu', false)
+        }
+      }
     }
   }
 }
