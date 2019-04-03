@@ -26,6 +26,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
+/**
+ * Test on BERT QA model
+ */
 public class BertExampleTest {
     final static Logger logger = LoggerFactory.getLogger(BertExampleTest.class);
     private static String modelPathPrefix = "";

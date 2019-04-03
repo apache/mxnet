@@ -25,6 +25,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+/**
+ * This is the Utility for pre-processing the data for Bert Model
+ * You can use this utility to parse Vocabulary JSON into Java Array and Dictionary,
+ * clean and tokenize sentences and pad the text
+ */
 public class BertDataParser {
 
     private Map<String, Integer> token2idx;
@@ -32,7 +37,7 @@ public class BertDataParser {
 
     /**
      * Parse the Vocabulary to JSON files
-     * [PAD], [CLS], [SEP], [MASK], [UNK] are reserved token
+     * [PAD], [CLS], [SEP], [MASK], [UNK] are reserved tokens
      * @param jsonFile the filePath of the vocab.json
      * @throws Exception
      */
@@ -52,13 +57,13 @@ public class BertDataParser {
     }
 
     /**
-     * Tokenize the input, split all kinds of spaces and
-     * saparate the end of sentence symbol: . , ? !
-     * @param input The input String
+     * Tokenize the input, split all kinds of whitespace and
+     * Separate the end of sentence symbol: . , ? !
+     * @param input The input string
      * @return List of tokens
      */
     List<String> tokenizer(String input) {
-        String[] step1 = input.split("[\n\r\t ]+");
+        String[] step1 = input.split("\\s+");
         List<String> finalResult = new LinkedList<>();
         for (String item : step1) {
             if (item.length() != 0) {

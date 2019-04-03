@@ -26,6 +26,11 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+/**
+ * This is an example of using BERT to do the general Question and Answer inference jobs
+ * Users can provide a question with a paragraph contains answer to the model and
+ * the model will be able to find the best answer from the answer paragraph
+ */
 public class BertQA {
     @Option(name = "--model-path-prefix", usage = "input model directory and prefix of the model")
     private String modelPathPrefix = "/model/static_bert_qa";
