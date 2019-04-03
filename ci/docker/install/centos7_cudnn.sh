@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,29 +16,17 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build and run MXNet on CentOS 7 for GPU
 
-FROM nvidia/cuda:10.0-devel-centos7
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-ENV CUDNN_VERSION=7.3.1.20
+set -ex
 
-WORKDIR /work/deps
+# Multipackage installation does not fail in yum
+CUDNN_DOWNLOAD_SUM=4e15a323f2edffa928b4574f696fc0e449a32e6bc35c9ccb03a47af26c2de3fa
+curl -fsSL http://developer.download.nvidia.com/compute/redist/cudnn/v7.3.1/cudnn-10.0-linux-x64-v7.3.1.20.tgz -O
+echo "$CUDNN_DOWNLOAD_SUM cudnn-10.0-linux-x64-v7.3.1.20.tgz" | sha256sum -c -
+tar --no-same-owner -xzf cudnn-10.0-linux-x64-v7.3.1.20.tgz -C /usr/local
+rm cudnn-10.0-linux-x64-v7.3.1.20.tgz
+ldconfig
 
-COPY install/centos7_core.sh /work/
-RUN /work/centos7_core.sh
-COPY install/centos7_ccache.sh /work/
-RUN /work/centos7_ccache.sh
-COPY install/centos7_python.sh /work/
-RUN /work/centos7_python.sh
-COPY install/centos7_cudnn.sh /work/
-RUN /work/centos7_cudnn.sh
-
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh
-
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
-
-COPY runtime_functions.sh /work/
