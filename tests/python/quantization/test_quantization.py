@@ -417,6 +417,15 @@ def test_quantized_flatten():
 @with_seed()
 def test_quantized_act():
     def check_quantized_act(data_shape, qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing quantized_act for native cpu since it is not supported yet')
+            return
+        elif qdtype == 'int8' and is_test_for_mkldnn():
+            print('skipped testing quantized_act for mkldnn cpu int8 since it is not supported yet')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing quantized_act for gpu since it is not supported yet')
+            return
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
         act_fp32 = mx.sym.Activation(data=data, act_type='relu', name='relu')
         arg_shapes, _, _ = act_fp32.infer_shape(data=data_shape)
