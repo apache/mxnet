@@ -100,9 +100,9 @@ int64_t GradientCompression::GetCompressedSize(const int64_t original_size) {
 
 void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *to,
                   mxnet::NDArray *residual, const int priority) {
-  CHECK(!mxnet::op::shape_is_none(from.shape())) << "source operand has undefined shape";
-  CHECK(!mxnet::op::shape_is_none(to->shape())) << "destination operand has undefined shape";
-  CHECK(!mxnet::op::shape_is_none(residual->shape())) << "residual operand has undefined shape";
+  CHECK(mxnet::op::shape_is_known(from.shape())) << "source operand has undefined shape";
+  CHECK(mxnet::op::shape_is_known(to->shape())) << "destination operand has undefined shape";
+  CHECK(mxnet::op::shape_is_known(residual->shape())) << "residual operand has undefined shape";
   const int a = from.ctx().dev_mask();
   const int b = to->ctx().dev_mask();
   const float threshold = threshold_;
@@ -137,8 +137,8 @@ void GradientCompression::Quantize(const mxnet::NDArray &from, mxnet::NDArray *t
 
 void GradientCompression::Dequantize(const mxnet::NDArray &from, mxnet::NDArray *to,
                                      const int priority) {
-  CHECK(!mxnet::op::shape_is_none(from.shape())) << "source operand has undefined shape";
-  CHECK(!mxnet::op::shape_is_none(to->shape())) << "destination operand has undefined shape";
+  CHECK(mxnet::op::shape_is_known(from.shape())) << "source operand has undefined shape";
+  CHECK(mxnet::op::shape_is_known(to->shape())) << "destination operand has undefined shape";
   const int a = from.ctx().dev_mask();
   const int b = to->ctx().dev_mask();
   const float threshold = threshold_;
