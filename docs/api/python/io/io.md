@@ -78,6 +78,7 @@ A detailed tutorial is available at
     io.ImageRecordInt8Iter
     io.ImageRecordUInt8Iter
     io.MNISTIter
+    io.im2rec
     recordio.MXRecordIO
     recordio.MXIndexedRecordIO
     image.ImageIter

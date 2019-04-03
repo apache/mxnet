@@ -24,6 +24,7 @@ from __future__ import absolute_import
 
 from . import io
 from .io import *
+from ._im2rec import im2rec
 
 from . import utils
 from .utils import *
