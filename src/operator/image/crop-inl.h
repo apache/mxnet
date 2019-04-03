@@ -68,7 +68,7 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
     CHECK((in_attrs->at(0)[2] == 1) || (in_attrs->at(0)[2] == 3))
       << "Expect channel of the input image is 1 or 3, but got"
       << in_attrs->at(0)[2];
-  } else if {
+  } else if (in_attrs->at(0).ndim() == 4U) {
     CHECK((in_attrs->at(0)[3] == 1) || (in_attrs->at(0)[3] == 3))
       << "Expect channel of the input image is 1 or 3, but got"
       << in_attrs->at(0)[3];
