@@ -64,19 +64,28 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   // input attrs should only be (h, w, c) or (n, h, w, c)
-  CHECK((in_attrs->at(0).ndim() == 3U) || (in_attrs->at(0).ndim() == 4U))
-    << "Input image dimension should be 3 or 4 but got "
-    << in_attrs->at(0).ndim();
+  if (in_attrs->at(0).ndim() == 3U) {
+    CHECK((in_attrs->at(0)[2] == 1) || (in_attrs->at(0)[2] == 3))
+      << "Expect channel of the input image is 1 or 3, but got"
+      << in_attrs->at(0)[2];
+  } else if {
+    CHECK((in_attrs->at(0)[3] == 1) || (in_attrs->at(0)[3] == 3))
+      << "Expect channel of the input image is 1 or 3, but got"
+      << in_attrs->at(0)[3];
+  } else {
+    LOG(FATAL) << "Image Crop expects inputs of 3D (h, w, c) or 4D (n, h, w, c). But got "
+      << in_attrs->at(0).ndim();
+  }
 
   const auto& ishape = (*in_attrs)[0];
   const CropParam& param = nnvm::get<CropParam>(attrs.parsed);
 
   CHECK((param.height > 0) && (param.width > 0))
-      << "Input height and width must be greater than 0";
+    << "Input height and width must be greater than 0";
   CHECK(param.x + param.width <= ishape[ishape.ndim() - 2])
-        << " x + width should not be greater than input width";
+    << " x + width should not be greater than input width";
   CHECK(param.y + param.height <= ishape[ishape.ndim() - 3])
-        << " y + height should not be greater than input height";
+    << " y + height should not be greater than input height";
   if (ishape.ndim() == 3) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({param.height, param.width, ishape[C]}));
   } else {
@@ -94,7 +103,6 @@ inline void CropImpl(int x,
                       const OpContext &ctx,
                       const std::vector<OpReqType> &req) {
   using namespace mshadow;
-  // invalid param
   const TBlob& data = inputs[0];
   const TBlob& out = outputs[0];
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {

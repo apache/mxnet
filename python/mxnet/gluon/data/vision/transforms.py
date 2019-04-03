@@ -244,8 +244,14 @@ class CropResize(HybridBlock):
         Height of the cropping area
     size : int or tuple of (w, h)
         Optional, resize to new size after cropping
-    interp : int, optional
-        Optional, interpolation method. See opencv for details
+    interpolation : int, optional
+        Optional, interpolation method for resizing. By default uses bilinear
+        interpolation. See OpenCV's resize function for available choices.
+        https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=resize#resize
+        Note that the Resize on gpu use contrib.bilinearResize2D operator
+        which only support bilinear interpolation(1). The result would be slightly
+        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
+        use algorithm which aligns corner.
 
 
     Inputs:
@@ -256,13 +262,13 @@ class CropResize(HybridBlock):
 
     Examples
     --------
-    >>> transformer = vision.transforms.Crop(0, 0, 100, 100)
+    >>> transformer = vision.transforms.CropResize(x=0, y=0, width=100, height=100)
     >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
     >>> transformer(image)
-    <NDArray 500x1000x3 @cpu(0)>
+    <NDArray 100x100x3 @cpu(0)>
     >>> image = mx.nd.random.uniform(0, 255, (3, 224, 224, 3)).astype(dtype=np.uint8)
-    <NDArray 3x500x1000x3 @cpu(0)>
-    >>> transformer = vision.transforms.Crop(0, 0, 100, 100, (50, 50), 1)
+    <NDArray 3x100x100x3 @cpu(0)>
+    >>> transformer = vision.transforms.CropResize(x=0, y=0, width=100, height=100, size=(50, 50), interpolation=1)
     >>> transformer(image)
     <NDArray 3x50x50 @cpu(0)>
     """
