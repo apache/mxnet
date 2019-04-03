@@ -17,14 +17,15 @@
 
 ''' Unit tests for Gluon Estimator '''
 
-import unittest
 import sys
+import unittest
 import warnings
-from nose.tools import assert_raises
+
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet.gluon.estimator import estimator
+from mxnet.gluon.estimator import Estimator, EventHandler
+from nose.tools import assert_raises
 
 
 def get_model():
@@ -43,11 +44,11 @@ def test_fit():
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=acc,
-                              trainers=trainer,
-                              context=ctx)
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=acc,
+                    trainer=trainer,
+                    context=ctx)
     in_data = mx.nd.random.uniform(shape=(10, 3))
     out_data = mx.nd.random.uniform(shape=(10, 4))
     # Input dataloader
@@ -80,11 +81,11 @@ def test_validation():
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=acc,
-                              trainers=trainer,
-                              context=ctx)
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=acc,
+                    trainer=trainer,
+                    context=ctx)
     in_data = mx.nd.random.uniform(shape=(10, 3))
     out_data = mx.nd.random.uniform(shape=(10, 4))
     # Input dataloader
@@ -125,10 +126,10 @@ def test_initializer():
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
     # no initializer
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=acc,
-                              context=ctx)
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=acc,
+                    context=ctx)
     est.fit(train_data=train_data,
             epochs=num_epochs,
             batch_size=batch_size)
@@ -139,12 +140,12 @@ def test_initializer():
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # catch reinit warning
     with warnings.catch_warnings(record=True) as w:
-        est = estimator.Estimator(net=net,
-                                  loss=loss,
-                                  metrics=acc,
-                                  initializer=mx.init.MSRAPrelu(),
-                                  trainers=trainer,
-                                  context=ctx)
+        est = Estimator(net=net,
+                        loss=loss,
+                        metrics=acc,
+                        initializer=mx.init.MSRAPrelu(),
+                        trainer=trainer,
+                        context=ctx)
         assert 'Network already initialized' in str(w[-1].message)
     est.fit(train_data=train_data,
             epochs=num_epochs,
@@ -167,10 +168,10 @@ def test_trainer():
     net.initialize(ctx=ctx)
     # input no trainer
     with warnings.catch_warnings(record=True) as w:
-        est = estimator.Estimator(net=net,
-                                  loss=loss,
-                                  metrics=acc,
-                                  context=ctx)
+        est = Estimator(net=net,
+                        loss=loss,
+                        metrics=acc,
+                        context=ctx)
         assert 'No trainer specified' in str(w[-1].message)
     est.fit(train_data=train_data,
             epochs=num_epochs,
@@ -179,11 +180,11 @@ def test_trainer():
     # input invalid trainer
     trainer = 'sgd'
     with assert_raises(ValueError):
-        est = estimator.Estimator(net=net,
-                                  loss=loss,
-                                  metrics=acc,
-                                  trainers=trainer,
-                                  context=ctx)
+        est = Estimator(net=net,
+                        loss=loss,
+                        metrics=acc,
+                        trainer=trainer,
+                        context=ctx)
 
 
 def test_metric():
@@ -200,59 +201,54 @@ def test_metric():
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # input no metric
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              trainers=trainer,
-                              context=ctx)
+    est = Estimator(net=net,
+                    loss=loss,
+                    trainer=trainer,
+                    context=ctx)
     est.fit(train_data=train_data,
             epochs=num_epochs,
             batch_size=batch_size)
     # input list of metrics
     metrics = [mx.metric.Accuracy(), mx.metric.Accuracy()]
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=metrics,
-                              trainers=trainer,
-                              context=ctx)
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=metrics,
+                    trainer=trainer,
+                    context=ctx)
     est.fit(train_data=train_data,
             epochs=num_epochs,
             batch_size=batch_size)
     # input invalid metric
     with assert_raises(ValueError):
-        est = estimator.Estimator(net=net,
-                                  loss=loss,
-                                  metrics='acc',
-                                  trainers=trainer,
-                                  context=ctx)
+        est = Estimator(net=net,
+                        loss=loss,
+                        metrics='acc',
+                        trainer=trainer,
+                        context=ctx)
     # test default metric
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              trainers=trainer,
-                              context=ctx)
+    est = Estimator(net=net,
+                    loss=loss,
+                    trainer=trainer,
+                    context=ctx)
     assert isinstance(est.train_metrics[0], mx.metric.Accuracy)
 
 
 def test_loss():
-    ''' test with no loss, invalid loss '''
+    ''' test with invalid loss '''
     net = get_model()
     ctx = mx.cpu()
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    # input no loss
-    with assert_raises(ValueError):
-        est = estimator.Estimator(net=net,
-                                  trainers=trainer,
-                                  metrics=acc,
-                                  context=ctx)
     # input invalid loss
     with assert_raises(ValueError):
-        est = estimator.Estimator(net=net,
-                                  loss='mse',
-                                  metrics=acc,
-                                  trainers=trainer,
-                                  context=ctx)
+        est = Estimator(net=net,
+                        loss='mse',
+                        metrics=acc,
+                        trainer=trainer,
+                        context=ctx)
+
 
 def test_context():
     ''' test with no context, list of context, invalid context '''
@@ -260,18 +256,69 @@ def test_context():
     loss = gluon.loss.L2Loss()
     metrics = mx.metric.Accuracy()
     # input no context
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=metrics)
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=metrics)
     # input list of context
     ctx = [mx.gpu(0), mx.gpu(1)]
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=metrics,
-                              context=ctx)
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=metrics,
+                    context=ctx)
     # input invalid context
     with assert_raises(ValueError):
-        est = estimator.Estimator(net=net,
-                                  loss=loss,
-                                  metrics=metrics,
-                                  context='cpu')
+        est = Estimator(net=net,
+                        loss=loss,
+                        metrics=metrics,
+                        context='cpu')
+
+
+def test_categorize_handlers():
+    class CustomHandler1(EventHandler):
+        def __init__(self):
+            super(CustomHandler1, self).__init__()
+
+        def train_begin(self):
+            print("custom train begin")
+
+    class CustomHandler2(EventHandler):
+        def __init__(self):
+            super(CustomHandler2, self).__init__()
+
+        def epoch_begin(self):
+            print("custom epoch begin")
+
+        def batch_begin(self):
+            print("custom batch begin")
+
+        def train_end(self):
+            print("custom train end")
+
+    class CustomHandler3(EventHandler):
+        def __init__(self):
+            super(CustomHandler3, self).__init__()
+
+        def epoch_begin(self):
+            print("custom epoch begin")
+
+        def batch_begin(self):
+            print("custom batch begin")
+
+        def batch_end(self):
+            print("custom batch end")
+
+        def train_end(self):
+            print("custom train end")
+
+    net = nn.Sequential()
+    net.add(nn.Dense(10))
+    loss = gluon.loss.SoftmaxCrossEntropyLoss()
+    est = Estimator(net, loss=loss)
+    event_handlers = [CustomHandler1(), CustomHandler2(), CustomHandler3()]
+    train_begin, epoch_begin, batch_begin, \
+    batch_end, epoch_end, train_end = est._categorize_handlers(event_handlers)
+    assert len(train_begin) == 1
+    assert len(epoch_begin) == 2
+    assert len(batch_begin) == 2
+    assert len(batch_end) == 1
+    assert len(train_end) == 2
