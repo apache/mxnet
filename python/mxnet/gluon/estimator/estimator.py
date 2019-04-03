@@ -54,6 +54,7 @@ class Estimator(object):
 
     def __init__(self, net,
                  loss,
+                 loss_weights=None,
                  metrics=None,
                  initializer=None,
                  trainer=None,
@@ -68,6 +69,10 @@ class Estimator(object):
         else:
             raise ValueError("loss must be a Loss or a list of Loss, "
                              "refer to gluon.loss.Loss:{}".format(loss))
+
+        self.loss_weights = loss_weights
+        if len(self.loss) > 1 and not self.loss_weights:
+            self.loss_weights = [1.0/len(self.loss) for _ in self.loss]
 
         if isinstance(metrics, EvalMetric):
             self.train_metrics = [metrics]
@@ -297,19 +302,15 @@ class Estimator(object):
 
                 with autograd.record():
                     pred =  fit_helper.forward_pass(self.net, data)
-                    losses = fit_helper.calculate_loss(self.loss, pred, label)
+                    losses = fit_helper.calculate_loss(self.loss, pred, label, self.loss_weights, self.train_loss_metrics)
 
                 # backward loss per device
                 for loss in losses:
                     loss.backward()
 
-                fit_helper.update_metrics(self.train_metrics, pred, label, self.train_stats, 'train')
+                fit_helper.update_metrics(self.train_metrics, pred, label)
 
-                # update loss
-                for loss, loss_metric, in zip(losses, self.train_loss_metrics):
-                    loss_metric.update(0, [l for l in loss])
-                    name, value = loss_metric.get()
-                    self.train_stats['train_' + name] = value
+                self.update_train_stats( self.train_metrics + self.train_loss_metrics, self.train_stats, 'train')
 
                 self.batch_idx = i
                 # record trained samples v.s. total samples if using Gluon DataLoader
@@ -334,6 +335,17 @@ class Estimator(object):
         # train end
         for handler in train_end:
             handler.train_end()
+
+    def infer_num_labels(self, loss):
+        return len(loss)
+
+    def infer_num_inputs(self, batch, num_labels):
+        return len(batch) - num_labels
+
+    def update_train_stats(self, metrics, stats, prefix):
+        for metric in metrics:
+            name, value = metric.get()
+            stats['%s_%s' % (prefix, name)] = value
 
     def _categorize_handlers(self, event_handlers):
         """
@@ -364,12 +376,6 @@ class Estimator(object):
         return train_begin, epoch_begin, batch_begin, batch_end, epoch_end, train_end
 
 
-    def infer_num_labels(self, loss):
-        return len(loss)
-
-    def infer_num_inputs(self, batch, num_labels):
-        return len(batch) - num_labels
-
 class FitHelper(object):
     def __init__(self, num_inputs, num_labels):
         self.num_inputs = num_inputs
@@ -392,18 +398,17 @@ class FitHelper(object):
         else:
             return self._forward_pass_single_input(net, data)
 
-    def calculate_loss(self, loss, preds, labels, loss_weights=None):
+    def calculate_loss(self, loss, preds, labels, loss_weights, loss_metrics):
         if self.num_labels > 1:
-            return self._calculate_loss_multi_label(loss, loss_weights, preds, labels)
+            return self._calculate_loss_multi_label(loss, loss_weights, preds, labels, loss_metrics)
         else:
-            return self._calculate_loss_single_label(loss, preds, labels)
+            return self._calculate_loss_single_label(loss[0], preds, labels, loss_metrics[0])
 
-    def update_metrics(self, metrics, preds, labels, train_stats, prefix):
+    def update_metrics(self, metrics, preds, labels):
         if self.num_labels > 1:
-            self._update_metric_multi_label(self, metrics, preds, labels, train_stats, prefix)
+            self._update_metric_multi_label(metrics, preds, labels)
         else:
-            self._update_metric_single_label(metrics, preds, labels, train_stats, prefix)
-
+            self._update_metric_single_label(metrics, preds, labels)
 
     def _get_single_input(self, batch, ctx_list):
         return gluon.utils.split_and_load(batch[0], ctx_list=ctx_list, batch_axis=0)
@@ -418,14 +423,14 @@ class FitHelper(object):
         # convert inputs from inputs grouped to context grouped
         # before: [[input1_context1, input1_context2], [input2_context1, input2_context2]]
         # after:  [[input1_context1, input2_context1], [input1_context2, input2_context2]]
-        return np.transpose(inputs)
+        return list(map(list, zip(*inputs)))
 
     def _get_multi_label(self, batch, num_inputs, num_labels, ctx_list):
         labels = []
         for i in range(num_inputs, num_inputs + num_labels):
             labels.append(gluon.utils.split_and_load(batch[i], ctx_list=ctx_list, batch_axis=0))
         # convert labels from inputs grouped to context grouped
-        return np.transpose(labels)
+        return list(map(list, zip(*labels)))
 
     def _forward_pass_single_input(self, net, data):
         return [net(x) for x in data]
@@ -433,24 +438,28 @@ class FitHelper(object):
     def _forward_pass_multi_input(self, net, data):
         return [net(*x) for x in data]
 
-    def _calculate_loss_single_label(self, loss, preds, labels):
-        return [loss[0](pred, label) for pred, label in zip(preds, labels)]
+    def _calculate_loss_single_label(self, loss, preds, labels, loss_metric):
+        loss_all_device = [loss(pred, label) for pred, label in zip(preds, labels)]
+        loss_metric.update(0, loss_all_device)
+        return loss_all_device
 
-    def _calculate_loss_multi_label(self, loss, loss_weights, preds, labels):
+    def _calculate_loss_multi_label(self, loss, loss_weights, preds, labels, loss_metrics):
         combined_loss_all_device = []
         # calculate combined loss per device
-        for pred, label in preds, labels:
+        for pred, label in zip(preds, labels):
             combined_loss = 0
-            for idx in range(len(pred)):
-                combined_loss = combined_loss + loss_weights[idx] * loss[idx](pred[idx], label[idx])
+            for idx in range(self.num_labels):
+                single_loss = loss[idx](pred[idx], label[idx])
+                combined_loss = combined_loss + loss_weights[idx] * single_loss
+                loss_metrics[idx].update(0, single_loss)
             combined_loss_all_device.append(combined_loss)
         return combined_loss_all_device
 
-    def _update_metric_single_label(self, metrics, preds, labels, train_stats, prefix):
+    def _update_metric_single_label(self, metrics, preds, labels):
         for metric in metrics:
             metric.update(labels, preds)
-            name, value = metric.get()
-            train_stats['%s_%s' % (prefix, name)] = value
 
-    def _update_metric_multi_label(self, metrics, preds, labels, train_stats, prefix):
-        pass
+    def _update_metric_multi_label(self, metrics, preds, labels):
+        for pred, label in zip(preds, labels):
+            for idx in range(self.num_labels):
+                metrics[idx].update(label[idx], pred[idx])
