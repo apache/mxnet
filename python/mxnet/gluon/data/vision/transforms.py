@@ -268,6 +268,7 @@ class CropResize(HybridBlock):
     >>> transformer(image)
     <NDArray 100x100x3 @cpu(0)>
     >>> image = mx.nd.random.uniform(0, 255, (3, 224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
     <NDArray 3x100x100x3 @cpu(0)>
     >>> transformer = vision.transforms.CropResize(x=0, y=0, width=100, height=100, size=(50, 50), interpolation=1)
     >>> transformer(image)
