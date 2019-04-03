@@ -90,9 +90,9 @@ inline bool AMPMultiCastType(const nnvm::NodeAttrs& attrs,
     if ((*in_attrs)[i] == kFloat32 || (*in_attrs)[i] == kFloat16) {
       TYPE_ASSIGN_CHECK(*out_attrs, i, widest_type);
     } else {
-      TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+      TYPE_ASSIGN_CHECK(*out_attrs, i, (*in_attrs)[i]);
     }
-    ret = ret && ((*in_attrs)[0] != -1);
+    ret = ret && ((*in_attrs)[i] != -1);
   }
   return ret;
 }
