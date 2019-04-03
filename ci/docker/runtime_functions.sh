@@ -1310,6 +1310,20 @@ nightly_estimator_cnn_cpu() {
     python test_estimator_cnn.py --type cpu
 }
 
+nightly_estimator_rnn_gpu() {
+    set -ex
+    cd /work/mxnet/tests/nightly/estimator
+    export PYTHONPATH=/work/mxnet/python/
+    python test_sentiment_rnn.py --type gpu
+}
+
+nightly_estimator_rnn_cpu() {
+    set -ex
+    cd /work/mxnet/tests/nightly/estimator
+    export PYTHONPATH=/work/mxnet/python/
+    python test_sentiment_rnn.py --type cpu
+}
+
 # Deploy
 
 deploy_docs() {
