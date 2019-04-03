@@ -1191,7 +1191,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
   CHECK(from.shape() == to.shape())
       << "operands shape mismatch"
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
-  CHECK(!mxnet::op::shape_is_none(from))
+  CHECK(!mxnet::op::shape_is_none(from.shape()))
       << "source operands have undefined shape";
   // important: callback must always capture by value
   const Context from_ctx = from.ctx();
