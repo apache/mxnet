@@ -1364,6 +1364,12 @@ class Symbol(SymbolBase):
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
 
+    def _gen_atomic_symbol(self):
+        handle = SymbolHandle()
+        check_call(_LIB.MXGenAtomicSymbolFromSymbol(self.handle, ctypes.byref(handle)))
+        return Symbol(handle)
+
+
     # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
                     group2ctx=None, shared_arg_names=None, shared_exec=None,

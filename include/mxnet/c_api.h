@@ -1636,6 +1636,14 @@ MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
 MXNET_DLL int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
                                    SymbolHandle *ret_sym_handle);
 
+/*!
+ * \brief Generate atomic symbol (able to be composed) from a source symbol
+ * \param sym_handle source symbol
+ * \param ret_sym_handle returned atomic symbol
+ */
+MXNET_DLL int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle);
+
+
 //--------------------------------------------
 // Part 4: Executor interface
 //--------------------------------------------

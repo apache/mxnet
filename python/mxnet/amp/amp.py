@@ -76,9 +76,8 @@ def _wrap_symbol_functions(module):
             aux = sym.list_auxiliary_states()
             inputs = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype)
                               if x.name not in aux else x, inputs))
-            wrapped_sym = f(*inputs, **attr)
-            #wrapped_sym_argnames = wrapped_sym.list_arguments()
-            #wrapped_sym._compose(**dict(zip(wrapped_sym_argnames, inputs)))
+            atomic_sym = sym._gen_atomic_symbol()
+            wrapped_sym = atomic_sym(*inputs)
             wrapped_sym._set_attr(name=sym.name)
             return wrapped_sym
         _new_fun.__name__ = f.__name__

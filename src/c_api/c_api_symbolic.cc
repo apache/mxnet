@@ -734,3 +734,17 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
+
+int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *source = static_cast<nnvm::Symbol *>(sym_handle);
+  CHECK_EQ(source->outputs.size(), 1U)
+    << "Generating atomic symbol from other symbol only works for nongrouped symbol.";
+  const auto& node = source->outputs[0];
+  const auto *op = node.node->op();
+  const auto attrs = source->ListAttrs(nnvm::Symbol::ListAttrOption::kShallow);
+  *s = nnvm::Symbol::CreateFunctor(op, attrs);
+  *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
