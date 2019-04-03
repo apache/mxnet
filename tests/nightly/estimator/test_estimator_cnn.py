@@ -120,10 +120,7 @@ def test_estimator_gpu():
     model_name = 'resnet18_v1'
     batch_size = 128
     num_epochs = 5
-    if mx.context.num_gpus() > 0:
-        context = mx.gpu(0)
-    else:
-        context = mx.cpu()
+    context = mx.gpu(0)
     net, _, _, _ = get_net(model_name, context)
     train_data, test_data = load_data_mnist(batch_size, resize=224)
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -142,7 +139,7 @@ def test_estimator_gpu():
             epochs=num_epochs,
             batch_size=batch_size)
 
-    assert est.train_stats['train_'+acc.name][num_epochs-1] > 0.75
+    assert est.train_stats['train_'+acc.name][num_epochs-1] > 0.80
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='test gluon estimator')
