@@ -48,11 +48,6 @@ namespace mxnet {
 namespace op {
 namespace custom {
 
-struct CustomTask {
-  std::function<void(void)> fn;
-  mxnet::engine::CallbackOnComplete on_complete;
-};
-
 class CustomOperator {
  public:
   void Register(const std::string &op_type, CustomOpPropCreator creator) {
@@ -97,11 +92,18 @@ class CustomOperator {
       return;
     }
     std::unique_lock<std::mutex> lock(mutex_);
-    q_.push({[=]() mutable {
+    q_.push([=]() mutable {
       bool prev_recording = Imperative::Get()->set_is_recording(recording);
       bool prev_training = Imperative::Get()->set_is_training(training);
 
-      func();
+      try {
+        func();
+      } catch (dmlc::Error& e) {
+        exception_ =
+            std::make_shared<std::exception_ptr>(std::current_exception());
+        ctx.async_on_complete();
+        return;
+      }
 
       Imperative::Get()->set_is_training(prev_training);
       Imperative::Get()->set_is_recording(prev_recording);
@@ -134,7 +136,7 @@ class CustomOperator {
           },
           ctx.run_ctx.ctx, vars, vars2, FnProperty::kNormal, 0,
           "CustomOperator");
-    }, ctx.async_on_complete});
+    });
     // increase num_threads if there is not enough threads to execute custom operator
     if (q_.size() > num_free_threads)
       CreateThreads(q_.size() - num_free_threads);
@@ -186,16 +188,10 @@ class CustomOperator {
       cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
       while (!q_.empty()) {
         --num_free_threads;
-        auto task = q_.front();
+        auto fn = q_.front();
         q_.pop();
         lock.unlock();
-        try {
-          task.fn();
-        } catch (dmlc::Error& e) {
-          exception_ =
-              std::make_shared<std::exception_ptr>(std::current_exception());
-          task.on_complete();
-        }
+        fn();
         ++num_free_threads;
         lock.lock();
       }
@@ -217,7 +213,7 @@ class CustomOperator {
   std::condition_variable cv_;
   std::vector<std::thread> workers_;
   std::atomic<uint32_t> num_free_threads;
-  std::queue<CustomTask> q_;
+  std::queue<std::function<void(void)> > q_;
   std::shared_ptr<std::exception_ptr> exception_;
   bool naive_engine_;
   bool destructing_;
