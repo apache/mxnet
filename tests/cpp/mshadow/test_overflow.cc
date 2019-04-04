@@ -37,5 +37,20 @@ TEST(Overflow, OverflowTest) {
   EXPECT_FALSE(mult_not_overflow<int>(3, 1<<31,1,2));
   EXPECT_TRUE(mult_not_overflow<int>(2, 0, 0));
   EXPECT_TRUE(mult_not_overflow<int>(1, 0));
+  bool not_overflow = false;
+  not_overflow = narrow_not_overflow<size_t, int>(0);
+  EXPECT_TRUE(not_overflow);
+  not_overflow = narrow_not_overflow<size_t, int>((1ULL<<31)-1);
+  EXPECT_TRUE(not_overflow);
+  not_overflow = narrow_not_overflow<size_t, int>((1ULL<<32)-1);
+  EXPECT_FALSE(not_overflow);
+  not_overflow = narrow_not_overflow<size_t, int>(1ULL << 40);
+  EXPECT_FALSE(not_overflow);
+  not_overflow = narrow_not_overflow<int64_t, int>(1LL << 40);
+  EXPECT_FALSE(not_overflow);
+  not_overflow = narrow_not_overflow<int64_t, int8_t>(1LL << 40);
+  EXPECT_FALSE(not_overflow);
+  not_overflow = narrow_not_overflow<int64_t, unsigned>(-1);
+  EXPECT_FALSE(not_overflow);
 }
 
