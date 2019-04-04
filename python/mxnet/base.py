@@ -736,13 +736,13 @@ ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 
-def set_np_comp(is_np_comp):
+def set_np_comp(flag):
     """
     Turns on/off NumPy compatibility. NumPy-compatibility is turned off by default in backend.
 
     Parameters
     ----------
-    is_np_comp : bool
+    flag : bool
         Indicates whether to turn on/off NumPy compatibility.
 
     Returns
@@ -750,7 +750,7 @@ def set_np_comp(is_np_comp):
         A bool value indicating the previous state of NumPy compatibility.
     """
     prev = ctypes.c_int()
-    check_call(_LIB.MXSetIsNumpyCompatible(ctypes.c_int(is_np_comp), ctypes.byref(prev)))
+    check_call(_LIB.MXSetIsNumpyCompatible(ctypes.c_int(flag), ctypes.byref(prev)))
     return bool(prev.value)
 
 
