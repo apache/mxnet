@@ -55,21 +55,18 @@ def test_fit():
     dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
     train_dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
     est.fit(train_data=train_dataloader,
-            epochs=num_epochs,
-            batch_size=batch_size)
+            epochs=num_epochs)
 
     # Input dataiter
     train_dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
     with assert_raises(ValueError):
         est.fit(train_data=train_dataiter,
-                epochs=num_epochs,
-                batch_size=batch_size)
+                epochs=num_epochs)
 
     # Input NDArray
     with assert_raises(ValueError):
         est.fit(train_data=[in_data, out_data],
-                epochs=num_epochs,
-                batch_size=batch_size)
+                epochs=num_epochs)
 
 
 def test_validation():
@@ -95,8 +92,7 @@ def test_validation():
     val_dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
     est.fit(train_data=train_dataloader,
             val_data=val_dataloader,
-            epochs=num_epochs,
-            batch_size=batch_size)
+            epochs=num_epochs)
 
     # Input dataiter
     train_dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
@@ -104,14 +100,12 @@ def test_validation():
     with assert_raises(ValueError):
         est.fit(train_data=train_dataiter,
                 val_data=val_dataiter,
-                epochs=num_epochs,
-                batch_size=batch_size)
+                epochs=num_epochs)
     # Input NDArray
     with assert_raises(ValueError):
         est.fit(train_data=[in_data, out_data],
                 val_data=[in_data, out_data],
-                epochs=num_epochs,
-                batch_size=batch_size)
+                epochs=num_epochs)
 
 
 @unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
@@ -133,8 +127,7 @@ def test_initializer():
                     metrics=acc,
                     context=ctx)
     est.fit(train_data=train_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
+            epochs=num_epochs)
 
     # different initializer for net and estimator
     net = get_model()
@@ -150,8 +143,7 @@ def test_initializer():
                         context=ctx)
         assert 'Network already initialized' in str(w[-1].message)
     est.fit(train_data=train_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
+            epochs=num_epochs)
 
 
 @unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
@@ -176,8 +168,7 @@ def test_trainer():
                         context=ctx)
         assert 'No trainer specified' in str(w[-1].message)
     est.fit(train_data=train_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
+            epochs=num_epochs)
 
     # input invalid trainer
     trainer = 'sgd'
@@ -208,8 +199,7 @@ def test_metric():
                     trainer=trainer,
                     context=ctx)
     est.fit(train_data=train_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
+            epochs=num_epochs)
     # input list of metrics
     metrics = [mx.metric.Accuracy(), mx.metric.Accuracy()]
     est = Estimator(net=net,
@@ -218,8 +208,7 @@ def test_metric():
                     trainer=trainer,
                     context=ctx)
     est.fit(train_data=train_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
+            epochs=num_epochs)
     # input invalid metric
     with assert_raises(ValueError):
         est = Estimator(net=net,

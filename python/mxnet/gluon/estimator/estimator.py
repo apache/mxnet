@@ -203,7 +203,6 @@ class Estimator(object):
     def fit(self, train_data,
             val_data=None,
             epochs=1,
-            batch_size=None,
             event_handlers=None,
             batch_fn=None):
         """Main training loop
