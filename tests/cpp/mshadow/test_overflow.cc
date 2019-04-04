@@ -28,13 +28,13 @@ using namespace mshadow;
  * Test that enum and string values are in sync
  */
 TEST(Overflow, OverflowTest) {
-  EXPECT_TRUE(mult_not_overflow_binary<int>(200,400));
-  EXPECT_FALSE(mult_not_overflow_binary<int>(1<<31,4));
-  EXPECT_FALSE(mult_not_overflow_binary<int>(1<<30,1<<5));
-  EXPECT_TRUE(mult_not_overflow<int>(2, 200,400));
-  EXPECT_FALSE(mult_not_overflow<int>(2, 1<<31,1<<31));
-  EXPECT_TRUE(mult_not_overflow<int>(2, 1<<31,1));
-  EXPECT_FALSE(mult_not_overflow<int>(3, 1<<31,1,2));
+  EXPECT_TRUE(mult_not_overflow_binary<int>(200, 400));
+  EXPECT_FALSE(mult_not_overflow_binary<int>(1<<31, 4));
+  EXPECT_FALSE(mult_not_overflow_binary<int>(1<<30, 1<<5));
+  EXPECT_TRUE(mult_not_overflow<int>(2, 200, 400));
+  EXPECT_FALSE(mult_not_overflow<int>(2, 1<<31, 1<<31));
+  EXPECT_TRUE(mult_not_overflow<int>(2, 1<<31, 1));
+  EXPECT_FALSE(mult_not_overflow<int>(3, 1<<31, 1, 2));
   EXPECT_TRUE(mult_not_overflow<int>(2, 0, 0));
   EXPECT_TRUE(mult_not_overflow<int>(1, 0));
   bool not_overflow = false;
