@@ -143,9 +143,9 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
         }
       }
     } else {
-      for (size_t i = 0; i < ndim; i++) {
-        o_pad[i] = pad[i];
-        o_adj[i] = adj[i];
+      for (int i = 0; i < (int) ndim; i++) {
+        o_pad[i] = i < pad.ndim() ? pad[i] : 0;
+        o_adj[i] = i < adj.ndim() ? adj[i] : 0;
       }
     }
   }
