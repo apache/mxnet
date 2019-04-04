@@ -266,6 +266,7 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -395,9 +396,9 @@ The storage type of ``slice`` output depends on storage types of inputs
 - otherwise, ``slice`` generates output with default storage
 
 .. note:: When input data storage type is csr, it only supports
-step=(), or step=(None,), or step=(1,) to generate a csr output.
-For other step parameter values, it falls back to slicing
-a dense tensor.
+   step=(), or step=(None,), or step=(1,) to generate a csr output.
+   For other step parameter values, it falls back to slicing
+   a dense tensor.
 
 Example::
 

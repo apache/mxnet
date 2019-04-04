@@ -34,7 +34,7 @@ apt-key add r.gpg
 # Installing the latest version (3.3+) that is compatible with MXNet
 add-apt-repository 'deb [arch=amd64,i386] https://cran.rstudio.com/bin/linux/ubuntu xenial/'
 
-apt-get update
+apt-get update || true
 apt-get install -y --allow-unauthenticated \
     libcairo2-dev \
     libssl-dev \

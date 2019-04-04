@@ -214,7 +214,7 @@ def test_quantized_conv():
 
 @with_seed()
 def test_quantized_pooling():
-    def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool, qdtype):
+    def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool, qdtype, convention='valid'):
         if is_test_for_native_cpu():
             print('skipped testing quantized_pooling for native cpu since it is not supported yet')
             return
@@ -224,7 +224,8 @@ def test_quantized_pooling():
 
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
         pooling_fp32 = mx.sym.Pooling(data=data, kernel=kernel, pad=pad, stride=stride,
-                                        pool_type=pool_type, global_pool=global_pool, cudnn_off=False)
+                                      pool_type=pool_type, global_pool=global_pool, cudnn_off=False,
+                                      pooling_convention=convention)
         arg_shapes, _, _ = pooling_fp32.infer_shape(data=data_shape)
         arg_names = pooling_fp32.list_arguments()
         pooling_fp32_exe = pooling_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
@@ -242,9 +243,10 @@ def test_quantized_pooling():
         min_data = mx.sym.Variable(name='min_data')
         max_data = mx.sym.Variable(name='max_data')
         quantized_pooling = mx.sym.contrib.quantized_pooling(data=qdata, min_data=min_data,
-                                                                max_data=max_data, kernel=kernel,
-                                                                pad=pad, stride=stride, pool_type=pool_type,
-                                                                global_pool=global_pool)
+                                                             max_data=max_data, kernel=kernel,
+                                                             pad=pad, stride=stride, pool_type=pool_type,
+                                                             global_pool=global_pool,
+                                                             pooling_convention=convention)
         pooling_int8_exe = quantized_pooling.simple_bind(ctx=mx.current_context(), grad_req='null')
         qarg_names = quantized_pooling.list_arguments()
         pooling_int8_exe.arg_dict[qarg_names[0]][:] = pooling_fp32_exe.arg_dict[arg_names[0]].astype(qdtype)
@@ -265,6 +267,12 @@ def test_quantized_pooling():
         check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), True, qdtype)
         check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), False, qdtype)
         check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), True, qdtype)
+
+        check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), False, qdtype, 'full')
+        check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), True, qdtype, 'full')
+        check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), False, qdtype, 'full')
+        check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), True, qdtype, 'full')
+
 
 @with_seed()
 def test_quantized_fc():
@@ -374,7 +382,7 @@ def test_quantize_params():
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
     qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
-    qparams = mx.contrib.quant._quantize_params(qsym, params)
+    qparams = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
     param_names = params.keys()
     qparam_names = qparams.keys()
     for name in qparam_names:
@@ -406,7 +414,7 @@ def get_fp32_residual():
     fc = mx.sym.FullyConnected(pool, num_hidden=10, flatten=True, name='fc')
     sym = mx.sym.SoftmaxOutput(fc, grad_scale=1, ignore_label=-1, multi_output=False,
                                out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
-    return sym 
+    return sym
 
 @with_seed()
 def test_quantize_model():
@@ -418,7 +426,7 @@ def test_quantize_model():
                     assert k in qparams
                     assert same(v.asnumpy(), qparams[k].asnumpy())
             else:
-                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params)
+                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
                 assert len(qparams) == len(qparams_ground_truth)
                 for k, v in qparams_ground_truth.items():
                     assert k in qparams
@@ -494,7 +502,7 @@ def test_quantize_residual_unit():
                     assert k in qparams
                     assert same(v.asnumpy(), qparams[k].asnumpy())
             else:
-                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params)
+                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
                 assert len(qparams) == len(qparams_ground_truth)
                 for k, v in qparams_ground_truth.items():
                     assert k in qparams
@@ -525,7 +533,7 @@ def test_quantize_residual_unit():
             mod.forward(batch, is_train=False)
             for output in mod.get_outputs():
                 output.wait_to_read()
-             
+
 
         sym = get_fp32_residual()
         mod = Module(symbol=sym)

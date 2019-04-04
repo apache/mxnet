@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 
 # Generative Adversarial Network (GAN)
 
@@ -63,7 +80,7 @@ The MNIST dataset contains 70,000 images of handwritten digits. Each image is 28
 
 ### 1. Preparing the MNSIT dataset
 
-Let us start by preparing the handwritten digits from the MNIST dataset. 
+Let us start by preparing the handwritten digits from the MNIST dataset.
 ```python
 import mxnet as mx
 import numpy as np
@@ -75,7 +92,7 @@ mnist_test = mx.gluon.data.vision.datasets.MNIST(train=False)
 ```python
 # The downloaded data is of type `Dataset` which are
 # Well suited to work with the new Gluon interface but less
-# With the older symbol API, used in this tutorial. 
+# With the older symbol API, used in this tutorial.
 # Therefore we convert them to numpy array first
 X = np.zeros((70000, 28, 28))
 for i, (data, label) in enumerate(mnist_train):
@@ -394,7 +411,8 @@ As a result, we have created two neural nets: a Generator, which is able to crea
 Along the way, we have learned how to do the image manipulation and visualization that is associated with the training of deep neural nets. We have also learned how to use MXNet's Module APIs to perform advanced model training functionality to fit the model.
 
 ## Acknowledgements
-This tutorial is based on [MXNet DCGAN codebase](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dcgan.py),
+
+This tutorial is based on [MXNet DCGAN codebase](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dc_gan/dcgan.py),
 [The original paper on GANs](https://arxiv.org/abs/1406.2661), as well as [this paper on deep convolutional GANs](https://arxiv.org/abs/1511.06434).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

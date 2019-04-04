@@ -54,7 +54,8 @@ private[mxnet] class DataParallelExecutorManager(private val symbol: Symbol,
   if (workLoadList == null) {
     workLoadList = Seq.fill(numDevice)(1f)
   }
-  require(workLoadList.size == numDevice, "Invalid settings for work load.")
+  require(workLoadList.size == numDevice, "Invalid settings for work load. " +
+    s"Size (${workLoadList.size}) should match num devices ($numDevice)")
 
   private val slices = ExecutorManager.splitInputSlice(trainData.batchSize, workLoadList)
 
@@ -212,13 +213,13 @@ private[mxnet] object ExecutorManager {
   private[mxnet] def checkArguments(symbol: Symbol): Unit = {
     val argNames = symbol.listArguments()
     require(argNames.toSet.size == argNames.length,
-      "Find duplicated argument name," +
+      "Found duplicated argument name," +
         "please make the weight name non-duplicated(using name arguments)," +
         s"arguments are $argNames")
 
     val auxNames = symbol.listAuxiliaryStates()
     require(auxNames.toSet.size == auxNames.length,
-      "Find duplicated auxiliary param name," +
+      "Found duplicated auxiliary param name," +
         "please make the weight name non-duplicated(using name arguments)," +
         s"arguments are $auxNames")
   }
@@ -272,7 +273,11 @@ private[mxnet] object ExecutorManager {
       sharedDataArrays: mutable.Map[String, NDArray] = null,
       inputTypes: ListMap[String, DType] = null) = {
     val (argShape, _, auxShape) = sym.inferShape(inputShapes)
-    require(argShape != null)
+    // TODO: more precise error message should be provided by backend
+    require(argShape != null, "Shape inference failed." +
+      s"Known shapes are $inputShapes for symbol arguments ${sym.listArguments()} " +
+      s"and aux states ${sym.listAuxiliaryStates()}")
+
     val inputTypesUpdate =
       if (inputTypes == null) {
         inputShapes.map { case (key, _) => (key, Base.MX_REAL_TYPE) }
@@ -280,7 +285,9 @@ private[mxnet] object ExecutorManager {
         inputTypes
       }
     val (argTypes, _, auxTypes) = sym.inferType(inputTypesUpdate)
-    require(argTypes != null)
+    require(argTypes != null, "Type inference failed." +
+      s"Known types as $inputTypes for symbol arguments ${sym.listArguments()} " +
+      s"and aux states ${sym.listAuxiliaryStates()}")
 
     val argArrays = ArrayBuffer.empty[NDArray]
     val gradArrays: mutable.Map[String, NDArray] =
@@ -311,7 +318,8 @@ private[mxnet] object ExecutorManager {
             val arr = sharedDataArrays(name)
             if (arr.shape.product >= argShape(i).product) {
               // good, we can share this memory
-              require(argTypes(i) == arr.dtype)
+              require(argTypes(i) == arr.dtype,
+                s"Type ${arr.dtype} of argument $name does not match inferred type ${argTypes(i)}")
               arr.reshape(argShape(i))
             } else {
               DataParallelExecutorManager.logger.warn(
@@ -345,8 +353,10 @@ private[mxnet] object ExecutorManager {
             NDArray.zeros(argShape(i), ctx, dtype = argTypes(i))
           } else {
             val arr = baseExec.argDict(name)
-            require(arr.shape == argShape(i))
-            require(arr.dtype == argTypes(i))
+            require(arr.shape == argShape(i),
+              s"Shape ${arr.shape} of argument $name does not match inferred shape ${argShape(i)}")
+            require(arr.dtype == argTypes(i),
+              s"Type ${arr.dtype} of argument $name does not match inferred type ${argTypes(i)}")
             if (gradSet.contains(name)) {
               gradArrays.put(name, baseExec.gradDict(name))
             }
@@ -356,6 +366,7 @@ private[mxnet] object ExecutorManager {
       }
     }
     // create or borrow aux variables
+    val auxNames = sym.listAuxiliaryStates()
     val auxArrays =
       if (baseExec == null) {
         (auxShape zip auxTypes) map { case (s, t) =>
@@ -363,8 +374,12 @@ private[mxnet] object ExecutorManager {
         }
       } else {
         baseExec.auxArrays.zipWithIndex.map { case (a, i) =>
-          require(auxShape(i) == a.shape)
-          require(auxTypes(i) == a.dtype)
+          require(auxShape(i) == a.shape,
+            s"Shape ${a.shape} of aux variable ${auxNames(i)} does not match " +
+              s"inferred shape ${auxShape(i)}")
+          require(auxTypes(i) == a.dtype,
+            s"Type ${a.dtype} of aux variable ${auxNames(i)} does not match " +
+              s"inferred type ${auxTypes(i)}")
           a
         }.toSeq
       }

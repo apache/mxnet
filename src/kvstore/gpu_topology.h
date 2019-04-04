@@ -278,8 +278,8 @@ inline bool KernighanLin(const std::vector<T>& W, std::vector<int>* P,
 
   // 0) For every partition, determine if it can be partitioned further.
   //    To do this, we must do a histogram of each partition:
-  for (unsigned i=0; i < P->size(); ++i) {
-    histogram[(*P)[i]]++;
+  for (int partition : *P) {
+    histogram[partition]++;
   }
 
   bool stop = true;
@@ -315,13 +315,13 @@ inline bool KernighanLin(const std::vector<T>& W, std::vector<int>* P,
 
       // 1b) Shuffle using random generator
       std::shuffle(cluster_list.begin(), cluster_list.end(), *gen);
-      for (unsigned i = 0; i < cluster_list.size(); ++i) {
+      for (int cluster : cluster_list) {
         if (first_partition < target_partition) {
-          int dest = cluster_list[i];
+          int dest = cluster;
           P_temp[dest] = 1;
           first_partition++;
         } else {
-          int dest = cluster_list[i];
+          int dest = cluster;
           P_temp[dest] = -1;
         }
       }
@@ -758,8 +758,8 @@ inline bool FormTopology(const std::vector<int>& result,
                          std::vector<size_t>* topo_row,
                          std::vector<size_t>* scan_row,
                          int depth) {
-  for (unsigned i = 0; i < result.size(); ++i)
-    if (result[i] == -1)
+  for (int result_value : result)
+    if (result_value == -1)
       return false;
 
   scan_row->push_back(topo_row->size());
@@ -1027,7 +1027,7 @@ inline void ComputeTreesFromRoot(std::vector<T>* W,
 
   bool success = true;
   if (reset == 1) {
-    // LOG(INFO) << "No valid binary tree found from root " << root << ", try backtracking";
+    LOG(INFO) << "No valid binary tree found from root " << root << ", try backtracking";
     success = BacktrackGenerateBinaryTree(W, num_elements, root, topo, scan);
   } else {
     *topo = topo_temp;
@@ -1078,8 +1078,8 @@ inline void ComputeTrees(const std::vector<T>& W,
       int from = std::min((*topo)[row][col], (*topo)[row][col+1]);
       int dest = std::max((*topo)[row][col], (*topo)[row][col+1]);
       if (from != dest) {
-        adj[from*num_elements+dest] += 1;
-        adj[dest*num_elements+from] += 1;
+        adj.at(from*num_elements+dest) += 1;
+        adj.at(dest*num_elements+from) += 1;
       }
     }
   }

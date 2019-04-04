@@ -16,6 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+ /*!
+ * \file elemwise_scatter_op.cu
+ * \brief GPU implementation of elementwise scatter operators
+ */
 #include "./elemwise_binary_scalar_op.h"
 #include "./elemwise_scatter_op.h"
 

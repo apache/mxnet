@@ -273,8 +273,10 @@ def grad(heads, variables, head_grads=None, retain_graph=None, create_graph=Fals
     returned as new NDArrays instead of stored into `variable.grad`.
     Supports recording gradient graph for computing higher order gradients.
 
-    .. Note: Currently only a very limited set of operators support higher order
-    gradients.
+    .. note::
+
+      Currently only a very limited set of operators support higher order \
+      gradients.
 
     Parameters
     ----------

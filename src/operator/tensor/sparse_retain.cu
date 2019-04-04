@@ -19,7 +19,7 @@
 
 /*!
  * \file sparse_retain.cu
- * \brief
+ * \brief GPU implementation of sparse_retain operator
 */
 
 #include "./sparse_retain-inl.h"

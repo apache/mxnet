@@ -17,6 +17,8 @@
 
 package org.apache.mxnet
 
+import scala.language.implicitConversions
+
 object Context {
   val devtype2str = Map(1 -> "cpu", 2 -> "gpu", 3 -> "cpu_pinned")
   val devstr2type = Map("cpu" -> 1, "gpu" -> 2, "cpu_pinned" -> 3)

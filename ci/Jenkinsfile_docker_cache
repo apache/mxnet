@@ -23,12 +23,12 @@
 // timeout in minutes
 total_timeout = 300
 
-node('restricted-mxnetlinux-cpu') {
+node('restricted-utility') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
 }
-utils.assign_node_labels(linux_cpu: 'restricted-mxnetlinux-cpu', linux_gpu: 'restricted-mxnetlinux-gpu', linux_gpu_p3: 'restricted-mxnetlinux-gpu-p3', windows_cpu: 'restricted-mxnetwindows-cpu', windows_gpu: 'restricted-mxnetwindows-gpu')
+utils.assign_node_labels(utility: 'restricted-utility', linux_cpu: 'restricted-mxnetlinux-cpu', linux_gpu: 'restricted-mxnetlinux-gpu', linux_gpu_p3: 'restricted-mxnetlinux-gpu-p3', windows_cpu: 'restricted-mxnetwindows-cpu', windows_gpu: 'restricted-mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {

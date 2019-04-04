@@ -31,7 +31,7 @@
 #include <mxnet/op_attr_types.h>
 #include <mxnet/operator.h>
 #include <nnvm/graph_attr_types.h>
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 
 #include "../operator/contrib/nnvm_to_onnx-inl.h"
 #include "./exec_pass.h"

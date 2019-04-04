@@ -2146,6 +2146,15 @@ def test_output_format_cond():
         for i in range(len(out1)):
             assert_almost_equal(out1[i].asnumpy(), out2[i].asnumpy(), rtol=0.001, atol=0.0001)
 
+def test_foreach_with_unkown_dim():
+    # MXNet supports using 0 as placeholder for unknown dimensions in shape
+    step = lambda data, states: (data + states[0], [states[0] * 2])
+    # input shape with NCHW format and N is unknown
+    data = mx.sym.var('data', shape=(0, 3, 32, 32))
+    states = [mx.sym.var('state')]
+    outs, states = mx.sym.contrib.foreach(step, data, states)
+    _, output_shape, _ = outs.infer_shape_partial()
+    assert_allclose((0, 3, 32, 32), output_shape[0])
 
 if __name__ == '__main__':
     import nose

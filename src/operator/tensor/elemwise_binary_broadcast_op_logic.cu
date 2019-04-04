@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cu
- * \brief GPU Implementation of unary function.
+ * \file elemwise_binary_broadcast_op_logic.cu
+ * \brief GPU Implementation of elementwise binary broadcast logical operators.
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op.h"

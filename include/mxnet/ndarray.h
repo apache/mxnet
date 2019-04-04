@@ -103,7 +103,18 @@ class NDArray {
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
           std::vector<int> aux_types = {}, std::vector<TShape> aux_shapes = {},
           TShape storage_shape = TShape(mshadow::Shape1(0)));
-
+  /*!
+   * \brief constructs a new dynamic NDArray whose shape is unknown,
+   *        hence the NDArray is inherently lazily created
+   * \param ctx context of NDArray
+   * \param dtype data type of this ndarray
+   */
+  explicit NDArray(Context ctx, int dtype = mshadow::default_type_flag) {
+    ptr_ = std::make_shared<Chunk>(TShape(mshadow::Shape1(0)), ctx, true, dtype);
+    dtype_ = dtype;
+    storage_type_ = kDefaultStorage;
+    entry_ = {nullptr, 0, 0};
+  }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
    *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
@@ -116,6 +127,26 @@ class NDArray {
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
         entry_({nullptr, 0, 0}) {
   }
+
+  /*!
+   * \brief constructing a static NDArray that shares data with TBlob which is with deleter
+   *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
+   *  make sure the memory region is available through out the life of NDArray
+   * \param data the memory content of static data
+   * \param dev_id the device id this tensor sits at
+   * \param deleter the function pointer of custom deleter
+   */
+  NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter)
+      : ptr_(new Chunk(data, dev_id),
+        [deleter](Chunk *p) {
+          deleter();    // call custom deleter
+          delete p;     // delete Chunk object
+        }),
+        shape_(data.shape_),
+        dtype_(data.type_flag_), storage_type_(kDefaultStorage),
+        entry_({nullptr, 0, 0}) {
+  }
+
   /*! \brief create ndarray from shared memory */
   NDArray(int shared_pid, int shared_id, const TShape& shape, int dtype)
       : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)), shape_(shape),
@@ -137,7 +168,20 @@ class NDArray {
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
         dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
   }
-
+  /*!
+   * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
+   * \param shape the shape of the NDArray
+   */
+  void Init(const TShape &shape) {
+    ptr_->Init(shape, this->dtype_);
+    this->shape_ = shape;
+  }
+  /*!
+   * \brief set the correct shape of NDArray directly from the storage_shape of its own chunk.
+   */
+  void SetShapeFromChunk() {
+    shape_ = ptr_->storage_shape;
+  }
   /*
    * This indicates whether an array is a view of another array (created by
    * reshape or slice). If an array is a view and the the data is stored in
@@ -340,6 +384,10 @@ class NDArray {
   inline size_t byte_offset() const {
     return byte_offset_;
   }
+  /*! \brief return var version of the NDArray*/
+  inline size_t version() const {
+    return var()->version();
+  }
   /*!
    * \brief save the content into binary stream
    * \param strm the output stream
@@ -520,6 +568,26 @@ class NDArray {
   }
 
   /*!
+   * \brief Create a reference view of NDArray that
+   *  represents as DLManagedTensor.
+   * \return A DLManagedTensor
+   */
+  DLManagedTensor* ToDLPack() const;
+
+  /*!
+   * \brief Create a NDArray backed by a dlpack tensor.
+   *
+   * This allows us to create a NDArray using the memory
+   * allocated by an external deep learning framework
+   * that is DLPack compatible.
+   *
+   * The memory is retained until the NDArray went out of scope.
+   *
+   * \return The created NDArray view.
+   */
+  static NDArray FromDLPack(const DLManagedTensor* tensor);
+
+  /*!
    * \brief Update ndarray chunk storage handles using existing ndarray storage handles
    * Also update the aux_handle, aux_shapes and aux_types.
    * This is specifically used for custom op to update the inputs and outputs from
@@ -624,6 +692,16 @@ class NDArray {
 
 #if MXNET_USE_MKLDNN == 1
   /*
+   * Create NDArray from mkldnn memory.
+   * mkldnn_mem The mkldnn memory to be managed.
+   */
+  explicit NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem);
+  /*
+   * Create NDArray from mkldnn memory descriptor.
+   * mem_pd The mkldnn memory descriptor to be created.
+   */
+  explicit NDArray(mkldnn::memory::primitive_desc mem_pd);
+  /*
    * Test if the data is stored in one of special MKLDNN format.
    */
   bool IsMKLDNNData() const {
@@ -698,6 +776,11 @@ class NDArray {
    * It's used by FullyConnected right now.
    */
   NDArray MKLDNNDataReshape(const TShape &shape) const;
+
+   /*!
+   * \ Fix mkldnn memory descriptor mismatch from NDArray.
+   */
+  void UpdateMKLDNNMemDesc(mkldnn::memory::format format);
 #endif
 
   /*!
@@ -905,7 +988,13 @@ class NDArray {
 #endif
       }
     }
-
+    /*! \brief initialize the shape and dtype, assuming it is not initialized before. */
+    void Init(const TShape &shape, int dtype) {
+      auto size = shape.Size();
+      storage_shape = shape;
+      shandle.size = size * mshadow::mshadow_sizeof(dtype);
+      this->CheckAndAlloc();
+    }
     inline void CheckAndAlloc(const TShape &shape, const std::vector<TShape> &aux_shapes,
                               int dtype) {
       // calculate size, perform allocation

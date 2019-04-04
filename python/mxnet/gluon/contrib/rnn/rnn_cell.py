@@ -26,7 +26,7 @@ from ... import tensor_types
 class VariationalDropoutCell(ModifierCell):
     """
     Applies Variational Dropout on base cell.
-    (https://arxiv.org/pdf/1512.05287.pdf,
+    (https://arxiv.org/pdf/1512.05287.pdf, \
      https://www.stat.berkeley.edu/~tsmoon/files/Conference/asru2015.pdf).
 
     Variational dropout uses the same dropout mask across time-steps. It can be applied to RNN
@@ -197,24 +197,29 @@ class VariationalDropoutCell(ModifierCell):
 class LSTMPCell(HybridRecurrentCell):
     r"""Long-Short Term Memory Projected (LSTMP) network cell.
     (https://arxiv.org/abs/1402.1128)
+
     Each call computes the following function:
+
     .. math::
         \begin{array}{ll}
         i_t = sigmoid(W_{ii} x_t + b_{ii} + W_{ri} r_{(t-1)} + b_{ri}) \\
         f_t = sigmoid(W_{if} x_t + b_{if} + W_{rf} r_{(t-1)} + b_{rf}) \\
-        g_t = \tanh(W_{ig} x_t + b_{ig} + W_{rc} r_{(t-1)} + b_{rg}}) \\
+        g_t = \tanh(W_{ig} x_t + b_{ig} + W_{rc} r_{(t-1)} + b_{rg}) \\
         o_t = sigmoid(W_{io} x_t + b_{io} + W_{ro} r_{(t-1)} + b_{ro}) \\
         c_t = f_t * c_{(t-1)} + i_t * g_t \\
         h_t = o_t * \tanh(c_t) \\
         r_t = W_{hr} h_t
         \end{array}
+
     where :math:`r_t` is the projected recurrent activation at time `t`,
-    math:`h_t` is the hidden state at time `t`, :math:`c_t` is the
+    :math:`h_t` is the hidden state at time `t`, :math:`c_t` is the
     cell state at time `t`, :math:`x_t` is the input at time `t`, and :math:`i_t`,
     :math:`f_t`, :math:`g_t`, :math:`o_t` are the input, forget, cell, and
     out gates, respectively.
+
     Parameters
     ----------
+
     hidden_size : int
         Number of units in cell state symbol.
     projection_size : int
@@ -234,7 +239,7 @@ class LSTMPCell(HybridRecurrentCell):
         to zero.
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
-    prefix : str, default 'lstmp_'
+    prefix : str, default ``'lstmp_``'
         Prefix for name of `Block`s
         (and name of weight if params is `None`).
     params : Parameter or None

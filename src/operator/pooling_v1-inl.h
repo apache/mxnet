@@ -273,10 +273,10 @@ class PoolingV1Prop : public OperatorProperty {
           oshape[3] = 1 + (dshape[3] + 2 * param_.pad[1] - param_.kernel[1]) /
                               param_.stride[1];
       } else {
-          oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
+          oshape[2] = 1 + static_cast<int>(std::ceil(static_cast<float>(
                               dshape[2] + 2 * param_.pad[0] -
                               param_.kernel[0]) / param_.stride[0]));
-          oshape[3] = 1 + static_cast<int>(ceil(static_cast<float>(
+          oshape[3] = 1 + static_cast<int>(std::ceil(static_cast<float>(
                               dshape[3] + 2 * param_.pad[1] -
                               param_.kernel[1]) / param_.stride[1]));
       }
@@ -296,13 +296,13 @@ class PoolingV1Prop : public OperatorProperty {
           oshape[4] = 1 + (dshape[4] + 2 * param_.pad[2] - param_.kernel[2]) /
                               param_.stride[2];
       } else {
-          oshape[2] = 1 + static_cast<int>(ceil(static_cast<float>(
+          oshape[2] = 1 + static_cast<int>(std::ceil(static_cast<float>(
                               dshape[2] + 2 * param_.pad[0] -
                               param_.kernel[0]) / param_.stride[0]));
-          oshape[3] = 1 + static_cast<int>(ceil(static_cast<float>(
+          oshape[3] = 1 + static_cast<int>(std::ceil(static_cast<float>(
                               dshape[3] + 2 * param_.pad[1] -
                               param_.kernel[1]) / param_.stride[1]));
-          oshape[4] = 1 + static_cast<int>(ceil(static_cast<float>(
+          oshape[4] = 1 + static_cast<int>(std::ceil(static_cast<float>(
                               dshape[4] + 2 * param_.pad[2] -
                               param_.kernel[2]) / param_.stride[2]));
       }

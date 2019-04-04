@@ -74,8 +74,9 @@ SortByKeyWorkspaceSize(const size_t num_keys) {
   size_t sortpairs_bytes = 0;
   cub::DeviceRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
       NULL, NULL, NULL, NULL, num_keys);
-  size_t keys_bytes = num_keys*sizeof(KDType);
-  size_t values_bytes = num_keys*sizeof(VDType);
+  size_t alignment = std::max(sizeof(KDType), sizeof(VDType));
+  size_t keys_bytes = PadBytes(num_keys*sizeof(KDType), alignment);
+  size_t values_bytes = PadBytes(num_keys*sizeof(VDType), alignment);
   return (keys_bytes + values_bytes + sortpairs_bytes);
 #endif
 }
@@ -96,8 +97,9 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
     // Workspace given, sort using CUB
     CHECK_EQ(workspace->CheckContiguous(), true);
     // workspace = [keys_out, values_out, temporary_storage]
-    size_t keys_bytes = keys.size(0)*sizeof(KDType);
-    size_t values_bytes = keys.size(0)*sizeof(VDType);
+    size_t alignment = std::max(sizeof(KDType), sizeof(VDType));
+    size_t keys_bytes = PadBytes(keys.size(0)*sizeof(KDType), alignment);
+    size_t values_bytes = PadBytes(keys.size(0)*sizeof(VDType), alignment);
     // Get the size of internal storage (for checking purposes only)
     size_t sortpairs_bytes = 0;
     if (is_ascend) {

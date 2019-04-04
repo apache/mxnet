@@ -26,7 +26,7 @@ use AI::MXNet::Gluon::ModelZoo::Vision;
 use Exporter;
 use base qw(Exporter);
 @AI::MXNet::Gluon::ModelZoo::EXPORT_OK = qw(get_model);
-our $VERSION = '1.32';
+our $VERSION = '1.33';
 
 =head1 NAME
 
@@ -130,3 +130,13 @@ sub get_model
 sub vision { 'AI::MXNet::Gluon::ModelZoo::Vision' }
 
 1;
+
+=head1 AUTHOR
+
+    Sergey Kolychev, <sergeykolychev.github@gmail.com>
+
+=head1 COPYRIGHT & LICENSE
+
+    This library is licensed under Apache 2.0 license L<https://www.apache.org/licenses/LICENSE-2.0>
+
+=cut

@@ -153,6 +153,8 @@ class _Conv(HybridBlock):
             s += ', groups={num_group}'
         if self.bias is None:
             s += ', bias=False'
+        if self.act:
+            s += ', {}'.format(self.act)
         s += ')'
         shape = self.weight.shape
         return s.format(name=self.__class__.__name__,

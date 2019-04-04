@@ -27,12 +27,12 @@ LDFLAGS=$(COMMFLAGS) -L ../../../lib -lmxnet $(BLAS) $(CUDA) -lgomp -pthread
 all: feature_extract prepare_data_with_opencv
 
 feature_extract: ./feature_extract.cpp
-	$(CXX) -c -std=c++0x $(CFLAGS) $^
+	$(CXX) -c -std=c++11 $(CFLAGS) $^
 	$(CXX) $(basename $@).o -o $@ $(LDFLAGS)
 	-rm -f $(basename $@).o
 
 prepare_data_with_opencv: ./prepare_data_with_opencv.cpp
-	$(CXX) -c -std=c++0x $(OPENCV_CFLAGS) $^
+	$(CXX) -c -std=c++11 $(OPENCV_CFLAGS) $^
 	$(CXX) $(basename $@).o -o $@ $(OPENCV_LDFLAGS)
 	-rm -f $(basename $@).o
 

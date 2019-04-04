@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 
 # Fine-tuning an ONNX model with MXNet/Gluon
 
@@ -23,19 +40,23 @@ We recommend that you have first followed this tutorial:
 
 
 ```python
-import numpy as np
+import json
+import logging
+import multiprocessing
+import os
+import tarfile
+
+logging.basicConfig(level=logging.INFO)
+
+import matplotlib.pyplot as plt
 import mxnet as mx
 from mxnet import gluon, nd, autograd
 from mxnet.gluon.data.vision.datasets import ImageFolderDataset
 from mxnet.gluon.data import DataLoader
 import mxnet.contrib.onnx as onnx_mxnet
+import numpy as np
+
 %matplotlib inline
-import matplotlib.pyplot as plt
-import tarfile, os
-import json
-import multiprocessing
-import logging
-logging.basicConfig(level=logging.INFO)
 ```
 
 
@@ -122,7 +143,7 @@ We need to transform the images to a format accepted by the network
 EDGE = 224
 SIZE = (EDGE, EDGE)
 BATCH_SIZE = 32
-NUM_WORKERS = multiprocessing.cpu_count()
+NUM_WORKERS = 6
 ```
 
 We transform the dataset images using the following operations:
@@ -152,18 +173,18 @@ ____image4
 
 
 ```python
-dataset_train = ImageFolderDataset(root=training_path, transform=transform)
-dataset_test = ImageFolderDataset(root=testing_path, transform=transform)
+dataset_train = ImageFolderDataset(root=training_path)
+dataset_test = ImageFolderDataset(root=testing_path)
 ```
 
-We use num_workers=Number of CPU cores, which means the dataloading and pre-processing is going to be distributed across multiple processes. This will help preventing our GPU from starving and waiting for the data to be copied across
+We use several worker processes, which means the dataloading and pre-processing is going to be distributed across multiple processes. This will help preventing our GPU from starving and waiting for the data to be copied across
 
 
 ```python
-dataloader_train = DataLoader(dataset_train, batch_size=BATCH_SIZE, last_batch='discard',
+dataloader_train = DataLoader(dataset_train.transform(transform, lazy=False), batch_size=BATCH_SIZE, last_batch='rollover',
                               shuffle=True, num_workers=NUM_WORKERS)
-dataloader_test = DataLoader(dataset_test, batch_size=BATCH_SIZE, last_batch='discard',
-                             shuffle=True, num_workers=NUM_WORKERS)
+dataloader_test = DataLoader(dataset_test.transform(transform, lazy=False), batch_size=BATCH_SIZE, last_batch='rollover',
+                             shuffle=False, num_workers=NUM_WORKERS)
 print("Train dataset: {} images, Test dataset: {} images".format(len(dataset_train), len(dataset_test)))
 ```
 
@@ -183,7 +204,7 @@ Let's plot the 1000th image to test the dataset
 
 ```python
 N = 1000
-plt.imshow(np.transpose(dataset_train[N][0].asnumpy(),(1,2,0)))
+plt.imshow((transform(dataset_train[N][0], 0)[0].asnumpy().transpose((1,2,0))))
 plt.axis('off')
 print(categories[dataset_train[N][1]])
 ```
@@ -251,7 +272,7 @@ We pick a context, fine-tuning on CPU will be **WAY** slower.
 
 
 ```python
-ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+ctx = mx.gpu() if mx.context.num_gpus() > 0 else mx.cpu()
 ```
 
 We create a symbol block that is going to hold all our pre-trained layers, and assign the weights of the different pre-trained layers to the newly created SymbolBlock
@@ -282,8 +303,9 @@ We add the SymbolBlock and the new dense layer to a HybridSequential network
 
 ```python
 net = gluon.nn.HybridSequential()
-net.add(pre_trained)
-net.add(dense_layer)
+with net.name_scope():
+    net.add(pre_trained)
+    net.add(dense_layer)
 ```
 
 ### Loss
@@ -321,7 +343,7 @@ We measure the accuracy in a non-blocking way, using `nd.array` to take care of 
 
 ```python
  def evaluate_accuracy_gluon(data_iterator, net):
-    num_instance = nd.zeros(1, ctx=ctx)
+    num_instance = 0
     sum_metric = nd.zeros(1,ctx=ctx, dtype=np.int32)
     for i, (data, label) in enumerate(data_iterator):
         data = data.astype(np.float32).as_in_context(ctx)
@@ -330,7 +352,7 @@ We measure the accuracy in a non-blocking way, using `nd.array` to take care of 
         prediction = nd.argmax(output, axis=1).astype(np.int32)
         num_instance += len(prediction)
         sum_metric += (prediction==label).sum()
-    accuracy = (sum_metric.astype(np.float32)/num_instance.astype(np.float32))
+    accuracy = (sum_metric.astype(np.float32)/num_instance)
     return accuracy.asscalar()
 ```
 

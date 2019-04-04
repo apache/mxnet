@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 
 # Exporting MXNet model to ONNX format
 
@@ -49,13 +66,13 @@ Let us describe the MXNet's `export_model` API.
 help(onnx_mxnet.export_model)
 ```
 
-```python
+```
 Help on function export_model in module mxnet.contrib.onnx.mx2onnx.export_model:
 
 export_model(sym, params, input_shape, input_type=<type 'numpy.float32'>, onnx_file_path=u'model.onnx', verbose=False)
     Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
-    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
+    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/MXNet-ONNX+Integration
     
     Parameters
     ----------
@@ -121,7 +138,7 @@ from onnx import checker
 import onnx
 
 # Load onnx model
-model_proto = onnx.load(converted_model_path)
+model_proto = onnx.load_model(converted_model_path)
 
 # Check if converted ONNX protobuf is valid
 checker.check_graph(model_proto.graph)

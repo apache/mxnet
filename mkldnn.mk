@@ -47,7 +47,7 @@ $(MKLDNN_LIBFILE):
 
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
-	$(RM) -r 3rdparty/mkldnn/install/*
+	$(RM) -r $(MKLDNNROOT)
 
 ifeq ($(USE_MKLDNN), 1)
 mkldnn: mkldnn_build

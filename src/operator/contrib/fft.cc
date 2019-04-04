@@ -30,7 +30,7 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(FFTParam param, int dtype) {
   LOG(FATAL) << "fft is only available for GPU.";
-  return NULL;
+  return nullptr;
 }
 
 Operator *FFTProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,

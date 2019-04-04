@@ -1,328 +1,197 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Build MXNet from Source
 
-**NOTE:** For MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
-
-This document explains how to build MXNet from sources. Building MXNet from sources is a 2 step process.
-
-1. Build the MXNet shared library, `libmxnet.so`, from [C++ source files](#build-the-shared-library)
-2. Install the language binding for MXNet. MXNet supports -
-   [C++](#build-the-c-package),
-   [Scala](#build-the-scala-package), [R](#build-the-r-package), and
-   [Julia](#build-the-julia-package).
-
-## Build the shared library
-
-### Prerequisites
-
-You need C++ build tools and BLAS library to build MXNet shared library. If you want to run MXNet on GPUs, you need to install CUDA and CuDNN.
-
-#### C++ build tools
-
-1. A C++ compiler that supports C++ 11.
-[G++ (4.8 or later)](https://gcc.gnu.org/gcc-4.8/) or
-[Clang](http://clang.llvm.org/) is required.
-
-2. [Git](https://git-scm.com/downloads) for downloading the sources from Github repository.
-
-3. [GNU Make](https://www.gnu.org/software/make/) ([cmake](https://cmake.org/)
-   for Windows) to build the library.
+This document explains how to build MXNet from source code.
 
 
-Select your preferences and follow the instructions to install MXNet from sources.
-<div class="btn-group opt-group" role="group">
-<button type="button" class="btn btn-default opt active">Linux</button>
-<button type="button" class="btn btn-default opt">macOS</button>
-<button type="button" class="btn btn-default opt">Windows</button>
-</div>
-<script type="text/javascript" src='../../_static/js/options.js'></script>
+## Overview
 
-<div class="linux">
+Building from source follows this general two-step flow of building the shared library, then installing your preferred language binding. Use the following links to jump to the different sections of this guide.
 
-Then select the Linux distribution:
-<div class="btn-group opt-group" role="group">
-<button type="button" class="btn btn-default opt active">Ubuntu</button>
-<button type="button" class="btn btn-default opt">CentOS</button>
-<button type="button" class="btn btn-default opt">Others</button>
-</div>
+1. Build the MXNet shared library, `libmxnet.so`.
+    * [Clone the repository](#clone-the-mxnet-project)
+    * [Prerequisites](#prerequisites)
+        * [Math library selection](#math-library-selection)
+        * [Install GPU software](#install-gpu-software)
+        * [Install optional software](#install-optional-software)
+    * [Adjust your build configuration](#build-configurations)
+    * [Build MXNet](#build-mxnet)
+        * [with NCCL](#build-mxnet-with-nccl) (optional)
+        * [for C++](#build-mxnet-with-c++) (optional)
+        * [Usage Examples](#usage-examples)
+            * [systems with GPUs and Intel CPUs](#recommended-for-Systems-with-NVIDIA-GPUs-and-Intel-CPUs)
+            * [GPUs with non-Intel CPUs](#recommended-for-Systems-with-Intel-CPUs)
+            * [Intel CPUs](#recommended-for-Systems-with-Intel-CPUs)
+            * [non-Intel CPUs](#recommended-for-Systems-with-non-Intel-CPUs)
+2. [Install the language API binding(s)](#installing-mxnet-language-bindings) you would like to use for MXNet.
+MXNet's newest and most popular API is Gluon. Gluon is built into the Python binding. If Python isn't your preference, you still have more options. MXNet supports several other language APIs:
+    - [Python (includes Gluon)](../api/python/index.html)
+    - [C++](../api/c++/index.html)
+    - [Clojure](../api/clojure/index.html)
+    - Java (coming soon)
+    - [Julia](../api/julia/index.html)
+    - [Perl](../api/perl/index.html)
+    - [R](../api/r/index.html)
+    - [Scala](../api/scala/index.html)
+    - [Java](../api/java/index.html)
 
-- **Ubuntu** for systems supporting the `apt-get`
-  package management program
-- **CentOS** for systems supporting the `yum` package
-  management program
-- **Others** for general Linux-like systems building dependencies from scratch.
+<hr>
+## Build Instructions by Operating System
 
-<div class="ubuntu">
+Detailed instructions are provided per operating system. Each of these guides also covers how to install the specific [Language Bindings](#installing-mxnet-language-bindings) you require.
+You may jump to those, but it is recommended that you continue reading to understand more general "build from source" options.
 
-Install build tools and git on `Ubuntu >= 13.10` and `Debian >= 8`.
+* [Amazon Linux / CentOS / RHEL](centos_setup.html)
+* [macOS](osx_setup.html)
+* [Raspbian](raspian_setup.html)
+* [TX2](tx2_setup.html)
+* [Ubuntu](ubuntu_setup.html)
+* [Windows](windows_setup.html)
 
+
+<hr>
+
+## Clone the MXNet Project
+
+1. Clone or fork the MXNet project.
 ```bash
-sudo apt-get update && sudo apt-get install build-essential git
-```
-
-</div>
-
-<div class="centos">
-
-Install build tools and git on `CentOS >= 7` and `Fedora >= 19`.
-
-```bash
-sudo yum groupinstall -y "Development Tools" && sudo yum install -y git
-```
-
-</div>
-
-<div class="others">
-
-Installing both `git` and `make` by following instructions on the websites is
-straightforward. Here we provide the instructions to build `gcc-4.8` from source codes.
-
-1. Install the 32-bit `libc` with one of the following system-specific commands:
-
-   ```bash
-   sudo apt-get install libc6-dev-i386 # In Ubuntu
-   sudo yum install glibc-devel.i686   # In RHEL (Red Hat Linux)
-   sudo yum install glibc-devel.i386   # In CentOS 5.8
-   sudo yum install glibc-devel.i686   # In CentOS 6/7
-   ```
-
-2. Download and extract the `gcc` source code with the prerequisites:
-
-   ```bash
-   wget http://mirrors.concertpass.com/gcc/releases/gcc-4.8.5/gcc-4.8.5.tar.gz
-   tar -zxf gcc-4.8.5.tar.gz
-   cd gcc-4.8.5
-   ./contrib/download_prerequisites
-   ```
-
-3. Build `gcc` by using 10 threads and then install to `/usr/local`
-
-   ```bash
-   mkdir release && cd release
-   ../configure --prefix=/usr/local --enable-languages=c,c++
-   make -j10
-   sudo make install
-   ```
-
-4. Add the lib path to your configure file such as `~/.bashrc`:
-
-   ```bash
-   export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib64
-   ```
-
-</div>
-</div> <!-- linux -->
-
-<div class="windows">
-
-1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Download and Install [CMake](https://cmake.org/) if it is not already installed.
-
-</div>
-
-<div class="macos">
-
-Install [Xcode](https://developer.apple.com/xcode/).
-
-</div>
-
-#### BLAS library
-
-MXNet relies on the
-[BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) (Basic
-Linear Algebra Subprograms) library for numerical computations. You can install
-any one among [ATLAS](http://math-atlas.sourceforge.net/),
-[OpenBLAS](http://www.openblas.net/) and
-[MKL](https://software.intel.com/en-us/intel-mkl).
-
-<div class="linux">
-For Ubuntu you can get Atlas and OpenBLAS from package repositories:
-<div class="ubuntu">
-
-```bash
-sudo apt-get install libatlas-base-dev libopenblas-dev
-```
-
-</div>
-
-<div class="centos">
-
-```bash
-sudo yum install atlas-devel
-```
-
-</div>
-
-<div class="linux">
-
-You can follow this link to build
-[OpenBlas from source](https://github.com/xianyi/OpenBLAS#installation-from-source).
-
-</div>
-</div>
-
-<div class="macos">
-
-macOS users can skip this step as `xcode` ships with a BLAS library.
-
-</div>
-
-<div class="windows">
-
-1. Download pre-built binaries for [OpenBLAS](https://sourceforge.net/projects/openblas/files/)
-2. Set the environment variable `OpenBLAS_HOME` to point to the OpenBLAS
-   directory that contains the `include/` and `lib/` directories. Typically, you
-   can find the directory in `C:\Program files (x86)\OpenBLAS\`.
-
-</div>
-
-#### Optional: [OpenCV](http://opencv.org/) for Image Loading and Augmentation
-
-<div class="linux">
-<div class="ubuntu">
-
-```bash
-sudo apt-get install libopencv-dev
-```
-
-</div>
-
-<div class="centos">
-
-```bash
-sudo apt-get install opencv-devel
-```
-
-</div>
-
-<div class="others">
-
-To build OpenCV from source code, you need the [cmake](https://cmake.org) library.
-
-1. If you don't have cmake or if your version of cmake is earlier than 3.12.3, run the following commands to install a newer version of cmake:
-
-   ```bash
-   wget https://cmake.org/files/v3.12/cmake-3.12.3-Linux-x86_64.tar.gz
-   tar -zxvf cmake-3.12.3-Linux-x86_64.tar.gz
-   alias cmake="cmake-3.12.3-Linux-x86_64/bin/cmake"
-   ```
-
-2. To download and extract the OpenCV source code, run the following commands:
-
-   ```bash
-   wget https://codeload.github.com/opencv/opencv/zip/2.4.13
-   unzip 2.4.13
-   cd opencv-2.4.13
-   mkdir release
-   cd release/
-   ```
-
-3. Build OpenCV. The following commands build OpenCV with 10 threads. We
-   disabled GPU support, which might significantly slow down an MXNet program
-   running on a GPU processor. It also disables 1394 which might generate a
-   warning. Then install it on `/usr/local`.
-
-   ```bash
-   cmake -D BUILD_opencv_gpu=OFF -D WITH_CUDA=OFF -D WITH_1394=OFF -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
-   make -j10
-   sudo make install
-   ```
-
-4. Add the lib path to your configuration such as `~/.bashrc`.
-
-   ```bash
-   export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/lib/pkgconfig/
-   ```
-
-</div>
-</div>
-
-<div class="windows">
-
-First download and install [OpenCV](http://opencv.org/releases.html), then set
-the environment variable `OpenCV_DIR` to point to the OpenCV build directory.
-
-</div>
-
-#### Optional: [CUDA](https://developer.nvidia.com/cuda-downloads)/[cuDNN](https://developer.nvidia.com/cudnn) for Nvidia GPUs
-
-BMXNet is compatible with CUDA 8.0, 9.2, and 10.0. It is recommended to use cuDNN 6 or 7.
-
-<div class="linux">
-<div class="ubuntu">
-
-Download [CUDA](https://developer.nvidia.com/cuda-downloads)/[cuDNN](https://developer.nvidia.com/cudnn) from nvidia.
-
-Do not forget to take the [post-installation actions](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#post-installation-actions).
-
-</div>
-</div>
-
-### Build
-
-<div class="linux macos">
-
-First clone the recent codes
-
-```bash
-git clone --recursive https://github.com/dmlc/mxnet
+git clone --recursive https://github.com/apache/incubator-mxnet mxnet
 cd mxnet
 ```
 
-File
-[`make/config.mk`](https://github.com/dmlc/mxnet/blob/master/make/config.mk)
-contains all the compilation options. You can edit it and then `make`. There are
-some example build options
+<hr>
 
-If you want to build MXNet with C++ language binding, please make sure you read [Build the C++ package](#build-the-c-package) first.
+## Prerequisites
 
-</div>
+The following sections will help you decide which specific prerequisites you need to install.
 
-<div class="linux">
+#### Math Library Selection
+It is useful to consider your math library selection prior to your other prerequisites.
+MXNet relies on the
+[BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) (Basic
+Linear Algebra Subprograms) library for numerical computations.
+Those can be extended with [LAPACK (Linear Algebra Package)](https://github.com/Reference-LAPACK/lapack), an additional set of mathematical functions.
 
-- Build without using OpenCV. `-j` runs multiple jobs against multi-core CPUs.
+MXNet supports multiple mathematical backends for computations on the CPU:
+* [Apple Accelerate](https://developer.apple.com/documentation/accelerate)
+* [ATLAS](http://math-atlas.sourceforge.net/)
+* [MKL](https://software.intel.com/en-us/intel-mkl) (MKL, MKLML)
+* [MKL-DNN](https://github.com/intel/mkl-dnn)
+* [OpenBLAS](http://www.openblas.net/)
 
-  ```bash
-  make -j USE_OPENCV=0
-  ```
+The default order of choice for the libraries if found follows the path from the most
+(recommended) to less performant backends.
+The following lists show this order by library and `cmake` switch.
 
-- Build with both GPU and OpenCV support
+For desktop platforms (x86_64):
 
-  ```bash
-  make -j USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
-  ```
+1. MKL-DNN (submodule) | `USE_MKLDNN`
+2. MKL | `USE_MKL_IF_AVAILABLE`
+3. MKLML (downloaded) | `USE_MKLML`
+4. Apple Accelerate | `USE_APPLE_ACCELERATE_IF_AVAILABLE` | Mac only
+5. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
 
-</div>
+Note: If `USE_MKL_IF_AVAILABLE` is set to False then MKLML and MKL-DNN will be disabled as well for configuration
+backwards compatibility.
 
-<div class="macos">
+For embedded platforms (all other and if cross compiled):
 
-- Build with the default BLAS library and clang installed with `xcode` (OPENMP
-  is disabled because it is not supported in default by clang).
+1. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
 
-  ```bash
-  make -j USE_BLAS=apple USE_OPENCV=0 USE_OPENMP=0
-  ```
+You can set the BLAS library explicitly by setting the BLAS variable to:
 
-</div>
+* Atlas
+* Open
+* MKL
+* Apple
 
-<div class="windows">
+See the [cmake/ChooseBLAS.cmake](https://github.com/apache/incubator-mxnet/blob/master/cmake/ChooseBlas.cmake) file for the options.
 
-Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
+Intel's MKL (Math Kernel Library) is one of the most powerful math libraries
+https://software.intel.com/en-us/mkl
 
-In Visual Studio, open the solution file,```.sln```, and compile it.
-These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
+It has following flavors:
 
-</div>
+* MKL is a complete math library, containing all the functionality found in ATLAS, OpenBlas and LAPACK. It is free under
+community support licensing (https://software.intel.com/en-us/articles/free-mkl),
+but needs to be downloaded and installed manually.
 
-<div class="linux ubuntu">
+* MKLML is a subset of MKL. It contains a smaller number of functions to reduce the
+size of the download and reduce the number of dynamic libraries user needs.
 
-## Build MXNet using NCCL
+<!-- [Removed until #11148 is merged.] This is the most effective option since it can be downloaded and installed automatically
+by the cmake script (see cmake/DownloadMKLML.cmake).-->
+
+* MKL-DNN is a separate open-source library, it can be used separately from MKL or MKLML. It is
+shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn or the [MKL-DNN project](https://github.com/intel/mkl-dnn))
+
+Since the full MKL library is almost always faster than any other BLAS library it's turned on by default,
+however it needs to be downloaded and installed manually before doing `cmake` configuration.
+Register and download on the [Intel performance libraries website](https://software.intel.com/en-us/performance-libraries).
+
+Note: MKL is supported only for desktop builds and the framework itself supports the following
+hardware:
+
+* Intel® Xeon Phi™ processor
+* Intel® Xeon® processor
+* Intel® Core™ processor family
+* Intel Atom® processor
+
+If you have a different processor you can still try to use MKL, but performance results are
+unpredictable.
+
+
+#### Install GPU Software
+
+If you want to run MXNet with GPUs, you must install [NVDIA CUDA and cuDNN](https://developer.nvidia.com/cuda-downloads).
+
+
+#### Install Optional Software
+
+These might be optional, but they're typically desirable as the extend or enhance MXNet's functionality.
+
+* [OpenCV](http://opencv.org/) - Image Loading and Augmentation. Each operating system has different packages and build from source options for OpenCV. Refer to your OS's link in the [Build Instructions by Operating System](#build-instructions-by-operating-system) section for further instructions.
+* [NCCL](https://developer.nvidia.com/nccl) - NVIDIA's Collective Communications Library. Instructions for installing NCCL are found in the following [Build MXNet with NCCL](#build-mxnet-with-nccl) section.
+
+More information on turning these features on or off are found in the following [build configurations](#build-configurations) section.
+
+
+<hr>
+
+## Build Configurations
+
+There is a configuration file for make,
+[`make/config.mk`](https://github.com/apache/incubator-mxnet/blob/master/make/config.mk), that contains all the compilation options. You can edit it and then run `make` or `cmake`. `cmake` is recommended for building MXNet (and is required to build with MKLDNN), however you may use `make` instead.
+
+<hr>
+
+## Build MXNet
+
+### Build MXNet with NCCL
 - Download and install the latest NCCL library from NVIDIA.
 - Note the directory path in which NCCL libraries and header files are installed.
 - Ensure that the installation directory contains ```lib``` and ```include``` folders.
-- Ensure that the prerequisites for using NCCL such as Cuda libraries are met. 
+- Ensure that the prerequisites for using NCCL such as Cuda libraries are met.
 - Append the ```config.mk``` file with following, in addition to the CUDA related options.
 - USE_NCCL=1
 - USE_NCCL_PATH=path-to-nccl-installation-folder
+
 ``` bash
 echo "USE_NCCL=1" >> make/config.mk
 echo "USE_NCCP_PATH=path-to-nccl-installation-folder" >> make/config.mk
@@ -333,7 +202,7 @@ cp make/config.mk .
 make -j"$(nproc)"
 ```
 
-## Validation
+#### Validating NCCL
 - Follow the steps to install MXNet Python binding.
 - Comment the following line in ```test_nccl.py``` file at ```incubator-mxnet/tests/python/gpu/test_nccl.py```
 ``` bash
@@ -344,143 +213,92 @@ make -j"$(nproc)"
 nosetests --verbose tests/python/gpu/test_nccl.py
 ```
 
-## Recommendation for best performance
+**Recommendation to get the best performance out of NCCL:**
 It is recommended to set environment variable NCCL_LAUNCH_MODE to PARALLEL when using NCCL version 2.1 or newer.
 
+<hr>
 
-</div>
+### Build MXNet with C++
 
-## Build the C++ package
-The C++ package has the same prerequisites as the MXNet library, you should also have `python` installed. (Both `python` 2 and 3 are supported)
+* To enable C++ package, just add `USE_CPP_PACKAGE=1` when you run `make` or `cmake`.
 
-To enable C++ package, just add `USE_CPP_PACKAGE=1` in the build options when building the MXNet shared library.
+<hr>
 
-## Build the R package
+### Usage Examples
 
-The R package requires `R` to be installed.
+* `-j` runs multiple jobs against multi-core CPUs.
 
-<div class="ubuntu">
-
-Follow the below instructions to install the latest R on Ubuntu 14.04 (trusty) and also the libraries used
-to build other R package dependencies.
+For example, you can specify using all cores on Linux as follows:
 
 ```bash
-echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list
-gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
-gpg -a --export E084DAB9 | apt-key add -
-
-apt-get update
-apt-get install -y r-base r-base-dev libxml2-dev libxt-dev libssl-dev
+cmake -j$(nproc)
 ```
 
-</div>
 
-Install the required R package dependencies:
+#### Recommended for Systems with NVIDIA GPUs and Intel CPUs
+* Build MXNet with `cmake` and install with MKL DNN, GPU, and OpenCV support:
 
 ```bash
-cd R-package
-Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
-Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
+cmake -j USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_MKLDNN=1
 ```
 
-Next, build and install the MXNet R package:
+#### Recommended for Systems with NVIDIA GPUs
+* Build with both OpenBLAS, GPU, and OpenCV support:
 
 ```bash
-cd ..
-make rpkg
+cmake -j BLAS=open USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
-## Build the Scala package
-
-Both JDK and Maven are required to build the Scala package.
-
-<div class="ubuntu">
+#### Recommended for Systems with Intel CPUs
+* Build MXNet with `cmake` and install with MKL DNN, and OpenCV support:
 
 ```bash
-apt-get install -y software-properties-common
-add-apt-repository -y ppa:webupd8team/java
-apt-get update
-echo "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true" | debconf-set-selections
-apt-get install -y oracle-java8-installer
-apt-get install -y oracle-java8-set-default
-apt-get install -y maven
+cmake -j USE_CUDA=0 USE_MKLDNN=1
 ```
 
-</div>
-
-The following command builds the `.jar` package:
+#### Recommended for Systems with non-Intel CPUs
+* Build MXNet with `cmake` and install with OpenBLAS and OpenCV support:
 
 ```bash
-make scalapkg
+cmake -j USE_CUDA=0 BLAS=open
 ```
 
-which can be found by `ls scala-package/assembly/*/target/*SNAPSHOT.jar`.
+#### Other Examples
 
-Optionally, we can install Scala for the interactive interface.
-
-<div class="ubuntu">
+* Build without using OpenCV:
 
 ```bash
-wget http://downloads.lightbend.com/scala/2.11.8/scala-2.11.8.deb
-dpkg -i scala-2.11.8.deb
-rm scala-2.11.8.deb
+cmake USE_OPENCV=0
 ```
 
-</div>
-
-Then we can start `scala` with `mxnet` imported by
+* Build on **macOS** with the default BLAS library (Apple Accelerate) and Clang installed with `xcode` (OPENMP is disabled because it is not supported by the Apple version of Clang):
 
 ```bash
-scala -cp scala-package/assembly/*/target/*SNAPSHOT.jar
+cmake -j BLAS=apple USE_OPENCV=0 USE_OPENMP=0
 ```
 
-## Build the Julia package
-
-We need to first install Julia.
-
-<div class="ubuntu centos linux">
-
-The following commands install Julia 0.5.1
+* To use OpenMP on **macOS** you need to install the Clang compiler, `llvm` (the one provided by Apple does not support OpenMP):
 
 ```bash
-wget -q https://julialang.s3.amazonaws.com/bin/linux/x64/0.5/julia-0.5.1-linux-x86_64.tar.gz
-tar -zxf julia-0.5.1-linux-x86_64.tar.gz
-rm julia-0.5.1-linux-x86_64.tar.gz
-ln -s $(pwd)/julia-6445c82d00/bin/julia /usr/bin/julia
+brew install llvm
+cmake -j BLAS=apple USE_OPENMP=1
 ```
 
-</div>
+<hr>
 
-Next set the environment variable `MXNET_HOME=/path/to/mxnet` so that Julia
-can find the pre-built library.
+## Installing MXNet Language Bindings
+After building MXNet's shared library, you can install other language bindings.
 
-Install the Julia package for MXNet with:
+**NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++](#build-mxnet-with-c++).
 
-```bash
-julia -e 'Pkg.add("MXNet")'
-```
-
-### Build the Perl package
-
-Run the following command from the MXNet source root directory to build the MXNet Perl package:
-
-```bash
-    sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
-    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered PDL::CCS
-
-    MXNET_HOME=${PWD}
-    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
-    export PERL5LIB=${HOME}/perl5/lib/perl5
-
-    cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
-    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
-    make install
-
-    cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
-    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
-    make install
-
-    cd ${MXNET_HOME}/perl-package/AI-MXNet/
-    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
-    make install
-```
+The following table provides links to each language binding by operating system:
+| | [Ubuntu](ubuntu_setup.html) | [macOS](osx_setup.html) | [Windows](windows_setup.html) |
+| --- | ----  | --- | ------- |
+| Python | [Ubuntu guide](ubuntu_setup.html#install-mxnet-for-python) | [OSX guide](osx_setup.html) | [Windows guide](windows_setup.html#install-mxnet-for-python) |
+| C++ | [C++ guide](c_plus_plus.html) | [C++ guide](c_plus_plus.html) | [C++ guide](c_plus_plus.html) |
+| Clojure | [Clojure guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) | [Clojure guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) | n/a |
+| Julia | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-julia) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-julia) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-julia) |
+| Perl | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-perl) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-perl) | n/a |
+| R | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-r) |
+| Scala | [Scala guide](scala_setup.html) | [Scala guide](scala_setup.html) | n/a |
+| Java | [Java guide](java_setup.html) | [Java Guide](java_setup.html) | n/a |

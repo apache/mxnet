@@ -54,6 +54,7 @@ struct SpatialTransformerParam : public dmlc::Parameter<SpatialTransformerParam>
   TShape target_shape;
   int transform_type;
   int sampler_type;
+  dmlc::optional<bool> cudnn_off;
   DMLC_DECLARE_PARAMETER(SpatialTransformerParam) {
     int shape[] = {0, 0};
     DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
@@ -62,6 +63,8 @@ struct SpatialTransformerParam : public dmlc::Parameter<SpatialTransformerParam>
         .describe("transformation type");
     DMLC_DECLARE_FIELD(sampler_type).add_enum("bilinear", st::kBilinear)
         .describe("sampling type");
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>())
+        .describe("whether to turn cudnn off");
   }
 };
 
@@ -101,11 +104,11 @@ class SpatialTransformerOp : public Operator {
     }
     Copy(grid_dst, workspace, grid_dst.stream_);
     for (index_t batch = 0; batch < data.size(0); batch++) {
-        if (param_.transform_type == st::kAffine) {
-          // Legacy approach shown here for comparison:
-          //    grid_src[batch] = dot(loc[batch], grid_dst);
-          linalg_gemm(loc[batch], grid_dst, grid_src[batch], false, false, s);
-        }
+      if (param_.transform_type == st::kAffine) {
+        // Legacy approach shown here for comparison:
+        //    grid_src[batch] = dot(loc[batch], grid_dst);
+        linalg_gemm(loc[batch], grid_dst, grid_src[batch], false, false, s);
+      }
     }
     if (param_.sampler_type == st::kBilinear) {
       BilinearSamplingForward(out, data, grid_src);
@@ -136,11 +139,11 @@ class SpatialTransformerOp : public Operator {
       BilinearSamplingBackward(gdata, grid_src, grad, data);
     }
     for (index_t batch = 0; batch < data.size(0); batch++) {
-        if (param_.transform_type == st::kAffine) {
-          // Legacy approach shown here for comparison:
-          //   gloc[batch] = dot(grid_src[batch], grid_dst.T());
-          linalg_gemm(grid_src[batch], grid_dst, gloc[batch], false, true, s);
-        }
+      if (param_.transform_type == st::kAffine) {
+        // Legacy approach shown here for comparison:
+        //   gloc[batch] = dot(grid_src[batch], grid_dst.T());
+        linalg_gemm(grid_src[batch], grid_dst, gloc[batch], false, true, s);
+      }
     }
   }
 
@@ -213,12 +216,12 @@ class SpatialTransformerProp : public OperatorProperty {
                    std::vector<int> *out_type,
                    std::vector<int> *aux_type) const override {
       int dtype = -1;
-      for (size_t i = 0; i < in_type->size(); ++i) {
+      for (int i_type : *in_type) {
         if (dtype == -1) {
-          dtype = in_type->at(i);
+          dtype = i_type;
         } else {
-          CHECK(in_type->at(i) == dtype ||
-                in_type->at(i) == -1) <<
+          CHECK(i_type == dtype ||
+              i_type == -1) <<
                 "Non-uniform data type in SpatialTransformer";
         }
       }

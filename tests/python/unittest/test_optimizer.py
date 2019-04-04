@@ -71,43 +71,6 @@ def test_lr_wd_mult():
     assert not mx.test_utils.almost_equal(args1['fc1_bias'], args2['fc1_bias'], 1e-1)
     assert not mx.test_utils.almost_equal(args1['fc2_weight'], args2['fc2_weight'], 1e-1)
 
-def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
-    if t1 is not None and t2 is not None:
-        if isinstance(t1, tuple):
-            for s1, s2 in zip(t1, t2):
-                compare_ndarray_tuple(s1, s2, rtol, atol)
-        else:
-            assert_almost_equal(t1.asnumpy(), t2.asnumpy(), rtol=rtol, atol=atol)
-
-
-def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
-                      rtol=1e-4, atol=1e-5):
-    if w_stype == 'default':
-        w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-        w1 = w2.copyto(default_context())
-    elif w_stype == 'row_sparse' or w_stype == 'csr':
-        w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
-        w1 = w2.copyto(default_context()).tostype('default')
-    else:
-        raise Exception("type not supported yet")
-    if g_stype == 'default':
-        g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-        g1 = g2.copyto(default_context())
-    elif g_stype == 'row_sparse' or g_stype == 'csr':
-        g2 = rand_ndarray(shape, g_stype, dtype=dtype)
-        g1 = g2.copyto(default_context()).tostype('default')
-    else:
-        raise Exception("type not supported yet")
-
-    state1 = opt1.create_state_multi_precision(0, w1)
-    state2 = opt2.create_state_multi_precision(0, w2)
-    compare_ndarray_tuple(state1, state2)
-
-    opt1.update_multi_precision(0, w1, g1, state1)
-    opt2.update_multi_precision(0, w2, g2, state2)
-    compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
-    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
-
 # SGD
 
 class PySGD(mx.optimizer.Optimizer):
@@ -1040,6 +1003,58 @@ def test_adagrad():
                                               g_stype='row_sparse')
 
 
+def test_factor_scheduler():
+    base_lr = 1
+    step = 100
+    factor = 0.1
+    sched = mx.lr_scheduler.FactorScheduler(step, factor, stop_factor_lr=1e-4, base_lr=base_lr,
+                                        warmup_steps=20, warmup_begin_lr=0.1, warmup_mode='constant')
+
+    assert (sched(0) == 0.1)
+    np.testing.assert_almost_equal(sched(10), 0.1)
+    assert (sched(21) == base_lr), sched(21)
+    np.testing.assert_almost_equal(sched(101), base_lr * factor)
+    np.testing.assert_almost_equal(sched(201), base_lr * factor * factor)
+    np.testing.assert_almost_equal(sched(1000), 1e-4)
+
+def test_multifactor_scheduler():
+    base_lr = 0.1
+    steps = [15, 25]
+    factor = 0.1
+    sched = mx.lr_scheduler.MultiFactorScheduler(steps, factor, base_lr=base_lr,
+                                        warmup_steps=10, warmup_begin_lr=0.05, warmup_mode='linear')
+
+    assert sched(0) == 0.05
+    np.testing.assert_almost_equal(sched(5), 0.05 + (base_lr - 0.05)/2)
+    np.testing.assert_almost_equal(sched(15), base_lr)
+    np.testing.assert_almost_equal(sched(16), base_lr * factor)
+    np.testing.assert_almost_equal(sched(20), base_lr * factor)
+    np.testing.assert_almost_equal(sched(26), base_lr * factor * factor)
+    np.testing.assert_almost_equal(sched(100), base_lr * factor * factor)
+
+def test_poly_scheduler():
+    base_lr = 3
+    final_lr = 0
+    steps = 1000
+    poly_sched = mx.lr_scheduler.PolyScheduler(steps, base_lr=base_lr, pwr=2, final_lr=final_lr,
+                                    warmup_steps=100, warmup_begin_lr=0, warmup_mode='linear')
+
+    np.testing.assert_almost_equal(poly_sched(0), 0)
+    np.testing.assert_almost_equal(poly_sched(50), float(base_lr)/2)
+    np.testing.assert_almost_equal(poly_sched(100), base_lr)
+    assert (poly_sched(101) <  poly_sched(100))
+    assert (poly_sched(500) < 1.6)
+    np.testing.assert_almost_equal(poly_sched(steps), final_lr)
+
+def test_cosine_scheduler():
+    # also tests case without warmup
+    base_lr = 3
+    final_lr = 0.1
+    steps = 1000
+    cosine_sched = mx.lr_scheduler.CosineScheduler(steps, base_lr=base_lr, final_lr=final_lr)
+    np.testing.assert_almost_equal(cosine_sched(0), base_lr)
+    np.testing.assert_almost_equal(cosine_sched(steps), final_lr)
+    assert (cosine_sched(500) > 1.5)
 
 if __name__ == '__main__':
     import nose

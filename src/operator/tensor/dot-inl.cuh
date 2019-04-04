@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file dot-inl.cuh
- * \brief implementation of matrix dot op on GPU
+ * \brief GPU specific function definition of matrix dot operator
  */
 #ifndef MXNET_OPERATOR_TENSOR_DOT_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_DOT_INL_CUH_

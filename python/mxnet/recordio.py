@@ -18,6 +18,7 @@
 """Read and write for the RecordIO data format."""
 from __future__ import absolute_import
 from collections import namedtuple
+from multiprocessing import current_process
 
 import ctypes
 import struct
@@ -36,8 +37,8 @@ except ImportError:
 class MXRecordIO(object):
     """Reads/writes `RecordIO` data format, supporting sequential read and write.
 
-    Example usage:
-    ----------
+    Examples
+    ---------
     >>> record = mx.recordio.MXRecordIO('tmp.rec', 'w')
     <mxnet.recordio.MXRecordIO object at 0x10ef40ed0>
     >>> for i in range(5):
@@ -65,6 +66,7 @@ class MXRecordIO(object):
         self.uri = c_str(uri)
         self.handle = RecordIOHandle()
         self.flag = flag
+        self.pid = None
         self.is_open = False
         self.open()
 
@@ -78,10 +80,45 @@ class MXRecordIO(object):
             self.writable = False
         else:
             raise ValueError("Invalid flag %s"%self.flag)
+        self.pid = current_process().pid
         self.is_open = True
 
     def __del__(self):
         self.close()
+
+    def __getstate__(self):
+        """Override pickling behavior."""
+        # pickling pointer is not allowed
+        is_open = self.is_open
+        self.close()
+        d = dict(self.__dict__)
+        d['is_open'] = is_open
+        uri = self.uri.value
+        try:
+            uri = uri.decode('utf-8')
+        except AttributeError:
+            pass
+        del d['handle']
+        d['uri'] = uri
+        return d
+
+    def __setstate__(self, d):
+        """Restore from pickled."""
+        self.__dict__ = d
+        is_open = d['is_open']
+        self.is_open = False
+        self.handle = RecordIOHandle()
+        self.uri = c_str(self.uri)
+        if is_open:
+            self.open()
+
+    def _check_pid(self, allow_reset=False):
+        """Check process id to ensure integrity, reset if in new process."""
+        if not self.pid == current_process().pid:
+            if allow_reset:
+                self.reset()
+            else:
+                raise RuntimeError("Forbidden operation in multiple processes")
 
     def close(self):
         """Closes the record file."""
@@ -92,14 +129,15 @@ class MXRecordIO(object):
         else:
             check_call(_LIB.MXRecordIOReaderFree(self.handle))
         self.is_open = False
+        self.pid = None
 
     def reset(self):
         """Resets the pointer to first item.
 
         If the record is opened with 'w', this function will truncate the file to empty.
 
-        Example usage:
-        ----------
+        Examples
+        ---------
         >>> record = mx.recordio.MXRecordIO('tmp.rec', 'r')
         >>> for i in range(2):
         ...    item = record.read()
@@ -117,8 +155,8 @@ class MXRecordIO(object):
     def write(self, buf):
         """Inserts a string buffer as a record.
 
-        Example usage:
-        ----------
+        Examples
+        ---------
         >>> record = mx.recordio.MXRecordIO('tmp.rec', 'w')
         >>> for i in range(5):
         ...    record.write('record_%d'%i)
@@ -130,6 +168,7 @@ class MXRecordIO(object):
             Buffer to write.
         """
         assert self.writable
+        self._check_pid(allow_reset=False)
         check_call(_LIB.MXRecordIOWriterWriteRecord(self.handle,
                                                     ctypes.c_char_p(buf),
                                                     ctypes.c_size_t(len(buf))))
@@ -137,8 +176,8 @@ class MXRecordIO(object):
     def read(self):
         """Returns record as a string.
 
-        Example usage:
-        ----------
+        Examples
+        ---------
         >>> record = mx.recordio.MXRecordIO('tmp.rec', 'r')
         >>> for i in range(5):
         ...    item = record.read()
@@ -156,6 +195,9 @@ class MXRecordIO(object):
             Buffer read.
         """
         assert not self.writable
+        # trying to implicitly read from multiple processes is forbidden,
+        # there's no elegant way to handle unless lock is introduced
+        self._check_pid(allow_reset=False)
         buf = ctypes.c_char_p()
         size = ctypes.c_size_t()
         check_call(_LIB.MXRecordIOReaderReadRecord(self.handle,
@@ -170,8 +212,8 @@ class MXRecordIO(object):
 class MXIndexedRecordIO(MXRecordIO):
     """Reads/writes `RecordIO` data format, supporting random access.
 
-    Example usage:
-    ----------
+    Examples
+    ---------
     >>> for i in range(5):
     ...     record.write_idx(i, 'record_%d'%i)
     >>> record.close()
@@ -217,20 +259,27 @@ class MXIndexedRecordIO(MXRecordIO):
         super(MXIndexedRecordIO, self).close()
         self.fidx.close()
 
+    def __getstate__(self):
+        """Override pickling behavior."""
+        d = super(MXIndexedRecordIO, self).__getstate__()
+        d['fidx'] = None
+        return d
+
     def seek(self, idx):
         """Sets the current read pointer position.
 
         This function is internally called by `read_idx(idx)` to find the current
         reader pointer position. It doesn't return anything."""
         assert not self.writable
+        self._check_pid(allow_reset=True)
         pos = ctypes.c_size_t(self.idx[idx])
         check_call(_LIB.MXRecordIOReaderSeek(self.handle, pos))
 
     def tell(self):
         """Returns the current position of write head.
 
-        Example usage:
-        ----------
+        Examples
+        ---------
         >>> record = mx.recordio.MXIndexedRecordIO('tmp.idx', 'tmp.rec', 'w')
         >>> print(record.tell())
         0
@@ -251,8 +300,8 @@ class MXIndexedRecordIO(MXRecordIO):
     def read_idx(self, idx):
         """Returns the record at given index.
 
-        Example usage:
-        ----------
+        Examples
+        ---------
         >>> record = mx.recordio.MXIndexedRecordIO('tmp.idx', 'tmp.rec', 'w')
         >>> for i in range(5):
         ...     record.write_idx(i, 'record_%d'%i)
@@ -267,8 +316,8 @@ class MXIndexedRecordIO(MXRecordIO):
     def write_idx(self, idx, buf):
         """Inserts input record at given index.
 
-        Example usage:
-        ----------
+        Examples
+        ---------
         >>> for i in range(5):
         ...     record.write_idx(i, 'record_%d'%i)
         >>> record.close()

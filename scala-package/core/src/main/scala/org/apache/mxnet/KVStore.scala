@@ -52,22 +52,17 @@ object KVStore {
   }
 }
 
-class KVStore(private[mxnet] val handle: KVStoreHandle) extends WarnIfNotDisposed {
+class KVStore(private[mxnet] val handle: KVStoreHandle) extends NativeResource {
   private val logger: Logger = LoggerFactory.getLogger(classOf[KVStore])
   private var updaterFunc: MXKVStoreUpdater = null
-  private var disposed = false
-  protected def isDisposed = disposed
 
-  /**
-   * Release the native memory.
-   * The object shall never be used after it is disposed.
-   */
-  def dispose(): Unit = {
-    if (!disposed) {
-      _LIB.mxKVStoreFree(handle)
-      disposed = true
-    }
-  }
+  override def nativeAddress: CPtrAddress = handle
+
+  override def nativeDeAllocator: CPtrAddress => MXUint = _LIB.mxKVStoreFree
+
+  override val ref: NativeResourceRef = super.register()
+
+  override val bytesAllocated: Long = 0L
 
   /**
    * Initialize a single or a sequence of key-value pairs into the store.
@@ -291,7 +286,7 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) extends WarnIfNotDispose
       case cachedStates: MXKVStoreCachedStates =>
         val bis = new BufferedInputStream (new FileInputStream (fname) )
         try {
-        val bArray = Stream.continually (bis.read).takeWhile (- 1 !=).map (_.toByte).toArray
+        val bArray = Stream.continually (bis.read).takeWhile (_ != -1).map (_.toByte).toArray
           cachedStates.deserializeState(bArray)
         } finally {
           bis.close ()

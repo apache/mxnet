@@ -19,21 +19,16 @@ from __future__ import print_function
 import unittest
 import mxnet as mx
 import numpy as np
-import sys
-import os
+
 from collections import namedtuple
-
+from converter._mxnet_converter import convert
 from six.moves import xrange
-
-current_working_directory = os.getcwd()
-sys.path.append(current_working_directory + "/..")
-sys.path.append(current_working_directory + "/../converter/")
-import _mxnet_converter as mxnet_converter
 
 
 def _mxnet_remove_batch(input_data):
     for blob in input_data:
-        input_data[blob] = np.reshape(input_data[blob], input_data[blob].shape[1:])
+        input_data[blob] = np.reshape(input_data[blob], input_data[blob]
+                                      .shape[1:])
     return input_data
 
 
@@ -53,9 +48,10 @@ def _kl_divergence(distribution1, distribution2):
 
 class ModelsTest(unittest.TestCase):
     """
-    Unit test class that tests converter on entire MXNet models .
-    In order to test each unit test converts MXNet model into CoreML model using the converter, generate predictions
-    on both MXNet and CoreML and verifies that predictions are same (or similar).
+    Unit test class that tests converter on entire MXNet models.
+    In order to test each unit test converts MXNet model into CoreML model using the converter,
+    generate predictions on both MXNet and CoreML and verifies that predictions are same
+    (or similar).
     """
     def _load_model(self, model_name, epoch_num, input_shape):
         sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, epoch_num)
@@ -76,8 +72,10 @@ class ModelsTest(unittest.TestCase):
         )
         return mod
 
-    def _test_model(self, model_name, epoch_num, input_shape=(1, 3, 224, 224), files=None):
-        """ Tests whether the converted CoreML model's preds are equal to MXNet preds for a given model or not.
+    def _test_model(self, model_name, epoch_num, input_shape=(1, 3, 224, 224),
+                    files=None):
+        """ Tests whether the converted CoreML model's preds are equal to MXNet
+        preds for a given model or not.
 
         Parameters
         ----------
@@ -88,10 +86,12 @@ class ModelsTest(unittest.TestCase):
             Epoch number of model we would like to load.
 
         input_shape: tuple
-            The shape of the input data in the form of (batch_size, channels, height, width)
+            The shape of the input data in the form of (batch_size, channels,
+            height, width)
 
         files: list of strings
-            List of URLs pertaining to files that need to be downloaded in order to use the model.
+            List of URLs pertaining to files that need to be downloaded in
+            order to use the model.
         """
 
         if files is not None:
@@ -106,17 +106,22 @@ class ModelsTest(unittest.TestCase):
             input_shape=input_shape
         )
 
-        coreml_model = mxnet_converter.convert(module, input_shape={'data': input_shape})
+        coreml_model = convert(module, input_shape={'data': input_shape})
 
         # Get predictions from MXNet and coreml
-        div=[] # For storing KL divergence for each input.
+        div = []  # For storing KL divergence for each input.
         for _ in xrange(1):
             np.random.seed(1993)
-            input_data = {'data': np.random.uniform(0, 1, input_shape).astype(np.float32)}
+            input_data = {'data': np.random.uniform(0, 1, input_shape)
+                                           .astype(np.float32)}
             Batch = namedtuple('Batch', ['data'])
-            module.forward(Batch([mx.nd.array(input_data['data'])]), is_train=False)
+            module.forward(Batch([mx.nd.array(input_data['data'])]),
+                           is_train=False)
             mxnet_pred = module.get_outputs()[0].asnumpy().flatten()
-            coreml_pred = coreml_model.predict(_mxnet_remove_batch(input_data)).values()[0].flatten()
+            coreml_pred = coreml_model \
+                .predict(_mxnet_remove_batch(input_data)) \
+                .values()[0] \
+                .flatten()
             self.assertEqual(len(mxnet_pred), len(coreml_pred))
             div.append(_kl_divergence(mxnet_pred, coreml_pred))
 
@@ -138,6 +143,7 @@ class ModelsTest(unittest.TestCase):
                          files=["http://data.mxnet.io/models/imagenet/resnet/50-layers/resnet-50-symbol.json",
                                 "http://data.mxnet.io/models/imagenet/resnet/50-layers/resnet-50-0000.params"])
 
+    @unittest.skip("Model is too big for unit test")
     def test_pred_vgg16(self):
         self._test_model(model_name='vgg16', epoch_num=0,
                          files=["http://data.mxnet.io/models/imagenet/vgg/vgg16-symbol.json",

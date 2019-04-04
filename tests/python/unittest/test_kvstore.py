@@ -107,6 +107,23 @@ def test_init():
     check_init(mx.kv.create(), 'a')
 
 @with_seed()
+def test_pull():
+    """test pull"""
+    def check_pull(kv):
+        a = mx.nd.ones(shape)
+        b = mx.nd.zeros(shape)
+        kv.init('1', mx.nd.zeros(shape))
+        kv.push('1', [a,a,a,a])
+        kv.pull('1', b)
+        check_diff_to_scalar(b, 4)
+        kv.init('2', mx.nd.zeros(shape))
+        kv.pull('2', b)
+        check_diff_to_scalar(b, 0)
+
+    check_pull(mx.kv.create('device'))
+    check_pull(mx.kv.create())
+
+@with_seed()
 def test_list_kv_pair():
     """list key-value pair push & pull"""
     def check_list_kv_pair(kv, key, stype):

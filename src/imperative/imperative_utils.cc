@@ -79,9 +79,9 @@ void RunGraph(
       arg_dtypes.clear();
       arg_shapes.reserve(ndinputs.size());
       arg_dtypes.reserve(ndinputs.size());
-      for (size_t i = 0; i < ndinputs.size(); ++i) {
-        arg_shapes.emplace_back(ndinputs[i]->shape());
-        arg_dtypes.emplace_back(ndinputs[i]->dtype());
+      for (auto& ndinput : ndinputs) {
+        arg_shapes.emplace_back(ndinput->shape());
+        arg_dtypes.emplace_back(ndinput->dtype());
       }
       states[i] = createop[node.source->op()](
           node.source->attrs, ctx, arg_shapes, arg_dtypes);

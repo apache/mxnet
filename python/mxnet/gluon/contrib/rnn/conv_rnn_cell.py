@@ -255,7 +255,7 @@ class Conv1DRNNCell(_ConvRNNCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_rnn_'
+    prefix : str, default ``'conv_rnn_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -322,7 +322,7 @@ class Conv2DRNNCell(_ConvRNNCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_rnn_'
+    prefix : str, default ``'conv_rnn_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -389,7 +389,7 @@ class Conv3DRNNCell(_ConvRNNCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_rnn_'
+    prefix : str, default ``'conv_rnn_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -519,7 +519,7 @@ class Conv1DLSTMCell(_ConvLSTMCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_lstm_'
+    prefix : str, default ``'conv_lstm_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -596,7 +596,7 @@ class Conv2DLSTMCell(_ConvLSTMCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_lstm_'
+    prefix : str, default ``'conv_lstm_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -673,7 +673,7 @@ class Conv3DLSTMCell(_ConvLSTMCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_lstm_'
+    prefix : str, default ``'conv_lstm_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -803,7 +803,7 @@ class Conv1DGRUCell(_ConvGRUCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_gru_'
+    prefix : str, default ``'conv_gru_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -875,7 +875,7 @@ class Conv2DGRUCell(_ConvGRUCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_gru_'
+    prefix : str, default ``'conv_gru_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -947,7 +947,7 @@ class Conv3DGRUCell(_ConvGRUCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default 'conv_gru_'
+    prefix : str, default ``'conv_gru_``'
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.

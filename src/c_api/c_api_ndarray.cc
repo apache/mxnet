@@ -176,7 +176,7 @@ int MXCreateCachedOpEx(SymbolHandle handle,
   API_BEGIN();
   std::vector<std::pair<std::string, std::string> > flags;
   for (int i = 0; i < num_flags; ++i) {
-    flags.push_back({keys[i], vals[i]});
+    flags.emplace_back(keys[i], vals[i]);
   }
   *out = new CachedOpPtr(new CachedOp(*sym, flags));
   API_END();

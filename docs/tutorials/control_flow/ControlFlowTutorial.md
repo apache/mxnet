@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Hybridize Gluon models with control flows.
 
 MXNet currently provides three control flow operators: `cond`, `foreach` and `while_loop`. Like other MXNet operators, they all have a version for NDArray and a version for Symbol. These two versions have exactly the same semantics. We can take advantage of this and use them in Gluon to hybridize models.
@@ -15,13 +32,13 @@ from mxnet.gluon import HybridBlock
 ## foreach
 `foreach` is a for loop that iterates over the first dimension of the input data (it can be an array or a list of arrays). It is defined with the following signature:
 
-```python
+```
 foreach(body, data, init_states, name) => (outputs, states)
 ```
 
 It runs the Python function defined in `body` for every slice from the input arrays. The signature of the `body` function is defined as follows:
 
-```python
+```
 body(data, states) => (outputs, states)
 ```
 
@@ -243,13 +260,13 @@ res, states = lstm(rnn_data, [x for x in init_states], valid_length)
 ## while_loop
 `while_loop` defines a while loop. It has the following signature:
 
-```python
+```
 while_loop(cond, body, loop_vars, max_iterations, name) => (outputs, states)
 ```
 
 Instead of running over the first dimension of an array, `while_loop` checks a condition function in every iteration and runs a `body` function for computation. The signature of the `body` function is defined as follows:
 
-```python
+```
 body(state1, state2, ...) => (outputs, states)
 ```
 
@@ -297,13 +314,13 @@ print(state)
 ## cond
 `cond` defines an if condition. It has the following signature:
 
-```python
+```
 cond(pred, then_func, else_func, name)
 ```
 
 `cond` checks `pred`, which is a symbol or an NDArray with one element. If its value is true, it calls `then_func`. Otherwise, it calls `else_func`. The signature of `then_func` and `else_func` are as follows:
 
-```python
+```
 func() => [outputs]
 ```
 

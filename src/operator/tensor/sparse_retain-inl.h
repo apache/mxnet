@@ -19,7 +19,7 @@
 
 /*!
  * \file sparse_retain-inl.h
- * \brief
+ * \brief Function definition of sparse_retain operator
 */
 #ifndef MXNET_OPERATOR_TENSOR_SPARSE_RETAIN_INL_H_
 #define MXNET_OPERATOR_TENSOR_SPARSE_RETAIN_INL_H_

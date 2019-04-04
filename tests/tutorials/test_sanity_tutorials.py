@@ -24,8 +24,17 @@ import re
 # automated test suite.
 # Rules to be in the whitelist:
 # - not a python tutorial
-whitelist = ['c++/basics.md',
+whitelist = ['basic/index.md',
+             'c++/basics.md',
+             'c++/index.md',
+             'c++/subgraphAPI.md',
+             'control_flow/index.md',
+             'embedded/index.md',
              'embedded/wine_detector.md',
+             'gluon/index.md',
+             'nlp/index.md',
+             'onnx/index.md',
+             'python/index.md',
              'r/CallbackFunction.md',
              'r/charRnnModel.md',
              'r/classifyRealImageWithPretrainedModel.md',
@@ -34,12 +43,23 @@ whitelist = ['c++/basics.md',
              'r/fiveMinutesNeuralNetwork.md',
              'r/index.md',
              'r/mnistCompetition.md',
+             'r/MultidimLstm.md',
              'r/ndarray.md',
              'r/symbol.md',
              'scala/char_lstm.md',
              'scala/mnist.md',
              'scala/index.md',
-             'scala/mxnet_scala_on_intellij.md']
+             'scala/mxnet_scala_on_intellij.md',
+             'scala/mxnet_java_install_and_run_examples.md',
+             'sparse/index.md',
+             'speech_recognition/index.md',
+             'unsupervised_learning/index.md',
+             'vision/index.md',
+             'tensorrt/index.md',
+             'tensorrt/inference_with_trt.md',
+             'java/index.md',
+             'java/mxnet_java_on_intellij.md',
+             'java/ssd_inference.md']
 whitelist_set = set(whitelist)
 
 def test_tutorial_downloadable():

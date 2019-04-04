@@ -52,7 +52,8 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
   }
 
   private val workLoads = workLoadList.getOrElse(contexts.map(_ => 1f).toIndexedSeq)
-  require(workLoads.size == contexts.length)
+  require(workLoads.size == contexts.length,
+    s"workloads size (${workLoads.size}) do not match number of contexts ${contexts.length}")
 
   private val _buckets = scala.collection.mutable.Map[AnyRef, Module]()
   private var _currModule: Module = null
@@ -84,7 +85,7 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
   // Input/Output information
   // A list of (name, shape) pairs specifying the data inputs to this module.
   override def dataShapes: IndexedSeq[DataDesc] = {
-    require(this.binded)
+    require(this.binded, "bind() must be called first.")
     this._currModule.dataShapes
   }
 
@@ -95,13 +96,13 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    * list `[]`.
    */
   override def labelShapes: IndexedSeq[DataDesc] = {
-    require(this.binded)
+    require(this.binded, "bind() must be called first.")
     this._currModule.labelShapes
   }
 
   // A list of (name, shape) pairs specifying the outputs of this module.
   override def outputShapes: IndexedSeq[(String, Shape)] = {
-    require(this.binded)
+    require(this.binded, "bind() must be called first.")
     this._currModule.outputShapes
   }
 
@@ -111,7 +112,7 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    * `NDArray`) mapping.
    */
   override def getParams: (Map[String, NDArray], Map[String, NDArray]) = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     this._currModule.paramsDirty = this.paramsDirty
     val params = this._currModule.getParams
     this.paramsDirty = false
@@ -220,8 +221,8 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
       return
     }
 
-    require(sharedModule == None,
-      "shared_module for BucketingModule is not supported")
+    require(sharedModule.isEmpty,
+      "sharedModule for BucketingModule is not supported")
 
     this.forTraining = forTraining
     this.inputsNeedGrad = inputsNeedGrad
@@ -276,7 +277,7 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    */
   override def initOptimizer(kvstore: String = "local", optimizer: Optimizer = new SGD(),
                     resetOptimizer: Boolean = true, forceInit: Boolean = false): Unit = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     if (optimizerInitialized && !forceInit) {
       logger.warn("optimizer already initialized, ignoring ...")
     } else {
@@ -294,7 +295,7 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    */
   def prepare(dataBatch: DataBatch): Unit = {
     // perform bind if haven't done so
-    require(this.binded && this.paramsInitialized)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     val bucketKey = dataBatch.bucketKey
     val originalBucketKey = this._currBucketKey
     this.switchBucket(bucketKey, dataBatch.provideData, Option(dataBatch.provideLabel))
@@ -308,7 +309,7 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    * @param isTrain Default is `None`, which means `is_train` takes the value of `for_training`.
    */
   override def forward(dataBatch: DataBatch, isTrain: Option[Boolean] = None): Unit = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     this.switchBucket(dataBatch.bucketKey, dataBatch.provideData,
       Option(dataBatch.provideLabel))
     this._currModule.forward(dataBatch, isTrain)
@@ -321,14 +322,15 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    *                 on outputs that are not a loss function.
    */
   override def backward(outGrads: Array[NDArray] = null): Unit = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     this._currModule.backward(outGrads)
   }
 
   // Update parameters according to the installed optimizer and the gradients computed
   // in the previous forward-backward cycle.
   override def update(): Unit = {
-    require(binded && paramsInitialized && optimizerInitialized)
+    require(binded && paramsInitialized && optimizerInitialized,
+      "bind(), initParams() and initOptimizer() must be called first.")
     this.paramsDirty = true
     this._currModule.update()
   }
@@ -337,11 +339,11 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    * Get outputs of the previous forward computation.
    * @return In the case when data-parallelism is used,
    *         the outputs will be collected from multiple devices.
-   *         The results will look like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`,
+   *         The results will look like `[ [out1_dev1, out1_dev2], [out2_dev1, out2_dev2] ]`,
    *         those `NDArray` might live on different devices.
    */
   override def getOutputs(): IndexedSeq[IndexedSeq[NDArray]] = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     this._currModule.getOutputs()
   }
 
@@ -353,7 +355,7 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    *         The results will look like `[out1, out2]`
    */
   override def getOutputsMerged(): IndexedSeq[NDArray] = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     this._currModule.getOutputsMerged()
   }
 
@@ -361,11 +363,12 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    * Get the gradients to the inputs, computed in the previous backward computation.
    * @return In the case when data-parallelism is used,
    *         the grads will be collected from multiple devices.
-   *         The results will look like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`,
+   *         The results will look like `[ [grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2] ]`,
    *         those `NDArray` might live on different devices.
    */
   override def getInputGrads(): IndexedSeq[IndexedSeq[NDArray]] = {
-    require(binded && paramsInitialized && inputsNeedGrad)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
+    require(inputsNeedGrad, "Call to getInputGrads() but inputsNeedGrad is false")
     this._currModule.getInputGrads()
   }
 
@@ -377,7 +380,8 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    *         The results will look like `[grad1, grad2]`
    */
   override def getInputGradsMerged(): IndexedSeq[NDArray] = {
-    require(binded && paramsInitialized && inputsNeedGrad)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
+    require(inputsNeedGrad, "Call to getInputGradsMerged() but inputsNeedGrad is false")
     this._currModule.getInputGradsMerged()
   }
 
@@ -387,18 +391,18 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    * @param labels
    */
   override def updateMetric(evalMetric: EvalMetric, labels: IndexedSeq[NDArray]): Unit = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     this._currModule.updateMetric(evalMetric, labels)
   }
 
   override def getSymbol: Symbol = {
-    require(binded)
+    require(binded, "bind() must be called first.")
     this._currModule.symbol
   }
 
   // Install monitor on all executors
   override def installMonitor(monitor: Monitor): Unit = {
-    require(binded)
+    require(binded, "bind() must be called first.")
     for (mod <- this._buckets.values) mod.installMonitor(monitor)
   }
 }

@@ -127,7 +127,7 @@ def _bind_exec(sym, ctx, input_shapes, param_names, need_grad=False,
     assert(arg_types is not None)
 
     arg_arrays = []
-    grad_arrays = {} if need_grad != False else None
+    grad_arrays = {} if need_grad is not False else None
 
     arg_names = sym.list_arguments()
 

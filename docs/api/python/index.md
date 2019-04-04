@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet - Python API
 
 MXNet provides a comprehensive and flexible Python API to serve a broad community of developers with different levels of experience and wide ranging requirements. In this section, we provide an in-depth discussion of the functionality provided by various MXNet Python packages.
@@ -17,50 +34,13 @@ Code examples are placed throughout the API documentation and these can be run a
 ```eval_rst
 
 .. note:: A convenient way to execute code examples is using the ``%doctest_mode`` mode of
-    Jupyter notebook, which allows for pasting multi-line examples containing
-    ``>>>`` while preserving indentation. Run ``%doctest_mode?`` in Jupyter notebook
-    for more details.
+   Jupyter notebook, which allows for pasting multi-line examples containing
+   ``>>>`` while preserving indentation. Run ``%doctest_mode?`` in Jupyter notebook
+   for more details.
 
 ```
 
 \* Some old references to Model API may exist, but this API has been deprecated.
-
-## NDArray API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   ndarray/ndarray.md
-   ndarray/random.md
-   ndarray/linalg.md
-   ndarray/sparse.md
-   ndarray/contrib.md
-```
-
-## Symbol API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   symbol/symbol.md
-   symbol/random.md
-   symbol/linalg.md
-   symbol/sparse.md
-   symbol/contrib.md
-   symbol/rnn.md
-```
-
-## Module API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   module/module.md
-   executor/executor.md
-```
 
 ## Autograd API
 
@@ -69,6 +49,27 @@ Code examples are placed throughout the API documentation and these can be run a
    :maxdepth: 1
 
    autograd/autograd.md
+```
+
+## Callback API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   callback/callback.md
+```
+
+## Contrib Package
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   contrib/contrib.md
+   contrib/text.md
+   contrib/onnx.md
+   contrib/svrg_optimization.md
 ```
 
 ## Gluon API
@@ -86,15 +87,6 @@ Code examples are placed throughout the API documentation and these can be run a
    gluon/contrib.md
 ```
 
-## IO API
-
-```eval_rst
-.. toctree::
-   :maxdepth: 1
-
-   io/io.md
-```
-
 ## Image API
 
 ```eval_rst
@@ -104,22 +96,22 @@ Code examples are placed throughout the API documentation and these can be run a
    image/image.md
 ```
 
-## Optimization API
+## IO API
 
 ```eval_rst
 .. toctree::
    :maxdepth: 1
 
-   optimization/optimization.md
+   io/io.md
 ```
 
-## Callback API
+## KV Store API
 
 ```eval_rst
 .. toctree::
    :maxdepth: 1
 
-   callback/callback.md
+   kvstore/kvstore.md
 ```
 
 ## Metric API
@@ -129,6 +121,39 @@ Code examples are placed throughout the API documentation and these can be run a
    :maxdepth: 1
 
    metric/metric.md
+```
+
+## Module API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   module/module.md
+   executor/executor.md
+```
+
+## NDArray API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   ndarray/ndarray.md
+   ndarray/random.md
+   ndarray/linalg.md
+   ndarray/sparse.md
+   ndarray/contrib.md
+```
+
+## Optimization API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   optimization/optimization.md
+   optimization/contrib.md
 ```
 
 ## Profiler API
@@ -144,18 +169,40 @@ Code examples are placed throughout the API documentation and these can be run a
 
 ```eval_rst
 .. toctree::
-   :maxdepth 1
+   :maxdepth: 1
 
    rtc/rtc.md
 ```
 
-## Contrib Package
+## Symbol API
 
 ```eval_rst
 .. toctree::
    :maxdepth: 1
 
-   contrib/contrib.md
-   contrib/text.md
-   contrib/onnx.md
+   symbol/symbol.md
+   symbol/random.md
+   symbol/linalg.md
+   symbol/sparse.md
+   symbol/contrib.md
+   symbol/rnn.md
+```
+
+## Symbol in Pictures API
+
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   symbol_in_pictures/symbol_in_pictures.md
+```
+
+## Tools
+
+```eval_rst
+.. toctree::
+    :maxdepth: 1
+
+    tools/test_utils.md
+    tools/visualization.md
 ```

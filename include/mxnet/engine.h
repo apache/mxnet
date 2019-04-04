@@ -25,7 +25,6 @@
 #ifndef MXNET_ENGINE_H_
 #define MXNET_ENGINE_H_
 
-#include <dmlc/base.h>
 #if DMLC_USE_CXX11
 #include <algorithm>
 #include <memory>
@@ -41,8 +40,26 @@ class Engine;
 
 /*! \brief namespace of engine internal types. */
 namespace engine {
-/*! \brief Internal representation of variable. */
-struct Var;
+/*! \brief base class of engine variables.*/
+struct Var {
+  virtual size_t version() {
+    return version_;
+  }
+  virtual ~Var() = default;
+  /*!
+   * \brief cast variable to derived type T
+   * \tparam T the type we want to cast into.
+   * \return A casted variable.
+   */
+  template <typename T>
+  inline T* Cast();
+  /*!
+   * \brief version number of the var. Every time the object it is associated with
+   * is modified, the version number is incremented by 1.
+   */
+  size_t version_{0};
+};  // struct Var
+
 /*! \brief Internal representation of operator.  */
 struct Opr;
 /*! \brief Variable pointer type, usually hold by user used to specify dependencies. */
@@ -57,15 +74,15 @@ class CallbackOnComplete {
  public:
   // use implicit copy and assign
   /*! \brief involve the callback */
-  inline void operator()() const {
-    (*callback_)(engine_, param_);
+  inline void operator()(const dmlc::Error* error = nullptr) const {
+    (*callback_)(engine_, param_, error);
   }
 
  private:
   /*! \brief engine can see content of callback */
   friend class ::mxnet::Engine;
   /*! \brief the real callback */
-  void (*callback_)(Engine *, void *);
+  void (*callback_)(Engine *, void *, const dmlc::Error *);
   /*! \brief the engine class passed to callback */
   Engine* engine_;
   /*! \brief the parameter set on callback */
@@ -258,7 +275,7 @@ class MXNET_API Engine {
    * \param param the paramter passed to callback.
    */
   inline CallbackOnComplete CreateCallback(
-      void (*callback)(Engine *, void *), void *param) {
+      void (*callback)(Engine *, void *, const dmlc::Error *), void *param) {
     CallbackOnComplete ret;
     ret.callback_ = callback;
     ret.engine_ = this;

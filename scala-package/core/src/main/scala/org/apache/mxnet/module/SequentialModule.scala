@@ -96,7 +96,7 @@ class SequentialModule extends BaseModule {
    * @return The data shapes of the first module is the data shape of a SequentialModule.
    */
   override def dataShapes: IndexedSeq[DataDesc] = {
-    require(this.binded)
+    require(this.binded, "bind() must be called first.")
     this.modules.head.dataShapes
   }
 
@@ -107,7 +107,7 @@ class SequentialModule extends BaseModule {
    * training (in this case, label information is not available).
    */
   override def labelShapes: IndexedSeq[DataDesc] = {
-    require(this.binded)
+    require(this.binded, "bind() must be called first.")
     this.labelShapesVar.orNull
   }
 
@@ -117,7 +117,7 @@ class SequentialModule extends BaseModule {
    * module is the output shape of a SequentialModule.
    */
   override def outputShapes: IndexedSeq[(String, Shape)] = {
-    require(this.binded)
+    require(this.binded, "bind() must be called first.")
     this.modules.reverse.head.outputShapes
   }
 
@@ -127,7 +127,7 @@ class SequentialModule extends BaseModule {
    * each a Map of name to parameters (in NDArray) mapping.
    */
   override def getParams: (Map[String, NDArray], Map[String, NDArray]) = {
-    require(this.binded && this.paramsInitialized)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     ((Map[String, NDArray](), Map[String, NDArray]()) /: this.modules){ (result, module) =>
       val (arg, aux) = module.getParams
       (result._1 ++ arg, result._2 ++ aux)
@@ -220,7 +220,7 @@ class SequentialModule extends BaseModule {
     }
 
     if (inputsNeedGrad) {
-      require(forTraining == true)
+      require(forTraining, "inputsNeedGrad can be set only for training")
     }
 
     require(sharedModule == None, "Shared module is not supported")
@@ -246,7 +246,8 @@ class SequentialModule extends BaseModule {
       val myInputsNeedGrad = if (inputsNeedGrad || (forTraining && iLayer > 0)) true else false
       if (meta.contains(META_AUTO_WIRING) && meta(META_AUTO_WIRING)) {
         val dataNames = module.dataNames
-        require(dataNames.length == myDataShapes.length)
+        require(dataNames.length == myDataShapes.length,
+          s"dataNmes $dataNames and dataShapes $myDataShapes do not match")
         myDataShapes = dataNames.zip(myDataShapes).map { case (newName, dataDes) =>
           DataDesc(newName, dataDes.shape)
         }
@@ -276,7 +277,7 @@ class SequentialModule extends BaseModule {
    */
   override def initOptimizer(kvstore: String = "local", optimizer: Optimizer = new SGD(),
       resetOptimizer: Boolean = true, forceInit: Boolean = false): Unit = {
-    require(this.binded && this.paramsInitialized)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     if (optimizerInitialized && !forceInit) {
       logger.warn("optimizer already initialized, ignoring ...")
     } else {
@@ -293,7 +294,7 @@ class SequentialModule extends BaseModule {
    * @param isTrain Default is `None`, which means `isTrain` takes the value of `forTraining`.
    */
   override def forward(dataBatch: DataBatch, isTrain: Option[Boolean] = None): Unit = {
-    require(this.binded && this.paramsInitialized)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
 
     var data = dataBatch
     for ((module, iLayer) <- this.modules.zipWithIndex) {
@@ -304,7 +305,8 @@ class SequentialModule extends BaseModule {
         // need to update this, in case the internal module is using bucketing
         // or whatever
         val dataNames = module.outputShapes.map(_._1)
-        require(dataNames.length == data.data.length)
+        require(dataNames.length == data.data.length,
+          s"dataNames $dataNames do not match with number of arrays in batch")
         var provideData = ListMap[String, Shape]()
         for ((name, x) <- dataNames.zip(out.head)) {
           provideData += name -> x.shape
@@ -322,7 +324,7 @@ class SequentialModule extends BaseModule {
    *                 on outputs that are not a loss function.
    */
   override def backward(outGrads: Array[NDArray] = null): Unit = {
-    require(this.binded && this.paramsInitialized)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     var grad = outGrads
     for ((module, iLayer) <- this.modules.zipWithIndex.reverse) {
       module.backward(outGrads = grad)
@@ -335,7 +337,8 @@ class SequentialModule extends BaseModule {
   // Update parameters according to the installed optimizer and the gradients computed
   // in the previous forward-backward batch.
   override def update(): Unit = {
-    require(this.binded && this.paramsInitialized && this.optimizerInitialized)
+    require(this.binded && this.paramsInitialized && this.optimizerInitialized,
+      "bind(), initParams() and initOptimizer() must be called first.")
     this.modules.foreach(_.update())
   }
 
@@ -343,11 +346,11 @@ class SequentialModule extends BaseModule {
    * Get outputs of the previous forward computation.
    * @return In the case when data-parallelism is used,
    *         the outputs will be collected from multiple devices.
-   *         The results will look like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`,
+   *         The results will look like `[ [out1_dev1, out1_dev2], [out2_dev1, out2_dev2] ]`,
    *         those `NDArray` might live on different devices.
    */
   def getOutputs(): IndexedSeq[IndexedSeq[NDArray]] = {
-    require(this.binded && this.paramsInitialized)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     this.modules.reverse.head.getOutputs()
   }
 
@@ -359,7 +362,7 @@ class SequentialModule extends BaseModule {
    *         The results will look like `[out1, out2]`
    */
   def getOutputsMerged(): IndexedSeq[NDArray] = {
-    require(this.binded && this.paramsInitialized)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     this.modules.reverse.head.getOutputsMerged()
   }
 
@@ -367,11 +370,12 @@ class SequentialModule extends BaseModule {
    * Get the gradients to the inputs, computed in the previous backward computation.
    * @return In the case when data-parallelism is used,
    *         the grads will be collected from multiple devices.
-   *         The results will look like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`,
+   *         The results will look like `[ [grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2] ]`,
    *         those `NDArray` might live on different devices.
    */
   def getInputGrads(): IndexedSeq[IndexedSeq[NDArray]] = {
-    require(this.binded && this.paramsInitialized && inputsNeedGrad)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
+    require(inputsNeedGrad, "Call to getInputGrads() but inputsNeedGrad is false")
     this.modules.head.getInputGrads()
   }
 
@@ -383,7 +387,8 @@ class SequentialModule extends BaseModule {
    *         The results will look like `[grad1, grad2]`
    */
   def getInputGradsMerged(): IndexedSeq[NDArray] = {
-    require(this.binded && this.paramsInitialized && inputsNeedGrad)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
+    require(inputsNeedGrad, "Call to getInputGradsMerged() but inputsNeedGrad is false")
     this.modules.head.getInputGradsMerged()
   }
 
@@ -393,7 +398,7 @@ class SequentialModule extends BaseModule {
    * @param labels
    */
   def updateMetric(evalMetric: EvalMetric, labels: IndexedSeq[NDArray]): Unit = {
-    require(this.binded && this.paramsInitialized)
+    require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     for ((meta, module) <- this.metas.zip(this.modules)) {
       if (meta.contains(META_TAKE_LABELS) && meta(META_TAKE_LABELS)) {
         module.updateMetric(evalMetric, labels)
@@ -403,7 +408,7 @@ class SequentialModule extends BaseModule {
 
   // Install monitor on all executors
   def installMonitor(monitor: Monitor): Unit = {
-    require(this.binded)
+    require(this.binded, "bind() must be called first.")
     this.modules.foreach(_.installMonitor(monitor))
   }
 }

@@ -288,8 +288,7 @@ std::vector<std::pair<int, int> > OpPropInplaceOption(const NodeAttrs& attrs) {
   }
   std::vector<std::pair<int, int> > forward_inplace;
   for (auto& kv : prop.ptr->ForwardInplaceOption(in_data, out_addr)) {
-    forward_inplace.push_back(
-        std::make_pair(kv.first, *static_cast<int*>(kv.second)));
+    forward_inplace.emplace_back(kv.first, *static_cast<int*>(kv.second));
   }
   return forward_inplace;
 }
@@ -389,13 +388,13 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
   std::vector<int> out_data_index(prop.outputs.size());
 
   int counter = 0;
-  for (size_t i = 0; i < in_data_index.size(); ++i) {
+  for (const int& i : in_data_index) {
     in_data_index[i] = counter++;
   }
-  for (size_t i = 0; i < out_grad_index.size(); ++i) {
+  for (const int& i : out_grad_index) {
     out_grad_index[i] = counter++;
   }
-  for (size_t i = 0; i < out_data_index.size(); ++i) {
+  for (const int& i : out_data_index) {
     out_data_index[i] = counter++;
   }
 

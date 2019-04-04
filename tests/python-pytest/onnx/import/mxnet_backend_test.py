@@ -39,11 +39,11 @@ BACKEND_TESTS = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 for op_tests in test_cases.IMPLEMENTED_OPERATORS_TEST:
     BACKEND_TESTS.include(op_tests)
 
-for std_model_test in test_cases.STANDARD_MODEL:
-    BACKEND_TESTS.include(std_model_test)
-
 for basic_model_test in test_cases.BASIC_MODEL_TESTS:
     BACKEND_TESTS.include(basic_model_test)
+
+for std_model_test in test_cases.STANDARD_MODEL:
+    BACKEND_TESTS.include(std_model_test)
 
 BACKEND_TESTS.exclude('.*broadcast.*')
 BACKEND_TESTS.exclude('.*bcast.*')

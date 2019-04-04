@@ -16,6 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+/*!
+ *  Copyright (c) 2016 by Contributors
+ * \file elemwise_binary_op.cc
+ * \brief CPU implementation of elementwise binary operators
+ */
+
 #include "./elemwise_binary_op.h"
 
 

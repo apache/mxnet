@@ -38,13 +38,15 @@ void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
                     RunContext ctx) {
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
     if (to->type_flag_ == from.type_flag_) {
-        mshadow::Copy(to->FlatTo1D<cpu, DType>(),
-                      from.FlatTo1D<cpu, DType>());
+      const index_t size = from.Size();
+      CHECK_EQ(size, to->Size()) << "copying size mismatch, from: " << size * sizeof(DType)
+               << " bytes, to: " << to->Size() * sizeof(DType) << " bytes.";
+      common::ParallelCopy(to->dptr<DType>(), from.dptr<DType>(), size);
     } else {
-        MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
-            to->FlatTo1D<cpu, DType>() =
-                mshadow::expr::tcast<DType>(from.FlatTo1D<cpu, SrcDType>());
-        })
+      MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
+          to->FlatTo1D<cpu, DType>() =
+              mshadow::expr::tcast<DType>(from.FlatTo1D<cpu, SrcDType>());
+      })
     }
   })
 }
@@ -92,7 +94,7 @@ void ElementwiseSumRspImpl(mshadow::Stream<cpu>* s,
               auto out_value_cur_row = out_values[irow];
               const auto offset = row_idx_ptr - nd_indices_start;
               auto nd_value_cur_row = nd_values[offset];
-              for (size_t j = 0; j < nd_value_cur_row.shape_[0]; ++j) {
+              for (index_t j = 0; j < nd_value_cur_row.shape_[0]; ++j) {
                 out_value_cur_row[j] += nd_value_cur_row[j];
               }
               ++irow;

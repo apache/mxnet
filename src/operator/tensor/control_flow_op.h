@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2017 by Contributors
- * \file control_flow.h
+ * \file control_flow_op.h
  * \brief Function definitions of operators for controlling flow
  */
 #ifndef MXNET_OPERATOR_TENSOR_CONTROL_FLOW_OP_H_

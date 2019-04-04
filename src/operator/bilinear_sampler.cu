@@ -51,8 +51,8 @@ __global__ void BilinearSamplerForwardKernel(const int i_c, const int i_h,
     int h = (index / o_w) % o_h;
     int c = (index / o_w / o_h) % o_c;
     int n = index / o_w / o_h / o_c;
-    index_t out_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
-    index_t grid_index = n * o_h * o_w * 2 + h * o_w + w;
+    int out_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
+    int grid_index = n * o_h * o_w * 2 + h * o_w + w;
     DType y_real = (*(grid + grid_index + o_h * o_w) + 1) * (i_h - 1) / 2;
     DType x_real = (*(grid + grid_index) + 1) * (i_w - 1) / 2;
     int top_left_y = static_cast<int>(floor(y_real));
@@ -79,7 +79,7 @@ __global__ void BilinearSamplerForwardKernel(const int i_c, const int i_h,
   }
 }
 
-template<typename DType>
+template<typename DType, int Req1, int Req2>
 __global__ void BilinearSamplerBackwardKernel(const int i_c, const int i_h,
                                               const int i_w, const DType* grad,
                                               const DType* data, const int o_n,
@@ -96,7 +96,7 @@ __global__ void BilinearSamplerBackwardKernel(const int i_c, const int i_h,
     int n = index / o_w / o_h;
     DType top_left_y_gw = 0.0;
     DType top_left_x_gw = 0.0;
-    index_t grid_src_index = n * o_h * o_w * 2 + h * o_w + w;
+    int grid_src_index = n * o_h * o_w * 2 + h * o_w + w;
     DType y_real = (*(grid_src + grid_src_index + o_h * o_w) + 1) * (i_h - 1) / 2;
     DType x_real = (*(grid_src + grid_src_index) + 1) * (i_w - 1) / 2;
 
@@ -104,8 +104,8 @@ __global__ void BilinearSamplerBackwardKernel(const int i_c, const int i_h,
     int top_left_x = static_cast<int>(floor(x_real));
     DType top_left_y_w = 1.0 - (y_real - top_left_y);
     DType top_left_x_w = 1.0 - (x_real - top_left_x);
-    for (index_t c = 0; c < o_c; ++c) {
-      index_t grad_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
+    for (int c = 0; c < o_c; ++c) {
+      int grad_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
       int data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w + top_left_x;
       // calc 4 vertex value in input data
       DType top_left_v = 0;
@@ -114,22 +114,30 @@ __global__ void BilinearSamplerBackwardKernel(const int i_c, const int i_h,
       DType bottom_right_v = 0;
       // calc input grad
       if (between(top_left_x, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
-        atomicAdd(&g_input[data_index], *(grad + grad_index) * top_left_y_w * top_left_x_w);
+        if (Req1 != mxnet::kNullOp) {
+          atomicAdd(&g_input[data_index], *(grad + grad_index) * top_left_y_w * top_left_x_w);
+        }
         top_left_v = *(data + data_index);
       }
       if (between(top_left_x+1, 0, i_w-1) && between(top_left_y, 0, i_h-1)) {
-        atomicAdd(&g_input[data_index + 1], *(grad + grad_index) * top_left_y_w
-                                        * (1.0 - top_left_x_w));
+        if (Req1 != mxnet::kNullOp) {
+          atomicAdd(&g_input[data_index + 1],
+                    *(grad + grad_index) * top_left_y_w * (1.0 - top_left_x_w));
+        }
         top_right_v = *(data + data_index + 1);
       }
       if (between(top_left_x, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
-        atomicAdd(&g_input[data_index+ i_w], *(grad + grad_index) * (1.0 - top_left_y_w)
-                                        * top_left_x_w);
+        if (Req1 != mxnet::kNullOp) {
+          atomicAdd(&g_input[data_index+ i_w],
+                    *(grad + grad_index) * (1.0 - top_left_y_w) * top_left_x_w);
+        }
         bottom_left_v = *(data + data_index + i_w);
       }
       if (between(top_left_x+1, 0, i_w-1) && between(top_left_y+1, 0, i_h-1)) {
-        atomicAdd(&g_input[data_index+ i_w + 1], *(grad + grad_index) * (1.0 - top_left_y_w)
-                                            * (1.0 - top_left_x_w));
+        if (Req1 != mxnet::kNullOp) {
+          atomicAdd(&g_input[data_index+ i_w + 1],
+                    *(grad + grad_index) * (1.0 - top_left_y_w) * (1.0 - top_left_x_w));
+        }
         bottom_right_v = *(data + data_index + i_w + 1);
       }
       // calc weight grad of top_left_w, then multiple -1 is the grad of grid_src
@@ -140,9 +148,11 @@ __global__ void BilinearSamplerBackwardKernel(const int i_c, const int i_h,
                         (top_left_v - top_right_v - bottom_left_v + bottom_right_v)
                         * top_left_y_w);
     }
-    // calc grad of grid
-    *(grad_grid + grid_src_index + o_h * o_w) += top_left_y_gw * (i_h - 1) / 2;
-    *(grad_grid + grid_src_index) += top_left_x_gw * (i_w - 1) / 2;
+    if (Req2 != mxnet::kNullOp) {
+      // calc grad of grid
+      *(grad_grid + grid_src_index + o_h * o_w) += top_left_y_gw * (i_h - 1) / 2;
+      *(grad_grid + grid_src_index) += top_left_x_gw * (i_w - 1) / 2;
+    }
   }
 }
 }  // namespace cuda
@@ -174,10 +184,13 @@ inline void BilinearSamplerForward(const Tensor<gpu, 4, DType> &output,
 
 template<typename DType>
 inline void BilinearSamplerBackward(const Tensor<gpu, 4, DType> &input_grad,
-                                     const Tensor<gpu, 4, DType> &ggrid,
-                                     const Tensor<gpu, 4, DType> &output_grad,
-                                     const Tensor<gpu, 4, DType> &input_data,
-                                     const Tensor<gpu, 4, DType> &grid) {
+                                    const Tensor<gpu, 4, DType> &ggrid,
+                                    const Tensor<gpu, 4, DType> &output_grad,
+                                    const Tensor<gpu, 4, DType> &input_data,
+                                    const Tensor<gpu, 4, DType> &grid,
+                                    const mxnet::OpReqType data_req,
+                                    const mxnet::OpReqType grid_req) {
+  using namespace mxnet;
   DType *g_input = input_grad.dptr_;
   DType *grad_grid = ggrid.dptr_;
   const DType *grid_src = grid.dptr_;
@@ -196,8 +209,13 @@ inline void BilinearSamplerBackward(const Tensor<gpu, 4, DType> &input_grad,
   dim3 threads_per_block(kMaxThreadsPerBlock);
   CheckLaunchParam(num_blocks, threads_per_block, "bilinear sampler backward");
   cudaStream_t stream = Stream<gpu>::GetStream(input_grad.stream_);
-  cuda::BilinearSamplerBackwardKernel<DType> << <num_blocks, threads_per_block, 0, stream >> >(
-    i_c, i_h, i_w, grad, data, o_n, o_c, o_h, o_w, g_input, grid_src, grad_grid);
+  MXNET_REQ_TYPE_SWITCH(data_req, Req1, {
+    MXNET_REQ_TYPE_SWITCH(grid_req, Req2, {
+      cuda::BilinearSamplerBackwardKernel<DType, Req1, Req2>
+      <<<num_blocks, threads_per_block, 0, stream >>>(
+        i_c, i_h, i_w, grad, data, o_n, o_c, o_h, o_w, g_input, grid_src, grad_grid);
+    });
+  });
   // post kernel check
   cudaError err = cudaPeekAtLastError();
   CHECK_EQ(err, cudaSuccess) << cudaGetErrorString(err);
@@ -212,7 +230,11 @@ Operator* CreateOp<gpu>(BilinearSamplerParam param, int dtype) {
   Operator *op = NULL;
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new CuDNNBilinearSamplerOp<DType>(param);
+    if (param.cudnn_off.has_value() && param.cudnn_off.value()) {
+      op = new BilinearSamplerOp<gpu, DType>(param);
+    } else {
+      op = new CuDNNBilinearSamplerOp<DType>(param);
+    }
   })
 #else
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {

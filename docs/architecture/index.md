@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet Architecture
 
 Building a high-performance deep learning library
@@ -15,9 +32,15 @@ Mainly, they focus on the following 3 areas:
 abstraction, optimization, and trade-offs between efficiency and flexibility.
 Additionally, we provide an overview of the complete MXNet system.
 
-* [MXNet System Overview](http://mxnet.io/architecture/overview.html)
-* [Deep Learning Programming Style: Symbolic vs Imperative](http://mxnet.io/architecture/program_model.html)
-* [Dependency Engine for Deep Learning](http://mxnet.io/architecture/note_engine.html)
-* [Optimizing the Memory Consumption in Deep Learning](http://mxnet.io/architecture/note_memory.html)
-* [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
-* [Exception Handling in MXNet](http://mxnet.io/architecture/exception_handling.html)
+```eval_rst
+.. toctree::
+   :maxdepth: 1
+
+   overview.md
+   program_model.md
+   note_engine.md
+   note_memory.md
+   note_data_loading.md
+   exception_handling.md
+   rnn_interface.md
+```

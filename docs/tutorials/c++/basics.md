@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 Basics
 ======
 
@@ -8,9 +25,9 @@ The following contents assume that the working directory is `/path/to/mxnet/cpp-
 
 Load Data
 --------
-Before going into codes, we need to fetch MNIST data. You can either use the script `get_mnist.sh`,
+Before going into codes, we need to fetch MNIST data. You can either use the script `/path/to/mxnet/cpp-package/example/get_data.sh`,
 or download mnist data by yourself from Lecun's [website](http://yann.lecun.com/exdb/mnist/)
-and decompress them into `mnist_data` folder.
+and decompress them into `data/mnist_data` folder.
 
 Except linking the MXNet shared library, the C++ package itself is a header-only package,
 which means all you need to do is to include the header files. Among the header files,
@@ -36,14 +53,14 @@ The digits in MNIST are 2-dimension arrays, so we should set `flat` to true to f
 
 ```cpp
 auto train_iter = MXDataIter("MNISTIter")
-    .SetParam("image", "./mnist_data/train-images-idx3-ubyte")
-    .SetParam("label", "./mnist_data/train-labels-idx1-ubyte")
+    .SetParam("image", "./data/mnist_data/train-images-idx3-ubyte")
+    .SetParam("label", "./data/mnist_data/train-labels-idx1-ubyte")
     .SetParam("batch_size", batch_size)
     .SetParam("flat", 1)
     .CreateDataIter();
 auto val_iter = MXDataIter("MNISTIter")
-    .SetParam("image", "./mnist_data/t10k-images-idx3-ubyte")
-    .SetParam("label", "./mnist_data/t10k-labels-idx1-ubyte")
+    .SetParam("image", "./data/mnist_data/t10k-images-idx3-ubyte")
+    .SetParam("label", "./data/mnist_data/t10k-labels-idx1-ubyte")
     .SetParam("batch_size", batch_size)
     .SetParam("flat", 1)
     .CreateDataIter();

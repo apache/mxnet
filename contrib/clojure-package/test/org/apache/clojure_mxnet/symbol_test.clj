@@ -17,9 +17,12 @@
 
 (ns org.apache.clojure-mxnet.symbol-test
   (:require [org.apache.clojure-mxnet.dtype :as dtype]
+            [org.apache.clojure-mxnet.executor :as executor]
+            [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.symbol :as sym]
             [org.apache.clojure-mxnet.util :as util]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [org.apache.clojure-mxnet.context :as context]))
 
 (deftest test-compose
   (let [data (sym/variable "data")
@@ -61,3 +64,30 @@
   (let [data (sym/variable "data")
         data2 (sym/clone data)]
     (is (= (sym/to-json data) (sym/to-json data2)))))
+
+(deftest test-basic-bind
+  (let [a (sym/variable "a")
+        b (sym/variable "b")
+        c (sym/+ a b)
+        ex (sym/bind c {"a" (ndarray/ones [2 2]) "b" (ndarray/ones [2 2])})]
+    (is (= [2.0 2.0 2.0 2.0]) (-> (executor/forward ex)
+                                  (executor/outputs)
+                                  (first)
+                                  (ndarray/->vec)))))
+(deftest test-simple-bind
+  (let [a (sym/ones [3])
+        b (sym/ones [3])
+        c (sym/+ a b)
+        ex (sym/simple-bind c (context/default-context))]
+    (is (= [2.0 2.0 2.0]  (-> (executor/forward ex)
+                              (executor/outputs)
+                              (first)
+                              (ndarray/->vec))))))
+
+(deftest test-infer-shape
+  (let [a (sym/variable "a")
+        b (sym/variable "b")
+        c (sym/+ a b)
+        [arg-shapes out-shapes] (sym/infer-shape c {"a" [2 2] "b" [2 2]})]
+    (is (= [[2 2] [2 2]] arg-shapes))
+    (is (= [[2 2]] out-shapes))))

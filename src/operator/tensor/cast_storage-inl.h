@@ -19,7 +19,7 @@
 
 /*!
  * \file cast_storage-inl.h
- * \brief cast_storage implementation for dense and sparse tensors
+ * \brief CPU implementation of cast_storage operator for dense and sparse tensors
  */
 #ifndef MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_H_
 #define MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_H_

@@ -30,6 +30,8 @@ def parse_args():
                         default="", type=str)
     parser.add_argument('--network', dest='network', type=str, default='vgg16_reduced',
                         help='which network to use')
+    parser.add_argument('--num-batch', dest='num_batch', type=int, default=5,
+                        help='evaluation number batches')
     parser.add_argument('--batch-size', dest='batch_size', type=int, default=32,
                         help='evaluation batch size')
     parser.add_argument('--num-class', dest='num_class', type=int, default=20,
@@ -97,7 +99,7 @@ if __name__ == '__main__':
         prefix = args.prefix + args.network
     else:
         prefix = args.prefix
-    evaluate_net(network, args.rec_path, num_class,
+    evaluate_net(network, args.rec_path, num_class, args.num_batch,
                  (args.mean_r, args.mean_g, args.mean_b), args.data_shape,
                  prefix, args.epoch, ctx, batch_size=args.batch_size,
                  path_imglist=args.list_path, nms_thresh=args.nms_thresh,

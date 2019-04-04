@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cc
- * \brief CPU Implementation of unary function.
+ * \file elemwise_binary_scalar_op_extended.cc
+ * \brief CPU Implementation of extended binary scalar functions.
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op.h"
@@ -83,7 +83,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_hypot_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::hypot_grad_left>);
 
-MXNET_OPERATOR_REGISTER_BINARY_SCALAR(smooth_l1)
+NNVM_REGISTER_OP(smooth_l1)
   .describe(R"code(Calculate Smooth L1 Loss(lhs, scalar) by summing
 
 .. math::
@@ -98,17 +98,40 @@ where :math:`x` is an element of the tensor *lhs* and :math:`\sigma` is the scal
 
 Example::
 
+  smooth_l1([1, 2, 3, 4]) = [0.5, 1.5, 2.5, 3.5]
   smooth_l1([1, 2, 3, 4], scalar=1) = [0.5, 1.5, 2.5, 3.5]
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<
-  cpu, mshadow_op::smooth_l1_loss>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser([](NodeAttrs* attrs) {
+    if (attrs->dict.find("scalar") != attrs->dict.end()) {
+      attrs->parsed = std::stod(attrs->dict["scalar"]);
+    } else {
+      attrs->parsed = 1.0;
+    }
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                [](const NodeAttrs& attrs){
+                                  return std::vector<std::pair<int, int> >{{0, 0}};
+                                })
+.add_argument("data", "NDArray-or-Symbol", "source input")
+.add_argument("scalar", "float", "scalar input")
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::smooth_l1_loss>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_smooth_l1" });
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_smooth_l1)
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
-  cpu, mshadow_op::smooth_l1_gradient>);
+  .set_attr_parser([](NodeAttrs *attrs) {
+      if (attrs->dict.find("scalar") != attrs->dict.end()) {
+        attrs->parsed = std::stod(attrs->dict["scalar"]);
+      } else {
+        attrs->parsed = 1.0;
+      }
+})
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryScalarOp::Backward<cpu, mshadow_op::smooth_l1_gradient>);
 
 }  // namespace op
 }  // namespace mxnet

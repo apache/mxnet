@@ -29,12 +29,16 @@ namespace op {
 DMLC_REGISTER_PARAMETER(QuadraticParam);
 
 NNVM_REGISTER_OP(_contrib_quadratic)
-.describe(R"code(This operators implements the quadratic function:
+.describe(R"code(This operators implements the quadratic function.
+
 .. math::
     f(x) = ax^2+bx+c
+
 where :math:`x` is an input tensor and all operations
 in the function are element-wise.
+
 Example::
+
   x = [[1, 2], [3, 4]]
   y = quadratic(data=x, a=1, b=2, c=3)
   y = [[6, 11], [18, 27]]

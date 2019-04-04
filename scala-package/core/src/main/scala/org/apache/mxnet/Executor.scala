@@ -26,7 +26,7 @@ object Executor {
   // Get the dictionary given name and ndarray pairs.
   private[mxnet] def getDict(names: Seq[String],
                              ndarrays: Seq[NDArray]): Map[String, NDArray] = {
-    require(names.toSet.size == names.length, "Duplicate names detected")
+    require(names.toSet.size == names.length, s"Duplicate names detected in ($names)")
     (names zip ndarrays).toMap
   }
 }
@@ -45,7 +45,7 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
-                              private[mxnet] val symbol: Symbol) extends WarnIfNotDisposed {
+                              private[mxnet] val symbol: Symbol) extends NativeResource {
   private[mxnet] var argArrays: Array[NDArray] = null
   private[mxnet] var gradArrays: Array[NDArray] = null
   private[mxnet] var auxArrays: Array[NDArray] = null
@@ -59,14 +59,15 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   private[mxnet] var _group2ctx: Map[String, Context] = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
-  private var disposed = false
-  protected def isDisposed = disposed
-
-  def dispose(): Unit = {
-    if (!disposed) {
-      outputs.foreach(_.dispose())
-      _LIB.mxExecutorFree(handle)
-      disposed = true
+  override def nativeAddress: CPtrAddress = handle
+  override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxExecutorFree
+  // cannot determine the off-heap size of this object
+  override val bytesAllocated: Long = 0
+  override val ref: NativeResourceRef = super.register()
+  override def dispose(): Unit = {
+    if (!super.isDisposed) {
+      super.dispose()
+      outputs.foreach(o => o.dispose())
     }
   }
 
@@ -86,7 +87,10 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   def reshape(partialShaping: Boolean = false, allowUpSizing: Boolean = false,
     kwargs: Map[String, Shape]): Executor = {
      val (argShapes, _, auxShapes) = this.symbol.inferShape(kwargs)
-     require(argShapes != null, "Insufficient argument shapes provided.")
+    // TODO: more precise error message should be provided by backend
+    require(argShapes != null, "Shape inference failed." +
+      s"Known shapes are $kwargs for symbol arguments ${symbol.listArguments()} " +
+      s"and aux states ${symbol.listAuxiliaryStates()}")
 
     var newArgDict = Map[String, NDArray]()
     var newGradDict = Map[String, NDArray]()
@@ -102,9 +106,9 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                         "is more efficient than the reverse." +
                         "If you really want to up size, set allowUpSizing = true " +
                         "to enable allocation of new arrays.")
-          newArgDict = newArgDict + (name -> NDArray.empty(newShape, arr.context))
+          newArgDict = newArgDict + (name -> NDArray.empty(newShape, arr.context, arr.dtype))
           if (dArr != null) {
-            newGradDict = newGradDict + (name -> NDArray.empty(newShape, dArr.context))
+            newGradDict = newGradDict + (name -> NDArray.empty(newShape, dArr.context, dArr.dtype))
           }
         } else {
           newArgDict = newArgDict + (name -> arr.reshape(newShape.toArray))
@@ -194,13 +198,13 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
    *                 on outputs that are not a loss function.
    */
   def backward(outGrads: Array[NDArray]): Unit = {
-    require(outGrads != null)
+    require(outGrads != null, "outGrads must not be null")
     val ndArrayPtrs = outGrads.map(_.handle)
     checkCall(_LIB.mxExecutorBackward(handle, ndArrayPtrs))
   }
 
   def backward(outGrad: NDArray): Unit = {
-    require(outGrad != null)
+    require(outGrad != null, "outGrads must not be null")
     backward(Array(outGrad))
   }
 
@@ -220,7 +224,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of argument arrrays.
    * @return The dictionary that maps name of arguments to NDArrays.
-   * @throws IllegalArgumentException if there are duplicated names in the arguments.
    */
   def argDict: Map[String, NDArray] = {
     if (_argDict == null) {
@@ -232,7 +235,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of gradient arrays.
    * @return The dictionary that maps name of arguments to gradient arrays.
-   * @throws IllegalArgumentException if there are duplicated names in the grads.
    */
   def gradDict: Map[String, NDArray] = {
     if (_gradDict == null) {
@@ -244,7 +246,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of auxiliary states arrays.
    * @return The dictionary that maps name of auxiliary states to NDArrays.
-   * @throws IllegalArgumentException if there are duplicated names in the auxiliary states.
    */
   def auxDict: Map[String, NDArray] = {
     if (_auxDict == null) {
@@ -261,8 +262,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
    *        Whether allow extra parameters that are not needed by symbol
    *        If this is True, no error will be thrown when arg_params or aux_params
    *        contain extra parameters that is not needed by the executor.
-   * @throws IllegalArgumentException
-   *         If there is additional parameters in the dict but allow_extra_params=False
    */
   def copyParamsFrom(argParams: Map[String, NDArray],
                      auxParams: Map[String, NDArray],
@@ -271,7 +270,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
       if (argDict.contains(name)) {
         array.copyTo(argDict(name))
       } else {
-        require(allowExtraParams, s"Find name $name that is not in the arguments")
+        require(allowExtraParams, s"Provided name $name is not in the arguments")
       }
     }
     if (auxParams != null) {
@@ -279,7 +278,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
         if (auxDict.contains(name)) {
           array.copyTo(auxDict(name))
         } else {
-          require(allowExtraParams, s"Find name $name that is not in the auxiliary states")
+          require(allowExtraParams, s"Provided name $name is not in the auxiliary states")
         }
       }
     }
@@ -302,4 +301,5 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     checkCall(_LIB.mxExecutorPrint(handle, str))
     str.value
   }
+
 }

@@ -56,7 +56,7 @@ namespace op {
 #endif
 #endif  // MXNET_NO_INLINE
 
-#define OUTSIDE_COUNT_SHIFT    9
+#define OUTSIDE_COUNT_SHIFT  3
 
 namespace tune {
 
@@ -356,7 +356,8 @@ class OperatorTune : public OperatorTuneByType<DType> {
   static duration_t GetOMPLoopOverhead() {
     // It was found empirically that OMP times was not heavily tied to number of cores,
     // so take an average across all core counts
-    const auto max_cores = static_cast<size_t>(omp_get_num_procs()) >> 1;
+    const auto max_cores_default = static_cast<size_t>(omp_get_num_procs()) >> 1;
+    const auto max_cores = dmlc::GetEnv("MXNET_USE_NUM_CORES_OPERATOR_TUNING", max_cores_default);
     if (max_cores >= 2) {
       std::vector<duration_t> core_times;
       // Take care of any OMP lazy-init with a throwaway call
