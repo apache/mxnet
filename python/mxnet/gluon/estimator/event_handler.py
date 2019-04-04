@@ -97,6 +97,9 @@ class LoggingHandler(EventHandler):
         self.logger.setLevel(logging.INFO)
         stream_handler = logging.StreamHandler()
         self.logger.addHandler(stream_handler)
+        if verbose <= 0 or verbose > 2:
+            raise ValueError("verbose value must be either 1 or 2, received %s."
+                             % verbose)
         self.verbose = verbose
         # save logger to file only if file name or location is specified
         if file_name or file_location:
