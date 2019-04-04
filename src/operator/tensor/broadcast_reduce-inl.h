@@ -153,9 +153,9 @@ MSHADOW_XINLINE void binary_broadcast_assign(const index_t idx, const bool addto
   assign(&out[idx], addto, OP::Map(lhs[j], rhs[k]));
 }
 
-template<typename Reducer, int ndim, typename AType, typename DType, typename OP>
+template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
 MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const bool addto,
-                                       const DType* __restrict big, DType *small,
+                                       const DType* __restrict big, OType *small,
                                        const Shape<ndim>& bshape, const Shape<ndim>& sshape,
                                        const Shape<ndim>& rshape, const Shape<ndim>& rstride) {
   Shape<ndim> coord = unravel(idx, sshape);
@@ -167,7 +167,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const 
     Reducer::Reduce(val, AType(OP::Map(big[j + dot(coord, rstride)])), residual);
   }
   Reducer::Finalize(val, residual);
-  assign(&small[idx], addto, DType(val));
+  assign(&small[idx], addto, OType(val));
 }
 
 #ifdef __CUDACC__
@@ -194,14 +194,14 @@ void BinaryBroadcastComputeImpl(Stream<cpu> *s, const OpReqType req,
                            out.shape_.get<ndim>());
 }
 
-template<typename Reducer, int ndim, typename AType, typename DType, typename OP>
+template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
 void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
-                        const DType *big, DType *small, const Shape<ndim> bshape,
+                        const DType *big, OType *small, const Shape<ndim> bshape,
                         const Shape<ndim> sshape, const Shape<ndim> rshape,
                         const Shape<ndim> rstride) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
-    seq_reduce_assign<Reducer, ndim, AType, DType, OP>(idx, M, addto, big, small,
+    seq_reduce_assign<Reducer, ndim, AType, DType, OType, OP>(idx, M, addto, big, small,
         bshape, sshape, rshape, rstride);
   }
 }
@@ -235,15 +235,18 @@ void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
   diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
   size_t N = small.shape_.Size(), M = rshape.Size();
   if (!safe_acc) {
-    seq_reduce_compute<Reducer, ndim, DType, DType, OP>(
+    seq_reduce_compute<Reducer, ndim, DType, DType, DType, OP>(
       N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(),
       big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
   } else {
     MXNET_REAL_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
-      seq_reduce_compute<Reducer, ndim, AccType, DataType, OP>(
-        N, M, req == kAddTo, big.dptr<DataType>(), small.dptr<DataType>(),
-        big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
+      MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+        typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
+        seq_reduce_compute<Reducer, ndim, AccType, DataType, OutType, OP>(
+          N, M, req == kAddTo, big.dptr<DataType>(), small.dptr<OutType>(),
+          big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
+      });
     });
   }
 }
