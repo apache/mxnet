@@ -5243,6 +5243,7 @@ def test_custom_op():
     def custom_add_exc():
         a = mx.nd.array([1, 2, 3])
         b = mx.nd.array([4, 5])
+        # trigger exception by providing unmatched operand shapes
         c = mx.nd.Custom(a, b, op_type='AdditionOP')
         c.wait_to_read()
 
