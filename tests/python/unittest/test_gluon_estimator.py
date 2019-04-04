@@ -276,47 +276,6 @@ def test_context():
                         context='cpu')
 
 
-def test_batch_size():
-    '''Test batch size'''
-    num_samples = 32
-
-    # No Data Loader
-    data = mx.nd.random.uniform(shape=(num_samples, 3, 28, 28))
-    label = mx.nd.random.randint(low=0, high=2, shape=(num_samples,))
-    data_iter = mx.io.NDArrayIter(data=data, label=label, batch_size=16)
-    net = get_model()
-    loss = mx.gluon.loss.L2Loss()
-    ctx = mx.cpu()
-    est = Estimator(net=net, loss=loss, context=ctx)
-    with assert_raises(ValueError):
-        est.fit(train_data=data_iter)
-
-    # Empty data loader
-    data = mx.nd.random.uniform(shape=(0,))
-    label = mx.nd.random.randint(low=0, high=2, shape=(0,))
-    batch_size = 2
-    data_arr = mx.gluon.data.dataset.ArrayDataset(data, label)
-    data_loader = mx.gluon.data.DataLoader(data_arr, batch_size=batch_size)
-    est = Estimator(net=net, loss=loss, context=ctx)
-    with assert_raises(ValueError):
-        est.fit(train_data=data_loader)
-
-    # Batch size less than context
-    ctx = [mx.cpu() for _ in range(4)]
-    data = mx.nd.random.uniform(shape=(num_samples, 3, 28, 28))
-    label = mx.nd.random.randint(low=0, high=2, shape=(num_samples,))
-    batch_size = 2
-    data_arr = mx.gluon.data.dataset.ArrayDataset(data, label)
-    data_loader = mx.gluon.data.DataLoader(data_arr, batch_size=batch_size)
-    est = Estimator(net=net, loss=loss, context=ctx)
-    with assert_raises(ValueError):
-        est.fit(train_data=data_loader)
-
-    # Batch size verification
-    _, _, inferred_batch_size = est._infer_data_info(data_loader)
-    assert inferred_batch_size == batch_size, "Batch size mismatch"
-
-
 def test_categorize_handlers():
     class CustomHandler1(EventHandler):
         def __init__(self):
