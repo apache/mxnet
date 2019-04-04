@@ -436,6 +436,7 @@ int MXPredGetOutputShape(PredictorHandle handle,
       << "Index exceed number of outputs";
 
   const mxnet::TShape& s = p->out_shapes[out_index];
+  CHECK_GE(s.ndim(), 0);
   p->out_shapes_buffer.resize(s.ndim());
   nnvm::ShapeTypeCast(s.begin(), s.end(), p->out_shapes_buffer.data());
   *shape_data = p->out_shapes_buffer.data();
