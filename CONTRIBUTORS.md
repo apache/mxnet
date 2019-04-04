@@ -235,6 +235,7 @@ List of Contributors
 * [Xinyu Chen](https://github.com/xinyu-intel)
 * [Zhennan Qin](https://github.com/ZhennanQin)
 * [Zhiyuan Huang](https://github.com/huangzhiyuan)
+* [Zak Jost](https://github.com/zjost)
 
 Label Bot
 ---------
