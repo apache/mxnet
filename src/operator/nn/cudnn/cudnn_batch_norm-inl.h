@@ -84,7 +84,6 @@ class CuDNNBatchNormOp {
     }
     CHECK_EQ(req[cudnnbatchnorm::kOut], kWriteTo);
     CHECK_GE(in_data[cudnnbatchnorm::kData].ndim(), 2);
-    CHECK_LE(in_data[cudnnbatchnorm::kData].ndim(), 4);
 
     Init(in_data[cudnnbatchnorm::kData]);
     Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -273,12 +272,15 @@ class CuDNNBatchNormOp {
 
  private:
   void Init(const TBlob &in_data) {
-    for (int i = 0; i < 4; ++i) {
-      if (i < in_data.ndim()) {
+    if (in_data.ndim() == 4) {
+      for (int i = 0; i < 4; ++i)
         shape_[i] = in_data.shape_[i];
-      } else {
-        shape_[i] = 1;
-      }
+    } else {
+      // when in_data.ndim() != 4
+      shape_[0] = in_data.shape_[0];
+      shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
+      shape_[2] = 1;
+      shape_[3] = in_data.shape_.ProdShape(2, in_data.ndim());
     }
 
     CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,

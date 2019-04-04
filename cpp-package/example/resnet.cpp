@@ -172,6 +172,7 @@ int main(int argc, char const *argv[]) {
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 
+  TRY
   auto resnet = ResNetSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
@@ -277,5 +278,6 @@ int main(int argc, char const *argv[]) {
   delete exec;
   delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

@@ -17,16 +17,16 @@
 
 # Nightly Tests for MXNet 
 
-These are some longer running tests that are scheduled to run every night. 
+These are some longer running tests that are scheduled to run every night, for master and for latest release branches. 
 
 ### Description
 There are two Jenkins pipelines that run these tests - 
-1. Tests on the Source code: http://jenkins.mxnet-ci.amazon-ml.com/view/Nightly%20Tests/job/NightlyTests_onSource/
-2. Tests on Built Binaries: http://jenkins.mxnet-ci.amazon-ml.com/view/Nightly%20Tests/job/NightlyTests_onBinaries/
+1. [Tests on source code](http://jenkins.mxnet-ci.amazon-ml.com/job/NightlyTests/)
+2. [Tests on built binaries](http://jenkins.mxnet-ci.amazon-ml.com/job/NightlyTestsForBinaries/)
 
 ### Adding a new Nightly Test
-Add your test script to the mxnet repo (preferably)in the tests/nightly folder)
-Make sure to describe in a readme or comments the purpose of the test. 
+Add your test script to the MXNet repo's `tests/nightly/` folder. Make sure to describe in a readme or in the 
+comments the purpose of the test. 
 
 #### Setting up the Docker Container 
 1. Your test must run on the CI slaves only within an official docker container available at ci/docker
