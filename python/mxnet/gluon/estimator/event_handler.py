@@ -85,21 +85,25 @@ class LoggingHandler(EventHandler):
         file name to save the logs
     file_location: str
         file location to save the logs
-    verbose: int, default 1
-        Limit the display level of training progress
-        verbose=1: display metrics every epoch
-        verbose=2: display metrics every batch and epoch
+    verbose: int, default ONLY_EPOCH
+        Limit the granularity of metrics displayed during training process
+        verbose=ONLY_EPOCH: display metrics every epoch
+        verbose=BATCH_WITH_EPOCH: display metrics every batch and epoch
     """
 
-    def __init__(self, file_name=None, file_location=None, verbose=1):
+    ONLY_EPOCH = 1
+    BATCH_WITH_EPOCH = 2
+
+    def __init__(self, file_name=None, file_location=None, verbose=ONLY_EPOCH):
         super(LoggingHandler, self).__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
         stream_handler = logging.StreamHandler()
         self.logger.addHandler(stream_handler)
-        if verbose <= 0 or verbose > 2:
-            raise ValueError("verbose value must be either 1 or 2, received %s."
-                             % verbose)
+        if verbose not in [__class__.ONLY_EPOCH, __class__.BATCH_WITH_EPOCH]:
+            raise ValueError("verbose level must be either ONLY_EPOCH or BATCH_WITH_EPOCH, "
+                             "received %s. "
+                             "E.g: LoggingHandler(verbose=LoggingHandler.ONLY_EPOCH)" % verbose)
         self.verbose = verbose
         # save logger to file only if file name or location is specified
         if file_name or file_location:
@@ -126,11 +130,11 @@ class LoggingHandler(EventHandler):
         self.logger.info(msg)
 
     def batch_begin(self):
-        if self.verbose == 2:
+        if self.verbose == __class__.BATCH_WITH_EPOCH:
             self.batch_start = time.time()
 
     def batch_end(self):
-        if self.verbose == 2:
+        if self.verbose == __class__.BATCH_WITH_EPOCH:
             batch_time = time.time() - self.batch_start
             epoch = self.estimator.current_epoch
             batch = self.estimator.batch_idx
@@ -145,11 +149,11 @@ class LoggingHandler(EventHandler):
             self.logger.info(msg)
 
     def epoch_begin(self):
-        if self.verbose > 0:
+        if self.verbose > __class__.ONLY_EPOCH:
             self.epoch_start = time.time()
 
     def epoch_end(self):
-        if self.verbose > 0:
+        if self.verbose > __class__.ONLY_EPOCH:
             epoch_time = time.time() - self.epoch_start
             epoch = self.estimator.current_epoch
             msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
