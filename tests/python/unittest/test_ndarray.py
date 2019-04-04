@@ -1,4 +1,4 @@
-# Licensed to the Apache Software Foundation (ASF) under one
+    # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
 # regarding copyright ownership.  The ASF licenses this file
@@ -491,10 +491,11 @@ def test_dot():
 
 @raises(mx.base.MXNetError)
 def test_gemm_overflow():
-	# 100 * 6000 * 7000 overflows signed int32
-	a = mx.nd.random.uniform(shape=(100, 6000, 1))
-	b = mx.nd.random.uniform(shape=(100, 1, 7000))
-	c = mx.nd.batch_dot(a, b)
+    # 100 * 6000 * 7000 overflows signed int32
+    a = mx.nd.random.uniform(shape=(100, 6000, 1))
+    b = mx.nd.random.uniform(shape=(100, 1, 7000))
+    c = mx.nd.batch_dot(a, b)
+    c.wait_to_read()
 
 
 @with_seed()
