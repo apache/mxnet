@@ -213,6 +213,73 @@ def test_quantized_conv():
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), True, qdtype)
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), False, qdtype)
 
+
+@with_seed()
+def test_quantized_sum():
+    def check_quantized_sum(data_shape, qtype):
+        if is_test_for_native_cpu():
+            print('skipped testing quantized_sum for native cpu since it is not supported yet')
+            return
+        elif qtype != 'uint8' and qtype != 'int8':
+            print('skipped testing quantized_sum for not supported data type')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing quantized_sum for gpu since it is not supported yet')
+            return
+
+        dataA = mx.sym.Variable(name='dataA', shape=data_shape, dtype='float32')
+        dataB = mx.sym.Variable(name='dataB', shape=data_shape, dtype='float32')
+        sum_fp32 = mx.sym.elemwise_add(dataA, dataB)
+        arg_names = sum_fp32.list_arguments()
+        sum_fp32_exe = sum_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        if qtype == 'uint8':
+            data_low = 0.0
+            data_high = 127.0
+        else:
+            data_low = -127.0
+            data_high = 127.0
+
+        dataA_val = mx.nd.random.uniform(low=data_low, high=data_high, shape=data_shape).astype('int32')
+        dataB_val = mx.nd.random.uniform(low=data_low, high=data_high, shape=data_shape).astype('int32')
+        sum_fp32_exe.arg_dict[arg_names[0]][:] = dataA_val
+
+        sum_fp32_exe.arg_dict[arg_names[1]][:] = dataB_val
+
+        output = sum_fp32_exe.forward()[0]
+
+        qdataA = mx.sym.Variable(name='qdataA', shape=data_shape, dtype=qtype)
+        qdataB = mx.sym.Variable(name='qdataB', shape=data_shape, dtype=qtype)
+        min_dataA = mx.sym.Variable(name='min_dataA')
+        max_dataA = mx.sym.Variable(name='max_dataA')
+        min_dataB = mx.sym.Variable(name='min_dataB')
+        max_dataB = mx.sym.Variable(name='max_dataB')
+        quantized_sum = mx.sym.contrib.quantized_sum(qdataA, qdataB, min_dataA, max_dataA, min_dataB, max_dataB)
+        sum_int8_exe = quantized_sum.simple_bind(ctx=mx.current_context(), grad_req='null')
+        qarg_names = quantized_sum.list_arguments()
+        sum_int8_exe.arg_dict[qarg_names[0]][:] = sum_fp32_exe.arg_dict[arg_names[0]].astype(qtype)
+        sum_int8_exe.arg_dict[qarg_names[1]][:] = sum_fp32_exe.arg_dict[arg_names[1]].astype(qtype)
+        quantized_range = 127.0
+        sum_int8_exe.arg_dict[qarg_names[2]][:] = data_low
+        sum_int8_exe.arg_dict[qarg_names[3]][:] = data_high
+        sum_int8_exe.arg_dict[qarg_names[4]][:] = data_low
+        sum_int8_exe.arg_dict[qarg_names[5]][:] = data_high
+        qoutput, min_range, max_range = sum_int8_exe.forward()
+        min_val = min_range.asnumpy().tolist()[0]
+        max_val = max_range.asnumpy().tolist()[0]
+        max_abs = max(abs(min_val), abs(max_val))
+
+        fp32_rslt = output.asnumpy()
+        int8_rslt = qoutput.asnumpy()
+        fp32_to_int8_rslt = (fp32_rslt*data_high/max_abs).astype(int)
+        assert_almost_equal(int8_rslt, fp32_to_int8_rslt, atol = 1)
+
+    for qtype in ['int8', 'uint8']:
+        check_quantized_sum((4, 6), qtype)
+        check_quantized_sum((13, 74, 52), qtype)
+        check_quantized_sum((3, 4, 56, 56), qtype)
+        check_quantized_sum((32, 56, 64, 11), qtype)
+
+
 @with_seed()
 def test_quantized_pooling():
     def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool, qdtype, convention='valid'):
