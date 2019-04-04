@@ -209,7 +209,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
       oshape[inf_idx] = dshape.Size() / oshape.Size();
     }
   } else {
-    return shape_is_known((*out_attrs)[0]) && ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
+    return shape_is_known((*out_attrs)[0])
+           && ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
   }
   ReverseReshapeInferShape(&dshape, oshape);
 #if 0
