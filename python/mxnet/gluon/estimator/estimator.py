@@ -22,8 +22,6 @@
 import copy
 import warnings
 
-import numpy as np
-
 from .event_handler import EventHandler, LoggingHandler
 from ... import gluon, autograd
 from ...context import Context, cpu, gpu, num_gpus
@@ -61,7 +59,177 @@ class Estimator(object):
                  context=None):
 
         self.net = net
+        self._check_loss(loss, loss_weights)
+        self._check_metrics(metrics)
+        self._check_context(context)
+        self._initialize(initializer)
+        self._check_trainer(trainer)
 
+    def evaluate(self,
+                 val_data,
+                 batch_fn=None):
+        """Evaluate model on validation data
+
+         Parameters
+         ----------
+         val_data : DataLoader or DataIter
+             validation data with data and labels
+         batch_fn : function
+             custom batch function to extract data and label
+             from a data batch and load into contexts(devices)
+         """
+
+        for metric in self.val_metrics + self.val_loss:
+            metric.reset()
+
+        for _, batch in enumerate(val_data):
+            if not batch_fn:
+                if isinstance(val_data, gluon.data.DataLoader):
+                    data, label = self._batch_fn(batch, self.context)
+                elif isinstance(val_data, DataIter):
+                    data, label = self._batch_fn(batch, self.context, is_iterator=True)
+                else:
+                    raise ValueError("You are using a custom iteration, please also provide "
+                                     "batch_fn to extract data and label. Alternatively, you "
+                                     "can provide the data as gluon.data.DataLoader or "
+                                     "mx.io.DataIter")
+            else:
+                data, label = batch_fn(batch, self.context)
+            pred = [self.net(x) for x in data]
+            losses = []
+            for loss in self.loss:
+                losses.append([loss(y_hat, y) for y_hat, y in zip(pred, label)])
+            # update metrics
+            for metric in self.val_metrics:
+                metric.update(label, pred)
+                name, value = metric.get()
+                self.train_stats['val_' + name] = value
+            for loss, loss_metric, in zip(losses, self.val_loss):
+                loss_metric.update(0, [l for l in loss])
+                name, value = loss_metric.get()
+                self.train_stats['val_' + name] = value
+
+    def fit(self, train_data,
+            val_data=None,
+            epochs=1,
+            event_handlers=None,
+            batch_fn=None):
+        """Main training loop
+
+        Parameters
+        ----------
+        train_data : DataLoader or DataIter
+            training data with data and labels
+        val_data : DataLoader or DataIter
+            validation data with data and labels
+        epochs : int, default 1
+            number of epochs to iterate on the training data.
+        batch_size : int
+            number of samples per gradient update.
+            default will be 32 per device
+        event_handlers : EventHandler or list of EventHandler
+            list of EventHandlers to apply during training
+        batch_fn : function
+            custom batch function to extract data and label
+            from a data batch and load into contexts(devices)
+        """
+
+        self.max_epoch = epochs
+        self.stop_training = False
+        self.samples = None
+        self.batch_idx = 0
+
+        event_handlers = event_handlers or []
+        # provide default logging handler
+        if not event_handlers or \
+                not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
+            event_handlers.append(LoggingHandler())
+
+        train_begin, epoch_begin, batch_begin, \
+        batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
+
+        # passing estimator to event handlers so they can access estimator information
+        # when a event is triggered
+        for handler in event_handlers:
+            handler.estimator = self
+
+        # training begin
+        for handler in train_begin:
+            handler.train_begin()
+
+        num_labels = self._infer_num_labels(self.loss)
+        for i, batch in enumerate(train_data):
+            first_batch = batch
+            break
+        num_inputs = self._infer_num_inputs(first_batch, num_labels)
+        fit_helper = FitHelper(num_inputs, num_labels)
+
+        for epoch in range(self.max_epoch):
+            # epoch begin
+            self.current_epoch = epoch
+
+            for handler in epoch_begin:
+                handler.epoch_begin()
+
+            for metric in self.train_metrics + self.train_loss:
+                metric.reset()
+
+            for i, batch in enumerate(train_data):
+
+                if not batch_fn:
+                    if isinstance(train_data, gluon.data.DataLoader):
+                        data, label = fit_helper.get_data_label(batch, self.context)
+                    elif isinstance(train_data, DataIter):
+                        data, label = self._batch_fn(batch, self.context, is_iterator=True)
+                    else:
+                        raise ValueError("You are using a custom iteration, please also provide "
+                                         "batch_fn to extract data and label. Alternatively, you "
+                                         "can provide the data as gluon.data.DataLoader or "
+                                         "mx.io.DataIter")
+                else:
+                    data, label = batch_fn(batch, self.context)
+
+                # batch begin
+                for handler in batch_begin:
+                    handler.batch_begin()
+
+                with autograd.record():
+                    pred =  fit_helper.forward_pass(self.net, data)
+                    losses = fit_helper.calculate_loss(self.loss, pred, label, self.loss_weights, self.train_loss)
+
+                # backward loss per device
+                for loss in losses:
+                    loss.backward()
+
+                fit_helper.update_metrics(self.train_metrics, pred, label)
+
+                self.batch_idx = i
+                # record trained samples v.s. total samples if using Gluon DataLoader
+                if isinstance(train_data, gluon.data.DataLoader):
+                    self.samples = "{}/{}".format(batch[0].shape[0] * (i + 1), len(train_data._dataset))
+
+                self.trainer.step(batch[0].shape[0])
+                # batch end
+                for handler in batch_end:
+                    handler.batch_end()
+
+            if val_data:
+                self.val_metrics = copy.deepcopy(self.train_metrics)
+                self.val_loss = copy.deepcopy(self.train_loss)
+                self.evaluate(val_data, batch_fn)
+
+            # epoch end
+            for handler in epoch_end:
+                handler.epoch_end()
+
+            if self.stop_training:
+                break
+
+        # train end
+        for handler in train_end:
+            handler.train_end()
+
+    def _check_loss(self, loss, loss_weights):
         if isinstance(loss, gluon.loss.Loss):
             self.loss = [loss]
         elif isinstance(loss, list) and all([isinstance(l, gluon.loss.Loss) for l in loss]):
@@ -70,10 +238,16 @@ class Estimator(object):
             raise ValueError("loss must be a Loss or a list of Loss, "
                              "refer to gluon.loss.Loss:{}".format(loss))
 
-        self.loss_weights = loss_weights
-        if len(self.loss) > 1 and not self.loss_weights:
-            self.loss_weights = [1.0/len(self.loss) for _ in self.loss]
+        if len(self.loss) > 1:
+            if not loss_weights:
+                loss_weights = [1.0 / len(self.loss) for _ in self.loss]
+            if not isinstance(loss_weights, list):
+                raise ValueError("Please provide loss weights as a list to match the number of loss")
+            if len(self.loss) != len(loss_weights):
+                raise ValueError("Number of loss weights must match number of loss")
+            self.loss_weights = loss_weights
 
+    def _check_metrics(self, metrics):
         if isinstance(metrics, EvalMetric):
             self.train_metrics = [metrics]
         else:
@@ -86,20 +260,16 @@ class Estimator(object):
         if not self.train_metrics and any([isinstance(l, gluon.loss.SoftmaxCrossEntropyLoss) for l in self.loss]):
             self.train_metrics = [Accuracy()]
 
-        # Use same metrics for validation
-        self.val_metrics = copy.deepcopy(self.train_metrics)
+        # separate train and validation metrics and loss
+        self.val_metrics = []
+        self.train_loss = []
+        self.val_loss = []
 
-        # store training statistics
-        self.train_stats = {}
-
-        # separate train and validation
-        self.train_loss_metrics = []
-        self.val_loss_metrics = []
         # using the metric wrapper for loss to record loss value
         for l in self.loss:
-            self.train_loss_metrics.append(Loss(l.name))
-            self.val_loss_metrics.append(Loss(l.name))
+            self.train_loss.append(Loss(l.name))
 
+    def _check_context(self, context):
         # handle context
         if isinstance(context, Context):
             self.context = [context]
@@ -119,6 +289,7 @@ class Estimator(object):
             raise ValueError("context must be a Context or a list of Context, "
                              "refer to mxnet.Context:{}".format(context))
 
+    def _initialize(self, initializer):
         # initialize the network
         self.initializer = initializer
         if self.initializer:
@@ -135,6 +306,7 @@ class Estimator(object):
             if not self._is_initialized():
                 self.net.initialize(ctx=self.context)
 
+    def _check_trainer(self, trainer):
         # handle trainer
         if not trainer:
             warnings.warn("No trainer specified, default SGD optimizer "
@@ -167,185 +339,11 @@ class Estimator(object):
         label = gluon.utils.split_and_load(label, ctx_list=ctx, batch_axis=0)
         return data, label
 
-    def evaluate(self,
-                 val_data,
-                 batch_fn=None):
-        """Evaluate model on validation data
-
-         Parameters
-         ----------
-         val_data : DataLoader or DataIter
-             validation data with data and labels
-         batch_fn : function
-             custom batch function to extract data and label
-             from a data batch and load into contexts(devices)
-         """
-
-        for metric in self.val_metrics + self.val_loss_metrics:
-            metric.reset()
-
-        for _, batch in enumerate(val_data):
-            if not batch_fn:
-                if isinstance(val_data, gluon.data.DataLoader):
-                    data, label = self._batch_fn(batch, self.context)
-                elif isinstance(val_data, DataIter):
-                    data, label = self._batch_fn(batch, self.context, is_iterator=True)
-                else:
-                    raise ValueError("You are using a custom iteration, please also provide "
-                                     "batch_fn to extract data and label. Alternatively, you "
-                                     "can provide the data as gluon.data.DataLoader or "
-                                     "mx.io.DataIter")
-            else:
-                data, label = batch_fn(batch, self.context)
-            pred = [self.net(x) for x in data]
-            losses = []
-            for loss in self.loss:
-                losses.append([loss(y_hat, y) for y_hat, y in zip(pred, label)])
-            # update metrics
-            for metric in self.val_metrics:
-                metric.update(label, pred)
-                name, value = metric.get()
-                self.train_stats['val_' + name] = value
-            for loss, loss_metric, in zip(losses, self.val_loss_metrics):
-                loss_metric.update(0, [l for l in loss])
-                name, value = loss_metric.get()
-                self.train_stats['val_' + name] = value
-
-    def fit(self, train_data,
-            val_data=None,
-            epochs=1,
-            batch_size=None,
-            event_handlers=None,
-            batch_fn=None):
-        """Main training loop
-
-        Parameters
-        ----------
-        train_data : DataLoader or DataIter
-            training data with data and labels
-        val_data : DataLoader or DataIter
-            validation data with data and labels
-        epochs : int, default 1
-            number of epochs to iterate on the training data.
-        batch_size : int
-            number of samples per gradient update.
-            default will be 32 per device
-        event_handlers : EventHandler or list of EventHandler
-            list of EventHandlers to apply during training
-        batch_fn : function
-            custom batch function to extract data and label
-            from a data batch and load into contexts(devices)
-        """
-
-        self.max_epoch = epochs
-        if not batch_size:
-            self.batch_size = 32 * len(self.context)
-        else:
-            self.batch_size = batch_size
-        self.stop_training = False
-        self.samples = None
-        self.batch_idx = 0
-
-        event_handlers = event_handlers or []
-        # provide default logging handler
-        if not event_handlers or \
-                not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
-            event_handlers.append(LoggingHandler())
-
-        train_begin, epoch_begin, batch_begin, \
-        batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
-
-        # passing estimator to event handlers so they can access estimator information
-        # when a event is triggered
-        for handler in event_handlers:
-            handler.estimator = self
-
-        # training begin
-        for handler in train_begin:
-            handler.train_begin()
-
-        num_labels = self.infer_num_labels(self.loss)
-        for i, batch in enumerate(train_data):
-            first_batch = batch
-            break
-        num_inputs = self.infer_num_inputs(first_batch, num_labels)
-        fit_helper = FitHelper(num_inputs, num_labels)
-
-        for epoch in range(self.max_epoch):
-            # epoch begin
-            self.current_epoch = epoch
-
-            for handler in epoch_begin:
-                handler.epoch_begin()
-
-            for metric in self.train_metrics + self.train_loss_metrics:
-                metric.reset()
-
-            for i, batch in enumerate(train_data):
-
-                if not batch_fn:
-                    if isinstance(train_data, gluon.data.DataLoader):
-                        data, label = fit_helper.get_data_label(batch, self.context)
-                    elif isinstance(train_data, DataIter):
-                        data, label = self._batch_fn(batch, self.context, is_iterator=True)
-                    else:
-                        raise ValueError("You are using a custom iteration, please also provide "
-                                         "batch_fn to extract data and label. Alternatively, you "
-                                         "can provide the data as gluon.data.DataLoader or "
-                                         "mx.io.DataIter")
-                else:
-                    data, label = batch_fn(batch, self.context)
-
-                # batch begin
-                for handler in batch_begin:
-                    handler.batch_begin()
-
-                with autograd.record():
-                    pred =  fit_helper.forward_pass(self.net, data)
-                    losses = fit_helper.calculate_loss(self.loss, pred, label, self.loss_weights, self.train_loss_metrics)
-
-                # backward loss per device
-                for loss in losses:
-                    loss.backward()
-
-                fit_helper.update_metrics(self.train_metrics, pred, label)
-
-                self.update_train_stats( self.train_metrics + self.train_loss_metrics, self.train_stats, 'train')
-
-                self.batch_idx = i
-                # record trained samples v.s. total samples if using Gluon DataLoader
-                if isinstance(train_data, gluon.data.DataLoader):
-                    self.samples = "{}/{}".format(self.batch_size * (i + 1), len(train_data._dataset))
-
-                self.trainer.step(self.batch_size)
-                # batch end
-                for handler in batch_end:
-                    handler.batch_end()
-
-            if val_data:
-                self.evaluate(val_data, batch_fn)
-
-            # epoch end
-            for handler in epoch_end:
-                handler.epoch_end()
-
-            if self.stop_training:
-                break
-
-        # train end
-        for handler in train_end:
-            handler.train_end()
-
-    def infer_num_labels(self, loss):
+    def _infer_num_labels(self, loss):
         return len(loss)
 
-    def infer_num_inputs(self, batch, num_labels):
+    def _infer_num_inputs(self, batch, num_labels):
         return len(batch) - num_labels
-
-    def update_train_stats(self, metrics, stats, prefix):
-        for metric in metrics:
-            name, value = metric.get()
-            stats['%s_%s' % (prefix, name)] = value
 
     def _categorize_handlers(self, event_handlers):
         """

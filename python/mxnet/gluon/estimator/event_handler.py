@@ -113,8 +113,12 @@ class LoggingHandler(EventHandler):
         epoch = self.estimator.current_epoch
         msg = 'Train finished using total %ds at epoch %d. ' % (train_time, epoch)
         # log every result in train stats including train/validation loss & metrics
-        for key in self.estimator.train_stats:
-            msg += '%s : %.4f ' % (key, self.estimator.train_stats[key])
+        for metric in self.estimator.train_metrics + self.estimator.train_loss:
+            name, value = metric.get()
+            msg += 'train %s: %.4f ' % (name, value)
+        for metric in self.estimator.val_metrics + self.estimator.val_loss:
+            name, value = metric.get()
+            msg += 'val %s: %.4f ' % (name, value)
         self.logger.info(msg)
 
     def batch_begin(self):
@@ -128,10 +132,9 @@ class LoggingHandler(EventHandler):
         if self.estimator.samples:
             msg += '[Samples %s] ' % (self.estimator.samples)
         msg += 'time/batch: %.3fs ' % batch_time
-        for key in self.estimator.train_stats:
-            # only log current training loss & metric after each batch
-            if key.startswith('train_'):
-                msg += key + ': ' + '%.4f ' % self.estimator.train_stats[key]
+        for metric in self.estimator.train_metrics + self.estimator.train_loss:
+            name, value = metric.get()
+            msg += '%s: %.4f ' % (name, value)
         self.logger.info(msg)
 
     def epoch_begin(self):
@@ -142,8 +145,12 @@ class LoggingHandler(EventHandler):
         epoch = self.estimator.current_epoch
         msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
         # log every result in train stats including train/validation loss & metrics
-        for key in self.estimator.train_stats:
-            msg += '%s : %.4f ' % (key, self.estimator.train_stats[key])
+        for metric in self.estimator.train_metrics + self.estimator.train_loss:
+            name, value = metric.get()
+            msg += 'train %s: %.4f ' % (name, value)
+        for metric in self.estimator.val_metrics + self.estimator.val_loss:
+            name, value = metric.get()
+            msg += 'val %s: %.4f ' % (name, value)
         self.logger.info(msg)
 
 
@@ -174,7 +181,8 @@ class CheckpointHandler(EventHandler):
 
     def __init__(self,
                  filepath,
-                 monitor='val_accuracy',
+                 monitor=None,
+                 monitor_validaton=True,
                  verbose=0,
                  save_best_only=False,
                  mode='auto',
