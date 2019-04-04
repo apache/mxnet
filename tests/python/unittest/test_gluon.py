@@ -1190,16 +1190,30 @@ def test_activations():
     def selu_test(x):
         def selu(x):
             scale, alpha = 1.0507009873554804934193349852946, 1.6732632423543772848170429916717
-            return scale * x if x >= 0 else alpha * mx.nd.exp(x) - alpha
+            return scale * x if x >= 0 else scale * alpha * mx.nd.expm1(x)
         return [selu(x_i) for x_i in x]
 
-    for test_point, ref_point in zip(selu(point_to_validate), selu(point_to_validate)):
+    for test_point, ref_point in zip(selu_test(point_to_validate), selu(point_to_validate)):
         assert test_point == ref_point
 
     prelu = mx.gluon.nn.PReLU()
     prelu.initialize()
     x = point_to_validate.reshape((1, 3, 2))
     assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
+
+    gelu = mx.gluon.nn.GELU()
+    def gelu_test(x):
+        CUBE_CONSTANT = 0.044715
+        ROOT_TWO_OVER_PI = 0.7978845608028654
+        def g(x):
+            return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * x * x * x)
+        def f(x):
+            return 1.0 + mx.nd.tanh(g(x))
+        def gelu(x):
+            return 0.5 * x * f(x)
+        for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
+            assert test_point == ref_point
+
 
 @with_seed()
 def test_dropout():

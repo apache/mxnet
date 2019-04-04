@@ -863,6 +863,39 @@ def test_selu():
 
 
 @with_seed()
+def test_gelu():
+    CUBE_CONSTANT = 0.044715
+    ROOT_TWO_OVER_PI = 0.7978845608028654
+    def g(x):
+        return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * np.power(x, 3))
+    def g_grad(x):
+        return ROOT_TWO_OVER_PI * (1.0 + 3.0 * CUBE_CONSTANT * np.power(x, 2))
+    def f(x):
+        return 1.0 + np.tanh(g(x))
+    def f_grad(x):
+        return (1.0 - np.tanh(g(x)) * np.tanh(g(x))) * g_grad(x)
+    def fgelu(x):
+        return 0.5 * x * f(x)
+    def fgelu_grad(grad, x, y):
+        return grad * (y / x + y * (1 - np.tanh(g(x))) * g_grad(x))
+
+    shape = (3, 4)
+    x = mx.sym.Variable("x")
+    y = mx.sym.LeakyReLU(data=x, act_type="gelu")
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
+        eps, rtol, atol = (7.5e-4, 1e-1, 1e-2) if dtype is np.float16 else (1e-4, 1e-2, 1e-4)
+        if dtype is np.float16:
+            xa /= 10.0
+        xa[abs(xa) < eps] = 0.01
+        ya = fgelu(xa)
+        ga = fgelu_grad(np.ones(shape).astype(dtype), xa, ya)
+        check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+
+
+@with_seed()
 def test_sigmoid():
     def fsigmoid(a):
         return np.divide(1.0, (1.0 + np.exp(-a)))
