@@ -23,7 +23,7 @@ import copy
 import warnings
 from mxnet import nd
 import numpy as np
-from .event_handler import LoggingHandler
+from .event_handler import EventHandler, LoggingHandler
 from ... import gluon, autograd
 from ...context import Context, cpu, gpu, num_gpus
 from ...metric import EvalMetric, Loss, Accuracy
@@ -39,27 +39,26 @@ class Estimator(object):
 
     Parameters
     ----------
-    loss : Loss or list of Loss
+    loss : gluon.loss.Loss or list of gluon.loss.Loss
         Loss(objective functions) to calculate during training
     metrics : EvalMetric or list of EvalMetric
         Metrics for evaluating models
     initializer : Initializer
         initializer to initialize the network
-    trainers : Trainer or list of Trainer
-        Trainers to apply optimizers on network parameters
+    trainer : Trainer
+        Trainer to apply optimizer on network parameters
     context : Context or list of Context
         devices to run the training on
     """
 
     def __init__(self, net,
-                 loss=None,
+                 loss,
                  metrics=None,
                  initializer=None,
-                 trainers=None,
+                 trainer=None,
                  context=None):
 
         self.net = net
-        self.stop_training = False
 
         if isinstance(loss, gluon.loss.Loss):
             self.loss = [loss]
@@ -86,27 +85,14 @@ class Estimator(object):
 
         # store training statistics
         self.train_stats = {}
-        self.train_stats['epochs'] = []
-        self.train_stats['learning_rate'] = []
-        # current step of the epoch
-        self.train_stats['step'] = ''
-        for metric in self.train_metrics:
-            # record a history of metrics over each epoch
-            self.train_stats['train_' + metric.name] = []
-            # only record the latest metric numbers after each batch
-            self.train_stats['batch_' + metric.name] = 0.
-        for metric in self.val_metrics:
-            self.train_stats['val_' + metric.name] = []
+
+        # separate train and validation
         self.train_loss_metrics = []
         self.val_loss_metrics = []
         # using the metric wrapper for loss to record loss value
         for l in self.loss:
             self.train_loss_metrics.append(Loss(l.name))
             self.val_loss_metrics.append(Loss(l.name))
-            self.train_stats['train_' + l.name] = []
-            self.train_stats['val_' + l.name] = []
-            # only record the latest loss numbers after each batch
-            self.train_stats['batch_' + l.name] = 0.
 
         # handle context
         if isinstance(context, Context):
@@ -143,16 +129,17 @@ class Estimator(object):
             if not self._is_initialized():
                 self.net.initialize(ctx=self.context)
 
-        # handle trainers
-        if isinstance(trainers, gluon.Trainer):
-            self.trainers = [trainers]
-        elif not trainers:
+        # handle trainer
+        if not trainer:
             warnings.warn("No trainer specified, default SGD optimizer "
                           "with learning rate 0.001 is used.")
-            self.trainers = [gluon.Trainer(self.net.collect_params(),
-                                           'sgd', {'learning_rate': 0.001})]
+            self.trainer = gluon.Trainer(self.net.collect_params(),
+                                         'sgd', {'learning_rate': 0.001})
+        elif not isinstance(trainer, gluon.Trainer):
+            raise ValueError("Trainer must be a Gluon Trainer instance, refer to "
+                             "gluon.Trainer:{}".format(trainer))
         else:
-            raise ValueError("Invalid trainer specified, please provide a valid gluon.Trainer")
+            self.trainer = trainer
 
     def _is_initialized(self):
         param_dict = self.net.collect_params()
@@ -245,8 +232,12 @@ class Estimator(object):
             # update metrics
             for metric in self.val_metrics:
                 metric.update(label, pred)
+                name, value = metric.get()
+                self.train_stats['val_' + name] = value
             for loss, loss_metric, in zip(losses, self.val_loss_metrics):
                 loss_metric.update(0, [l for l in loss])
+                name, value = loss_metric.get()
+                self.train_stats['val_' + name] = value
 
     def fit(self, train_data,
             val_data=None,
@@ -274,7 +265,7 @@ class Estimator(object):
             from a data batch and load into contexts(devices)
         """
 
-        self.epochs = epochs
+        self.max_epoch = epochs
         num_batches, total_samples, batch_size = self._infer_data_info(train_data)
 
         if isinstance(self.context, list):
@@ -282,26 +273,36 @@ class Estimator(object):
                 raise ValueError("Batch size is too small to be split and loaded into the list "
                                  "of devices you provided in context. Please provide the batch size value"
                                  "greater than the number of devices in your system")
+        self.stop_training = False
+        self.samples = None
+        self.batch_idx = 0
 
         event_handlers = event_handlers or []
         # provide default logging handler
         if not event_handlers or \
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
-            event_handlers.append(LoggingHandler(self))
+            event_handlers.append(LoggingHandler())
             warnings.warn("No Event Handler specified, default `LoggingHandler()` "
                           "is used with verbose=1. Please look at gluon.estimator.event_handler"
                           "for more detail.")
 
-        # training begin
+        train_begin, epoch_begin, batch_begin, \
+        batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
+
+        # passing estimator to event handlers so they can access estimator information
+        # when a event is triggered
         for handler in event_handlers:
+            handler.estimator = self
+
+        # training begin
+        for handler in train_begin:
             handler.train_begin()
 
-        for epoch in range(epochs):
+        for epoch in range(self.max_epoch):
             # epoch begin
-            self.train_stats['epochs'].append(epoch)
-            self.train_stats['learning_rate'].append(self.trainers[0].learning_rate)
+            self.current_epoch = epoch
 
-            for handler in event_handlers:
+            for handler in epoch_begin:
                 handler.epoch_begin()
 
             for metric in self.train_metrics + self.train_loss_metrics:
@@ -321,7 +322,7 @@ class Estimator(object):
                     data, label = batch_fn(batch, self.context)
 
                 # batch begin
-                for handler in event_handlers:
+                for handler in batch_begin:
                     handler.batch_begin()
 
                 with autograd.record():
@@ -337,9 +338,15 @@ class Estimator(object):
                 # update train metrics
                 for metric in self.train_metrics:
                     metric.update(label, pred)
-                    self.train_stats['batch_' + metric.name] = metric.get()[1]
+                    # get metric name and current value and update train stats
+                    name, value = metric.get()
+                    self.train_stats['train_' + name] = value
+
+                # update loss
                 for loss, loss_metric, in zip(losses, self.train_loss_metrics):
                     loss_metric.update(0, [l for l in loss])
+                    name, value = loss_metric.get()
+                    self.train_stats['train_' + name] = value
                     self.train_stats['batch_' + loss_metric.name] = loss_metric.get()[1]
 
                 # last batch size may be different from the rest
@@ -349,33 +356,52 @@ class Estimator(object):
                 else:
                     completed_samples = batch_size * (i + 1)
 
-                try:
-                    self.train_stats['step'] = "{}/{}".format(completed_samples, total_samples)
-                except AttributeError:
-                    self.train_stats['step'] = i
+                self.batch_idx = i
+                self.samples = "{}/{}".format(completed_samples, total_samples)
 
-                for trainer in self.trainers:
-                    trainer.step(current_batch_size)
-
+                self.trainer.step(current_batch_size)
                 # batch end
-                for handler in event_handlers:
+                for handler in batch_end:
                     handler.batch_end()
 
             if val_data:
                 self.evaluate(val_data, batch_fn)
 
-            for metric in self.train_metrics + self.train_loss_metrics:
-                self.train_stats['train_' + metric.name].append(metric.get()[1])
-            for metric in self.val_metrics + self.val_loss_metrics:
-                self.train_stats['val_' + metric.name].append(metric.get()[1])
-
             # epoch end
-            for handler in event_handlers:
+            for handler in epoch_end:
                 handler.epoch_end()
 
             if self.stop_training:
                 break
 
         # train end
-        for handler in event_handlers:
+        for handler in train_end:
             handler.train_end()
+
+    def _categorize_handlers(self, event_handlers):
+        """
+        categorize handlers into 6 event lists to avoid calling empty methods
+        for example, only event handlers with train_begin method
+        implemented will be called at train begin
+        """
+
+        train_begin = []
+        epoch_begin = []
+        batch_begin = []
+        batch_end = []
+        epoch_end = []
+        train_end = []
+        for handler in event_handlers:
+            if not handler.__class__.train_begin == EventHandler.train_begin:
+                train_begin.append(handler)
+            if not handler.__class__.epoch_begin == EventHandler.epoch_begin:
+                epoch_begin.append(handler)
+            if not handler.__class__.batch_begin == EventHandler.batch_begin:
+                batch_begin.append(handler)
+            if not handler.__class__.batch_end == EventHandler.batch_end:
+                batch_end.append(handler)
+            if not handler.__class__.epoch_end == EventHandler.epoch_end:
+                epoch_end.append(handler)
+            if not handler.__class__.train_end == EventHandler.train_end:
+                train_end.append(handler)
+        return train_begin, epoch_begin, batch_begin, batch_end, epoch_end, train_end
