@@ -737,12 +737,32 @@ ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 
 def set_np_comp(is_np_comp):
+    """
+    Turns on/off NumPy compatibility. NumPy-compatibility is turned off by default in backend.
+
+    Parameters
+    ----------
+    is_np_comp : bool
+        Indicates whether to turn on/off NumPy compatibility.
+
+    Returns
+    -------
+        A bool value indicating the previous state of NumPy compatibility.
+    """
     prev = ctypes.c_int()
     check_call(_LIB.MXSetIsNumpyCompatible(ctypes.c_int(is_np_comp), ctypes.byref(prev)))
     return bool(prev.value)
 
 
 def is_np_comp():
+    """
+    Checks whether the NumPy compatibility is currently turned on.
+    NumPy-compatibility is turned off by default in backend.
+
+    Returns
+    -------
+        A bool value indicating whether the NumPy compatibility is currently on.
+    """
     curr = ctypes.c_bool()
     check_call(_LIB.MXIsNumpyCompatible(ctypes.byref(curr)))
     return curr.value
@@ -772,8 +792,61 @@ class _NumpyCompatibilityStateScope(object):
 
 
 def enable_np_comp():
+    """Returns a NumPy compatibility state scope to be used in 'with' statement
+    and captures code that needs the compatibility.
+
+    Example::
+
+        with mx.enable_np_comp():
+            # A scalar tensor's shape is `()`, whose `ndim` is `0`.
+            scalar = mx.nd.ones(shape=())
+            assert scalar.shape == ()
+
+            # In NumPy compatible mode, 0 in a shape means that dimension contains zero elements.
+            data = mx.sym.var("data", shape=(0, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape()
+            assert arg_shapes[0] == (0, 2, 3)
+            assert out_shapes[0] == (0, 2, 3)
+
+            # -1 means unknown shape dimension size in the new NumPy-compatible shape definition
+            data = mx.sym.var("data", shape=(-1, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == (-1, 2, 3)
+            assert out_shapes[0] == (-1, 2, 3)
+
+            # When a shape is completely unknown in NumPy-compatible mode, it is
+            # represented as `None` in Python.
+            data = mx.sym.var("data")
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] is None
+            assert out_shapes[0] is None
+    """
     return _NumpyCompatibilityStateScope(True)
 
 
 def disable_np_comp():
+    """Returns a state scope with NumPy-compatibility disabled to be used in 'with' statement
+    and captures code that does not need the compatibility.
+
+    Example::
+
+        with mx.disable_np_comp():
+            # 0 means unknown shape dimension size in the legacy shape definition.
+            data = mx.sym.var("data", shape=(0, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == (0, 2, 3)
+            assert out_shapes[0] == (0, 2, 3)
+
+            # When a shape is completely unknown in the legacy mode (default), its ndim is
+            # equal to 0 and it is represented as `()` in Python.
+            data = mx.sym.var("data")
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == ()
+            assert out_shapes[0] == ()
+    """
     return _NumpyCompatibilityStateScope(False)

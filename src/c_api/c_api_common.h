@@ -100,7 +100,9 @@ struct MXAPIThreadLocalEntry {
     for (size_t i = 0; i < shapes.size(); ++i) {
       ndim->at(i) = shapes[i].ndim();
       data->at(i) = ptr;
-      ptr = mxnet::ShapeTypeCast(shapes[i].begin(), shapes[i].end(), ptr);
+      if (shapes[i].ndim() > 0) {
+        ptr = mxnet::ShapeTypeCast(shapes[i].begin(), shapes[i].end(), ptr);
+      }
     }
   }
 };
