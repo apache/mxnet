@@ -21,7 +21,8 @@
 
 import copy
 import warnings
-
+from mxnet import nd
+import numpy as np
 from .event_handler import LoggingHandler
 from ... import gluon, autograd
 from ...context import Context, cpu, gpu, num_gpus
@@ -173,7 +174,7 @@ class Estimator(object):
         label = gluon.utils.split_and_load(label, ctx_list=ctx, batch_axis=0)
         return data, label
 
-    def infer_data_info(self, data):
+    def _infer_data_info(self, data):
         """Retrieve the data information such as batch size,
         Number of batches, and total number of samples
 
@@ -192,16 +193,22 @@ class Estimator(object):
             Batch size
         """
         if isinstance(data, gluon.data.DataLoader):
-            num_batches = len(data)
-            total_samples = len(data._dataset)
+            if isinstance(data._dataset, gluon.data.ArrayDataset):
+                total_samples = data._dataset._data[0].shape[0]
+            elif isinstance(data._dataset, nd.ndarray.NDArray):
+                total_samples = data._dataset.shape[0]
+            else:
+                total_samples = len(data._dataset)
+
             if total_samples == 0:
                 raise ValueError("DataLoader is Empty. Please refer to gluon.data.DataLoader "
-                                 "for more detail on how to contruct a DataLoader")
+                                 "for more detail on how to construct a DataLoader")
             for batch in data:
                 batch_size = batch[0].shape[0]
                 break
         else:
             raise ValueError("Please provide the data as gluon.data.DataLoader")
+        num_batches = int(np.ceil(total_samples / batch_size))
         return num_batches, total_samples, batch_size
 
     def evaluate(self,
@@ -268,7 +275,7 @@ class Estimator(object):
         """
 
         self.epochs = epochs
-        num_batches, total_samples, batch_size = self.infer_data_info(train_data)
+        num_batches, total_samples, batch_size = self._infer_data_info(train_data)
 
         if isinstance(self.context, list):
             if batch_size < len(self.context):

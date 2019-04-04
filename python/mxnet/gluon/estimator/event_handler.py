@@ -78,7 +78,6 @@ class LoggingHandler(EventHandler):
         file location to save the logs
     verbose: int, default 1
         Limit the display level of training progress
-        verbose=0: display nothing(silent)
         verbose=1: display metrics every epoch
         verbose=2: display metrics every batch and epoch
     """
