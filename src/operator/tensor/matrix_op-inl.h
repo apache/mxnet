@@ -1154,9 +1154,14 @@ inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!mxnet::ndim_is_known(ishape)) return false;
   int axis;
   index_t begin, end;
   GetSliceAxisParams(param, ishape, &axis, &begin, &end);
+  if (!mxnet::dim_size_is_known(ishape, axis)) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
+    return false;
+  }
   mxnet::TShape shape(ishape.ndim(), -1);
   for (int i = 0; i < ishape.ndim(); ++i) {
     if (static_cast<int>(i) == axis) {
