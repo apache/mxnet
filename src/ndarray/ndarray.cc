@@ -1711,7 +1711,7 @@ bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   mxnet::TShape shape;
   if (!shape.Load(strm)) return false;
-  if (Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_comp()) {
     common::ConvertToNumpyShape(&shape);
   }
   if (mxnet::op::shape_is_none(shape)) {
