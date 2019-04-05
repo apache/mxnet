@@ -1274,11 +1274,15 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return an array representing shape of current ndarray
    */
   def shape: Shape = {
-    val ndim = new MXUintRef
+    val ndim = new RefInt
     val data = ArrayBuffer[Int]()
     checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
-    require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
-    Shape(data)
+    if (ndim.value == -1) {
+      null
+    } else {
+      require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
+      Shape(data)
+    }
   }
 
   // Get size of current NDArray.
