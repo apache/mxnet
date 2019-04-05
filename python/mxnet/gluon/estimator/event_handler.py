@@ -85,14 +85,27 @@ class LoggingHandler(EventHandler):
         file name to save the logs
     file_location: str
         file location to save the logs
+    verbose: int, default LOG_VERBOSITY_PER_EPOCH
+        Limit the granularity of metrics displayed during training process
+        verbose=LOG_VERBOSITY_PER_EPOCH: display metrics every epoch
+        verbose=LOG_VERBOSITY_PER_BATCH: display metrics every batch
     """
 
-    def __init__(self, file_name=None, file_location=None):
+    LOG_VERBOSITY_PER_EPOCH = 1
+    LOG_VERBOSITY_PER_BATCH = 2
+
+    def __init__(self, file_name=None, file_location=None, verbose=LOG_VERBOSITY_PER_EPOCH):
         super(LoggingHandler, self).__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
         stream_handler = logging.StreamHandler()
         self.logger.addHandler(stream_handler)
+        if verbose not in [self.LOG_VERBOSITY_PER_EPOCH, self.LOG_VERBOSITY_PER_BATCH]:
+            raise ValueError("verbose level must be either LOG_VERBOSITY_PER_EPOCH or "
+                             "LOG_VERBOSITY_PER_BATCH, received %s. "
+                             "E.g: LoggingHandler(verbose=LoggingHandler.LOG_VERBOSITY_PER_EPOCH)"
+                             % verbose)
+        self.verbose = verbose
         # save logger to file only if file name or location is specified
         if file_name or file_location:
             file_name = file_name or 'estimator_log'
@@ -118,33 +131,37 @@ class LoggingHandler(EventHandler):
         self.logger.info(msg)
 
     def batch_begin(self):
-        self.batch_start = time.time()
+        if self.verbose == self.LOG_VERBOSITY_PER_BATCH:
+            self.batch_start = time.time()
 
     def batch_end(self):
-        batch_time = time.time() - self.batch_start
-        epoch = self.estimator.current_epoch
-        batch = self.estimator.batch_idx
-        msg = '[Epoch %d] [Batch %d] ' % (epoch, batch)
-        if self.estimator.samples:
-            msg += '[Samples %s] ' % (self.estimator.samples)
-        msg += 'time/batch: %.3fs ' % batch_time
-        for key in self.estimator.train_stats:
-            # only log current training loss & metric after each batch
-            if key.startswith('train_'):
-                msg += key + ': ' + '%.4f ' % self.estimator.train_stats[key]
-        self.logger.info(msg)
+        if self.verbose == self.LOG_VERBOSITY_PER_BATCH:
+            batch_time = time.time() - self.batch_start
+            epoch = self.estimator.current_epoch
+            batch = self.estimator.batch_idx
+            msg = '[Epoch %d] [Batch %d] ' % (epoch, batch)
+            if self.estimator.processed_samples:
+                msg += '[Samples %s] ' % (self.estimator.processed_samples)
+            msg += 'time/batch: %.3fs ' % batch_time
+            for key in self.estimator.train_stats:
+                # only log current training loss & metric after each batch
+                if key.startswith('train_'):
+                    msg += key + ': ' + '%.4f ' % self.estimator.train_stats[key]
+            self.logger.info(msg)
 
     def epoch_begin(self):
-        self.epoch_start = time.time()
+        if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
+            self.epoch_start = time.time()
 
     def epoch_end(self):
-        epoch_time = time.time() - self.epoch_start
-        epoch = self.estimator.current_epoch
-        msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
-        # log every result in train stats including train/validation loss & metrics
-        for key in self.estimator.train_stats:
-            msg += '%s : %.4f ' % (key, self.estimator.train_stats[key])
-        self.logger.info(msg)
+        if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
+            epoch_time = time.time() - self.epoch_start
+            epoch = self.estimator.current_epoch
+            msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
+            # log every result in train stats including train/validation loss & metrics
+            for key in self.estimator.train_stats:
+                msg += '%s : %.4f ' % (key, self.estimator.train_stats[key])
+            self.logger.info(msg)
 
 
 class CheckpointHandler(EventHandler):
