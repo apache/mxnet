@@ -188,6 +188,23 @@ private[mxnet] class LibInfo {
                                  grads: Array[NDArrayHandle]): Int
   @native def mxExecutorPrint(handle: ExecutorHandle, debugStr: RefString): Int
   @native def mxExecutorSetMonitorCallback(handle: ExecutorHandle, callback: MXMonitorCallback): Int
+  // scalastyle:off parameterNum
+  @native def mxExecutorReshape(partialShaping: Int,
+                                allowUpSizing: Int,
+                                devType: Int,
+                                devId: Int,
+                                mapKeys: Array[String],
+                                mapDevTypes: Array[Int],
+                                mapDevIds: Array[Int],
+                                providedArgShapeNames: Array[String],
+                                providedArgShapeData: Array[Int],
+                                providedArgShapeIdx: Array[Int],
+                                inArgs: ArrayBuffer[NDArrayHandle],
+                                argGrads: ArrayBuffer[NDArrayHandle],
+                                auxStates: ArrayBuffer[NDArrayHandle],
+                                sharedExec: ExecutorHandle,
+                                out: ExecutorHandleRef): Int
+  // scalastyle:on parameterNum
 
   // Symbols
   @native def mxSymbolListAtomicSymbolCreators(symbolList: ListBuffer[SymbolHandle]): Int
@@ -240,11 +257,20 @@ private[mxnet] class LibInfo {
                                  numArgs: MXUint,
                                  keys: Array[String],
                                  argIndPtr: Array[MXUint],
-                                 argShapeData: Array[MXUint],
+                                 argShapeData: Array[Int],
                                  inShapeData: ListBuffer[Array[Int]],
                                  outShapeData: ListBuffer[Array[Int]],
                                  auxShapeData: ListBuffer[Array[Int]],
                                  complete: RefInt): Int
+  @native def mxSymbolInferShapePartial(handle: SymbolHandle,
+                                        numArgs: MXUint,
+                                        keys: Array[String],
+                                        argIndPtr: Array[MXUint],
+                                        argShapeData: Array[Int],
+                                        inShapeData: ListBuffer[Array[Int]],
+                                        outShapeData: ListBuffer[Array[Int]],
+                                        auxShapeData: ListBuffer[Array[Int]],
+                                        complete: RefInt): Int
   @native def mxSymbolGetOutput(handle: SymbolHandle, index: Int, out: SymbolHandleRef): Int
   @native def mxSymbolSaveToJSON(handle: SymbolHandle, out: RefString): Int
   @native def mxSymbolCreateFromJSON(json: String, handle: SymbolHandleRef): Int
@@ -322,4 +348,8 @@ private[mxnet] class LibInfo {
   @native def mxSetProfilerConfig(keys: Array[String], vals: Array[String]): Int
   @native def mxSetProfilerState(state: Int): Int
   @native def mxDumpProfile(finished: Int): Int
+
+  // Numpy
+  @native def mxIsNumpyCompatible(compatible: RefInt): Int
+  @native def mxSetIsNumpyCompatible(isNpComp: Int, prev: RefInt): Int
 }
