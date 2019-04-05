@@ -104,13 +104,13 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
             std::string strategy = type;
 
             if (strategy == "Round") {
-              ptr = new storage::GPUPooledRoundedStorageManager();
+              ptr = new storage::GPUPooledRoundedStorageManager(handle->ctx);
               LOG(INFO) << "Using GPUPooledRoundedStorageManager.";
             } else {
               if (strategy != "Naive") {
                 LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
               }
-              ptr = new storage::GPUPooledStorageManager();
+              ptr = new storage::GPUPooledStorageManager(handle->ctx);
             }
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";

@@ -428,7 +428,7 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
     NDArray
         An `NDArray` containing the cropped image.
     """
-    out = nd.crop(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
+    out = nd.slice(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
     if size is not None and (w, h) != size:
         sizes = (h, w, size[1], size[0])
         out = imresize(out, *size, interp=_get_interp_method(interp, sizes))
