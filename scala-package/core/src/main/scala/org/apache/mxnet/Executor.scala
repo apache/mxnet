@@ -71,17 +71,12 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     if (!super.isDisposed) {
       super.dispose()
       outputs.foreach(o => o.dispose())
-      // Symbol.bind clones symbol when creating the executor so we need to dispose of the clone
-      symbol.dispose()
       if (argArrays != null) {argArrays.foreach(a => a.dispose())}
       if (gradArrays != null) {gradArrays.foreach(
         // Symbol will sometimes fill this with nulls so we've got to check the elements too
         a => if (a != null) {a.dispose()})
       }
       if (auxArrays != null) {auxArrays.foreach(a => a.dispose())}
-      if (_argDict != null) {_argDict.foreach(a => a._2.dispose())}
-      if (_gradDict != null) {_gradDict.foreach(a => a._2.dispose())}
-      if (_auxDict != null) {_auxDict.foreach(a => a._2.dispose())}
     }
   }
 

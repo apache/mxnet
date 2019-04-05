@@ -240,7 +240,7 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
 struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   mxnet::TShape axes;
   DMLC_DECLARE_PARAMETER(TransposeParam) {
-    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0))
     .describe("Target axis order. By default the axes will be inverted.");
   }
 };
@@ -314,7 +314,7 @@ void Transpose(const nnvm::NodeAttrs& attrs,
                const std::vector<TBlob>& outputs) {
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
   CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
-  if (!mxnet::ndim_is_known(param.axes)) {
+  if (param.axes.ndim() == 0) {
     mxnet::TShape axes(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {
       axes[i] = axes.ndim() - 1 - i;
@@ -334,7 +334,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& shp = (*in_attrs)[0];
   CHECK_LE(shp.ndim(), 6U) << "Transpose support at most 6 dimensions";
   mxnet::TShape ret(shp.ndim(), -1);
-  if (!mxnet::ndim_is_known(param.axes)) {
+  if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {
       ret[i] = shp[shp.ndim()-1-i];
     }
