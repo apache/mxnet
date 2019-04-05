@@ -205,7 +205,9 @@ class Estimator(object):
             epochs=1,
             event_handlers=None,
             batch_fn=None):
-        """Main training loop
+        """Trains the model on a given dataset for a specified
+        number of epochs. Also, the batch size is inferred from the
+        DataLoader's batch_size.
 
         Parameters
         ----------
@@ -227,7 +229,7 @@ class Estimator(object):
 
         self.max_epoch = epochs
         self.stop_training = False
-        self.samples = None
+        self.processed_samples = None
         self.batch_idx = 0
 
         event_handlers = event_handlers or []
@@ -236,8 +238,8 @@ class Estimator(object):
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
             event_handlers.append(LoggingHandler())
             warnings.warn("No Event Handler specified, default `LoggingHandler()` "
-                          "is used with verbose=LoggingHandler.ONLY_EPOCH. Please "
-                          "look at gluon.estimator.event_handler for more detail.")
+                          "is used with verbose=LoggingHandler.LOG_VERBOSITY_PER_BATCH. "
+                          "Please look at gluon.estimator.event_handler for more detail.")
 
         train_begin, epoch_begin, batch_begin, \
         batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
@@ -308,7 +310,8 @@ class Estimator(object):
                 self.batch_idx = i
                 # record trained samples v.s. total samples if using Gluon DataLoader
                 if isinstance(train_data, gluon.data.DataLoader):
-                    self.samples = "{}/{}".format(completed_samples, len(train_data._dataset))
+                    self.processed_samples = "{}/{}".format(completed_samples,
+                                                            len(train_data._dataset))
 
                 self.trainer.step(batch_size)
                 # batch end

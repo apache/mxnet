@@ -85,25 +85,26 @@ class LoggingHandler(EventHandler):
         file name to save the logs
     file_location: str
         file location to save the logs
-    verbose: int, default ONLY_EPOCH
+    verbose: int, default LOG_VERBOSITY_PER_EPOCH
         Limit the granularity of metrics displayed during training process
-        verbose=ONLY_EPOCH: display metrics every epoch
-        verbose=BATCH_WITH_EPOCH: display metrics every batch and epoch
+        verbose=LOG_VERBOSITY_PER_EPOCH: display metrics every epoch
+        verbose=LOG_VERBOSITY_PER_BATCH: display metrics every batch
     """
 
-    ONLY_EPOCH = 1
-    BATCH_WITH_EPOCH = 2
+    LOG_VERBOSITY_PER_EPOCH = 1
+    LOG_VERBOSITY_PER_BATCH = 2
 
-    def __init__(self, file_name=None, file_location=None, verbose=ONLY_EPOCH):
+    def __init__(self, file_name=None, file_location=None, verbose=LOG_VERBOSITY_PER_EPOCH):
         super(LoggingHandler, self).__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
         stream_handler = logging.StreamHandler()
         self.logger.addHandler(stream_handler)
-        if verbose not in [self.ONLY_EPOCH, self.BATCH_WITH_EPOCH]:
-            raise ValueError("verbose level must be either ONLY_EPOCH or BATCH_WITH_EPOCH, "
-                             "received %s. "
-                             "E.g: LoggingHandler(verbose=LoggingHandler.ONLY_EPOCH)" % verbose)
+        if verbose not in [self.LOG_VERBOSITY_PER_EPOCH, self.LOG_VERBOSITY_PER_BATCH]:
+            raise ValueError("verbose level must be either LOG_VERBOSITY_PER_EPOCH or "
+                             "LOG_VERBOSITY_PER_BATCH, received %s. "
+                             "E.g: LoggingHandler(verbose=LoggingHandler.LOG_VERBOSITY_PER_EPOCH)"
+                             % verbose)
         self.verbose = verbose
         # save logger to file only if file name or location is specified
         if file_name or file_location:
@@ -130,17 +131,17 @@ class LoggingHandler(EventHandler):
         self.logger.info(msg)
 
     def batch_begin(self):
-        if self.verbose == self.BATCH_WITH_EPOCH:
+        if self.verbose == self.LOG_VERBOSITY_PER_BATCH:
             self.batch_start = time.time()
 
     def batch_end(self):
-        if self.verbose == self.BATCH_WITH_EPOCH:
+        if self.verbose == self.LOG_VERBOSITY_PER_BATCH:
             batch_time = time.time() - self.batch_start
             epoch = self.estimator.current_epoch
             batch = self.estimator.batch_idx
             msg = '[Epoch %d] [Batch %d] ' % (epoch, batch)
-            if self.estimator.samples:
-                msg += '[Samples %s] ' % (self.estimator.samples)
+            if self.estimator.processed_samples:
+                msg += '[Samples %s] ' % (self.estimator.processed_samples)
             msg += 'time/batch: %.3fs ' % batch_time
             for key in self.estimator.train_stats:
                 # only log current training loss & metric after each batch
@@ -149,11 +150,11 @@ class LoggingHandler(EventHandler):
             self.logger.info(msg)
 
     def epoch_begin(self):
-        if self.verbose > self.ONLY_EPOCH:
+        if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
             self.epoch_start = time.time()
 
     def epoch_end(self):
-        if self.verbose > self.ONLY_EPOCH:
+        if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
             epoch_time = time.time() - self.epoch_start
             epoch = self.estimator.current_epoch
             msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
