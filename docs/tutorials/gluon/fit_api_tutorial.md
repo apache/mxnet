@@ -156,6 +156,31 @@ Fit API is also customizable with several `Event Handlers` which give a fine gra
 
 One can use built-in event handlers such as `LoggingHandler`, `CheckpointHandler` or `EarlyStoppingHandler` to log and save the model at certain timesteps during training and stopping the training when the model's performance plateaus. One can also create a custom handler by inheriting [`EventHandler`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/estimator/event_handler.py#L31).
 
+### Custom Event Handler
+
+Here we will showcase an example to create a custom event handler by inheriting from `EventHandler` class. Our custom event handler is a simple one, that just records the loss values at the end of every epoch in our training phase.
+
+
+```python
+class LossRecordHandler(EventHandler):
+    def __init__(self):
+        super(LossRecordHandler, self).__init__()
+        self.losses = []
+    
+    def train_begin(self):
+        print ("Training begin")
+
+    def train_end(self):
+        # Print all the losses at the end of training
+        for i, loss in enumerate(self.losses):
+            print ("Epoch {}, loss {}".format(i, loss)) 
+
+    def epoch_end(self):
+        loss_name = self.estimator.loss[0].name # Access the loss from estimator
+        loss_val = self.estimator.train_stats['train_'+ loss_name] # Get the loss value at current epoch
+        self.losses.append(loss_val) # Append it to losses
+```
+
 
 ```python
 # Let's reset the model, trainer and accuracy objects from above
@@ -175,17 +200,18 @@ est = estimator.Estimator(net=resnet_18_v1,
                           trainer=trainer, 
                           context=ctx)
 
-# Define the handlers, let's say Checkpointhandler
+# Define the handlers, let's say in built Checkpointhandler
 checkpoint_handler = event_handler.CheckpointHandler(filepath='./my_best_model.params',
                                                      monitor='val_accuracy', # Monitors a metric
                                                      save_best_only=True) # Save the best model in terms of 
                                                                          # training accuracy
-
+# Let's instantiate another handler which we defined above 
+loss_record_handler = LossRecordHandler()
 # Magic line
 est.fit(train_data=train_data_loader,
         val_data=val_data_loader,
         epochs=num_epochs,
-        event_handlers=checkpoint_handler) # Add the event handlers
+        event_handlers=[checkpoint_handler, loss_record_handler]) # Add the event handlers
 ```
 
     Training begin: using optimizer SGD with current learning rate 0.0400 <!--notebook-skip-line-->
@@ -197,6 +223,9 @@ est.fit(train_data=train_data_loader,
     
     Train finished using total 50s at epoch 1. train_accuracy : 0.8826 train_softmaxcrossentropyloss0 : 0.3229 val_accuracy : 0.8474 val_softmaxcrossentropyloss0 : 0.4262 <!--notebook-skip-line-->
 
+    Training begin <!--notebook-skip-line-->
+    Epoch 1, loss 0.5741 <!--notebook-skip-line-->
+    Epoch 2, loss 0.3229 <!--notebook-skip-line-->
 
 You can load the saved model, by using ```load_parameters``` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](http://mxnet.incubator.apache.org/versions/master/tutorials/gluon/save_load_params.html#saving-model-parameters-to-file)
 
