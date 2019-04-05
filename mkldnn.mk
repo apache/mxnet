@@ -23,10 +23,12 @@ ifeq ($(UNAME_S), Darwin)
 	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.dylib
 	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml.dylib
 	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.0.dylib
+	MKLDNN_LIB64FILE = $(MKLDNNROOT)/lib64/libmkldnn.0.dylib
 else
 	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.so
 	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml_intel.so
 	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so.0
+	MKLDNN_LIB64FILE = $(MKLDNNROOT)/lib64/libmkldnn.so.0
 endif
 endif
 
@@ -40,6 +42,9 @@ $(MKLDNN_LIBFILE):
 	cmake $(MKLDNN_SUBMODDIR) -DCMAKE_INSTALL_PREFIX=$(MKLDNNROOT) -B$(MKLDNN_BUILDDIR) -DARCH_OPT_FLAGS="-mtune=generic" -DWITH_TEST=OFF -DWITH_EXAMPLE=OFF
 	$(MAKE) -C $(MKLDNN_BUILDDIR) VERBOSE=1
 	$(MAKE) -C $(MKLDNN_BUILDDIR) install
+	if [ -f "$(MKLDNN_LIB64FILE)" ]; then \
+		mv $(MKLDNNROOT)/lib64/libmkldnn* $(MKLDNNROOT)/lib/; \
+	fi
 	mkdir -p $(MXNET_LIBDIR)
 	cp $(OMP_LIBFILE) $(MXNET_LIBDIR)
 	cp $(MKLML_LIBFILE) $(MXNET_LIBDIR)

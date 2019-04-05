@@ -236,7 +236,10 @@ class Tuple {
    */
   friend std::ostream &operator<<(std::ostream &os, const Tuple<ValueType> &t) {
     if (t.ndim() == -1) {
-      os << "[?]";
+      // If t is an unknown shape, return string "None".
+      // This is consistent with returning unknown shape in Python and generating
+      // C++ operator APIs by OpWrapperGenerator.py (defaultString) in cpp-package.
+      os << "None";
       return os;
     }
     os << '[';
@@ -275,22 +278,12 @@ class Tuple {
     }
     // Handle empty tuple. A tensor whose shape is an empty tuple
     // represents a scalar with ndim = 0.
-    // and shape=[?] represents an unknown-dim shape
     while (isspace(is.peek())) {
-      is.get();
-    }
-    int ndim = 0;
-    while (is.peek() == '?') {
-      ndim = -1;
       is.get();
     }
     if (is.peek() == ')' || is.peek() == ']') {
       is.get();
-      t.SetDim(ndim);
-      return is;
-    } else if (ndim == -1) {
-      // does not support parsing [?, ...] for now.
-      is.setstate(std::ios::failbit);
+      t.SetDim(0);
       return is;
     }
     // Handle non-empty tuple
@@ -737,6 +730,7 @@ struct hash<mxnet::TShape> {
 namespace dmlc {
 /*! \brief description for optional TShape */
 DMLC_DECLARE_TYPE_NAME(optional<mxnet::TShape>, "Shape or None");
+DMLC_DECLARE_TYPE_NAME(optional<mxnet::Tuple<int>>, "Shape or None");
 // avoid low version of MSVC
 #if !defined(_MSC_VER)
 template<typename T>

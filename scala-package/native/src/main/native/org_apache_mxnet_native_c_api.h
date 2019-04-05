@@ -161,11 +161,11 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayAt
 
 /*
  * Class:     org_apache_mxnet_LibInfo
- * Method:    mxNDArrayReshape
- * Signature: (JI[ILorg/apache/mxnet/Base/RefLong;)I
+ * Method:    mxNDArrayReshape64
+ * Signature: (JI[JZLorg/apache/mxnet/Base/RefLong;)I
  */
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayReshape
-  (JNIEnv *, jobject, jlong, jint, jintArray, jobject);
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayReshape64
+  (JNIEnv *, jobject, jlong, jint, jlongArray, jboolean, jobject);
 
 /*
  * Class:     org_apache_mxnet_LibInfo

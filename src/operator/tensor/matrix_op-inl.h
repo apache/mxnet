@@ -657,52 +657,45 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       << "step and begin must have the same length";
   }
 
-  for (int i = 0; i < param_begin.ndim(); ++i) {
-    int b = 0, e = dshape[i], s = 1;
-    const int len = dshape[i];
-    if (param_step.ndim() != 0) {
-      const auto& opt_step_val = param_step[i];
-      if (opt_step_val.has_value()) {
-        s = opt_step_val.value();
-        CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
-      }
-    }
+  for (index_t i = 0; i < param_begin.ndim(); ++i) {
+    index_t s = param_step.ndim() != 0U && param_step[i].has_value() ? param_step[i].value() : 1;
+    CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
 
+    index_t b = 0, e = 0;
+    const index_t len = dshape[i];
     if (len > 0) {
-      if (param_begin[i].has_value()) {
-        b = param_begin[i].value();
-        if (b < 0) {
-          b += len;
-          CHECK_GE(b, 0) << "slicing with begin[" << i << "]="
-                         << b - len << " exceeds limit of " << len;
-        }
-      } else if (s < 0) {
-        b = len - 1;
-      }
-      CHECK_LT(b, len) << "slicing with begin[" << i << "]="
-                       << b << " exceends limit of " << len;
+      b = param_begin[i].has_value() ? param_begin[i].value() : (s < 0 ? len - 1 : 0);
+      e = param_end[i].has_value() ? param_end[i].value() : (s < 0 ? -1 : len);
 
-      if (param_end[i].has_value()) {
-        e = param_end[i].value();
-        if (e < 0) {
-          e += len;
-          CHECK_GE(e, 0) << "slicing with end[" << i << "]="
-                         << e - len << " exceeds limit of " << len;
-        }
-      } else if (s < 0) {
-        e = -1;
+      // checking upper and lower bounds for begin
+      if (b < 0) {
+        b += len;
+        CHECK_GE(b, 0) << "slicing with begin[" << i << "]=" << b - len
+                       << " exceeds limit of input dimension[" << i << "]=" << len;
       }
-      CHECK_LE(e, len) << "slicing with end[" << i << "]="
-                       << e << " exceeds limit of " << len;
-    } else {
-      b = 0;
-      e = 0;
+      CHECK_LT(b, len) << "slicing with begin[" << i << "]=" << b
+                       << " exceeds limit of input dimension[" << i << "]=" << len;
+
+      // checking upper and lower bounds for end
+      if (e < 0 && param_end[i].has_value()) {
+        e += len;
+        CHECK_GE(e, 0) << "slicing with end[" << i << "]=" << e - len
+                       << " exceeds limit of input dimension[" << i << "]=" << len;
+      }
+      CHECK_LE(e, len) << "slicing with end[" << i << "]=" << e
+                       << " exceeds limit of input dimension[" << i << "]=" << len;
+
+      // checking begin==end case which is not supported
+      CHECK_NE(b, e) << "slicing with begin[" << i << "]=end[" << i << "]="
+                     << e << " results in an empty tensor and is not supported";
     }
+
     (*begin)[i] = b;
     (*end)[i] = e;
     (*step)[i] = s;
   }
-  for (int i = param_begin.ndim(); i < dshape.ndim(); ++i) {
+
+  for (index_t i = param_begin.ndim(); i < dshape.ndim(); ++i) {
     (*begin)[i] = 0;
     (*end)[i] = dshape[i];
     (*step)[i] = 1;

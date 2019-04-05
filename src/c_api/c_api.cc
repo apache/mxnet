@@ -113,6 +113,7 @@ int MXRandomSeedContext(int seed, int dev_type, int dev_id) {
 
 int MXNotifyShutdown() {
   API_BEGIN();
+  mxnet::op::custom::CustomOperator::Get()->Stop();
   Engine::Get()->NotifyShutdown();
   API_END();
 }

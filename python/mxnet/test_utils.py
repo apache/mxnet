@@ -1926,7 +1926,7 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
     _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
     return p, obs_freq, expected_freq
 
-def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.25, alpha=0.05):
+def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.2, alpha=0.05):
     """Verify whether the generator is correct using chi-square testing.
 
     The test is repeated for "nrepeat" times and we check if the success rate is

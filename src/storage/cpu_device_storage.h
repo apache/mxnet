@@ -40,13 +40,12 @@ class CPUDeviceStorage {
  public:
   /*!
    * \brief Aligned allocation on CPU.
-   * \param size Size to allocate.
-   * \return Pointer to the storage.
+   * \param handle Handle struct.
    */
-  inline static void* Alloc(Storage::Handle* handle);
+  inline static void Alloc(Storage::Handle* handle);
   /*!
    * \brief Deallocation.
-   * \param ptr Pointer to deallocate.
+   * \param handle Handle struct.
    */
   inline static void Free(Storage::Handle handle);
 
@@ -63,25 +62,25 @@ class CPUDeviceStorage {
 #endif
 };  // class CPUDeviceStorage
 
-inline void* CPUDeviceStorage::Alloc(Storage::Handle* handle) {
+inline void CPUDeviceStorage::Alloc(Storage::Handle* handle) {
+  handle->dptr = nullptr;
   const size_t size = handle->size;
-  void* ptr;
+  if (size == 0) return;
+
 #if _MSC_VER
-  ptr = _aligned_malloc(size, alignment_);
-  if (ptr == NULL) LOG(FATAL) << "Failed to allocate CPU Memory";
+  handle->dptr = _aligned_malloc(size, alignment_);
+  if (handle->dptr == nullptr) LOG(FATAL) << "Failed to allocate CPU Memory";
 #else
-  int ret = posix_memalign(&ptr, alignment_, size);
+  int ret = posix_memalign(&handle->dptr, alignment_, size);
   if (ret != 0) LOG(FATAL) << "Failed to allocate CPU Memory";
 #endif
-  return ptr;
 }
 
 inline void CPUDeviceStorage::Free(Storage::Handle handle) {
-  void * ptr = handle.dptr;
 #if _MSC_VER
-  _aligned_free(ptr);
+  _aligned_free(handle.dptr);
 #else
-  free(ptr);
+  free(handle.dptr);
 #endif
 }
 

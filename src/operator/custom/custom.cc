@@ -34,11 +34,6 @@ namespace mxnet {
 namespace op {
 namespace custom {
 
-CustomOperator* CustomOperator::Get() {
-  static CustomOperator inst;
-  return &inst;
-}
-
 struct CustomParam {
   std::string op_type;
   size_t num_args, num_outs, num_auxs;

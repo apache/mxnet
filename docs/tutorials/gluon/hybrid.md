@@ -154,7 +154,11 @@ You can use other language bindings to load them. You can also load them back
 to gluon with `SymbolBlock`:
 
 ```python
-net2 = gluon.SymbolBlock.imports('model-symbol.json', ['data'], 'model-0001.params')
+import warnings
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    net2 = gluon.SymbolBlock.imports('model-symbol.json', ['data'], 'model-0001.params')
 ```
 
 ## Operators that do not work with hybridize
