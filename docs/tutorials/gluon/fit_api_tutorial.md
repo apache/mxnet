@@ -161,6 +161,8 @@ One can use built-in event handlers such as `LoggingHandler`, `CheckpointHandler
 
 Here we will showcase an example to create a custom event handler by inheriting from `EventHandler` class. Our custom event handler is a simple one, that just records the loss values at the end of every epoch in our training phase.
 
+Note : The `EventHandler` holds a reference to the `Estimator` object. The Estimator object reference is updated when the Fit API is called.
+
 
 ```python
 class LossRecordHandler(EventHandler):
