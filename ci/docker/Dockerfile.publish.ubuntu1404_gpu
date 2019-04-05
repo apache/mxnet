@@ -18,12 +18,18 @@
 #
 # Dockerfile to run MXNet on Ubuntu 14.04 for GPU
 
-FROM ubuntu:14.04
+FROM nvidia/cuda:8.0-cudnn7-devel-ubuntu14.04
 
 WORKDIR /work/deps
 
-COPY install/ubuntu_publish.sh /work/
-RUN /work/ubuntu_publish.sh
+COPY install/ubuntu_base.sh /work/
+RUN /work/ubuntu_base.sh
+
+COPY install/ubuntu_python.sh /work/
+RUN /work/ubuntu_python.sh
+
+COPY install/ubuntu_scala.sh /work/
+RUN /work/ubuntu_scala.sh
 
 ARG USER_ID=0
 ARG GROUP_ID=0

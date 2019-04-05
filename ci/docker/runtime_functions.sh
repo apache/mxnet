@@ -1345,6 +1345,14 @@ build_static_python_mkl() {
     popd
 }
 
+build_static_python_cu80mkl() {
+    set -ex
+    pushd .
+    export mxnet_variant=cu80mkl
+    ./ci/publish/python/build.sh
+    popd
+}
+
 publish_scala_build() {
     set -ex
     pushd .
