@@ -20,7 +20,7 @@ import tempfile
 import mxnet as mx
 from mxnet import nd
 from mxnet.gluon import nn, loss
-from mxnet.contrib.estimator import estimator, event_handler
+from mxnet.gluon.contrib.estimator import estimator, event_handler
 
 def _get_test_network():
     net = nn.Sequential()

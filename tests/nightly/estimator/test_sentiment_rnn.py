@@ -29,7 +29,7 @@ import mxnet as mx
 from mxnet import nd, gluon
 from mxnet.contrib import text
 from mxnet.gluon import nn, rnn
-from mxnet.contrib.estimator import estimator
+from mxnet.gluon.contrib.estimator import estimator
 
 
 class TextCNN(nn.Block):
