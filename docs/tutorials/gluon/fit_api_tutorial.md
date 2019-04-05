@@ -38,7 +38,8 @@ To complete this tutorial, you will need:
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon.model_zoo import vision
-from mxnet.gluon.estimator import estimator, event_handler
+from mxnet.gluon.contrib.estimator import estimator, event_handler
+from mxnet.gluon.contrib.estimator.event_handler import EventHandler
 
 gpu_count = mx.context.num_gpus()
 ctx = [mx.gpu(i) for i in range(gpu_count)] if gpu_count > 0 else mx.cpu()
