@@ -85,9 +85,12 @@ The storage type of ``relu`` output depends upon the input storage type:
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto zero_node = MakeNode("zeros_like", n->attrs.name + "_relu_backward", {n->inputs[0]}, nullptr, &n);
-    auto x_grad = MakeNode("_greater", n->attrs.name + "_mid_x_grad", {n->inputs[0], nnvm::NodeEntry{zero_node, 0, 0}}, nullptr, &n);
-    auto in_grad = MakeNode("elemwise_mul", n->attrs.name + "_backward", {ograds[0], nnvm::NodeEntry{x_grad, 0 , 0}}, nullptr, &n);
+    auto zero_node = MakeNode("zeros_like", n->attrs.name + "_backward",
+      {n->inputs[0]}, nullptr, &n);
+    auto x_grad = MakeNode("_greater", n->attrs.name + "_mid_x_grad",
+      {n->inputs[0], nnvm::NodeEntry{zero_node, 0, 0}}, nullptr, &n);
+    auto in_grad = MakeNode("elemwise_mul", n->attrs.name + "_backward",
+      {ograds[0], nnvm::NodeEntry{x_grad, 0 , 0}}, nullptr, &n);
     std::vector<nnvm::NodeEntry> ret;
     ret.emplace_back(nnvm::NodeEntry{in_grad, 0, 0});
     return ret;
