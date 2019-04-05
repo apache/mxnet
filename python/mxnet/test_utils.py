@@ -526,6 +526,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     relErr = rel
     aValue = a[index]
     bValue = b[index]
+    expected = a.copy()
 
     print('*** Maximum errors for vector of sise {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
     i = 1
@@ -541,7 +542,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
 
 
     np.set_printoptions(threshold=4, suppress=True)
-    msg = npt.build_err_msg([a, b],
+    msg = npt.build_err_msg([expected, b],
                             err_msg="Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %f%%).\n"
                                     " Location of maximum error:%s, a=%.8f, b=%.8f"
                             % (relErr, rtol, atol, 100*i/a.size, str(indexErr), aValue, bValue),
