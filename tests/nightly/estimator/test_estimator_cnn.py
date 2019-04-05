@@ -22,7 +22,7 @@ import numpy as np
 import mxnet as mx
 from mxnet import gluon, init, nd
 from mxnet.gluon import data
-from mxnet.contrib.estimator import estimator
+from mxnet.gluon.contrib.estimator import estimator
 from mxnet.gluon.model_zoo import vision
 
 def load_data_mnist(batch_size, resize=None, num_workers=4):
