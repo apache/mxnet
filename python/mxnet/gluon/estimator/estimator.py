@@ -21,11 +21,9 @@
 
 import copy
 import warnings
-
 from .event_handler import EventHandler, LoggingHandler
 from ... import gluon, autograd
 from ...context import Context, cpu, gpu, num_gpus
-from ...io import DataIter
 from ...metric import EvalMetric, Loss, Accuracy
 
 __all__ = ['Estimator']
@@ -168,7 +166,7 @@ class Estimator(object):
 
          Parameters
          ----------
-         val_data : DataLoader or DataIter
+         val_data : DataLoader
              validation data with data and labels
          batch_fn : function
              custom batch function to extract data and label
@@ -182,13 +180,10 @@ class Estimator(object):
             if not batch_fn:
                 if isinstance(val_data, gluon.data.DataLoader):
                     data, label = self._batch_fn(batch, self.context)
-                elif isinstance(val_data, DataIter):
-                    data, label = self._batch_fn(batch, self.context, is_iterator=True)
                 else:
                     raise ValueError("You are using a custom iteration, please also provide "
                                      "batch_fn to extract data and label. Alternatively, you "
-                                     "can provide the data as gluon.data.DataLoader or "
-                                     "mx.io.DataIter")
+                                     "can provide the data as gluon.data.DataLoader.")
             else:
                 data, label = batch_fn(batch, self.context)
             pred = [self.net(x) for x in data]
@@ -208,16 +203,17 @@ class Estimator(object):
     def fit(self, train_data,
             val_data=None,
             epochs=1,
-            batch_size=None,
             event_handlers=None,
             batch_fn=None):
-        """Main training loop
+        """Trains the model on a given dataset for a specified
+        number of epochs. Also, the batch size is inferred from the
+        DataLoader's batch_size.
 
         Parameters
         ----------
-        train_data : DataLoader or DataIter
+        train_data : DataLoader
             training data with data and labels
-        val_data : DataLoader or DataIter
+        val_data : DataLoader
             validation data with data and labels
         epochs : int, default 1
             number of epochs to iterate on the training data.
@@ -232,12 +228,8 @@ class Estimator(object):
         """
 
         self.max_epoch = epochs
-        if not batch_size:
-            self.batch_size = 32 * len(self.context)
-        else:
-            self.batch_size = batch_size
         self.stop_training = False
-        self.samples = None
+        self.processed_samples = None
         self.batch_idx = 0
 
         event_handlers = event_handlers or []
@@ -245,6 +237,9 @@ class Estimator(object):
         if not event_handlers or \
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
             event_handlers.append(LoggingHandler())
+            warnings.warn("No Event Handler specified, default `LoggingHandler()` "
+                          "is used with verbose=LoggingHandler.LOG_VERBOSITY_PER_EPOCH. "
+                          "Please look at gluon.estimator.event_handler for more detail.")
 
         train_begin, epoch_begin, batch_begin, \
         batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
@@ -261,6 +256,8 @@ class Estimator(object):
         for epoch in range(self.max_epoch):
             # epoch begin
             self.current_epoch = epoch
+            # Number of samples trained after every batch
+            completed_samples = 0
 
             for handler in epoch_begin:
                 handler.epoch_begin()
@@ -272,15 +269,14 @@ class Estimator(object):
                 if not batch_fn:
                     if isinstance(train_data, gluon.data.DataLoader):
                         data, label = self._batch_fn(batch, self.context)
-                    elif isinstance(train_data, DataIter):
-                        data, label = self._batch_fn(batch, self.context, is_iterator=True)
                     else:
                         raise ValueError("You are using a custom iteration, please also provide "
                                          "batch_fn to extract data and label. Alternatively, you "
-                                         "can provide the data as gluon.data.DataLoader or "
-                                         "mx.io.DataIter")
+                                         "can provide the data as gluon.data.DataLoader")
                 else:
                     data, label = batch_fn(batch, self.context)
+
+                batch_size = batch[0].shape[0]
 
                 # batch begin
                 for handler in batch_begin:
@@ -309,12 +305,15 @@ class Estimator(object):
                     name, value = loss_metric.get()
                     self.train_stats['train_' + name] = value
 
+                completed_samples += batch_size
+
                 self.batch_idx = i
                 # record trained samples v.s. total samples if using Gluon DataLoader
                 if isinstance(train_data, gluon.data.DataLoader):
-                    self.samples = "{}/{}".format(self.batch_size * (i + 1), len(train_data._dataset))
+                    self.processed_samples = "{}/{}".format(completed_samples,
+                                                            len(train_data._dataset))
 
-                self.trainer.step(self.batch_size)
+                self.trainer.step(batch_size)
                 # batch end
                 for handler in batch_end:
                     handler.batch_end()
