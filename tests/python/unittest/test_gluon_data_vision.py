@@ -42,7 +42,7 @@ def test_to_tensor():
     out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(out_nd.asnumpy(), np.transpose(
                         data_in.astype(dtype=np.float32) / 255.0, (0, 3, 1, 2)))
-    
+
     # Invalid Input
     invalid_data_in = nd.random.uniform(0, 255, (5, 5, 300, 300, 3)).astype(dtype=np.uint8)
     transformer = transforms.ToTensor()
@@ -117,7 +117,7 @@ def test_resize():
         assertRaises(MXNetError, invalid_transform, data_in)
 
     for dtype in ['uint8', 'float32', 'float64']:
-        _test_resize_with_diff_type(dtype)    
+        _test_resize_with_diff_type(dtype)
 
 
 @with_seed()
@@ -149,7 +149,7 @@ def test_crop_resize():
         # test with resize height and width should be greater than 0
         transformer = transforms.CropResize(0, 0, 100, 50, (-25, 25), 2)
         assertRaises(MXNetError, transformer, data_in)
-        # test height and width should be greater than 0 
+        # test height and width should be greater than 0
         transformer = transforms.CropResize(0, 0, -100, -50)
         assertRaises(MXNetError, transformer, data_in)
         # test cropped area is bigger than input data
@@ -158,7 +158,7 @@ def test_crop_resize():
         assertRaises(MXNetError, transformer, data_bath_in)
 
     for dtype in ['uint8', 'float32', 'float64']:
-        _test_crop_resize_with_diff_type(dtype)  
+        _test_crop_resize_with_diff_type(dtype)
 
     # test nd.image.crop backward
     def test_crop_backward(test_nd_arr, TestCase):
@@ -179,7 +179,7 @@ def test_crop_resize():
         data_in = nd.arange(60).reshape((5, 4, 3)).astype(dtype)
         for test_case in test_list:
             test_crop_backward(data_in, test_case)
-        
+
 
 
     # check numeric gradient of nd.image.crop
