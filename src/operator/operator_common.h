@@ -447,7 +447,7 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
   p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+    ret.emplace_back(p, i, 0);
   }
   return ret;
 }
