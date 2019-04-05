@@ -100,7 +100,7 @@ class LoggingHandler(EventHandler):
         self.logger.setLevel(logging.INFO)
         stream_handler = logging.StreamHandler()
         self.logger.addHandler(stream_handler)
-        if verbose not in [__class__.ONLY_EPOCH, __class__.BATCH_WITH_EPOCH]:
+        if verbose not in [self.ONLY_EPOCH, self.BATCH_WITH_EPOCH]:
             raise ValueError("verbose level must be either ONLY_EPOCH or BATCH_WITH_EPOCH, "
                              "received %s. "
                              "E.g: LoggingHandler(verbose=LoggingHandler.ONLY_EPOCH)" % verbose)
@@ -130,11 +130,11 @@ class LoggingHandler(EventHandler):
         self.logger.info(msg)
 
     def batch_begin(self):
-        if self.verbose == __class__.BATCH_WITH_EPOCH:
+        if self.verbose == self.BATCH_WITH_EPOCH:
             self.batch_start = time.time()
 
     def batch_end(self):
-        if self.verbose == __class__.BATCH_WITH_EPOCH:
+        if self.verbose == self.BATCH_WITH_EPOCH:
             batch_time = time.time() - self.batch_start
             epoch = self.estimator.current_epoch
             batch = self.estimator.batch_idx
@@ -149,11 +149,11 @@ class LoggingHandler(EventHandler):
             self.logger.info(msg)
 
     def epoch_begin(self):
-        if self.verbose > __class__.ONLY_EPOCH:
+        if self.verbose > self.ONLY_EPOCH:
             self.epoch_start = time.time()
 
     def epoch_end(self):
-        if self.verbose > __class__.ONLY_EPOCH:
+        if self.verbose > self.ONLY_EPOCH:
             epoch_time = time.time() - self.epoch_start
             epoch = self.estimator.current_epoch
             msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
