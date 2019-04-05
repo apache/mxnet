@@ -48,7 +48,7 @@ def _cast_symbol_NDArray(s, dtype):
     else:
         return s
 
-def _wrap_symbol_functions(module):
+def _wrap_symbol_functions(module, fp16_list=None, conditional_fp32_list=None, fp32_list=None):
     def _ndarray_wrapper(f, target_dtype, cond_arg=None):
         def _new_fun(*args, **kwargs):
             if cond_arg is not None:
@@ -125,21 +125,25 @@ def _wrap_symbol_functions(module):
 
     _wrapper = _symbol_wrapper if module in (symbol, Symbol, symbol_contrib) else _ndarray_wrapper
 
-    for fun_name in lists.symbol.FP16_FUNCS:
+    wrap_list = fp16_list if fp16_list is not None else lists.symbol.FP16_FUNCS
+    for fun_name in wrap_list:
         try:
             f_to_wrap = getattr(module, fun_name)
             setattr(module, fun_name, _wrapper(f_to_wrap, np.float16))
         except AttributeError:
             pass
 
-    for fun_name in lists.symbol.FP32_FUNCS:
+    wrap_list = fp32_list if fp32_list is not None else lists.symbol.FP32_FUNCS
+    for fun_name in wrap_list:
         try:
             f_to_wrap = getattr(module, fun_name)
             setattr(module, fun_name, _wrapper(f_to_wrap, np.float32))
         except AttributeError:
             pass
 
-    for fun_name, arg, arg_values in lists.symbol.CONDITIONAL_FP32_FUNCS:
+    wrap_list = conditional_fp32_list if conditional_fp32_list is not None \
+                    else lists.symbol.CONDITIONAL_FP32_FUNCS
+    for fun_name, arg, arg_values in wrap_list:
         try:
             f_to_wrap = getattr(module, fun_name)
             setattr(module, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
@@ -198,24 +202,37 @@ def scale_loss(loss, optimizer_or_trainer):
     else:
         yield optimizer_or_trainer._amp_loss_scaler.loss_scale * loss
 
-def init():
+def init(fp16_list=None, conditional_fp32_list=None, fp32_list=None):
     """Initialize AMP (automatic mixed precision).
 
     This needs to be done before model creation.
+
+    Parameters
+    ----------
+    fp16_list : list of string
+        Override the list of functions casted to FP16. Entries in this list
+        are names of the functions casted to FP16.
+    conditional_fp32_list : list of (string, string, list of string)
+        Override the list of functions conditionally casted to FP32. The format
+        of the list is (name of the function, name of the parameter, list of
+        values of the parameter that make the function be casted to FP32).
+    fp32_list : list of string
+        Override the list of functions casted to FP32. Entries in this list
+        are names of the functions casted to FP32.
     """
     global _amp_initialized
     global _loss_scaler
     if not _amp_initialized:
         _amp_initialized = True
         logging.info("Using AMP")
-        _wrap_symbol_functions(symbol)
-        _wrap_symbol_functions(symbol._internal)
-        _wrap_symbol_functions(Symbol)
-        _wrap_symbol_functions(symbol_contrib)
-        _wrap_symbol_functions(ndarray)
-        _wrap_symbol_functions(ndarray._internal)
-        _wrap_symbol_functions(NDArray)
-        _wrap_symbol_functions(ndarray_contrib)
+        _wrap_symbol_functions(symbol, fp16_list, conditional_fp32_list, fp32_list)
+        _wrap_symbol_functions(symbol._internal, fp16_list, conditional_fp32_list, fp32_list)
+        _wrap_symbol_functions(Symbol, fp16_list, conditional_fp32_list, fp32_list)
+        _wrap_symbol_functions(symbol_contrib, fp16_list, conditional_fp32_list, fp32_list)
+        _wrap_symbol_functions(ndarray, fp16_list, conditional_fp32_list, fp32_list)
+        _wrap_symbol_functions(ndarray._internal, fp16_list, conditional_fp32_list, fp32_list)
+        _wrap_symbol_functions(NDArray, fp16_list, conditional_fp32_list, fp32_list)
+        _wrap_symbol_functions(ndarray_contrib, fp16_list, conditional_fp32_list, fp32_list)
         _loss_scaler = LossScaler()
         _wrap_loss_output_functions(ndarray, _loss_scaler)
         _wrap_loss_output_functions(symbol, _loss_scaler)
