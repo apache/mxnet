@@ -179,10 +179,10 @@ def run(net, train_dataloader, test_dataloader, **kwargs):
 
     # Define estimator
     est = estimator.Estimator(net=net, loss=loss, metrics=acc,
-                              trainers=trainer, context=ctx)
+                              trainer=trainer, context=ctx)
     # Begin training
     est.fit(train_data=train_dataloader, val_data=test_dataloader,
-            epochs=num_epochs, batch_size=batch_size)
+            epochs=num_epochs)
     return est
 
 
@@ -252,7 +252,7 @@ def test_estimator_gpu(**kwargs):
 
     est = run(net, train_dataloader, test_dataloader, **kwargs)
 
-    assert est.train_stats['train_accuracy'][num_epochs - 1] > 0.70
+    assert est.train_stats['train_accuracy'] > 0.70
 
 
 parser = argparse.ArgumentParser(description='test gluon estimator')

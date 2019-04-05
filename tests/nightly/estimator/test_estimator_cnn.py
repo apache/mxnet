@@ -105,13 +105,12 @@ def test_estimator_cpu():
         est = estimator.Estimator(net=net,
                                   loss=loss,
                                   metrics=mx.metric.Accuracy(),
-                                  trainers=trainer,
+                                  trainer=trainer,
                                   context=context)
         # Call fit()
         est.fit(train_data=train_data,
                 val_data=val_data,
-                epochs=1,
-                batch_size=1)
+                epochs=1)
 
 def test_estimator_gpu():
     '''
@@ -131,15 +130,14 @@ def test_estimator_gpu():
     est = estimator.Estimator(net=net,
                               loss=loss,
                               metrics=acc,
-                              trainers=trainer,
+                              trainer=trainer,
                               context=context)
     # Call fit()
     est.fit(train_data=train_data,
             val_data=test_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
+            epochs=num_epochs)
 
-    assert est.train_stats['train_'+acc.name][num_epochs-1] > 0.80
+    assert est.train_stats['train_'+acc.name] > 0.80
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='test gluon estimator')
