@@ -24,7 +24,7 @@ import warnings
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet.contrib.estimator import Estimator, EventHandler
+from mxnet.gluon.contrib.estimator import Estimator, EventHandler
 from nose.tools import assert_raises
 
 
