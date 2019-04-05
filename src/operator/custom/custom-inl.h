@@ -101,8 +101,6 @@ class CustomOperator {
       } catch (dmlc::Error& e) {
         exception_ =
             std::make_shared<std::exception_ptr>(std::current_exception());
-        ctx.async_on_complete();
-        return;
       }
 
       Imperative::Get()->set_is_training(prev_training);
@@ -123,6 +121,13 @@ class CustomOperator {
 
       Engine::Get()->PushSync(
           [=](RunContext rctx) {
+            try {
+              ThrowException();
+            } catch(dmlc::Error& err) {
+              ctx.async_on_complete(&err);
+              return;
+            }
+
             for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
               if (arrs[i].storage_type() == kDefaultStorage ||
                   arrs[i].storage_type() == kUndefinedStorage)

@@ -31,7 +31,6 @@
 #include <utility>
 #include "./threaded_engine.h"
 #include "../common/cuda_utils.h"
-#include "../operator/custom/custom-inl.h"
 
 namespace mxnet {
 namespace engine {
@@ -374,12 +373,10 @@ void ThreadedEngine::DeleteVariable(SyncFn delete_fn,
 }
 
 void ThreadedEngine::WaitForVar(VarHandle var) {
-  using mxnet::op::custom::CustomOperator;
   BulkFlush();
   ThreadedVar* threaded_var = ThreadedVar::CastFromBase(var);
   if (threaded_var->ready_to_read()) {
     ThrowException(threaded_var);
-    CustomOperator::Get()->ThrowException();
     return;
   }
   if (engine_info_) {
@@ -410,7 +407,6 @@ void ThreadedEngine::WaitForVar(VarHandle var) {
   }
 
   ThrowException(threaded_var);
-  CustomOperator::Get()->ThrowException();
 }
 
 void ThreadedEngine::WaitForAll() {
