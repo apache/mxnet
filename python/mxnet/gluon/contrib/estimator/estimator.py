@@ -22,9 +22,9 @@
 import copy
 import warnings
 from .event_handler import EventHandler, LoggingHandler
-from ... import gluon, autograd
-from ...context import Context, cpu, gpu, num_gpus
-from ...metric import EvalMetric, Loss, Accuracy
+from .... import gluon, autograd
+from ....context import Context, cpu, gpu, num_gpus
+from ....metric import EvalMetric, Loss, Accuracy
 
 __all__ = ['Estimator']
 
