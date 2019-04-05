@@ -896,9 +896,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorReshape
   (JNIEnv * env, jobject obj,
     jint partialReshaping, jint allowUpSizing, jint devType, jint devId,
     jobjectArray jmapKeys, jintArray jmapDevTypes, jintArray jmapDevIds,
-    jobjectArray jprovidedArgShapeNames, jintArray jprovidedArgShapeData, jintArray jprovidedArgShapeIdx,
-    jobject jrefInArgs, jobject jrefArgGrads, jobject jrefAuxStates,
-    jlong jsharedExec, jobject jrefOut) {
+    jobjectArray jprovidedArgShapeNames, jintArray jprovidedArgShapeData,
+    jintArray jprovidedArgShapeIdx, jobject jrefInArgs, jobject jrefArgGrads,
+    jobject jrefAuxStates, jlong jsharedExec, jobject jrefOut) {
   CHECK(jmapKeys != NULL);
   CHECK(jprovidedArgShapeNames != NULL);
 
@@ -922,7 +922,8 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorReshape
   if (numProvidedArgShapes > 0) {
     providedArgShapeNames = new const char*[numProvidedArgShapes];
     for (int i = 0; i < numProvidedArgShapes; ++i) {
-      jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jprovidedArgShapeNames, i));
+      jstring jkey = reinterpret_cast<jstring>(
+          env->GetObjectArrayElement(jprovidedArgShapeNames, i));
       providedArgShapeNames[i] = env->GetStringUTFChars(jkey, 0);
       env->DeleteLocalRef(jkey);
     }
@@ -1659,9 +1660,10 @@ int FillSymbolInferShape
   return 0;
 }
 
-int SymbolInferShapeHelper(JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
-                            jintArray jargIndPtr, jintArray jargShapeData, jobject jinShapeData,
-                            jobject joutShapeData, jobject jauxShapeData, jobject jcomplete, bool partial) {
+int SymbolInferShapeHelper(JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs,
+                            jobjectArray jkeys, jintArray jargIndPtr, jintArray jargShapeData,
+                            jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData,
+                            jobject jcomplete, bool partial) {
   const char **keys = NULL;
   if (jkeys != NULL) {
     keys = new const char *[jnumArgs];
