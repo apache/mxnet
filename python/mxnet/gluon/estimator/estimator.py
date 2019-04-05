@@ -238,7 +238,7 @@ class Estimator(object):
                 not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
             event_handlers.append(LoggingHandler())
             warnings.warn("No Event Handler specified, default `LoggingHandler()` "
-                          "is used with verbose=LoggingHandler.LOG_VERBOSITY_PER_BATCH. "
+                          "is used with verbose=LoggingHandler.LOG_VERBOSITY_PER_EPOCH. "
                           "Please look at gluon.estimator.event_handler for more detail.")
 
         train_begin, epoch_begin, batch_begin, \
