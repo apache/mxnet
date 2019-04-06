@@ -98,49 +98,38 @@ class CustomOperator {
 
       try {
         func();
-      } catch (dmlc::Error& e) {
-        exception_ =
-            std::make_shared<std::exception_ptr>(std::current_exception());
+
+        size_t idx = 0;
+        for (const auto& i : arrs) {
+          i.WaitToRead();
+          if (output_tags.count(tags[idx]) > 0) {
+            if (i.storage_type() == kDefaultStorage ||
+                i.storage_type() == kUndefinedStorage)
+              continue;
+            i.WaitToWrite();
+            idx++;
+          }
+        }
+      } catch (dmlc::Error& err) {
+        Imperative::Get()->set_is_training(prev_training);
+        Imperative::Get()->set_is_recording(prev_recording);
+        ctx.async_on_complete(&err);
+        return;
       }
 
       Imperative::Get()->set_is_training(prev_training);
       Imperative::Get()->set_is_recording(prev_recording);
 
-      std::vector<Engine::VarHandle> vars, vars2;
-      size_t idx = 0;
-      for (const auto& i : arrs) {
-        vars.push_back(i.var());
-        if (output_tags.count(tags[idx]) > 0) {
-          if (i.storage_type() == kDefaultStorage ||
-              i.storage_type() == kUndefinedStorage)
-            continue;
-          vars2.push_back(i.var());
-          idx++;
+      for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
+        if (arrs[i].storage_type() == kDefaultStorage ||
+            arrs[i].storage_type() == kUndefinedStorage)
+          continue;
+        if (output_tags.count(tags[i]) > 0) {
+          outputs[out_idx].SparseUpdateChunk(arrs[i]);
+          out_idx++;
         }
       }
-
-      Engine::Get()->PushSync(
-          [=](RunContext rctx) {
-            try {
-              ThrowException();
-            } catch(dmlc::Error& err) {
-              ctx.async_on_complete(&err);
-              return;
-            }
-
-            for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
-              if (arrs[i].storage_type() == kDefaultStorage ||
-                  arrs[i].storage_type() == kUndefinedStorage)
-                continue;
-              if (output_tags.count(tags[i]) > 0) {
-                outputs[out_idx].SparseUpdateChunk(arrs[i]);
-                out_idx++;
-              }
-            }
-            ctx.async_on_complete();
-          },
-          ctx.run_ctx.ctx, vars, vars2, FnProperty::kNormal, 0,
-          "CustomOperator");
+      ctx.async_on_complete();
     });
     // increase num_threads if there is not enough threads to execute custom operator
     if (q_.size() > num_free_threads)
@@ -157,7 +146,6 @@ class CustomOperator {
     num_free_threads = 0;
     destructing_ = false;
     naive_engine_ = true;
-    exception_ = nullptr;
     if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
       naive_engine_ = false;
     }
@@ -173,14 +161,6 @@ class CustomOperator {
     for (auto &worker : workers_)
       worker.join();
     workers_.clear();
-  }
-
-  inline void ThrowException() {
-    if (exception_ && *exception_) {
-      std::exception_ptr tmp = *exception_;
-      exception_ = nullptr;
-      std::rethrow_exception(tmp);
-    }
   }
 
  private:
@@ -219,7 +199,6 @@ class CustomOperator {
   std::vector<std::thread> workers_;
   std::atomic<uint32_t> num_free_threads;
   std::queue<std::function<void(void)> > q_;
-  std::shared_ptr<std::exception_ptr> exception_;
   bool naive_engine_;
   bool destructing_;
 };
