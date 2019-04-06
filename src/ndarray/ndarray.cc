@@ -549,7 +549,7 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     // If they have different shapes, we need to reshape the array first.
     // Since this method will only be used inside an operator, we can call
     // MKLDNNDataReshape to reshape an array.
-    mxnet::TShape required_shape(desc2.data.ndims);
+    mxnet::TShape required_shape(desc2.data.ndims, -1);
     for (int i = 0; i < desc2.data.ndims; i++)
       required_shape[i] = desc2.data.dims[i];
     NDArray reshaped = MKLDNNDataReshape(required_shape);
@@ -575,7 +575,7 @@ NDArray NDArray::Reorder2Default() const {
 
   // create new ndarray from  mkldnn layout
   mkldnn::memory::desc from_desc = ptr_->mkl_mem_->GetPrimitiveDesc().desc();
-  mxnet::TShape tshape(from_desc.data.ndims);
+  mxnet::TShape tshape(from_desc.data.ndims, -1);
   for (int i = 0; i < from_desc.data.ndims; i++) tshape[i] = from_desc.data.dims[i];
   NDArray ret(tshape, ctx(), false, dtype());
   mkldnn::memory::primitive_desc def_pd = ptr_->mkl_mem_->GetPrimitiveDesc(format);
