@@ -390,7 +390,7 @@ class TShape : public Tuple<dim_t> {
    * \param ndim the number of dimension
    * \param value the dimension size for all dims
    */
-  inline TShape(int ndim, int value = -1) {  // NOLINT(*)
+  inline TShape(const int ndim, const dim_t value) {  // NOLINT(*)
     this->SetDim(ndim);
     if (ndim > 0) {
       std::fill_n(begin(), ndim, value);
@@ -422,12 +422,17 @@ class TShape : public Tuple<dim_t> {
     this->swap(s);
   }
   /*!
-   * \brief construct the Tuple from content of iterator
+   * \brief construct the Tuple from content of iterator.
+   * This function is enforced with template arguments of random access iterator types.
+   * This is necessary to distinguish from another constructor: TShape(const int, const dim_t).
    * \param begin the beginning of iterator
    * \param end end the end of the iterator
    * \tparam RandomAccessIterator iterator type
    */
-  template<typename RandomAccessIterator>
+  template<typename RandomAccessIterator,
+           typename std::enable_if<
+               std::is_same<typename std::iterator_traits<RandomAccessIterator>::iterator_category,
+                            std::random_access_iterator_tag>::value, int>::type = 0>
   inline TShape(RandomAccessIterator begin,
                 RandomAccessIterator end) {
     this->assign(begin, end);

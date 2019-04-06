@@ -59,7 +59,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
     .set_default(false)
     .describe("If true then the special values are inferred from right to left");
     DMLC_DECLARE_FIELD(target_shape)
-    .set_default(mxnet::TShape(0))
+    .set_default(mxnet::TShape(0, -1))
     .describe("(Deprecated! Use ``shape`` instead.) "
               "Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
@@ -241,7 +241,7 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
 struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   mxnet::TShape axes;
   DMLC_DECLARE_PARAMETER(TransposeParam) {
-    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0))
+    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0, -1))
     .describe("Target axis order. By default the axes will be inverted.");
   }
 };

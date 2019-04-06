@@ -75,8 +75,8 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   } else {
     SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param.num_hidden));
   }
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));
-  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
+  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
   return true;
 }
 

@@ -120,7 +120,7 @@ inline bool QuantizeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 3U);
 
   for (size_t i = 1; i < 3; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_attrs, i, mxnet::TShape({1}));
+    SHAPE_ASSIGN_CHECK(*in_attrs, i, mxnet::TShape(1, 1));
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
