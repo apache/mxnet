@@ -121,9 +121,11 @@ class MXNET_API Engine {
   /*! \brief Asynchronous operation to pass to engine. */
   typedef std::function<void(RunContext, CallbackOnComplete)> AsyncFn;
   /*! \brief Synchronous operation (function pointer) to pass to engine. */
-  typedef void (*SyncFnPtr)(RunContext, const std::shared_ptr<void>&);
+  typedef void (*SyncFnPtr)(RunContext, void*);
   /*! \brief Asynchronous operation (function pointer) to pass to engine. */
-  typedef void (*AsyncFnPtr)(RunContext, CallbackOnComplete, const std::shared_ptr<void>&);
+  typedef void (*AsyncFnPtr)(RunContext, CallbackOnComplete, void*);
+  /*! \brief Callback to free the param passed into AsyncFnPtr/SyncFnPtr. */
+  typedef void (*FnPtrParamDeleter)(void* param);
   /*! \brief Variable pointer */
   typedef engine::VarHandle VarHandle;
   /*! \brief Operator pointer */
@@ -215,7 +217,8 @@ class MXNET_API Engine {
    * \param exec_fn_ptr Execution function, this function takes a parameter
    *                    on_complete that must be called when the execution
    *                    completes.
-   * \param param the parameter set on calling exec_fn_ptr.
+   * \param param The parameter set on calling exec_fn_ptr, can be NULL.
+   * \param del The callback to free param, can be NULL.
    * \param exec_ctx Execution context.
    * \param const_vars The variables that current operation will use but not
    *                   mutate.
@@ -225,7 +228,7 @@ class MXNET_API Engine {
    * \param opr_name The operator name.
    * \param wait Whether this is a WaitForVar operation.
    */
-  void PushAsyncPtr(AsyncFnPtr exec_fn_ptr, const std::shared_ptr<void>& param,
+  void PushAsyncPtr(AsyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter del,
                     Context exec_ctx, std::vector<VarHandle> const& const_vars,
                     std::vector<VarHandle> const& mutable_vars,
                     FnProperty prop = FnProperty::kNormal, int priority = 0,
@@ -233,7 +236,8 @@ class MXNET_API Engine {
   /*!
    * \brief Push an synchronous operation to the engine.
    * \param exec_fn_ptr Execution function that executes the operation.
-   * \param param the parameter set on calling exec_fn_ptr.
+   * \param param The parameter set on calling exec_fn_ptr, can be NULL.
+   * \param del The callback to free param, can be NULL.
    * \param exec_ctx Execution context.
    * \param const_vars The variables that current operation will use but not
    *                   mutate.
@@ -242,7 +246,7 @@ class MXNET_API Engine {
    * \param priority Priority of the action, as hint to the engine.
    * \param opr_name The operator name.
    */
-  void PushSyncPtr(SyncFnPtr exec_fn_ptr, const std::shared_ptr<void>& param,
+  void PushSyncPtr(SyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter del,
                    Context exec_ctx, std::vector<VarHandle> const& const_vars,
                    std::vector<VarHandle> const& mutable_vars,
                    FnProperty prop = FnProperty::kNormal, int priority = 0,

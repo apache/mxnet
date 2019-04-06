@@ -68,25 +68,48 @@ Engine* Engine::Get() {
   return inst;
 }
 
-void Engine::PushAsyncPtr(AsyncFnPtr exec_fn_ptr, const std::shared_ptr<void>& param,
+void Engine::PushAsyncPtr(AsyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter del,
                           Context exec_ctx, std::vector<VarHandle> const& const_vars,
                           std::vector<VarHandle> const& mutable_vars,
                           FnProperty prop, int priority,
                           const char* opr_name, bool wait) {
-  auto exec_fn = [exec_fn_ptr, param](RunContext rctx,
-                                      CallbackOnComplete on_complete) {
-    exec_fn_ptr(rctx, on_complete, param);
-  };
+  AsyncFn exec_fn;
+  if (del == nullptr) {
+    exec_fn = [exec_fn_ptr, param](RunContext rctx,
+                                   CallbackOnComplete on_complete) {
+      exec_fn_ptr(rctx, on_complete, param);
+    };
+  } else {
+    // Wrap param in a shared_ptr with del as deleter such that del will be
+    // called when the lambda goes out of scope.
+    std::shared_ptr<void> shared_param(param, del);
+    exec_fn = [exec_fn_ptr, shared_param](RunContext rctx,
+                                          CallbackOnComplete on_complete) {
+      exec_fn_ptr(rctx, on_complete, shared_param.get());
+    };
+  }
+
   PushAsync(exec_fn, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name, wait);
 }
 
-void Engine::PushSyncPtr(SyncFnPtr exec_fn_ptr, const std::shared_ptr<void>& param,
+void Engine::PushSyncPtr(SyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter del,
                          Context exec_ctx, std::vector<VarHandle> const& const_vars,
                          std::vector<VarHandle> const& mutable_vars,
                          FnProperty prop, int priority, const char* opr_name) {
-  auto exec_fn = [exec_fn_ptr, param](RunContext rctx) {
-    exec_fn_ptr(rctx, param);
-  };
+  SyncFn exec_fn;
+  if (del == nullptr) {
+    exec_fn = [exec_fn_ptr, param](RunContext rctx) {
+      exec_fn_ptr(rctx, param);
+    };
+  } else {
+    // Wrap param in a shared_ptr with del as deleter such that del will be
+    // called when the lambda goes out of scope.
+    std::shared_ptr<void> shared_param(param, del);
+    exec_fn = [exec_fn_ptr, shared_param](RunContext rctx) {
+      exec_fn_ptr(rctx, shared_param.get());
+    };
+  }
+
   PushSync(exec_fn, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
 }
 }  // namespace mxnet
