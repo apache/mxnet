@@ -53,7 +53,7 @@ if [[ $VARIANT == *mkl ]]; then
 fi
 
 if [[ $VARIANT == cu* ]]; then
-    cp 3rdparty/cub/LICENSE.TXT ./CUB_LICENSE
+    cp 3rdparty/nvidia_cub/LICENSE.TXT ./CUB_LICENSE
 fi
 
 >&2 echo "Now building mxnet..."
