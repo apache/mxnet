@@ -246,6 +246,7 @@
         d-shape1 [10 3 64 64]
         d-shape2 [10 3 32 32]
         l-shape [10]
+
         mod (m/module my-sym {:data-names ["data1" "data2"]})
         data-batch {:data [(ndarray/random-uniform 0 9 (str (mx-shape/->shape d-shape1)))
                            (ndarray/random-uniform 5 15 (str (mx-shape/->shape d-shape2)))]
@@ -261,7 +262,12 @@
         (m/init-params)
         (m/init-optimizer {:optimizer (optimizer/sgd {:learning-rate 0.1})})
         (m/forward data-batch))
-    (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
+    (is (= [(first l-shape) num-class]
+           (-> mod
+               (m/outputs-merged)
+               (first)
+               (ndarray/shape)
+               (mx-shape/->vec))))
     (-> mod
         (m/backward)
         (m/update))
@@ -275,8 +281,13 @@
                         :index nil
                         :pad 0}]
       (-> mod
-          (m/forward data-batch))
-      (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
+          (m/forward data-batch-2))
+      (is (= [(first l-shape) num-class]
+             (-> mod
+                 (m/outputs-merged)
+                 (first)
+                 (ndarray/shape)
+                 (mx-shape/->vec))))
       (-> mod
           (m/backward)
           (m/update)))
@@ -290,8 +301,13 @@
                         :index nil
                         :pad 0}]
       (-> mod
-          (m/forward data-batch))
-      (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
+          (m/forward data-batch-2))
+      (is (= [(first l-shape) num-class]
+             (-> mod
+                 (m/outputs-merged)
+                 (first)
+                 (ndarray/shape)
+                 (mx-shape/->vec))))
       (-> mod
           (m/backward)
           (m/update)))
@@ -307,7 +323,11 @@
                       :pad 0}]
       (-> mod
           (m/forward data-batch))
-      (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
+      (is (= [(first l-shape) num-class]
+             (-> (m/outputs-merged mod)
+                 first
+                 (ndarray/shape)
+                 (mx-shape/->vec))))
       (-> mod
           (m/backward)
           (m/update)))
@@ -321,7 +341,11 @@
                       :pad 0}]
       (-> mod
           (m/forward data-batch))
-      (is (= [(first l-shape) num-class]) (-> (m/outputs-merged mod) first (ndarray/shape) (mx-shape/->vec)))
+      (is (= [(first l-shape) num-class]
+             (-> (m/outputs-merged mod)
+                 first
+                 (ndarray/shape)
+                 (mx-shape/->vec))))
       (-> mod
           (m/backward)
           (m/update)))))

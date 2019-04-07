@@ -23,6 +23,7 @@
             [org.apache.clojure-mxnet.util :as util]
             [clojure.spec.alpha :as s])
   (:import (org.apache.mxnet Image NDArray)
+           (java.awt.image BufferedImage)
            (java.io InputStream)))
 
 ;; Flags for conversion of images
@@ -199,3 +200,68 @@
   [input]
   (util/validate! ::to-image-ndarray input "Invalid input array")
   (Image/toImage input))
+
+(s/def ::buffered-image #(instance? BufferedImage %))
+(s/def ::xmin integer?)
+(s/def ::xmax integer?)
+(s/def ::ymin integer?)
+(s/def ::ymax integer?)
+(s/def ::coordinate (s/keys :req-un [::xmin ::xmax ::ymin ::ymax]))
+(s/def ::coordinates (s/coll-of ::coordinate))
+(s/def ::names (s/nilable (s/coll-of string?)))
+(s/def ::stroke (s/and integer? pos?))
+(s/def ::font-size-mult (s/and float? pos?))
+(s/def ::transparency (s/and float? #(<= 0.0 % 1.0)))
+(s/def ::coordinates-names
+  (fn [[coordinates names]] (= (count coordinates) (count names))))
+
+(defn- convert-coordinate
+  "Convert bounding box coordinate to Scala correct types."
+  [{:keys [xmin xmax ymin ymax]}]
+  {:xmin (int xmin)
+   :xmax (int xmax)
+   :ymin (int ymin)
+   :ymax (int ymax)})
+
+(defn draw-bounding-box!
+  "Draw bounding boxes on `buffered-image` and Mutate the input image.
+  `buffered-image`: BufferedImage
+  `coordinates`: collection of {:xmin int :xmax int :ymin int :ymax int}
+  `font-size-mult`: positive float - Font size multiplier
+  `names`: collection of strings - List of names for the bounding boxes
+  `stroke`: positive integer - thickness of the bounding box
+  `transparency`: float in (0.0, 1.0) - Transparency of the bounding box
+  returns: Modified `buffered-image`
+  Ex:
+    (draw-bounding-box! img [{:xmin 0 :xmax 100 :ymin 0 :ymax 100}])
+    (draw-bounding-box! [{:xmin 190 :xmax 850 :ymin 50 :ymax 450}
+                         {:xmin 200 :xmax 350 :ymin 440 :ymax 530}]
+                        {:stroke 2
+                         :names [\"pug\" \"cookie\"]
+                         :transparency 0.8
+                         :font-size-mult 2.0})"
+  ([buffered-image coordinates]
+   (draw-bounding-box! buffered-image coordinates {}))
+  ([buffered-image coordinates
+    {:keys [names stroke font-size-mult transparency]
+     :or {stroke 3 font-size-mult 1.0 transparency 1.0}
+     :as opts}]
+  (util/validate! ::buffered-image buffered-image "Invalid input image")
+  (util/validate! ::coordinates coordinates "Invalid input coordinates")
+  (util/validate! ::names names "Invalid input names")
+  (util/validate! ::stroke stroke "Invalid input stroke")
+  (util/validate! ::font-size-mult font-size-mult "Invalid input font-size-mult")
+  (util/validate! ::transparency transparency "Invalid input transparency")
+  (when (pos? (count names))
+    (util/validate!  ::coordinates-names [coordinates names] "Invalid number of names"))
+  (Image/drawBoundingBox
+    buffered-image
+    (->> coordinates
+         (map convert-coordinate)
+         (map util/convert-map)
+         (into-array))
+    (util/->option (into-array names))
+    (util/->option (int stroke))
+    (util/->option (float font-size-mult))
+    (util/->option (float transparency)))
+  buffered-image))

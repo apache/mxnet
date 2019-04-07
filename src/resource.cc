@@ -54,30 +54,29 @@ struct SpaceAllocator {
     host_handle.dptr = nullptr;
     host_handle.size = 0;
   }
+
   inline void ReleaseAll() {
-    if (handle.size != 0) {
-      Storage::Get()->DirectFree(handle);
-      handle.size = 0;
-    }
-    if (host_handle.size != 0) {
-      Storage::Get()->DirectFree(host_handle);
-      host_handle.size = 0;
-    }
+    Storage::Get()->DirectFree(handle);
+    handle.dptr = nullptr;
+    handle.size = 0;
+
+    Storage::Get()->DirectFree(host_handle);
+    host_handle.dptr = nullptr;
+    host_handle.size = 0;
   }
+
   inline void* GetSpace(size_t size) {
     if (handle.size >= size) return handle.dptr;
-    if (handle.size != 0) {
-      Storage::Get()->DirectFree(handle);
-    }
+
+    Storage::Get()->DirectFree(handle);
     handle = Storage::Get()->Alloc(size, ctx);
     return handle.dptr;
   }
 
   inline void* GetHostSpace(size_t size) {
     if (host_handle.size >= size) return host_handle.dptr;
-    if (host_handle.size != 0) {
-      Storage::Get()->DirectFree(host_handle);
-    }
+
+    Storage::Get()->DirectFree(host_handle);
     host_handle = Storage::Get()->Alloc(size, Context());
     return host_handle.dptr;
   }

@@ -32,6 +32,8 @@ This command will pick the default values specified in the [pom](https://github.
 
 Note: If you are planning to use GPU, please add `-Dmxnet.profile=linux-x86_64-gpu`
 
+Note: The Maven package is built with CUDA 9.2.
+
 ### Use customized version set
 You can use the following instruction as an alternative to achieve the same result:
 You may use `mvn package` to build the package,
