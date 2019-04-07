@@ -152,7 +152,7 @@
     (do (.nnGetOpHandle libinfo op-name ref)
         (.value ref))))
 
-(defn- gen-op-info [op-name]
+(defn gen-op-info [op-name]
   (let [handle (get-op-handle op-name)
         name (new Base$RefString nil)
         desc (new Base$RefString nil)
