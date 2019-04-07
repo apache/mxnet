@@ -2740,6 +2740,8 @@ def pow(base, exp):
     Both inputs can be Symbol or scalar number.
     Broadcasting is not supported. Use `broadcast_pow` instead.
 
+    `sym.pow` is being deprecated, please use `sym.power` instead.
+
     Parameters
     ---------
     base : Symbol or scalar

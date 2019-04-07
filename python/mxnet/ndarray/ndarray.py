@@ -46,7 +46,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
-           "pow", "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
+           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
            "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
 
 _STORAGE_TYPE_UNDEFINED = -1
@@ -3016,62 +3016,6 @@ def power(base, exp):
         _internal._power_scalar,
         _internal._rpower_scalar)
     # pylint: enable= no-member, protected-access
-
-
-# pylint: disable=no-member
-# pylint: disable=redefined-builtin
-def pow(base, exp):
-    """Returns result of first array elements raised to powers from second array, element-wise
-    with broadcasting.
-
-    Equivalent to ``base ** exp`` and ``mx.nd.broadcast_power(lhs, rhs)``.
-
-    .. note::
-
-       If the corresponding dimensions of two arrays have the same size or one of them has size 1,
-       then the arrays are broadcastable to a common shape.
-
-    Parameters
-    ----------
-    base : scalar or NDArray
-         The base array
-    exp : scalar or NDArray
-         The exponent array. If ``base.shape != exp.shape``, they must be
-        broadcastable to a common shape.
-
-    Returns
-    --------
-    NDArray
-        The bases in x raised to the exponents in y.
-
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))*2
-    >>> y = mx.nd.arange(1,3).reshape((2,1))
-    >>> z = mx.nd.arange(1,3).reshape((2,1))
-    >>> x.asnumpy()
-    array([[ 2.,  2.,  2.],
-           [ 2.,  2.,  2.]], dtype=float32)
-    >>> y.asnumpy()
-    array([[ 1.],
-           [ 2.]], dtype=float32)
-    >>> z.asnumpy()
-    array([[ 1.],
-           [ 2.]], dtype=float32)
-    >>> (x**2).asnumpy()
-    array([[ 4.,  4.,  4.],
-           [ 4.,  4.,  4.]], dtype=float32)
-    >>> (x**y).asnumpy()
-    array([[ 2.,  2.,  2.],
-           [ 4.,  4.,  4.]], dtype=float32)
-    >>> mx.nd.pow(x,y).asnumpy()
-    array([[ 2.,  2.,  2.],
-           [ 4.,  4.,  4.]], dtype=float32)
-    >>> (z**y).asnumpy()
-    array([[ 1.],
-           [ 4.]], dtype=float32)
-    """
-    power(base, exp)
 
 
 def maximum(lhs, rhs):
