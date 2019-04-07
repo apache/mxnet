@@ -234,7 +234,7 @@ def test_quantized_sum():
         sum_fp32_exe = sum_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
         if qtype == 'uint8':
             data_low = 0.0
-            data_high = 127.0
+            data_high = 255.0
         else:
             data_low = -127.0
             data_high = 127.0
@@ -266,12 +266,10 @@ def test_quantized_sum():
         qoutput, min_range, max_range = sum_int8_exe.forward()
         min_val = min_range.asnumpy().tolist()[0]
         max_val = max_range.asnumpy().tolist()[0]
-        max_abs = max(abs(min_val), abs(max_val))
 
         fp32_rslt = output.asnumpy()
-        int8_rslt = qoutput.asnumpy()
-        fp32_to_int8_rslt = (fp32_rslt*data_high/max_abs).astype(int)
-        assert_almost_equal(int8_rslt, fp32_to_int8_rslt, atol = 1)
+        int8_rslt = qoutput.asnumpy()*max_val/0x7fffffff
+        assert_almost_equal(int8_rslt, int8_rslt, atol = 1)
 
     for qtype in ['int8', 'uint8']:
         check_quantized_sum((4, 6), qtype)

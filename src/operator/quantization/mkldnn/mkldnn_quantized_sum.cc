@@ -24,34 +24,13 @@
  */
 
 #if MXNET_USE_MKLDNN == 1
-#include "./mkldnn_ops-inl.h"
-#include "./mkldnn_base-inl.h"
+#include "./mkldnn_quantized_sum-inl.h"
+#include "../../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {
 namespace op {
-
-namespace quantized_sum_enum {
-enum QuantizedSumOutputs { kOut, kMin, kMax };
-enum QuantizedSumInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax};
-}
-
-struct RequantizeSumParam : public dmlc::Parameter<RequantizeSumParam> {
-  dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
-  dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  DMLC_DECLARE_PARAMETER(RequantizeSumParam) {
-    DMLC_DECLARE_FIELD(min_calib_range)
-    .set_default(dmlc::optional<float>())
-    .describe("The minimum scalar value in the form of float32 obtained "
-              "through calibration. If present, it will be used to requantize the "
-              "int8 output data.");
-    DMLC_DECLARE_FIELD(max_calib_range)
-    .set_default(dmlc::optional<float>())
-    .describe("The maximum scalar value in the form of float32 obtained "
-              "through calibration. If present, it will be used to requantize the "
-              "int8 output data.");
-  }
-};
 
 DMLC_REGISTER_PARAMETER(RequantizeSumParam);
 
@@ -81,20 +60,24 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
   auto dataA_mem  = in_data[quantized_sum_enum::kDataA].GetMKLDNNData();
   auto dataB_mem  = in_data[quantized_sum_enum::kDataB].GetMKLDNNData();
   bool dataA_int8 = (in_data[quantized_sum_enum::kDataA].dtype() == mshadow::kInt8) ? true : false;
+  size_t dataA_range = dataA_int8 ? kInt8Range : kUint8Range;
 
   float A_scale = GetScale(in_data[quantized_sum_enum::kDataA], dataA_min, dataA_max);
   float B_scale = GetScale(in_data[quantized_sum_enum::kDataB], dataB_min, dataB_max);
-
   // rescaled_mem is for reorder mkldnn memory
   std::shared_ptr<mkldnn::memory> rescaled_mem;
-  size_t output_data_range = kInt8Range;
-  auto output_data_type = mkldnn::memory::s8;
+  // output default set as int32
+  size_t output_data_range = kInt32Range;
+  auto output_data_type = mkldnn::memory::s32;
   // dataA && dataB are uint8
-  if (in_data[quantized_sum_enum::kDataA].dtype() == in_data[quantized_sum_enum::kDataB].dtype()
-      && dataA_int8 == false) {
+  if (out_data[quantized_sum_enum::kDataA].dtype() == mshadow::kInt8) {
+  output_data_range = kInt8Range;
+  output_data_type = mkldnn::memory::s8;
+  } else if (out_data[quantized_sum_enum::kDataA].dtype() == mshadow::kUint8) {
     output_data_range = kUint8Range;
     output_data_type = mkldnn::memory::u8;
   }
+
   float output_min = 0;
   float output_max = 0;
   float out_data_scale = 0;
@@ -106,6 +89,7 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
     output_max = dataA_absmax + dataB_absmax;
     output_min = 0 - output_max;
   }
+
   std::vector<float> scales;
   if (in_data[quantized_sum_enum::kDataA].dtype() != in_data[quantized_sum_enum::kDataB].dtype()) {
     auto s8_pd = (dataA_int8 == true)
@@ -126,13 +110,17 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
     } else {
       // x*dataA_absmax/dataA_range = y*(dataA_absmax+dataB_absmax)/output_range
       if (dataA_int8 == true) {
-        u8_reorder_scale = kInt8Range*dataB_absmax/(kUint8Range*(dataA_absmax + dataB_absmax));
-        scales.push_back(dataA_absmax/(dataA_absmax + dataB_absmax));
+        u8_reorder_scale = dataB_absmax*output_data_range
+                           /((dataA_absmax + dataB_absmax)*kUint8Range);
+        scales.push_back(dataA_absmax*output_data_range
+                         /((dataA_absmax + dataB_absmax)*dataA_range));
         scales.push_back(1);
       } else {
-        u8_reorder_scale = kInt8Range*dataA_absmax/(kUint8Range*(dataA_absmax + dataB_absmax));
+        u8_reorder_scale = dataA_absmax*output_data_range
+                           /((dataA_absmax + dataB_absmax)*dataA_range);
         scales.push_back(1);
-        scales.push_back(dataB_absmax/(dataA_absmax + dataB_absmax));
+        scales.push_back(dataB_absmax*output_data_range
+                         /((dataA_absmax + dataB_absmax)*kInt8Range));
       }
     }
     std::vector<float> reorder_scale = {u8_reorder_scale};
@@ -151,13 +139,13 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
       dataA_mem = rescaled_mem.get();
     }
   } else {
-    // same data type
+    // same data type and has same data range
     if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
       scales.push_back(out_data_scale/A_scale);
       scales.push_back(out_data_scale/B_scale);
     } else {
-      scales.push_back(dataA_absmax/(dataA_absmax + dataB_absmax));
-      scales.push_back(1 - scales[0]);
+      scales.push_back(dataA_absmax*output_data_range/((dataA_absmax + dataB_absmax)*dataA_range));
+      scales.push_back(dataB_absmax*output_data_range/((dataA_absmax + dataB_absmax)*dataA_range));
     }
   }
 

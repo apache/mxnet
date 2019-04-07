@@ -34,6 +34,7 @@ namespace op {
 
 static const size_t kUint8Range = 255;
 static const size_t kInt8Range = 127;
+static const size_t kInt32Range = 0x7fffffff;
 
 template<typename T>
 MSHADOW_XINLINE int Sign(T val) {

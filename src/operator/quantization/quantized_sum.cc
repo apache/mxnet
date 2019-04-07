@@ -23,6 +23,9 @@
  * \brief
 */
 #include "../tensor/elemwise_unary_op.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./mkldnn/mkldnn_quantized_sum-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -64,7 +67,13 @@ static bool SumType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
     }
   }
   // C
-  int dtype = (in_type->at(0) == in_type->at(1)) ? in_type->at(0) : mshadow::kInt8;
+  int dtype = mshadow::kInt32;
+#if MXNET_USE_MKLDNN == 1
+  const RequantizeSumParam& params = nnvm::get<RequantizeSumParam>(attrs.parsed);
+  if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
+    dtype = (in_type->at(0) == in_type->at(1)) ? in_type->at(0) : mshadow::kInt8;
+  }
+#endif
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   // C_min
   TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
@@ -75,17 +84,14 @@ static bool SumType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_sum)
-.describe(R"code(Adds arguments element-wise.
+.describe(R"code(elem_add operator for input dataA and input dataB data type of int8,
+and accumulates in type int32 for the output. For each argument, two more arguments of type
+float32 must be provided representing the thresholds of quantizing argument from data
+type float32 to int8. The final outputs contain result in int32, and min
+and max thresholds representing the threholds for quantizing the float32 output into int32.
 
-The storage type of ``elemwise_add`` output depends on storage types of inputs
-
-   - elemwise_add(row_sparse, row_sparse) = row_sparse
-   - elemwise_add(csr, csr) = csr
-   - elemwise_add(default, csr) = default
-   - elemwise_add(csr, default) = default
-   - elemwise_add(default, rsp) = default
-   - elemwise_add(rsp, default) = default
-   - otherwise, ``elemwise_add`` generates output with default storage
+.. Note::
+    This operator only supports forward propogation. DO NOT use it in training.
 
 )code")
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -100,9 +106,6 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"output", "min_output", "max_output"};
 })
-// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
-// will be reverted after the improvement of CachedOP is done.
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferType>("FInferType", SumType)
 .set_attr<mxnet::FInferShape>("FInferShape", SumShape)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
