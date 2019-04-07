@@ -8427,6 +8427,31 @@ def test_image_normalize():
     # check backward using finite difference
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
 
+@with_seed()
+def test_index_array_default():
+    for shape in [(10,), (7, 5, 29), (5, 7, 11, 13, 17, 19)]:
+        data  = mx.symbol.Variable("data")
+        index_array = mx.sym.contrib.index_array(data)
+
+        mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
+        expected = np.stack(mgrid, axis=-1)
+        
+        check_symbolic_forward(index_array, [np.ones(shape)], [expected])
+        check_symbolic_backward(index_array, [np.ones(shape)], [np.ones(shape)], [np.zeros(shape)])
+
+@with_seed()
+def test_index_array_select_axes():
+    shape = (5, 7, 11, 13, 17, 19)
+    for axes in [(3,), (4, 1), (5, 1, 3), (-1,), (-5, -1, -3)]:
+        data  = mx.symbol.Variable("data")
+        index_array = mx.sym.contrib.index_array(data, axes=axes)
+
+        mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
+        expected = np.stack(mgrid, axis=-1)[..., axes]
+
+        check_symbolic_forward(index_array, [np.ones(shape)], [expected])
+        check_symbolic_backward(index_array, [np.ones(shape)], [np.ones(shape)], [np.zeros(shape)])
+
 
 @with_seed()
 def test_scalar_tensor_creation():
