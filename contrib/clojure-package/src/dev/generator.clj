@@ -135,8 +135,8 @@
 (def op-names
   (let [l ($ ListBuffer/empty)]
     (do (.mxListAllOpNames libinfo l)
-        (filter #(and (not= "Custom" %)
-                      (re-matches #"^[^_].*" %))
+        (filter #(not (or (= "Custom" %)
+                          (re-matches #"^_.*" %)))
                 (util/buffer->vec l)))))
 
 (defn- parse-arg-type [s]
@@ -406,10 +406,10 @@
 
 (defn gen-symbol-api-function [op-name]
   (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
-        params (mapv #(assoc %
-                             :sym (-> % :name symbol)
-                             :optional? (or (:optional? %)
-                                            (= "NDArray-or-Symbol" (:type %))))
+        params (mapv (fn [{:keys [name type optional?] :as opts}]
+                       (assoc opts
+                              :sym (symbol name)
+                              :optional? (or optional? (= "NDArray-or-Symbol" type))))
                      (conj args
                            {:name "name"
                             :type "String"
@@ -422,8 +422,9 @@
         opt-params (filter :optional? params)
         coerced-params (mapv symbol-api-coerce-param params)
         default-args (array-map :keys (mapv :sym params)
-                                :or (into {} (mapv #(vector (:sym %) nil)
-                                                   opt-params))
+                                :or (into {}
+                                          (mapv (fn [{:keys [sym]}] [sym nil])
+                                                opt-params))
                                 :as 'opts)
         default-call `([~default-args]
                        (~'util/coerce-return
@@ -462,21 +463,23 @@
 
 (defn gen-ndarray-api-function [op-name]
   (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
-        params (mapv #(assoc % :sym (-> % :name symbol))
+        params (mapv (fn [{:keys [name] :as opts}]
+                       (assoc opts :sym (symbol name)))
                      (conj args {:name "out"
                                  :type "NDArray-or-Symbol"
                                  :optional? true
                                  :description "Output ndarray (optional)"}))
-        req-params (filter #(not (:optional? %)) params)
         opt-params (filter :optional? params)
+        req-params (filter (comp not :optional?) params)
         coerced-params (mapv ndarray-api-coerce-param params)
-        req-args (into {} (mapv #(vector (keyword (:sym %)) (:sym %))
+        req-args (into {} (mapv (fn [{:keys [sym]}] [(keyword sym) sym])
                                 req-params))
         req-call `(~(mapv :sym req-params)
                    (~(symbol fn-name) ~req-args))
         default-args (array-map :keys (mapv :sym params)
-                                :or (into {} (mapv #(vector (:sym %) nil)
-                                             opt-params))
+                                :or (into {}
+                                          (mapv (fn [{:keys [sym]}] [sym nil])
+                                                opt-params))
                                 :as 'opts)
         default-call `([~default-args]
                        (~'util/coerce-return
