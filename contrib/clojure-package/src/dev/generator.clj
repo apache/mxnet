@@ -421,10 +421,11 @@
                             :description "Symbol attributes"}))
         opt-params (filter :optional? params)
         coerced-params (mapv symbol-api-coerce-param params)
-        default-call `([{:keys ~(mapv :sym params)
-                         :or ~(into {} (mapv #(vector (:sym %) nil)
-                                             opt-params))
-                         :as ~'opts}]
+        default-args (array-map :keys (mapv :sym params)
+                                :or (into {} (mapv #(vector (:sym %) nil)
+                                                   opt-params))
+                                :as 'opts)
+        default-call `([~default-args]
                        (~'util/coerce-return
                         (~(symbol (str "SymbolAPI/" op-name))
                          ~@coerced-params)))]
@@ -469,14 +470,15 @@
         req-params (filter #(not (:optional? %)) params)
         opt-params (filter :optional? params)
         coerced-params (mapv ndarray-api-coerce-param params)
+        req-args (into {} (mapv #(vector (keyword (:sym %)) (:sym %))
+                                req-params))
         req-call `(~(mapv :sym req-params)
-                   (~(symbol fn-name)
-                    ~(into {} (mapv #(vector (keyword (:sym %)) (:sym %))
-                                    req-params))))
-        default-call `([{:keys ~(mapv :sym params)
-                         :or ~(into {} (mapv #(vector (:sym %) nil)
+                   (~(symbol fn-name) ~req-args))
+        default-args (array-map :keys (mapv :sym params)
+                                :or (into {} (mapv #(vector (:sym %) nil)
                                              opt-params))
-                         :as ~'opts}]
+                                :as 'opts)
+        default-call `([~default-args]
                        (~'util/coerce-return
                         (~(symbol (str "NDArrayAPI/" op-name))
                          ~@coerced-params)))]
@@ -516,6 +518,8 @@
 
 
 (comment
+
+  (gen-ndarray-api-function "Activation")
 
   ;; This generates a file with the bulk of the nd-array functions
   (generate-ndarray-file)

@@ -31,7 +31,7 @@
  activation
  "Applies an activation function element-wise to the input.\n\nThe following activation functions are supported:\n\n- `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`\n- `sigmoid`: :math:`y = \\frac{1}{1 + exp(-x)}`\n- `tanh`: Hyperbolic tangent, :math:`y = \\frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`\n- `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + exp(x))`\n- `softsign`: :math:`y = \\frac{x}{1 + abs(x)}`\n\n\n\nDefined in src/operator/nn/activation.cc:L167"
  ([data act-type] (activation {:data data, :act-type act-type}))
- ([{:as opts, :or {out nil}, :keys [data act-type out]}]
+ ([{:keys [data act-type out], :or {out nil}, :as opts}]
   (util/coerce-return
    (NDArrayAPI/Activation data act-type (util/->option out)))))
 
@@ -45,17 +45,7 @@
     :beta beta,
     :moving-mean moving-mean,
     :moving-var moving-var}))
- ([{:as opts,
-    :or
-    {eps nil,
-     momentum nil,
-     fix-gamma nil,
-     use-global-stats nil,
-     output-mean-var nil,
-     axis nil,
-     cudnn-off nil,
-     out nil},
-    :keys
+ ([{:keys
     [data
      gamma
      beta
@@ -68,7 +58,17 @@
      output-mean-var
      axis
      cudnn-off
-     out]}]
+     out],
+    :or
+    {eps nil,
+     momentum nil,
+     fix-gamma nil,
+     use-global-stats nil,
+     output-mean-var nil,
+     axis nil,
+     cudnn-off nil,
+     out nil},
+    :as opts}]
   (util/coerce-return
    (NDArrayAPI/BatchNorm
     data
