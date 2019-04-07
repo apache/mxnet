@@ -39,23 +39,6 @@
                            "org.apache.mxnet.Symbol" "sym"
                            "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE" "double-or-float"})
 
-(def ndarray-api-param-coerce {"float" "num"
-                               "int" "num"
-                               "boolean" "bool"
-                               "scala.collection.immutable.Map" "kwargs-map"
-                               "scala.collection.Seq" "& nd-array-and-params"
-                               "int<>" "vec-of-ints"
-                               "float<>" "vec-of-floats"
-                               "byte<>" "byte-array"
-                               "java.lang.String<>" "vec-of-strings"
-                               "java.lang.String" "string"
-                               "scala.Option" "option"
-                               "org.apache.mxnet.NDArray<>" "vec-of-ndarrays"
-                               "org.apache.mxnet.NDArray" "ndarray"
-                               "org.apache.mxnet.Shape" "shape"
-                               "org.apache.mxnet.Symbol" "sym"
-                               "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE" "double-or-float"})
-
 (def symbol-param-coerce {"java.lang.String" "sym-name"
                           "float" "num"
                           "int" "num"
@@ -68,22 +51,6 @@
                           "java.lang.String<>" "vec-of-strings"
                           "org.apache.mxnet.Symbol" "sym"
                           "java.lang.Object" "object"})
-
-(def symbol-api-param-coerce {"java.lang.String" "string"
-                              "float" "num"
-                              "int" "num"
-                              "boolean" "bool"
-                              "scala.collection.immutable.Map" "kwargs-map"
-                              "scala.collection.Seq" "symbol-list"
-                              "scala.Option" "nil-or-sym"
-                              "int<>" "vec-of-ints"
-                              "float<>" "vec-of-floats"
-                              "byte<>" "byte-array"
-                              "java.lang.String<>" "vec-of-strings"
-                              "org.apache.mxnet.Shape" "shape"
-                              "org.apache.mxnet.Symbol" "sym"
-                              "org.apache.mxnet.Symbol<>" "vec-of-syms"
-                              "java.lang.Object" "object"})
 
 (defn empty-list []
   ($ List/empty))
@@ -99,8 +66,6 @@
 
 (defn ->option [v]
   ($ Option v))
-
-(def none (->option nil))
 
 (defn ->int-option [v]
   (->option (when v (int v))))

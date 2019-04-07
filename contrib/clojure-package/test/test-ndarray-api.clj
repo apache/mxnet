@@ -2,7 +2,8 @@
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
                             min repeat reverse set sort take to-array empty shuffle
                             ref])
-  (:require [org.apache.clojure-mxnet.util :as util])
+  (:require [org.apache.clojure-mxnet.shape :as mx-shape]
+            [org.apache.clojure-mxnet.util :as util])
   (:import (org.apache.mxnet NDArrayAPI)))
 
 ;; Do not edit - this is auto-generated
@@ -28,207 +29,59 @@
 
 (defn
  activation
- ([ndarray string option]
+ "Applies an activation function element-wise to the input.\n\nThe following activation functions are supported:\n\n- `relu`: Rectified Linear Unit, :math:`y = max(x, 0)`\n- `sigmoid`: :math:`y = \\frac{1}{1 + exp(-x)}`\n- `tanh`: Hyperbolic tangent, :math:`y = \\frac{exp(x) - exp(-x)}{exp(x) + exp(-x)}`\n- `softrelu`: Soft ReLU, or SoftPlus, :math:`y = log(1 + exp(x))`\n- `softsign`: :math:`y = \\frac{x}{1 + abs(x)}`\n\n\n\nDefined in src/operator/nn/activation.cc:L167"
+ ([data act-type] (activation {:data data, :act-type act-type}))
+ ([{:as opts, :or {out nil}, :keys [data act-type out]}]
   (util/coerce-return
-   (NDArrayAPI/Activation
-    (util/coerce-param ndarray #{"org.apache.mxnet.NDArray"})
-    (util/coerce-param string #{"java.lang.String"})
-    (util/coerce-param option #{"scala.Option"}))))
- ([ndarray string] (activation ndarray string util/none)))
+   (NDArrayAPI/Activation data act-type (util/->option out)))))
 
 (defn
  batch-norm
- ([ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3
-   option-4
-   option-5
-   option-6
-   option-7]
+ "Batch normalization.\n\nNormalizes a data batch by mean and variance, and applies a scale ``gamma`` as\nwell as offset ``beta``.\n\nAssume the input has more than one dimension and we normalize along axis 1.\nWe first compute the mean and variance along this axis:\n\n.. math::\n\n  data\\_mean[i] = mean(data[:,i,:,...]) \\\\\n  data\\_var[i] = var(data[:,i,:,...])\n\nThen compute the normalized output, which has the same shape as input, as following:\n\n.. math::\n\n  out[:,i,:,...] = \\frac{data[:,i,:,...] - data\\_mean[i]}{\\sqrt{data\\_var[i]+\\epsilon}} * gamma[i] + beta[i]\n\nBoth *mean* and *var* returns a scalar by treating the input as a vector.\n\nAssume the input has size *k* on axis 1, then both ``gamma`` and ``beta``\nhave shape *(k,)*. If ``output_mean_var`` is set to be true, then outputs both ``data_mean`` and\nthe inverse of ``data_var``, which are needed for the backward pass. Note that gradient of these\ntwo outputs are blocked.\n\nBesides the inputs and the outputs, this operator accepts two auxiliary\nstates, ``moving_mean`` and ``moving_var``, which are *k*-length\nvectors. They are global statistics for the whole dataset, which are updated\nby::\n\n  moving_mean = moving_mean * momentum + data_mean * (1 - momentum)\n  moving_var = moving_var * momentum + data_var * (1 - momentum)\n\nIf ``use_global_stats`` is set to be true, then ``moving_mean`` and\n``moving_var`` are used instead of ``data_mean`` and ``data_var`` to compute\nthe output. It is often used during inference.\n\nThe parameter ``axis`` specifies which axis of the input shape denotes\nthe 'channel' (separately normalized groups).  The default is 1.  Specifying -1 sets the channel\naxis to be the last item in the input shape.\n\nBoth ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,\nthen set ``gamma`` to 1 and its gradient to 0.\n\n.. Note::\n  When ``fix_gamma`` is set to True, no sparse support is provided. If ``fix_gamma is`` set to False,\n  the sparse tensors will fallback.\n\n\n\nDefined in src/operator/nn/batch_norm.cc:L574"
+ ([data gamma beta moving-mean moving-var]
+  (batch-norm
+   {:data data,
+    :gamma gamma,
+    :beta beta,
+    :moving-mean moving-mean,
+    :moving-var moving-var}))
+ ([{:as opts,
+    :or
+    {eps nil,
+     momentum nil,
+     fix-gamma nil,
+     use-global-stats nil,
+     output-mean-var nil,
+     axis nil,
+     cudnn-off nil,
+     out nil},
+    :keys
+    [data
+     gamma
+     beta
+     moving-mean
+     moving-var
+     eps
+     momentum
+     fix-gamma
+     use-global-stats
+     output-mean-var
+     axis
+     cudnn-off
+     out]}]
   (util/coerce-return
    (NDArrayAPI/BatchNorm
-    (util/coerce-param ndarray #{"org.apache.mxnet.NDArray"})
-    (util/coerce-param ndarray-1 #{"org.apache.mxnet.NDArray"})
-    (util/coerce-param ndarray-2 #{"org.apache.mxnet.NDArray"})
-    (util/coerce-param ndarray-3 #{"org.apache.mxnet.NDArray"})
-    (util/coerce-param ndarray-4 #{"org.apache.mxnet.NDArray"})
-    (util/coerce-param option #{"scala.Option"})
-    (util/coerce-param option-1 #{"scala.Option"})
-    (util/coerce-param option-2 #{"scala.Option"})
-    (util/coerce-param option-3 #{"scala.Option"})
-    (util/coerce-param option-4 #{"scala.Option"})
-    (util/coerce-param option-5 #{"scala.Option"})
-    (util/coerce-param option-6 #{"scala.Option"})
-    (util/coerce-param option-7 #{"scala.Option"}))))
- ([ndarray ndarray-1 ndarray-2 ndarray-3 ndarray-4]
-  (batch-norm
-   ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none))
- ([ndarray ndarray-1 ndarray-2 ndarray-3 ndarray-4 option]
-  (batch-norm
-   ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none))
- ([ndarray ndarray-1 ndarray-2 ndarray-3 ndarray-4 option option-1]
-  (batch-norm
-   ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none))
- ([ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2]
-  (batch-norm
-   ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   util/none
-   util/none
-   util/none
-   util/none
-   util/none))
- ([ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3]
-  (batch-norm
-   ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3
-   util/none
-   util/none
-   util/none
-   util/none))
- ([ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3
-   option-4]
-  (batch-norm
-   ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3
-   option-4
-   util/none
-   util/none
-   util/none))
- ([ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3
-   option-4
-   option-5]
-  (batch-norm
-   ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3
-   option-4
-   option-5
-   util/none
-   util/none))
- ([ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3
-   option-4
-   option-5
-   option-6]
-  (batch-norm
-   ndarray
-   ndarray-1
-   ndarray-2
-   ndarray-3
-   ndarray-4
-   option
-   option-1
-   option-2
-   option-3
-   option-4
-   option-5
-   option-6
-   util/none)))
+    data
+    gamma
+    beta
+    moving-mean
+    moving-var
+    (util/->option eps)
+    (util/->option momentum)
+    (util/->option fix-gamma)
+    (util/->option use-global-stats)
+    (util/->option output-mean-var)
+    (util/->option axis)
+    (util/->option cudnn-off)
+    (util/->option out)))))
 

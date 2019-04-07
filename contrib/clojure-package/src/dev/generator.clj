@@ -23,8 +23,8 @@
             [org.apache.clojure-mxnet.util :as util])
   (:import (org.apache.mxnet NDArray NDArrayAPI
                              Symbol SymbolAPI
-                             Base)
-           (scala.collection.mutable ListBuffer))
+                             Base Base$RefInt Base$RefLong Base$RefFloat Base$RefString)
+           (scala.collection.mutable ListBuffer ArrayBuffer))
   (:gen-class))
 
 
@@ -47,14 +47,8 @@
 (defn symbol-transform-param-name [parameter-types]
   (transform-param-names util/symbol-param-coerce parameter-types))
 
-(defn symbol-api-transform-param-name [parameter-types]
-  (transform-param-names util/symbol-api-param-coerce parameter-types))
-
 (defn ndarray-transform-param-name [parameter-types]
   (transform-param-names util/ndarray-param-coerce parameter-types))
-
-(defn ndarray-api-transform-param-name [parameter-types]
-  (transform-param-names util/ndarray-api-param-coerce parameter-types))
 
 (defn has-variadic? [params]
   (->> params
@@ -134,6 +128,55 @@
   (doseq [f functions]
     (clojure.pprint/pprint f w)
     (.write w "\n"))))
+
+;;;;;;; Common operations
+
+(def libinfo (Base/_LIB))
+(def op-names
+  (let [l ($ ListBuffer/empty)]
+    (do (.mxListAllOpNames libinfo l)
+        (filter #(and (not= "Custom" %)
+                      (re-matches #"^[^_].*" %))
+                (util/buffer->vec l)))))
+
+(defn- parse-arg-type [s]
+  (let [[_ var-arg-type _ set-arg-type arg-spec _ type-req _ default-val] (re-find #"(([\w-\[\]]+)|\{([^}]+)\})\s*(\([^)]+\))?(,\s*(optional|required)(,\s*default=(.*))?)?" s)]
+    {:type (or set-arg-type var-arg-type)
+     :spec arg-spec
+     :optional? (or (= "optional" type-req)
+                    (= "boolean" var-arg-type))
+     :default default-val}))
+
+(defn- get-op-handle [op-name]
+  (let [ref (new Base$RefLong 0)]
+    (do (.nnGetOpHandle libinfo op-name ref)
+        (.value ref))))
+
+(defn- gen-op-info [op-name]
+  (let [handle (get-op-handle op-name)
+        name (new Base$RefString nil)
+        desc (new Base$RefString nil)
+        key-var-num-args (new Base$RefString nil)
+        num-args (new Base$RefInt 0)
+        arg-names ($ ListBuffer/empty)
+        arg-types ($ ListBuffer/empty)
+        arg-descs ($ ListBuffer/empty)]
+    (do (.mxSymbolGetAtomicSymbolInfo libinfo
+                                      handle
+                                      name
+                                      desc
+                                      num-args
+                                      arg-names
+                                      arg-types
+                                      arg-descs
+                                      key-var-num-args)
+        {:fn-name (clojure-case (.value name))
+         :fn-description (.value desc)
+         :args (mapv (fn [t n d] (assoc t :name n :description d))
+                     (mapv parse-arg-type (util/buffer->vec arg-types))
+                     (mapv clojure-case (util/buffer->vec arg-names))
+                     (util/buffer->vec arg-descs))
+         :key-var-num-args (clojure-case (.value key-var-num-args))})))
 
 ;;;;;;; Symbol
 
@@ -257,106 +300,6 @@
   (println "Generating symbol file")
   (write-to-file all-symbol-functions symbol-gen-ns "src/org/apache/clojure_mxnet/gen/symbol.clj"))
 
-;;;;;;; SymbolAPI
-
-(def symbol-api-public-no-default
-  (get-public-no-default-methods SymbolAPI))
-
-(into #{} (mapcat :parameter-types symbol-api-public-no-default))
-
-(def symbol-api-hand-gen-set
-  #{"scala.Enumeration$Value"
-    "scala.Tuple2"
-    "scala.collection.mutable.Map"
-    "scala.collection.Traversable"})
-
-(defn is-symbol-api-hand-gen? [info]
-  (->> (map str (:parameter-types info))
-       (into #{})
-       (clojure.set/intersection symbol-api-hand-gen-set)
-       count
-       pos?))
-
-(def symbol-api-public-to-hand-gen
-  (filter is-symbol-api-hand-gen? symbol-api-public-no-default))
-(def symbol-api-public-to-gen
-  (get-public-to-gen-methods symbol-api-public-to-hand-gen
-                             symbol-api-public-no-default))
-
-(count symbol-api-public-to-hand-gen)   ;=> 1 (Custom)
-(count symbol-api-public-to-gen)        ;=> 232
-
-(into #{} (map :name symbol-api-public-to-hand-gen))
-;;=>  #{Custom}
-
-(defn symbol-api-reflect-info [name]
-  (->> symbol-api-public-no-default
-       (filter #(= name (str (:name %))))
-       first))
-
-(def activation-sym (symbol-api-reflect-info "Activation"))
-
-(defn gen-symbol-api-function-arity [op-name op-values function-name]
-  (mapcat
-   (fn [[param-count info]]
-     (let [targets (->> (mapv :parameter-types info)
-                        (apply interleave)
-                        (mapv str)
-                        (partition (count info))
-                        (mapv set))
-           pnames (->> (mapv :parameter-types info)
-                       (mapv symbol-api-transform-param-name)
-                       (apply interleave)
-                       (partition (count info))
-                       (mapv #(clojure.string/join "-or-" %))
-                       (rename-duplicate-params)
-                       (mapv symbol))
-           coerced-params (mapv (fn [p t]
-                                  (if (= #{"scala.Option"} t)
-                                    `(~'util/nil-or-coerce-param (~'util/->option ~(symbol (clojure.string/replace p #"\& " ""))) ~t)
-                                    `(~'util/nil-or-coerce-param ~(symbol (clojure.string/replace p #"\& " "")) ~t)))
-                                pnames targets)
-           params (if (= #{:public :static} (:flags (first info)))
-                    pnames
-                    (into ['sym] pnames))
-           function-body (if (= #{:public :static} (:flags (first info)))
-                           `(~'util/coerce-return (~(symbol (str "SymbolAPI/" op-name)) ~@coerced-params))
-                           `(~'util/coerce-return (~(symbol (str  "." op-name)) ~'sym ~@coerced-params)
-                             ))]
-       (when (not (and (> param-count 1) (has-variadic? params)))
-         `[(
-            ~params
-            ~function-body
-            )])))
-   op-values))
-
-(defn gen-symbol-api-functions [public-to-gen-methods]
- (for [operation (sort (public-by-name-and-param-count public-to-gen-methods))]
-   (let [[op-name op-values] operation
-         function-name (-> op-name
-                           str
-                           scala/decode-scala-symbol
-                           clojure-case
-                           symbol)]
-     `(~'defn ~function-name
-       ~@(remove nil? (gen-symbol-api-function-arity op-name op-values function-name))))))
-
-(gen-symbol-api-functions [activation-sym])
-
-(def all-symbol-api-functions
-  (gen-symbol-api-functions symbol-api-public-to-gen))
-
-(def symbol-api-gen-ns "(ns org.apache.clojure-mxnet.symbol-api
-  (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
-                            min repeat reverse set sort take to-array empty sin
-                            get apply shuffle ref])
-  (:require [org.apache.clojure-mxnet.util :as util])
-  (:import (org.apache.mxnet SymbolAPI)))")
-
-(defn generate-symbol-api-file []
-  (println "Generating symbol-api file")
-  (write-to-file all-symbol-api-functions symbol-api-gen-ns "src/org/apache/clojure_mxnet/gen/symbol_api.clj"))
-
 ;;;;;;; NDArray
 
 
@@ -448,113 +391,113 @@
                  ndarray-gen-ns
                  "src/org/apache/clojure_mxnet/gen/ndarray.clj"))
 
+;;;;;;; SymbolAPI
+
+(defn symbol-api-coerce-param
+  [{:keys [name sym type optional?]}]
+  (let [coerced-param (case type
+                        "Shape" `(when ~sym (~'mx-shape/->shape ~sym))
+                        "NDArray-or-Symbol[]" `(~'clojure.core/into-array ~sym)
+                        sym)
+        name-or-attr (#{"name" "attr"} name)]
+    (if (and optional? (not name-or-attr))
+      `(~'util/->option ~coerced-param)
+      coerced-param)))
+
+(defn gen-symbol-api-function [op-name]
+  (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
+        params (mapv #(assoc %
+                             :sym (-> % :name symbol)
+                             :optional? (or (:optional? %)
+                                            (= "NDArray-or-Symbol" (:type %))))
+                     (conj args
+                           {:name "name"
+                            :type "String"
+                            :optional? true
+                            :description "Symbol name"}
+                           {:name "attr"
+                            :type "Map[String, String]"
+                            :optional? true
+                            :description "Symbol attributes"}))
+        opt-params (filter :optional? params)
+        coerced-params (mapv symbol-api-coerce-param params)
+        default-call `([{:keys ~(mapv :sym params)
+                         :or ~(into {} (mapv #(vector (:sym %) nil)
+                                             opt-params))
+                         :as ~'opts}]
+                       (~'util/coerce-return
+                        (~(symbol (str "SymbolAPI/" op-name))
+                         ~@coerced-params)))]
+    `(~'defn ~(symbol fn-name)
+      ~fn-description
+      ~@default-call)))
+
+(def all-symbol-api-functions
+  (mapv gen-symbol-api-function op-names))
+
+(def symbol-api-gen-ns "(ns org.apache.clojure-mxnet.symbol-api
+  (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
+                            min repeat reverse set sort take to-array empty sin
+                            get apply shuffle ref])
+  (:require [org.apache.clojure-mxnet.util :as util]
+            [org.apache.clojure-mxnet.shape :as mx-shape])
+  (:import (org.apache.mxnet SymbolAPI)))")
+
+(defn generate-symbol-api-file []
+  (println "Generating symbol-api file")
+  (write-to-file all-symbol-api-functions symbol-api-gen-ns "src/org/apache/clojure_mxnet/gen/symbol_api.clj"))
+
 ;;;;;;; NDArrayAPI
 
-(def ndarray-api-public-no-default
-  (get-public-no-default-methods NDArrayAPI))
+(defn ndarray-api-coerce-param
+  [{:keys [sym type optional?]}]
+  (let [coerced-param (case type
+                        "Shape" `(when ~sym (~'mx-shape/->shape ~sym))
+                        "NDArray-or-Symbol[]" `(~'clojure.core/into-array ~sym)
+                        sym)]
+    (if optional?
+      `(~'util/->option ~coerced-param)
+      coerced-param)))
 
-(def ndarray-api-hand-gen-set
-  #{"org.apache.mxnet.NDArrayFuncReturn"
-    "org.apache.mxnet.Context"
-    "scala.Enumeration$Value"
-    "scala.Tuple2"
-    "scala.collection.Traversable"})
-
-(defn is-ndarray-api-hand-gen? [info]
-  (->> (map str (:parameter-types info))
-       (into #{})
-       (clojure.set/intersection ndarray-api-hand-gen-set)
-       count
-       pos?))
-
-
-(def ndarray-api-public-to-hand-gen
-  (filter is-ndarray-api-hand-gen? ndarray-api-public-no-default))
-(def ndarray-api-public-to-gen
-  (get-public-to-gen-methods ndarray-api-public-to-hand-gen
-                             ndarray-api-public-no-default))
-
-
-(count ndarray-api-public-to-hand-gen)   ; => 0
-(count ndarray-api-public-to-gen)        ; => 232
-
-(map :name ndarray-api-public-to-gen)
-
-(defn ndarray-api-reflect-info [name]
-  (->> ndarray-api-public-no-default
-       (filter #(= name (str (:name %))))
-       first))
-
-(def activation (ndarray-api-reflect-info "Activation"))
-(def batch-norm (ndarray-api-reflect-info "BatchNorm"))
-
-
-(defn add-ndarray-api-arities [params function-name]
-  (let [req-params (->> params
-                        reverse
-                        (drop-while #(re-find #"[O|o]ption" (str %)))
-                        reverse)
-        num-req (count req-params)
-        num-options (- (count params) num-req)]
-    (for [i (range num-options)]
-      `([~@(take (+ num-req i) params)]
-        (~function-name
-         ~@(take (+ num-req i) params)
-         ~@(repeat (- num-options i) 'util/none))))))
-
-(defn gen-ndarray-api-function-arity [op-name op-values function-name]
-  (mapcat
-   (fn [[param-count info]]
-     (let [targets (->> (mapv :parameter-types info)
-                       (apply interleave)
-                       (mapv str)
-                       (partition (count info))
-                       (mapv set))
-          pnames (->> (mapv :parameter-types info)
-                      (mapv ndarray-api-transform-param-name)
-                      (apply interleave)
-                      (partition (count info))
-                      (mapv #(clojure.string/join "-or-" %))
-                      (rename-duplicate-params)
-                      (mapv symbol))
-          coerced-params (mapv (fn [p t] `(~'util/coerce-param ~(symbol (clojure.string/replace p #"\& " "")) ~t)) pnames targets)
-          params (if (= #{:public :static} (:flags (first info)))
-                   pnames
-                   (into ['ndarray] pnames))
-          function-body (if (= #{:public :static} (:flags (first info)))
-                          `(~'util/coerce-return (~(symbol (str "NDArrayAPI/" op-name)) ~@coerced-params))
-                          `(~'util/coerce-return (~(symbol (str  "." op-name)) ~'ndarray ~@coerced-params)
-                            ))]
-      (when (not (and (> param-count 1) (has-variadic? params)))
-        `[(
-            ~params
-            ~function-body
-           )
-          ~@(add-ndarray-api-arities params function-name)])))
-   op-values))
-
-
-(defn gen-ndarray-api-functions [public-to-gen-methods]
-  (for [operation (sort (public-by-name-and-param-count public-to-gen-methods))]
-    (let [[op-name op-values] operation
-          function-name (-> op-name
-                            str
-                            scala/decode-scala-symbol
-                            clojure-case
-                            symbol)]
-      `(~'defn ~function-name
-        ~@(remove nil? (gen-ndarray-api-function-arity op-name op-values function-name))))))
-
-(gen-ndarray-api-functions [activation])
+(defn gen-ndarray-api-function [op-name]
+  (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
+        params (mapv #(assoc % :sym (-> % :name symbol))
+                     (conj args {:name "out"
+                                 :type "NDArray-or-Symbol"
+                                 :optional? true
+                                 :description "Output ndarray (optional)"}))
+        req-params (filter #(not (:optional? %)) params)
+        opt-params (filter :optional? params)
+        coerced-params (mapv ndarray-api-coerce-param params)
+        req-call `(~(mapv :sym req-params)
+                   (~(symbol fn-name)
+                    ~(into {} (mapv #(vector (keyword (:sym %)) (:sym %))
+                                    req-params))))
+        default-call `([{:keys ~(mapv :sym params)
+                         :or ~(into {} (mapv #(vector (:sym %) nil)
+                                             opt-params))
+                         :as ~'opts}]
+                       (~'util/coerce-return
+                        (~(symbol (str "NDArrayAPI/" op-name))
+                         ~@coerced-params)))]
+    (if (= 1 (count req-params))
+      `(~'defn ~(symbol fn-name)
+        ~fn-description
+        ~@default-call)
+      `(~'defn ~(symbol fn-name)
+        ~fn-description
+        ~req-call
+        ~default-call))))
 
 (def all-ndarray-api-functions
-  (gen-ndarray-api-functions ndarray-api-public-to-gen))
+  (mapv gen-ndarray-api-function op-names))
 
 (def ndarray-api-gen-ns "(ns org.apache.clojure-mxnet.ndarray-api
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
                             min repeat reverse set sort take to-array empty shuffle
                             ref])
-  (:require [org.apache.clojure-mxnet.util :as util])
+  (:require [org.apache.clojure-mxnet.shape :as mx-shape]
+            [org.apache.clojure-mxnet.util :as util])
   (:import (org.apache.mxnet NDArrayAPI)))")
 
 
@@ -573,44 +516,6 @@
 
 
 (comment
-  (def libinfo (Base/_LIB))
-
-  (def mylist ($ ListBuffer/empty))
-  (do (.mxListAllOpNames libinfo mylist))
-  (take 5 (util/buffer->vec mylist))
-
-  (import '(org.apache.mxnet Base$RefInt
-                             Base$RefLong
-                             Base$RefFloat
-                             Base$RefString))
-
-  (def myref (new Base$RefLong 0))
-  (do (.nnGetOpHandle libinfo "Convolution" myref))
-  (.value myref)
-
-  (def name (new Base$RefString nil))
-  (def desc (new Base$RefString nil))
-  (def key-var-num-args (new Base$RefString nil))
-  (def num-args (new Base$RefInt 0))
-  (def arg-names ($ ListBuffer/empty))
-  (def arg-types ($ ListBuffer/empty))
-  (def arg-descs ($ ListBuffer/empty))
-
-  (do (.mxSymbolGetAtomicSymbolInfo libinfo
-                                    (.value myref)
-                                    name
-                                    desc
-                                    num-args
-                                    arg-names
-                                    arg-types
-                                    arg-descs
-                                    key-var-num-args))
-  (.value name)
-  (.value desc)
-  (.value num-args)
-  (util/buffer->vec arg-names)
-  (util/buffer->vec arg-types)
-  (util/buffer->vec arg-descs)
 
   ;; This generates a file with the bulk of the nd-array functions
   (generate-ndarray-file)

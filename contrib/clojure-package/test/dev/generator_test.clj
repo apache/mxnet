@@ -32,18 +32,8 @@
        (filter #(= name (str (:name %))))
        first))
 
-(defn ndarray-api-reflect-info [name]
-  (->> gen/ndarray-api-public-no-default
-       (filter #(= name (str (:name %))))
-       first))
-
 (defn symbol-reflect-info [name]
   (->> gen/symbol-public-no-default
-       (filter #(= name (str (:name %))))
-       first))
-
-(defn symbol-api-reflect-info [name]
-  (->> gen/symbol-api-public-no-default
        (filter #(= name (str (:name %))))
        first))
 
@@ -67,15 +57,6 @@
     (is (= transformed-params (gen/ndarray-transform-param-name params)))
     (is (= transformed-params (gen/ndarray-transform-param-name
                                (:parameter-types (ndarray-reflect-info "sqrt")))))))
-
-(deftest test-ndarray-api-transform-param-name
-  (let [params ["org.apache.mxnet.NDArray"
-                "scala.Option"
-                "scala.Option"]
-        transformed-params ["ndarray" "option" "option"]]
-    (is (= transformed-params (gen/ndarray-api-transform-param-name params)))
-    (is (= transformed-params (gen/ndarray-api-transform-param-name
-                               (:parameter-types (ndarray-api-reflect-info "transpose")))))))
 
 (deftest test-has-variadic?
   (is (false? (gen/has-variadic? ["sym-name" "kwargs-map" "symbol-list" "kwargs-map-1"])))
@@ -213,7 +194,17 @@
            (gen/gen-ndarray-function-arity op-name op-values)))))
 
 (deftest test-write-to-file
-  (testing "symbol"
+  (testing "symbol-api"
+    (let [fname "test/test-symbol-api.clj"
+          _ (gen/write-to-file [(first gen/all-symbol-api-functions)
+                                (second gen/all-symbol-api-functions)]
+                               gen/symbol-api-gen-ns
+                               fname)
+          good-contents (slurp "test/good-test-symbol-api.clj")
+          contents (slurp fname)]
+      (is (= good-contents contents))))
+
+ (testing "symbol"
     (let [fname "test/test-symbol.clj"
           _ (gen/write-to-file [(first gen/all-symbol-functions)]
                                gen/symbol-gen-ns
