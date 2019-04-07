@@ -7892,6 +7892,7 @@ def test_image_normalize():
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
 
 
+@with_seed()
 def test_scalar_tensor_creation():
     assertRaises(MXNetError, mx.nd.zeros, shape=())
     assertRaises(MXNetError, mx.nd.ones, shape=())
@@ -7901,6 +7902,7 @@ def test_scalar_tensor_creation():
         assert same(data_mx.asnumpy(), data_np)
 
 
+@with_seed()
 def test_zero_size_tensor_creation():
     assertRaises(MXNetError, mx.nd.zeros, shape=(0, 1, 3, 0))
     assertRaises(MXNetError, mx.nd.ones, shape=(0, 1, 3, 0))
@@ -7910,6 +7912,7 @@ def test_zero_size_tensor_creation():
         assert same(data_mx.asnumpy(), data_np)
 
 
+@with_seed()
 def test_concat_with_zero_size_tensor():
     with mx.enable_np_comp():
         data1 = mx.nd.ones((0, 8, 12))
@@ -7917,6 +7920,12 @@ def test_concat_with_zero_size_tensor():
         data3 = mx.nd.ones((0, 8, 12))
         ret = mx.nd.Concat(data1, data2, data3, dim=0)
         assert ret.shape == (3, 8, 12)
+
+        data1 = mx.nd.ones((0, 3, 10))
+        data2 = mx.nd.ones((0, 4, 10))
+        data3 = mx.nd.ones((0, 5, 10))
+        ret = mx.nd.Concat(data1, data2, data3, dim=1)
+        assert ret.shape == (0, 12, 10)
 
 
 if __name__ == '__main__':

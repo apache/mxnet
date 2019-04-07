@@ -627,7 +627,7 @@ inline bool ndim_is_known(const TShape& x) {
 }
 
 /*! brief check if a shape's dim size is known. */
-inline bool dim_size_is_known(const int dim_size) {
+inline bool dim_size_is_known(const dim_t dim_size) {
   CHECK_GE(dim_size, -1) << "shape dim size must be >= -1, while received " << dim_size;
   return dim_size != -1;
 }
