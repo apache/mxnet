@@ -51,7 +51,7 @@ namespace rnn_enum {
   enum RNNOpInputs {kData, kParams, kState, kStateCell};
   enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
   enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
-  enum RNNOpResource {kTempSpace};
+  enum RNNOpResource {kTempSpace, kCuDNNDropoutDescSpace};
 }
 
 inline int GetRnnParamSize(int num_layer,
@@ -1212,10 +1212,8 @@ class RNNOp {
       // Create Dropout descriptors
       DType* dropout_states_ = NULL;
       if (param_.p > 0) {
-        CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_, &dropout_byte_));
-        dropout_size_ = dropout_byte_ / sizeof(DType);
-        dropout_states_ = ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
-            mshadow::Shape1(dropout_size_), s).dptr_;
+         ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
+            (&dropout_desc_, s, 1.0f - param_.p, seed_);
       } else {
         dropout_byte_ = 0;
       }
@@ -1353,7 +1351,7 @@ class RNNOp {
   Storage::Handle reserve_space_;
   uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
-  int workspace_size_, dropout_size_;
+  int workspace_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
   #if USE_CUDNN_LSTM_PROJ
   cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
