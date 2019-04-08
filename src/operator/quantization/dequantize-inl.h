@@ -98,7 +98,7 @@ inline bool DequantizeType(const nnvm::NodeAttrs& attrs,
 template <typename xpu>
 class DequantizeOperator {
  public:
-  DequantizeOperator(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
+  explicit DequantizeOperator(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
   void Forward(const OpContext &ctx, const std::vector<TBlob> &inputs,
                const std::vector<OpReqType> &req, const std::vector<TBlob> &outputs) {
     using namespace mshadow;

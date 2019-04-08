@@ -34,10 +34,11 @@
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNDequantizeOperator : public DequantizeOperator {
+
+class SgMKLDNNDequantizeOperator {
  public:
   explicit SgMKLDNNDequantizeOperator(const nnvm::NodeAttrs &attrs)
-      : DequantizeOperator(attrs), param_(nnvm::get<DequantizeParam>(attrs.parsed)) {}
+      : param_(nnvm::get<DequantizeParam>(attrs.parsed)) {}
 
   void Forward(const OpContext &ctx, const std::vector<NDArray> &inputs,
                const std::vector<OpReqType> &req, const std::vector<NDArray> &outputs);
@@ -124,7 +125,13 @@ static void SgMKLDNNDequantizeForward(const OpStatePtr &state_ptr, const OpConte
 static OpStatePtr CreateSgMKLDNNDequantizeState(const nnvm::NodeAttrs &attrs, Context ctx,
                                                 const std::vector<TShape> &in_shapes,
                                                 const std::vector<int> &in_types) {
-  return OpStatePtr::Create<SgMKLDNNDequantizeOperator>(attrs);
+  OpStatePtr state;
+  if (ctx.dev_type == kGPU) {
+    state = OpStatePtr::Create<DequantizeOperator<gpu>>(attrs);
+  } else {
+    state = OpStatePtr::Create<SgMKLDNNDequantizeOperator>(attrs);
+  }
+  return state;
 }
 
 }  // namespace op

@@ -34,10 +34,10 @@
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNQuantizeOperator : public QuantizeV2Operator {
+class SgMKLDNNQuantizeOperator {
  public:
   explicit SgMKLDNNQuantizeOperator(const nnvm::NodeAttrs &attrs)
-      : QuantizeV2Operator(attrs), param_(nnvm::get<QuantizeV2Param>(attrs.parsed)) {}
+      : param_(nnvm::get<QuantizeV2Param>(attrs.parsed)) {}
 
   void Forward(const OpContext &ctx, const std::vector<NDArray> &inputs,
                const std::vector<OpReqType> &req, const std::vector<NDArray> &outputs);
@@ -173,7 +173,13 @@ static void SgMKLDNNQuantizeForward(const OpStatePtr &state_ptr, const OpContext
 static OpStatePtr CreateSgMKLDNNQuantizeState(const nnvm::NodeAttrs &attrs, Context ctx,
                                               const std::vector<TShape> &in_shapes,
                                               const std::vector<int> &in_types) {
-  return OpStatePtr::Create<SgMKLDNNQuantizeOperator>(attrs);
+  OpStatePtr state;
+  if (ctx.dev_type == kGPU) {
+    state = OpStatePtr::Create<QuantizeV2Operator<gpu>>(attrs);
+  } else {
+    state = OpStatePtr::Create<SgMKLDNNQuantizeOperator>(attrs);
+  }
+  return state;
 }
 
 }  // namespace op

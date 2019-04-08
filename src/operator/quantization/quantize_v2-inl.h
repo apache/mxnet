@@ -159,7 +159,7 @@ static inline bool QuantizeV2Type(const nnvm::NodeAttrs &attrs, std::vector<int>
 template<typename xpu>
 class QuantizeV2Operator {
  public:
-  QuantizeV2Operator(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
+  explicit QuantizeV2Operator(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
 
   void Forward(const OpContext &ctx, const std::vector<TBlob> &inputs,
                const std::vector<OpReqType> &req, const std::vector<TBlob> &outputs) {
