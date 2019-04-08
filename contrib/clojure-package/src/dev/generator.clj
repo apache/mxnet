@@ -404,34 +404,46 @@
       `(~'util/->option ~coerced-param)
       coerced-param)))
 
-(defn gen-symbol-api-function [op-name]
-  (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
-        params (mapv (fn [{:keys [name type optional?] :as opts}]
-                       (assoc opts
-                              :sym (symbol name)
-                              :optional? (or optional? (= "NDArray-or-Symbol" type))))
-                     (conj args
-                           {:name "name"
-                            :type "String"
-                            :optional? true
-                            :description "Symbol name"}
-                           {:name "attr"
-                            :type "Map[String, String]"
-                            :optional? true
-                            :description "Symbol attributes"}))
-        opt-params (filter :optional? params)
+(defn gen-symbol-api-doc [fn-description params]
+  (let [param-descriptions (mapv (fn [{:keys [name description]}]
+                                   (str "`" name "`: " description "\n"))
+                                 params)]
+    (str fn-description "\n\n"
+         (apply str param-descriptions))))
+
+(defn gen-symbol-api-default-arity [op-name params]
+  (let [opt-params (filter :optional? params)
         coerced-params (mapv symbol-api-coerce-param params)
         default-args (array-map :keys (mapv :sym params)
                                 :or (into {}
                                           (mapv (fn [{:keys [sym]}] [sym nil])
                                                 opt-params))
-                                :as 'opts)
-        default-call `([~default-args]
-                       (~'util/coerce-return
-                        (~(symbol (str "SymbolAPI/" op-name))
-                         ~@coerced-params)))]
+                                :as 'opts)]
+    `([~default-args]
+      (~'util/coerce-return
+       (~(symbol (str "SymbolAPI/" op-name))
+        ~@coerced-params)))))
+
+(defn gen-symbol-api-function [op-name]
+  (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
+        params (mapv (fn [{:keys [name type optional?] :as opts}]
+                       (assoc opts
+                              :sym (symbol name)
+                              :optional? (or optional?
+                                             (= "NDArray-or-Symbol" type))))
+                     (conj args
+                           {:name "name"
+                            :type "String"
+                            :optional? true
+                            :description "Name of the symbol"}
+                           {:name "attr"
+                            :type "Map[String, String]"
+                            :optional? true
+                            :description "Attributes of the symbol"}))
+        doc (gen-symbol-api-doc fn-description params)
+        default-call (gen-symbol-api-default-arity op-name params)]
     `(~'defn ~(symbol fn-name)
-      ~fn-description
+      ~doc
       ~@default-call)))
 
 (def all-symbol-api-functions
@@ -461,6 +473,33 @@
       `(~'util/->option ~coerced-param)
       coerced-param)))
 
+(defn gen-ndarray-api-doc [fn-description params]
+  (let [param-descriptions (mapv (fn [{:keys [name description]}]
+                                   (str "`" name "`: " description "\n"))
+                                 params)]
+    (str fn-description "\n\n"
+         (apply str param-descriptions))))
+
+(defn gen-ndarray-api-default-arity [op-name params]
+  (let [opt-params (filter :optional? params)
+        coerced-params (mapv ndarray-api-coerce-param params)
+        default-args (array-map :keys (mapv :sym params)
+                                :or (into {}
+                                          (mapv (fn [{:keys [sym]}] [sym nil])
+                                                opt-params))
+                                :as 'opts)]
+    `([~default-args]
+      (~'util/coerce-return
+       (~(symbol (str "NDArrayAPI/" op-name))
+        ~@coerced-params)))))
+
+(defn gen-ndarray-api-required-arity [fn-name req-params]
+  (let [req-args (->> req-params
+                      (mapv (fn [{:keys [sym]}] [(keyword sym) sym]))
+                      (into {}))]
+    `(~(mapv :sym req-params)
+      (~(symbol fn-name) ~req-args))))
+
 (defn gen-ndarray-api-function [op-name]
   (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
         params (mapv (fn [{:keys [name] :as opts}]
@@ -468,29 +507,18 @@
                      (conj args {:name "out"
                                  :type "NDArray-or-Symbol"
                                  :optional? true
-                                 :description "Output ndarray (optional)"}))
+                                 :description "Output array (optional)"}))
+        doc (gen-ndarray-api-doc fn-description params)
         opt-params (filter :optional? params)
         req-params (filter (comp not :optional?) params)
-        coerced-params (mapv ndarray-api-coerce-param params)
-        req-args (into {} (mapv (fn [{:keys [sym]}] [(keyword sym) sym])
-                                req-params))
-        req-call `(~(mapv :sym req-params)
-                   (~(symbol fn-name) ~req-args))
-        default-args (array-map :keys (mapv :sym params)
-                                :or (into {}
-                                          (mapv (fn [{:keys [sym]}] [sym nil])
-                                                opt-params))
-                                :as 'opts)
-        default-call `([~default-args]
-                       (~'util/coerce-return
-                        (~(symbol (str "NDArrayAPI/" op-name))
-                         ~@coerced-params)))]
+        req-call (gen-ndarray-api-required-arity fn-name req-params)
+        default-call (gen-ndarray-api-default-arity op-name params)]
     (if (= 1 (count req-params))
       `(~'defn ~(symbol fn-name)
-        ~fn-description
+        ~doc
         ~@default-call)
       `(~'defn ~(symbol fn-name)
-        ~fn-description
+        ~doc
         ~req-call
         ~default-call))))
 
