@@ -82,7 +82,7 @@ def _read_list(list_file, batch_size):
                     continue
             yield batch
 
-def _read_worker(q_out, transformer, color, quality, encoding,
+def _read_worker(q_out, transformations, color, quality, encoding,
                  pass_through, pack_labels, exception_counter,
                  data_record):
     """
@@ -93,7 +93,7 @@ def _read_worker(q_out, transformer, color, quality, encoding,
     ----------
     q_out : priority queue
         priority queue where processed images are stored
-    transformer : transformer object
+    transformations : transformer object
         transformer object
     color : int, default 1
         specify the color mode of the loaded image.
@@ -135,7 +135,8 @@ def _read_worker(q_out, transformer, color, quality, encoding,
                 with exception_counter.get_lock():
                     exception_counter.value += 1
                 return
-            img = transformer(array(img))
+            if transformations:
+                img = transformations(array(img))
             packed_image = recordio.pack_img(header, img, quality=quality,
                                              img_fmt=encoding)
             q_out.put((order_num, i, packed_image, data_item))
@@ -156,28 +157,28 @@ def _validate_params(list_file, output_path, pack_labels, color,
     Parameters
     """
     if not os.path.isfile(list_file):
-        raise Exception("Input list file is invalid - \n"
-                        + "1. Wrong filename or file path \n"
-                        + "2. List file should be of format *.lst")
+        raise ValueError("Input list file is invalid - \n"
+                         + "1. Wrong filename or file path \n"
+                         + "2. List file should be of format *.lst")
     if not os.path.isdir(output_path):
-        raise Exception("Output path should be a directory where the "
-                        + "rec files will be stored.")
+        raise ValueError("Output path should be a directory where the "
+                         + "rec files will be stored.")
     if not pass_through and cv2 is None:
-        raise Exception("This API usage requires OpenCV to be installed.")
+        raise ValueError("This API usage requires OpenCV to be installed.")
     if color not in [1, 0, -1]:
-        raise Exception("Invalid value for color parameter. "
-                        + "Should be 1, 0 or -1")
+        raise ValueError("Invalid value for color parameter. "
+                         + "Should be 1, 0 or -1")
     if encoding not in ['.jpg', '.png']:
-        raise Exception("Encoding should be either .jpg or .png")
+        raise ValueError("Encoding should be either .jpg or .png")
     if not isinstance(quality, int):
-        raise Exception("Quality should be an integer value. "
-                        + "range for quality of JPEG encoding is 1-100, "
-                        + "and range for PNG compression for encoding is 1-9")
+        raise ValueError("Quality should be an integer value. "
+                         + "range for quality of JPEG encoding is 1-100, "
+                         + "and range for PNG compression for encoding is 1-9")
     if not pack_labels:
         logging.info("pack_labels is set as False. We will create a copy of the"
-                     + " list file to align with the created rec file.")
+                    + " list file to align with the created rec file.")
 
-def im2rec(list_file, transformer, output_path, num_workers=mp.cpu_count() - 1,
+def im2rec(list_file, output_path, transformations=None, num_workers=mp.cpu_count() - 1,
            batch_size=4096, pack_labels=True, color=1, encoding='.jpg',
            quality=95, pass_through=False, error_limit=0):
     """
@@ -189,7 +190,7 @@ def im2rec(list_file, transformer, output_path, num_workers=mp.cpu_count() - 1,
         List file name
     output_path : str
         output file path
-    transformer : Transforms object
+    transformations : Transforms object
         Transforms object
     num_workers : int. default (number of cpu cores - 1)
         number of workers, ideally do not set this value to a number
@@ -243,7 +244,7 @@ def im2rec(list_file, transformer, output_path, num_workers=mp.cpu_count() - 1,
         lst_file_copy = os.path.join(output_path, fname) + '-copy.lst'
         lst_fhandle = open(lst_file_copy, 'w')
     for data_batch in data_batch_iter:
-        pool.map(partial(_read_worker, out_q, transformer,
+        pool.map(partial(_read_worker, out_q, transformations,
                          color, quality, encoding, pass_through,
                          pack_labels, exception_counter), data_batch)
         if exception_counter >= error_limit:
