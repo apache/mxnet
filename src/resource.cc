@@ -189,12 +189,14 @@ class ResourceManagerImpl : public ResourceManager {
     cpu_rand_->Seed(seed);
     cpu_parallel_rand_->Seed(seed);
 #if MXNET_USE_CUDA
-    gpu_rand_.Get(ctx.dev_id, [ctx, seed, this]() {
-      return new ResourceRandom<gpu>(ctx, seed);
-    })->Seed(seed);
-    gpu_parallel_rand_.Get(ctx.dev_id, [ctx, seed, this]() {
-      return new ResourceParallelRandom<gpu>(ctx, gpu_native_rand_copy_, seed);
-    })->Seed(seed);
+    if (ctx.dev_type == Context::kGPU) {
+      gpu_rand_.Get(ctx.dev_id, [ctx, seed, this]() {
+        return new ResourceRandom<gpu>(ctx, seed);
+      })->Seed(seed);
+      gpu_parallel_rand_.Get(ctx.dev_id, [ctx, seed, this]() {
+        return new ResourceParallelRandom<gpu>(ctx, gpu_native_rand_copy_, seed);
+      })->Seed(seed);
+    }
 #endif
   }
 
