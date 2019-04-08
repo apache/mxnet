@@ -685,8 +685,11 @@ def test_quantize_model_with_forward():
             arg_params, aux_params = mod.get_params()
             excluded_names = []
             if mx.current_context() == mx.cpu():
-               excluded_names += ['fc']
+               excluded_names += ['fc', 'conv1']
+            if mx.current_context() == mx.gpu():
+               excluded_names += ['relu0', 'relu1']
             excluded_names += ['concat']
+
 
             optional_names = ['pool0']
             for skip_optional_names in [False, True]:

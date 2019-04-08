@@ -16,6 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file mkldnn_act-inl.h
+ * \brief MKLDNN(Quantized) Activation operator based on subgraph
+ * /author Zhiyuan Huang
+*/
+
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_ACT_INL_H_
 
