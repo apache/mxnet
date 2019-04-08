@@ -234,9 +234,10 @@ bool SupportMKLDNNConcat(const std::vector<NDArray> &arrs) {
   for (auto &arr : arrs) {
     if (arr.IsView()) return false;
     if (arr.dtype() != mshadow::kFloat32) return false;
+    // DO not support zero-size tensors.
+    if (arr.shape().Size() == 0) return false;
     int ndim = arr.shape().ndim();
-    unsigned mkldnn_ndims =
-        static_cast<unsigned>(arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims);
+    const int mkldnn_ndims = arr.GetMKLDNNData()->get_primitive_desc().desc().data.ndims;
     if (!(ndim == 2 || ndim == 4) || ndim != mkldnn_ndims) return false;
   }
   return true;

@@ -776,7 +776,7 @@ inline void ConvertToNumpyShape(mxnet::ShapeVector* shapes) {
  */
 inline void ConvertToLegacyShape(mxnet::TShape* shape) {
   if (!mxnet::ndim_is_known(*shape)) {
-    *shape = mxnet::TShape(0);
+    *shape = mxnet::TShape(0, -1);
   } else {
     for (int j = 0; j < shape->ndim(); ++j) {
       if (!mxnet::dim_size_is_known(*shape, j)) {

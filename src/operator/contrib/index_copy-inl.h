@@ -64,7 +64,7 @@ inline bool IndexCopyShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->at(1).ndim(), 1);
   // Shape matching
   CHECK_EQ(in_attrs->at(0).ndim(), in_attrs->at(2).ndim());
-  for (size_t i = 0; i < in_attrs->at(0).ndim(); ++i) {
+  for (int i = 0; i < in_attrs->at(0).ndim(); ++i) {
     if (i == 0) {
       CHECK_GE(in_attrs->at(0)[i], in_attrs->at(2)[i]);
     } else {

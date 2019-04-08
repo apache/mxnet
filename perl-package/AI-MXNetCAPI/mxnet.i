@@ -641,8 +641,8 @@ int MXNDArrayReshape64(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArrayGetShape(NDArrayHandle handle,
-                                mx_uint *out_dim,
-                                const mx_uint **out_pdata);
+                                int *out_dim,
+                                const int **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the ndarray
@@ -1290,20 +1290,20 @@ int MXSymbolGrad(SymbolHandle sym,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolInferShape(SymbolHandle sym,
-                                 mx_uint num_args,
-                                 const char** in,
-                                 const mx_uint *in,
-                                 const mx_uint *in,
-                                 mx_uint *in_shape_size,
-                                 const mx_uint **in_shape_ndim,
-                                 const mx_uint ***in_shape_data,
-                                 mx_uint *out_shape_size,
-                                 const mx_uint **out_shape_ndim,
-                                 const mx_uint ***out_shape_data,
-                                 mx_uint *aux_shape_size,
-                                 const mx_uint **aux_shape_ndim,
-                                 const mx_uint ***aux_shape_data,
-                                 int *out);
+                       mx_uint num_args,
+                       const char** in,
+                       const mx_uint *in,
+                       const int *in,
+                       mx_uint *in_shape_size,
+                       const int **in_shape_ndim,
+                       const int ***in_shape_data,
+                       mx_uint *out_shape_size,
+                       const int **out_shape_ndim,
+                       const int ***out_shape_data,
+                       mx_uint *aux_shape_size,
+                       const int **aux_shape_ndim,
+                       const int ***aux_shape_data,
+                       int *out);
 /*!
  * \brief partially infer shape of unknown input shapes given the known one.
  *
@@ -1332,16 +1332,16 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
                                  mx_uint num_args,
                                  const char** in,
                                  const mx_uint *in,
-                                 const mx_uint *in,
+                                 const int *in,
                                  mx_uint *in_shape_size,
-                                 const mx_uint **in_shape_ndim,
-                                 const mx_uint ***in_shape_data,
+                                 const int **in_shape_ndim,
+                                 const int ***in_shape_data,
                                  mx_uint *out_shape_size,
-                                 const mx_uint **out_shape_ndim,
-                                 const mx_uint ***out_shape_data,
+                                 const int **out_shape_ndim,
+                                 const int ***out_shape_data,
                                  mx_uint *aux_shape_size,
-                                 const mx_uint **aux_shape_ndim,
-                                 const mx_uint ***aux_shape_data,
+                                 const int **aux_shape_ndim,
+                                 const int ***aux_shape_data,
                                  int *out);
 
 /*!
@@ -1547,7 +1547,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                          const char** in, // provided_grad_req_types,
                          const mx_uint num_provided_arg_shapes,
                          const char** in, // provided_arg_shape_names,
-                         const mx_uint* in, // provided_arg_shape_data,
+                         const int* in, // provided_arg_shape_data,
                          const mx_uint* in, // provided_arg_shape_idx,
                          const mx_uint num_provided_arg_dtypes,
                          const char** in, // provided_arg_dtype_names,
@@ -1593,24 +1593,24 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
  * \return a new executor
  */
 int MXExecutorReshape(int partial_shaping,
-                                int allow_up_sizing,
-                                int dev_type,
-                                int dev_id,
-                                mx_uint num_map_keys,
-                                const char** in,
-                                const int* in,
-                                const int* in,
-                                const mx_uint num_provided_arg_shapes,
-                                const char** in,
-                                const mx_uint* in,
-                                const mx_uint* in,
-                                mx_uint* couple_out_size,
-                                NDArrayHandle** out_first_array,
-                                NDArrayHandle** out_second_array,
-                                mx_uint* out_size,
-                                NDArrayHandle** out_array,
-                                ExecutorHandle shared_exec,
-                                ExecutorHandle *out);
+                      int allow_up_sizing,
+                      int dev_type,
+                      int dev_id,
+                      mx_uint num_map_keys,
+                      const char** in,
+                      const int* in,
+                      const int* in,
+                      const mx_uint num_provided_arg_shapes,
+                      const char** in,
+                      const int* in,
+                      const mx_uint* in,
+                      mx_uint* couple_out_size,
+                      NDArrayHandle** out_first_array,
+                      NDArrayHandle** out_second_array,
+                      mx_uint* out_size,
+                      NDArrayHandle** out_array,
+                      ExecutorHandle shared_exec,
+                      ExecutorHandle *out);
 
 /*!
  * \brief set a call back to notify the completion of operation

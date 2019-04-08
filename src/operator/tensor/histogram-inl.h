@@ -86,9 +86,9 @@ inline bool HistogramOpShape(const nnvm::NodeAttrs& attrs,
   if (has_cnt) {
     // if cnt is specified, the output histogram has shape (cnt,)
     // while output bins has shape (cnt+1,)
-    const int bin_cnt = param.bin_cnt.value();
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({bin_cnt}));
-    SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape({bin_cnt + 1}));
+    const dim_t bin_cnt = param.bin_cnt.value();
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, bin_cnt));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1, bin_cnt + 1));
   } else {
     // if cnt is not specified, the output histogram has shape (bins.Size() - 1)
     // while output bins has same shape as input bins
@@ -97,7 +97,7 @@ inline bool HistogramOpShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(oshape.ndim(), 1U) << "bins argument should be an 1D vector";
     CHECK_GE(oshape.Size(), 2U) << "number of bounds should be >= 2";
 
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({(oshape[0] - 1)}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, oshape[0] - 1));
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, in_attrs->at(1));
   }
 

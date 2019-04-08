@@ -278,6 +278,8 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
  */
 template <bool is_integer = false, typename ValueType, typename xpu>
 void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueType val) {
+  // If b is a zero-size tensor, do nothing.
+  if (b.Size() == 0) return;
   if (req != kNullOp) {
     const size_t size = b.Size();
     if (val == 0) {

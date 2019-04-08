@@ -143,7 +143,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
         }
       }
     } else {
-      for (int i = 0; i < (int) ndim; i++) {
+      for (int i = 0; i < static_cast<int>(ndim); i++) {
         o_pad[i] = i < pad.ndim() ? pad[i] : 0;
         o_adj[i] = i < adj.ndim() ? adj[i] : 0;
       }

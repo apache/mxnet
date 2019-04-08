@@ -69,7 +69,7 @@ class SwapAxisOp : public Operator {
 
   void Reshape2Five(mshadow::Shape<5> *inter_shape,
                     const mxnet::TShape &shape,
-                    uint32_t dim1, uint32_t dim2) {
+                    int dim1, int dim2) {
     using namespace mshadow;
     using namespace mshadow::expr;
     int ndim_in = shape.ndim();
