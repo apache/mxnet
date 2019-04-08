@@ -83,6 +83,15 @@ static bool SumType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
   return true;
 }
 
+void QuantizedSumForward(const nnvm::NodeAttrs& attrs,
+                                       const OpContext &ctx,
+                                       const std::vector<TBlob> &in_data,
+                                       const std::vector<OpReqType> &req,
+                                       const std::vector<TBlob> &out_data) {
+  LOG(FATAL) << "Not supported for MXNet built without MKLDNN. "
+                "Please install MKLDNN enabled MXNet.";
+}
+
 NNVM_REGISTER_OP(_contrib_quantized_sum)
 .describe(R"code(elem_add operator for input dataA and input dataB data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
@@ -108,6 +117,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 })
 .set_attr<nnvm::FInferType>("FInferType", SumType)
 .set_attr<mxnet::FInferShape>("FInferShape", SumShape)
+.set_attr<FCompute>("FCompute<cpu>", QuantizedSumForward)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .add_argument("lhs", "NDArray-or-Symbol", "first input")
 .add_argument("rhs", "NDArray-or-Symbol", "4th input")
