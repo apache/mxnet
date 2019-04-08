@@ -55,7 +55,7 @@ struct PoolingV1Param : public dmlc::Parameter<PoolingV1Param> {
   int pooling_convention;
   bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingV1Param) {
-    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape(0))
+    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape(0, -1))
     .enforce_nonzero()
     .describe("pooling kernel size: (y, x) or (d, y, x)");
 
@@ -73,11 +73,11 @@ struct PoolingV1Param : public dmlc::Parameter<PoolingV1Param> {
     .add_enum("valid", pool_v1_enum::kValid)
     .describe("Pooling convention to be applied.");
 
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0))
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, -1))
     .enforce_nonzero()
     .describe("stride: for pooling (y, x) or (d, y, x)");
 
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0))
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, -1))
     .describe("pad for pooling: (y, x) or (d, y, x)");
   }
 };

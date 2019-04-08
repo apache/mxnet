@@ -59,7 +59,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
     .set_default(false)
     .describe("If true then the special values are inferred from right to left");
     DMLC_DECLARE_FIELD(target_shape)
-    .set_default(mxnet::TShape(0))
+    .set_default(mxnet::TShape(0, -1))
     .describe("(Deprecated! Use ``shape`` instead.) "
               "Target new shape. One and only one dim can be 0, "
               "in which case it will be inferred from the rest of dims");
@@ -209,7 +209,8 @@ inline bool ReshapeShape(const nnvm::NodeAttrs& attrs,
       oshape[inf_idx] = dshape.Size() / oshape.Size();
     }
   } else {
-    return shape_is_known((*out_attrs)[0]) && ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
+    return shape_is_known((*out_attrs)[0])
+           && ReverseReshapeInferShape(&(*in_attrs)[0], (*out_attrs)[0]);
   }
   ReverseReshapeInferShape(&dshape, oshape);
 #if 0
@@ -240,7 +241,7 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
 struct TransposeParam : public dmlc::Parameter<TransposeParam> {
   mxnet::TShape axes;
   DMLC_DECLARE_PARAMETER(TransposeParam) {
-    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0))
+    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0, -1))
     .describe("Target axis order. By default the axes will be inverted.");
   }
 };
@@ -1154,9 +1155,14 @@ inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!mxnet::ndim_is_known(ishape)) return false;
   int axis;
   index_t begin, end;
   GetSliceAxisParams(param, ishape, &axis, &begin, &end);
+  if (!mxnet::dim_size_is_known(ishape, axis)) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
+    return false;
+  }
   mxnet::TShape shape(ishape.ndim(), -1);
   for (int i = 0; i < ishape.ndim(); ++i) {
     if (static_cast<int>(i) == axis) {

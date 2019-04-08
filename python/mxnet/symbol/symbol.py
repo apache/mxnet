@@ -34,7 +34,7 @@ import numpy as _numpy
 
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
-from ..base import mx_uint, py_str, string_types, integer_types, mx_int
+from ..base import mx_uint, py_str, string_types, integer_types, mx_int, is_np_comp
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
@@ -42,7 +42,6 @@ from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from ..ndarray import _ndarray_cls
 from ..executor import Executor
-from ..numpy import is_np_comp
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class

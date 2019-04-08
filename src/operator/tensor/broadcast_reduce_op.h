@@ -129,9 +129,9 @@ struct BroadcastAxesParam : public dmlc::Parameter<BroadcastAxesParam> {
   mxnet::TShape axis;
   mxnet::TShape size;
   DMLC_DECLARE_PARAMETER(BroadcastAxesParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(mxnet::TShape(0))
+    DMLC_DECLARE_FIELD(axis).set_default(mxnet::TShape(0, -1))
       .describe("The axes to perform the broadcasting.");
-    DMLC_DECLARE_FIELD(size).set_default(mxnet::TShape(0))
+    DMLC_DECLARE_FIELD(size).set_default(mxnet::TShape(0, -1))
       .describe("Target sizes of the broadcasting axes.");
   }
 };
@@ -139,7 +139,7 @@ struct BroadcastAxesParam : public dmlc::Parameter<BroadcastAxesParam> {
 struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
   mxnet::TShape shape;
   DMLC_DECLARE_PARAMETER(BroadcastToParam) {
-    DMLC_DECLARE_FIELD(shape).set_default(mxnet::TShape(0))
+    DMLC_DECLARE_FIELD(shape).set_default(mxnet::TShape(0, -1))
       .describe("The shape of the desired array."
                 " We can set the dim to zero if it's same as the original."
                 " E.g `A = broadcast_to(B, shape=(10, 0, 0))` "

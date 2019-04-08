@@ -131,12 +131,16 @@ inline void SetShapeType(const Context& ctx,
       std::stringstream os;
       os << "Operator " << attrs.op->name << " inferring shapes failed.\n";
       os << "input shapes:\n";
-      for (auto& nd : inputs) {
-        os << nd->shape() << '\n';
+      for (const auto& s : in_shapes) {
+        os << s << '\n';
       }
       os << "output shapes:\n";
-      for (auto& nd : outputs) {
-        os << nd->shape() << '\n';
+      for (const auto& s : out_shapes) {
+        os << s << '\n';
+      }
+      os << "operator attributes:\n";
+      for (const auto& kv : attrs.dict) {
+        os << kv.first << " : " << kv.second << '\n';
       }
       LOG(FATAL) << os.str();
     }

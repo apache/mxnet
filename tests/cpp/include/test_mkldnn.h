@@ -49,7 +49,7 @@ inline static mkldnn::memory::primitive_desc GetMemPD(const mxnet::TShape s, int
 inline static mkldnn::memory::primitive_desc GetExpandedMemPD(
     mkldnn::memory::primitive_desc pd, float scale, int dim = 0) {
   CHECK(dim < pd.desc().data.ndims) << "dimension cannot be larger than total dimensions of input";
-  mxnet::TShape s(pd.desc().data.ndims);
+  mxnet::TShape s(pd.desc().data.ndims, -1);
   for (size_t i = 0; i < pd.desc().data.ndims; i++)
     s[i] = pd.desc().data.dims[i];
   s[dim] = static_cast<int>(s[dim] * scale);
@@ -165,7 +165,7 @@ inline static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = fals
   std::vector<mkldnn::memory::primitive_desc> pds;
   {
     // 1D
-    mxnet::TShape s(1);
+    mxnet::TShape s(1, -1);
     s[0] = 279936;
     shapes.push_back(s);
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::x));
@@ -175,7 +175,7 @@ inline static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = fals
   }
   {
     // 2D
-    mxnet::TShape s(2);
+    mxnet::TShape s(2, -1);
     s[0] = 96;
     s[1] = 2916;
     shapes.push_back(s);
@@ -187,12 +187,12 @@ inline static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = fals
   }
   {
     // 4D
-    mxnet::TShape s1(4);
+    mxnet::TShape s1(4, -1);
     s1[0] = 10; s1[1] = 96; s1[2] = 54; s1[3] = 54;
     shapes.push_back(s1);
     pds.push_back(GetMemPD(s1, dtype, mkldnn::memory::format::nchw));
 
-    mxnet::TShape s2(4);
+    mxnet::TShape s2(4, -1);
     s2[0] = 96; s2[1] = 3; s2[2] = 11; s2[3] = 11;
     shapes.push_back(s2);
     pds.push_back(GetMemPD(s2, dtype, mkldnn::memory::format::oihw));
@@ -204,7 +204,7 @@ inline static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = fals
   }
   {
     // 5D
-    mxnet::TShape s(5);
+    mxnet::TShape s(5, -1);
     s[0] = 96; s[1] = 1; s[2] = 3; s[3] = 11; s[4] = 11;
     shapes.push_back(s);
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::goihw));
@@ -259,7 +259,7 @@ enum ArrayTypes {
 inline NDArray CreateKernelNDArray(mxnet::TShape kernel, int num_filters, mxnet::TShape input,
     bool is_deconv = false) {
   CHECK_EQ(kernel.ndim(), 2) << "mkldnn only supports 2d filters on 4d inputs";
-  mxnet::TShape target_shape(4);
+  mxnet::TShape target_shape(4, -1);
   target_shape[0] = is_deconv ? input[1] : num_filters;
   target_shape[1] = is_deconv ? num_filters : input[1];
   target_shape[2] = kernel[0];
@@ -470,7 +470,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
   }
 
-  mxnet::TShape s(1);
+  mxnet::TShape s(1, -1);
   if (types & ArrayTypes::NormalReused) {
     // Type 5.
     // Get a reused version.
@@ -528,7 +528,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
 
     // Type 8, 9.
     // Get a reused version.
-    mxnet::TShape s(1);
+    mxnet::TShape s(1, -1);
     s[0] = shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());

@@ -17,7 +17,7 @@
 
 """Symbol API of MXNet."""
 
-from . import _internal, contrib, linalg, op, random, sparse, image, symbol, numpy
+from . import _internal, contrib, linalg, op, random, sparse, image, symbol
 # pylint: disable=wildcard-import, redefined-builtin
 try:
     from .gen_op import * # pylint: disable=unused-wildcard-import

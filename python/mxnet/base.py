@@ -561,7 +561,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_', '_numpy_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_']
 
 
 def _get_op_name_prefix(op_name):
@@ -607,13 +607,6 @@ def _init_op_module(root_namespace, module_name, make_op_func):
     # use mx.nd.contrib or mx.sym.contrib from now on
     contrib_module_name_old = "%s.contrib.%s" % (root_namespace, module_name)
     contrib_module_old = sys.modules[contrib_module_name_old]
-    # special handling of registering numpy ops
-    if module_name == 'ndarray':
-        numpy_module_name = "%s.numpy" % root_namespace
-        numpy_module = sys.modules[numpy_module_name]
-    else:
-        numpy_module_name = None
-        numpy_module = None
     submodule_dict = {}
     for op_name_prefix in _OP_NAME_PREFIX_LIST:
         submodule_dict[op_name_prefix] =\
@@ -652,16 +645,6 @@ def _init_op_module(root_namespace, module_name, make_op_func):
             function.__module__ = contrib_module_name_old
             setattr(contrib_module_old, function.__name__, function)
             contrib_module_old.__all__.append(function.__name__)
-        elif op_name_prefix == '_numpy_' and numpy_module_name is not None:
-            # only register numpy ops under mxnet.numpy in imperative mode
-            hdl = OpHandle()
-            check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-            # TODO(reminisce): Didn't consider third level module here, e.g. mxnet.numpy.random.
-            func_name = name[len(op_name_prefix):]
-            function = make_op_func(hdl, name, func_name)
-            function.__module__ = numpy_module_name
-            setattr(numpy_module, function.__name__, function)
-            numpy_module.__all__.append(function.__name__)
 
 
 def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func):
@@ -751,3 +734,119 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+
+
+def set_np_comp(flag):
+    """
+    Turns on/off NumPy compatibility. NumPy-compatibility is turned off by default in backend.
+
+    Parameters
+    ----------
+    flag : bool
+        Indicates whether to turn on/off NumPy compatibility.
+
+    Returns
+    -------
+        A bool value indicating the previous state of NumPy compatibility.
+    """
+    prev = ctypes.c_int()
+    check_call(_LIB.MXSetIsNumpyCompatible(ctypes.c_int(flag), ctypes.byref(prev)))
+    return bool(prev.value)
+
+
+def is_np_comp():
+    """
+    Checks whether the NumPy compatibility is currently turned on.
+    NumPy-compatibility is turned off by default in backend.
+
+    Returns
+    -------
+        A bool value indicating whether the NumPy compatibility is currently on.
+    """
+    curr = ctypes.c_bool()
+    check_call(_LIB.MXIsNumpyCompatible(ctypes.byref(curr)))
+    return curr.value
+
+
+class _NumpyCompatibilityStateScope(object):
+    """Scope for managing numpy compatibility state.
+
+    Example::
+
+        with _NumpyCompatibilityStateScope(True):
+            y = model(x)
+            backward([y])
+
+    """
+    def __init__(self, is_np_comp): #pylint: disable=redefined-outer-name
+        self._enter_is_np_comp = is_np_comp
+        self._prev_is_np_comp = None
+
+    def __enter__(self):
+        if self._enter_is_np_comp is not None:
+            self._prev_is_np_comp = set_np_comp(self._enter_is_np_comp)
+
+    def __exit__(self, ptype, value, trace):
+        if self._enter_is_np_comp is not None and self._prev_is_np_comp != self._enter_is_np_comp:
+            set_np_comp(self._prev_is_np_comp)
+
+
+def enable_np_comp():
+    """Returns a NumPy compatibility state scope to be used in 'with' statement
+    and captures code that needs the compatibility.
+
+    Example::
+
+        with mx.enable_np_comp():
+            # A scalar tensor's shape is `()`, whose `ndim` is `0`.
+            scalar = mx.nd.ones(shape=())
+            assert scalar.shape == ()
+
+            # In NumPy compatible mode, 0 in a shape means that dimension contains zero elements.
+            data = mx.sym.var("data", shape=(0, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape()
+            assert arg_shapes[0] == (0, 2, 3)
+            assert out_shapes[0] == (0, 2, 3)
+
+            # -1 means unknown shape dimension size in the new NumPy-compatible shape definition
+            data = mx.sym.var("data", shape=(-1, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == (-1, 2, 3)
+            assert out_shapes[0] == (-1, 2, 3)
+
+            # When a shape is completely unknown in NumPy-compatible mode, it is
+            # represented as `None` in Python.
+            data = mx.sym.var("data")
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] is None
+            assert out_shapes[0] is None
+    """
+    return _NumpyCompatibilityStateScope(True)
+
+
+def disable_np_comp():
+    """Returns a state scope with NumPy-compatibility disabled to be used in 'with' statement
+    and captures code that does not need the compatibility.
+
+    Example::
+
+        with mx.disable_np_comp():
+            # 0 means unknown shape dimension size in the legacy shape definition.
+            data = mx.sym.var("data", shape=(0, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == (0, 2, 3)
+            assert out_shapes[0] == (0, 2, 3)
+
+            # When a shape is completely unknown in the legacy mode (default), its ndim is
+            # equal to 0 and it is represented as `()` in Python.
+            data = mx.sym.var("data")
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == ()
+            assert out_shapes[0] == ()
+    """
+    return _NumpyCompatibilityStateScope(False)

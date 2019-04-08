@@ -61,16 +61,13 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     int l = 1, r = 1;
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
+    if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r)) continue;
     if (l != r) {
-      if (l == 0 || r == 0) {
-        // TODO(junwu): here is not compatible with NumPy.
-        // For example, (2, 3) cannot broadcast to (2, 0, 3).
-        out[i] = 0;
-      } else {
-        CHECK(l == 1 || r == 1)
-          << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
-        out[i] = std::max(l, r);
-      }
+      // Make it compatible with NumPy.
+      // For example, (2, 3) cannot broadcast to (2, 0, 3), but (1, 3) can broadcast to (2, 0, 3).
+      CHECK(l == 1 || r == 1)
+        << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
+      out[i] = (l == 1 ? r : l);
     } else {
       out[i] = l;
     }
