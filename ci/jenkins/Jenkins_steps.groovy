@@ -554,19 +554,6 @@ def test_static_python_gpu() {
   }]
 }
 
-def test_static_scala_gpu() {
-  return ['Static build GPU 14.04 Scala' : {
-    node(NODE_LINUX_GPU) {
-        ws('workspace/ut-publish-scala-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run("publish.ubuntu1404_gpu", 'build_static_scala_cu92mkl', true)
-          }
-        }
-    }
-  }]
-}
-
 def test_unix_python2_cpu() {
     return ['Python2: CPU': {
       node(NODE_LINUX_CPU) {

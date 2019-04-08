@@ -1337,16 +1337,6 @@ build_static_scala_mkl() {
     popd
 }
 
-build_static_scala_cu92mkl() {
-    set -ex
-    pushd .
-    scala_prepare
-    export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
-    export mxnet_variant=cu92mkl
-    ./ci/publish/scala/build.sh
-    popd
-}
-
 build_static_python_mkl() {
     set -ex
     pushd .
