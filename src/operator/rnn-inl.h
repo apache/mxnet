@@ -563,8 +563,8 @@ class RNNOp {
     if (param_.state_outputs) {
       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
     }
-    DType * cx_ptr = NULL;
-    DType * cy_ptr = NULL;
+    DType* cx_ptr = NULL;
+    DType* cy_ptr = NULL;
     if (param_.mode == rnn_enum::kLstm)
       cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
     if (param_.mode == rnn_enum::kLstm && param_.state_outputs)
@@ -575,10 +575,6 @@ class RNNOp {
     CHECK_EQ(hx.CheckContiguous(), true);
     CHECK_EQ(y.CheckContiguous(), true);
 
-    // allocate temp space
-    const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                                                      param_.state_size, direction, param_.mode);
-    DType* work_cpu_space = NULL;
     #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
       Init(ctx, s, in_data, out_data);
@@ -587,9 +583,7 @@ class RNNOp {
     int temp_size = workspace_size_;
     Tensor<xpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
-                              mshadow::Shape1(temp_size + work_cpu_space_size), s);
-
-    work_cpu_space = temp_space.dptr_ + temp_size;
+                              mshadow::Shape1(temp_size), s);
 
     #if USE_CUDNN_LSTM_PROJ
     std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
@@ -749,11 +743,13 @@ class RNNOp {
     #endif
 
     if (ctx_.dev_type == kCPU) {
-      if (!work_cpu_space) {
-        Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-          .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
-        work_cpu_space = workspace.dptr_;
-      }
+      // allocate temp space
+      const size_t work_cpu_space_size =
+          GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+                              param_.state_size, direction, param_.mode);
+      Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
+        .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
+      DType* work_cpu_space = workspace.dptr_;
       if (ctx.is_train) {
         const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                      param_.seq_length_, param_.batch_size_,
@@ -855,6 +851,7 @@ class RNNOp {
     CHECK_EQ(dhx.CheckContiguous(), true);
     CHECK_EQ(y.CheckContiguous(), true);
     CHECK_EQ(dy.CheckContiguous(), true);
+    CHECK_EQ(dx.CheckContiguous(), true);
 
     if (req[rnn_enum::kParams] != kAddTo) {
       dw = mshadow::expr::ScalarExp<DType>(0.0f);
@@ -886,11 +883,6 @@ class RNNOp {
     if ((param_.mode == rnn_enum::kLstm) && param_.state_outputs)
         dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
 
-    // allocate temp space
-    const size_t work_cpu_space_size =
-        GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                            param_.state_size, direction, param_.mode);
-    DType* work_cpu_space = NULL;
     #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
       Init(ctx, s, in_data, out_data);
@@ -900,8 +892,7 @@ class RNNOp {
     int temp_size = workspace_size_;
     Tensor<xpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
-                              mshadow::Shape1(temp_size + work_cpu_space_size), s);
-    work_cpu_space = temp_space.dptr_ + temp_size;
+                              mshadow::Shape1(temp_size), s);
     #if USE_CUDNN_LSTM_PROJ
     CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
                                       rnn_desc_,
@@ -994,11 +985,14 @@ class RNNOp {
     #endif
 
     if (ctx_.dev_type == kCPU) {
-      if (!work_cpu_space) {
-        Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
+      // allocate temp space
+      const size_t work_cpu_space_size =
+          GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+                              param_.state_size, direction, param_.mode);
+      DType* work_cpu_space = NULL;
+      Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
           .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
-        work_cpu_space = workspace.dptr_;
-      }
+      work_cpu_space = workspace.dptr_;
       size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                              param_.seq_length_, param_.batch_size_,
                                              param_.state_size, param_.mode);
