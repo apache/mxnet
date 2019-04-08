@@ -560,7 +560,7 @@ def test_static_scala_gpu() {
         ws('workspace/ut-publish-scala-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run("publish.ubuntu1404_gpu", 'build_static_scala_cu100mkl', true)
+            utils.docker_run("publish.ubuntu1404_gpu", 'build_static_scala_cu92mkl', true)
           }
         }
     }
