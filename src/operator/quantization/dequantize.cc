@@ -76,9 +76,12 @@ by keep zero centered for the quantized value:
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
-.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNDequantizeCompute)
+.set_attr<FCreateOpState>("FCreateOpState", CreateSgMKLDNNDequantizeState)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNDequantizeForward)
+#else
+.set_attr<FCreateOpState>("FCreateOpState", CreateDequantizeState)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", DequantizeForward<cpu>)
 #endif
-.set_attr<FCompute>("FCompute<cpu>", DequantizeCompute<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `uint8`")
 .add_argument("min_range", "NDArray-or-Symbol", "The minimum scalar value "
   "possibly produced for the input in float32")

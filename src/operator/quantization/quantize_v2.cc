@@ -88,9 +88,12 @@ If min_calib_range isn't presented, the output type will be int8.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
-.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeV2Compute)
+.set_attr<FCreateOpState>("FCreateOpState", CreateSgMKLDNNQuantizeState)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNQuantizeForward)
+#else
+.set_attr<FCreateOpState>("FCreateOpState", CreateQuantizeV2State)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", QuantizeV2Forward<cpu>)
 #endif
-.set_attr<FCompute>("FCompute<cpu>", QuantizeV2Compute<cpu>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs) {
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
