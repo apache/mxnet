@@ -518,7 +518,8 @@ def get_fp32_residual():
     conv0 = mx.sym.Convolution(data=data, num_filter=4, kernel=(1,1), pad=(0,0),
                                no_bias=True, name='conv0')
     bn = mx.sym.BatchNorm(data=conv0, fix_gamma=False, eps=2e-5, momentum=0.9, name='bn')
-    act0 = mx.sym.Activation(data=bn + data, act_type='relu', name='relu0')
+    sum0 = mx.sym.elemwise_add(bn, data, name='sum0')
+    act0 = mx.sym.Activation(data=sum0, act_type='relu', name='relu0')
     pool0 = mx.sym.Pooling(act0, kernel=(4, 4), pool_type='avg', name='pool0')
     conv1 = mx.sym.Convolution(data=pool0, num_filter=4, kernel=(1,1), pad=(0,0),
                                no_bias=False, name='conv1')
@@ -700,6 +701,8 @@ def test_quantize_model_with_forward():
             excluded_names = []
             if mx.current_context() == mx.cpu():
                excluded_names += ['fc']
+            if mx.current_context() == mx.gpu():
+               excluded_names += ['sum0']
             excluded_names += ['concat']
 
             optional_names = ['pool0']
