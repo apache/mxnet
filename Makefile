@@ -129,7 +129,7 @@ ifdef CAFFE_PATH
 endif
 
 ifndef LINT_LANG
-	LINT_LANG="all"
+	LINT_LANG = "all"
 endif
 
 ifeq ($(USE_MKLDNN), 1)
@@ -146,11 +146,33 @@ endif
 
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
-	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)
-	LDFLAGS += $(filter-out -lopencv_ts, $(shell pkg-config --libs opencv))
+	CFLAGS += -DMXNET_USE_OPENCV=1
+	ifneq ($(filter-out NONE, $(USE_OPENCV_INC_PATH)),)
+		CFLAGS += -I$(USE_OPENCV_INC_PATH)/include
+		ifeq ($(filter-out NONE, $(USE_OPENCV_LIB_PATH)),)
+$(error Please add the path of OpenCV shared library path into `USE_OPENCV_LIB_PATH`, when `USE_OPENCV_INC_PATH` is not NONE)
+		endif
+		LDFLAGS += -L$(USE_OPENCV_LIB_PATH)
+		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_imgcodecs.*),)
+			LDFLAGS += -lopencv_imgcodecs
+		endif
+		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_highgui.*),)
+			LDFLAGS += -lopencv_highgui
+		endif
+	else
+		ifeq ("$(shell pkg-config --exists opencv4; echo $$?)", "0")
+			OPENCV_LIB = opencv4
+		else
+			OPENCV_LIB = opencv
+		endif
+		CFLAGS += $(shell pkg-config --cflags $(OPENCV_LIB))
+		LDFLAGS += $(shell pkg-config --libs-only-L $(OPENCV_LIB))
+		LDFLAGS += $(filter -lopencv_imgcodecs -lopencv_highgui, $(shell pkg-config --libs-only-l $(OPENCV_LIB)))
+	endif
+	LDFLAGS += -lopencv_imgproc -lopencv_core
 	BIN += bin/im2rec
 else
-	CFLAGS+= -DMXNET_USE_OPENCV=0
+	CFLAGS += -DMXNET_USE_OPENCV=0
 endif
 
 ifeq ($(USE_OPENMP), 1)
@@ -431,7 +453,7 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 
 ifeq ($(USE_CUDA), 1)
-	CFLAGS += -I$(ROOTDIR)/3rdparty/cub
+	CFLAGS += -I$(ROOTDIR)/3rdparty/nvidia_cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcufft
 	ifeq ($(ENABLE_CUDA_RTC), 1)

@@ -20,7 +20,7 @@ import tempfile
 import mxnet as mx
 from mxnet import nd
 from mxnet.gluon import nn, loss
-from mxnet.gluon.estimator import estimator, event_handler
+from mxnet.gluon.contrib.estimator import estimator, event_handler
 
 def _get_test_network():
     net = nn.Sequential()
@@ -30,7 +30,10 @@ def _get_test_network():
     return net
 
 def _get_test_data():
-    return mx.io.NDArrayIter(data=nd.ones((32, 100)), label=nd.random.randint(0, 10, (32, 1)))
+    data = nd.ones((32, 100))
+    label = nd.random.randint(0, 10, (32, 1))
+    data_arr = mx.gluon.data.dataset.ArrayDataset(data, label)
+    return mx.gluon.data.DataLoader(data_arr, batch_size=32)
 
 
 def test_checkpoint_handler():

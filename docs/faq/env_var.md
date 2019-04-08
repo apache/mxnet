@@ -60,6 +60,9 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_MP_OPENCV_NUM_THREADS
   - Values: Int ```(default=0)```
   - The number of OpenCV execution threads given to multiprocess workers. OpenCV multithreading is disabled if `MXNET_MP_OPENCV_NUM_THREADS` < 1 (default). Enlarge this number may boost the performance of individual workers when executing underlying OpenCV functions but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
+* MXNET_CUSTOM_OP_NUM_THREADS
+  - Values: Int ```(default=16)```
+  - The maximum number of threads given to custom operators.
 
 ## Memory Options
 
@@ -115,7 +118,13 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - If set to `1`, during training MXNet executes the computation graph as several subgraphs in bulk mode.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN
   - Values: Int ```(default=15)```
-  - The maximum number of nodes in the subgraph executed in bulk during training(not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
+* MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the forward pass.
+* MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the backward pass.
 
 ## Control the Data Communication
 

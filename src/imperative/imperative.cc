@@ -442,9 +442,10 @@ std::vector<NDArray*> Imperative::Backward(
 
     ShapeVector shapes;
     shapes.reserve(idx.num_node_entries());
+    bool contain_unknown = false;
     for (const auto& i : arrays) shapes.emplace_back(i->shape());
     CheckAndInferShape(&graph, std::move(shapes), false,
-                       node_range, entry_range);
+                       node_range, entry_range, &contain_unknown);
 
     DTypeVector dtypes;
     dtypes.reserve(idx.num_node_entries());

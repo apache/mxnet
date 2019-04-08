@@ -32,6 +32,12 @@
 namespace mxnet {
 namespace op {
 
+bool SupportMKLDNNFC(const NDArray& input) {
+  int ndim = input.shape().ndim();
+  return input.dtype() == mshadow::kFloat32 && (ndim >= 1 && ndim <= 4) &&
+         input.storage_type() == kDefaultStorage;
+}
+
 static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
                                 mxnet::ShapeVector *in_shape,
                                 mxnet::ShapeVector *out_shape) {
@@ -94,7 +100,7 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   if (common::ContainsOnlyStorage(inputs, kDefaultStorage) &&
       common::ContainsOnlyStorage(outputs, kDefaultStorage)) {
-    if (SupportMKLDNN(inputs[0])) {
+    if (SupportMKLDNNFC(inputs[0])) {
       MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
       MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
       MKLDNN_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req,
@@ -141,7 +147,7 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray> &inputs,
                                     const std::vector<OpReqType> &req,
                                     const std::vector<NDArray> &outputs) {
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportMKLDNNFC(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNFCBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req,

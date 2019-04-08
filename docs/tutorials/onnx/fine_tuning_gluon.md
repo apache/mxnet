@@ -279,7 +279,10 @@ We create a symbol block that is going to hold all our pre-trained layers, and a
 
 
 ```python
-pre_trained = gluon.nn.SymbolBlock(outputs=new_sym, inputs=mx.sym.var('data_0'))
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    pre_trained = gluon.nn.SymbolBlock(outputs=new_sym, inputs=mx.sym.var('data_0'))
 net_params = pre_trained.collect_params()
 for param in new_arg_params:
     if param in net_params:

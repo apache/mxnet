@@ -3,7 +3,7 @@
 This fold contains examples for image classification. The goal of image
 classifcation is to identify the objects contained in images. The following
 [example](http://mxnet.io/tutorials/python/predict_image.html) shows
-recognized object classes with corresponding probabilities using a pre-traind
+recognized object classes with corresponding probabilities using a pre-trained
 model.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/predict-dog.png" width="600"/>

@@ -121,9 +121,9 @@ NDArray::Chunk::~Chunk() {
         CHECK_EQ(mem.mem->GetDataHandle(), mem.h.dptr);
       }
 #endif
-      if (mem.h.size > 0) Storage::Get()->Free(mem.h);
+      Storage::Get()->Free(mem.h);
       for (const auto& aux : mem.aux_h) {
-        if (aux.size > 0) Storage::Get()->Free(aux);
+        Storage::Get()->Free(aux);
       }
     }
   }, shandle.ctx, var);
@@ -134,8 +134,8 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
       << "data is expected to be allocated after aux_data";
   auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
   if (shandle.size < dbytes) {
-    // free storage if necessary and alloc again
-    if (shandle.size > 0) Storage::Get()->Free(shandle);
+    // free storage
+    Storage::Get()->Free(shandle);
     // init storage
     shandle = Storage::Get()->Alloc(dbytes, ctx);
 #if MXNET_USE_MKLDNN == 1
