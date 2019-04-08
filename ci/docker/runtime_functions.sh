@@ -1327,12 +1327,22 @@ deploy_jl_docs() {
     # ...
 }
 
-build_scala_static_mkl() {
+build_static_scala_mkl() {
     set -ex
     pushd .
     scala_prepare
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=mkl
+    ./ci/publish/scala/build.sh
+    popd
+}
+
+build_static_scala_cu100mkl() {
+    set -ex
+    pushd .
+    scala_prepare
+    export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
+    export mxnet_variant=cu100mkl
     ./ci/publish/scala/build.sh
     popd
 }
