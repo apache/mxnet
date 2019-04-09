@@ -705,7 +705,7 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
 
       // checking upper and lower bounds for end
       if (e < 0 && param_end[i].has_value()) {
-        if (!(s < 0 && e == -1)){
+        if (!(s < 0 && e == -1)) {
           // Keep end=-1 as one-beyond-limits index for negative stride
           e += len;
         }
