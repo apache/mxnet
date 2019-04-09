@@ -24,8 +24,6 @@ from mxnet.base import MXNetError
 from mxnet.test_utils import assert_exception, default_context, set_default_context
 from nose.tools import assert_raises
 
-url = "https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true"
-
 @with_seed()
 def test_exc_imperative():
     def imperative(exec_numpy=True):
@@ -168,8 +166,8 @@ def test_multiple_waitalls():
     mx.nd.waitall()
 
 @with_seed()
-    def run_training_iteration(data):
-        output = net(data)
+def run_training_iteration(data):
+    output = net(data)
 
     net = gluon.nn.HybridSequential()
     with net.name_scope():
