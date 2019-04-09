@@ -125,18 +125,6 @@ class DequantizeOperator {
   nnvm::NodeAttrs attrs_;
 };
 
-static OpStatePtr CreateDequantizeState(const nnvm::NodeAttrs &attrs, Context ctx,
-                                        const std::vector<TShape> &in_shapes,
-                                        const std::vector<int> &in_types) {
-  OpStatePtr state;
-  if (ctx.dev_type == kGPU) {
-    state = OpStatePtr::Create<DequantizeOperator<gpu>>(attrs);
-  } else {
-    state = OpStatePtr::Create<DequantizeOperator<cpu>>(attrs);
-  }
-  return state;
-}
-
 template <typename xpu>
 static void DequantizeForward(const OpStatePtr &state_ptr, const OpContext &ctx,
                               const std::vector<TBlob> &inputs, const std::vector<OpReqType> &req,

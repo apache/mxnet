@@ -244,18 +244,6 @@ class QuantizeV2Operator {
   nnvm::NodeAttrs attrs_;
 };
 
-static OpStatePtr CreateQuantizeV2State(const nnvm::NodeAttrs &attrs, Context ctx,
-                                        const std::vector<TShape> &in_shapes,
-                                        const std::vector<int> &in_types) {
-  OpStatePtr state;
-  if (ctx.dev_type == kGPU) {
-    state = OpStatePtr::Create<QuantizeV2Operator<gpu>>(attrs);
-  } else {
-    state = OpStatePtr::Create<QuantizeV2Operator<cpu>>(attrs);
-  }
-  return state;
-}
-
 template <typename xpu>
 static void QuantizeV2Forward(const OpStatePtr &state_ptr, const OpContext &ctx,
                               const std::vector<TBlob> &inputs, const std::vector<OpReqType> &req,

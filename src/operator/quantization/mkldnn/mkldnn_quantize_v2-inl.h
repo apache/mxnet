@@ -170,18 +170,6 @@ static void SgMKLDNNQuantizeForward(const OpStatePtr &state_ptr, const OpContext
   op.Forward(ctx, inputs, req, outputs);
 }
 
-static OpStatePtr CreateSgMKLDNNQuantizeState(const nnvm::NodeAttrs &attrs, Context ctx,
-                                              const std::vector<TShape> &in_shapes,
-                                              const std::vector<int> &in_types) {
-  OpStatePtr state;
-  if (ctx.dev_type == kGPU) {
-    state = OpStatePtr::Create<QuantizeV2Operator<gpu>>(attrs);
-  } else {
-    state = OpStatePtr::Create<SgMKLDNNQuantizeOperator>(attrs);
-  }
-  return state;
-}
-
 }  // namespace op
 }  // namespace mxnet
 

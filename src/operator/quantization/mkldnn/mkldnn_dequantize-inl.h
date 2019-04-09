@@ -122,17 +122,7 @@ static void SgMKLDNNDequantizeForward(const OpStatePtr &state_ptr, const OpConte
   op.Forward(ctx, inputs, req, outputs);
 }
 
-static OpStatePtr CreateSgMKLDNNDequantizeState(const nnvm::NodeAttrs &attrs, Context ctx,
-                                                const std::vector<TShape> &in_shapes,
-                                                const std::vector<int> &in_types) {
-  OpStatePtr state;
-  if (ctx.dev_type == kGPU) {
-    state = OpStatePtr::Create<DequantizeOperator<gpu>>(attrs);
-  } else {
-    state = OpStatePtr::Create<SgMKLDNNDequantizeOperator>(attrs);
-  }
-  return state;
-}
+
 
 }  // namespace op
 }  // namespace mxnet
