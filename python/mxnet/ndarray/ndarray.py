@@ -647,6 +647,7 @@ fixed-size items.
             value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
 
+    # pylint: disable=invalid-name
     @staticmethod
     def _basic_indexing_key_to_begin_end_step(idcs, shape, keep_none=True):
         """Map a tuple of ``slice`` and ``None`` (ignored) to begin, end, step tuples."""
@@ -659,7 +660,9 @@ fixed-size items.
         else:
             sss_list = [slc.indices(n) for slc, n in zip(idcs, shape)]
         return tuple(zip(*sss_list))
+    # pylint: enable=invalid-name
 
+    # pylint: disable=invalid-name
     @staticmethod
     def _basic_indexing_key_int_to_slice(idcs):
         """Return the converted indexing tuple and the integer axes."""
@@ -673,6 +676,7 @@ fixed-size items.
                 conv_idcs.append(idx)
 
         return tuple(conv_idcs), tuple(int_axes)
+    # pylint: enable=invalid-name
 
     @staticmethod
     def _new_axes_after_basic_indexing(axes, key_nd):
@@ -695,6 +699,7 @@ fixed-size items.
         axes_after += tuple(cum_steps[-1] + offset for offset in oob_offsets)
         return axes_after
 
+    # pylint: disable=invalid-name
     @staticmethod
     def _basic_indexing_slice_is_contiguous(slc_key, shape):
         """Whether indexing with the given key results in a contiguous array.
@@ -721,6 +726,7 @@ fixed-size items.
                 subset = True
 
         return True
+    # pylint: enable=invalid-name
 
     @staticmethod
     def _basic_indexing_sliced_shape(slc_key, shape):
@@ -737,6 +743,7 @@ fixed-size items.
 
         return tuple(sliced_shape)
 
+    # pylint: disable=invalid-name
     @staticmethod
     def _basic_indexing_contiguous_flat_begin_end(slc_key, shape):
         """Return the flat indices of begin and end for contiguous slicing."""
@@ -751,6 +758,7 @@ fixed-size items.
             flat_end += end - 1
 
         return flat_begin, flat_end + 1
+    # pylint: enable=invalid-name
 
     def _set_nd_basic_indexing(self, key, value):
         """This function indexes ``self`` with a tuple of ``slice`` objects only."""
@@ -840,7 +848,7 @@ fixed-size items.
                 ''.format(len(key_nd), self.ndim)
             )
 
-        none_axes = [ax for ax in range(len(key)) if key[ax] is None]
+        none_axes = [ax for ax in range(len(key)) if key[ax] is None]  # pylint: disable=invalid-name
         slc_key, int_axes = self._basic_indexing_key_int_to_slice(key_nd)
         new_axes = self._new_axes_after_basic_indexing(none_axes, key_nd)
 
@@ -865,10 +873,13 @@ fixed-size items.
         begin, end, step = self._basic_indexing_key_to_begin_end_step(
             slc_key, self.shape, keep_none=False
         )
+        # Pylint is wrong about this
+        # pylint: disable=bad-continuation
         if any(
             b >= e and s > 0 or b <= e and s < 0 for b, e, s in zip(begin, end, step)
         ):
             return array([], self.context, self.dtype)
+        # pylint: enable=bad-continuation
 
         if self._basic_indexing_slice_is_contiguous(slc_key, self.shape):
             # Create a shared-memory view by using low-level flat slicing
@@ -896,7 +907,7 @@ fixed-size items.
         # Reshape to final shape due to integer and `None` entries in `key`.
         final_shape = [sliced.shape[i] for i in range(sliced.ndim)
                        if i not in int_axes]
-        for ax in new_axes:
+        for ax in new_axes:  # pylint: disable=invalid-name
             final_shape.insert(ax, 1)
 
         if final_shape == []:
@@ -930,6 +941,7 @@ fixed-size items.
         else:
             raise RuntimeError('illegal index type {}'.format(type(idx)))
 
+    # pylint: disable=invalid-name
     @staticmethod
     def _broadcast_advanced_indices(arrays, block_axes):
         """Broadcast arrays according to position in the sequence.
@@ -974,6 +986,7 @@ fixed-size items.
             bcast_arrays[ax] = arrays[ax].reshape(shp).broadcast_to(bcast_shape)
 
         return tuple(bcast_arrays)
+    # pylint: enable=invalid-name
 
     @staticmethod
     def _drop_slice_none_at_end(key):
