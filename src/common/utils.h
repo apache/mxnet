@@ -654,7 +654,7 @@ FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
   } else if (ctx.dev_mask() == gpu::kDevMask) {
     return fcompute_gpu.get(op, nullptr);
   } else {
-    LOG(FATAL) << "Unknown device mask";
+    LOG(FATAL) << "Unknown device mask " << ctx.dev_mask();
     return nullptr;
   }
 }

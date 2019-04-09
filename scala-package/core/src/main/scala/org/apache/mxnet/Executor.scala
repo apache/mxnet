@@ -61,6 +61,8 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   protected var monitorCallback: MXMonitorCallback = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
+  private var reshaped = false
+
   override def nativeAddress: CPtrAddress = handle
   override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxExecutorFree
   // cannot determine the off-heap size of this object
@@ -71,12 +73,12 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     if (!super.isDisposed) {
       super.dispose()
       outputs.foreach(o => o.dispose())
-      if (argArrays != null) {argArrays.foreach(a => a.dispose())}
-      if (gradArrays != null) {gradArrays.foreach(
+      if (reshaped && argArrays != null) {argArrays.foreach(a => a.dispose())}
+      if (reshaped && gradArrays != null) {gradArrays.foreach(
         // Symbol will sometimes fill this with nulls so we've got to check the elements too
         a => if (a != null) {a.dispose()})
       }
-      if (auxArrays != null) {auxArrays.foreach(a => a.dispose())}
+      if (reshaped && auxArrays != null) {auxArrays.foreach(a => a.dispose())}
     }
   }
 
@@ -146,6 +148,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     executor.argArrays = argArrays
     executor.gradArrays = gradArrays
     executor.auxArrays = auxArrays
+    executor.reshaped = true
     executor
   }
 
