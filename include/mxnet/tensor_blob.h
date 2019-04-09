@@ -219,11 +219,12 @@ class TBlob {
     return shape_.ndim();
   }
   /*!
-   * \brief return size of i-th dimension, start counting from highest dimension
+   * \brief return size of i-th dimension, start counting from highest dimension.
+   * return type needs to be a signed integer.
    * \param idx the dimension count from the highest dimensin
-   * \return the size
+   * \return the size. -1 means unknown size to support zero-size tensor.
    */
-  inline size_t size(index_t idx) const {
+  inline index_t size(index_t idx) const {
     return shape_[idx];
   }
   /*! \brief total number of elements in the tensor */
