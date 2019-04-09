@@ -51,7 +51,7 @@ bool QuantizedActivationType(const nnvm::NodeAttrs& attrs,
   if (param.act_type == activation::kReLU) {
     TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt8);
   } else {
-    LOG(FATAL) << "QuantizedActivationOp only supports act_type=relu for now";
+    LOG(FATAL) << "_contrib_quantized_act only supports act_type=relu for now";
   }
   TYPE_ASSIGN_CHECK(*in_type, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*in_type, 2, mshadow::kFloat32);

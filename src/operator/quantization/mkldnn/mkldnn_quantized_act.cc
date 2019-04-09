@@ -18,17 +18,13 @@
  */
 /*!
  * Copyright (c) 2019 by Contributors
- * \file mkldnn_act-inl.h
+ * \file mkldnn_quantized_act.cc
  * \brief MKLDNN(Quantized) Activation operator based on subgraph
  * /author Zhiyuan Huang
 */
 #if MXNET_USE_MKLDNN == 1
 
 #include "../../nn/mkldnn/mkldnn_act-inl.h"
-#include "../../tensor/elemwise_unary_op.h"
-#include "../../tensor/elemwise_binary_op-inl.h"
-#include "../../nn/mkldnn/mkldnn_ops-inl.h"
-#include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {
@@ -41,7 +37,7 @@ static void MKLDNNQuantizedActForward(const nnvm::NodeAttrs& attrs,
                                       const std::vector<NDArray>& out_data) {
   CHECK(in_data[0].dtype() == mshadow::kUint8 ||
         in_data[0].dtype() == mshadow::kInt8)
-      << "mkldnn_quantized_activation op only supports uint8 and int8 as input "
+      << "_contrib_quantized_act op only supports uint8 and int8 as input "
          "type";
 
   MKLDNNActivationForward(attrs, ctx, in_data[0], req[0], out_data[0]);
