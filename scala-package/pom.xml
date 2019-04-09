@@ -348,7 +348,6 @@
         <artifactId>scala-maven-plugin</artifactId>
         <version>3.4.4</version>
         <configuration>
-          <recompileMode>incremental</recompileMode>
           <source>${java.version}</source>
           <target>${java.version}</target>
           <compilerPlugins>
