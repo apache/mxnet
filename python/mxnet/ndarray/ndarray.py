@@ -853,7 +853,7 @@ fixed-size items.
         new_axes = self._new_axes_after_basic_indexing(none_axes, key_nd)
 
         # Check bounds for integer axes
-        for ax in int_axes:
+        for ax in int_axes:  # pylint: disable=invalid-name
             if not -self.shape[ax] <= key_nd[ax] < self.shape[ax]:
                 raise IndexError(
                     'index {} is out of bounds for axis {} with size {}'
