@@ -1,6 +1,3 @@
-"""
-Description : Set Dataloader for SNAIL
-"""
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,6 +14,9 @@ Description : Set Dataloader for SNAIL
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License
+"""
+Description : Set Dataloader for SNAIL
+"""
 
 from mxnet.gluon.data import DataLoader
 from omniglot_dataset import OmniglotDataset

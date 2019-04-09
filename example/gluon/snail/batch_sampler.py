@@ -1,6 +1,3 @@
-"""
-Description : Generate batch sample data for omniglot
-"""
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,6 +14,9 @@ Description : Generate batch sample data for omniglot
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License
+"""
+Description : Generate batch sample data for omniglot
+"""
 import random
 import numpy as np
 
