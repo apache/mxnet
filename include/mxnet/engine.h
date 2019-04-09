@@ -222,15 +222,17 @@ class MXNET_API Engine {
    * \param exec_ctx Execution context.
    * \param const_vars The variables that current operation will use but not
    *                   mutate.
+   * \param num_const_vars The number of const_vars.
    * \param mutable_vars The variables that current operation will mutate.
+   * \param num_mutable_vars The number of mutable_vars.
    * \param prop Property of the function.
    * \param priority Priority of the action, as hint to the engine.
    * \param opr_name The operator name.
    * \param wait Whether this is a WaitForVar operation.
    */
   void PushAsyncPtr(AsyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter del,
-                    Context exec_ctx, std::vector<VarHandle> const& const_vars,
-                    std::vector<VarHandle> const& mutable_vars,
+                    Context exec_ctx, VarHandle* const_vars, size_t num_const_vars,
+                    VarHandle* mutable_vars, size_t num_mutable_vars,
                     FnProperty prop = FnProperty::kNormal, int priority = 0,
                     const char* opr_name = nullptr, bool wait = false);
   /*!
@@ -241,14 +243,16 @@ class MXNET_API Engine {
    * \param exec_ctx Execution context.
    * \param const_vars The variables that current operation will use but not
    *                   mutate.
+   * \param num_const_vars The number of const_vars.
    * \param mutable_vars The variables that current operation will mutate.
+   * \param num_mutable_vars The number of mutable_vars.
    * \param prop Property of the function.
    * \param priority Priority of the action, as hint to the engine.
    * \param opr_name The operator name.
    */
   void PushSyncPtr(SyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter del,
-                   Context exec_ctx, std::vector<VarHandle> const& const_vars,
-                   std::vector<VarHandle> const& mutable_vars,
+                   Context exec_ctx, VarHandle* const_vars, size_t num_const_vars,
+                   VarHandle* mutable_vars, size_t num_mutable_vars,
                    FnProperty prop = FnProperty::kNormal, int priority = 0,
                    const char* opr_name = nullptr);
   /*!

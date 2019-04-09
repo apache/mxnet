@@ -69,10 +69,9 @@ Engine* Engine::Get() {
 }
 
 void Engine::PushAsyncPtr(AsyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter del,
-                          Context exec_ctx, std::vector<VarHandle> const& const_vars,
-                          std::vector<VarHandle> const& mutable_vars,
-                          FnProperty prop, int priority,
-                          const char* opr_name, bool wait) {
+                          Context exec_ctx, VarHandle* const_vars, size_t num_const_vars,
+                          VarHandle* mutable_vars, size_t num_mutable_vars,
+                          FnProperty prop, int priority, const char* opr_name, bool wait) {
   AsyncFn exec_fn;
   if (del == nullptr) {
     exec_fn = [exec_fn_ptr, param](RunContext rctx,
@@ -89,12 +88,15 @@ void Engine::PushAsyncPtr(AsyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter
     };
   }
 
-  PushAsync(exec_fn, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name, wait);
+  std::vector<VarHandle> const_var_vec(const_vars, const_vars + num_const_vars);
+  std::vector<VarHandle> mutable_var_vec(mutable_vars, mutable_vars + num_mutable_vars);
+  PushAsync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
+            prop, priority, opr_name, wait);
 }
 
 void Engine::PushSyncPtr(SyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter del,
-                         Context exec_ctx, std::vector<VarHandle> const& const_vars,
-                         std::vector<VarHandle> const& mutable_vars,
+                         Context exec_ctx, VarHandle* const_vars, size_t num_const_vars,
+                         VarHandle* mutable_vars, size_t num_mutable_vars,
                          FnProperty prop, int priority, const char* opr_name) {
   SyncFn exec_fn;
   if (del == nullptr) {
@@ -110,6 +112,9 @@ void Engine::PushSyncPtr(SyncFnPtr exec_fn_ptr, void* param, FnPtrParamDeleter d
     };
   }
 
-  PushSync(exec_fn, exec_ctx, const_vars, mutable_vars, prop, priority, opr_name);
+  std::vector<VarHandle> const_var_vec(const_vars, const_vars + num_const_vars);
+  std::vector<VarHandle> mutable_var_vec(mutable_vars, mutable_vars + num_mutable_vars);
+  PushSync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
+           prop, priority, opr_name);
 }
 }  // namespace mxnet
