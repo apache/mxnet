@@ -462,7 +462,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
       float alpha_s = 1.0 + std::uniform_real_distribution<float>(-param_.saturation,
                                                                   param_.saturation)(*prnd);
       int rand_order[3] = {0, 1, 2};
-      std::random_shuffle(std::begin(rand_order), std::end(rand_order));
+      std::shuffle(std::begin(rand_order), std::end(rand_order), *prnd);
       for (int i : rand_order) {
         if (i == 0) {
           // brightness
