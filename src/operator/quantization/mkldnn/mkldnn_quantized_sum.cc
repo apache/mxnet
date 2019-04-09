@@ -45,25 +45,26 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
                                          const std::vector<NDArray>& out_data) {
   const RequantizeSumParam& params = nnvm::get<RequantizeSumParam>(attrs.parsed);
   // A, B, A_min, A_max, B_min, B_max
-  CHECK_EQ(in_data.size(), static_cast<size_t>(6));
+  CHECK_EQ(in_data.size(), 6U);
   // C, C_min, C_max
   CHECK_EQ(out_data.size(), 3U);
 
   // Collect data min,max,absmax
-  float dataA_min = in_data[quantized_sum_enum::kAMin].data().dptr<float>()[0];
-  float dataB_min = in_data[quantized_sum_enum::kBMin].data().dptr<float>()[0];
-  float dataA_max = in_data[quantized_sum_enum::kAMax].data().dptr<float>()[0];
-  float dataB_max = in_data[quantized_sum_enum::kBMax].data().dptr<float>()[0];
-  float dataA_absmax = MaxAbs(dataA_min, dataA_max);
-  float dataB_absmax = MaxAbs(dataB_min, dataB_max);
+  const float dataA_min = in_data[quantized_sum_enum::kAMin].data().dptr<float>()[0];
+  const float dataB_min = in_data[quantized_sum_enum::kBMin].data().dptr<float>()[0];
+  const float dataA_max = in_data[quantized_sum_enum::kAMax].data().dptr<float>()[0];
+  const float dataB_max = in_data[quantized_sum_enum::kBMax].data().dptr<float>()[0];
+  const float dataA_absmax = MaxAbs(dataA_min, dataA_max);
+  const float dataB_absmax = MaxAbs(dataB_min, dataB_max);
 
   auto dataA_mem  = in_data[quantized_sum_enum::kDataA].GetMKLDNNData();
   auto dataB_mem  = in_data[quantized_sum_enum::kDataB].GetMKLDNNData();
-  bool dataA_int8 = (in_data[quantized_sum_enum::kDataA].dtype() == mshadow::kInt8) ? true : false;
-  size_t dataA_range = dataA_int8 ? kInt8Range : kUint8Range;
+  const bool dataA_int8 = (in_data[quantized_sum_enum::kDataA].dtype() == mshadow::kInt8)
+                          ? true : false;
+  const size_t dataA_range = dataA_int8 ? kInt8Range : kUint8Range;
 
-  float A_scale = GetScale(in_data[quantized_sum_enum::kDataA], dataA_min, dataA_max);
-  float B_scale = GetScale(in_data[quantized_sum_enum::kDataB], dataB_min, dataB_max);
+  const float A_scale = GetScale(in_data[quantized_sum_enum::kDataA], dataA_min, dataA_max);
+  const float B_scale = GetScale(in_data[quantized_sum_enum::kDataB], dataB_min, dataB_max);
   // rescaled_mem is for reorder mkldnn memory
   std::shared_ptr<mkldnn::memory> rescaled_mem;
   // output default set as int32
@@ -71,8 +72,8 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
   auto output_data_type = mkldnn::memory::s32;
   // dataA && dataB are uint8
   if (out_data[quantized_sum_enum::kDataA].dtype() == mshadow::kInt8) {
-  output_data_range = kInt8Range;
-  output_data_type = mkldnn::memory::s8;
+    output_data_range = kInt8Range;
+    output_data_type = mkldnn::memory::s8;
   } else if (out_data[quantized_sum_enum::kDataA].dtype() == mshadow::kUint8) {
     output_data_range = kUint8Range;
     output_data_type = mkldnn::memory::u8;
@@ -89,8 +90,10 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
     output_max = dataA_absmax + dataB_absmax;
     output_min = 0 - output_max;
   }
-
+  // 2: scale 0 for dataA, scale 1 for data B
+  const int scales_num = 2;
   std::vector<float> scales;
+  scales.reserve(scales_num);
   if (in_data[quantized_sum_enum::kDataA].dtype() != in_data[quantized_sum_enum::kDataB].dtype()) {
     auto s8_pd = (dataA_int8 == true)
                  ? dataA_mem->get_primitive_desc()
