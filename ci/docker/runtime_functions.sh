@@ -860,7 +860,9 @@ unittest_ubuntu_cpu_scala() {
     set -ex
     scala_prepare
     cd scala-package
-    mvn -B integration-test
+    mvn -B package scoverage:package -Dscoverage.skip=false || true
+    mvn -B package pre-site scoverage:integration-test -Dscoverage.skip=false
+    mvn -B package scoverage:package pre-site scoverage:report-only -Dscoverage.skip=false
 }
 
 unittest_centos7_cpu_scala() {
@@ -868,7 +870,9 @@ unittest_centos7_cpu_scala() {
     cd /work/mxnet
     scala_prepare
     cd scala-package
-    mvn -B integration-test
+    mvn -B package scoverage:package -Dscoverage.skip=false || true
+    mvn -B package pre-site scoverage:integration-test -Dscoverage.skip=false
+    mvn -B package scoverage:package pre-site scoverage:report-only -Dscoverage.skip=false
 }
 
 unittest_ubuntu_cpu_clojure() {
@@ -1065,7 +1069,9 @@ integrationtest_ubuntu_gpu_scala() {
     scala_prepare
     cd scala-package
     export SCALA_TEST_ON_GPU=1
-    mvn -B integration-test -DskipTests=false
+    mvn -B package scoverage:package -Dscoverage.skip=false || true
+    mvn -B package pre-site scoverage:integration-test -Dscoverage.skip=false -DskipTests=false
+    mvn -B package scoverage:package pre-site scoverage:report-only -Dscoverage.skip=false
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
