@@ -1,6 +1,3 @@
-"""
-Descrition : main module to run code
-"""
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,6 +14,9 @@ Descrition : main module to run code
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+"""
+Descrition : main module to run code
+"""
 import argparse
 from trainer import Train
 
