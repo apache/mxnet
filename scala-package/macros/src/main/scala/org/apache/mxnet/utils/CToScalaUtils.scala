@@ -31,7 +31,15 @@ private[mxnet] object CToScalaUtils {
     "double" -> "Double",
     "bool" -> "Boolean")
 
-  // Convert C++ Types to Scala Types
+  /**
+    * Convert C++ Types to Scala Types
+    * @param in input raw string that contains C type docs
+    * @param argType arg type that used for error messaging
+    * @param argName arg name used for error messaging
+    * @param returnType the type that NDArray/Symbol should be
+    * @param isJava check if generating for Java
+    * @return String that contains right Scala/Java types
+    */
   def typeConversion(in : String, argType : String = "", argName : String,
                      returnType : String, isJava : Boolean) : String = {
     val header = returnType.split("\\.").dropRight(1)
@@ -64,6 +72,8 @@ private[mxnet] object CToScalaUtils {
     * optional, what is it Scala type and possibly pass in a default value
     * @param argName The name of the argument
     * @param argType Raw arguement Type description
+    * @param returnType return type of the function (Symbol/NDArray)
+    * @param isJava check if Java args should be generated
     * @return (Scala_Type, isOptional)
     */
   def argumentCleaner(argName: String, argType : String,
