@@ -447,13 +447,9 @@ Returns a **view** of the `lhs` array with a new shape without altering any data
 
 Example::
 
-  >>> x = mx.nd.array([1, 2, 3, 4, 5, 6])
-  >>> y = mx.nd.array([[0, -4], [3, 2], [2, 2]])
-  >>> mx.nd.reshape_like(x, y)
-  [[1. 2.]
-  [3. 4.]
-  [5. 6.]]
-  <NDArray 3x2 @cpu(0)>
+  x = [1, 2, 3, 4, 5, 6]
+  y = [[0, -4], [3, 2], [2, 2]]
+  reshape_like(x, y) = [[1, 2], [3, 4], [5, 6]]
 
 More precise control over how dimensions are inherited is achieved by specifying \
 slices over the `lhs` and `rhs` array dimensions. Only the sliced `lhs` dimensions \
@@ -519,10 +515,7 @@ NNVM_REGISTER_OP(shape_array)
 
 Example::
 
-  >>> x = mx.nd.array([[1,2,3,4], [5,6,7,8]])
-  >>> mx.nd.shape_array(x)
-  [2 4]
-  <NDArray 2 @cpu(0)>
+  shape_array([[1,2,3,4], [5,6,7,8]]) = [2,4]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -574,10 +567,7 @@ NNVM_REGISTER_OP(size_array)
 
 Example::
 
-  >>> x = mx.nd.array([[1,2,3,4], [5,6,7,8]])
-  >>> mx.nd.size_array(x)
-  [8]
-  <NDArray 1 @cpu(0)>
+  size_array([[1,2,3,4], [5,6,7,8]]) = [8]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -613,20 +603,9 @@ NNVM_REGISTER_OP(Cast)
 
 Example::
 
-  >>> x = mx.nd.array([0.9, 1.3])
-  >>> mx.nd.cast(x, dtype='int32')
-  [0 1]
-  <NDArray 2 @cpu(0)>
-
-  >>> x = mx.nd.array([1e20, 11.1])
-  >>> mx.nd.cast(x, dtype='float16')
-  [ inf 11.1]
-  <NDArray 2 @cpu(0)>
-
-  >>> x = mx.nd.array([300, 11.1, 10.9, -1, -3])
-  >>> mx.nd.cast(x, dtype='uint8')
-  [ 44  11  10 255 253]
-  <NDArray 5 @cpu(0)>
+   cast([0.9, 1.3], dtype='int32') = [0, 1]
+   cast([1e20, 11.1], dtype='float16') = [inf, 11.09375]
+   cast([300, 11.1, 10.9, -1, -3], dtype='uint8') = [44, 11, 10, 255, 253]
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<CastParam>)
@@ -670,10 +649,7 @@ Calculates 1/x.
 
 Example::
 
-  >>> x = mx.nd.array([-2, 1, 3, 1.6, 0.2])
-  >>> mx.nd.reciprocal(x)
-  [-0.5         1.          0.33333334  0.625       5.        ]
-  <NDArray 5 @cpu(0)>
+    reciprocal([-2, 1, 3, 1.6, 0.2]) = [-0.5, 1.0, 0.33333334, 0.625, 5.0]
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::reciprocal>)
@@ -689,10 +665,7 @@ MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(abs, cpu, mshadow_op::abs)
 
 Example::
 
-  >>> x = mx.nd.array([-2, 0, 3])
-  >>> mx.nd.abs(x)
-  [2. 0. 3.]
-  <NDArray 3 @cpu(0)>
+   abs([-2, 0, 3]) = [2, 0, 3]
 
 The storage type of ``abs`` output depends upon the input storage type:
 
@@ -711,10 +684,7 @@ MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sign, cpu, mshadow_op::sign)
 
 Example::
 
-  >>> x = mx.nd.array([-2, 0, 3])
-  >>> mx.nd.sign(x)
-  [-1.  0.  1.]
-  <NDArray 3 @cpu(0)>
+   sign([-2, 0, 3]) = [-1, 0, 1]
 
 The storage type of ``sign`` output depends upon the input storage type:
 
@@ -733,10 +703,7 @@ MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(round, cpu, mshadow_op::round)
 
 Example::
 
-  >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
-  >>> mx.nd.round(x)
-  [-2. -2.  2.  2.  2.]
-  <NDArray 5 @cpu(0)>
+   round([-1.5, 1.5, -1.9, 1.9, 2.1]) = [-2.,  2., -2.,  2.,  2.]
 
 The storage type of ``round`` output depends upon the input storage type:
 
@@ -757,10 +724,7 @@ MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(rint, cpu, mshadow_op::rint)
 
 Example::
 
-  >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
-  >>> mx.nd.rint(x)
-  [-2. -2.  1.  2.  2.]
-  <NDArray 5 @cpu(0)>
+   rint([-1.5, 1.5, -1.9, 1.9, 2.1]) = [-2.,  1., -2.,  2.,  2.]
 
 The storage type of ``rint`` output depends upon the input storage type:
 
@@ -779,10 +743,7 @@ The ceil of the scalar x is the smallest integer i, such that i >= x.
 
 Example::
 
-  >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
-  >>> mx.nd.ceil(x)
-  [-2. -1.  2.  2.  3.]
-  <NDArray 5 @cpu(0)>
+   ceil([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  2.,  2.,  3.]
 
 The storage type of ``ceil`` output depends upon the input storage type:
 
@@ -801,10 +762,7 @@ The floor of the scalar x is the largest integer i, such that i <= x.
 
 Example::
 
-  >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
-  >>> mx.nd.floor(x)
-  [-3. -2.  1.  1.  2.]
-  <NDArray 5 @cpu(0)>
+   floor([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-3., -2.,  1.,  1.,  2.]
 
 The storage type of ``floor`` output depends upon the input storage type:
 
@@ -824,10 +782,7 @@ zero than x is. In short, the fractional part of the signed number x is discarde
 
 Example::
 
-  >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
-  >>> mx.nd.trunc(x)
-  [-2. -1.  1.  1.  2.]
-  <NDArray 5 @cpu(0)>
+   trunc([-2.1, -1.9, 1.5, 1.9, 2.1]) = [-2., -1.,  1.,  1.,  2.]
 
 The storage type of ``trunc`` output depends upon the input storage type:
 

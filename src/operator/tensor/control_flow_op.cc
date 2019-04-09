@@ -44,20 +44,15 @@ Note that all non-zero values are interpreted as ``True`` in condition.
 
 Examples::
 
-  >>> x = mx.nd.array([[1, 2], [3, 4]])
-  >>> y = mx.nd.array([[5, 6], [7, 8]])
-  
-  >>> cond = mx.nd.array([[0, 1], [-1, 0]])
-  >>> mx.nd.where(cond, x, y)
-  [[5. 2.]
-  [3. 8.]]
-  <NDArray 2x2 @cpu(0)>
+  x = [[1, 2], [3, 4]]
+  y = [[5, 6], [7, 8]]
+  cond = [[0, 1], [-1, 0]]
 
-  >>> csr_cond = mx.nd.sparse.cast_storage(cond, 'csr')
-  >>> mx.nd.sparse.where(csr_cond, x, y)
-  [[5. 2.]
-  [3. 8.]]
-  <NDArray 2x2 @cpu(0)>
+  where(cond, x, y) = [[5, 2], [3, 8]]
+
+  csr_cond = cast_storage(cond, 'csr')
+
+  where(csr_cond, x, y) = [[5, 2], [3, 8]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(3)

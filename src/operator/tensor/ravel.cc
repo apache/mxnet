@@ -59,11 +59,8 @@ NNVM_REGISTER_OP(_unravel_index)
 
 Examples::
 
-  >>> a = mx.nd.array([22,41,37])
-  >>> mx.nd.unravel_index(a, shape=(7,6))
-  [[3. 6. 6.]
-  [4. 5. 1.]]
-  <NDArray 2x3 @cpu(0)>
+   A = [22,41,37]
+   unravel(A, shape=(7,6)) = [[3,6,6],[4,5,1]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)

@@ -112,15 +112,11 @@ The storage type of ``zeros_like`` output depends on the storage type of the inp
 
 Examples::
 
-  >>> x = mx.nd.array([[ 1.,  1.,  1.],[ 1.,  1.,  1.]])
-  >>> x
-  [[1. 1. 1.]
-  [1. 1. 1.]]
-  <NDArray 2x3 @cpu(0)>
-  >>> mx.nd.zeros_like(x)
-  [[0. 0. 0.]
-  [0. 0. 0.]]
-  <NDArray 2x3 @cpu(0)>  
+  x = [[ 1.,  1.,  1.],
+       [ 1.,  1.,  1.]]
+
+  zeros_like(x) = [[ 0.,  0.,  0.],
+                   [ 0.,  0.,  0.]]
 
 )code")
 .set_num_inputs(1)
