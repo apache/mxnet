@@ -118,7 +118,7 @@ CachedOp::CachedOp(
         if (_copy->attr_parser != nullptr) {
           _copy->attr_parser(&(copy_node->attrs));
         }
-        fwd_graph_.outputs.push_back(NodeEntry{copy_node, 0, 0});
+        fwd_graph_.outputs.emplace_back(copy_node, 0, 0);
       } else {
         dedup_out.insert({i, 0});
         fwd_graph_.outputs.push_back(i);
