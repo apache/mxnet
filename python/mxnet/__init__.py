@@ -23,7 +23,7 @@ from __future__ import absolute_import
 
 from .context import Context, current_context, cpu, gpu, cpu_pinned
 from . import engine
-from .base import MXNetError, is_np_comp, set_np_comp, enable_np_comp, disable_np_comp
+from .base import MXNetError, is_np_compat, set_np_compat, enable_np_compat, disable_np_compat
 from . import base
 from . import contrib
 from . import ndarray

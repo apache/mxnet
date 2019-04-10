@@ -30,7 +30,7 @@ import numpy as _np
 
 from . import libinfo
 
-__all__ = ['MXNetError']
+__all__ = ['MXNetError', 'is_np_compat', 'set_np_compat', 'enable_np_compat', 'disable_np_compat']
 #----------------------------
 # library loading
 #----------------------------
