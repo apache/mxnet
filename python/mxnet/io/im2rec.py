@@ -175,8 +175,8 @@ def _validate_params(list_file, output_path, pack_labels, color,
                          + "range for quality of JPEG encoding is 1-100, "
                          + "and range for PNG compression for encoding is 1-9")
     if not pack_labels:
-        logging.info("pack_labels is set as False. We will create a copy of the"
-                    + " list file to align with the created rec file.")
+        logging.info("pack_labels is set as False. We will create a copy of the "
+                     + "list file to align with the created rec file.")
 
 def im2rec(list_file, output_path, transformations=None, num_workers=mp.cpu_count() - 1,
            batch_size=4096, pack_labels=True, color=1, encoding='.jpg',
