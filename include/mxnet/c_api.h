@@ -95,10 +95,22 @@ typedef void *CudaKernelHandle;
 typedef void *ProfileHandle;
 /*! \brief handle to DLManagedTensor*/
 typedef void *DLManagedTensorHandle;
+/*! \brief handle to Context */
+typedef const void *ContextHandle;
+/*! \brief handle to Engine FnProperty */
+typedef const void *EngineFnPropertyHandle;
+/*! \brief handle to Engine VarHandle */
+typedef void *EngineVarHandle;
 
+/*! \brief Engine asynchronous operation */
+typedef void (*EngineAsyncFunc)(void*, void*, void*);
+/*! \brief Engine synchronous operation */
+typedef void (*EngineSyncFunc)(void*, void*);
+/*! \brief Callback to free the param for EngineAsyncFunc/EngineSyncFunc */
+typedef void (*EngineFuncParamDeleter)(void*);
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
-                                        void *);
+                                        void*);
 
 struct NativeOpInfo {
   void (*forward)(int, float**, int*, unsigned**, int*, void*);
@@ -2541,6 +2553,51 @@ MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
 MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
                                            mx_uint ndim, int dtype, NDArrayHandle *out);
 
+/*!
+  * \brief Push an asynchronous operation to the engine.
+  * \param async_func Execution function whici takes a parameter on_complete
+  *                   that must be called when the execution ompletes.
+  * \param func_param The parameter set on calling async_func, can be NULL.
+  * \param deleter The callback to free func_param, can be NULL.
+  * \param ctx_handle Execution context.
+  * \param const_vars_handle The variables that current operation will use
+  *                          but not mutate.
+  * \param num_const_vars The number of const_vars.
+  * \param mutable_vars_handle The variables that current operation will mutate.
+  * \param num_mutable_vars The number of mutable_vars.
+  * \param prop_handle Property of the function.
+  * \param priority Priority of the action, as hint to the engine.
+  * \param opr_name The operation name.
+  * \param wait Whether this is a WaitForVar operation.
+  */
+MXNET_DLL int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
+                                EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                                EngineVarHandle const_vars_handle, size_t num_const_vars,
+                                EngineVarHandle mutable_vars_handle, size_t num_mutable_vars,
+                                EngineFnPropertyHandle prop_handle, int priority,
+                                const char* opr_name, bool wait);
+
+/*!
+  * \brief Push a synchronous operation to the engine.
+  * \param sync_func Execution function that executes the operation.
+  * \param func_param The parameter set on calling sync_func, can be NULL.
+  * \param deleter The callback to free func_param, can be NULL.
+  * \param ctx_handle Execution context.
+  * \param const_vars_handle The variables that current operation will use
+  *                          but not mutate.
+  * \param num_const_vars The number of const_vars.
+  * \param mutable_vars_handle The variables that current operation will mutate.
+  * \param num_mutable_vars The number of mutable_vars.
+  * \param prop_handle Property of the function.
+  * \param priority Priority of the action, as hint to the engine.
+  * \param opr_name The operation name.
+  */
+MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
+                               EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                               EngineVarHandle const_vars_handle, size_t num_const_vars,
+                               EngineVarHandle mutable_vars_handle, size_t num_mutable_vars,
+                               EngineFnPropertyHandle prop_handle, int priority,
+                               const char* opr_name, bool wait);
 
 #ifdef __cplusplus
 }
