@@ -491,7 +491,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small, const mxn
 
     if (config.Mnext > 1) {
       // small_dptr[] is N*Mnext*sizeof(DType) bytes
-      config.workspace_size += config.N*config.Mnext*sizeof(DType);
+      config.workspace_size += config.N*config.Mnext*sizeof(double);
       // Set gridDim.y to Mnext
       config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
     }
@@ -521,7 +521,6 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
                 const TBlob& big, const Tensor<gpu, 1, char>& workspace,
                 const ReduceImplConfig<ndim>& config) {
   if (config.M == 1) {
-    std::cout << "here1" << std::endl;
     reduce_kernel_M1<Reducer, ndim, AType, DType, OType, OP>
     <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream >>>(
       config.N, req == kAddTo, big.dptr<DType>(), small.dptr<OType>(), big.shape_.get<ndim>(),
@@ -553,7 +552,6 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
     MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel);
 
     if (config.Mnext > 1) {
-      std::cout << "here3" << std::endl;
       reduce_lines_kernel<Reducer, OType>
       <<< config.kernel_2.gridSize, config.kernel_2.blockSize, 0, stream >>>
         (config.N, config.Mnext, req == kAddTo, config.N, small_dptr, small.dptr<OType>());
@@ -614,21 +612,25 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const
 template<typename Reducer, int ndim, typename DType, typename OP, bool safe_acc = false>
 void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
             const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
+  // std::cout << "\n\n\nhere\n\n\n" << std::endl;
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   ReduceImplConfig<ndim> config =
     ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
   if (safe_acc) {
+    // std::cout << "\n\nsafe acc\n\n" << std::endl;
     MXNET_REAL_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
-      config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+        // std::cout << sizeof(DType) << " " << sizeof(AType) << " " << sizeof(OType) << std::endl;
         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
+        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
         ReduceImpl<Reducer, ndim, AccType, DataType, OutType, OP>(
           stream, small, req, big, workspace, config);
       });
     });
   } else {
+    // std::cout << "\n\nnormal acc\n\n" << std::endl;
     ReduceImpl<Reducer, ndim, DType, DType, DType, OP>(stream, small, req, big, workspace, config);
   }
 }

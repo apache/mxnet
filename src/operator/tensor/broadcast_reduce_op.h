@@ -565,12 +565,13 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MXNET_ACC_TYPE_SWITCH(inputs[0].type_flag_, DType, AType, {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       const TBlob in_data = inputs[0].reshape(src_shape);
       const TBlob out_data = outputs[0].reshape(dst_shape);
       BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
+        typedef typename std::conditional<safe_acc, AType, DType>::type AccType;
+        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, AccType>(
             s, out_data.shape_, req[0], in_data.shape_);
         Tensor<xpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
@@ -867,7 +868,7 @@ struct reduce_axes_backward_broadcast {
       in_stride *= in_shape[iter];
       out_stride *= out_shape[iter];
     }
-    KERNEL_ASSIGN(igrad[i], req, OType(ograd[out_idx] * OP::Map(OType(data[i]), out[out_idx])));
+    KERNEL_ASSIGN(igrad[i], req, DType(ograd[out_idx]) * OP::Map(data[i], DType(out[out_idx])));
   }
 };
 
@@ -884,13 +885,19 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
+
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       mshadow::Shape<5> in_shape;
       mshadow::Shape<5> out_shape;
-      for (uint32_t i = 0; i < dst_shape.ndim(); ++i) {
-        out_shape[i] = src_shape[i];
-        in_shape[i] = dst_shape[i];
+      for (uint32_t i = 0; i < 5; ++i) {
+        if (i < dst_shape.ndim()) {
+          in_shape[i] = src_shape[i];
+          out_shape[i] = dst_shape[i];
+        } else {
+          in_shape[i] = 1;
+          out_shape[i] = 1;
+        }
       }
       if (dst_shape.ndim() == 2) {
         Tensor<xpu, 2, DType> igrad =
@@ -901,8 +908,6 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
           inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
         Tensor<xpu, 2, OType> out =
           inputs[2].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
-        // ASSIGN_DISPATCH(igrad, req[0],
-        //     broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
         MXNET_REQ_TYPE_SWITCH(req[0], Req, {
           Kernel<reduce_axes_backward_broadcast<Req, OP>, xpu>::Launch(
             s, outputs[0].shape_.Size(), data.dptr_, out.dptr_, igrad.dptr_, ograd.dptr_,
@@ -913,18 +918,16 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
         const int ndim = MXNET_SPECIAL_MAX_NDIM;
         Tensor<xpu, ndim, DType> igrad =
           outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-        Tensor<xpu, ndim, DType> ograd =
-          inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, OType> ograd =
+          inputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
         Tensor<xpu, ndim, DType> data =
           inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-        Tensor<xpu, ndim, DType> out =
-          inputs[2].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
-        // ASSIGN_DISPATCH(igrad, req[0],
-        //     broadcast_to(ograd, src_shape)*F<OP>(data, broadcast_to(out, src_shape)));
+        Tensor<xpu, ndim, OType> out =
+          inputs[2].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
         MXNET_REQ_TYPE_SWITCH(req[0], Req, {
           Kernel<reduce_axes_backward_broadcast<Req, OP>, xpu>::Launch(
             s, outputs[0].shape_.Size(), data.dptr_, out.dptr_, igrad.dptr_, ograd.dptr_,
-            out_shape, in_shape, src_shape.ndim());
+            in_shape, out_shape, src_shape.ndim());
         });
         if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
       }
@@ -1185,7 +1188,6 @@ struct norm_backward_broadcast {
                                   mshadow::Shape<5> in_shape,
                                   mshadow::Shape<5> out_shape,
                                   const uint32_t ndim) {
-    // TODO: calculate the src index
     size_t in_stride = 1;
     size_t out_stride = 1;
     index_t idx = i;
@@ -1200,7 +1202,7 @@ struct norm_backward_broadcast {
       in_stride *= in_shape[iter];
       out_stride *= out_shape[iter];
     }
-    KERNEL_ASSIGN(igrad[i], req, ograd[out_idx] * mshadow_op::sign::Map(data[out_idx]));
+    KERNEL_ASSIGN(igrad[i], req, ograd[out_idx] * mshadow_op::sign::Map(data[i]));
   }
 };
 
@@ -1237,9 +1239,6 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
         out_shape[i] = 1;
       }
     }
-    std::cout << "Here" << std::endl;
-    std::cout << in_shape << std::endl;
-    std::cout << out_shape << std::endl;
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, OType, {
         if (dst_shape.ndim() == 2) {
@@ -1251,10 +1250,9 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
             inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
           MXNET_REQ_TYPE_SWITCH(req[0], Req, {
             Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
-              s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_, in_shape, out_shape, src_shape.ndim());
+              s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
+              in_shape, out_shape, src_shape.ndim());
           });
-          // ASSIGN_DISPATCH(igrad, req[0],
-          //   broadcast_to(ograd, src_shape)*F<mshadow_op::sign>(data));
         } else {
           const int ndim = MXNET_SPECIAL_MAX_NDIM;
           Tensor<xpu, ndim, DType> igrad =
@@ -1265,10 +1263,9 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
             inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
           MXNET_REQ_TYPE_SWITCH(req[0], Req, {
             Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
-              s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_, in_shape, out_shape, src_shape.ndim());
+              s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
+              in_shape, out_shape, src_shape.ndim());
           });
-          // ASSIGN_DISPATCH(igrad, req[0],
-          //   broadcast_to(ograd, src_shape)*F<mshadow_op::sign>(data));
         }
       });
     });
