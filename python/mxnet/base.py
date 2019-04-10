@@ -736,7 +736,7 @@ ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 
-def set_np_comp(flag):
+def set_np_compat(flag):
     """
     Turns on/off NumPy compatibility. NumPy-compatibility is turned off by default in backend.
 
@@ -754,7 +754,7 @@ def set_np_comp(flag):
     return bool(prev.value)
 
 
-def is_np_comp():
+def is_np_compat():
     """
     Checks whether the NumPy compatibility is currently turned on.
     NumPy-compatibility is turned off by default in backend.
@@ -778,26 +778,26 @@ class _NumpyCompatibilityStateScope(object):
             backward([y])
 
     """
-    def __init__(self, is_np_comp): #pylint: disable=redefined-outer-name
-        self._enter_is_np_comp = is_np_comp
-        self._prev_is_np_comp = None
+    def __init__(self, is_np_compat):  #pylint: disable=redefined-outer-name
+        self._enter_is_np_compat = is_np_compat
+        self._prev_is_np_compat = None
 
     def __enter__(self):
-        if self._enter_is_np_comp is not None:
-            self._prev_is_np_comp = set_np_comp(self._enter_is_np_comp)
+        if self._enter_is_np_compat is not None:
+            self._prev_is_np_compat = set_np_compat(self._enter_is_np_compat)
 
     def __exit__(self, ptype, value, trace):
-        if self._enter_is_np_comp is not None and self._prev_is_np_comp != self._enter_is_np_comp:
-            set_np_comp(self._prev_is_np_comp)
+        if self._enter_is_np_compat is not None and self._prev_is_np_compat != self._enter_is_np_compat:
+            set_np_compat(self._prev_is_np_compat)
 
 
-def enable_np_comp():
+def enable_np_compat():
     """Returns a NumPy compatibility state scope to be used in 'with' statement
     and captures code that needs the compatibility.
 
     Example::
 
-        with mx.enable_np_comp():
+        with mx.enable_np_compat():
             # A scalar tensor's shape is `()`, whose `ndim` is `0`.
             scalar = mx.nd.ones(shape=())
             assert scalar.shape == ()
@@ -827,13 +827,13 @@ def enable_np_comp():
     return _NumpyCompatibilityStateScope(True)
 
 
-def disable_np_comp():
+def disable_np_compat():
     """Returns a state scope with NumPy-compatibility disabled to be used in 'with' statement
     and captures code that does not need the compatibility.
 
     Example::
 
-        with mx.disable_np_comp():
+        with mx.disable_np_compat():
             # 0 means unknown shape dimension size in the legacy shape definition.
             data = mx.sym.var("data", shape=(0, 2, 3))
             ret = mx.sym.sin(data)

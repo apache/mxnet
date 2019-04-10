@@ -1963,14 +1963,14 @@ def test_multi_proposal_op():
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
     os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
         b = mx.nd.array([],ctx=mx.gpu(0))
         c = (a / b).asnumpy()
 
 def kernel_error_check_symbolic():
     os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         a = mx.sym.Variable('a')
         b = mx.sym.Variable('b')
         c = a / b

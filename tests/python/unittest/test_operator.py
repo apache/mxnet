@@ -4403,7 +4403,7 @@ def test_tile():
         assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
 
     test_normal_case()
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         test_empty_tensor()
     test_empty_reps()
     test_tile_backward()
@@ -4464,7 +4464,7 @@ def test_one_hot():
     test_normal_case(index_type=np.float64)
     test_normal_case(index_type=np.float32)
     test_normal_case(index_type=np.float16)
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         test_empty_indices()
     test_zero_depth()
 
@@ -6850,7 +6850,7 @@ def test_slice_partial_infer():
     check_slice_axis_partial_infer(var1, 0, 0, 5, (5, 0))
     check_slice_axis_partial_infer(var1, 1, 0, 5, (10, 0))
 
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         var1 = mx.sym.var(name="data", shape=(-1, 20))
         check_slice_partial_infer(var1, (None, None), (None, 10), [], (-1, 10))
         check_slice_partial_infer(var1, (None, None), (None, 10), (None, 2), (-1, 5))
@@ -7916,7 +7916,7 @@ def test_image_normalize():
 def test_scalar_tensor_creation():
     assertRaises(MXNetError, mx.nd.zeros, shape=())
     assertRaises(MXNetError, mx.nd.ones, shape=())
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         data_mx = mx.nd.ones(shape=())
         data_np = np.ones((), dtype=data_mx.dtype)
         assert same(data_mx.asnumpy(), data_np)
@@ -7926,7 +7926,7 @@ def test_scalar_tensor_creation():
 def test_zero_size_tensor_creation():
     assertRaises(MXNetError, mx.nd.zeros, shape=(0, 1, 3, 0))
     assertRaises(MXNetError, mx.nd.ones, shape=(0, 1, 3, 0))
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         data_mx = mx.nd.ones(shape=(0, 1, 0, 4))
         data_np = np.ones(shape=data_mx.shape, dtype=data_mx.dtype)
         assert same(data_mx.asnumpy(), data_np)
@@ -7934,7 +7934,7 @@ def test_zero_size_tensor_creation():
 
 @with_seed()
 def test_concat_with_zero_size_tensor():
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         data1 = mx.nd.ones((0, 8, 12))
         data2 = mx.nd.ones((3, 8, 12))
         data3 = mx.nd.ones((0, 8, 12))

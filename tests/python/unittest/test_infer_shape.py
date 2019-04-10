@@ -154,7 +154,7 @@ def test_shape_completely_unknown():
     assert arg_shapes[0] == ()
     assert out_shapes[0] == ()
 
-    with mx.enable_np_comp():
+    with mx.enable_np_compat():
         data = mx.sym.var("data")
         ret = mx.sym.sin(data)
         arg_shapes, out_shapes, _ = ret.infer_shape_partial()
