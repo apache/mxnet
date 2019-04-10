@@ -27,6 +27,7 @@
 #include <dmlc/thread_group.h>
 #include <dmlc/omp.h>
 #include <gtest/gtest.h>
+#include <mxnet/c_api.h>
 #include <mxnet/engine.h>
 #include <dmlc/timer.h>
 #include <cstdio>
@@ -175,6 +176,59 @@ TEST(Engine, RandSumExpr) {
 }
 
 void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
+
+void FooAsyncFunc(void*, void* cb_ptr, void* param) {
+  if (param == nullptr) {
+    LOG(INFO) << "The fox asynchronously says receiving nothing.";
+  } else {
+    auto num = static_cast<int*>(param);
+    EXPECT_EQ(*num, 100);
+    LOG(INFO) << "The fox asynchronously says receiving " << *num;
+  }
+  auto cb = *static_cast<mxnet::engine::CallbackOnComplete*>(cb_ptr);
+  cb();
+}
+
+void FooSyncFunc(void*, void* param) {
+  if (param == nullptr) {
+    LOG(INFO) << "The fox synchronously says receiving nothing.";
+  } else {
+    auto num = static_cast<int*>(param);
+    EXPECT_EQ(*num, 101);
+    LOG(INFO) << "The fox synchronously says receiving " << *num;
+  }
+}
+
+void FooFuncDeleter(void* param) {
+  if (param != nullptr) {
+    auto num = static_cast<int*>(param);
+    LOG(INFO) << "The fox says deleting " << *num;
+    delete num;
+  }
+}
+
+TEST(Engine, PushFunc) {
+  auto var = mxnet::Engine::Get()->NewVariable();
+  auto ctx = mxnet::Context{};
+
+  // Test #1
+  LOG(INFO) << "===== Test #1: PushAsync param and deleter =====";
+  int* a = new int(100);
+  MXEnginePushAsync(FooAsyncFunc, a, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+
+  // Test #2
+  LOG(INFO) << "===== Test #2: PushAsync NULL param and NULL deleter =====";
+  MXEnginePushAsync(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, 1);
+
+  // Test #3
+  LOG(INFO) << "===== Test #3: PushSync param and deleter =====";
+  int* b = new int(101);
+  MXEnginePushSync(FooSyncFunc, b, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+
+  // Test #4
+  LOG(INFO) << "===== Test #4: PushSync NULL param and NULL deleter =====";
+  MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, 1);
+}
 
 TEST(Engine, basics) {
   auto&& engine = mxnet::Engine::Get();

@@ -1414,9 +1414,12 @@ int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
   API_BEGIN();
 
   auto exec_ctx = *static_cast<const Context*>(ctx_handle);
-  auto prop = *static_cast<const FnProperty*>(prop_handle);
   auto const_vars = static_cast<VarHandle*>(const_vars_handle);
   auto mutable_vars = static_cast<VarHandle*>(mutable_vars_handle);
+  auto prop = FnProperty::kNormal;
+  if (prop_handle != nullptr) {
+    prop = *static_cast<const FnProperty*>(prop_handle);
+  }
 
   Engine::AsyncFn exec_fn;
   if (deleter == nullptr) {
@@ -1425,7 +1428,7 @@ int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
       async_func(&rctx, &on_complete, func_param);
     };
   } else {
-    // Wrap func_param in a shared_ptr with del as deleter such that delelter
+    // Wrap func_param in a shared_ptr with deleter such that deleter
     // will be called when the lambda goes out of scope.
     std::shared_ptr<void> shared_func_param(func_param, deleter);
     exec_fn = [async_func, shared_func_param](RunContext rctx,
@@ -1451,9 +1454,12 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
   API_BEGIN();
 
   auto exec_ctx = *static_cast<const Context*>(ctx_handle);
-  auto prop = *static_cast<const FnProperty*>(prop_handle);
   auto const_vars = static_cast<VarHandle*>(const_vars_handle);
   auto mutable_vars = static_cast<VarHandle*>(mutable_vars_handle);
+  auto prop = FnProperty::kNormal;
+  if (prop_handle != nullptr) {
+    prop = *static_cast<const FnProperty*>(prop_handle);
+  }
 
   Engine::SyncFn exec_fn;
   if (deleter == nullptr) {
@@ -1461,7 +1467,7 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
       sync_func(&rctx, func_param);
     };
   } else {
-    // Wrap func_param in a shared_ptr with del as deleter such that delelter
+    // Wrap func_param in a shared_ptr with deleter such that deleter
     // will be called when the lambda goes out of scope.
     std::shared_ptr<void> shared_func_param(func_param, deleter);
     exec_fn = [sync_func, shared_func_param](RunContext rctx) {
