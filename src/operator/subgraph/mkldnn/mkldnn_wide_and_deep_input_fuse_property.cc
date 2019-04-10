@@ -31,7 +31,7 @@ namespace mxnet {
 namespace op {
 #define EMBEDDING_NODE_NAME "Embedding"
 #define CONCAT_NODE_NAME "Concat"
-class SgMKLDNNWideAndDeepInputFuseSelector : public SubgraphSelector {
+class SgWideAndDeepInputFuseSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
@@ -44,7 +44,7 @@ class SgMKLDNNWideAndDeepInputFuseSelector : public SubgraphSelector {
   SelectStatus status;
 
  public:
-  explicit SgMKLDNNWideAndDeepInputFuseSelector(int dis_all)
+  explicit SgWideAndDeepInputFuseSelector(int dis_all)
       : disable_all(dis_all), status(kFail) {}
   bool Select(const nnvm::Node &n) override {
     if (disable_all)
@@ -104,18 +104,18 @@ static std::string get_value_from_op_prop(
   else
       return got->second;
 }
-class SgMKLDNNWideAndDeepInputFuseProperty : public SubgraphProperty {
+class SgWideAndDeepInputFuseProperty : public SubgraphProperty {
  public:
-  SgMKLDNNWideAndDeepInputFuseProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", 0);
+  SgWideAndDeepInputFuseProperty() {
+    disable_all = dmlc::GetEnv("MXNET_DISABLE_WIDE_DEEP_OPT", 0);
     if (disable_all) {
-      LOG(INFO) << "MKLDNN Wide And Deep Input Fuse is disabled.";
+      LOG(INFO) << "Wide And Deep Input Fuse is disabled.";
     } else {
-      LOG(INFO) << "Start to execute MKLDNN Wide And Deep Input Fuse optimization pass.";
+      LOG(INFO) << "Start to execute Wide And Deep Input Fuse optimization pass.";
     }
   }
   static SubgraphPropertyPtr Create() {
-    return std::make_shared<SgMKLDNNWideAndDeepInputFuseProperty>();
+    return std::make_shared<SgWideAndDeepInputFuseProperty>();
   }
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                   const int subgraph_id = 0) const override {
@@ -184,7 +184,7 @@ class SgMKLDNNWideAndDeepInputFuseProperty : public SubgraphProperty {
   }
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     auto selector =
-        std::make_shared<SgMKLDNNWideAndDeepInputFuseSelector>(disable_all);
+        std::make_shared<SgWideAndDeepInputFuseSelector>(disable_all);
     return selector;
   }
   void ConnectSubgraphOutputs(
@@ -218,8 +218,8 @@ class SgMKLDNNWideAndDeepInputFuseProperty : public SubgraphProperty {
   int disable_all;
 };
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_WIDE_AND_DEEP_INPUT_FUSE,
-                                 SgMKLDNNWideAndDeepInputFuseProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(WIDE_AND_DEEP_INPUT_FUSE,
+                                 SgWideAndDeepInputFuseProperty);
 }  // namespace op
 }  // namespace mxnet
 #endif  // if MXNET_USE_MKLDNN == 1

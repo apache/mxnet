@@ -760,7 +760,7 @@ def test_SliceSplitEmbeddingConcatFuse():
     hidden = mx.symbol.concat(*features, dim=1)
     sym = mx.symbol.SoftmaxOutput(hidden, name='model')
 
-    sym_sg = sym.get_backend_symbol('MKLDNN_WIDE_AND_DEEP_INPUT_FUSE')
+    sym_sg = sym.get_backend_symbol('WIDE_AND_DEEP_INPUT_FUSE')
     assert ''.join(sym_sg.attr_dict().keys()).find('SliceSplitEmbeddingConcatFuse') != -1
 
     arg_shapes, _, aux_shapes = sym.infer_shape()
@@ -768,7 +768,7 @@ def test_SliceSplitEmbeddingConcatFuse():
     aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
     exe = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe.forward()
-    os.environ['MXNET_SUBGRAPH_BACKEND'] = 'MKLDNN_WIDE_AND_DEEP_INPUT_FUSE'
+    os.environ['MXNET_SUBGRAPH_BACKEND'] = 'WIDE_AND_DEEP_INPUT_FUSE'
     exe_sg = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe_sg.forward()
     for i in range(len(exe.outputs)):
