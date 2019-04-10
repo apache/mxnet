@@ -54,6 +54,267 @@ class ReshapeDoc(NDArrayDoc):
     (4L, 3L, 2L)
     """
 
+class ConcatDoc(NDArrayDoc):
+    """
+    Examples
+    --------
+    Joins input arrays along a given axis.
+    >>> x = mx.nd.array([[1,1],[2,2]])
+    >>> y = mx.nd.array([[3,3],[4,4],[5,5]])
+    >>> z = mx.nd.array([[6,6], [7,7],[8,8]])
+
+    >>> mx.nd.concat(x,y,z,dim=0)
+    [[1. 1.]
+    [2. 2.]
+    [3. 3.]
+    [4. 4.]
+    [5. 5.]
+    [6. 6.]
+    [7. 7.]
+    [8. 8.]]
+    <NDArray 8x2 @cpu(0)>
+
+    >>> mx.nd.concat(y,z,dim=1)
+    [[3. 3. 6. 6.]
+    [4. 4. 7. 7.]
+    [5. 5. 8. 8.]]
+    <NDArray 3x4 @cpu(0)>
+    """
+
+class SwapAxisDoc(NDArrayDoc):
+    """
+    Examples
+    --------
+    Interchanges two axes of an array.
+    >>> x = mx.nd.array([[1, 2, 3]])
+    >>> mx.nd.swapaxes(x, 0, 1)
+    [[1.]
+    [2.]
+    [3.]]
+
+    >>> x = mx.nd.array([[[ 0, 1],[ 2, 3]],[[ 4, 5],[ 6, 7]]])
+    >>> x
+    [[[0. 1.]
+      [2. 3.]]
+    [[4. 5.]
+      [6. 7.]]]
+    <NDArray 2x2x2 @cpu(0)>
+    >>> mx.nd.swapaxes(x, 0, 2)
+    [[[0. 4.]
+     [2. 6.]]
+    [[1. 5.]
+      [3. 7.]]]
+    <NDArray 2x2x2 @cpu(0)>
+    """
+
+class whereDoc(NDArrayDoc):
+    """
+    Examples
+    --------
+    Return the elements, either from x or y, depending on the condition.
+    >>> x = mx.nd.array([[1, 2], [3, 4]])
+    >>> y = mx.nd.array([[5, 6], [7, 8]])
+
+    >>> cond = mx.nd.array([[0, 1], [-1, 0]])
+    >>> mx.nd.where(cond, x, y)
+    [[5. 2.]
+    [3. 8.]]
+    <NDArray 2x2 @cpu(0)>
+
+    >>> csr_cond = mx.nd.sparse.cast_storage(cond, 'csr')
+    >>> mx.nd.sparse.where(csr_cond, x, y)
+    [[5. 2.]
+    [3. 8.]]
+    <NDArray 2x2 @cpu(0)>
+    """
+
+class ReshapeLikeDoc(NDArrayDoc):
+    """
+    Reshape some or all dimensions of `lhs` to have the same shape as some or all dimensions of `rhs`.
+    Example
+    -------
+
+    >>> x = mx.nd.array([1, 2, 3, 4, 5, 6])
+    >>> y = mx.nd.array([[0, -4], [3, 2], [2, 2]])
+    >>> mx.nd.reshape_like(x, y)
+    [[1. 2.]
+    [3. 4.]
+    [5. 6.]]
+    <NDArray 3x2 @cpu(0)>
+    """
+
+class shape_arrayDoc(NDArrayDoc):
+    """
+    Returns a 1D int64 array containing the shape of data.
+    Example
+    -------
+
+    >>> x = mx.nd.array([[1,2,3,4], [5,6,7,8]])
+    >>> mx.nd.shape_array(x)
+    [2 4]
+    <NDArray 2 @cpu(0)>
+    """
+
+class size_arrayDoc(NDArrayDoc):
+    """
+    Returns a 1D int64 array containing the size of data.
+    Example
+    -------
+
+    >>> x = mx.nd.array([[1,2,3,4], [5,6,7,8]])
+    >>> mx.nd.size_array(x)
+    [8]
+    <NDArray 1 @cpu(0)>
+    """
+
+class CastDoc(NDArrayDoc):
+    """
+    Casts all elements of the input to a new type.
+    Example
+    -------
+
+    >>> x = mx.nd.array([0.9, 1.3])
+    >>> mx.nd.cast(x, dtype='int32')
+    [0 1]
+    <NDArray 2 @cpu(0)>
+
+    >>> x = mx.nd.array([1e20, 11.1])
+    >>> mx.nd.cast(x, dtype='float16')
+    [ inf 11.1]
+    <NDArray 2 @cpu(0)>
+
+    >>> x = mx.nd.array([300, 11.1, 10.9, -1, -3])
+    >>> mx.nd.cast(x, dtype='uint8')
+    [ 44  11  10 255 253]
+    <NDArray 5 @cpu(0)>
+    """
+
+class reciprocalDoc(NDArrayDoc):
+    """
+    Returns the reciprocal of the argument, element-wise.
+    Example
+    -------
+
+    >>> x = mx.nd.array([-2, 1, 3, 1.6, 0.2])
+    >>> mx.nd.reciprocal(x)
+    [-0.5         1.          0.33333334  0.625       5.        ]
+    <NDArray 5 @cpu(0)>
+    """
+
+class absDoc(NDArrayDoc):
+    """
+    Returns element-wise absolute value of the input.
+    Example
+    -------
+
+    >>> x = mx.nd.array([-2, 0, 3])
+    >>> mx.nd.abs(x)
+    [2. 0. 3.]
+    <NDArray 3 @cpu(0)>
+    """
+
+class signDoc(NDArrayDoc):
+    """
+    Returns element-wise sign of the input.
+    Example
+    -------
+
+    >>> x = mx.nd.array([-2, 0, 3])
+    >>> mx.nd.sign(x)
+    [-1.  0.  1.]
+    <NDArray 3 @cpu(0)>
+    """
+
+class roundDoc(NDArrayDoc):
+    """
+    Returns element-wise rounded value to the nearest integer of the input.
+    Example
+    -------
+
+    >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
+    >>> mx.nd.round(x)
+    [-2. -2.  2.  2.  2.]
+    <NDArray 5 @cpu(0)>
+    """
+
+class rintDoc(NDArrayDoc):
+    """
+    Returns element-wise rounded value to the nearest integer of the input.
+    Example
+    -------
+
+    >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
+    >>> mx.nd.rint(x)
+    [-2. -2.  1.  2.  2.]
+    <NDArray 5 @cpu(0)>
+    """
+
+class ceilDoc(NDArrayDoc):
+    """
+    Returns element-wise ceiling of the input.
+    Example
+    -------
+
+    >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
+    >>> mx.nd.ceil(x)
+    [-2. -1.  2.  2.  3.]
+    <NDArray 5 @cpu(0)>
+    """
+
+class floorDoc(NDArrayDoc):
+    """
+    Returns element-wise floor of the input.
+    Example
+    -------
+
+    >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
+    >>> mx.nd.floor(x)
+    [-3. -2.  1.  1.  2.]
+    <NDArray 5 @cpu(0)>
+    """
+
+class truncDoc(NDArrayDoc):
+    """
+    Return the element-wise truncated value of the input.
+    Example
+    -------
+
+    >>> x = mx.nd.array([-2.1, -1.9, 1.5, 1.9, 2.1])
+    >>> mx.nd.trunc(x)
+    [-2. -1.  1.  1.  2.]
+    <NDArray 5 @cpu(0)>
+    """
+
+class zeros_likeDoc(NDArrayDoc):
+    """
+    Return an array of zeros with the same shape, type and storage type
+    Example
+    -------
+
+    >>> x = mx.nd.array([[ 1.,  1.,  1.],[ 1.,  1.,  1.]])
+    >>> x
+    [[1. 1. 1.]
+    [1. 1. 1.]]
+    <NDArray 2x3 @cpu(0)>
+    >>> mx.nd.zeros_like(x)
+    [[0. 0. 0.]
+    [0. 0. 0.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+
+class unravel_indexDoc(NDArrayDoc):
+    """
+    Converts an array of flat indices into a batch of index arrays. The operator follows numpy conventions so a single multi index is given by a column of the output matrix.
+    Example
+    -------
+
+    >>> a = mx.nd.array([22,41,37])
+    >>> mx.nd.unravel_index(a, shape=(7,6))
+    [[3. 6. 6.]
+    [4. 5. 1.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+
 class elemwise_addDoc(NDArrayDoc):
     """
     Example
