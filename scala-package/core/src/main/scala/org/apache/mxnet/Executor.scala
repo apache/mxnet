@@ -45,29 +45,47 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
-                              private[mxnet] val symbol: Symbol) extends NativeResource {
-  private[mxnet] var argArrays: Array[NDArray] = null
-  private[mxnet] var gradArrays: Array[NDArray] = null
-  private[mxnet] var auxArrays: Array[NDArray] = null
+                              private[mxnet] val symbol: Symbol,
+                              private[mxnet] var argArrays: Array[NDArray] = null,
+                              private[mxnet] var gradArrays: Array[NDArray] = null,
+                              private[mxnet] var auxArrays: Array[NDArray] = null,
+                              private var _ctx: Context = null,
+                              private var _gradsReq: Iterable[_] = null,
+                              private var _group2ctx: Map[String, Context] = null
+                             ) extends NativeResource {
+
   val outputs: Array[NDArray] = getOutputs
   protected var _argDict: Map[String, NDArray] = null
   protected var _gradDict: Map[String, NDArray] = null
   protected var _auxDict: Map[String, NDArray] = null
   protected var monitorCallback: MXMonitorCallback = null
-  private[mxnet] var _ctx: Context = null
-  private[mxnet] var _gradsReq: Iterable[_] = null
-  private[mxnet] var _group2ctx: Map[String, Context] = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
+
+  private[mxnet] var ownsArgArrays = false
+  private[mxnet] var ownsGradArrays = false
+  private[mxnet] var ownsAuxArrays = false
 
   override def nativeAddress: CPtrAddress = handle
   override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxExecutorFree
   // cannot determine the off-heap size of this object
   override val bytesAllocated: Long = 0
   override val ref: NativeResourceRef = super.register()
+
   override def dispose(): Unit = {
     if (!super.isDisposed) {
       super.dispose()
       outputs.foreach(o => o.dispose())
+      // Symbol.bind clones symbol when creating the executor so we need to dispose of the clone
+      symbol.dispose()
+      if (ownsArgArrays && argArrays != null) {argArrays.foreach(a => a.dispose())}
+      if (ownsGradArrays && gradArrays != null) {gradArrays.foreach(
+        // Symbol will sometimes fill this with nulls so we've got to check the elements too
+        a => if (a != null) {a.dispose()})
+      }
+      if (ownsAuxArrays && auxArrays != null) {auxArrays.foreach(a => a.dispose())}
+      if (_argDict != null) {_argDict.foreach(a => a._2.dispose())}
+      if (_gradDict != null) {_gradDict.foreach(a => a._2.dispose())}
+      if (_auxDict != null) {_auxDict.foreach(a => a._2.dispose())}
     }
   }
 
@@ -86,6 +104,9 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
    */
   def reshape(partialShaping: Boolean = false, allowUpSizing: Boolean = false,
     kwargs: Map[String, Shape]): Executor = {
+    var setArgOwner = false
+    var setAuxOwner = false
+    var setGradOwner = false
      val (argShapes, _, auxShapes) = this.symbol.inferShape(kwargs)
     // TODO: more precise error message should be provided by backend
     require(argShapes != null, "Shape inference failed." +
@@ -107,8 +128,10 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                         "If you really want to up size, set allowUpSizing = true " +
                         "to enable allocation of new arrays.")
           newArgDict = newArgDict + (name -> NDArray.empty(newShape, arr.context, arr.dtype))
+          setArgOwner = true
           if (dArr != null) {
             newGradDict = newGradDict + (name -> NDArray.empty(newShape, dArr.context, dArr.dtype))
+            setGradOwner = true
           }
         } else {
           newArgDict = newArgDict + (name -> arr.reshape(newShape.toArray))
@@ -135,6 +158,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                         "If you really want to up size, set allowUpSizing = true " +
                         "to enable allocation of new arrays.")
           newAuxDict = newAuxDict + (name -> NDArray.empty(newShape, arr.context))
+          setAuxOwner = true
         } else {
           newAuxDict = newAuxDict + (name -> arr.reshape(newShape.toArray))
         }
@@ -145,7 +169,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                   "If this is intended, set partialShaping = true to suppress this warning.")
       }
     }
-    if (this._gradsReq.isInstanceOf[Seq[_]]) {
+    val reshapedExecutor = if (this._gradsReq.isInstanceOf[Seq[_]]) {
       this.symbol.bind(this._ctx,
                           newArgDict,
                           newGradDict,
@@ -162,6 +186,13 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                           this._group2ctx,
                           this)
     }
+
+    // This method has created new NDArrays that will need to be managed by the new Executor
+    if (setArgOwner) reshapedExecutor.ownsArgArrays = true
+    if (setGradOwner) reshapedExecutor.ownsGradArrays = true
+    if (setAuxOwner) reshapedExecutor.ownsAuxArrays = true
+
+    reshapedExecutor
   }
 
   /**

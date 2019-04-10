@@ -25,7 +25,7 @@ To get started with Gluon, checkout the following resources and tutorials:
 * [60-minute Gluon Crash Course](https://gluon-crash-course.mxnet.io/) - six 10-minute lessons on using Gluon
 * [GluonCV Toolkit](https://gluon-cv.mxnet.io/) - implementations of state of the art deep learning algorithms in **Computer Vision (CV)**
 * [GluonNLP Toolkit](https://gluon-nlp.mxnet.io/) - implementations of state of the art deep learning algorithms in **Natural Language Processing (NLP)**
-* [Gluon: The Straight Dope](https://gluon.mxnet.io/) - notebooks designed to teach deep learning from the ground up, all using the Gluon API
+* [Dive into Deep Learning](https://www.d2l.ai/) - notebooks designed to teach deep learning from the ground up, all using the Gluon API
 
 <br/>
 <div class="boxed">
@@ -42,14 +42,14 @@ To get started with Gluon, checkout the following resources and tutorials:
 
 <br/>
 <div class="boxed">
-    The Straight Dope
+    Dive into Deep Learning
 </div>
 
-The community is also working on parallel effort to create a foundational resource for learning about machine learning. The Straight Dope is a book composed of introductory as well as advanced tutorials – all based on the Gluon interface. For example,
+The community is also working on parallel effort to create a foundational resource for learning about machine learning. Dive into Deep Learning is a book composed of introductory as well as advanced tutorials – all based on the Gluon interface. For example,
 
-* [Learn about machine learning basics](http://gluon.mxnet.io/chapter01_crashcourse/introduction.html).
-* [Develop and train a simple neural network model](http://gluon.mxnet.io/chapter03_deep-neural-networks/mlp-gluon.html).
-* [Implement a Recurrent Neural Network (RNN) model for Language Modeling](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/simple-rnn.html).
+* [Learn about machine learning basics](https://www.d2l.ai/chapter_introduction/intro.html).
+* [Develop and train a simple neural network model](https://www.d2l.ai/chapter_multilayer-perceptrons/mlp-scratch.html).
+* [Implement a Recurrent Neural Network (RNN) model for Language Modeling](https://www.d2l.ai/chapter_recurrent-neural-networks/rnn-scratch.html).
 
 <br/>
 <div class="boxed">
@@ -124,4 +124,4 @@ net.hybridize()
 * [60-minute Gluon Crash Course](https://gluon-crash-course.mxnet.io/)
 * [GluonCV Toolkit](https://gluon-cv.mxnet.io/)
 * [GluonNLP Toolkit](https://gluon-nlp.mxnet.io/)
-* [Gluon: The Straight Dope](https://gluon.mxnet.io/)
+* [Dive into Deep Learning](https://www.d2l.ai)

@@ -233,12 +233,12 @@ inline NDArray NDArray::Reshape(const Shape &new_shape) const {
   return NDArray(handle);
 }
 inline void NDArray::WaitToRead() const {
-  CHECK_EQ(MXNDArrayWaitToRead(blob_ptr_->handle_), 0);
+  CHECK_EQ(MXNDArrayWaitToRead(blob_ptr_->handle_), 0) << MXGetLastError();
 }
 inline void NDArray::WaitToWrite() {
-  CHECK_EQ(MXNDArrayWaitToWrite(blob_ptr_->handle_), 0);
+  CHECK_EQ(MXNDArrayWaitToWrite(blob_ptr_->handle_), 0) << MXGetLastError();
 }
-inline void NDArray::WaitAll() { CHECK_EQ(MXNDArrayWaitAll(), 0); }
+inline void NDArray::WaitAll() { CHECK_EQ(MXNDArrayWaitAll(), 0) << MXGetLastError(); }
 inline void NDArray::SampleGaussian(mx_float mu, mx_float sigma, NDArray *out) {
   Operator("_random_normal")(mu, sigma).Invoke(*out);
 }

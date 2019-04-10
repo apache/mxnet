@@ -94,6 +94,7 @@ int main(int argc, char const *argv[]) {
   }
 #endif
 
+  TRY
   auto lenet = LenetSymbol();
   std::map<std::string, NDArray> args_map;
 
@@ -197,5 +198,6 @@ int main(int argc, char const *argv[]) {
   delete exec;
   delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }
