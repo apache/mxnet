@@ -304,7 +304,8 @@ class zeros_likeDoc(NDArrayDoc):
 
 class unravel_indexDoc(NDArrayDoc):
     """
-    Converts an array of flat indices into a batch of index arrays. The operator follows numpy conventions so a single multi index is given by a column of the output matrix.
+    Converts an array of flat indices into a batch of index arrays.
+    The operator follows numpy conventions so a single multi index is given by a column of the output matrix.
     Example
     -------
 
