@@ -18,11 +18,13 @@ build_base_image:
     - docker build -f docker/Dockerfile.build.ubuntu_cpu --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --cache-from $BASE_IMAGE -t $BASE_TEMPORARY_IMAGE docker
 
 build_and_test:
-  variables:
-    GIT_SUBMODULE_STRATEGY: recursive
   stage: test
   image: $BASE_TEMPORARY_IMAGE
   before_script:
+    - sed -i "s#https://github.com/hpi-xnor/BMXNet-v2-examples#$TESTING_SUBMODULE_URL#g" .gitmodules
+    - git --version
+    - git submodule sync --recursive
+    - git submodule update --init --recursive
     - ls && pwd
     - export PYTHONPATH=./python/
     - export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
