@@ -20,7 +20,7 @@
 
 In this tutorial, we will see how to use the [Gluon Fit API](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design) which is the easiest way to train deep learning models using the [Gluon API](http://mxnet.incubator.apache.org/versions/master/gluon/index.html) in Apache MXNet. 
 
-With the Fit API, you can train a deep learning model with miminal amount of code. Just specify the network, loss function and the data you want to train on. You don't need to worry about the boiler plate code to loop through the dataset in batches(often called as 'training loop'). Advanced users can still do this for bespolke training loops, but most use cases will be covered by the Fit API.
+With the Fit API, you can train a deep learning model with miminal amount of code. Just specify the network, loss function and the data you want to train on. You don't need to worry about the boiler plate code to loop through the dataset in batches(often called as 'training loop'). Advanced users can still do this for bespoke training loops, but most use cases will be covered by the Fit API.
 
 To demonstrate the Fit API, this tutorial will train an Image Classification model using the [ResNet-18](https://arxiv.org/abs/1512.03385) architecture for the neural network. The model will be trained using the [Fashion-MNIST dataset](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/). 
 
