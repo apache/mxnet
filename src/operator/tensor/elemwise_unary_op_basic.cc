@@ -356,11 +356,11 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
-      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+      std::vector<nnvm::NodeEntry> lhs = MakeGradNode("_backward_copy", n, ograds,
                               std::unordered_map<std::string, std::string>());
       auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                          {n->inputs[1]}, nullptr, &n);
-      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      lhs.emplace_back(ng, 0, 0);
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
@@ -495,11 +495,11 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
-      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+      std::vector<nnvm::NodeEntry> lhs = MakeGradNode("_backward_copy", n, ograds,
                               std::unordered_map<std::string, std::string>());
       auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                          {n->inputs[1]}, nullptr, &n);
-      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      lhs.emplace_back(ng, 0, 0);
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
