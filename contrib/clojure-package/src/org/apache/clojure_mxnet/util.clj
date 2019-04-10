@@ -74,8 +74,17 @@
 (defn option->value [opt]
   ($/view opt))
 
-(defn keyword->snake-case [vals]
-  (mapv (fn [v] (if (keyword? v) (string/replace (name v) "-" "_") v)) vals))
+(defn keyword->snake-case
+  "Transforms a keyword `kw` into a snake-case string.
+  `kw`: keyword
+  returns: string
+  Ex:
+    (keyword->snake-case :foo-bar) ;\"foo_bar\"
+    (keyword->snake-case :foo)     ;\"foo\""
+  [kw]
+  (if (keyword? kw)
+    (string/replace (name kw) "-" "_")
+    kw))
 
 (defn convert-tuple [param]
   (apply $/tuple param))
@@ -111,8 +120,8 @@
     (empty-map)
     (apply $/immutable-map (->> param
                                 (into [])
-                                flatten
-                                keyword->snake-case))))
+                                (flatten)
+                                (mapv keyword->snake-case)))))
 
 (defn convert-symbol-map [param]
   (convert-map (tuple-convert-by-param-name param)))

@@ -86,9 +86,10 @@ private[mxnet] class LibInfo {
   @native def mxNDArrayAt(handle: NDArrayHandle,
                           idx: MXUint,
                           out: NDArrayHandleRef): Int
-  @native def mxNDArrayReshape(handle: NDArrayHandle,
+  @native def mxNDArrayReshape64(handle: NDArrayHandle,
                                nDim: Int,
-                               dims: Array[Int],
+                               dims: Array[Long],
+                               reverse: Boolean,
                                reshapeHandle: NDArrayHandleRef): Int
   @native def mxNDArraySyncCopyFromCPU(handle: NDArrayHandle,
                                        source: Array[MXFloat],

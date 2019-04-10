@@ -39,7 +39,10 @@
 #include "../random/sampler.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 
-#define MXNET_USE_MKL_DROPOUT defined(USE_MKL) && defined(_OPENMP) && !defined(__CUDACC__)
+#if defined(USE_MKL) && defined(_OPENMP) && !defined(__CUDACC__)
+#define MXNET_USE_MKL_DROPOUT 1
+#endif
+
 #if MXNET_USE_MKL_DROPOUT
 #include <omp.h>
 

@@ -878,14 +878,18 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   }
 
   test("reshape") {
-    val arr = NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Shape(3, 2))
+    var arr = NDArray.array(Array(1f, 2f, 3f, 4f, 5f, 6f), shape = Shape(3, 2))
 
-    val arr1 = arr.reshape(Array(2, 3))
+    var arr1 = arr.reshape(Array(2, 3))
     assert(arr1.shape === Shape(2, 3))
     assert(arr1.toArray === Array(1f, 2f, 3f, 4f, 5f, 6f))
 
     arr.set(1f)
     assert(arr1.toArray === Array(1f, 1f, 1f, 1f, 1f, 1f))
+
+    arr = NDArray.ones(1, 384, 1)
+    arr1 = arr.reshape(Array(0, -3))
+    assert(arr1.shape === Shape(1, 384))
   }
 
   test("dispose deps") {

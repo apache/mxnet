@@ -265,7 +265,7 @@ Graph QuantizeGraph(Graph &&src) {
             (mirror_node->op() != Op::Get("_contrib_dequantize"))) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
-          // there is only 1min and 1max output from mirror node (which is
+          // there is only 1 min and 1 max output from mirror node (which is
           // currently true)
           size_t num_outputs = mirror_node->num_outputs() - 2;
           uint32_t min_index = num_outputs + 2 * e.index;
@@ -297,9 +297,13 @@ Graph QuantizeGraph(Graph &&src) {
       // Only insert dequantize for those Ops supports quantize and not excluded.
       NodePtr mirror_node = mirror_map.at(e.node.get());
       NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
-      size_t num_inputs = e.node->num_inputs();
-      uint32_t min_index = num_inputs + 2 * e.index;
-      uint32_t max_index = num_inputs + 2 * e.index + 1;
+      // here we calculate the output number (exclude min/max, in order to
+      // calculate min/max index from mirror node) based on assumption that
+      // there is only 1 min and 1 max output from mirror node (which is
+      // currently true)
+      size_t num_outputs = e.node->num_outputs();
+      uint32_t min_index = num_outputs + 2 * e.index;
+      uint32_t max_index = num_outputs + 2 * e.index + 1;
 
       NodePtr dequantize_node = CreateNode("_contrib_dequantize",
           e.node->attrs.name + "_dequantize");
