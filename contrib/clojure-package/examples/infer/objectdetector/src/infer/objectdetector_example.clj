@@ -56,30 +56,36 @@
     :validate [check-valid-dir "Input directory not found"]]
    ["-h" "--help"]])
 
+
+(defn process-result! [output-dir image-path predictions]
+  (println "looking at image" image-path)
+  (println "predictions: " predictions)
+  (let [buf (ImageIO/read (new File image-path))
+        width (.getWidth buf)
+        height (.getHeight buf)
+        names (mapv :class predictions)
+        coords (mapv (fn [prediction]
+                       (-> prediction
+                           (update :x-min #(* width %))
+                           (update :x-max #(* width %))
+                           (update :y-min #(* height %))
+                           (update :y-max #(* height %))))
+                     predictions)
+        new-img  (-> (ImageIO/read (new File image-path))
+                     (image/draw-bounding-box! coords
+                                               {:stroke 2
+                                                :names (mapv #(str (:class %) "-" (:prob %))
+                                                             predictions)
+                                                :transparency 0.5
+
+                                                :font-size-mult 1.0}))]
+    (->> (string/split image-path #"\/")
+         last
+         (io/file output-dir)
+         (ImageIO/write new-img "jpg"))))
+
 (defn process-results [images results output-dir]
-  (mapv (fn [image-path result]
-          (println "looking at image" image-path)
-          (println "result: " result)
-          (let [buf (ImageIO/read (new File image-path))
-                width (.getWidth buf)
-                height (.getHeight buf)
-                names (mapv :class result)
-                coords (mapv (fn [result]
-                               (-> result
-                                   (update :x-min #(* width %))
-                                   (update :x-max #(* width %))
-                                   (update :y-min #(* height %))
-                                   (update :y-max #(* height %))))
-                             result)
-                new-img  (-> (ImageIO/read (new File image-path))
-                             (image/draw-bounding-box! coords
-                                                       {:stroke 2
-                                                        :names (mapv #(str (:class %) "-" (:prob %))
-                                                                     result)
-                                                        :transparency 0.5
-                                                        :font-size-mult 1.0}))]
-            (ImageIO/write new-img "jpg" (io/file output-dir (last (string/split image-path #"\/"))))))
-        images results))
+  (doall (map (partial process-result! output-dir) images results)))
 
 (defn detect-single-image
   "Detect objects in a single image and print top-5 predictions"
@@ -87,7 +93,7 @@
   ([detector input-image output-dir]
     (.mkdir (io/file output-dir))
   (let [image (infer/load-image-from-file input-image)
-        topk 5
+        topk 3
         res (infer/detect-objects detector image topk)
         ]
     (process-results
@@ -114,7 +120,7 @@
     (apply concat
      (for [image-files image-file-batches]
        (let [image-batch (infer/load-image-paths image-files) 
-             topk 5
+             topk 3
              res (infer/detect-objects-batch detector image-batch topk) ]
          (process-results
           image-files
