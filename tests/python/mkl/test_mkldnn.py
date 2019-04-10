@@ -107,8 +107,8 @@ def test_mkldnn_reshape():
         res = mx.symbol.reshape(data=conv, shape=dst_shape)
         exe = res.simple_bind(mx.cpu(), data=shape, grad_req='null')
 
-        val1 = np.random.uniform(-1, 1, (4, 4))
-        val2 = np.random.uniform(-1, 1, (1, 1, 1, 1))
+        val1 = np.random.uniform(-1, 1, shape)
+        val2 = np.random.uniform(-1, 1, (16, 1, 1, 1))
         val3 = np.random.uniform(-1 ,1, (1))
 
         exe.arg_arrays[0][:] = val1
@@ -127,6 +127,7 @@ def test_mkldnn_reshape():
     # Test mkldnn reshape (Using shape)
     test_cases = [(256), (16, 16), (4, 4, 16), (4, 4, 4, 4)]
     for test_case in test_cases:
+        print(test_case)
         test_reshape_after_conv(test_case)
 
 

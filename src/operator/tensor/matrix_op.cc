@@ -108,12 +108,17 @@ DMLC_REGISTER_PARAMETER(SplitParam);
 #if MXNET_USE_MKLDNN == 1
 void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
   MSHADOW_TYPE_SWITCH(in_data.dtype(), DType, {
+    // Removing out_data mkl_mem_ and store data in the default format
+    const_cast<NDArray &>(out_data).InvalidateMKLDNNData();
+
     auto this_mem = in_data.GetMKLDNNData();
     auto out_dptr = out_data.data().dptr<DType>();
-    mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
-    mkldnn::memory::desc this_desc = this_pd.desc();
-    mkldnn::memory::dims dims(this_desc.data.dims,
-                              this_desc.data.dims + this_desc.data.ndims);
+    CHECK_NE(this_mem.get_data_handle(), reinterpret_cast<void*>out_dptr) << "should not inplace.";
+
+    auto this_pd = this_mem->get_primitive_desc();
+    auto this_desc = this_pd.desc();
+    auto dims = mkldnn::memory::dims(this_desc.data.dims,
+                                     this_desc.data.dims + this_desc.data.ndims);
     auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
     auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
     mkldnn::memory::desc data_md(dims, this_dtype, this_format);
@@ -121,9 +126,6 @@ void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
     auto temp_mem = mkldnn::memory(pd, out_dptr);
     MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*this_mem, temp_mem));
     MKLDNNStream::Get()->Submit();
-
-    // Removing out_data mkl_mem_ and store data in the default format
-    const_cast<NDArray &>(out_data).InvalidateMKLDNNData();
   });
 }
 
@@ -137,11 +139,17 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
+  bool need_reorder = false;
+  if (req[0] == kWriteTo) {
+    need_reorder = true;
+  } else if (req[0] == kWriteInplace)
   if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape()) &&
       req[0] == kWriteTo) {
+    printf("MKLDNNReshape\n");
     MKLDNNReshape(inputs[0], outputs[0]);
     return;
   }
+  printf("fallback\n");
   FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
