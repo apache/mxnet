@@ -398,9 +398,7 @@ def _worker_fn(samples, batchify_fn, dataset=None):
     # preserving dataset as global variable can save tons of overhead and is safe in new process
     global _worker_dataset
     batch = batchify_fn([_worker_dataset[i] for i in samples])
-    buf = io.BytesIO()
-    ForkingPickler(buf, pickle.HIGHEST_PROTOCOL).dump(batch)
-    return buf.getvalue()
+    return batch
 
 def _thread_worker_fn(samples, batchify_fn, dataset):
     """Threadpool worker function for processing data."""
@@ -447,7 +445,7 @@ class _MultiWorkerIter(object):
         assert self._rcvd_idx < self._sent_idx, "rcvd_idx must be smaller than sent_idx"
         assert self._rcvd_idx in self._data_buffer, "fatal error with _push_next, rcvd_idx missing"
         ret = self._data_buffer.pop(self._rcvd_idx)
-        batch = pickle.loads(ret.get()) if self._dataset is None else ret.get()
+        batch = ret.get()
         if self._pin_memory:
             batch = _as_in_context(batch, context.cpu_pinned(self._pin_device_id))
         batch = batch[0] if len(batch) == 1 else batch
