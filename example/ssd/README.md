@@ -122,7 +122,7 @@ with the detection threshold to get more or less detections.
 
 ### Train the model on VOC
 * Note that we recommend to use gluon-cv to train the model, please refer to [gluon-cv ssd](https://gluon-cv.mxnet.io/build/examples_detection/train_ssd_voc.html).
-This example only covers training on Pascal VOC dataset. Other datasets should
+This example only covers training on Pascal VOC or MS COCO dataset. Other datasets should
 be easily supported by adding subclass derived from class `Imdb` in `dataset/imdb.py`.
 See example of `dataset/pascal_voc.py` for details.
 * Download the converted pretrained `vgg16_reduced` model [here](https://github.com/zhreshold/mxnet-ssd/releases/download/v0.2-beta/vgg16_reduced.zip), unzip `.param` and `.json` files
