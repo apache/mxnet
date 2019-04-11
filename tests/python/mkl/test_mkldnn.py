@@ -474,6 +474,21 @@ def test_non_mkldnn_fcomputeex():
     exec1 = custom.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
 
+@with_seed()
+def test_conv_transpose():
+    axes = [(0,2,1,3), (0,2,3,1), (1,2,3,0), (3,2,1,0)]
+    a = np.random.rand(10, 16, 50, 50)
+    b = np.random.rand(32, 16, 3, 3)
+    x = mx.nd.array(a)
+    w = mx.nd.array(b)
+    y = mx.nd.Convolution(data=x, weight=w, kernel=(3, 3), num_group=1, num_filter=32, no_bias=True)
+    for axis in axes:
+        t = mx.nd.transpose(y, axis)
+        t.wait_to_read()
+        s = y.asnumpy()
+        n = np.transpose(s, axis)
+        np.allclose(t.asnumpy(), n)
+
 
 if __name__ == '__main__':
     install.test_mkldnn_install()

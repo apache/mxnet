@@ -67,8 +67,25 @@ def check_qsym_calibrated(qsym, out_type, name='conv'):
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
 
+def check_qsym_scale_align(qsym):
+  assert ''.join(qsym.attr_dict().keys()).find('quantized_sg_mkldnn_conv') != -1
+  init = False
+  for k, v in qsym.attr_dict().items():
+    if k.find('quantized_sg_mkldnn_conv') != -1:
+      assert 'min_calib_range' in v
+      assert 'max_calib_range' in v
+      if not init:
+        min_calib_range = v['min_calib_range']
+        max_calib_range = v['max_calib_range']
+        init = True
+      else:
+        assert min_calib_range == v['min_calib_range']
+        assert max_calib_range == v['max_calib_range']
+
+
+
 def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape):
-  mod = mx.mod.Module(symbol=qsym, context=mx.current_context())
+  mod = Module(symbol=qsym, context=mx.current_context())
   mod.bind(for_training=False,
            data_shapes=[('data', data_shape)],
            label_shapes=[('softmax_label', label_shape)])
@@ -79,7 +96,7 @@ def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_
   return mod.get_outputs()
 
 def check_qsym_dummy_forward(qsym, batch, data_shape, label_shape):
-  mod = mx.mod.Module(symbol=qsym, context=mx.current_context())
+  mod = Module(symbol=qsym, context=mx.current_context())
   mod.bind(for_training=False,
            data_shapes=[('data', data_shape)],
            label_shapes=[('softmax_label', label_shape)])
@@ -105,7 +122,7 @@ def check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape):
   net(data)
 
 def check_quantize(sym, data_shape, out_type, name='conv',
-                   check_calibration=True, gluon_forward=False):
+                   check_calibration=True, gluon_forward=False, check_scale_align=False):
   sg_pass_name = config[name][SG_PASS_NAME]
   post_sg_pass_name = config[name][POST_SG_PASS_NAME]
 
@@ -157,6 +174,8 @@ def check_quantize(sym, data_shape, out_type, name='conv',
   qsym = qsym.get_backend_symbol(post_sg_pass_name)
   if check_calibration:
     check_qsym_calibrated(qsym, out_type, name=name)
+  if check_scale_align:
+    check_qsym_scale_align(qsym)
   if gluon_forward == True:
     check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape)
   else:
@@ -164,6 +183,55 @@ def check_quantize(sym, data_shape, out_type, name='conv',
     quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
     for i in range(len(ref_out)):
       assert_almost_equal(ref_out[i].asnumpy(), quantized_out[i].asnumpy(), atol = 1)
+
+@with_seed()
+def check_quantize_whole_model_with_forward():
+  def check_qsym_forward(qsym, qarg_params, qaux_params, data_shape):
+    mod = Module(symbol=qsym, label_names=None, context=mx.current_context())
+    mod.bind(for_training=False,
+             data_shapes=[('data', data_shape)])
+    mod.set_params(qarg_params, qaux_params)
+    data = [mx.random.uniform(-1.0, 1.0, shape=shape) for _, shape in mod.data_shapes]
+    batch = mx.io.DataBatch(data, [])
+    mod.forward(batch, is_train=False)
+    for output in mod.get_outputs():
+        output.wait_to_read()
+
+  def check_quantize_whole_model(out_type):
+    batch_size = 4
+    data_shape = (batch_size, 4, 10, 10)
+    data = mx.sym.Variable('data')
+    conv0 = mx.sym.Convolution(data, kernel=(1, 1), num_filter=16, name='conv0')
+    sym = mx.sym.Convolution(conv0, kernel=(1, 1), num_filter=16, name='conv1')
+    sym_sg = sym.get_backend_symbol('MKLDNN')
+    mod = Module(symbol=sym, label_names=[])
+    mod.bind(for_training=False,
+             data_shapes=[('data', data_shape)])
+
+    mod.init_params(mx.init.Normal(0.5))
+    arg_params, aux_params = mod.get_params()
+
+    excluded_sym_names = []
+
+    calib_data = mx.nd.random.uniform(shape=data_shape)
+    calib_data = NDArrayIter(data=calib_data)
+    calib_data = DummyIter(calib_data)
+    calib_layer = lambda name: name.endswith('_output')
+    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                     arg_params=arg_params,
+                                                                     aux_params=aux_params,
+                                                                     ctx=mx.current_context(),
+                                                                     excluded_sym_names=excluded_sym_names,
+                                                                     quantized_dtype=out_type,
+                                                                     calib_mode='naive',
+                                                                     calib_data=calib_data,
+                                                                     calib_layer=calib_layer,
+                                                                     num_calib_examples=5)
+    qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')
+    check_qsym_forward(qsym, qarg_params, qaux_params, data_shape)
+
+  for qdtype in ['uint8', 'int8', 'auto']:
+    check_quantize_whole_model(qdtype)
 
 @with_seed()
 def check_fusion(sym, data_shape, attrs_op, name='conv', check_quantization=True):
@@ -304,6 +372,20 @@ def single_concat(data_shape, input_num, dim):
   for i in range(input_num):
     inputs.append(data)
   concat = mx.symbol.Concat(*inputs, name="concat", dim=dim)
+  return concat
+
+# concat scale alignment case
+def concat_scale_align(data_shape):
+  data, weight = head_symbol(data_shape)
+  conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
+                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+  conv2 = mx.symbol.Convolution(data=data, weight=weight * 2, name='conv2', num_filter=64,
+                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+  conv3 = mx.symbol.Convolution(data=data, weight=weight * 3, name='conv3', num_filter=64,
+                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+  conv4 = mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4', num_filter=64,
+                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+  concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
   return concat
 
 def tail_neg_symbol(sym1, sym2):
@@ -579,6 +661,7 @@ def test_pos_conv_bn_sum_relu():
     net, attrs = conv_bn_sum_relu(True, data_shape)
     check_fusion(net, data_shape, attrs)
 
+@with_seed()
 def test_pos_single_concat():
   for data_shape in DATA_SHAPE:
     for out_type in ('uint8', 'int8', 'auto'):
@@ -591,6 +674,14 @@ def test_pos_single_concat():
       net = single_concat(data_shape, 4, 3)
       check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
       check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
+
+@with_seed()
+def test_pos_concat_scale_align():
+  for data_shape in DATA_SHAPE:
+    for out_type in ('uint8', 'int8', 'auto'):
+      net = concat_scale_align(data_shape)
+      check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True)
+      check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True, gluon_forward=True)
 
 @with_seed()
 def test_neg_conv_bn():

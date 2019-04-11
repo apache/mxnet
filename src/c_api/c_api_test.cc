@@ -27,7 +27,7 @@
 #include "./c_api_common.h"
 #include "../operator/subgraph/subgraph_property.h"
 
-int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
+int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
                               const char* prop_name,
                               const mx_uint num_ops,
                               const char** op_names,
@@ -49,7 +49,7 @@ int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
       property->SetAttr("graph", g);
       property->SetAttr("op_names", op_name_set);
       g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
-      g = nnvm::ApplyPass(std::move(g), "PartitionGraph");
+      g = nnvm::ApplyPass(std::move(g), "BuildSubgraph");
       s->outputs = g.outputs;
     }
   }

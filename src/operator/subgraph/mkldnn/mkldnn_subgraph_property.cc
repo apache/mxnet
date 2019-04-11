@@ -23,6 +23,7 @@
 #include "mkldnn_fc_property.h"
 #include "mkldnn_conv_post_quantize_property.h"
 #include "mkldnn_fc_post_quantize_property.h"
+#include "mkldnn_post_quantize_align_scale_property.h"
 
 namespace mxnet {
 namespace op {
@@ -31,6 +32,7 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNFCProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_POST_QUANTIZE, SgMKLDNNConvPostQuantizeProperty);
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_POST_QUANTIZE, SgMKLDNNFCPostQuantizeProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_POST_QUANTIZE, SgMKLDNNPostQuantizeAlignScaleProperty);
 
 }  // namespace op
 }  // namespace mxnet

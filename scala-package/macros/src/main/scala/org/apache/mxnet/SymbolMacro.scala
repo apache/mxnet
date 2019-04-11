@@ -23,15 +23,16 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro SymbolMacro.addDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any = macro SymbolMacro.addDefs
 }
 
 private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro TypedSymbolAPIMacro.typeSafeAPIDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any =
+  macro TypedSymbolAPIMacro.typeSafeAPIDefs
 }
 
 private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) =
+  private[mxnet] def macroTransform(annottees: Any*): Any =
   macro TypedSymbolRandomAPIMacro.typeSafeAPIDefs
 }
 
@@ -40,7 +41,7 @@ private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnot
   */
 private[mxnet] object SymbolMacro extends GeneratorBase {
 
-  def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+  def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     import c.universe._
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddSymbolFunctions($b)" => c.eval[Boolean](c.Expr(b))
@@ -50,7 +51,7 @@ private[mxnet] object SymbolMacro extends GeneratorBase {
   }
 
   private def impl(c: blackbox.Context)
-                  (isContrib: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+                  (isContrib: Boolean, annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     import c.universe._
 
     val functions = functionsToGenerate(isSymbol = false, isContrib)
@@ -76,7 +77,7 @@ private[mxnet] object SymbolMacro extends GeneratorBase {
   */
 private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
 
-  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     import c.universe._
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
@@ -140,7 +141,7 @@ private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
 private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
   with RandomHelpers {
 
-  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     val functionDefs = typeSafeRandomFunctionsToGenerate(isSymbol = true)
       .map(f => buildTypedFunction(c)(f))
 
