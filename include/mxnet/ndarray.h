@@ -97,8 +97,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_()
-  {
+        entry_() {
   }
   /*! \brief constructor for NDArray with storage type
    */
@@ -117,8 +116,7 @@ class NDArray {
         shape_(),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_()
-  {
+        entry_() {
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
