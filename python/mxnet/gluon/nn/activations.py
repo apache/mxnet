@@ -158,7 +158,8 @@ class ELU(HybridBlock):
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-        return F.where(x > 0, x, self._alpha * (F.exp(x) - 1.0))
+        _x = F.where(x < 0, x, F.zeros_like(x))
+        return F.where(x > 0, x, self._alpha * (F.exp(_x) - 1.0))
 
 
 class SELU(HybridBlock):
