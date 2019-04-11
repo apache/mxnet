@@ -495,8 +495,27 @@ int MXNDArrayGetStorageType(NDArrayHandle handle,
 }
 
 int MXNDArrayGetShape(NDArrayHandle handle,
-                      int *out_dim,
-                      const int **out_pdata) {
+                      mx_uint *out_dim,
+                      const mx_uint **out_pdata) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    const mxnet::TShape &s = arr->shape();
+    *out_dim = s.ndim();
+    std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
+    buffer.resize(s.ndim());
+    nnvm::ShapeTypeCast(s.begin(), s.end(), buffer.data());
+    *out_pdata = buffer.data();
+  } else {
+    *out_dim = 0;
+  }
+  API_END();
+}
+
+int MXNDArrayGetShapeEx(NDArrayHandle handle,
+                        int *out_dim,
+                        const int **out_pdata) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
@@ -507,7 +526,7 @@ int MXNDArrayGetShape(NDArrayHandle handle,
     }
     *out_dim = s.ndim();
     if (s.ndim() >= 0) {
-      std::vector<int> &buffer = ret->arg_shape_buffer;
+      std::vector<int> &buffer = ret->arg_shape_buffer_ex;
       buffer.resize(s.ndim());
       mxnet::ShapeTypeCast(s.begin(), s.end(), buffer.data());
       *out_pdata = buffer.data();
@@ -1406,8 +1425,15 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const int *shape,
-                                 int ndim, int dtype, NDArrayHandle *out) {
+int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
+                                 mx_uint ndim, int dtype, NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  API_END();
+}
+
+int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
+                                   int ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   API_END();

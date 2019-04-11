@@ -356,7 +356,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject ndimRef, jobject dataBuf) {
   int ndim;
   const int *pdata;
-  int ret = MXNDArrayGetShape(reinterpret_cast<NDArrayHandle>(ndArrayPtr), &ndim, &pdata);
+  int ret = MXNDArrayGetShapeEx(reinterpret_cast<NDArrayHandle>(ndArrayPtr), &ndim, &pdata);
 
   // fill dataBuf
   jclass integerClass = env->FindClass("java/lang/Integer");
@@ -938,25 +938,25 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorReshape
 
   ExecutorHandle out;
 
-  int ret = MXExecutorReshape(partialReshaping,
-                              allowUpSizing,
-                              devType,
-                              devId,
-                              static_cast<mx_uint>(numMapKeys),
-                              mapKeys,
-                              static_cast<const int*>(mapDevTypes),
-                              static_cast<const int*>(mapDevIds),
-                              static_cast<const mx_uint>(numProvidedArgShapes),
-                              providedArgShapeNames,
-                              static_cast<const int*>(providedArgShapeData),
-                              reinterpret_cast<const mx_uint*>(providedArgShapeIdx),
-                              &numInArgs,
-                              &inArgs,
-                              &argGrads,
-                              &numAuxStates,
-                              &auxStates,
-                              reinterpret_cast<ExecutorHandle>(jsharedExec),
-                              &out);
+  int ret = MXExecutorReshapeEx(partialReshaping,
+                                allowUpSizing,
+                                devType,
+                                devId,
+                                static_cast<mx_uint>(numMapKeys),
+                                mapKeys,
+                                static_cast<const int*>(mapDevTypes),
+                                static_cast<const int*>(mapDevIds),
+                                static_cast<const mx_uint>(numProvidedArgShapes),
+                                providedArgShapeNames,
+                                static_cast<const int*>(providedArgShapeData),
+                                reinterpret_cast<const mx_uint*>(providedArgShapeIdx),
+                                &numInArgs,
+                                &inArgs,
+                                &argGrads,
+                                &numAuxStates,
+                                &auxStates,
+                                reinterpret_cast<ExecutorHandle>(jsharedExec),
+                                &out);
 
   jclass longCls = env->FindClass("java/lang/Long");
   jmethodID newLong = env->GetMethodID(longCls, "<init>", "(J)V");
@@ -1693,37 +1693,37 @@ int SymbolInferShapeHelper(JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumA
   jint *argShapeData = env->GetIntArrayElements(jargShapeData, NULL);
   int ret;
   if (!partial) {
-    ret = MXSymbolInferShape(reinterpret_cast<SymbolHandle>(symbolPtr),
-                              static_cast<mx_uint>(jnumArgs),
-                              keys,
-                              reinterpret_cast<mx_uint *>(argIndPtr),
-                              reinterpret_cast<const int *>(argShapeData),
-                              &inShapeSize,
-                              &inShapeNdim,
-                              &inShapeData,
-                              &outShapeSize,
-                              &outShapeNdim,
-                              &outShapeData,
-                              &auxShapeSize,
-                              &auxShapeNdim,
-                              &auxShapeData,
-                              &complete);
+    ret = MXSymbolInferShapeEx(reinterpret_cast<SymbolHandle>(symbolPtr),
+                               static_cast<mx_uint>(jnumArgs),
+                               keys,
+                               reinterpret_cast<mx_uint *>(argIndPtr),
+                               reinterpret_cast<const int *>(argShapeData),
+                               &inShapeSize,
+                               &inShapeNdim,
+                               &inShapeData,
+                               &outShapeSize,
+                               &outShapeNdim,
+                               &outShapeData,
+                               &auxShapeSize,
+                               &auxShapeNdim,
+                               &auxShapeData,
+                               &complete);
   } else {
-    ret = MXSymbolInferShapePartial(reinterpret_cast<SymbolHandle>(symbolPtr),
-                                    static_cast<mx_uint>(jnumArgs),
-                                    keys,
-                                    reinterpret_cast<mx_uint *>(argIndPtr),
-                                    reinterpret_cast<const int *>(argShapeData),
-                                    &inShapeSize,
-                                    &inShapeNdim,
-                                    &inShapeData,
-                                    &outShapeSize,
-                                    &outShapeNdim,
-                                    &outShapeData,
-                                    &auxShapeSize,
-                                    &auxShapeNdim,
-                                    &auxShapeData,
-                                    &complete);
+    ret = MXSymbolInferShapePartialEx(reinterpret_cast<SymbolHandle>(symbolPtr),
+                                      static_cast<mx_uint>(jnumArgs),
+                                      keys,
+                                      reinterpret_cast<mx_uint *>(argIndPtr),
+                                      reinterpret_cast<const int *>(argShapeData),
+                                      &inShapeSize,
+                                      &inShapeNdim,
+                                      &inShapeData,
+                                      &outShapeSize,
+                                      &outShapeNdim,
+                                      &outShapeData,
+                                      &auxShapeSize,
+                                      &auxShapeNdim,
+                                      &auxShapeData,
+                                      &complete);
   }
   env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);

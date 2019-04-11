@@ -1188,9 +1188,9 @@ class Symbol(SymbolBase):
         aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         complete = ctypes.c_int()
         if partial:
-            infer_func = _LIB.MXSymbolInferShapePartial
+            infer_func = _LIB.MXSymbolInferShapePartialEx
         else:
-            infer_func = _LIB.MXSymbolInferShape
+            infer_func = _LIB.MXSymbolInferShapeEx
         check_call(infer_func(
             self.handle,
             mx_uint(len(indptr) - 1),
@@ -1571,42 +1571,42 @@ class Symbol(SymbolBase):
         aux_state_handles = ctypes.POINTER(NDArrayHandle)()
 
         try:
-            check_call(_LIB.MXExecutorSimpleBind(self.handle,
-                                                 ctypes.c_int(ctx.device_typeid),
-                                                 ctypes.c_int(ctx.device_id),
-                                                 num_ctx_map_keys,
-                                                 ctx_map_keys,
-                                                 ctx_map_dev_types,
-                                                 ctx_map_dev_ids,
-                                                 mx_uint(provided_req_type_list_len),
-                                                 provided_grad_req_names,
-                                                 provided_grad_req_types,
-                                                 mx_uint(len(provided_arg_shape_names)),
-                                                 c_str_array(provided_arg_shape_names),
-                                                 c_array_buf(mx_int,
-                                                             array('I', provided_arg_shape_data)),
-                                                 c_array_buf(mx_uint,
-                                                             array('i', provided_arg_shape_idx)),
-                                                 num_provided_arg_types,
-                                                 provided_arg_type_names,
-                                                 provided_arg_type_data,
-                                                 num_provided_arg_stypes,
-                                                 provided_arg_stype_names,
-                                                 provided_arg_stype_data,
-                                                 mx_uint(len(shared_arg_name_list)),
-                                                 c_str_array(shared_arg_name_list),
-                                                 ctypes.byref(shared_buffer_len),
-                                                 shared_buffer_names,
-                                                 shared_buffer_handles,
-                                                 ctypes.byref(updated_shared_buffer_names),
-                                                 ctypes.byref(updated_shared_buffer_handles),
-                                                 ctypes.byref(num_in_args),
-                                                 ctypes.byref(in_arg_handles),
-                                                 ctypes.byref(arg_grad_handles),
-                                                 ctypes.byref(num_aux_states),
-                                                 ctypes.byref(aux_state_handles),
-                                                 shared_exec_handle,
-                                                 ctypes.byref(exe_handle)))
+            check_call(_LIB.MXExecutorSimpleBindEx(self.handle,
+                                                   ctypes.c_int(ctx.device_typeid),
+                                                   ctypes.c_int(ctx.device_id),
+                                                   num_ctx_map_keys,
+                                                   ctx_map_keys,
+                                                   ctx_map_dev_types,
+                                                   ctx_map_dev_ids,
+                                                   mx_uint(provided_req_type_list_len),
+                                                   provided_grad_req_names,
+                                                   provided_grad_req_types,
+                                                   mx_uint(len(provided_arg_shape_names)),
+                                                   c_str_array(provided_arg_shape_names),
+                                                   c_array_buf(mx_int,
+                                                               array('I', provided_arg_shape_data)),
+                                                   c_array_buf(mx_uint,
+                                                               array('i', provided_arg_shape_idx)),
+                                                   num_provided_arg_types,
+                                                   provided_arg_type_names,
+                                                   provided_arg_type_data,
+                                                   num_provided_arg_stypes,
+                                                   provided_arg_stype_names,
+                                                   provided_arg_stype_data,
+                                                   mx_uint(len(shared_arg_name_list)),
+                                                   c_str_array(shared_arg_name_list),
+                                                   ctypes.byref(shared_buffer_len),
+                                                   shared_buffer_names,
+                                                   shared_buffer_handles,
+                                                   ctypes.byref(updated_shared_buffer_names),
+                                                   ctypes.byref(updated_shared_buffer_handles),
+                                                   ctypes.byref(num_in_args),
+                                                   ctypes.byref(in_arg_handles),
+                                                   ctypes.byref(arg_grad_handles),
+                                                   ctypes.byref(num_aux_states),
+                                                   ctypes.byref(aux_state_handles),
+                                                   shared_exec_handle,
+                                                   ctypes.byref(exe_handle)))
         except MXNetError as e:
             error_msg = "simple_bind error. Arguments:\n"
             for k, v in kwargs.items():
