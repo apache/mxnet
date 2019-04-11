@@ -134,6 +134,9 @@
             </configuration>
           </execution>
         </executions>
+        <configuration>
+            <skip>true</skip> <!-- Skip deploy-plugin:deploy and only use deploy-plugin:deploy-file -->
+        </configuration>
       </plugin>
     </plugins>
   </build>
