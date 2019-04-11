@@ -22,6 +22,7 @@ from common import setup_module, with_seed, teardown
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import assert_exception, default_context, set_default_context
+from mxnet.gluon.data.vision import transforms
 from nose.tools import assert_raises
 
 @with_seed()
@@ -165,6 +166,46 @@ def test_multiple_waitalls():
     assert caught, "No exception thrown"
     mx.nd.waitall()
 
+@with_seed()
+def test_exc_profiler():
+    def run_training_iteration(data, label):
+        data = data.as_in_context(ctx)
+        label = label.as_in_context(ctx)
+        with mx.autograd.record():
+            output = net(data)
+            loss = softmax_cross_entropy(output, label)
+        loss.backward()
+
+        trainer.step(data.shape[0])
+
+    net = gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
+        net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+        net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
+        net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+        net.add(gluon.nn.Flatten())
+        net.add(gluon.nn.Dense(512, activation="relu"))
+        net.add(gluon.nn.Dense(10))
+
+    train_data = gluon.data.DataLoader(gluon.data.vision.MNIST(train=True).transform_first(transforms.ToTensor()),
+                                       batch_size=64, shuffle=True)
+
+    ctx = default_context()
+
+    net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+    softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
+
+    itr = iter(train_data)
+    run_training_iteration(*next(itr))
+
+    data, label = next(itr)
+
+    mx.profiler.set_state("run")
+    run_training_iteration(*next(itr))
+    mx.nd.waitall()
+    mx.profiler.set_state("stop")
 
 
 if __name__ == '__main__':
