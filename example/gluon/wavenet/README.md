@@ -34,7 +34,6 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
 - tqdm 4.29.0
 - scipy 1.2.0
 
-
 ## Usage
 
 - arguments
