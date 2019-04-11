@@ -7887,6 +7887,10 @@ def test_image_normalize():
 
 @with_seed()
 def test_SliceSplitEmbeddingConcatFuse():
+    if mx.current_context().device_type == 'gpu':
+        print('skipped testing SliceSplitEmbeddingConcatFuse for gpu since it is not supported yet')
+        return
+
     DATA_SHAPE = [(1000, 26000)]
     num_embed_features = 26
     num_cont_features = 13
