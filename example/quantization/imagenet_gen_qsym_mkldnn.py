@@ -179,7 +179,6 @@ if __name__ == '__main__':
         prefix, epoch = download_model(model_name=args.model, logger=logger)
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
-    sym.save("model_pre_quantize.json")
     sym = sym.get_backend_symbol('MKLDNN')
 
     # get batch size
