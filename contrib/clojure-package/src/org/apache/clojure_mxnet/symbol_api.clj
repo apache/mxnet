@@ -15,6 +15,7 @@
 ;;
 
 (ns org.apache.clojure-mxnet.symbol-api
+  "Experimental Symbol API"
   (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
                             min repeat reverse set sort take to-array empty sin
                             get apply shuffle ref])

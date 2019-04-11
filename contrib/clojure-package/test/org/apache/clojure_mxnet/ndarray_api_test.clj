@@ -348,10 +348,10 @@
 
 (deftest test-argmax
   (let [x (ndarray/array (range 6) [2 3])
-        res1 (ndarray-api/argmax x (->option 0))
-        res2 (ndarray-api/argmax x (->option 1))
-        res3 (ndarray-api/argmax {:data x :axis (->option 0) :keepdims true})
-        res4 (ndarray-api/argmax {:data x :axis (->option 1) :keepdims true})]
+        res1 (ndarray-api/argmax {:data x :axis 0})
+        res2 (ndarray-api/argmax {:data x :axis 1})
+        res3 (ndarray-api/argmax {:data x :axis 0 :keepdims true})
+        res4 (ndarray-api/argmax {:data x :axis 1 :keepdims true})]
     (is (= [1. 1. 1.] (->vec res1)))
     (is (= [3] (shape-vec res1)))
     (is (= [2. 2.] (->vec res2)))
@@ -369,10 +369,10 @@
 
 (deftest test-argmin
   (let [x (ndarray/array (reverse (range 6)) [2 3])
-        res1 (ndarray-api/argmin x (->option 0))
-        res2 (ndarray-api/argmin x (->option 1))
-        res3 (ndarray-api/argmin {:data x :axis (->option 0) :keepdims true})
-        res4 (ndarray-api/argmin {:data x :axis (->option 1) :keepdims true})]
+        res1 (ndarray-api/argmin {:data x :axis 0})
+        res2 (ndarray-api/argmin {:data x :axis 1})
+        res3 (ndarray-api/argmin {:data x :axis 0 :keepdims true})
+        res4 (ndarray-api/argmin {:data x :axis 1 :keepdims true})]
     (is (= [1. 1. 1.] (->vec res1)))
     (is (= [3] (shape-vec res1)))
     (is (= [2. 2.] (->vec res2)))
@@ -387,9 +387,9 @@
                           0.1  0.3  0.2]
                          [2 3])
         y (ndarray/array [0.3 0.2 0.4 0.1 0.3 0.2] [6])
-        res1 (ndarray-api/argsort {:data x :axis (->option nil)})
-        res2 (ndarray-api/argsort {:data x :axis (->option 0)})
-        res3 (ndarray-api/argsort {:data y :axis (->option nil)})]
+        res1 (ndarray-api/argsort {:data x})
+        res2 (ndarray-api/argsort {:data x :axis 0})
+        res3 (ndarray-api/argsort {:data y})]
     (is (= [1. 0. 2.
             0. 2. 1.]
            (->vec res1)))

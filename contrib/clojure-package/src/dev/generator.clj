@@ -81,16 +81,13 @@
        :members
        (map #(into {} %))
        (filter #(-> % :flags :public))
-       (filter #(not (re-find #"org\$apache\$mxnet" (str (:name %)))))
-       (filter #(not (re-find #"\$default" (str (:name %)))))))
+       (remove #(re-find #"org\$apache\$mxnet" (str (:name %))))
+       (remove #(re-find #"\$default" (str (:name %))))))
 
 (defn get-public-to-gen-methods [public-to-hand-gen public-no-default]
-  (remove #(contains? (->> public-to-hand-gen
-                           (mapv :name)
-                           (mapv str)
-                           (set))
-                      (str (:name %)))
-          public-no-default))
+  (let [public-to-hand-gen-names
+        (into #{} (mapv (comp str :name) public-to-hand-gen))]
+    (remove #(-> % :name str public-to-hand-gen-names) public-no-default)))
 
 (defn public-by-name-and-param-count [public-reflect-info]
  (->> public-reflect-info
@@ -135,17 +132,18 @@
 (def op-names
   (let [l ($ ListBuffer/empty)]
     (do (.mxListAllOpNames libinfo l)
-        (filter #(not (or (= "Custom" %)
-                          (re-matches #"^_.*" %)))
+        (remove #(or (= "Custom" %)
+                     (re-matches #"^_.*" %))
                 (util/buffer->vec l)))))
 
 (defn- parse-arg-type [s]
-  (let [[_ var-arg-type _ set-arg-type arg-spec _ type-req _ default-val] (re-find #"(([\w-\[\]]+)|\{([^}]+)\})\s*(\([^)]+\))?(,\s*(optional|required)(,\s*default=(.*))?)?" s)]
-    {:type (or set-arg-type var-arg-type)
+  (let [[_ var-arg-type _ set-arg-type arg-spec _ type-req _ default-val] (re-find #"(([\w-\[\]\s]+)|\{([^}]+)\})\s*(\([^)]+\))?(,\s*(optional|required)(,\s*default=(.*))?)?" s)]
+    {:type (clojure.string/trim (or set-arg-type var-arg-type))
      :spec arg-spec
      :optional? (or (= "optional" type-req)
                     (= "boolean" var-arg-type))
-     :default default-val}))
+     :default default-val
+     :orig s}))
 
 (defn- get-op-handle [op-name]
   (let [ref (new Base$RefLong 0)]
@@ -396,17 +394,26 @@
 (defn symbol-api-coerce-param
   [{:keys [name sym type optional?]}]
   (let [coerced-param (case type
-                        "Shape" `(when ~sym (~'mx-shape/->shape ~sym))
+                        "Shape" `(~'when ~sym (~'mx-shape/->shape ~sym))
                         "NDArray-or-Symbol[]" `(~'clojure.core/into-array ~sym)
+                        "Map[String, String]"
+                        `(~'when ~sym
+                           (~'->> ~sym
+                                (~'mapv (~'fn [[~'k ~'v]] [~'k (~'str ~'v)]))
+                                (~'into {})
+                                ~'util/convert-map))
                         sym)
-        name-or-attr (#{"name" "attr"} name)]
-    (if (and optional? (not name-or-attr))
+        nil-param-allowed? (#{"name" "attr"} name)]
+    (if (and optional? (not nil-param-allowed?))
       `(~'util/->option ~coerced-param)
       coerced-param)))
 
 (defn gen-symbol-api-doc [fn-description params]
-  (let [param-descriptions (mapv (fn [{:keys [name description]}]
-                                   (str "`" name "`: " description "\n"))
+  (let [param-descriptions (mapv (fn [{:keys [name description optional?]}]
+                                   (str "`" name "`: "
+                                        description
+                                        (when optional? " (optional)")
+                                        "\n"))
                                  params)]
     (str fn-description "\n\n"
          (apply str param-descriptions))))
@@ -449,7 +456,9 @@
 (def all-symbol-api-functions
   (mapv gen-symbol-api-function op-names))
 
-(def symbol-api-gen-ns "(ns org.apache.clojure-mxnet.symbol-api
+(def symbol-api-gen-ns "(ns
+  ^{:doc \"Experimental\"}
+  org.apache.clojure-mxnet.symbol-api
   (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
                             min repeat reverse set sort take to-array empty sin
                             get apply shuffle ref])
@@ -474,8 +483,11 @@
       coerced-param)))
 
 (defn gen-ndarray-api-doc [fn-description params]
-  (let [param-descriptions (mapv (fn [{:keys [name description]}]
-                                   (str "`" name "`: " description "\n"))
+  (let [param-descriptions (mapv (fn [{:keys [name description optional?]}]
+                                   (str "`" name "`: "
+                                        description
+                                        (when optional? " (optional)")
+                                        "\n"))
                                  params)]
     (str fn-description "\n\n"
          (apply str param-descriptions))))
@@ -507,10 +519,10 @@
                      (conj args {:name "out"
                                  :type "NDArray-or-Symbol"
                                  :optional? true
-                                 :description "Output array (optional)"}))
+                                 :description "Output array."}))
         doc (gen-ndarray-api-doc fn-description params)
         opt-params (filter :optional? params)
-        req-params (filter (comp not :optional?) params)
+        req-params (remove :optional? params)
         req-call (gen-ndarray-api-required-arity fn-name req-params)
         default-call (gen-ndarray-api-default-arity op-name params)]
     (if (= 1 (count req-params))
@@ -525,7 +537,9 @@
 (def all-ndarray-api-functions
   (mapv gen-ndarray-api-function op-names))
 
-(def ndarray-api-gen-ns "(ns org.apache.clojure-mxnet.ndarray-api
+(def ndarray-api-gen-ns "(ns
+  ^{:doc \"Experimental\"}
+  org.apache.clojure-mxnet.ndarray-api
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
                             min repeat reverse set sort take to-array empty shuffle
                             ref])
@@ -550,7 +564,11 @@
 
 (comment
 
+  (gen-op-info "ElementWiseSum")
+
   (gen-ndarray-api-function "Activation")
+
+  (gen-symbol-api-function "Activation")
 
   ;; This generates a file with the bulk of the nd-array functions
   (generate-ndarray-file)

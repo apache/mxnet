@@ -57,33 +57,52 @@
       (is (string? (:fn-description activation-info)))
       (is (= 2 (-> activation-info :args count)))
       (is (= "" (:key-var-num-args activation-info)))
-      
+
       (is (= "data" (-> activation-info :args first :name)))
       (is (= "NDArray-or-Symbol" (-> activation-info :args first :type)))
       (is (false? (-> activation-info :args first :optional?)))
       (is (nil? (-> activation-info :args first :default)))
       (is (string? (-> activation-info :args first :description)))
-      
+
       (is (= "act-type" (-> activation-info :args second :name)))
       (is (= "'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'" (-> activation-info :args second :type)))
       (is (false? (-> activation-info :args second :optional?)))
       (is (nil? (-> activation-info :args second :default)))
       (is (string? (-> activation-info :args second :description)))))
 
+  (testing "argmin"
+    (let [argmin-info (gen/gen-op-info "argmin")]
+      (is (= "argmin" (:fn-name argmin-info)))
+      (is (= 3 (-> argmin-info :args count)))
+
+      (is (= "data" (-> argmin-info :args (nth 0) :name)))
+      (is (= "NDArray-or-Symbol" (-> argmin-info :args (nth 0) :type)))
+      (is (false? (-> argmin-info :args (nth 0) :optional?)))
+
+      (is (= "axis" (-> argmin-info :args (nth 1) :name)))
+      (is (= "int or None" (-> argmin-info :args (nth 1) :type)))
+      (is (= "'None'" (-> argmin-info :args (nth 1) :default)))
+      (is (true? (-> argmin-info :args (nth 1) :optional?)))
+
+      (is (= "keepdims" (-> argmin-info :args (nth 2) :name)))
+      (is (= "boolean" (-> argmin-info :args (nth 2) :type)))
+      (is (= "0" (-> argmin-info :args (nth 2) :default)))
+      (is (true? (-> argmin-info :args (nth 2) :optional?)))))
+
   (testing "concat"
     (let [concat-info (gen/gen-op-info "Concat")]
       (is (= "concat" (:fn-name concat-info)))
       (is (= 3 (-> concat-info :args count)))
       (is (= "num-args" (:key-var-num-args concat-info)))
-      
+
       (is (= "data" (-> concat-info :args (nth 0) :name)))
       (is (= "NDArray-or-Symbol[]" (-> concat-info :args (nth 0) :type)))
       (is (false? (-> concat-info :args (nth 0) :optional?)))
-      
+
       (is (= "num-args" (-> concat-info :args (nth 1) :name)))
       (is (= "int" (-> concat-info :args (nth 1) :type)))
       (is (false? (-> concat-info :args (nth 1) :optional?)))
-      
+
       (is (= "dim" (-> concat-info :args (nth 2) :name)))
       (is (= "int" (-> concat-info :args (nth 2) :type)))
       (is (= "'1'" (-> concat-info :args (nth 2) :default)))
@@ -147,7 +166,7 @@
       (is (= "add-n" (:fn-name element-wise-sum-info)))
       (is (= 1 (-> element-wise-sum-info :args count)))
       (is (= "num-args" (:key-var-num-args element-wise-sum-info)))
-      
+
       (is (= "args" (-> element-wise-sum-info :args (nth 0) :name)))
       (is (= "NDArray-or-Symbol[]" (-> element-wise-sum-info :args (nth 0) :type)))
       (is (false? (-> element-wise-sum-info :args (nth 0) :optional?))))))
