@@ -244,6 +244,7 @@ def test_bidirectional():
 
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@unittest.skip('https://github.com/apache/incubator-mxnet/issues/13103')
 def test_layer_bidirectional():
     class RefBiLSTM(gluon.Block):
         def __init__(self, size, **kwargs):
