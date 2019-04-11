@@ -188,11 +188,14 @@ For other libraries, visit the [Math Library Selection](build_from_source.html#m
 
 If building on CPU and using OpenBLAS:
 
+Clone the repository:
+
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
 ```
 
+Build with CMake and ninja, without GPU and without MKL.
 
 ```bash
     rm -rf build
@@ -239,12 +242,12 @@ Cuda 10.1 in Ubuntu 18.04 builds fine but is not currently tested in CI.
 ```
 
 *Note* - You can explore and use more compilation options in `CMakeLists.txt` and also review common [usage examples](build_from_source.html#usage-examples).
-You can also use a scripted version of the above with an editable CMake options file by doing the
+Optionally, you can also use a higher level, scripted version of the above with an editable CMake options file by doing the
 following:
 
 ```bash
 cp cmake/cmake_options.yml .
-# Edit to your taste
+# Edit cmake_options.yml in the MXNet root to your taste
 $EDITOR cmake_options.yml
 # Launch a local CMake build
 ./dev_menu.py menu 1
