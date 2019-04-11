@@ -266,7 +266,7 @@ void print_rapidjson_doc(string json, string log_prefix="") {
        << "]" << "]" << endl;
 
   // print arg_nodes
-  CHECK(d.HasMember(PREFIX_SYM_JSON_ARG_NODES));   
+  CHECK(d.HasMember(PREFIX_SYM_JSON_ARG_NODES));
   Value& arg_nodes = d[PREFIX_SYM_JSON_ARG_NODES];
   CHECK(arg_nodes.IsArray());
   CHECK(!arg_nodes.Empty());
@@ -295,6 +295,10 @@ void print_rapidjson_doc(string json, string log_prefix="") {
       cout <<"Info: \t" << log_prefix << "node index " << i << " : " << nodes[i]["name"].GetString() << endl;
     }
   }
+}
+
+bool contains(const string& haystack, const string& needle) {
+  return haystack.find(needle) != string::npos;
 }
 
 /**
@@ -343,7 +347,6 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
   CHECK(!arg_nodes.Empty());
   
   // check, create nodes
-  int retained_op_num = 0;
   CHECK(d.HasMember(PREFIX_SYM_JSON_NODES));
   Value& nodes = d[PREFIX_SYM_JSON_NODES];
   CHECK(nodes.IsArray());
@@ -356,27 +359,48 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
   // clear arg_nodes
   arg_nodes.Clear();
 
-  for (Value::ValueIterator itr = nodes.Begin(); itr != nodes.End(); ++itr) {
+  std::map<uint, uint> newIds;
+  for (uint i = 0; i <= nodes.Size(); i++) {
+    // assume ids are staying equal at first
+    newIds[i] = i;
+  }
+  std::map<uint, uint> inputChanges;
 
+  uint currentId = 0;
+  for (Value::ValueIterator itr = nodes.Begin(); itr != nodes.End(); ++itr, ++currentId) {
     CHECK((*itr).HasMember("op"));
+    CHECK((*itr).HasMember("name"));
+
+    string nodeName = string((*itr)["name"].GetString());
     // 1. remove qactivation ops, containing _grad_cancel and det_sign
-    if ((string((*itr)["name"].GetString()).find(PREFIX_Q_ACTIV) != string::npos))
+    if (contains(nodeName, PREFIX_Q_ACTIV)) {
+      CHECK((*itr)["inputs"].Size() == 1);
+      uint input = (*itr)["inputs"][0][0].GetUint();
+      while (inputChanges.count(input) > 0) {
+        input = inputChanges[input];
+      }
+      inputChanges[currentId] = input;
+      cout << "inputChanges[" << currentId << "]=" << input << endl;
+      for (uint i = currentId + 1; i <= nodes.Size(); i++) {
+        newIds[i] -= 1;
+      }
+      newIds.erase(currentId);
       continue;
+    }
 
     // adapt qconv and qdense ops
-    CHECK((*itr).HasMember("name"));
     
     bool foundq = false;
     bool retain = false;
     // if qconv or qdense found
-    if (string((*itr)["name"].GetString()).find(PREFIX_Q_CONV) != string::npos
-        || string((*itr)["name"].GetString()).find(PREFIX_Q_DENSE) != string::npos){
+    if (contains(nodeName, PREFIX_Q_CONV)
+        || contains(nodeName, PREFIX_Q_DENSE)){
       
       foundq = true;       
       //2.for qconv and qdense, we only retain  'weight', 'bias' and 'fwd'                                    
-      if (string((*itr)["name"].GetString()).find(PREFIX_WEIGHT) != string::npos
-          || string((*itr)["name"].GetString()).find(PREFIX_BIAS) != string::npos
-          || string((*itr)["name"].GetString()).find(PREFIX_FORWARD) != string::npos
+      if (contains(nodeName, PREFIX_WEIGHT)
+          || contains(nodeName, PREFIX_BIAS)
+          || contains(nodeName, PREFIX_FORWARD)
          )
         retain = true;  
 
@@ -403,32 +427,65 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
       CHECK((*itr).HasMember("inputs"));
       CHECK((*itr)["inputs"].IsArray());
 
-      int arr_size = (*itr)["inputs"].Capacity();
+      uint arr_size = (*itr)["inputs"].Size();
 
-      for (int i = 0; i < arr_size; ++i){
-        (*itr)["inputs"][i][0].SetInt(retained_op_num - (arr_size - i));        
+      for (uint i = 0; i < arr_size; ++i){
+        uint input = (*itr)["inputs"][i][0].GetUint();
+        if (inputChanges.count(input) > 0) {
+          cout << "set input: " << input << "=" << inputChanges[input] << endl;
+          input = inputChanges[input];
+        }
+        uint inputNewId = input;
+        if (newIds.count(input) > 0) {
+          inputNewId = newIds[input];
+        }
+        (*itr)["inputs"][i][0].SetUint(inputNewId);
       }
 
       // add node      
       nodes_new.PushBack((*itr), allocator);
 
+      uint currentNewId = currentId;
+      if (newIds.count(currentId) > 0) {
+        currentNewId = newIds[currentId];
+      }
+
       // add arg_node
-      if ( string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN){     
-        arg_nodes.PushBack(Value().SetInt(retained_op_num), allocator);        
+      if ( string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN){
+        arg_nodes.PushBack(Value().SetInt(currentNewId), allocator);
       }      
       
       //cout << (*itr)["name"].GetString() << endl;     
-      retained_op_num++;      
+    } else {
+      CHECK((*itr)["inputs"].Size() == 1);
+      uint input = (*itr)["inputs"][0][0].GetUint();
+      while (inputChanges.count(input) > 0) {
+        input = inputChanges[input];
+      }
+      inputChanges[currentId] = input;
+      cout << "inputChanges[" << currentId << "]=" << input << endl;
+      for (uint i = currentId + 1; i <= nodes.Size(); i++) {
+        newIds[i] -= 1;
+      }
+      newIds.erase(currentId);
     }
-  }  
+  }
+
+  uint maxId = 0;
+  for (uint i = 0; i <= nodes.Size(); i++) {
+    if (newIds.count(i) == 0) {
+      continue;
+    }
+    cout << i << " -> " << newIds[i] << endl;
+    maxId = newIds[i];
+  }
 
   // update heads 
   // heads : total num of nodes : [[index last element, 0, 0]]
-  heads[0][0].SetInt(retained_op_num - 1);  
+  heads[0][0].SetInt(maxId - 1);
 
   // update nodes  
   nodes = nodes_new;
-
 
   // Save output json file
   cout << "Info: " <<"saving new 'symbol json' file to: "<< output_fname << endl;
@@ -488,7 +545,7 @@ int main(int argc, char ** argv){
   if ( (argc == 3 && string(argv[2]) == "--verbose")
        || (argc == 4 && string(argv[3]) == "--verbose"))
     _verbose = true;
-  
+
   string base_name = params_file_name;
   base_name.erase(base_name.rfind('-')); // watchout if no '-'
 
