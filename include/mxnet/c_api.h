@@ -786,8 +786,8 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetShapeEx(NDArrayHandle handle,
-																	int *out_dim,
-																	const int **out_pdata);
+                                  int *out_dim,
+                                  const int **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the ndarray
