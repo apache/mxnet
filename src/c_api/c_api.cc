@@ -1417,7 +1417,7 @@ int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
   auto const_vars = static_cast<VarHandle*>(const_vars_handle);
   auto mutable_vars = static_cast<VarHandle*>(mutable_vars_handle);
   auto prop = FnProperty::kNormal;
-  if (prop_handle != nullptr) {
+  if (prop_handle) {
     prop = *static_cast<const FnProperty*>(prop_handle);
   }
 
@@ -1457,7 +1457,7 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
   auto const_vars = static_cast<VarHandle*>(const_vars_handle);
   auto mutable_vars = static_cast<VarHandle*>(mutable_vars_handle);
   auto prop = FnProperty::kNormal;
-  if (prop_handle != nullptr) {
+  if (prop_handle) {
     prop = *static_cast<const FnProperty*>(prop_handle);
   }
 
