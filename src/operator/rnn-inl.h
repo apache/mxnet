@@ -51,7 +51,7 @@ namespace rnn_enum {
   enum RNNOpInputs {kData, kParams, kState, kStateCell};
   enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
   enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
-  enum RNNOpResource {kTempSpace, kCuDNNDropoutDescSpace};
+  enum RNNOpResource {kCuDNNDropoutDescSpace};
 }
 
 inline int GetRnnParamSize(int num_layer,
@@ -473,7 +473,10 @@ class RNNOp {
 
     if (ctx_.dev_type == kCPU) {
       this->init_space_ = false;
+      this->temp_init_space_ = false;
       this->reserve_cpu_space_size_ = 0;
+      this->temp_cpu_space_size_ = 0;
+
       if (param_.projection_size.has_value()) {
         LOG(FATAL) <<
             "hidden layer projection is only supported for GPU with CuDNN later than 7.1.1";
@@ -509,7 +512,7 @@ class RNNOp {
         CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_vec_[i]));
       }
       init_cudnn_ = false;
-
+      Storage::Get()->Free(temp_space_);
       Storage::Get()->Free(reserve_space_);
     }
     #if USE_CUDNN_LSTM_PROJ
@@ -524,6 +527,10 @@ class RNNOp {
       if (init_space_) {
         Storage::Get()->Free(reserve_cpu_space_);
         init_space_ = false;
+      }
+      if (temp_init_space_) {
+        Storage::Get()->Free(temp_cpu_space_);
+        temp_init_space_ = false;
       }
     }
   }
@@ -579,11 +586,6 @@ class RNNOp {
     if (!init_cudnn_) {
       Init(ctx, s, in_data, out_data);
     }
-    // Get temp space
-    int temp_size = workspace_size_;
-    Tensor<xpu, 1, DType> temp_space =
-      ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
-                              mshadow::Shape1(temp_size), s);
 
     #if USE_CUDNN_LSTM_PROJ
     std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
@@ -663,7 +665,7 @@ class RNNOp {
                                            nullptr,
                                            nullptr,
                                            nullptr,
-                                           temp_space.dptr_,
+                                           temp_space_.dptr,
                                            workspace_byte_,
                                            reserve_space_.dptr,
                                            reserve_space_byte_));
@@ -685,7 +687,7 @@ class RNNOp {
                                          hy_ptr,
                                          cy_desc_,
                                          cy_ptr,
-                                         temp_space.dptr_,
+                                         temp_space_.dptr,
                                          workspace_byte_,
                                          reserve_space_.dptr,
                                          reserve_space_byte_));
@@ -716,7 +718,7 @@ class RNNOp {
                                             nullptr,
                                             nullptr,
                                             nullptr,
-                                            temp_space.dptr_,
+                                            temp_space_.dptr,
                                             workspace_byte_));
       #else
       CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
@@ -736,7 +738,7 @@ class RNNOp {
                                           hy_ptr,
                                           cy_desc_,
                                           cy_ptr,
-                                          temp_space.dptr_,
+                                          temp_space_.dptr,
                                           workspace_byte_));
       #endif
     }
@@ -747,9 +749,17 @@ class RNNOp {
       const size_t work_cpu_space_size =
           GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                               param_.state_size, direction, param_.mode);
-      Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-        .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
-      DType* work_cpu_space = workspace.dptr_;
+      if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
+          Storage::Get()->Free(temp_cpu_space_);
+          temp_init_space_ = false;
+      }
+      if (!temp_init_space_) {
+        temp_cpu_space_ = Storage::Get()->Alloc
+            (work_cpu_space_size * sizeof(DType), Context::CPU());
+        temp_cpu_space_size_ = work_cpu_space_size;
+        temp_init_space_ = true;
+      }
+      DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
       if (ctx.is_train) {
         const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                      param_.seq_length_, param_.batch_size_,
@@ -888,11 +898,6 @@ class RNNOp {
       Init(ctx, s, in_data, out_data);
     }
 
-    // Get temp space
-    int temp_size = workspace_size_;
-    Tensor<xpu, 1, DType> temp_space =
-      ctx.requested[rnn_enum::kTempSpace].get_space_typed<xpu, 1, DType>(
-                              mshadow::Shape1(temp_size), s);
     #if USE_CUDNN_LSTM_PROJ
     CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
                                       rnn_desc_,
@@ -920,7 +925,7 @@ class RNNOp {
                                       dcx_ptr,
                                       nullptr,
                                       nullptr,
-                                      temp_space.dptr_,
+                                      temp_space_.dptr,
                                       workspace_byte_,
                                       reserve_space_.dptr,
                                       reserve_space_byte_));
@@ -932,7 +937,7 @@ class RNNOp {
                                          hx.dptr_,
                                          y_data_desc_,
                                          y.dptr_,
-                                         temp_space.dptr_,
+                                         temp_space_.dptr,
                                          workspace_byte_,
                                          dw_desc_,
                                          dw.dptr_,
@@ -962,7 +967,7 @@ class RNNOp {
                                     dhx.dptr_,
                                     dcx_desc_,
                                     dcx_ptr,
-                                    temp_space.dptr_,
+                                    temp_space_.dptr,
                                     workspace_byte_,
                                     reserve_space_.dptr,
                                     reserve_space_byte_));
@@ -975,7 +980,7 @@ class RNNOp {
                                        hx.dptr_,
                                        y_desc_vec_.data(),
                                        y.dptr_,
-                                       temp_space.dptr_,
+                                       temp_space_.dptr,
                                        workspace_byte_,
                                        dw_desc_,
                                        dw.dptr_,
@@ -989,10 +994,10 @@ class RNNOp {
       const size_t work_cpu_space_size =
           GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                               param_.state_size, direction, param_.mode);
-      DType* work_cpu_space = NULL;
-      Tensor<xpu, 1, DType> workspace = ctx.requested[rnn_enum::kTempSpace]
-          .get_space_typed<xpu, 1, DType>(Shape1(work_cpu_space_size), s);
-      work_cpu_space = workspace.dptr_;
+      if (!temp_init_space_ || temp_cpu_space_size_ != work_cpu_space_size) {
+        LOG(FATAL) << "Check temp init error";
+      }
+      DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
       size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                              param_.seq_length_, param_.batch_size_,
                                              param_.state_size, param_.mode);
@@ -1280,6 +1285,8 @@ class RNNOp {
       workspace_size_ = workspace_byte_ / sizeof(DType);
       // Allocate the reserve space
       reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU(s->dev_id));
+      // Allocate the temp space
+      temp_space_ = Storage::Get()->Alloc(workspace_byte_, Context::GPU(s->dev_id));
       // Check that number of params are correct
       size_t cudnn_param_size;
       CUDNN_CALL(cudnnGetRNNParamsSize(s->dnn_handle_,
@@ -1348,7 +1355,7 @@ class RNNOp {
   cudnnDirectionMode_t direction_;
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  Storage::Handle reserve_space_;
+  Storage::Handle reserve_space_, temp_space_;
   uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_;
@@ -1369,9 +1376,9 @@ class RNNOp {
   cudnnTensorFormat_t format_;
   #endif
   #endif
-  bool init_space_;
-  size_t reserve_cpu_space_size_;
-  Storage::Handle reserve_cpu_space_;
+  bool init_space_, temp_init_space_;
+  size_t reserve_cpu_space_size_, temp_cpu_space_size_;
+  Storage::Handle reserve_cpu_space_, temp_cpu_space_;
 };  //  class RNNOp
 
 static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,

@@ -246,7 +246,6 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr<FResourceRequestEx>("FResourceRequestEx",
   [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
     std::vector<ResourceRequest> request;
-    request.emplace_back(ResourceRequest::kTempSpace);
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
     if (param.p == 0) return request;
     if (dev_mask == kGPU) {
@@ -275,9 +274,6 @@ NNVM_REGISTER_OP(_backward_RNN)
 .set_attr_parser(ParamParser<RNNParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulGradCompute<cpu>);
 }  // namespace op
 }  // namespace mxnet
