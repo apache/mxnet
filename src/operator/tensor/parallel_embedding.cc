@@ -19,14 +19,14 @@
 
 /*!
  * Copyright (c) 2017 by Contributors
- * \file mkldnn_parallel_embedding.cc
+ * \file parallel_embedding.cc
  * \brief CPU implementation of parallel embedding
  * \author Lingyan Guo
 */
 
 #include <string>
 #include <vector>
-#include "mkldnn_parallel_embedding.h"
+#include "parallel_embedding.h"
 namespace mxnet {
 namespace op {
 

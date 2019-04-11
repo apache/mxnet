@@ -16,9 +16,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#ifndef MXNET_OPERATOR_TENSOR_MKLDNN_MKLDNN_PARALLEL_EMBEDDING_H_
-#define MXNET_OPERATOR_TENSOR_MKLDNN_MKLDNN_PARALLEL_EMBEDDING_H_
-#include "../indexing_op.h"
+#ifndef MXNET_OPERATOR_TENSOR_PARALLEL_EMBEDDING_H_
+#define MXNET_OPERATOR_TENSOR_PARALLEL_EMBEDDING_H_
+#include "indexing_op.h"
 namespace mxnet {
 namespace op {
 
@@ -46,4 +46,4 @@ struct ParallelEmbeddingParam : public dmlc::Parameter<ParallelEmbeddingParam> {
 
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_TENSOR_MKLDNN_MKLDNN_PARALLEL_EMBEDDING_H_
+#endif  // MXNET_OPERATOR_TENSOR_PARALLEL_EMBEDDING_H_

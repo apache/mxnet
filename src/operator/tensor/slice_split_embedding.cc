@@ -17,10 +17,10 @@
  * under the License.
  */
 
-#include "../../slice_channel-inl.h"
-#include "../indexing_op.h"
-#include "../matrix_op-inl.h"
-#include "mkldnn_slice_split_embedding.h"
+#include "../slice_channel-inl.h"
+#include "indexing_op.h"
+#include "matrix_op-inl.h"
+#include "slice_split_embedding.h"
 
 namespace mxnet {
 namespace op {

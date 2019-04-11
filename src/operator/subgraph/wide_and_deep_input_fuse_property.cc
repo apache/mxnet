@@ -16,17 +16,16 @@
 * specific language governing permissions and limitations
 * under the License.
 */
-#if MXNET_USE_MKLDNN == 1
 #include <sstream>
-#include "../common.h"
-#include "../subgraph_property.h"
-#include "../../nn/fully_connected-inl.h"
-#include "../../nn/activation-inl.h"
-#include "../../nn/concat-inl.h"
-#include "../../tensor/mkldnn/mkldnn_slice_split_embedding.h"
-#include "../../tensor/indexing_op.h"
-#include "../../tensor/matrix_op-inl.h"
-#include "../../slice_channel-inl.h"
+#include "common.h"
+#include "subgraph_property.h"
+#include "../nn/fully_connected-inl.h"
+#include "../nn/activation-inl.h"
+#include "../nn/concat-inl.h"
+#include "../tensor/slice_split_embedding.h"
+#include "../tensor/indexing_op.h"
+#include "../tensor/matrix_op-inl.h"
+#include "../slice_channel-inl.h"
 namespace mxnet {
 namespace op {
 #define EMBEDDING_NODE_NAME "Embedding"
@@ -222,4 +221,3 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(WIDE_AND_DEEP_INPUT_FUSE,
                                  SgWideAndDeepInputFuseProperty);
 }  // namespace op
 }  // namespace mxnet
-#endif  // if MXNET_USE_MKLDNN == 1
