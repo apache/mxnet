@@ -16,6 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+/*!
+ * \file mkldnn_quantized_sum-inl.h
+ * \brief
+ * \author Rong Zhang
+ */
 
 #ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_SUM_INL_H_
 #define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_SUM_INL_H_

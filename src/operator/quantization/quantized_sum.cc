@@ -31,7 +31,7 @@ namespace mxnet {
 namespace op {
 
 static bool SumShape(const nnvm::NodeAttrs& attrs,  mxnet::ShapeVector* in_shape,
-                         mxnet::ShapeVector* out_shape) {
+                     mxnet::ShapeVector* out_shape) {
   // A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_shape->size(), 6U);
   // C, C_min, C_max
@@ -51,7 +51,7 @@ static bool SumShape(const nnvm::NodeAttrs& attrs,  mxnet::ShapeVector* in_shape
 }
 
 static bool SumType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
-                       std::vector<int>* out_type) {
+                    std::vector<int>* out_type) {
   // A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_type->size(), 6U);
   // C, C_min, C_max
@@ -84,10 +84,10 @@ static bool SumType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
 }
 
 void QuantizedSumForward(const nnvm::NodeAttrs& attrs,
-                                       const OpContext &ctx,
-                                       const std::vector<TBlob> &in_data,
-                                       const std::vector<OpReqType> &req,
-                                       const std::vector<TBlob> &out_data) {
+                         const OpContext &ctx,
+                         const std::vector<TBlob> &in_data,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<TBlob> &out_data) {
   LOG(FATAL) << "Not supported for MXNet built without MKLDNN. "
                 "Please install MKLDNN enabled MXNet.";
 }
