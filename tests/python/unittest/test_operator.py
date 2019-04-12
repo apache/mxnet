@@ -698,11 +698,11 @@ def test_symbol_pow():
 def test_pow_fn():
     shape = (3, 4)
     exp = mx.symbol.Variable("exp")
-    y = mx.sym.pow(2, exp)
     x = np.ones(shape)*3
-    check_numeric_gradient(y, [x], numeric_eps=1E-3)
-    check_symbolic_forward(y, [x], [2**x])
-    check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
+    for y in [mx.sym.pow(2, exp), mx.sym.power(2, exp)]:
+        check_numeric_gradient(y, [x], numeric_eps=1E-3)
+        check_symbolic_forward(y, [x], [2**x])
+        check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
 
 @with_seed()
@@ -6675,7 +6675,12 @@ def test_binary_math_operators():
                 lambda x, y: np.power(x, y),
                 lambda x, y: np.power(x, y - 1.) * y,
                 lambda x, y: np.power(x, y) * np.log(x),
-                0.2, 5.0, -4.0, 4.0]
+                0.2, 5.0, -4.0, 4.0],
+        'power': [lambda x, y: mx.sym.power(x, y),
+                  lambda x, y: np.power(x, y),
+                  lambda x, y: np.power(x, y - 1.) * y,
+                  lambda x, y: np.power(x, y) * np.log(x),
+                  0.2, 5.0, -4.0, 4.0]
     }
     # Loop over operators
     for name, op in binary_ops.items():
