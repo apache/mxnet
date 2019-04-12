@@ -108,20 +108,20 @@ CachedOp::CachedOp(
   // construct forward graph
   {
     NodeEntryMap<int> dedup_out;
-    for (const auto& i : sym.outputs) {
-      if (dedup_out.count(i)) {
+    for (const NodeEntry& nodeEntry : sym.outputs) {
+      if (dedup_out.count(nodeEntry)) {
         NodePtr copy_node = Node::Create();
         copy_node->attrs.op = _copy;
         copy_node->attrs.name =
-            i.node->attrs.name + "_copy" + std::to_string(dedup_out[i]++);
-        copy_node->inputs.emplace_back(i);
+            nodeEntry.node->attrs.name + "_copy" + std::to_string(dedup_out[nodeEntry]++);
+        copy_node->inputs.emplace_back(nodeEntry);
         if (_copy->attr_parser != nullptr) {
           _copy->attr_parser(&(copy_node->attrs));
         }
         fwd_graph_.outputs.emplace_back(copy_node, 0, 0);
       } else {
-        dedup_out.insert({i, 0});
-        fwd_graph_.outputs.push_back(i);
+        dedup_out.emplace(nodeEntry);
+        fwd_graph_.outputs.push_back(nodeEntry);
       }
     }
     const auto& idx = fwd_graph_.indexed_graph();
@@ -143,14 +143,15 @@ CachedOp::CachedOp(
 
   // Set params
   {
-    const auto& idx = fwd_graph_.indexed_graph();
+    const auto& indexed_graph = fwd_graph_.indexed_graph();
     if (config_.data_indices.ndim() || config_.param_indices.ndim()) {
       CHECK_EQ(config_.data_indices.ndim() + config_.param_indices.ndim(),
-               idx.input_nodes().size());
+               indexed_graph.input_nodes().size());
     } else {
       std::vector<uint32_t> tmp;
-      for (size_t i = 0; i < idx.input_nodes().size(); ++i) {
-        tmp.push_back(i);
+      tmp.reserve(indexed_graph.input_nodes().size());
+      for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
+        tmp.emplace_back(i);
       }
       config_.data_indices.assign(tmp.begin(), tmp.end());
     }
@@ -158,21 +159,18 @@ CachedOp::CachedOp(
 
   // construct backward graph
   {
-    ograd_entries_.reserve(fwd_graph_.outputs.size());
-    for (size_t i = 0; i < fwd_graph_.outputs.size(); ++i) {
-      ograd_entries_.emplace_back();
-    }
-
+    ograd_entries_.resize(fwd_graph_.outputs.size());
     std::vector<NodeEntry> xs;
-    const auto& idx = fwd_graph_.indexed_graph();
-    for (size_t i = 0; i < idx.input_nodes().size(); ++i) {
-      auto nid = idx.input_nodes()[i];
-      if (idx.mutable_input_nodes().count(nid)) continue;
-      fwd_input_to_grad_output_[i] = xs.size();
-      xs.emplace_back(idx[nid].weak_ref.lock(), 0, 0);
+    const IndexedGraph& indexed_graph = fwd_graph_.indexed_graph();
+    for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
+      const uint32_t node_id = indexed_graph.input_nodes()[i];
+      if (indexed_graph.mutable_input_nodes().count(node_id))
+        continue;
+      fwd_input_to_grad_output_.at(i) = xs.size();
+      xs.emplace_back(std::move(indexed_graph[node_id].weak_ref.lock()));
     }
 
-    CHECK_GT(xs.size(), 0)
+    CHECK(!xs.empty())
         << "There are no inputs in computation graph that require gradients.";
 
     grad_graph_ = pass::MXGradient(
