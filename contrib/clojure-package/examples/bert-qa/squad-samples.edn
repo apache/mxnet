@@ -1,0 +1,17 @@
+[{:input-answer "Computational complexity theory is a branch of the theory of computation in theoretical computer science that focuses on classifying computational problems according to their inherent difficulty, and relating those classes to each other. A computational problem is understood to be a task that is in principle amenable to being solved by a computer, which is equivalent to stating that the problem may be solved by mechanical application of mathematical steps, such as an algorithm."
+  :input-question "By what main attribute are computational problems classified utilizing computational complexity theory?"
+  :ground-truth-answers ["Computational complexity theory"
+                         "Computational  complexity theory"
+                         "complexity theory"]}
+ {:input-answer "Steam engines are external combustion engines, where the working fluid is separate from the combustion products. Non-combustion heat sources such as solar power, nuclear power or geothermal energy may be used. The ideal thermodynamic cycle used to analyze this process is called the Rankine cycle. In the cycle, water is heated and transforms into steam within a boiler operating at a high pressure. When expanded through pistons or turbines, mechanical work is done. The reduced-pressure steam is then condensed and pumped back into the boiler."
+  :input-question "Along with geothermal and nuclear, what is a notable non-combustion heat source?"
+  :ground-truth-answers ["solar"
+                         "solar power"
+                         "solar power, nuclear power or geothermal energysolar"]}
+ {:input-answer "In the 1960s, a series of discoveries, the most important of which was seafloor spreading, showed that the Earth's lithosphere, which includes the crust and rigid uppermost portion of the upper mantle, is separated into a number of tectonic plates that move across the plastically deforming, solid, upper mantle, which is called the asthenosphere. There is an intimate coupling between the movement of the plates on the surface and the convection of the mantle: oceanic plate motions and mantle convection currents always move in the same direction, because the oceanic lithosphere is the rigid upper thermal boundary layer of the convecting mantle. This coupling between rigid plates moving on the surface of the Earth and the convecting mantle is called plate tectonics."
+  :input-question "What was the most important discovery that led to the understanding that Earth's lithosphere is separated into tectonic plates?"
+  :ground-truth-answers ["seafloor spreading"]}
+ ;;; totally made up
+ {:input-answer "Susan had a cat named Sammy when she lived in the green house."
+  :input-question "What was Susan's cat named?"
+  :ground-truth-answers ["Sammy" "sammy"]}]
