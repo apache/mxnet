@@ -97,7 +97,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_() {
+        entry_(nullptr) {
   }
   /*! \brief constructor for NDArray with storage type
    */
@@ -116,7 +116,7 @@ class NDArray {
         shape_(),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_() {
+        entry_(nullptr) {
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
@@ -130,7 +130,7 @@ class NDArray {
         shape_(data.shape_),
         dtype_(data.type_flag_),
         storage_type_(kDefaultStorage),
-        entry_() {
+        entry_(nullptr) {
   }
 
   /*!
@@ -148,7 +148,7 @@ class NDArray {
         }),
         shape_(data.shape_),
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
-        entry_() {
+        entry_(nullptr) {
   }
 
   /*! \brief create ndarray from shared memory */
@@ -157,7 +157,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_() {
+        entry_(nullptr) {
   }
 
   /*!
@@ -176,7 +176,7 @@ class NDArray {
         shape_(shape),
         dtype_(data.type_flag_),
         storage_type_(stype),
-        entry_() {
+        entry_(nullptr) {
   }
   /*!
    * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
