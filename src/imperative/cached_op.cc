@@ -98,7 +98,7 @@ CachedOp::CachedOp(
   using namespace nnvm;
   using namespace imperative;
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
-  static const auto _copy = Op::Get("_copy");
+  static const auto _copy_op = Op::Get("_copy");
   config_.Init(flags);
 
   if (config_.static_shape) {
@@ -107,18 +107,18 @@ CachedOp::CachedOp(
 
   // construct forward graph
   {
-    NodeEntryMap<int> dedup_out;
+    NodeEntryMap<size_t> dedup_out;
     for (const NodeEntry& nodeEntry : sym.outputs) {
-      if (dedup_out.count(nodeEntry)) {
+      if (dedup_out.find(nodeEntry) != dedup_out.end()) {
         NodePtr copy_node = Node::Create();
-        copy_node->attrs.op = _copy;
+        copy_node->attrs.op = _copy_op;
         copy_node->attrs.name =
             nodeEntry.node->attrs.name + "_copy" + std::to_string(dedup_out[nodeEntry]++);
         copy_node->inputs.emplace_back(nodeEntry);
-        if (_copy->attr_parser != nullptr) {
-          _copy->attr_parser(&(copy_node->attrs));
+        if (_copy_op->attr_parser != nullptr) {
+          _copy_op->attr_parser(&(copy_node->attrs));
         }
-        fwd_graph_.outputs.emplace_back(copy_node, 0, 0);
+        fwd_graph_.outputs.emplace_back(std::move(copy_node));
       } else {
         dedup_out.emplace(nodeEntry, 0);
         fwd_graph_.outputs.push_back(nodeEntry);
@@ -197,7 +197,7 @@ CachedOp::CachedOp(
     }
 
     auto full_ref_count = fwd_graph_.GetAttr<std::vector<uint32_t> >("forward_ref_count");
-    for (size_t i = 0; i < num_forward_entries; ++i) full_ref_count[i] += ref_count[i];
+    for (size_t i = 0; i < num_forward_entries; ++i) full_ref_count.at(i) += ref_count[i];
     fwd_graph_.attrs["full_ref_count"] =
         std::make_shared<dmlc::any>(std::move(full_ref_count));
 
