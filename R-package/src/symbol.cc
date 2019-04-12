@@ -207,7 +207,7 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
   const int **aux_shape_data;
   int complete;
 
-  MX_CALL(MXSymbolInferShape(
+  MX_CALL(MXSymbolInferShapeEx(
       handle_, static_cast<mx_uint>(kwargs.size()), dmlc::BeginPtr(c_keys),
       dmlc::BeginPtr(arg_ind_ptr), dmlc::BeginPtr(arg_shape_data),
       &in_shape_size, &in_shape_ndim, &in_shape_data,
