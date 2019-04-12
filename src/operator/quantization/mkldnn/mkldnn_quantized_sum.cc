@@ -66,7 +66,8 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
   const float A_scale = GetScale(in_data[quantized_sum_enum::kDataA], dataA_min, dataA_max);
   const float B_scale = GetScale(in_data[quantized_sum_enum::kDataB], dataB_min, dataB_max);
   // rescaled_mem is for reorder mkldnn memory
-  std::shared_ptr<mkldnn::memory> rescaled_mem;
+  mkldnn::memory *rescaled_mem;
+
   // output default set as int32
   size_t output_data_range = kInt32Range;
   auto output_data_type = mkldnn::memory::s32;
@@ -98,7 +99,7 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
     auto s8_pd = (is_dataA_int8 == true)
                  ? dataA_mem->get_primitive_desc()
                  : dataB_mem->get_primitive_desc();
-    rescaled_mem = std::make_shared<mkldnn::memory>(s8_pd);
+    rescaled_mem = TmpMemMgr::Get()->Alloc(s8_pd);
     float u8_reorder_scale = 0;
     if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
       if (is_dataA_int8 == true) {
@@ -137,9 +138,9 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
     MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(reorder_pd, *u8_mem, *rescaled_mem));
 
     if (is_dataA_int8 == true) {
-      dataB_mem = rescaled_mem.get();
+      dataB_mem = rescaled_mem;
     } else {
-      dataA_mem = rescaled_mem.get();
+      dataA_mem = rescaled_mem;
     }
   } else {
     // same data type and has same data range
