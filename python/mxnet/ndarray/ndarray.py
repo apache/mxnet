@@ -158,12 +158,9 @@ def waitall():
 
     This function is used for benchmarking only.
 
-    .. warning::
+    .. note::
 
-       If your code has exceptions, `waitall` can cause silent failures.
-       For this reason you should avoid `waitall` in your code.
-       Use it only if you are confident that your code is error free.
-       Then make sure you call `wait_to_read` on all outputs after `waitall`.
+       If your mxnet code throws an exception, then waitall can cause performance impact.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 

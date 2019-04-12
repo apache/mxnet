@@ -404,14 +404,15 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayAt
   return ret;
 }
 
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayReshape
-  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jint ndim, jintArray dims, jobject reshapedHandle) {
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayReshape64
+  (JNIEnv *env, jobject obj, jlong ndArrayPtr, jint ndim,
+   jlongArray dims, jboolean reverse, jobject reshapedHandle) {
   NDArrayHandle out;
-  jint *pdims = env->GetIntArrayElements(dims, NULL);
-  int ret = MXNDArrayReshape(reinterpret_cast<NDArrayHandle>(ndArrayPtr), ndim,
-                                    reinterpret_cast<int *>(pdims), &out);
+  jlong *pdims = env->GetLongArrayElements(dims, NULL);
+  int ret = MXNDArrayReshape64(reinterpret_cast<NDArrayHandle>(ndArrayPtr), ndim,
+                                    reinterpret_cast<dim_t *>(pdims), reverse, &out);
   SetLongField(env, reshapedHandle, reinterpret_cast<jlong>(out));
-  env->ReleaseIntArrayElements(dims, pdims, 0);
+  env->ReleaseLongArrayElements(dims, pdims, 0);
   return ret;
 }
 

@@ -101,6 +101,39 @@ class ResourceScopeSuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(a.isDisposed == true, "returned object should be disposed in the outer scope")
   }
 
+  /**
+    * Tests passing a scope to using and creating new resources within.
+    */
+  test("test moving scope of native resource to scope of another") {
+    var a: TestNativeResource = null
+    var b: TestNativeResource = null
+    var c: TestNativeResource = null
+    var d: TestNativeResource = null
+
+    ResourceScope.using() {
+      a = new TestNativeResource()
+      ResourceScope.using() {
+        b = new TestNativeResource()
+        ResourceScope.usingIfScopeExists(a.scope) {
+          c = new TestNativeResource()
+          ResourceScope.using() {
+            d = new TestNativeResource()
+            assert(c.scope == a.scope)
+          }
+          assert(d.isDisposed == true)
+        }
+        assert(b.isDisposed == false)
+        assert(c.isDisposed == false)
+      }
+      assert(a.isDisposed == false)
+      assert(b.isDisposed == true)
+      assert(c.isDisposed == false)
+    }
+    assert(a.isDisposed == true)
+    assert(b.isDisposed == true)
+    assert(c.isDisposed == true)
+  }
+
   test(testName = "test NativeResources in returned Lists are not disposed") {
     var ndListRet: IndexedSeq[TestNativeResource] = null
     ResourceScope.using() {
