@@ -214,20 +214,44 @@ TEST(Engine, PushFunc) {
   // Test #1
   LOG(INFO) << "===== Test #1: PushAsync param and deleter =====";
   int* a = new int(100);
-  MXEnginePushAsync(FooAsyncFunc, a, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+  int res = MXEnginePushAsync(FooAsyncFunc, a, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+  EXPECT_EQ(res, 0);
 
   // Test #2
   LOG(INFO) << "===== Test #2: PushAsync NULL param and NULL deleter =====";
-  MXEnginePushAsync(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, 1);
+  res = MXEnginePushAsync(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, 0);
+  EXPECT_EQ(res, 0);
 
   // Test #3
-  LOG(INFO) << "===== Test #3: PushSync param and deleter =====";
-  int* b = new int(101);
-  MXEnginePushSync(FooSyncFunc, b, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+  LOG(INFO) << "===== Test #3: PushAsync invalid number of const vars =====";
+  res = MXEnginePushAsync(FooAsyncFunc, nullptr, nullptr, &ctx, &var, -1, nullptr, 0);
+  EXPECT_EQ(res, -1);
 
   // Test #4
-  LOG(INFO) << "===== Test #4: PushSync NULL param and NULL deleter =====";
-  MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, 1);
+  LOG(INFO) << "===== Test #4: PushAsync invalid number of mutable vars =====";
+  res = MXEnginePushAsync(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, -1);
+  EXPECT_EQ(res, -1);
+
+  // Test #5
+  LOG(INFO) << "===== Test #5: PushSync param and deleter =====";
+  int* b = new int(101);
+  res = MXEnginePushSync(FooSyncFunc, b, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #6
+  LOG(INFO) << "===== Test #6: PushSync NULL param and NULL deleter =====";
+  res = MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, 1);
+  EXPECT_EQ(res, 0);
+
+  // Test #7
+  LOG(INFO) << "===== Test #7: PushSync invalid number of const vars =====";
+  res = MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, &var, -1, nullptr, 0);
+  EXPECT_EQ(res, -1);
+
+  // Test #8
+  LOG(INFO) << "===== Test #8: PushSync invalid number of mutable vars =====";
+  res = MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, -1);
+  EXPECT_EQ(res, -1);
 }
 
 TEST(Engine, basics) {

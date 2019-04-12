@@ -1405,10 +1405,15 @@ int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *s
 typedef Engine::VarHandle VarHandle;
 typedef Engine::CallbackOnComplete CallbackOnComplete;
 
+void AssertValidNumberVars(int num_const_vars, int num_mutable_vars) {
+  CHECK_GE(num_const_vars, 0) << "Non-negative number of const vars expected.";
+  CHECK_GE(num_mutable_vars, 0) << "Non-negative number of mutable vars expected.";
+}
+
 int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
                       EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                      EngineVarHandle const_vars_handle, size_t num_const_vars,
-                      EngineVarHandle mutable_vars_handle, size_t num_mutable_vars,
+                      EngineVarHandle const_vars_handle, int num_const_vars,
+                      EngineVarHandle mutable_vars_handle, int num_mutable_vars,
                       EngineFnPropertyHandle prop_handle, int priority,
                       const char* opr_name, bool wait) {
   API_BEGIN();
@@ -1437,6 +1442,7 @@ int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
     };
   }
 
+  AssertValidNumberVars(num_const_vars, num_mutable_vars);
   std::vector<VarHandle> const_var_vec(const_vars, const_vars + num_const_vars);
   std::vector<VarHandle> mutable_var_vec(mutable_vars, mutable_vars + num_mutable_vars);
   Engine::Get()->PushAsync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
@@ -1447,8 +1453,8 @@ int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
 
 int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
                      EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                     EngineVarHandle const_vars_handle, size_t num_const_vars,
-                     EngineVarHandle mutable_vars_handle, size_t num_mutable_vars,
+                     EngineVarHandle const_vars_handle, int num_const_vars,
+                     EngineVarHandle mutable_vars_handle, int num_mutable_vars,
                      EngineFnPropertyHandle prop_handle, int priority,
                      const char* opr_name) {
   API_BEGIN();
@@ -1475,6 +1481,7 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
     };
   }
 
+  AssertValidNumberVars(num_const_vars, num_mutable_vars);
   std::vector<VarHandle> const_var_vec(const_vars, const_vars + num_const_vars);
   std::vector<VarHandle> mutable_var_vec(mutable_vars, mutable_vars + num_mutable_vars);
   Engine::Get()->PushSync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,

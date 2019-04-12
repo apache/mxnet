@@ -2572,8 +2572,8 @@ MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const 
   */
 MXNET_DLL int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
                                 EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                                EngineVarHandle const_vars_handle, size_t num_const_vars,
-                                EngineVarHandle mutable_vars_handle, size_t num_mutable_vars,
+                                EngineVarHandle const_vars_handle, int num_const_vars,
+                                EngineVarHandle mutable_vars_handle, int num_mutable_vars,
                                 EngineFnPropertyHandle prop_handle = NULL, int priority = 0,
                                 const char* opr_name = NULL, bool wait = false);
 
@@ -2594,8 +2594,8 @@ MXNET_DLL int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
   */
 MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
                                EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
-                               EngineVarHandle const_vars_handle, size_t num_const_vars,
-                               EngineVarHandle mutable_vars_handle, size_t num_mutable_vars,
+                               EngineVarHandle const_vars_handle, int num_const_vars,
+                               EngineVarHandle mutable_vars_handle, int num_mutable_vars,
                                EngineFnPropertyHandle prop_handle = NULL, int priority = 0,
                                const char* opr_name = NULL);
 
