@@ -120,7 +120,7 @@ CachedOp::CachedOp(
         }
         fwd_graph_.outputs.emplace_back(copy_node, 0, 0);
       } else {
-        dedup_out.emplace(nodeEntry);
+        dedup_out.emplace(nodeEntry, 0);
         fwd_graph_.outputs.push_back(nodeEntry);
       }
     }
@@ -166,7 +166,7 @@ CachedOp::CachedOp(
       const uint32_t node_id = indexed_graph.input_nodes()[i];
       if (indexed_graph.mutable_input_nodes().count(node_id))
         continue;
-      fwd_input_to_grad_output_.at(i) = xs.size();
+      fwd_input_to_grad_output_[i] = xs.size();
       xs.emplace_back(std::move(indexed_graph[node_id].weak_ref.lock()));
     }
 

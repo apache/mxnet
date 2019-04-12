@@ -152,6 +152,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
 
   // remove zero in the sum. at least keep 1.
   auto begin = std::remove_if(v.begin(), v.end(), [](const nnvm::NodeEntry& nodeEntry) {
+     CHECK(nodeEntry.node);
      return nodeEntry.node->op() == zeros_op || nodeEntry.node->op() == zeros_like_op;
   });
   if (begin == v.begin()) ++begin;
