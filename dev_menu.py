@@ -99,15 +99,15 @@ def create_virtualenv(venv_exe, pyexe, venv) -> None:
         logging.warn("Skipping creation of virtualenv")
         return
     check_call([venv_exe, '-p', pyexe, venv])
-    activate_this_py = os.path.join(venv, 'bin', 'activate_this.py')
-    # Activate virtualenv in this interpreter
-    exec(open(activate_this_py).read(), dict(__file__=activate_this_py))
-    check_call(['pip', 'install', '--upgrade','--force-reinstall', '-e', 'python'])
-    check_call(['pip', 'install', '-r', 'tests/requirements.txt'])
+    # TODO: Activate virtualenv in this interpreter, this is not working as it is.
+    #activate_this_py = os.path.join(venv, 'bin', 'activate_this.py')
+    #exec(open(activate_this_py).read(), dict(__file__=activate_this_py))
+    #check_call(['pip', 'install', '--upgrade','--force-reinstall', '-e', 'python'])
+    #check_call(['pip', 'install', '-r', 'tests/requirements.txt'])
 
 def create_virtualenv_default():
     create_virtualenv('virtualenv', DEFAULT_PYTHON, DEFAULT_PYENV)
-    logging.info("You can use the virtualenv by executing 'source %s/bin/activate'", DEFAULT_PYENV)
+    logging.info("You can use the virtualenv by executing 'source %s/bin/activate && pip install -e python'", DEFAULT_PYENV)
 
 COMMANDS = OrderedDict([
     ('[Local] BUILD CMake/Ninja (using cmake_options.yaml (cp cmake/cmake_options.yml .) and edit) ({} virtualenv in "{}")'.format(DEFAULT_PYTHON, DEFAULT_PYENV),
