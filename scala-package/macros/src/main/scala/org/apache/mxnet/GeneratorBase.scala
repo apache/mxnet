@@ -27,8 +27,8 @@ private[mxnet] abstract class GeneratorBase {
 
   case class Arg(argName: String, argType: String, argDesc: String, isOptional: Boolean) {
     /**
-      * filter the arg name with the Scala keyword
-      * var and type
+      * filter the arg name with the Scala keyword that are not allow to use as arg name
+      * such as var and type listed in here. This is due to the diff between C and Scala
       * @return argname that works in Scala
       */
     def safeArgName: String = argName match {

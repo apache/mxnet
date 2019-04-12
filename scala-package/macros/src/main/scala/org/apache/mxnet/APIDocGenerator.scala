@@ -107,6 +107,10 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
 
   /**
     * Non Type-safe interface of Scala Symbol/NDArray
+    * It includes class definition : e.g class SymbolBase
+    * and function definitions : e.g def softmax(...)(...)(...) : NDArray
+    * Users can directly use the api by calling NDArray.<function_name>
+    * It support both positional input or Map input
     * @param FILE_PATH file path write the file to
     * @param isSymbol check if write the Symbol API, NDArray otherwise
     * @return MD5 String
