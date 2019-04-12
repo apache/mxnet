@@ -19,7 +19,6 @@
 # pylint: disable=wildcard-import
 """Gluon EventHandlers for Estimators"""
 
-__all__ = ['EventHandler', 'LoggingHandler']
 import logging
 import os
 import time
@@ -28,50 +27,89 @@ import warnings
 import numpy as np
 
 
-class EventHandler(object):
-    """Basic for event handlers
-
-        :py:class:`EventHandler` can perform user defined functions at
-        different stages of training: train begin, epoch begin, batch begin,
-        batch end, epoch end, train end.
-
-        Parameters
-        ----------
-        estimator : Estimator
-            The :py:class:`Estimator` to get training statistics
-        """
-
-    def __init__(self):
-        self._estimator = None
-
-    @property
-    def estimator(self):
-        return self._estimator
-
-    @estimator.setter
-    def estimator(self, estimator):
-        self._estimator = estimator
-
-    def train_begin(self):
+class TrainBegin(object):
+    def train_begin(self, *args, **kwargs):
         pass
 
-    def train_end(self):
+class TrainEnd(object):
+    def train_end(self, *args, **kwargs):
         pass
 
-    def batch_begin(self):
+class EpochBegin(object):
+    def epoch_begin(self, *args, **kwargs):
         pass
 
-    def batch_end(self):
+class EpochEnd(object):
+    def epoch_end(self, *args, **kwargs):
+        return False
+
+class BatchBegin(object):
+    def batch_begin(self, *args, **kwargs):
         pass
 
-    def epoch_begin(self):
-        pass
-
-    def epoch_end(self):
-        pass
+class BatchEnd(object):
+    def batch_end(self, *args, **kwargs):
+        return False
 
 
-class LoggingHandler(EventHandler):
+class MetricHandler(EpochBegin, BatchEnd):
+    def __init__(self, train_loss, train_metrics):
+        self.train_loss = train_loss
+        self.train_metrics = train_metrics
+        # order to be called among all callbacks
+        # metrics need to be calculated before other callbacks can access them
+        self.rank = 1
+
+    def epoch_begin(self, *args, **kwargs):
+        for metric in self.train_loss + self.train_metrics:
+            metric.reset()
+
+    def batch_end(self, *args, **kwargs):
+        pred = kwargs['pred']
+        label = kwargs['label']
+        loss = kwargs['loss']
+        for metric in self.train_metrics:
+            metric.update(label, pred)
+        for metric in self.train_loss:
+            metric.update(0, loss)
+
+class ValidationHandler(BatchEnd, EpochEnd):
+    def __init__(self,
+                 val_data,
+                 eval_fn,
+                 val_loss,
+                 val_metrics=None,
+                 epoch_period=1,
+                 batch_period=None):
+        self.val_data = val_data
+        self.eval_fn = eval_fn
+        self.epoch_period = epoch_period
+        self.batch_period = batch_period
+        self.val_loss = val_loss
+        self.val_metrics = val_metrics
+        self.num_batches = 0
+        self.num_epochs = 0
+        # order to be called among all callbacks
+        # validation metrics need to be calculated before other callbacks can access them
+        self.rank = 1
+
+    def batch_end(self, *args, **kwargs):
+        if self.batch_period and self.num_batches % self.batch_period == 0:
+            self.eval_fn(val_data=self.val_data,
+                         val_loss= self.val_loss,
+                         val_metrics=self.val_metrics)
+        self.num_batches += 1
+
+    def epoch_end(self, *args, **kwargs):
+        if self.num_epochs % self.epoch_period == 0:
+            self.eval_fn(val_data=self.val_data,
+                         val_loss= self.val_loss,
+                         val_metrics=self.val_metrics)
+
+        self.num_epochs += 1
+
+
+class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, BatchEnd):
     """Basic Logging Handler that applies to every Gluon estimator by default.
 
     :py:class:`LoggingHandler` logs hyper-parameters, training statistics,
@@ -94,7 +132,11 @@ class LoggingHandler(EventHandler):
     LOG_VERBOSITY_PER_EPOCH = 1
     LOG_VERBOSITY_PER_BATCH = 2
 
-    def __init__(self, file_name=None, file_location=None, verbose=LOG_VERBOSITY_PER_EPOCH):
+    def __init__(self, file_name=None,
+                 file_location=None,
+                 verbose=LOG_VERBOSITY_PER_EPOCH,
+                 train_metrics=None,
+                 val_metrics=None):
         super(LoggingHandler, self).__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
@@ -112,59 +154,67 @@ class LoggingHandler(EventHandler):
             file_location = file_location or './'
             file_handler = logging.FileHandler(os.path.join(file_location, file_name))
             self.logger.addHandler(file_handler)
+        self.train_metrics = train_metrics
+        self.val_metrics = val_metrics
+        self.batch_index = 0
+        self.current_epoch = 0
+        self.processed_samples = 0
 
-    def train_begin(self):
+
+    def train_begin(self, *args, **kwargs):
         self.train_start = time.time()
-        self.logger.info("Training begin: using optimizer %s "
-                         "with current learning rate %.4f ",
-                         self.estimator.trainer.optimizer.__class__.__name__,
-                         self.estimator.trainer.learning_rate)
-        self.logger.info("Train for %d epochs.", self.estimator.max_epoch)
+        if 'trainer' in kwargs:
+            optimizer = kwargs['trainer'].optimizer.__class__.__name__
+            lr = kwargs['trainer'].learning_rate
+            self.logger.info("Training begin: using optimizer %s "
+                             "with current learning rate %.4f ",
+                             optimizer, lr)
+        if 'epochs' in kwargs:
+            self.logger.info("Train for %d epochs.", kwargs['epochs'])
 
-    def train_end(self):
+    def train_end(self, *args, **kwargs):
         train_time = time.time() - self.train_start
-        epoch = self.estimator.current_epoch
-        msg = 'Train finished using total %ds at epoch %d. ' % (train_time, epoch)
+        msg = 'Train finished using total %ds with %d epochs.' % (train_time, self.current_epoch)
         # log every result in train stats including train/validation loss & metrics
-        for key in self.estimator.train_stats:
-            msg += '%s : %.4f ' % (key, self.estimator.train_stats[key])
+        for metric in self.train_metrics + self.val_metrics:
+            name, value = metric.get()
+            msg += '%s : %.4f ' % (name, value)
         self.logger.info(msg)
 
-    def batch_begin(self):
+    def batch_begin(self, *args, **kwargs):
         if self.verbose == self.LOG_VERBOSITY_PER_BATCH:
             self.batch_start = time.time()
 
-    def batch_end(self):
+    def batch_end(self, *args, **kwargs):
         if self.verbose == self.LOG_VERBOSITY_PER_BATCH:
             batch_time = time.time() - self.batch_start
-            epoch = self.estimator.current_epoch
-            batch = self.estimator.batch_idx
-            msg = '[Epoch %d] [Batch %d] ' % (epoch, batch)
-            if self.estimator.processed_samples:
-                msg += '[Samples %s] ' % (self.estimator.processed_samples)
+            msg = '[Epoch %d] [Batch %d] ' % (self.current_epoch, self.batch_index)
+            self.processed_samples += kwargs['batch_size']
+            msg += '[Samples %s] ' % (self.processed_samples)
             msg += 'time/batch: %.3fs ' % batch_time
-            for key in self.estimator.train_stats:
+            for metric in self.train_metrics:
                 # only log current training loss & metric after each batch
-                if key.startswith('train_'):
-                    msg += key + ': ' + '%.4f ' % self.estimator.train_stats[key]
+                name, value = metric.get()
+                msg += '%s : %.4f ' % (name, value)
             self.logger.info(msg)
+            self.batch_index += 1
 
-    def epoch_begin(self):
+    def epoch_begin(self, *args, **kwargs):
         if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
             self.epoch_start = time.time()
 
-    def epoch_end(self):
+    def epoch_end(self, *args, **kwargs):
         if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
             epoch_time = time.time() - self.epoch_start
-            epoch = self.estimator.current_epoch
-            msg = '\n[Epoch %d] finished in %.3fs: ' % (epoch, epoch_time)
-            # log every result in train stats including train/validation loss & metrics
-            for key in self.estimator.train_stats:
-                msg += '%s : %.4f ' % (key, self.estimator.train_stats[key])
+            msg = '\n[Epoch %d] finished in %.3fs: ' % (self.current_epoch, epoch_time)
+            for monitor in self.train_metrics + self.val_metrics:
+                name, value = monitor.get()
+                msg += '%s : %.4f ' % (name, value)
             self.logger.info(msg)
+            self.current_epoch += 1
 
 
-class CheckpointHandler(EventHandler):
+class CheckpointHandler(object):
     """Save the model after every epoch.
 
     :py:class:`CheckpointHandler` save the network parameters every epoch
@@ -260,7 +310,7 @@ class CheckpointHandler(EventHandler):
                 self.estimator.net.save_parameters(self.filepath)
 
 
-class EarlyStoppingHandler(EventHandler):
+class EarlyStoppingHandler(object):
     """Early stop training if monitored value is not improving
 
     Parameters
