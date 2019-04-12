@@ -52,6 +52,7 @@ const string PREFIX_WEIGHT = "weight";
 const string PREFIX_BIAS = "bias";
 const string PREFIX_FORWARD = "fwd";
 const string PREFIX_ARG = "arg";
+const string PATTERN_PAD = "pad";
 // symbol json related
 const char* PREFIX_SYM_JSON_NODES = "nodes";
 const char* PREFIX_SYM_JSON_NODE_ROW_PTR = "node_row_ptr";
@@ -301,6 +302,26 @@ bool contains(const string& haystack, const string& needle) {
   return haystack.find(needle) != string::npos;
 }
 
+void adjustIdsForRemovalOf(Value::ValueIterator& itr, uint currentId,
+                           std::map<uint, uint>& inputChanges, std::map<uint, uint>& newIds) {
+  CHECK((*itr)["inputs"].Size() == 1);
+  uint input = (*itr)["inputs"][0][0].GetUint();
+  while (inputChanges.count(input) > 0) {
+    input = inputChanges[input];
+  }
+  inputChanges[currentId] = input;
+  cout << "inputChanges[" << currentId << "]=" << input << endl;
+  for (map<uint, uint>::iterator it = newIds.begin(); it != newIds.end(); it++) {
+    if (it->first > currentId) {
+      it->second -= 1;
+    }
+  }
+//  for (uint i = currentId + 1; i <= nodes.Size(); i++) {
+//    newIds[i] -= 1;
+//  }
+  newIds.erase(currentId);
+}
+
 /**
  * @brief
     description:
@@ -365,6 +386,7 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
     newIds[i] = i;
   }
   std::map<uint, uint> inputChanges;
+  std::map<uint, bool> padding;
 
   uint currentId = 0;
   for (Value::ValueIterator itr = nodes.Begin(); itr != nodes.End(); ++itr, ++currentId) {
@@ -374,39 +396,32 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
     string nodeName = string((*itr)["name"].GetString());
     // 1. remove qactivation ops, containing _grad_cancel and det_sign
     if (contains(nodeName, PREFIX_Q_ACTIV)) {
-      CHECK((*itr)["inputs"].Size() == 1);
-      uint input = (*itr)["inputs"][0][0].GetUint();
-      while (inputChanges.count(input) > 0) {
-        input = inputChanges[input];
-      }
-      inputChanges[currentId] = input;
-      cout << "inputChanges[" << currentId << "]=" << input << endl;
-      for (uint i = currentId + 1; i <= nodes.Size(); i++) {
-        newIds[i] -= 1;
-      }
-      newIds.erase(currentId);
+      adjustIdsForRemovalOf(itr, currentId, inputChanges, newIds);
       continue;
     }
 
     // adapt qconv and qdense ops
-    
-    bool foundq = false;
-    bool retain = false;
+    bool retainCurrentNode = true;
+    bool paddingNode = false;
     // if qconv or qdense found
     if (contains(nodeName, PREFIX_Q_CONV)
-        || contains(nodeName, PREFIX_Q_DENSE)){
-      
-      foundq = true;       
-      //2.for qconv and qdense, we only retain  'weight', 'bias' and 'fwd'                                    
+        || contains(nodeName, PREFIX_Q_DENSE)) {
+      if (contains(nodeName, PATTERN_PAD)) {
+        paddingNode = true;
+      }
+
+      // 2. for qconv and qdense, we only retain  'weight', 'bias' and 'fwd'
+      retainCurrentNode = false;
       if (contains(nodeName, PREFIX_WEIGHT)
           || contains(nodeName, PREFIX_BIAS)
           || contains(nodeName, PREFIX_FORWARD)
-         )
-        retain = true;  
+         ) {
+        retainCurrentNode = true;
+      }
 
       // replace convolution and dense operators with binary inference layer
       if ((*itr)["op"].IsString() && 
-          string((*itr)["op"].GetString()) == PREFIX_CONVOLUTION){
+          string((*itr)["op"].GetString()) == PREFIX_CONVOLUTION) {
         (*itr)["op"].SetString(PREFIX_BINARY_INFERENCE_CONV_LAYER.c_str(), allocator);
         //logging
         cout << "Info: " <<"CONVERTING op: '" << (*itr)["name"].GetString() << "' from '"
@@ -422,53 +437,56 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
       }
     }
 
-    if (!foundq || retain){
-      // get updated inputs
-      CHECK((*itr).HasMember("inputs"));
-      CHECK((*itr)["inputs"].IsArray());
-
-      uint arr_size = (*itr)["inputs"].Size();
-
-      for (uint i = 0; i < arr_size; ++i){
-        uint input = (*itr)["inputs"][i][0].GetUint();
-        if (inputChanges.count(input) > 0) {
-          cout << "set input: " << input << "=" << inputChanges[input] << endl;
-          input = inputChanges[input];
-        }
-        uint inputNewId = input;
-        if (newIds.count(input) > 0) {
-          inputNewId = newIds[input];
-        }
-        (*itr)["inputs"][i][0].SetUint(inputNewId);
+    if (!retainCurrentNode) {
+      adjustIdsForRemovalOf(itr, currentId, inputChanges, newIds);
+      if (paddingNode) {
+        // only check for 1,1 padding for now
+        CHECK(string((*itr)["attrs"]["constant_value"].GetString()) == "-1");
+        CHECK(string((*itr)["attrs"]["pad_width"].GetString()) == "[0, 0, 0, 0, 1, 1, 1, 1]");
+        padding[currentId] = true;
       }
+      continue;
+    }
 
-      // add node      
-      nodes_new.PushBack((*itr), allocator);
+    // get updated inputs
+    CHECK((*itr).HasMember("inputs"));
+    CHECK((*itr)["inputs"].IsArray());
 
-      uint currentNewId = currentId;
-      if (newIds.count(currentId) > 0) {
-        currentNewId = newIds[currentId];
+    uint arr_size = (*itr)["inputs"].Size();
+
+    for (uint i = 0; i < arr_size; ++i) {
+      uint input = (*itr)["inputs"][i][0].GetUint();
+      if (padding.count(input) > 0) {
+        cout << (*itr)["name"].GetString() << endl;
+        CHECK((*itr)["op"].IsString() && string((*itr)["op"].GetString()) == PREFIX_BINARY_INFERENCE_CONV_LAYER);
+        CHECK(string((*itr)["attrs"]["pad"].GetString()) == "(0, 0)");
+        (*itr)["attrs"]["pad"].SetString("(1, 1)");
       }
-
-      // add arg_node
-      if ( string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN){
-        arg_nodes.PushBack(Value().SetInt(currentNewId), allocator);
-      }      
-      
-      //cout << (*itr)["name"].GetString() << endl;     
-    } else {
-      CHECK((*itr)["inputs"].Size() == 1);
-      uint input = (*itr)["inputs"][0][0].GetUint();
-      while (inputChanges.count(input) > 0) {
+      if (inputChanges.count(input) > 0) {
+        cout << "set input: " << input << "=" << inputChanges[input] << endl;
         input = inputChanges[input];
       }
-      inputChanges[currentId] = input;
-      cout << "inputChanges[" << currentId << "]=" << input << endl;
-      for (uint i = currentId + 1; i <= nodes.Size(); i++) {
-        newIds[i] -= 1;
+      uint inputNewId = input;
+      if (newIds.count(input) > 0) {
+        inputNewId = newIds[input];
       }
-      newIds.erase(currentId);
+      (*itr)["inputs"][i][0].SetUint(inputNewId);
     }
+
+    // add node
+    nodes_new.PushBack((*itr), allocator);
+
+    uint currentNewId = currentId;
+    if (newIds.count(currentId) > 0) {
+      currentNewId = newIds[currentId];
+    }
+
+    // add arg_node
+    if ( string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN) {
+      arg_nodes.PushBack(Value().SetInt(currentNewId), allocator);
+    }
+
+    //cout << (*itr)["name"].GetString() << endl;
   }
 
   uint maxId = 0;
