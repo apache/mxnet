@@ -24,28 +24,33 @@ import os
 import time
 import warnings
 
-import numpy as np
+from ....metric import *
 
 
 class TrainBegin(object):
     def train_begin(self, *args, **kwargs):
         pass
 
+
 class TrainEnd(object):
     def train_end(self, *args, **kwargs):
         pass
+
 
 class EpochBegin(object):
     def epoch_begin(self, *args, **kwargs):
         pass
 
+
 class EpochEnd(object):
     def epoch_end(self, *args, **kwargs):
         return False
 
+
 class BatchBegin(object):
     def batch_begin(self, *args, **kwargs):
         pass
+
 
 class BatchEnd(object):
     def batch_end(self, *args, **kwargs):
@@ -73,6 +78,7 @@ class MetricHandler(EpochBegin, BatchEnd):
         for metric in self.train_loss:
             metric.update(0, loss)
 
+
 class ValidationHandler(BatchEnd, EpochEnd):
     def __init__(self,
                  val_data,
@@ -96,14 +102,14 @@ class ValidationHandler(BatchEnd, EpochEnd):
     def batch_end(self, *args, **kwargs):
         if self.batch_period and self.num_batches % self.batch_period == 0:
             self.eval_fn(val_data=self.val_data,
-                         val_loss= self.val_loss,
+                         val_loss=self.val_loss,
                          val_metrics=self.val_metrics)
         self.num_batches += 1
 
     def epoch_end(self, *args, **kwargs):
         if self.num_epochs % self.epoch_period == 0:
             self.eval_fn(val_data=self.val_data,
-                         val_loss= self.val_loss,
+                         val_loss=self.val_loss,
                          val_metrics=self.val_metrics)
 
         self.num_epochs += 1
@@ -154,12 +160,11 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
             file_location = file_location or './'
             file_handler = logging.FileHandler(os.path.join(file_location, file_name))
             self.logger.addHandler(file_handler)
-        self.train_metrics = train_metrics
-        self.val_metrics = val_metrics
+        self.train_metrics = train_metrics or []
+        self.val_metrics = val_metrics or []
         self.batch_index = 0
         self.current_epoch = 0
         self.processed_samples = 0
-
 
     def train_begin(self, *args, **kwargs):
         self.train_start = time.time()
@@ -212,9 +217,10 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
                 msg += '%s : %.4f ' % (name, value)
             self.logger.info(msg)
             self.current_epoch += 1
+            self.batch_index = 0
 
 
-class CheckpointHandler(object):
+class CheckpointHandler(BatchEnd, EpochEnd):
     """Save the model after every epoch.
 
     :py:class:`CheckpointHandler` save the network parameters every epoch
@@ -226,7 +232,7 @@ class CheckpointHandler(object):
     filepath : str
         file name to save the parameters, it can contain directories,
         for example: ./saved_model/resnet.params
-    monitor: str
+    monitor: EvalMetric
         the metrics to monitor
     verbose: int, default 0
         verbosity mode
@@ -241,18 +247,23 @@ class CheckpointHandler(object):
 
     def __init__(self,
                  filepath,
-                 monitor='val_accuracy',
+                 monitor=None,
                  verbose=0,
                  save_best_only=False,
                  mode='auto',
-                 period=1):
-        super(CheckpointHandler, self).__init__()
+                 epoch_period=1,
+                 batch_period=None):
         self.monitor = monitor
         self.verbose = verbose
         self.filepath = filepath
         self.save_best_only = save_best_only
-        self.period = period
-        self.epochs_since_last_save = 0
+        if self.save_best_only and not isinstance(self.monitor, EvalMetric):
+            raise ValueError("To save best model only, please provide one of the metric objects as monitor, "
+                             "You can create these objects using estimator.prepare_loss_and_metric()")
+        self.epoch_period = epoch_period
+        self.batch_period = batch_period
+        self.num_batches = 0
+        self.num_epochs = 0
         self.logger = logging.getLogger(__name__)
 
         if mode not in ['auto', 'min', 'max']:
@@ -262,55 +273,63 @@ class CheckpointHandler(object):
             mode = 'auto'
 
         if mode == 'min':
-            self.monitor_op = np.less
-            self.best = np.Inf
+            self.monitor_op = numpy.less
+            self.best = numpy.Inf
         elif mode == 'max':
-            self.monitor_op = np.greater
-            self.best = -np.Inf
+            self.monitor_op = numpy.greater
+            self.best = -numpy.Inf
         else:
             # use greater for accuracy and less otherwise
-            if 'acc' in self.monitor:
-                self.monitor_op = np.greater
-                self.best = -np.Inf
+            if 'acc' in self.monitor.get()[0].lower():
+                self.monitor_op = numpy.greater
+                self.best = -numpy.Inf
             else:
-                self.monitor_op = np.less
-                self.best = np.Inf
+                self.monitor_op = numpy.less
+                self.best = numpy.Inf
 
-    def epoch_end(self, ):
-        epoch = self.estimator.current_epoch
+    def batch_end(self, *args, **kwargs):
+        net = kwargs['net']
+        self._save_checkpoint(net, "Batch", self.num_batches)
+        self.num_batches += 1
+
+    def epoch_end(self, *args, **kwargs):
+        net = kwargs['net']
+        self._save_checkpoint(net, "Epoch", self.num_epochs)
+        self.num_epochs += 1
+
+    def _save_checkpoint(self, net, period_name, period_value):
         # add extension for weights
         if '.params' not in self.filepath:
             self.filepath += '.params'
-        self.epochs_since_last_save += 1
-        if self.epochs_since_last_save >= self.period:
-            self.epochs_since_last_save = 0
+        if self.num_epochs % self.epoch_period == 0:
             if self.save_best_only:
+                monitor_name, monitor_value = self.monitor.get()
                 # check if monitor exists in train stats
-                if self.monitor not in self.estimator.train_stats:
-                    warnings.warn(RuntimeWarning('Unable to find %s in training statistics, make sure the monitor value'
-                                                 'starts with `train_ `or `val_` and contains loss/metric name, ',
-                                                 'for example val_accuracy', self.monitor))
-                    self.estimator.net.save_parameters(self.filepath)
+                if numpy.isnan(monitor_value):
+                    warnings.warn(RuntimeWarning('%s is not updated, make sure you pass one of the metric objects'
+                                                 'as monitor, you can use estimator.prepare_loss_and_metrics to'
+                                                 'create all metric objects', monitor_name))
+                    net.save_parameters(self.filepath)
                 else:
-                    current = self.estimator.train_stats[self.monitor]
-                    if self.monitor_op(current, self.best):
+                    if self.monitor_op(monitor_value, self.best):
                         if self.verbose > 0:
-                            self.logger.info('\n[Epoch %d] %s improved from %0.5f to %0.5f,'
+                            self.logger.info('\n[%s %d] %s improved from %0.5f to %0.5f,'
                                              ' saving model to %s',
-                                             epoch, self.monitor, self.best, current, self.filepath)
-                        self.best = current
-                        self.estimator.net.save_parameters(self.filepath)
+                                             period_name, period_value, monitor_name,
+                                             self.best, monitor_value, self.filepath)
+                        self.best = monitor_value
+                        net.save_parameters(self.filepath)
                     else:
                         if self.verbose > 0:
-                            self.logger.info('\n[Epoch %d] %s did not improve from %0.5f, skipping save model',
-                                             epoch, self.monitor, self.best)
+                            self.logger.info('\n[%s %d] %s did not improve from %0.5f, skipping save model',
+                                             period_name, period_value, monitor_name, self.best)
             else:
                 if self.verbose > 0:
-                    logging.info('\nEpoch %d: saving model to %s', epoch, self.filepath)
-                self.estimator.net.save_parameters(self.filepath)
+                    logging.info('\n%s %d: saving model to %s', period_name, period_value, self.filepath)
+                net.save_parameters(self.filepath)
 
 
-class EarlyStoppingHandler(object):
+class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
     """Early stop training if monitored value is not improving
 
     Parameters
@@ -331,19 +350,24 @@ class EarlyStoppingHandler(object):
     """
 
     def __init__(self,
-                 monitor='val_accuracy',
+                 monitor,
                  min_delta=0,
                  patience=0,
                  mode='auto',
                  baseline=None):
         super(EarlyStoppingHandler, self).__init__()
 
+        if not isinstance(monitor, EvalMetric):
+            raise ValueError("Please provide one of the metric objects as monitor, "
+                             "You can create these objects using estimator.prepare_loss_and_metric()")
         self.monitor = monitor
         self.baseline = baseline
         self.patience = patience
         self.min_delta = min_delta
         self.wait = 0
         self.stopped_epoch = 0
+        self.num_epochs = 0
+        self.stop_training = False
         self.logger = logging.getLogger(__name__)
 
         if mode not in ['auto', 'min', 'max']:
@@ -352,45 +376,46 @@ class EarlyStoppingHandler(object):
             mode = 'auto'
 
         if mode == 'min':
-            self.monitor_op = np.less
+            self.monitor_op = numpy.less
         elif mode == 'max':
-            self.monitor_op = np.greater
+            self.monitor_op = numpy.greater
         else:
-            if 'acc' in self.monitor:
-                self.monitor_op = np.greater
+            if 'acc' in self.monitor.get()[0].lower():
+                self.monitor_op = numpy.greater
             else:
-                self.monitor_op = np.less
+                self.monitor_op = numpy.less
 
-        if self.monitor_op == np.greater:
+        if self.monitor_op == numpy.greater:
             self.min_delta *= 1
         else:
             self.min_delta *= -1
 
-    def train_begin(self):
+    def train_begin(self, *args, **kwargs):
         self.wait = 0
         self.stopped_epoch = 0
         if self.baseline is not None:
             self.best = self.baseline
         else:
-            self.best = np.Inf if self.monitor_op == np.less else -np.Inf
+            self.best = numpy.Inf if self.monitor_op == numpy.less else -numpy.Inf
 
-    def epoch_end(self):
-        epoch = self.estimator.current_epoch
-        if self.monitor not in self.estimator.train_stats:
-            warnings.warn(RuntimeWarning('Unable to find %s in training statistics, make sure the monitor value'
-                                         'starts with `train_ `or `val_` and contains loss/metric name, ',
-                                         'for example val_accuracy', self.monitor))
+    def epoch_end(self, *args, **kwargs):
+        monitor_name, monitor_value = self.monitor.get()
+        if numpy.isnan(monitor_value):
+            warnings.warn(RuntimeWarning('%s is not updated, make sure you pass one of the metric objects'
+                                         'as monitor, you can use estimator.prepare_loss_and_metrics to'
+                                         'create all metric objects', monitor_name))
         else:
-            current = self.estimator.train_stats[self.monitor]
-            if self.monitor_op(current - self.min_delta, self.best):
-                self.best = current
+            if self.monitor_op(monitor_value - self.min_delta, self.best):
+                self.best = monitor_value
                 self.wait = 0
             else:
                 self.wait += 1
                 if self.wait >= self.patience:
-                    self.stopped_epoch = epoch
-                    self.estimator.stop_training = True
+                    self.stopped_epoch = self.num_epochs
+                    self.stop_training = True
+        return self.stop_training
 
-    def train_end(self):
+    def train_end(self, *args, **kwargs):
         if self.stopped_epoch > 0:
-            self.logger.info('Epoch %d: early stopping due to %s not improving', self.stopped_epoch, self.monitor)
+            self.logger.info('Epoch %d: early stopping due to %s not improving',
+                             self.stopped_epoch, self.monitor.get()[0])

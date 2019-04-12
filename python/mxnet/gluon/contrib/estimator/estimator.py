@@ -20,6 +20,7 @@
 """Gluon Estimator"""
 
 import copy
+
 from .event_handler import *
 from .... import gluon, autograd
 from ....context import Context, cpu, gpu, num_gpus
@@ -70,7 +71,9 @@ class Estimator(object):
     def _check_loss(self, loss):
         if isinstance(loss, gluon.loss.Loss):
             loss = [loss]
-        elif isinstance(loss, list) and not all([isinstance(l, gluon.loss.Loss) for l in loss]):
+        elif isinstance(loss, list) or all([isinstance(l, gluon.loss.Loss) for l in loss]):
+            loss = loss
+        else:
             raise ValueError("loss must be a Loss or a list of Loss, "
                              "refer to gluon.loss.Loss:{}".format(loss))
         return loss
@@ -79,8 +82,8 @@ class Estimator(object):
         if isinstance(metrics, EvalMetric):
             metrics = [metrics]
         else:
-            self.train_metrics = metrics or []
-            if not all([isinstance(metric, EvalMetric) for metric in self.train_metrics]):
+            metrics = metrics or []
+            if not all([isinstance(metric, EvalMetric) for metric in metrics]):
                 raise ValueError("metrics must be a Metric or a list of Metric, "
                                  "refer to mxnet.metric.EvalMetric:{}".format(metrics))
         return metrics
@@ -128,7 +131,7 @@ class Estimator(object):
             warnings.warn("No trainer specified, default SGD optimizer "
                           "with learning rate 0.001 is used.")
             trainer = gluon.Trainer(self.net.collect_params(),
-                                         'sgd', {'learning_rate': 0.001})
+                                    'sgd', {'learning_rate': 0.001})
         elif not isinstance(trainer, gluon.Trainer):
             raise ValueError("Trainer must be a Gluon Trainer instance, refer to "
                              "gluon.Trainer:{}".format(trainer))
@@ -151,18 +154,27 @@ class Estimator(object):
         return data, label
 
     def prepare_loss_and_metrics(self):
-        train_loss = []
-        val_loss = []
-        val_metrics = []
-        for loss in self.loss:
-            train_loss.append(Loss("Train " + loss.name))
-            val_loss.append(Loss("Val " + loss.name))
-        for metric in self.train_metrics:
-            metric.name = "Train " + metric.name
-            val_metric = copy.deepcopy(metric)
-            val_metric.name = "Val " + val_metric.name
-            val_metrics.append(val_metric)
-        return train_loss, self.train_metrics, val_loss, val_metrics
+        """
+        Based on loss functions and training metrics in estimator
+        Create metric wrappers to record loss values,
+        Create copies of train loss/metric objects to record validation values
+        """
+        if all(hasattr(self, attribute) for attribute in
+               ['train_loss', 'train_metrics', 'val_loss', 'val_metrics']):
+            return self.train_loss, self.train_metrics, self.val_loss, self.val_metrics
+        else:
+            self.train_loss = []
+            self.val_loss = []
+            self.val_metrics = []
+            for loss in self.loss:
+                self.train_loss.append(Loss("Train " + ''.join([i for i in loss.name if not i.isdigit()])))
+                self.val_loss.append(Loss("Validation " + ''.join([i for i in loss.name if not i.isdigit()])))
+            for metric in self.train_metrics:
+                val_metric = copy.deepcopy(metric)
+                metric.name = "Train " + metric.name
+                val_metric.name = "Validation " + val_metric.name
+                self.val_metrics.append(val_metric)
+            return self.train_loss, self.train_metrics, self.val_loss, self.val_metrics
 
     def evaluate(self,
                  val_data,
@@ -236,19 +248,20 @@ class Estimator(object):
                           "Please look at gluon.contrib.estimator.event_handler for more detail." %
                           ", ".join([handler.__class__.__name__ for handler in event_handlers]))
 
-        event_handlers.sort(key= lambda handler : getattr(handler, 'rank', 0), reverse=True)
+        event_handlers.sort(key=lambda handler: getattr(handler, 'rank', 0), reverse=True)
 
         train_begin, epoch_begin, batch_begin, \
         batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
 
         # training begin
         for handler in train_begin:
-            handler.train_begin(trainer=self.trainer, epochs=epochs)
+            # we only have net, trainer, and epochs to train information
+            handler.train_begin(net=self.net, trainer=self.trainer, epochs=epochs)
 
         for epoch in range(epochs):
             # epoch begin
             for handler in epoch_begin:
-                handler.epoch_begin(trainer=self.trainer, epochs=epochs)
+                handler.epoch_begin(net=self.net, trainer=self.trainer, epochs=epochs)
 
             for i, batch in enumerate(train_data):
                 if not isinstance(train_data, gluon.data.DataLoader):
@@ -261,7 +274,7 @@ class Estimator(object):
 
                 # batch begin
                 for handler in batch_begin:
-                    handler.batch_begin()
+                    handler.batch_begin(net=self.net, trainer=self.trainer, epochs=epochs, batch=batch)
 
                 with autograd.record():
                     pred = [self.net(x) for x in data]
@@ -273,14 +286,12 @@ class Estimator(object):
                 self.trainer.step(batch_size)
                 # batch end
                 for handler in batch_end:
-                    if handler.batch_end(batch_size=batch_size,
-                                         pred=pred,
-                                         label=label,
-                                         loss=loss): break
+                    if handler.batch_end(net=self.net, trainer=self.trainer, epochs=epochs,
+                                         batch_size=batch_size, pred=pred, label=label, loss=loss): break
 
             # epoch end
             for handler in epoch_end:
-                if handler.epoch_end(): break
+                if handler.epoch_end(net=self.net, trainer=self.trainer, epochs=epochs): break
 
         # train end
         for handler in train_end:

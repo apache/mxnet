@@ -137,7 +137,7 @@ def test_estimator_gpu():
             val_data=test_data,
             epochs=num_epochs)
 
-    assert est.train_stats['train_'+acc.name] > 0.80
+    assert acc.get()[1] > 0.80
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='test gluon estimator')
