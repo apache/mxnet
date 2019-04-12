@@ -1401,3 +1401,91 @@ int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *s
   *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   API_END();
 }
+
+typedef Engine::VarHandle VarHandle;
+typedef Engine::CallbackOnComplete CallbackOnComplete;
+
+void AssertValidNumberVars(int num_const_vars, int num_mutable_vars) {
+  CHECK_GE(num_const_vars, 0) << "Non-negative number of const vars expected.";
+  CHECK_GE(num_mutable_vars, 0) << "Non-negative number of mutable vars expected.";
+}
+
+int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
+                      EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                      EngineVarHandle const_vars_handle, int num_const_vars,
+                      EngineVarHandle mutable_vars_handle, int num_mutable_vars,
+                      EngineFnPropertyHandle prop_handle, int priority,
+                      const char* opr_name, bool wait) {
+  API_BEGIN();
+
+  auto exec_ctx = *static_cast<const Context*>(ctx_handle);
+  auto const_vars = static_cast<VarHandle*>(const_vars_handle);
+  auto mutable_vars = static_cast<VarHandle*>(mutable_vars_handle);
+  auto prop = FnProperty::kNormal;
+  if (prop_handle) {
+    prop = *static_cast<const FnProperty*>(prop_handle);
+  }
+
+  Engine::AsyncFn exec_fn;
+  if (deleter == nullptr) {
+    exec_fn = [async_func, func_param](RunContext rctx,
+                                       CallbackOnComplete on_complete) {
+      async_func(&rctx, &on_complete, func_param);
+    };
+  } else {
+    // Wrap func_param in a shared_ptr with deleter such that deleter
+    // will be called when the lambda goes out of scope.
+    std::shared_ptr<void> shared_func_param(func_param, deleter);
+    exec_fn = [async_func, shared_func_param](RunContext rctx,
+                                              CallbackOnComplete on_complete) {
+      async_func(&rctx, &on_complete, shared_func_param.get());
+    };
+  }
+
+  AssertValidNumberVars(num_const_vars, num_mutable_vars);
+  std::vector<VarHandle> const_var_vec(const_vars, const_vars + num_const_vars);
+  std::vector<VarHandle> mutable_var_vec(mutable_vars, mutable_vars + num_mutable_vars);
+  Engine::Get()->PushAsync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
+                           prop, priority, opr_name, wait);
+
+  API_END();
+}
+
+int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
+                     EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                     EngineVarHandle const_vars_handle, int num_const_vars,
+                     EngineVarHandle mutable_vars_handle, int num_mutable_vars,
+                     EngineFnPropertyHandle prop_handle, int priority,
+                     const char* opr_name) {
+  API_BEGIN();
+
+  auto exec_ctx = *static_cast<const Context*>(ctx_handle);
+  auto const_vars = static_cast<VarHandle*>(const_vars_handle);
+  auto mutable_vars = static_cast<VarHandle*>(mutable_vars_handle);
+  auto prop = FnProperty::kNormal;
+  if (prop_handle) {
+    prop = *static_cast<const FnProperty*>(prop_handle);
+  }
+
+  Engine::SyncFn exec_fn;
+  if (deleter == nullptr) {
+    exec_fn = [sync_func, func_param](RunContext rctx) {
+      sync_func(&rctx, func_param);
+    };
+  } else {
+    // Wrap func_param in a shared_ptr with deleter such that deleter
+    // will be called when the lambda goes out of scope.
+    std::shared_ptr<void> shared_func_param(func_param, deleter);
+    exec_fn = [sync_func, shared_func_param](RunContext rctx) {
+      sync_func(&rctx, shared_func_param.get());
+    };
+  }
+
+  AssertValidNumberVars(num_const_vars, num_mutable_vars);
+  std::vector<VarHandle> const_var_vec(const_vars, const_vars + num_const_vars);
+  std::vector<VarHandle> mutable_var_vec(mutable_vars, mutable_vars + num_mutable_vars);
+  Engine::Get()->PushSync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
+                          prop, priority, opr_name);
+
+  API_END();
+}

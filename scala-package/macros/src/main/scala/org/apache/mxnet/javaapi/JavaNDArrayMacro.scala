@@ -25,18 +25,16 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 private[mxnet] class AddJNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro JavaNDArrayMacro.typeSafeAPIDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any = macro JavaNDArrayMacro.typeSafeAPIDefs
 }
 
 private[mxnet] object JavaNDArrayMacro extends GeneratorBase {
 
-  // scalastyle:off havetype
-  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     typeSafeAPIImpl(c)(annottees: _*)
   }
-  // scalastyle:off havetype
 
-  private def typeSafeAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
+  private def typeSafeAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Nothing] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
