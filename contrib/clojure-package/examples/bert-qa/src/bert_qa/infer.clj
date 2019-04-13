@@ -1,4 +1,22 @@
-(ns bert-qa.core
+;;
+;; Licensed to the Apache Software Foundation (ASF) under one or more
+;; contributor license agreements.  See the NOTICE file distributed with
+;; this work for additional information regarding copyright ownership.
+;; The ASF licenses this file to You under the Apache License, Version 2.0
+;; (the "License"); you may not use this file except in compliance with
+;; the License.  You may obtain a copy of the License at
+;;
+;;    http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
+;;
+
+
+(ns bert-qa.infer
   (:require [clojure.string :as string]
             [clojure.reflect :as r]
             [cheshire.core :as json]
@@ -68,8 +86,7 @@
                     (first))]
     (if (> end-idx start-idx)
       (subvec tokens start-idx (inc end-idx))
-      (subvec tokens end-idx (inc end-idx)) )
-    ))
+      (subvec tokens end-idx (inc end-idx)))))
 
 (defn make-predictor [ctx]
   (let [input-descs [{:name "data0"
@@ -118,8 +135,7 @@
         predictor (make-predictor ctx)
         {:keys [idx2token token2idx]} (get-vocab)
         ;;; samples taken from https://rajpurkar.github.io/SQuAD-explorer/explore/v2.0/dev/
-        question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))
-        ]
+        question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))]
     (doseq [qa-map question-answers]
       (let [{:keys [input-batch tokens qa-map]} (pre-processing ctx idx2token token2idx qa-map)
             result (first (infer/predict-with-ndarray predictor input-batch))
@@ -129,7 +145,7 @@
         (pprint/pprint qa-map)
         (println)
         (println "  Predicted Answer: " answer)
-        (println "===============================") ))))
+        (println "===============================")))))
 
 (defn -main [& args]
   (let [[dev] args]
@@ -139,6 +155,4 @@
 
 (comment
 
-  (infer :cpu)
-
-  )
+  (infer :cpu))

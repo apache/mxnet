@@ -6,5 +6,5 @@
                  [cheshire "5.8.1"]]
   :pedantic? :skip
   :java-source-paths ["src/java"]
-  :main bert-qa.core
-  :repl-options {:init-ns bert-qa.core})
+  :main bert-qa.infer
+  :repl-options {:init-ns bert-qa.infer})
