@@ -39,4 +39,4 @@
     (let [qa-map (last question-answers)
           {:keys [input-batch tokens qa-map]} (pre-processing ctx idx2token token2idx qa-map)
           result (first (infer/predict-with-ndarray predictor input-batch))]
-      (is (= ["sammy"] (post-processing result tokens))))))
+      (is (= ["rich" "hickey"] (post-processing result tokens))))))

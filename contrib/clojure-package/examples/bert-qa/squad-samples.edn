@@ -32,4 +32,8 @@
  ;;; totally made up
  {:input-answer "Susan had a cat named Sammy when she lived in the green house."
   :input-question "What was Susan's cat named?"
-  :ground-truth-answers ["Sammy" "sammy"]}]
+  :ground-truth-answers ["Sammy" "sammy"]}
+ ;;; more or less from wikipedia on clojure
+ {:input-answer "Rich Hickey is the creator of the Clojure language. Before Clojure, he developed dotLisp, a similar project based on the .NET platform, and three earlier attempts to provide interoperability between Lisp and Java: a Java foreign language interface for Common Lisp, A Foreign Object Interface for Lisp, and a Lisp-friendly interface to Java Servlets."
+  :input-question "Who created Clojure?"
+  :ground-truth-answers ["rich" "hickey"]}]
