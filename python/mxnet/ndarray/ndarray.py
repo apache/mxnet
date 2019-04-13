@@ -2899,7 +2899,7 @@ def array(source_array, ctx=None, dtype=None):
         arr[:] = source_array
         return arr.reshape(())
     elif source_array.size == 0:
-        return empty((0,), ctx, dtype)
+        return empty(source_array.shape, ctx, dtype)
     else:
         arr = empty(source_array.shape, ctx, dtype)
         arr[:] = source_array
