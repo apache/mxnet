@@ -132,8 +132,8 @@ class CustomOperator {
       ctx.async_on_complete();
     });
     // increase num_threads if there is not enough threads to execute custom operator
-    if (q_.size() > num_free_threads)
-      CreateThreads(q_.size() - num_free_threads);
+    if (q_.size() > num_free_threads_)
+      CreateThreads(q_.size() - num_free_threads_);
     cv_.notify_all();
   }
 
@@ -143,7 +143,7 @@ class CustomOperator {
   }
 
   void Start() {
-    num_free_threads = 0;
+    num_free_threads_ = 0;
     destructing_ = false;
     naive_engine_ = true;
     if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
@@ -172,21 +172,20 @@ class CustomOperator {
     while (!q_.empty() || !destructing_) {
       cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
       while (!q_.empty()) {
-        --num_free_threads;
+        --num_free_threads_;
         auto fn = q_.front();
         q_.pop();
         lock.unlock();
         fn();
-        ++num_free_threads;
+        ++num_free_threads_;
         lock.lock();
       }
     }
   }
   void SetNumThreads(int num_threads) {
-    num_threads = std::min(dmlc::GetEnv("MXNET_CUSTOM_OP_NUM_THREADS", 16), num_threads);
     for (int i = workers_.size(); i < num_threads; ++i) {
       workers_.emplace_back(std::thread([this]{this->ThreadTarget();}));
-      ++num_free_threads;
+      ++num_free_threads_;
     }
   }
   void CreateThreads(int num_new_threads) {
@@ -197,7 +196,7 @@ class CustomOperator {
   // async worker
   std::condition_variable cv_;
   std::vector<std::thread> workers_;
-  std::atomic<uint32_t> num_free_threads;
+  std::atomic<uint32_t> num_free_threads_;
   std::queue<std::function<void(void)> > q_;
   bool naive_engine_;
   bool destructing_;
