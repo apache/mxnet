@@ -49,12 +49,11 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
       nnvm::Op::Get("identity");
   CHECK_EQ(ograds.size(), 1);
   std::vector<nnvm::NodeEntry> ret;
-  nnvm::NodeEntry n_out(n, 0, 0);
   for (size_t i = 0; i < n->inputs.size(); ++i) {
-    nnvm::NodePtr id_node = nnvm::Node::Create();
-    id_node->attrs.op = copy_op;
-    id_node->inputs = {ograds[0]};
-    ret.emplace_back(id_node, 0, 0);
+    nnvm::NodePtr node = nnvm::Node::Create();
+    node->attrs.op = copy_op;
+    node->inputs = {ograds[0]};
+    ret.emplace_back(std::move(node), 0, 0);
   }
   return ret;
 }

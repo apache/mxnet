@@ -82,7 +82,9 @@ class MKLDNNMemory;
 class NDArray {
  public:
   /*! \brief default constructor */
-  NDArray() {
+  NDArray()
+    : entry_(nullptr)
+  {
   }
   /*!
    * \brief constructs a new dynamic NDArray
@@ -650,7 +652,7 @@ class NDArray {
    */
   NDArray Detach() const {
     NDArray ret(*this);
-    ret.entry_ = nnvm::NodeEntry();
+    ret.entry_ = nnvm::NodeEntry(nullptr);
     return ret;
   }
 
