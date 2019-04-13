@@ -40,12 +40,13 @@
    (util/->option data)
    act-type
    name
-   (when
+   (clojure.core/when
     attr
-    (->>
+    (clojure.core/->>
      attr
-     (mapv (fn [[k v]] [k (str v)]))
-     (into {})
+     (clojure.core/mapv
+      (clojure.core/fn [[k v]] [k (clojure.core/str v)]))
+     (clojure.core/into {})
      util/convert-map)))))
 
 (defn
@@ -97,11 +98,12 @@
    (util/->option axis)
    (util/->option cudnn-off)
    name
-   (when
+   (clojure.core/when
     attr
-    (->>
+    (clojure.core/->>
      attr
-     (mapv (fn [[k v]] [k (str v)]))
-     (into {})
+     (clojure.core/mapv
+      (clojure.core/fn [[k v]] [k (clojure.core/str v)]))
+     (clojure.core/into {})
      util/convert-map)))))
 

@@ -394,13 +394,13 @@
 (defn symbol-api-coerce-param
   [{:keys [name sym type optional?]}]
   (let [coerced-param (case type
-                        "Shape" `(~'when ~sym (~'mx-shape/->shape ~sym))
+                        "Shape" `(when ~sym (~'mx-shape/->shape ~sym))
                         "NDArray-or-Symbol[]" `(~'clojure.core/into-array ~sym)
                         "Map[String, String]"
-                        `(~'when ~sym
-                           (~'->> ~sym
-                                (~'mapv (~'fn [[~'k ~'v]] [~'k (~'str ~'v)]))
-                                (~'into {})
+                        `(when ~sym
+                           (->> ~sym
+                                (mapv (fn [[~'k ~'v]] [~'k (str ~'v)]))
+                                (into {})
                                 ~'util/convert-map))
                         sym)
         nil-param-allowed? (#{"name" "attr"} name)]
