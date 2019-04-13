@@ -50,7 +50,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", CumSumOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", CumSumOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", CumSumOpForwardStorageType)
 .set_attr<FCompute>("FCompute<cpu>", CumSumOpForward<cpu>)
