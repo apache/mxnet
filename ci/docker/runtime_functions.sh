@@ -803,7 +803,7 @@ unittest_ubuntu_python2_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -812,7 +812,7 @@ unittest_ubuntu_python3_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -829,7 +829,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
 }
@@ -841,7 +841,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -852,7 +852,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -1003,7 +1003,7 @@ unittest_centos7_cpu() {
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1033,8 +1033,6 @@ integrationtest_ubuntu_cpu_asan() {
     set -ex
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
 
-    # We do not want to fail the build on ASAN errors until memory leaks have been addressed.
-    export ASAN_OPTIONS=exitcode=0
     cd /work/mxnet/build/cpp-package/example/
     /work/mxnet/cpp-package/example/get_data.sh
     ./mlp_cpu

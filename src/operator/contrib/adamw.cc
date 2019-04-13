@@ -50,7 +50,7 @@ inline void MPUpdateCPU(const nnvm::NodeAttrs& attrs,
   });
 }
 
-NNVM_REGISTER_OP(_contrib_mp_adamw_update)
+NNVM_REGISTER_OP(_mp_adamw_update)
 .describe(R"code(Update function for multi-precision AdamW optimizer.
 
 AdamW is seen as a modification of Adam by decoupling the weight decay from the
@@ -78,7 +78,7 @@ the update is skipped.
 .set_num_inputs(6)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AdamWParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", MPUpdateInferShape<2, 1, 6>)
+.set_attr<mxnet::FInferShape>("FInferShape", MPUpdateInferShape<2, 1, 6>)
 .set_attr<nnvm::FInferType>("FInferType", MPUpdateInferType<2, 1, 6>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
@@ -91,10 +91,11 @@ the update is skipped.
 .add_argument("var", "NDArray-or-Symbol", "Moving variance")
 .add_argument("weight32", "NDArray-or-Symbol", "Weight32")
 .add_argument("rescale_grad", "NDArray-or-Symbol",
-              "Rescale gradient to rescale_grad * grad. If NaN, the update is skipped.")
+              "Rescale gradient to rescale_grad * grad. If NaN, Inf, or 0, "
+              "the update is skipped.")
 .add_arguments(AdamWParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_contrib_adamw_update)
+NNVM_REGISTER_OP(_adamw_update)
 .describe(R"code(Update function for AdamW optimizer. AdamW is seen as a modification of
 Adam by decoupling the weight decay from the optimization steps taken w.r.t. the loss function.
 
@@ -120,7 +121,7 @@ the update is skipped.
 .set_num_inputs(5)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AdamWParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", MPUpdateInferShape<4, 1, 5>)
+.set_attr<mxnet::FInferShape>("FInferShape", MPUpdateInferShape<4, 1, 5>)
 .set_attr<nnvm::FInferType>("FInferType", MPUpdateInferType<4, 1, 5>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
@@ -132,7 +133,8 @@ the update is skipped.
 .add_argument("mean", "NDArray-or-Symbol", "Moving mean")
 .add_argument("var", "NDArray-or-Symbol", "Moving variance")
 .add_argument("rescale_grad", "NDArray-or-Symbol",
-              "Rescale gradient to rescale_grad * grad. If NaN, the update is skipped.")
+              "Rescale gradient to rescale_grad * grad. If NaN, Inf, or 0, "
+              "the update is skipped.")
 .add_arguments(AdamWParam::__FIELDS__());
 
 }  // namespace op

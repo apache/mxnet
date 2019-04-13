@@ -731,9 +731,9 @@ __global__ void unpool_sum_3d_gpu_kernel(const int nthreads, const DType* out_gr
  * \param count_include_pad for avg pooling, should 0 pad values be averaged in the window
  */
 template<typename DType, int layout, int p>
-inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& ishape,
-                 const TShape& oshape, const TShape& kernel, const TShape& pad,
-                 const TShape& stride, const int pool_type, OpReqType req_type,
+inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const mxnet::TShape& ishape,
+                 const mxnet::TShape& oshape, const mxnet::TShape& kernel, const mxnet::TShape& pad,
+                 const mxnet::TShape& stride, const int pool_type, OpReqType req_type,
                  DType* out_data, const bool count_include_pad) {
   CHECK_EQ(req_type, kWriteTo) << "Only support req=kWriteTo in pooling operations";
   using namespace mxnet_op;
@@ -866,15 +866,15 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
  * \param layout I/O tensor layout, e.g. NCHW vs. NHWC
  */
 template<typename DType, int p>
-inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& ishape,
-                 const TShape& oshape, const TShape& kernel, const TShape& pad,
-                 const TShape& stride, const int pool_type, OpReqType req_type,
+inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const mxnet::TShape& ishape,
+                 const mxnet::TShape& oshape, const mxnet::TShape& kernel, const mxnet::TShape& pad,
+                 const mxnet::TShape& stride, const int pool_type, OpReqType req_type,
                  DType* out_data, const bool count_include_pad, int layout) {
   if (kernel.ndim() == 1) {
     if (layout == mshadow::kNWC) {
       // standardize shapes to NCW to aid templated kernel invocation
-      TShape ishape_ncw = ConvertLayout(ishape.get<3>(), mshadow::kNWC, mshadow::kNCW);
-      TShape oshape_ncw = ConvertLayout(oshape.get<3>(), mshadow::kNWC, mshadow::kNCW);
+      mxnet::TShape ishape_ncw = ConvertLayout(ishape.get<3>(), mshadow::kNWC, mshadow::kNCW);
+      mxnet::TShape oshape_ncw = ConvertLayout(oshape.get<3>(), mshadow::kNWC, mshadow::kNCW);
       pool<DType, mshadow::kNWC, p>(s, in_data, ishape_ncw, oshape_ncw, kernel,
                                     pad, stride, pool_type, req_type, out_data, count_include_pad);
     } else if (layout == mshadow::kNCW) {
@@ -886,8 +886,8 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
   } else if (kernel.ndim() == 2) {
     if (layout == mshadow::kNHWC) {
       // standardize shapes to NCHW to aid templated kernel invocation
-      TShape ishape_nchw = ConvertLayout(ishape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
-      TShape oshape_nchw = ConvertLayout(oshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
+      mxnet::TShape ishape_nchw = ConvertLayout(ishape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
+      mxnet::TShape oshape_nchw = ConvertLayout(oshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
       pool<DType, mshadow::kNHWC, p>(s, in_data, ishape_nchw, oshape_nchw, kernel,
                                      pad, stride, pool_type, req_type, out_data, count_include_pad);
     } else if (layout == mshadow::kNCHW) {
@@ -899,8 +899,8 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
   } else if (kernel.ndim() == 3) {
     if (layout == mshadow::kNDHWC) {
       // standardize shapes to NCDHW to aid templated kernel invocation
-      TShape ishape_ncdhw = ConvertLayout(ishape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
-      TShape oshape_ncdhw = ConvertLayout(oshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
+      mxnet::TShape ishape_ncdhw = ConvertLayout(ishape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
+      mxnet::TShape oshape_ncdhw = ConvertLayout(oshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
       pool<DType, mshadow::kNDHWC, p>(s, in_data, ishape_ncdhw, oshape_ncdhw, kernel,
                                      pad, stride, pool_type, req_type, out_data, count_include_pad);
     } else if (layout == mshadow::kNCDHW) {
@@ -932,8 +932,8 @@ inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& is
  */
 template<typename DType, int layout, int p>
 inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* in_data,
-                   const DType* out_data, const TShape& ishape, const TShape& oshape,
-                   const TShape& kernel, const TShape& pad, const TShape& stride,
+                   const DType* out_data, const mxnet::TShape& ishape, const mxnet::TShape& oshape,
+                   const mxnet::TShape& kernel, const mxnet::TShape& pad, const mxnet::TShape& stride,
                    const int pool_type, OpReqType req_type, DType* in_grad,
                    const bool count_include_pad) {
   if (mxnet::kNullOp == req_type) return;
@@ -1086,15 +1086,15 @@ inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* 
  */
 template<typename DType, int p>
 inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* in_data,
-                   const DType* out_data, const TShape& ishape, const TShape& oshape,
-                   const TShape& kernel, const TShape& pad, const TShape& stride,
+                   const DType* out_data, const mxnet::TShape& ishape, const mxnet::TShape& oshape,
+                   const mxnet::TShape& kernel, const mxnet::TShape& pad, const mxnet::TShape& stride,
                    const int pool_type, OpReqType req_type, DType* in_grad,
                    const bool count_include_pad, int layout) {
   if (kernel.ndim() == 1) {
     if (layout == mshadow::kNWC) {
       // standardize shapes to NCW to aid templated kernel invocation
-      TShape ishape_ncw = ConvertLayout(ishape.get<3>(), mshadow::kNWC, mshadow::kNCW);
-      TShape oshape_ncw = ConvertLayout(oshape.get<3>(), mshadow::kNWC, mshadow::kNCW);
+      mxnet::TShape ishape_ncw = ConvertLayout(ishape.get<3>(), mshadow::kNWC, mshadow::kNCW);
+      mxnet::TShape oshape_ncw = ConvertLayout(oshape.get<3>(), mshadow::kNWC, mshadow::kNCW);
       unpool<DType, mshadow::kNWC, p>(s, out_grad, in_data, out_data, ishape_ncw, oshape_ncw,
                               kernel, pad, stride, pool_type, req_type, in_grad, count_include_pad);
     } else if (layout == mshadow::kNCW) {
@@ -1106,8 +1106,8 @@ inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* 
   } else if (kernel.ndim() == 2) {
     if (layout == mshadow::kNHWC) {
       // standardize shapes to NCHW to aid templated kernel invocation
-      TShape ishape_nchw = ConvertLayout(ishape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
-      TShape oshape_nchw = ConvertLayout(oshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
+      mxnet::TShape ishape_nchw = ConvertLayout(ishape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
+      mxnet::TShape oshape_nchw = ConvertLayout(oshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
       unpool<DType, mshadow::kNHWC, p>(s, out_grad, in_data, out_data, ishape_nchw, oshape_nchw,
                               kernel, pad, stride, pool_type, req_type, in_grad, count_include_pad);
     } else if (layout == mshadow::kNCHW) {
@@ -1119,8 +1119,8 @@ inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* 
   } else if (kernel.ndim() == 3) {
     if (layout == mshadow::kNDHWC) {
       // standardize shapes to NCDHW to aid templated kernel invocation
-      TShape ishape_ncdhw = ConvertLayout(ishape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
-      TShape oshape_ncdhw = ConvertLayout(oshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
+      mxnet::TShape ishape_ncdhw = ConvertLayout(ishape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
+      mxnet::TShape oshape_ncdhw = ConvertLayout(oshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
       unpool<DType, mshadow::kNDHWC, p>(s, out_grad, in_data, out_data, ishape_ncdhw, oshape_ncdhw,
                               kernel, pad, stride, pool_type, req_type, in_grad, count_include_pad);
     } else if (layout == mshadow::kNCDHW) {

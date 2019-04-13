@@ -47,7 +47,7 @@ from . import op
 from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
-           "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange",
+           "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange",
            "histogram", "split_v2"]
 
 
@@ -2740,6 +2740,8 @@ def pow(base, exp):
     Both inputs can be Symbol or scalar number.
     Broadcasting is not supported. Use `broadcast_pow` instead.
 
+    `sym.pow` is being deprecated, please use `sym.power` instead.
+
     Parameters
     ---------
     base : Symbol or scalar
@@ -2778,6 +2780,43 @@ def pow(base, exp):
         return base**exp
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
+
+
+def power(base, exp):
+    """Returns element-wise result of base element raised to powers from exp element.
+
+    Both inputs can be Symbol or scalar number.
+    Broadcasting is not supported. Use `broadcast_pow` instead.
+
+    Parameters
+    ---------
+    base : Symbol or scalar
+        The base symbol
+    exp : Symbol or scalar
+        The exponent symbol
+
+    Returns
+    -------
+    Symbol or scalar
+        The bases in x raised to the exponents in y.
+
+    Examples
+    --------
+    >>> mx.sym.power(2, 3)
+    8
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.power(x, 2)
+    >>> z.eval(x=mx.nd.array([1,2]))[0].asnumpy()
+    array([ 1.,  4.], dtype=float32)
+    >>> z = mx.sym.power(3, y)
+    >>> z.eval(y=mx.nd.array([2,3]))[0].asnumpy()
+    array([  9.,  27.], dtype=float32)
+    >>> z = mx.sym.power(x, y)
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([2,3]))[0].asnumpy()
+    array([  9.,  64.], dtype=float32)
+    """
+    return pow(base, exp)
 
 
 # pylint: disable=no-member
@@ -2912,6 +2951,7 @@ def hypot(left, right):
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
+
 def eye(N, M=0, k=0, dtype=None, **kwargs):
     """Returns a new symbol of 2-D shpae, filled with ones on the diagonal and zeros elsewhere.
 
@@ -3002,11 +3042,16 @@ def full(shape, val, dtype=None, **kwargs):
 def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 
+    Values are generated within the half-open interval [`start`, `stop`). In other
+    words, the interval includes `start` but excludes `stop`. The function is
+    similar to the built-in Python function `range` and to `numpy.arange`,
+    but returns a `Symbol`.
+
     Parameters
     ----------
-    start : number
+    start : number, optional
         Start of interval. The interval includes this value. The default start value is 0.
-    stop : number, optional
+    stop : number
         End of interval. The interval does not include this value.
     step : number, optional
         Spacing between values.

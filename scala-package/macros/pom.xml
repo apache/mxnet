@@ -36,11 +36,6 @@
       <version>INTERNAL</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.1</version>
-    </dependency>
   </dependencies>
 
   <build>
@@ -55,10 +50,6 @@
             <exclude>META-INF/*.RSA</exclude>
           </excludes>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.scalatest</groupId>

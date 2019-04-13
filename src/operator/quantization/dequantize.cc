@@ -68,9 +68,12 @@ by keep zero centered for the quantized value:
 .set_attr_parser(ParamParser<DequantizeParam>)
 .set_num_inputs(3)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", DequantizeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", DequantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", DequantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", DequantizeStorageType)
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNDequantizeCompute)

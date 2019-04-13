@@ -38,7 +38,9 @@
 #ifdef __CUDACC__
 #include "./dot-inl.cuh"
 #endif  // __CUDACC__
-
+#if (MSHADOW_USE_MKL == 1)
+#include "sparse_matrix.h"
+#endif
 namespace mxnet {
 namespace op {
 
@@ -775,12 +777,34 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   }
 
   using nnvm::dim_t;
-
+#if (MSHADOW_USE_MKL == 1)
+  TShape lhs_shape = lhs.shape();
+  TShape rhs_shape = rhs.shape_;
+#endif
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
   const TBlob& data_r = rhs;
   const TBlob data_out = *ret;
+
+#if (MSHADOW_USE_MKL == 1)
+  if (data_l.type_flag_ == mshadow::kFloat32
+    && indptr_l.type_flag_ == mshadow::kInt64
+    && col_idx_l.type_flag_ == mshadow::kInt64
+    && !trans_lhs) {
+    bool ret = mkl_DotCsrDnsDns(static_cast<SP_INT64*>(indptr_l.dptr_),
+                                static_cast<SP_INT64*>(col_idx_l.dptr_),
+                                data_l.dptr<float>(),
+                                data_r.dptr<float>(),
+                                data_out.dptr<float>(),
+                                lhs_shape[0],
+                                lhs_shape[1],
+                                rhs_shape[1]);
+    if (ret) {
+      return;
+    }
+  }
+#endif
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type
@@ -1200,33 +1224,37 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx, const cpu& cpu_dev,
 }
 
 inline bool DotShape(const nnvm::NodeAttrs& attrs,
-                     std::vector<TShape> *in_attrs,
-                     std::vector<TShape> *out_attrs) {
+                     mxnet::ShapeVector *in_attrs,
+                     mxnet::ShapeVector *out_attrs) {
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
+  mxnet::TShape& lshape = (*in_attrs)[0];
+  mxnet::TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
     CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
   } else {
     bool Ta = param.transpose_a, Tb = param.transpose_b;
-    TShape L[2], R[2];
+    mxnet::TShape L[2], R[2];
     if (Ta) {
       L[0] = mshadow::Shape1(lshape[0]);
-      L[1] = lshape.ndim() > 1 ? TShape(&lshape[1], &lshape[lshape.ndim()]) : TShape(1);
+      L[1] = lshape.ndim() > 1 ?
+             mxnet::TShape(&lshape[1], &lshape[lshape.ndim()]) : mxnet::TShape(1);
     } else {
-      L[0] = lshape.ndim() > 1 ? TShape(&lshape[0], &lshape[lshape.ndim()-1]) : TShape(1);
+      L[0] = lshape.ndim() > 1 ?
+             mxnet::TShape(&lshape[0], &lshape[lshape.ndim()-1]) : mxnet::TShape(1);
       L[1] = mshadow::Shape1(lshape[lshape.ndim()-1]);
     }
     if (Tb) {
-      R[0] = rshape.ndim() > 1 ? TShape(&rshape[0], &rshape[rshape.ndim()-1]) : TShape(1);
+      R[0] = rshape.ndim() > 1 ?
+             mxnet::TShape(&rshape[0], &rshape[rshape.ndim()-1]) : mxnet::TShape(1);
       R[1] = mshadow::Shape1(rshape[rshape.ndim()-1]);
     } else {
       R[0] = mshadow::Shape1(rshape[0]);
-      R[1] = rshape.ndim() > 1 ? TShape(&rshape[1], &rshape[rshape.ndim()]) : TShape(1);
+      R[1] = rshape.ndim() > 1 ?
+             mxnet::TShape(&rshape[1], &rshape[rshape.ndim()]) : mxnet::TShape(1);
     }
 
     if (L[!Ta].Size() != 0 && R[Tb].Size() != 0) {
@@ -1236,7 +1264,7 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
     std::vector<index_t> buf;
     if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], &L[Ta][L[Ta].ndim()]);
     if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], &R[!Tb][R[!Tb].ndim()]);
-    TShape oshape(buf.begin(), buf.end());
+    mxnet::TShape oshape(buf.begin(), buf.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
   return true;
@@ -1468,13 +1496,13 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
+  mxnet::TShape& lshape = (*in_attrs)[0];
+  mxnet::TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 3 && rshape.ndim() == 3) {
     CHECK(lshape[0] == rshape[0])
       << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape

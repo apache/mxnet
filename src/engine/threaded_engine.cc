@@ -281,7 +281,7 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
   this->PushAsync([threaded_opr](RunContext, CallbackOnComplete on_complete) {
       ThreadedOpr::Delete(threaded_opr);
       on_complete();
-    }, Context::CPU(), {}, deps, FnProperty::kAsync, 0,
+    }, Context::CPU(), {}, deps, FnProperty::kDeleteVar, 0,
     "DeleteOperator");
 }
 
@@ -415,6 +415,23 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
+  std::exception_ptr exception_to_rethrow = nullptr;
+  if (!global_exception_refs_.empty()) {
+    // iterate through all exception refs
+    for (const auto& global_exception_ref : global_exception_refs_) {
+      // the first exception will be saved to be rethrown later
+      if (*global_exception_ref != nullptr && exception_to_rethrow == nullptr) {
+        exception_to_rethrow = *global_exception_ref;
+      }
+      // clear exceptions, WaitToRead following WaitForAll shouldn't throw
+      *global_exception_ref = nullptr;
+    }
+    // A waitall following a waitall shouldn't throw any exceptions
+    global_exception_refs_.clear();
+    if (exception_to_rethrow != nullptr) {
+      std::rethrow_exception(exception_to_rethrow);
+    }
+  }
 }
 
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
@@ -428,6 +445,9 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   for (auto&& i : threaded_opr->mutable_vars) {
     if (threaded_opr->opr_exception && *threaded_opr->opr_exception) {
       i->var_exception = threaded_opr->opr_exception;
+      // add current operator exceptions to global exceptions if not already
+      // added
+      AddToGlobalExceptions(threaded_opr->opr_exception);
     }
     const bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {

@@ -284,7 +284,7 @@ inline std::string storage_str(int storage_id) {
  */
 inline void LogMemoryPlan(const nnvm::Graph& g) {
   const auto &idx = g.indexed_graph();
-  const auto& vshape = g.GetAttr<nnvm::ShapeVector>("shape");
+  const auto& vshape = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& vtype = g.GetAttr<nnvm::DTypeVector>("dtype");
   const auto& vstorage = g.GetAttr<nnvm::StorageVector>("storage_id");
   // find node range
@@ -373,13 +373,13 @@ inline void LogInferStorage(const nnvm::Graph& g) {
 // prints a helpful message after shape inference errors in executor.
 inline void HandleInferShapeError(const size_t num_forward_inputs,
                                   const nnvm::IndexedGraph& idx,
-                                  const nnvm::ShapeVector& inferred_shapes) {
+                                  const mxnet::ShapeVector& inferred_shapes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const uint32_t eid = idx.entry_id(nid, 0);
-    const TShape& inferred_shape = inferred_shapes[eid];
+    const mxnet::TShape& inferred_shape = inferred_shapes[eid];
     if (inferred_shape.ndim() == 0 || inferred_shape.Size() == 0U) {
       const std::string& arg_name = idx[nid].source->attrs.name;
       oss << arg_name << ": " << inferred_shape << ", ";
@@ -451,7 +451,7 @@ inline void HandleInferStorageTypeError(const size_t num_forward_inputs,
  * if enable_row_sparse_sharing is `True`, otherwise default storage only.
  */
 inline NDArray ReshapeOrCreate(const std::string& name,
-                               const TShape& dest_arg_shape,
+                               const mxnet::TShape& dest_arg_shape,
                                const int dest_arg_dtype,
                                const NDArrayStorageType dest_arg_stype,
                                const Context& ctx,

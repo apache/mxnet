@@ -608,6 +608,12 @@ struct ProfileCounter : public ProfileObject {
       return IncrementValue(static_cast<uint64_t>(v));
     }
   }
+
+  inline bool operator >=(int64_t v) {
+      CHECK_GE(v, 0);
+      return value_ >= static_cast<uint64_t>(v);
+  }
+
   /*! \brief operator: object = v */
   inline ProfileCounter& operator = (uint64_t v) {
     SetValue(v);
@@ -1081,8 +1087,8 @@ struct ProfileOperator : public ProfileEvent {
    * \brief Operator attributes
    */
   struct Attributes {
-    std::vector<nnvm::TShape> inputs_;
-    std::vector<nnvm::TShape> outputs_;
+    std::vector<mxnet::TShape> inputs_;
+    std::vector<mxnet::TShape> outputs_;
     std::unordered_map<std::string, std::string> attr_;
     std::string to_string() const {
       std::stringstream ss;

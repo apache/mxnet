@@ -58,6 +58,10 @@ USE_BLAS=openblas
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 1
+# Add OpenCV include path, in which the directory `opencv2` exists
+USE_OPENCV_INC_PATH = NONE
+# Add OpenCV shared library path, in which the shared library exists
+USE_OPENCV_LIB_PATH = NONE
 
 # whether use CUDA during compile
 USE_CUDA = 1
@@ -75,7 +79,7 @@ USE_CUDNN = 1
 # CUDA_ARCH :=
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-USE_NVRTC = 1
+ENABLE_CUDA_RTC = 1
 
 # use openmp for parallelization
 USE_OPENMP = 1

@@ -82,8 +82,9 @@ enum PoolingOpPadConventionType {kValid, kFull, kSame};
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType>
-inline void pool_max_1d_ncw_cpu(const DType *in_data, const TShape &ishape, const TShape &oshape,
-                                const TShape &kernel, const TShape &pad, const TShape &stride,
+inline void pool_max_1d_ncw_cpu(const DType *in_data, const mxnet::TShape &ishape,
+                                const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                const mxnet::TShape &pad, const mxnet::TShape &stride,
                                 DType *out_data) {
   using mshadow::red::limits::MinValue;
   const int width = ishape[2];
@@ -118,9 +119,10 @@ inline void pool_max_1d_ncw_cpu(const DType *in_data, const TShape &ishape, cons
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType>
-inline void pool_max_1d_nwc_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
-                            const TShape& kernel, const TShape& pad, const TShape& stride,
-                            DType* out_data) {
+inline void pool_max_1d_nwc_cpu(const DType* in_data, const mxnet::TShape& ishape,
+                                const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                                const mxnet::TShape& pad, const mxnet::TShape& stride,
+                                DType* out_data) {
   using mshadow::red::limits::MinValue;
   const int width = ishape[1];
   const int pooled_width = oshape[1];
@@ -157,8 +159,9 @@ inline void pool_max_1d_nwc_cpu(const DType* in_data, const TShape& ishape, cons
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType>
-inline void pool_max_2d_nchw_cpu(const DType *in_data, const TShape &ishape, const TShape &oshape,
-                                 const TShape &kernel, const TShape &pad, const TShape &stride,
+inline void pool_max_2d_nchw_cpu(const DType *in_data, const mxnet::TShape &ishape,
+                                 const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                 const mxnet::TShape &pad, const mxnet::TShape &stride,
                                  DType *out_data) {
   using mshadow::red::limits::MinValue;
   const int height = ishape[2], width = ishape[3];
@@ -202,9 +205,10 @@ inline void pool_max_2d_nchw_cpu(const DType *in_data, const TShape &ishape, con
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType>
-inline void pool_max_2d_nhwc_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
-                            const TShape& kernel, const TShape& pad, const TShape& stride,
-                            DType* out_data) {
+inline void pool_max_2d_nhwc_cpu(const DType* in_data, const mxnet::TShape& ishape,
+                                 const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                                 const mxnet::TShape& pad, const mxnet::TShape& stride,
+                                 DType* out_data) {
   using mshadow::red::limits::MinValue;
   const int height = ishape[1], width = ishape[2];
   const int pooled_height = oshape[1], pooled_width = oshape[2];
@@ -250,8 +254,9 @@ inline void pool_max_2d_nhwc_cpu(const DType* in_data, const TShape& ishape, con
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType>
-inline void pool_max_3d_ncdhw_cpu(const DType *in_data, const TShape &ishape, const TShape &oshape,
-                                  const TShape &kernel, const TShape &pad, const TShape &stride,
+inline void pool_max_3d_ncdhw_cpu(const DType *in_data, const mxnet::TShape &ishape,
+                                  const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                  const mxnet::TShape &pad, const mxnet::TShape &stride,
                                   DType *out_data) {
   using mshadow::red::limits::MinValue;
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
@@ -302,9 +307,10 @@ inline void pool_max_3d_ncdhw_cpu(const DType *in_data, const TShape &ishape, co
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType>
-inline void pool_max_3d_ndhwc_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
-                            const TShape& kernel, const TShape& pad, const TShape& stride,
-                            DType* out_data) {
+inline void pool_max_3d_ndhwc_cpu(const DType* in_data, const mxnet::TShape& ishape,
+                                  const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                                  const mxnet::TShape& pad, const mxnet::TShape& stride,
+                                  DType* out_data) {
   using mshadow::red::limits::MinValue;
   const int depth = ishape[1], height = ishape[2], width = ishape[3];
   const int pooled_depth = oshape[1], pooled_height = oshape[2], pooled_width = oshape[3];
@@ -357,8 +363,9 @@ inline void pool_max_3d_ndhwc_cpu(const DType* in_data, const TShape& ishape, co
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType, int p = 1>
-inline void pool_sum_1d_ncw_cpu(const DType *in_data, const TShape &ishape, const TShape &oshape,
-                                const TShape &kernel, const TShape &pad, const TShape &stride,
+inline void pool_sum_1d_ncw_cpu(const DType *in_data, const mxnet::TShape &ishape,
+                                const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                const mxnet::TShape &pad, const mxnet::TShape &stride,
                                 DType *out_data,
                                 const bool get_avg = false, const bool count_include_pad = true) {
   using AccType = typename PoolingTypes<DType>::AccType;
@@ -397,10 +404,11 @@ inline void pool_sum_1d_ncw_cpu(const DType *in_data, const TShape &ishape, cons
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType, int p = 1>
-inline void pool_sum_1d_nwc_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
-                            const TShape& kernel, const TShape& pad, const TShape& stride,
-                            DType* out_data,
-                            const bool get_avg = false, const bool count_include_pad = true) {
+inline void pool_sum_1d_nwc_cpu(const DType* in_data, const mxnet::TShape& ishape,
+                                const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                                const mxnet::TShape& pad, const mxnet::TShape& stride,
+                                DType* out_data,
+                                const bool get_avg = false, const bool count_include_pad = true) {
   using AccType = typename PoolingTypes<DType>::AccType;
   const int width = ishape[1];
   const int pooled_width = oshape[1];
@@ -440,8 +448,9 @@ inline void pool_sum_1d_nwc_cpu(const DType* in_data, const TShape& ishape, cons
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType, int p = 1>
-inline void pool_sum_2d_nchw_cpu(const DType *in_data, const TShape &ishape, const TShape &oshape,
-                                 const TShape &kernel, const TShape &pad, const TShape &stride,
+inline void pool_sum_2d_nchw_cpu(const DType *in_data, const mxnet::TShape &ishape,
+                                 const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                 const mxnet::TShape &pad, const mxnet::TShape &stride,
                                  DType *out_data,
                                  const bool get_avg = false, const bool count_include_pad = true) {
   using AccType = typename PoolingTypes<DType>::AccType;
@@ -488,10 +497,11 @@ inline void pool_sum_2d_nchw_cpu(const DType *in_data, const TShape &ishape, con
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType, int p = 1>
-inline void pool_sum_2d_nhwc_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
-                            const TShape& kernel, const TShape& pad, const TShape& stride,
-                            DType* out_data,
-                            const bool get_avg = false, const bool count_include_pad = true) {
+inline void pool_sum_2d_nhwc_cpu(const DType* in_data, const mxnet::TShape& ishape,
+                                 const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                                 const mxnet::TShape& pad, const mxnet::TShape& stride,
+                                 DType* out_data,
+                                 const bool get_avg = false, const bool count_include_pad = true) {
   using AccType = typename PoolingTypes<DType>::AccType;
   const int height = ishape[1], width = ishape[2];
   const int pooled_height = oshape[1], pooled_width = oshape[2];
@@ -541,8 +551,9 @@ inline void pool_sum_2d_nhwc_cpu(const DType* in_data, const TShape& ishape, con
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType, int p = 1>
-inline void pool_sum_3d_ncdhw_cpu(const DType *in_data, const TShape &ishape, const TShape &oshape,
-                                  const TShape &kernel, const TShape &pad, const TShape &stride,
+inline void pool_sum_3d_ncdhw_cpu(const DType *in_data, const mxnet::TShape &ishape,
+                                  const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                  const mxnet::TShape &pad, const mxnet::TShape &stride,
                                   DType *out_data,
                                   const bool get_avg = false, const bool count_include_pad = true) {
   using AccType = typename PoolingTypes<DType>::AccType;
@@ -599,10 +610,11 @@ inline void pool_sum_3d_ncdhw_cpu(const DType *in_data, const TShape &ishape, co
  * Do not call this kernel directly. Use the interface pool().
  */
 template<typename DType, int p = 1>
-inline void pool_sum_3d_ndhwc_cpu(const DType* in_data, const TShape& ishape, const TShape& oshape,
-                            const TShape& kernel, const TShape& pad, const TShape& stride,
-                            DType* out_data,
-                            const bool get_avg = false, const bool count_include_pad = true) {
+inline void pool_sum_3d_ndhwc_cpu(const DType* in_data, const mxnet::TShape& ishape,
+                                  const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                                  const mxnet::TShape& pad, const mxnet::TShape& stride,
+                                  DType* out_data,
+                                  const bool get_avg = false, const bool count_include_pad = true) {
   using AccType = typename PoolingTypes<DType>::AccType;
   const int depth = ishape[1], height = ishape[2], width = ishape[3];
   const int pooled_depth = oshape[1], pooled_height = oshape[2], pooled_width = oshape[3];
@@ -663,9 +675,9 @@ inline void pool_sum_3d_ndhwc_cpu(const DType* in_data, const TShape& ishape, co
  */
 template<typename DType>
 inline void unpool_max_1d_ncw_cpu(const DType *out_grad, const DType *in_data,
-                                  const DType *out_data, const TShape &ishape,
-                                  const TShape &oshape, const TShape &kernel,
-                                  const TShape &pad, const TShape &stride,
+                                  const DType *out_data, const mxnet::TShape &ishape,
+                                  const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                  const mxnet::TShape &pad, const mxnet::TShape &stride,
                                   DType *in_grad) {
   const int width = ishape[2];
   const int pooled_width = oshape[2];
@@ -707,9 +719,9 @@ inline void unpool_max_1d_ncw_cpu(const DType *out_grad, const DType *in_data,
  */
 template<typename DType>
 inline void unpool_max_1d_nwc_cpu(const DType* out_grad, const DType* in_data,
-                              const DType* out_data, const TShape& ishape,
-                              const TShape& oshape, const TShape& kernel,
-                              const TShape& pad, const TShape& stride,
+                              const DType* out_data, const mxnet::TShape& ishape,
+                              const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                              const mxnet::TShape& pad, const mxnet::TShape& stride,
                               DType* in_grad) {
   const int width = ishape[1];
   const int pooled_width = oshape[1];
@@ -755,9 +767,9 @@ inline void unpool_max_1d_nwc_cpu(const DType* out_grad, const DType* in_data,
  */
 template<typename DType>
 inline void unpool_max_2d_nchw_cpu(const DType *out_grad, const DType *in_data,
-                                   const DType *out_data, const TShape &ishape,
-                                   const TShape &oshape, const TShape &kernel,
-                                   const TShape &pad, const TShape &stride,
+                                   const DType *out_data, const mxnet::TShape &ishape,
+                                   const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                   const mxnet::TShape &pad, const mxnet::TShape &stride,
                                    DType *in_grad) {
   const int height = ishape[2], width = ishape[3];
   const int pooled_height = oshape[2], pooled_width = oshape[3];
@@ -811,9 +823,9 @@ inline void unpool_max_2d_nchw_cpu(const DType *out_grad, const DType *in_data,
  */
 template<typename DType>
 inline void unpool_max_2d_nhwc_cpu(const DType* out_grad, const DType* in_data,
-                              const DType* out_data, const TShape& ishape,
-                              const TShape& oshape, const TShape& kernel,
-                              const TShape& pad, const TShape& stride,
+                              const DType* out_data, const mxnet::TShape& ishape,
+                              const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                              const mxnet::TShape& pad, const mxnet::TShape& stride,
                               DType* in_grad) {
   const int height = ishape[1], width = ishape[2];
   const int pooled_height = oshape[1], pooled_width = oshape[2];
@@ -871,9 +883,9 @@ inline void unpool_max_2d_nhwc_cpu(const DType* out_grad, const DType* in_data,
  */
 template<typename DType>
 inline void unpool_max_3d_ncdhw_cpu(const DType *out_grad, const DType *in_data,
-                                    const DType *out_data, const TShape &ishape,
-                                    const TShape &oshape, const TShape &kernel,
-                                    const TShape &pad, const TShape &stride,
+                                    const DType *out_data, const mxnet::TShape &ishape,
+                                    const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                    const mxnet::TShape &pad, const mxnet::TShape &stride,
                                     DType *in_grad) {
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
   const int pooled_depth = oshape[2], pooled_height = oshape[3], pooled_width = oshape[4];
@@ -935,9 +947,9 @@ inline void unpool_max_3d_ncdhw_cpu(const DType *out_grad, const DType *in_data,
  */
 template<typename DType>
 inline void unpool_max_3d_ndhwc_cpu(const DType* out_grad, const DType* in_data,
-                              const DType* out_data, const TShape& ishape,
-                              const TShape& oshape, const TShape& kernel,
-                              const TShape& pad, const TShape& stride,
+                              const DType* out_data, const mxnet::TShape& ishape,
+                              const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                              const mxnet::TShape& pad, const mxnet::TShape& stride,
                               DType* in_grad) {
   const int depth = ishape[1], height = ishape[2], width = ishape[3];
   const int pooled_depth = oshape[1], pooled_height = oshape[2], pooled_width = oshape[3];
@@ -1004,8 +1016,9 @@ inline void unpool_max_3d_ndhwc_cpu(const DType* out_grad, const DType* in_data,
 template<typename DType, int p = 1>
 inline void unpool_sum_1d_ncw_cpu(const DType *out_grad, const DType *in_data,
                                   const DType *out_data,
-                                  const TShape &ishape, const TShape &oshape, const TShape &kernel,
-                                  const TShape &pad, const TShape &stride, DType *in_grad,
+                                  const mxnet::TShape &ishape, const mxnet::TShape &oshape,
+                                  const mxnet::TShape &kernel, const mxnet::TShape &pad,
+                                  const mxnet::TShape &stride, DType *in_grad,
                                   const bool is_avg = false, const bool count_include_pad = true) {
   const int width = ishape[2];
   const int pooled_width = oshape[2];
@@ -1043,9 +1056,9 @@ inline void unpool_sum_1d_ncw_cpu(const DType *out_grad, const DType *in_data,
  */
 template<typename DType, int p = 1>
 inline void unpool_sum_1d_nwc_cpu(const DType* out_grad, const DType* in_data,
-                                  const DType *out_data, const TShape &ishape,
-                                  const TShape &oshape, const TShape &kernel,
-                                  const TShape &pad, const TShape &stride,
+                                  const DType *out_data, const mxnet::TShape &ishape,
+                                  const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                  const mxnet::TShape &pad, const mxnet::TShape &stride,
                                   DType *in_grad, const bool is_avg = false,
                                   const bool count_include_pad = true) {
   const int width = ishape[1];
@@ -1088,9 +1101,9 @@ inline void unpool_sum_1d_nwc_cpu(const DType* out_grad, const DType* in_data,
  */
 template<typename DType, int p = 1>
 inline void unpool_sum_2d_nchw_cpu(const DType *out_grad, const DType *in_data,
-                                   const DType *out_data, const TShape &ishape,
-                                   const TShape &oshape, const TShape &kernel,
-                                   const TShape &pad, const TShape &stride,
+                                   const DType *out_data, const mxnet::TShape &ishape,
+                                   const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                   const mxnet::TShape &pad, const mxnet::TShape &stride,
                                    DType *in_grad, const bool is_avg = false,
                                    const bool count_include_pad = true) {
   const int height = ishape[2], width = ishape[3];
@@ -1141,9 +1154,9 @@ inline void unpool_sum_2d_nchw_cpu(const DType *out_grad, const DType *in_data,
  */
 template<typename DType, int p = 1>
 inline void unpool_sum_2d_nhwc_cpu(const DType* out_grad, const DType* in_data,
-                                   const DType *out_data, const TShape &ishape,
-                                   const TShape &oshape, const TShape &kernel,
-                                   const TShape &pad, const TShape &stride,
+                                   const DType *out_data, const mxnet::TShape &ishape,
+                                   const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                   const mxnet::TShape &pad, const mxnet::TShape &stride,
                                    DType *in_grad, const bool is_avg = false,
                                    const bool count_include_pad = true) {
   const int height = ishape[1], width = ishape[2];
@@ -1196,9 +1209,9 @@ inline void unpool_sum_2d_nhwc_cpu(const DType* out_grad, const DType* in_data,
  */
 template<typename DType, int p = 1>
 inline void unpool_sum_3d_ncdhw_cpu(const DType *out_grad, const DType *in_data,
-                                    const DType *out_data, const TShape &ishape,
-                                    const TShape &oshape, const TShape &kernel,
-                                    const TShape &pad, const TShape &stride,
+                                    const DType *out_data, const mxnet::TShape &ishape,
+                                    const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                    const mxnet::TShape &pad, const mxnet::TShape &stride,
                                     DType *in_grad, const bool is_avg = false,
                                     const bool count_include_pad = true) {
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
@@ -1257,9 +1270,9 @@ inline void unpool_sum_3d_ncdhw_cpu(const DType *out_grad, const DType *in_data,
  */
 template<typename DType, int p = 1>
 inline void unpool_sum_3d_ndhwc_cpu(const DType* out_grad, const DType* in_data,
-                                    const DType *out_data, const TShape &ishape,
-                                    const TShape &oshape, const TShape &kernel,
-                                    const TShape &pad, const TShape &stride,
+                                    const DType *out_data, const mxnet::TShape &ishape,
+                                    const mxnet::TShape &oshape, const mxnet::TShape &kernel,
+                                    const mxnet::TShape &pad, const mxnet::TShape &stride,
                                     DType *in_grad, const bool is_avg = false,
                                     const bool count_include_pad = true) {
   const int depth = ishape[1], height = ishape[2], width = ishape[3];
@@ -1329,9 +1342,9 @@ inline void unpool_sum_3d_ndhwc_cpu(const DType* out_grad, const DType* in_data,
  * \param p_value value of p for Lp pooling
  */
 template<typename DType, int p>
-inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& ishape,
-                 const TShape& oshape, const TShape& kernel, const TShape& pad,
-                 const TShape& stride, const int pool_type, OpReqType req_type,
+inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const mxnet::TShape& ishape,
+                 const mxnet::TShape& oshape, const mxnet::TShape& kernel, const mxnet::TShape& pad,
+                 const mxnet::TShape& stride, const int pool_type, OpReqType req_type,
                  DType* out_data, const bool count_include_pad, int layout) {
   CHECK_EQ(req_type, kWriteTo) << "Only support req=kWriteTo in pooling operations";
   if (kernel.ndim() == 1) {
@@ -1447,8 +1460,9 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
  */
 template<typename DType, int p>
 inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* in_data,
-                   const DType* out_data, const TShape& ishape, const TShape& oshape,
-                   const TShape& kernel, const TShape& pad, const TShape& stride,
+                   const DType* out_data, const mxnet::TShape& ishape,
+                   const mxnet::TShape& oshape, const mxnet::TShape& kernel,
+                   const mxnet::TShape& pad, const mxnet::TShape& stride,
                    const int pool_type, OpReqType req_type, DType* in_grad,
                    const bool count_include_pad, int layout) {
   if (mxnet::kNullOp == req_type) return;

@@ -110,7 +110,7 @@ information on the definition and the algorithm.
   [](const NodeAttrs& attrs) {
     return 1;
   })
-.set_attr<nnvm::FInferShape>("FInferShape", CTCLossOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", CTCLossOpShape)
 .set_attr<nnvm::FInferType>("FInferType", CTCLossOpType)
 .set_attr<FInferStorageType>("FInferStorageType", CTCLossOpStorageType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)

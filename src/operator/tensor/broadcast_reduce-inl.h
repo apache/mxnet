@@ -260,14 +260,15 @@ void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<cpu> *s, const TShape& small, const OpReqType req,
-                           const TShape& big) {
+size_t ReduceWorkspaceSize(Stream<cpu> *s, const mxnet::TShape& small, const OpReqType req,
+                           const mxnet::TShape& big) {
   return 0;
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<cpu> *s, const TShape& small, const OpReqType req,
-                           const TShape& big, const TShape& lhs, const TShape& rhs) {
+size_t ReduceWorkspaceSize(Stream<cpu> *s, const mxnet::TShape& small, const OpReqType req,
+                           const mxnet::TShape& big, const mxnet::TShape& lhs,
+                           const mxnet::TShape& rhs) {
   return 0;
 }
 

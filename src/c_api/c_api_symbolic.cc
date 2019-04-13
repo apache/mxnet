@@ -520,18 +520,18 @@ int MXSymbolInferShape(SymbolHandle sym,
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   nnvm::Graph g = Symbol2Graph(*s);
-  nnvm::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), TShape());
+  mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
   if (keys == nullptr && num_args != 0) {
     std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
     CHECK_LE(num_args, read_only_args.size());
     for (mx_uint i = 0; i < num_args; ++i) {
-      arg_shapes[read_only_args[i]] = nnvm::ShapeTypeCast(
+      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(
           arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
     }
   } else {
-    std::unordered_map<std::string, TShape> kwargs;
+    std::unordered_map<std::string, mxnet::TShape> kwargs;
     for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = nnvm::ShapeTypeCast(
+      kwargs[keys[i]] = mxnet::ShapeTypeCast(
           arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
     }
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
@@ -544,7 +544,7 @@ int MXSymbolInferShape(SymbolHandle sym,
   }
 
   // copy back
-  CopyAttr(g.indexed_graph(), g.GetAttr<nnvm::ShapeVector>("shape"),
+  CopyAttr(g.indexed_graph(), g.GetAttr<mxnet::ShapeVector>("shape"),
            &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
 
   // copy data back
@@ -722,14 +722,15 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
-  nnvm::Graph g = Symbol2Graph(*s);
-  mxnet::op::SubgraphPropertyPtr property =
-      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(
-          backend);
-  g.attrs["subgraph_property"] =
-      std::make_shared<nnvm::any>(std::move(property));
-  g = ApplyPass(std::move(g), "PartitionGraph");
-  s->outputs = g.outputs;
+  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
+      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(backend);
+  for (auto property : properties) {
+    nnvm::Graph g = Symbol2Graph(*s);
+    property->SetAttr("graph", g);
+    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
+    g = ApplyPass(std::move(g), "BuildSubgraph");
+    s->outputs = g.outputs;
+  }
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }

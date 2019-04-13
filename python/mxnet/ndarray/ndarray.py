@@ -158,12 +158,9 @@ def waitall():
 
     This function is used for benchmarking only.
 
-    .. warning::
+    .. note::
 
-       If your code has exceptions, `waitall` can cause silent failures.
-       For this reason you should avoid `waitall` in your code.
-       Use it only if you are confident that your code is error free.
-       Then make sure you call `wait_to_read` on all outputs after `waitall`.
+       If your mxnet code throws an exception, then waitall can cause performance impact.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
@@ -2513,10 +2510,10 @@ def moveaxis(tensor, source, destination):
     ----------
     tensor : mx.nd.array
         The array which axes should be reordered
-    source : int
-        Original position of the axes to move.
-    destination : int
-        Destination position for each of the original axes.
+    source : int or sequence of int
+        Original position of the axes to move. Can be negative but must be unique.
+    destination : int or sequence of int
+        Destination position for each of the original axes. Can be negative but must be unique.
 
     Returns
     -------
@@ -2528,23 +2525,36 @@ def moveaxis(tensor, source, destination):
     >>> X = mx.nd.array([[1, 2, 3], [4, 5, 6]])
     >>> mx.nd.moveaxis(X, 0, 1).shape
     (3L, 2L)
+
+    >>> X = mx.nd.zeros((3, 4, 5))
+    >>> mx.nd.moveaxis(X, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
     """
-    axes = list(range(tensor.ndim))
     try:
-        axes.pop(source)
+        source = np.core.numeric.normalize_axis_tuple(source, tensor.ndim)
     except IndexError:
         raise ValueError('Source should verify 0 <= source < tensor.ndim'
                          'Got %d' % source)
     try:
-        axes.insert(destination, source)
+        destination = np.core.numeric.normalize_axis_tuple(destination, tensor.ndim)
     except IndexError:
-        raise ValueError('Destination should verify 0 <= destination < tensor.ndim'
-                         'Got %d' % destination)
-    return op.transpose(tensor, axes)
+        raise ValueError('Destination should verify 0 <= destination < tensor.ndim (%d).'
+                         % tensor.ndim, 'Got %d' % destination)
+
+    if len(source) != len(destination):
+        raise ValueError('`source` and `destination` arguments must have '
+                         'the same number of elements')
+
+    order = [n for n in range(tensor.ndim) if n not in source]
+
+    for dest, src in sorted(zip(destination, source)):
+        order.insert(dest, src)
+
+    return op.transpose(tensor, order)
 
 
 # pylint: disable= no-member, protected-access, too-many-arguments, redefined-outer-name
-def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dtype=mx_real_t):
+def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dtype=mx_real_t):
     """Returns evenly spaced values within a given interval.
 
     Values are generated within the half-open interval [`start`, `stop`). In other
@@ -2588,10 +2598,13 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dt
     >>> mx.nd.arange(2, 6, step=2, repeat=3, dtype='int32').asnumpy()
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
+    if infer_range is not None:
+        warnings.warn('`infer_range` argument has been deprecated',
+                      DeprecationWarning)
     if ctx is None:
         ctx = current_context()
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             infer_range=infer_range, dtype=dtype, ctx=str(ctx))
+                             infer_range=False, dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
 
 

@@ -32,9 +32,15 @@
 namespace mxnet {
 namespace op {
 
+bool SupportMKLDNNFC(const NDArray& input) {
+  int ndim = input.shape().ndim();
+  return input.dtype() == mshadow::kFloat32 && (ndim >= 1 && ndim <= 4) &&
+         input.storage_type() == kDefaultStorage;
+}
+
 static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
-                                std::vector<TShape> *in_shape,
-                                std::vector<TShape> *out_shape) {
+                                mxnet::ShapeVector *in_shape,
+                                mxnet::ShapeVector *out_shape) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
   if (!param.no_bias) {
@@ -43,8 +49,8 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
   }
   CHECK_EQ(out_shape->size(), 1U);
-  TShape dshape = (*in_shape)[fullc::kData];
-  TShape oshape = (*out_shape)[0];
+  mxnet::TShape dshape = (*in_shape)[fullc::kData];
+  mxnet::TShape oshape = (*out_shape)[0];
   // require data to be known
   if (dshape.ndim() ==  0) return false;
 
@@ -63,7 +69,7 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
   }
 
   if (!param.flatten) {
-    TShape result_shape(dshape);
+    mxnet::TShape result_shape(dshape);
     result_shape[dshape.ndim()-1] = param.num_hidden;
     SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
   } else {
@@ -94,7 +100,7 @@ void FullyConnectedComputeExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   if (common::ContainsOnlyStorage(inputs, kDefaultStorage) &&
       common::ContainsOnlyStorage(outputs, kDefaultStorage)) {
-    if (SupportMKLDNN(inputs[0])) {
+    if (SupportMKLDNNFC(inputs[0])) {
       MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
       MKLDNNFCForward(attrs, ctx, inputs, req, outputs);
       MKLDNN_OPCHECK_RUN(FullyConnectedCompute<cpu>, attrs, ctx, inputs, req,
@@ -141,7 +147,7 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray> &inputs,
                                     const std::vector<OpReqType> &req,
                                     const std::vector<NDArray> &outputs) {
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportMKLDNNFC(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNFCBackward(attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(FullyConnectedGradCompute<cpu>, attrs, ctx, inputs, req,
@@ -294,7 +300,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 #endif
-.set_attr<nnvm::FInferShape>("FInferShape", FullyConnectedShape)
+.set_attr<mxnet::FInferShape>("FInferShape", FullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", FullyConnectedType)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedComputeExCPU)
