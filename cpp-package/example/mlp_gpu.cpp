@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  TRY
   auto net = mlp(layers);
 
   Context ctx = Context::gpu();  // Use GPU for training
@@ -155,6 +156,8 @@ int main(int argc, char** argv) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

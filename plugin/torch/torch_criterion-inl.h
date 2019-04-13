@@ -42,13 +42,13 @@ namespace mxnet {
 namespace op {
 struct TorchCriterionParam : public dmlc::Parameter<TorchCriterionParam> {
   std::string lua_string;
-  TShape label_shape;
+  mxnet::TShape label_shape;
   float grad_scale;
   DMLC_DECLARE_PARAMETER(TorchCriterionParam) {
     DMLC_DECLARE_FIELD(lua_string)
     .describe("lua string that is called to generate the torch criterion object");
     DMLC_DECLARE_FIELD(label_shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .enforce_nonzero()
     .describe("Shape of label (without batch size).");
     DMLC_DECLARE_FIELD(grad_scale)
@@ -183,18 +183,18 @@ class TorchCriterionProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2);
-    const TShape &dshape = in_shape->at(0);
+    const mxnet::TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     std::vector<index_t> lshape;
     lshape.push_back(dshape[0]);
     lshape.insert(lshape.end(), param_.label_shape.data(),
       param_.label_shape.data() +  param_.label_shape.ndim());
-    TShape shape(lshape.begin(), lshape.end());
+    mxnet::TShape shape(lshape.begin(), lshape.end());
     SHAPE_ASSIGN_CHECK(*in_shape, 1, shape);
     out_shape->clear();
     out_shape->push_back(Shape1(dshape[0]));

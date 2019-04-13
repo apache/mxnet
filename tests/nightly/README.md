@@ -1,15 +1,32 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Nightly Tests for MXNet 
 
-These are some longer running tests that are scheduled to run every night. 
+These are some longer running tests that are scheduled to run every night, for master and for latest release branches. 
 
 ### Description
 There are two Jenkins pipelines that run these tests - 
-1. Tests on the Source code: http://jenkins.mxnet-ci.amazon-ml.com/view/Nightly%20Tests/job/NightlyTests_onSource/
-2. Tests on Built Binaries: http://jenkins.mxnet-ci.amazon-ml.com/view/Nightly%20Tests/job/NightlyTests_onBinaries/
+1. [Tests on source code](http://jenkins.mxnet-ci.amazon-ml.com/job/NightlyTests/)
+2. [Tests on built binaries](http://jenkins.mxnet-ci.amazon-ml.com/job/NightlyTestsForBinaries/)
 
 ### Adding a new Nightly Test
-Add your test script to the mxnet repo (preferably)in the tests/nightly folder)
-Make sure to describe in a readme or comments the purpose of the test. 
+Add your test script to the MXNet repo's `tests/nightly/` folder. Make sure to describe in a readme or in the 
+comments the purpose of the test. 
 
 #### Setting up the Docker Container 
 1. Your test must run on the CI slaves only within an official docker container available at ci/docker

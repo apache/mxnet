@@ -29,7 +29,9 @@ import org.mockito.Mockito;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ObjectDetectorTest {
 
@@ -93,10 +95,33 @@ public class ObjectDetectorTest {
     }
 
     @Test
+    public void testObjectDetectorWithIterableOfBatchImage() {
+
+        Set<BufferedImage> batchImage = new HashSet<>();
+        batchImage.add(inputImage);
+        Mockito.when(objectDetector.imageBatchObjectDetect(batchImage, topK)).thenReturn(expectedResult);
+        List<List<ObjectDetectorOutput>> actualResult = objectDetector.imageBatchObjectDetect(batchImage, topK);
+        Mockito.verify(objectDetector, Mockito.times(1)).imageBatchObjectDetect(batchImage, topK);
+        Assert.assertEquals(expectedResult, actualResult);
+    }
+
+    @Test
     public void testObjectDetectorWithNDArrayInput() {
 
         NDArray inputArr = ObjectDetector.bufferedImageToPixels(inputImage, getTestShape());
         List<NDArray> inputL = new ArrayList<>();
+        inputL.add(inputArr);
+        Mockito.when(objectDetector.objectDetectWithNDArray(inputL, 5)).thenReturn(expectedResult);
+        List<List<ObjectDetectorOutput>> actualResult = objectDetector.objectDetectWithNDArray(inputL, topK);
+        Mockito.verify(objectDetector, Mockito.times(1)).objectDetectWithNDArray(inputL, topK);
+        Assert.assertEquals(expectedResult, actualResult);
+    }
+
+    @Test
+    public void testObjectDetectorWithIterableOfNDArrayInput() {
+
+        NDArray inputArr = ObjectDetector.bufferedImageToPixels(inputImage, getTestShape());
+        Set<NDArray> inputL = new HashSet<>();
         inputL.add(inputArr);
         Mockito.when(objectDetector.objectDetectWithNDArray(inputL, 5)).thenReturn(expectedResult);
         List<List<ObjectDetectorOutput>> actualResult = objectDetector.objectDetectWithNDArray(inputL, topK);

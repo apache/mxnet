@@ -57,3 +57,12 @@
                                           "my-metric")]
     (eval-metric/update metric [(ndarray/ones [2])] [(ndarray/ones [2])])
     (is (= ["my-metric" 0.0] (eval-metric/get metric)))))
+
+(deftest test-comp-metric
+  (let [metric (eval-metric/comp-metric [(eval-metric/accuracy)
+                                         (eval-metric/f1)
+                                         (eval-metric/top-k-accuracy 2)])]
+    (eval-metric/update metric [(ndarray/ones [2])] [(ndarray/ones [2 3])])
+    (is (= {"accuracy" 0.0
+            "f1" 0.0
+            "top_k_accuracy" 1.0} (eval-metric/get metric)))))

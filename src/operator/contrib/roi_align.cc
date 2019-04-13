@@ -547,16 +547,16 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
   return std::vector<std::string>{"output"};
 })
 .set_attr_parser(ParamParser<ROIAlignParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", [](const nnvm::NodeAttrs& attrs,
-      std::vector<TShape> *in_shape, std::vector<TShape> *out_shape){
+.set_attr<mxnet::FInferShape>("FInferShape", [](const nnvm::NodeAttrs& attrs,
+      mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape){
   using namespace mshadow;
   const ROIAlignParam& param = nnvm::get<ROIAlignParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 2) << "Input:[data, rois]";
   // data: [batch_size, c, h, w]
-  TShape dshape = in_shape->at(roialign::kData);
+  mxnet::TShape dshape = in_shape->at(roialign::kData);
   CHECK_EQ(dshape.ndim(), 4) << "data should be a 4D tensor";
   // bbox: [num_rois, 5]
-  TShape bshape = in_shape->at(roialign::kBox);
+  mxnet::TShape bshape = in_shape->at(roialign::kBox);
   CHECK_EQ(bshape.ndim(), 2) << "bbox should be a 2D tensor of shape [batch, 5]";
   CHECK_EQ(bshape[1], 5) << "bbox should be a 2D tensor of shape [batch, 5]";
   // out: [num_rois, c, pooled_h, pooled_w]

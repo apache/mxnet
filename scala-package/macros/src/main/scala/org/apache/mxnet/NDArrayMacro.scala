@@ -22,15 +22,16 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 private[mxnet] class AddNDArrayFunctions(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any = macro NDArrayMacro.addDefs
 }
 
 private[mxnet] class AddNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro TypedNDArrayAPIMacro.typeSafeAPIDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any =
+  macro TypedNDArrayAPIMacro.typeSafeAPIDefs
 }
 
 private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) =
+  private[mxnet] def macroTransform(annottees: Any*): Any =
   macro TypedNDArrayRandomAPIMacro.typeSafeAPIDefs
 }
 
@@ -39,7 +40,7 @@ private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnno
   */
 private[mxnet] object NDArrayMacro extends GeneratorBase {
 
-  def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+  def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     import c.universe._
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddNDArrayFunctions($b)" => c.eval[Boolean](c.Expr(b))
@@ -49,7 +50,7 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
   }
 
   private def impl(c: blackbox.Context)
-                  (isContrib: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+                  (isContrib: Boolean, annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     import c.universe._
 
     val functions = functionsToGenerate(isSymbol = false, isContrib)
@@ -82,7 +83,7 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
   */
 private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
 
-  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     import c.universe._
     val isContrib: Boolean = c.prefix.tree match {
       case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
@@ -148,7 +149,7 @@ private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
 private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
   with RandomHelpers {
 
-  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     // Note: no contrib managed in this module
 
     val functionDefs = typeSafeRandomFunctionsToGenerate(isSymbol = false)

@@ -324,7 +324,7 @@ class BinaryScalarOp : public UnaryOp {
   .set_attr_parser([](NodeAttrs* attrs) {                           \
       attrs->parsed = std::stod(attrs->dict["scalar"]);             \
     })                                                              \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \

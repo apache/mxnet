@@ -72,8 +72,6 @@ end
 @deprecate softmax(x::NDArray; axis = ndims(x))     softmax.(x, axis)
 @deprecate log_softmax(x::NDArray; axis = ndims(x)) log_softmax.(x, axis)
 
-@deprecate clip(x; a_min = 0, a_max = 0) clip(x, a_min, a_max)
-
 function broadcast_plus(x::NDArray, y::NDArray)
   @warn("broadcast_plus(x, y) is deprecated, use x .+ y instead.")
   x .+ y
@@ -169,3 +167,34 @@ import Base: sum, maximum, minimum, prod, cat
 
 import Statistics: mean
 @deprecate mean(x::NDArray, dims) mean(x, dims = dims)
+
+# replaced by UndefInitializer
+function empty(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
+  @warn("`mx.empty(T, dims, ctx)` is deprecated, " *
+        "use `NDArray{T,N}(undef, dims; ctx = ctx)` instead.")
+  NDArray{T,N}(undef, dims; ctx = ctx)
+end
+
+function empty(::Type{T}, dims::Int...) where {T<:DType}
+  @warn("`mx.empty(T, dims...)` is deprecated, " *
+        "use `NDArray{T,N}(undef, dims...)` instead.")
+  NDArray{T,N}(undef, dims...)
+end
+
+function empty(dims::NTuple{N,Int}, ctx::Context = cpu()) where N
+  @warn("`mx.empty(dims, ctx)` is deprecated, " *
+        "use `NDArray(undef, dims; ctx = ctx)` instead.")
+  NDArray(undef, dims; ctx = ctx)
+end
+
+function empty(dims::Int...)
+  @warn("`mx.empty(dims...)` is deprecated, " *
+        "use `NDArray(undef, dims...)` instead.")
+  NDArray(undef, dims...)
+end
+
+# replaced by Base.clamp
+@deprecate clip(x::NDArray, lo::Real, hi::Real)  clamp(x, lo, hi)
+@deprecate clip!(x::NDArray, lo::Real, hi::Real) clamp!(x, lo, hi)
+@deprecate clip(x; a_min = 0, a_max = 0) clamp(x, a_min, a_max)
+

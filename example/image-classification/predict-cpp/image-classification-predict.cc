@@ -76,7 +76,9 @@ class BufferFile {
     ifs.seekg(0, std::ios::beg);
     std::cout << file_path.c_str() << " ... " << length_ << " bytes\n";
 
-    buffer_.reset(new char[length_]);
+    // Buffer as null terminated to be converted to string
+    buffer_.reset(new char[length_ + 1]);
+    buffer_[length_] = 0;
     ifs.read(buffer_.get(), length_);
     ifs.close();
   }

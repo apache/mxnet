@@ -315,10 +315,10 @@
          Copyright 2005-2008, Google Inc.
     3. Moderngpu - For details, see, 3rdparty/ctc_include/contrib/moderngpu/LICENSE
          Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
-    4. CUB Library - For details, see, 3rdparty/cub/LICENSE.TXT
+    4. CUB Library - For details, see, 3rdparty/nvidia_cub/LICENSE.TXT
          Copyright (c) 2010-2011, Duane Merrill.  All rights reserved.
          Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
-    5. CUB mersenne.h - For details, see 3rdparty/cub/test/mersenne.h
+    5. CUB mersenne.h - For details, see 3rdparty/nvidia_cub/test/mersenne.h
          Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
     6. Googlemock - For details, see, 3rdparty/googletest/googlemock/LICENSE
          Copyright 2006-2015, Google Inc.

@@ -57,6 +57,78 @@ function test_constructor()
     @test eltype(x) == Float32
     @test copy(x) ≈ [1.1, 2, 3]
   end
+
+  @info "NDArray::NDArray{T,N}(undef, dims...)"
+  let
+    x = NDArray{Int,2}(undef, 5, 5)
+    @test eltype(x) == Int
+    @test size(x) == (5, 5)
+    @test x.writable
+
+    y = NDArray{Int,2}(undef, 5, 5, writable = false)
+    @test !y.writable
+
+    # dimension mismatch
+    @test_throws MethodError NDArray{Int,1}(undef, 5, 5)
+  end
+
+  @info "NDArray::NDArray{T,N}(undef, dims)"
+  let
+    x = NDArray{Int,2}(undef, (5, 5))
+    @test eltype(x) == Int
+    @test size(x) == (5, 5)
+    @test x.writable
+
+    y = NDArray{Int,2}(undef, (5, 5), writable = false)
+    @test !y.writable
+
+    # dimension mismatch
+    @test_throws MethodError NDArray{Int,1}(undef, (5, 5))
+  end
+
+  @info "NDArray::NDArray{T}(undef, dims...)"
+  let
+    x = NDArray{Int}(undef, 5, 5)
+    @test eltype(x) == Int
+    @test size(x) == (5, 5)
+    @test x.writable
+
+    y = NDArray{Int}(undef, 5, 5, writable = false)
+    @test !y.writable
+  end
+
+  @info "NDArray::NDArray{T}(undef, dims)"
+  let
+    x = NDArray{Int}(undef, (5, 5))
+    @test eltype(x) == Int
+    @test size(x) == (5, 5)
+    @test x.writable
+
+    y = NDArray{Int}(undef, (5, 5), writable = false)
+    @test !y.writable
+  end
+
+  @info "NDArray::NDArray(undef, dims...)"
+  let
+    x = NDArray(undef, 5, 5)
+    @test eltype(x) == mx.MX_float
+    @test size(x) == (5, 5)
+    @test x.writable
+
+    y = NDArray(undef, 5, 5, writable = false)
+    @test !y.writable
+  end
+
+  @info "NDArray::NDArray(undef, dims)"
+  let
+    x = NDArray(undef, (5, 5))
+    @test eltype(x) == mx.MX_float
+    @test size(x) == (5, 5)
+    @test x.writable
+
+    y = NDArray(undef, (5, 5), writable = false)
+    @test !y.writable
+  end
 end  # function test_constructor
 
 
@@ -134,8 +206,8 @@ function test_assign()
   @info("NDArray::assign::dims = $dims")
 
   # Julia Array -> NDArray assignment
-  array   = mx.empty(size(tensor))
-  array[:]= tensor
+  array    = NDArray(undef, size(tensor)...)
+  array[:] = tensor
   @test tensor ≈ copy(array)
 
   array2  = mx.zeros(size(tensor))
@@ -813,24 +885,24 @@ function test_saveload()
   rm(fname)
 end
 
-function test_clip()
+function test_clamp()
   dims = rand_dims()
-  @info("NDArray::clip::dims = $dims")
+  @info("NDArray::clamp::dims = $dims")
 
   j_array, nd_array = rand_tensors(dims)
   clip_up   = maximum(abs.(j_array)) / 2
   clip_down = 0
-  clipped   = clip(nd_array, clip_down, clip_up)
+  clipped   = clamp(nd_array, clip_down, clip_up)
 
   # make sure the original array is not modified
   @test copy(nd_array) ≈ j_array
 
   @test all(clip_down .<= copy(clipped) .<= clip_up)
 
-  @info("NDArray::clip!")
+  @info("NDArray::clamp!")
   let
     x = NDArray(1.0:20)
-    clip!(x, 5, 15)
+    clamp!(x, 5, 15)
     @test all(5 .<= copy(x) .<= 15)
   end
 end
@@ -1006,14 +1078,14 @@ end
 
 function test_eltype()
   @info("NDArray::eltype")
-  dims1 = (3,3)
+  dims = (3,3)
 
-  x = mx.empty(dims1)
+  x = NDArray(undef, dims)
   @test eltype(x) == mx.DEFAULT_DTYPE
 
   for TF in instances(mx.TypeFlag)
     T = mx.fromTypeFlag(TF)
-    x = mx.empty(T, dims1)
+    x = NDArray{T}(undef, dims)
     @test eltype(x) == T
   end
 end
@@ -1499,7 +1571,7 @@ end
   test_mod()
   test_gd()
   test_saveload()
-  test_clip()
+  test_clamp()
   test_power()
   test_sqrt()
   test_eltype()

@@ -56,6 +56,8 @@
   (is (thrown? Exception (fn_ 'a 2 [])))
   (is (thrown? Exception (fn_ 1 'b [])))
   (is (thrown? Exception (fn_ 1 2 [-1])))
+  (is (thrown? Exception (fn_ 1 0 [1 2])))
+  (is (thrown? Exception (fn_ 1 -1 [1 2])))
   (is (thrown? Exception (fn_ 1 2 [2 3 0])))
   (is (thrown? Exception (fn_ 1 2 [10 10] {:ctx "a"})))
   (let [ctx (context/default-context)]

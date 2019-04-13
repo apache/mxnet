@@ -18,6 +18,8 @@
 # under the License.
 
 # Build on Ubuntu 14.04 LTS for LINUX CPU/GPU
+set -ex
+
 apt-get update
 apt-get install -y software-properties-common
 add-apt-repository ppa:ubuntu-toolchain-r/test -y
@@ -45,7 +47,10 @@ apt-get install -y git \
     automake \
     pkg-config \
     openjdk-8-jdk
-curl -o apache-maven-3.3.9-bin.tar.gz http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+
+curl -o apache-maven-3.3.9-bin.tar.gz http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+    || curl -o apache-maven-3.3.9-bin.tar.gz https://search.maven.org/remotecontent?filepath=org/apache/maven/apache-maven/3.3.9/apache-maven-3.3.9-bin.tar.gz
+
 tar xzf apache-maven-3.3.9-bin.tar.gz
 mkdir /usr/local/maven
 mv apache-maven-3.3.9/ /usr/local/maven/

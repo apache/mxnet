@@ -118,10 +118,13 @@ COMMANDS = OrderedDict([
     ('[Local] Python Unit tests',
         "./py3_venv/bin/nosetests -v tests/python/unittest/"
     ),
-    ('[Website and docs build] Will build to docs/_build/html/',
-        "ci/docker/runtime_functions.sh deploy_docs"),
-    ('[Docker] sanity_check. Check for linting and code formatting.',
-        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check"),
+    ('[Docker] Website and docs build outputs to "docs/_build/html/"',
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh deploy_docs"),
+    ('[Docker] sanity_check. Check for linting and code formatting and licenses.',
+    [
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check",
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_rat_check",
+    ]),
     ('[Docker] Python3 CPU unittests',
     [
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_openblas",
@@ -129,12 +132,12 @@ COMMANDS = OrderedDict([
     ]),
     ('[Docker] Python3 GPU unittests',
     [
-        "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
+        "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
     ('[Docker] Python3 GPU+MKLDNN unittests',
     [
-        "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn",
+        "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
     ('[Docker] Python3 CPU Intel MKLDNN unittests',

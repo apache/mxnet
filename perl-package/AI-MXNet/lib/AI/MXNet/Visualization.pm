@@ -172,6 +172,10 @@ method print_summary(
                 $cur_param = $num_filter * 2;
             }
         }
+        elsif($op eq 'Embedding')
+        {
+            $cur_param = $node->{attrs}{input_dim} * $node->{attrs}{output_dim};
+        }
         my $first_connection;
         if(not $pre_node)
         {

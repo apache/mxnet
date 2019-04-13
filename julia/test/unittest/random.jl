@@ -30,7 +30,7 @@ function test_uniform()
   ret1 = mx.rand(dims..., low = low, high = high)
 
   mx.seed!(seed)
-  ret2 = mx.empty(dims)
+  ret2 = NDArray(undef, dims)
   mx.rand!(ret2, low = low, high = high)
 
   @test copy(ret1) == copy(ret2)
@@ -47,7 +47,7 @@ function test_gaussian()
   ret1 = mx.randn(dims..., μ = μ, σ = σ)
 
   mx.seed!(seed)
-  ret2 = mx.empty(dims)
+  ret2 = NDArray(undef, dims)
   mx.randn!(ret2, μ = μ, σ = σ)
 
   @test copy(ret1) == copy(ret2)

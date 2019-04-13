@@ -35,15 +35,22 @@ apt-get install -y \
     libatlas-base-dev \
     libcurl4-openssl-dev \
     libjemalloc-dev \
+    libhdf5-dev \
     liblapack-dev \
     libopenblas-dev \
     libopencv-dev \
+    libturbojpeg \
     libzmq3-dev \
     ninja-build \
     software-properties-common \
     sudo \
     unzip \
     wget
+
+# Use libturbojpeg package as it is correctly compiled with -fPIC flag
+# https://github.com/HaxeFoundation/hashlink/issues/147 
+ln -s /usr/lib/x86_64-linux-gnu/libturbojpeg.so.0.1.0 /usr/lib/x86_64-linux-gnu/libturbojpeg.so
+
 
 # Note: we specify an exact cmake version to work around a cmake 3.10 CUDA 10 issue.
 # Reference: https://github.com/clab/dynet/issues/1457

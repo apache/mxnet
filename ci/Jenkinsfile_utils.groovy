@@ -186,18 +186,27 @@ def update_github_commit_status(state, message) {
     context = get_github_context()
     echo "context=${context}"
 
-    step([
-      $class: 'GitHubCommitStatusSetter',
-      reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
-      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
-      commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
-      statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
-      errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
-      statusResultSource: [
-        $class: 'ConditionalStatusResultSource',
-        results: [[$class: "AnyBuildResult", message: message, state: state]]
-      ]
-    ])
+    // a few attempts need to be made: https://github.com/apache/incubator-mxnet/issues/11654
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      echo "Sending GitHub status attempt ${attempt}..."
+
+      step([
+        $class: 'GitHubCommitStatusSetter',
+        reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
+        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
+        commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
+        statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
+        errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
+        statusResultSource: [
+          $class: 'ConditionalStatusResultSource',
+          results: [[$class: "AnyBuildResult", message: message, state: state]]
+        ]
+      ])
+
+      if (attempt <= 2) {
+        sleep 1
+      }
+    }
 
     echo "Publishing commit status done."
 

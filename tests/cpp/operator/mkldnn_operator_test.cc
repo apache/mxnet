@@ -437,7 +437,7 @@ void VerifyConcatResult(const std::vector<NDArray *> &in_arrs,
                         const std::vector<NDArray *> &out_arrs) {
   int num_inputs = in_arrs.size();
   int input_size = in_arrs[0]->shape().Size();
-  TShape input_shape = in_arrs[0]->shape();
+  mxnet::TShape input_shape = in_arrs[0]->shape();
   NDArray output = out_arrs[0]->Reorder2Default();
   size_t total_size = output.shape().Size();
   EXPECT_EQ(input_size * num_inputs, total_size);
@@ -462,7 +462,7 @@ void VerifyConcatBackwardsResult(const std::vector<NDArray *> &in_arrs,
   // in_arrs is larger array, out_arr is ammler
   int num_inputs = out_arrs.size();
   int input_size = out_arrs[0]->shape().Size();
-  TShape input_shape = out_arrs[0]->shape();
+  mxnet::TShape input_shape = out_arrs[0]->shape();
   NDArray output = in_arrs[0]->Reorder2Default();
   size_t total_size = output.shape().Size();
   EXPECT_EQ(input_size * num_inputs, total_size);
@@ -879,7 +879,7 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 }
 
 // Computes second dimension of FC weight matrix based on input shape
-uint32_t GetFCWeightDim2(const nnvm::TShape arr) {
+uint32_t GetFCWeightDim2(const mxnet::TShape arr) {
   uint32_t dim = 1;
   for (int i = 1; i < arr.ndim(); i++) {
     dim *= arr[i];
@@ -916,13 +916,13 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
       if (in_shape.ndim() < 2)
         continue;
 
-      nnvm::TShape wt_shape(2);
+      mxnet::TShape wt_shape(2);
       wt_shape[0] = num_hid;
       wt_shape[1] = GetFCWeightDim2(in_shape);
       NDArray weights(wt_shape, Context());
       InitDefaultArray(&weights, false);
 
-      nnvm::TShape bias_shape(1);
+      mxnet::TShape bias_shape(1);
       bias_shape[0] = num_hid;
       NDArray bias(bias_shape, Context());
       InitDefaultArray(&bias, false);
@@ -931,7 +931,7 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
       inputs[1] = &weights;
       inputs[2] = &bias;
 
-      nnvm::TShape out_shape(2);
+      mxnet::TShape out_shape(2);
       out_shape[0] = in_shape[0];
       out_shape[1] = num_hid;
 
@@ -1018,9 +1018,9 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
 
   P param;
   param.Init(forward_attrs.attrs.dict);
-  TShape kernel = param.kernel;
-  TShape padding = param.pad;
-  TShape stride = param.stride;
+  mxnet::TShape kernel = param.kernel;
+  mxnet::TShape padding = param.pad;
+  mxnet::TShape stride = param.stride;
   int num_filter = param.num_filter;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(
@@ -1032,7 +1032,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
     auto in_arr = in_arrs[i1];
 
     // can only conv only 4D inputs
-    TShape input_shape = in_arr.arr.shape();
+    mxnet::TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
 
@@ -1056,7 +1056,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
                                            scale_vector, true, forward_attrs.output_types);
     }
     NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
-    TShape bias_shape = {num_filter};
+    mxnet::TShape bias_shape = {num_filter};
     NDArray ndbias = CreateBiasNDArray(bias_shape);
     inputs[0] = &in_arr.arr;
     inputs[1] = &ndkernel;
@@ -1144,9 +1144,9 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
 
   mxnet::op::PoolingParam param;
   param.Init(forward_attrs.attrs.dict);
-  TShape kernel = param.kernel;
-  TShape padding = param.pad;
-  TShape stride = param.stride;
+  mxnet::TShape kernel = param.kernel;
+  mxnet::TShape padding = param.pad;
+  mxnet::TShape stride = param.stride;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
@@ -1156,7 +1156,7 @@ void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs)
     auto in_arr = in_arrs[i1];
 
     // can only pool only 3D and 4D inputs
-    TShape input_shape = in_arr.arr.shape();
+    mxnet::TShape input_shape = in_arr.arr.shape();
     if (input_shape.ndim() != kernel.ndim() + 2)
       continue;
     // cannot pool if ndarray and mkldnn memory have different ndim

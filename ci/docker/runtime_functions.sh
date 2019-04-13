@@ -312,6 +312,7 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_MKLDNN=0 \
         USE_DIST_KVSTORE=1 \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -346,6 +347,7 @@ build_centos7_mkldnn() {
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -385,6 +387,8 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_MKLDNN=0                  \
         USE_DIST_KVSTORE=1            \
+        USE_LIBJPEG_TURBO=1           \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
     make cython PYTHON=python2
     make cython PYTHON=python3
@@ -402,6 +406,7 @@ build_ubuntu_cpu_mkl() {
         USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -532,6 +537,7 @@ build_ubuntu_cpu_clang39_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -548,6 +554,7 @@ build_ubuntu_cpu_clang60_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -561,6 +568,7 @@ build_ubuntu_cpu_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -574,6 +582,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -657,6 +666,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
@@ -673,6 +683,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
@@ -691,6 +702,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 
     make cython PYTHON=python2
@@ -832,8 +844,7 @@ unittest_ubuntu_python2_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
-    export MXNET_ENABLE_CYTHON=0
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -842,7 +853,7 @@ unittest_ubuntu_python3_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
@@ -852,7 +863,7 @@ unittest_ubuntu_python3_gpu_cython() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     check_cython 3
@@ -873,7 +884,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
@@ -886,7 +897,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
@@ -898,7 +909,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
@@ -927,6 +938,15 @@ unittest_ubuntu_cpu_clojure() {
     ./contrib/clojure-package/ci-test.sh
 }
 
+unittest_ubuntu_cpu_clojure_integration() {
+    set -ex
+    cd scala-package
+    mvn -B install
+    cd ..
+    ./contrib/clojure-package/integration-tests.sh
+}
+
+
 unittest_ubuntu_cpugpu_perl() {
     set -ex
     ./perl-package/test.sh
@@ -942,6 +962,7 @@ unittest_ubuntu_cpu_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
+    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg                           \
@@ -952,11 +973,42 @@ unittest_ubuntu_cpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library
 }
 
+unittest_ubuntu_minimal_R() {
+    set -ex
+    mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    build_ccache_wrappers
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
+    # make -j not supported
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
+
+    R CMD INSTALL --library=/tmp/r-site-library R-package
+    # pick mlp as minimal R test
+    R_LIBS=/tmp/r-site-library \
+        Rscript -e "library(mxnet); require(mlbench); \
+                    data(Sonar, package=\"mlbench\"); \
+                    Sonar[,61] = as.numeric(Sonar[,61])-1; \
+                    train.ind = c(1:50, 100:150); \
+                    train.x = data.matrix(Sonar[train.ind, 1:60]); \
+                    train.y = Sonar[train.ind, 61]; \
+                    test.x = data.matrix(Sonar[-train.ind, 1:60]); \
+                    test.y = Sonar[-train.ind, 61]; \
+                    model = mx.mlp(train.x, train.y, hidden_node = 10, \
+                                   out_node = 2, out_activation = \"softmax\", \
+                                   learning.rate = 0.1, \
+                                   array.layout = \"rowmajor\"); \
+                    preds = predict(model, test.x, array.layout = \"rowmajor\")"
+}
+
 unittest_ubuntu_gpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
+    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg                           \
@@ -971,29 +1023,22 @@ unittest_ubuntu_cpu_julia() {
     export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
-    export DEVDIR="$JULIA_DEPOT_PATH/dev"
+    export INTEGRATION_TEST=1
 
     julia -e 'using InteractiveUtils; versioninfo()'
-
-    # install package
-    mkdir -p $DEVDIR
-    ln -sf ${MXNET_HOME}/julia ${DEVDIR}/MXNet
-
-    # register MXNet.jl and dependencies
-    julia -e 'using Pkg; Pkg.develop("MXNet")'
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'using Pkg; Pkg.build("MXNet")'
+    julia --project=./julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
-    julia -e 'using Pkg; Pkg.test("MXNet")'
+    julia --project=./julia -e 'using Pkg; Pkg.test("MXNet")'
 
     # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
-    julia -e 'using MXNet; mx._sig_checker()'
+    julia --project=./julia -e 'using MXNet; mx._sig_checker()'
 }
 
 unittest_ubuntu_cpu_julia07() {
@@ -1016,7 +1061,7 @@ unittest_centos7_cpu() {
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1046,8 +1091,6 @@ integrationtest_ubuntu_cpu_asan() {
     set -ex
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
 
-    # We do not want to fail the build on ASAN errors until memory leaks have been addressed.
-    export ASAN_OPTIONS=exitcode=0
     cd /work/mxnet/build/cpp-package/example/
     /work/mxnet/cpp-package/example/get_data.sh
     ./mlp_cpu
@@ -1298,7 +1341,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    make java_ci_demo
+    mvn -B -Pci-nightly install
     bash bin/java_sample.sh
     bash bin/run_od.sh
 }
@@ -1306,7 +1349,7 @@ nightly_java_demo_test_cpu() {
 nightly_scala_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/scala-demo
-    make scala_ci_demo
+    mvn -B -Pci-nightly install
     bash bin/demo.sh
     bash bin/run_im.sh
 }
@@ -1319,7 +1362,7 @@ deploy_docs() {
 
     export CC="ccache gcc"
     export CXX="ccache g++"
-    make docs SPHINXOPTS=-W
+    make docs SPHINXOPTS=-W USE_MKLDNN=0
 
     popd
 }
@@ -1329,10 +1372,8 @@ deploy_jl_docs() {
     export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
-    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
     julia -e 'using InteractiveUtils; versioninfo()'
-    mkdir -p $DEVDIR
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
@@ -1351,6 +1392,14 @@ build_scala_static_mkl() {
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=mkl
     ./ci/publish/scala/build.sh
+    popd
+}
+
+build_static_python_mkl() {
+    set -ex
+    pushd .
+    export mxnet_variant=mkl
+    ./ci/publish/python/build.sh
     popd
 }
 

@@ -74,8 +74,17 @@
 (defn option->value [opt]
   ($/view opt))
 
-(defn keyword->snake-case [vals]
-  (mapv (fn [v] (if (keyword? v) (string/replace (name v) "-" "_") v)) vals))
+(defn keyword->snake-case
+  "Transforms a keyword `kw` into a snake-case string.
+  `kw`: keyword
+  returns: string
+  Ex:
+    (keyword->snake-case :foo-bar) ;\"foo_bar\"
+    (keyword->snake-case :foo)     ;\"foo\""
+  [kw]
+  (if (keyword? kw)
+    (string/replace (name kw) "-" "_")
+    kw))
 
 (defn convert-tuple [param]
   (apply $/tuple param))
@@ -111,8 +120,8 @@
     (empty-map)
     (apply $/immutable-map (->> param
                                 (into [])
-                                flatten
-                                keyword->snake-case))))
+                                (flatten)
+                                (mapv keyword->snake-case)))))
 
 (defn convert-symbol-map [param]
   (convert-map (tuple-convert-by-param-name param)))
@@ -218,6 +227,26 @@
     (throw (ex-info error-msg
                     (s/explain-data spec value)))))
 
+(s/def ::non-empty-seq (s/and sequential? not-empty))
+(defn to-array-nd
+  "Converts any N-D sequential structure to an array
+   with the same dimensions."
+  [nd-seq]
+  (validate! ::non-empty-seq nd-seq "Invalid N-D sequence")
+  (if (sequential? (first nd-seq))
+    (to-array (mapv to-array-nd nd-seq))
+    (to-array nd-seq)))
+
+(defn nd-seq-shape
+  "Computes the shape of a n-dimensional sequential structure"
+  [nd-seq]
+  (validate! ::non-empty-seq nd-seq "Invalid N-D sequence")
+  (loop [s nd-seq
+         shape [(count s)]]
+    (if (sequential? (first s))
+      (recur (first s) (conj shape (count (first s))))
+      shape)))
+
 (defn map->scala-tuple-seq
   "* Convert a map to a scala-Seq of scala-Tubple.
    * Should also work if a seq of seq of 2 things passed.
@@ -239,3 +268,9 @@
            (apply $/immutable-list))
       ;; pass-through
       map-or-tuple-seq)))
+
+(defmacro forms->scala-fn
+  "Creates a scala fn of zero args from forms"
+  [& forms]
+  `($/fn []
+     (do ~@forms)))

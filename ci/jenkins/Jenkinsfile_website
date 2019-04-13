@@ -37,11 +37,10 @@ core_logic: {
     custom_steps.compile_unix_cpu_openblas()
   ])
 
-  // Disable website generation due to flakyness https://github.com/apache/incubator-mxnet/issues/13833
-  //utils.parallel_stage('Deploy', [
-  //  custom_steps.docs_website(),
-  //  custom_steps.docs_julia()
-  //])
+  utils.parallel_stage('Deploy', [
+    custom_steps.docs_website(),
+    custom_steps.docs_julia()
+  ])
 }
 ,
 failure_handler: {

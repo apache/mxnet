@@ -221,7 +221,7 @@ def get_input_shape(sym, proto_obj):
     model_input_shape = [data[1] for data  in proto_obj.model_metadata.get('input_tensor_data')]
     data_names = [data[0] for data  in proto_obj.model_metadata.get('input_tensor_data')]
 
-    #creating dummy inputs
+    # creating dummy inputs
     inputs = []
     for  in_shape in model_input_shape:
         inputs.append(nd.ones(shape=in_shape))

@@ -44,8 +44,8 @@ bool InferSubgraphDataType(const nnvm::Symbol &subgraph, std::vector<int> *in_ty
  * subgraph.
  */
 bool InferSubgraphShape(const nnvm::Symbol &subgraph,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape);
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape);
 
 /*
  * Infer the storage types of inputs and outputs of an operator that contains a
@@ -59,7 +59,7 @@ bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
 
 bool as_bool_scalar(const NDArray &a);
 
-bool is_shape_udf(const TShape &x);
+bool is_shape_udf(const mxnet::TShape &x);
 
 bool is_stype_udf(const int &x);
 
@@ -161,7 +161,8 @@ class LoopState {
     // only static_alloc supports nested call of CachedOp.
     std::vector<std::pair<std::string, std::string> > kwargs = {
       {"inline_limit", "0"},
-      {"static_alloc", "1"}
+      {"static_alloc", "1"},
+      {"is_dynamic", "1"}
     };
     return std::make_shared<CachedOp>(sym, kwargs);
   }

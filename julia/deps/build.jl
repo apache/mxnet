@@ -51,9 +51,10 @@ elseif Sys.islinux()
 end
 
 if Sys.isunix()
-  try
-    push!(CUDAPATHS, replace(strip(read(`which nvcc`, String)), "bin/nvcc", "lib64"))
-  catch
+  nvcc_path = Sys.which("nvcc")
+  if nvcc_path ≢ nothing
+    @info "Found nvcc: $nvcc_path"
+    push!(CUDAPATHS, replace(nvcc_path, "bin/nvcc", "lib64"))
   end
 end
 
@@ -86,7 +87,7 @@ if HAS_CUDA
   if HAS_CUDNN
     @info("Found a CuDNN installation.")
   end
-  @info("CUDA_HOME -> $(get(ENV, "CUDA_HOME", nothing))")
+  @info("CUDA_HOME -> $(get(ENV, "CUDA_HOME", "nothing"))")
 else
   @info("Did not find a CUDA installation, using CPU-only version of MXNet.")
 end

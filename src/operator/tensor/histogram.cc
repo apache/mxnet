@@ -151,7 +151,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", HistogramOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", HistogramOpShape)
 .set_attr<nnvm::FInferType>("FInferType", HistogramOpType)
 .set_attr<FCompute>("FCompute<cpu>", HistogramOpForward<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")

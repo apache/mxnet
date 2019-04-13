@@ -52,6 +52,10 @@ if [[ $VARIANT == *mkl ]]; then
     cp 3rdparty/mkldnn/LICENSE ./MKLML_LICENSE
 fi
 
+if [[ $VARIANT == cu* ]]; then
+    cp 3rdparty/nvidia_cub/LICENSE.TXT ./CUB_LICENSE
+fi
+
 >&2 echo "Now building mxnet..."
 $MAKE DEPS_PATH=$DEPS_PATH
 

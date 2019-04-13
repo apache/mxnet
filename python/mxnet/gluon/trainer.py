@@ -60,7 +60,8 @@ class Trainer(object):
         See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
     update_on_kvstore : bool, default None
         Whether to perform parameter updates on kvstore. If None, then trainer will choose the more
-        suitable option depending on the type of kvstore.
+        suitable option depending on the type of kvstore. If the `update_on_kvstore` argument is
+        provided, environment variable `MXNET_UPDATE_ON_KVSTORE` will be ignored.
 
     Properties
     ----------
@@ -94,10 +95,10 @@ class Trainer(object):
             if param._grad_stype != 'default':
                 self._contains_sparse_grad = True
         self._compression_params = compression_params
-        optimizer_params = optimizer_params if optimizer_params else {}
-        self._scale = float(optimizer_params.get('rescale_grad', 1.0))
         self._contexts = self._check_contexts()
+        optimizer_params = optimizer_params if optimizer_params else {}
         self._init_optimizer(optimizer, optimizer_params)
+        self._scale = self._optimizer.rescale_grad
         self._kvstore_params = {'kvstore': kvstore, 'update_on_kvstore': update_on_kvstore}
         self._kv_initialized = False
         self._kvstore = None
@@ -240,10 +241,6 @@ class Trainer(object):
                 kvstore.set_optimizer(self._optimizer)
             self._kvstore = kvstore
             self._update_on_kvstore = update_on_kvstore
-            if self._optimizer.lr_scheduler and not self._update_on_kvstore:
-                raise ValueError("update_on_kvstore=False does not support " \
-                                 "optimizer with LRScheduler. Please " \
-                                 "consider setting learning rate manually.")
         else:
             self._kvstore = None
             self._update_on_kvstore = None
@@ -393,6 +390,8 @@ class Trainer(object):
         self._update(ignore_stale_grad)
 
     def _update(self, ignore_stale_grad=False):
+        updates = [[] for _ in self._updaters]
+
         for i, param in enumerate(self._params):
             if param.grad_req == 'null':
                 continue
@@ -416,10 +415,16 @@ class Trainer(object):
                     self._kvstore.pull(i, param.list_data(), priority=-i)
                 continue
 
-            for upd, arr, grad in zip(self._updaters, param.list_data(), param.list_grad()):
+            for upd, arr, grad in zip(updates, param.list_data(), param.list_grad()):
                 if not ignore_stale_grad or arr._fresh_grad:
-                    upd(i, grad, arr)
+                    upd.append((i, grad, arr))
                     arr._fresh_grad = False
+
+        if not (self._kvstore and self._update_on_kvstore):
+            for updater, upd in zip(self._updaters, updates):
+                if upd:
+                    i, w, g = zip(*upd)
+                    updater(i, w, g)
 
     def save_states(self, fname):
         """Saves trainer states (e.g. optimizer, momentum) to a file.

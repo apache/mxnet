@@ -124,6 +124,7 @@ int main(int argc, char const *argv[]) {
   ctx = Context::cpu();;
 #endif
 
+  TRY
   auto googlenet = GoogleNetSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
@@ -190,6 +191,8 @@ int main(int argc, char const *argv[]) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

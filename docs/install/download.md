@@ -1,9 +1,27 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Source Download
 
 These source archives are generated from tagged releases. Updates and patches will not have been applied. For any updates refer to the corresponding branches in the [GitHub repository](https://github.com/apache/incubator-mxnet). Choose your flavor of download from the following links:
 
 | Version | Source                                                                                                      | PGP                                                                                                             | SHA                                                                                                                |
 |---------|-------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| 1.4.0   | [Download](https://www.apache.org/dyn/closer.cgi/incubator/mxnet/1.4.0/apache-mxnet-src-1.4.0-incubating.tar.gz)   | [Download](https://apache.org/dist/incubator/mxnet/1.4.0/apache-mxnet-src-1.4.0-incubating.tar.gz.asc)    | [Download](https://apache.org/dist/incubator/mxnet/1.4.0/apache-mxnet-src-1.4.0-incubating.tar.gz.sha512)      |
 | 1.3.1   | [Download](https://www.apache.org/dyn/closer.cgi/incubator/mxnet/1.3.1/apache-mxnet-src-1.3.1-incubating.tar.gz)   | [Download](https://apache.org/dist/incubator/mxnet/1.3.1/apache-mxnet-src-1.3.1-incubating.tar.gz.asc)    | [Download](https://apache.org/dist/incubator/mxnet/1.3.1/apache-mxnet-src-1.3.1-incubating.tar.gz.sha512)      |
 | 1.3.0   | [Download](https://archive.apache.org/dist/incubator/mxnet/1.3.0/apache-mxnet-src-1.3.0-incubating.tar.gz)   | [Download](https://archive.apache.org/dist/incubator/mxnet/1.3.0/apache-mxnet-src-1.3.0-incubating.tar.gz.asc)    | [Download](https://archive.apache.org/dist/incubator/mxnet/1.3.0/apache-mxnet-src-1.3.0-incubating.tar.gz.sha512)      |
 | 1.2.1   | [Download](https://archive.apache.org/dist/incubator/mxnet/1.2.1/apache-mxnet-src-1.2.1-incubating.tar.gz)   | [Download](https://archive.apache.org/dist/incubator/mxnet/1.2.1/apache-mxnet-src-1.2.1-incubating.tar.gz.asc)    | [Download](https://archive.apache.org/dist/incubator/mxnet/1.2.1/apache-mxnet-src-1.2.1-incubating.tar.gz.sha512)      |

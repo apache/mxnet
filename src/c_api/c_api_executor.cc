@@ -408,10 +408,10 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   }
 
   // create shape map for in_args and aux_states
-  std::unordered_map<std::string, TShape> arg_shape_map(num_provided_arg_shapes);
+  std::unordered_map<std::string, mxnet::TShape> arg_shape_map(num_provided_arg_shapes);
   for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
     auto p = arg_shape_map.emplace(provided_arg_shape_names[i],
-        TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
+        mxnet::TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
     CHECK(p.second) << "Duplicate shapes are provided for argument "
       << provided_arg_shape_names[i] << " in simple_bind";
@@ -562,10 +562,10 @@ int MXExecutorReshape(int partial_shaping,
   API_BEGIN();
   *out = nullptr;  // ensure we can know whether to free executor on early abort
   // create shape map for in_args and aux_states
-  std::unordered_map<std::string, TShape> kwargs(num_provided_arg_shapes);
+  std::unordered_map<std::string, mxnet::TShape> kwargs(num_provided_arg_shapes);
   for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
     auto p = kwargs.emplace(provided_arg_shape_names[i],
-        TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
+        mxnet::TShape(provided_arg_shape_data+provided_arg_shape_idx[i],
           provided_arg_shape_data+provided_arg_shape_idx[i+1]));
     CHECK(p.second) << "Duplicate shapes are provided for argument "
       << provided_arg_shape_names[i] << " in reshape of executor";
@@ -645,8 +645,6 @@ int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
-
-
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                  ExecutorMonitorCallback callback,
                                  void* callback_handle) {
@@ -658,6 +656,22 @@ int MXExecutorSetMonitorCallback(ExecutorHandle handle,
     callback_temp(name, handle, callback_handle_temp);
   };
   Executor *exec = static_cast<Executor*>(handle);
-  exec->SetMonitorCallback(clbk);
+  exec->SetMonitorCallback(clbk, false);
+  API_END();
+}
+
+int MXExecutorSetMonitorCallbackEX(ExecutorHandle handle,
+                                   ExecutorMonitorCallback callback,
+                                   void* callback_handle,
+                                   bool monitor_all) {
+  API_BEGIN();
+  ExecutorMonitorCallback callback_temp = callback;
+  void* callback_handle_temp = callback_handle;
+  std::function<void(const char*, void*)> clbk
+  = [callback_temp, callback_handle_temp](const char *name, void* handle) {
+    callback_temp(name, handle, callback_handle_temp);
+  };
+  Executor *exec = static_cast<Executor*>(handle);
+  exec->SetMonitorCallback(clbk, monitor_all);
   API_END();
 }

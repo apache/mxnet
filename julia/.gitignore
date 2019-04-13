@@ -8,3 +8,4 @@ deps/src
 deps/usr
 deps/deps.jl
 .vscode
+/Manifest.toml

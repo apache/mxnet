@@ -51,7 +51,7 @@ use AI::MXNet::Gluon;
 use AI::MXNet::NDArray::Sparse;
 use AI::MXNet::Symbol::Sparse;
 use AI::MXNet::Engine;
-our $VERSION = '1.33';
+our $VERSION = '1.4';
 
 sub import
 {
@@ -263,24 +263,24 @@ AI::MXNet - Perl interface to MXNet machine learning library
 =head1 DESCRIPTION
 
     Perl interface to MXNet machine learning library.
-    MXNet supports the Perl programming language. 
-    The MXNet Perl package brings flexible and efficient GPU computing and 
+    MXNet supports the Perl programming language.
+    The MXNet Perl package brings flexible and efficient GPU computing and
     state-of-art deep learning to Perl.
     It enables you to write seamless tensor/matrix computation with multiple GPUs in Perl.
     It also lets you construct and customize the state-of-art deep learning models in Perl,
     and apply them to tasks, such as image classification and data science challenges.
 
     One important thing to internalize is that Perl interface is written to be as close as possible to the Python’s API,
-    so most, if not all of Python’s documentation and examples should just work in Perl after making few changes 
-    in order to make the code a bit more Perlish. In nutshell just add $ sigils and replace . = \n with -> => ; 
+    so most, if not all of Python’s documentation and examples should just work in Perl after making few changes
+    in order to make the code a bit more Perlish. In nutshell just add $ sigils and replace . = \n with -> => ;
     and in 99% of cases that’s all that is needed there.
     In addition please refer to very detailed L<MXNet Python API Documentation|http://mxnet.io/api/python/index.html>.
 
     AI::MXNet supports new imperative PyTorch like Gluon MXNet interface.
-    Please get acquainted with this new interface at L<Deep Learning - The Straight Dope|https://gluon.mxnet.io/>.
+    Please get acquainted with this new interface at L<Dive into Deep Learning|https://www.d2l.ai/>.
 
     For specific Perl Gluon usage please refer to Perl examples and tests directories on github,
-    but be assured that the Python and Perl usage are extremely close in order to make the use 
+    but be assured that the Python and Perl usage are extremely close in order to make the use
     of the Python Gluon docs and examples as easy as possible.
 
     AI::MXNet is seamlessly glued with L<PDL|https://metacpan.org/pod/PDL>, the C++ level state can be easily initialized from PDL
