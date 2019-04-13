@@ -146,6 +146,7 @@ def test_ndarray_setitem():
     with assert_raises(IndexError):
         x[:] = 1
 
+    # Assignments for empty axes
     for trivial_shape in [(1,), (1, 1), (1, 1, 1)]:
         x = mx.nd.zeros(trivial_shape)
         x[:] = np.ones(trivial_shape)
