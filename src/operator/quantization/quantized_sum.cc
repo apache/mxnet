@@ -93,7 +93,7 @@ void QuantizedSumForward(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_sum)
-.describe(R"code(elem_add operator for input dataA and input dataB data type of int8,
+.describe(R"code(elemwise_add operator for input dataA and input dataB data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
 float32 must be provided representing the thresholds of quantizing argument from data
 type float32 to int8. The final outputs contain result in int32, and min

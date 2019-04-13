@@ -26,17 +26,14 @@
 #define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_SUM_INL_H_
 #if MXNET_USE_MKLDNN == 1
 
-#include <utility>
-#include <vector>
-#include <string>
 #include "../../tensor/elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
 
 struct RequantizeSumParam : public dmlc::Parameter<RequantizeSumParam> {
-  dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
-  dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
+  dmlc::optional<float> min_calib_range;
+  dmlc::optional<float> max_calib_range;
   DMLC_DECLARE_PARAMETER(RequantizeSumParam) {
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
