@@ -49,7 +49,7 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
  public:
   SgMKLDNNPostQuantizeSelector() {
     support_requantize_fusion_op_name.insert("_sg_mkldnn_conv");
-    support_requantize_fusion_op_name.insert("_contrib_quantized_sum");
+    support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
   }
 
   bool Select(const nnvm::Node &n) override {
@@ -62,7 +62,7 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
           matched_list.push_back(&n);
           return true;
         }
-      } else if (n.op()->name == "_contrib_quantized_sum") {
+      } else if (n.op()->name == "_contrib_quantized_elemwise_add") {
         status = kStart;
         matched_list.clear();
         matched_list.push_back(&n);
@@ -113,7 +113,7 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
  public:
   SgMKLDNNPostQuantizeProperty() {
     support_requantize_fusion_op_name.insert("_sg_mkldnn_conv");
-    support_requantize_fusion_op_name.insert("_contrib_quantized_sum");
+    support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
   }
   static SubgraphPropertyPtr Create() {
     static const std::string &name = "MKLDNN post-quantization optimization pass";

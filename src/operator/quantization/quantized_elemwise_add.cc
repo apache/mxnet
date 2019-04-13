@@ -19,12 +19,12 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file quantized_sum.cc
+ * \file quantized_elemwise_add.cc
  * \brief
 */
 #include "../tensor/elemwise_unary_op.h"
 #if MXNET_USE_MKLDNN == 1
-#include "./mkldnn/mkldnn_quantized_sum-inl.h"
+#include "./mkldnn/mkldnn_quantized_elemwise_add-inl.h"
 #endif
 
 namespace mxnet {
@@ -92,7 +92,7 @@ void QuantizedSumForward(const nnvm::NodeAttrs& attrs,
                 "Please install MKLDNN enabled MXNet.";
 }
 
-NNVM_REGISTER_OP(_contrib_quantized_sum)
+NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)
 .describe(R"code(elemwise_add operator for input dataA and input dataB data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
 float32 must be provided representing the thresholds of quantizing argument from data
@@ -130,7 +130,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 NNVM_REGISTER_OP(elemwise_add)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
   nnvm::NodePtr node = nnvm::Node::Create();
-  node->attrs.op = Op::Get("_contrib_quantized_sum");
+  node->attrs.op = Op::Get("_contrib_quantized_elemwise_add");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
   if (node->op()->attr_parser != nullptr) {

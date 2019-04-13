@@ -17,13 +17,13 @@
  * under the License.
  */
 /*!
- * \file mkldnn_quantized_sum-inl.h
+ * \file mkldnn_quantized_elemwise_add-inl.h
  * \brief
  * \author Rong Zhang
  */
 
-#ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_SUM_INL_H_
-#define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_SUM_INL_H_
+#ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_ELEMWISE_ADD_INL_H_
+#define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_ELEMWISE_ADD_INL_H_
 #if MXNET_USE_MKLDNN == 1
 
 #include "../../tensor/elemwise_unary_op.h"
@@ -48,7 +48,7 @@ struct RequantizeSumParam : public dmlc::Parameter<RequantizeSumParam> {
   }
 };
 
-namespace quantized_sum_enum {
+namespace quantized_elemwise_add_enum {
 enum QuantizedSumOutputs { kOut, kMin, kMax };
 enum QuantizedSumInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax};
 }
@@ -57,4 +57,4 @@ enum QuantizedSumInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax};
 }  // namespace mxnet
 
 #endif  // MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_SUM_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_ELEMWISE_ADD_INL_H_

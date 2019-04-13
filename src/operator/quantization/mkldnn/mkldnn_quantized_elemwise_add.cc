@@ -19,12 +19,12 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file mkldnn_quantized_sum.cc
+ * \file mkldnn_quantized_elemwise_add.cc
  * \brief
  */
 
 #if MXNET_USE_MKLDNN == 1
-#include "./mkldnn_quantized_sum-inl.h"
+#include "./mkldnn_quantized_elemwise_add-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../quantization_utils.h"
@@ -48,24 +48,26 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
   CHECK_EQ(in_data.size(), 6U);
   // C, C_min, C_max
   CHECK_EQ(out_data.size(), 3U);
-  CHECK(out_data[quantized_sum_enum::kOut].dtype() == mshadow::kInt8
-        || out_data[quantized_sum_enum::kOut].dtype() == mshadow::kUint8)
-       <<"Unsupport output type, should be int8 or uint8";
   // Collect data min,max,absmax
-  const float dataA_min = in_data[quantized_sum_enum::kAMin].data().dptr<float>()[0];
-  const float dataB_min = in_data[quantized_sum_enum::kBMin].data().dptr<float>()[0];
-  const float dataA_max = in_data[quantized_sum_enum::kAMax].data().dptr<float>()[0];
-  const float dataB_max = in_data[quantized_sum_enum::kBMax].data().dptr<float>()[0];
+  const float dataA_min = in_data[quantized_elemwise_add_enum::kAMin].data().dptr<float>()[0];
+  const float dataB_min = in_data[quantized_elemwise_add_enum::kBMin].data().dptr<float>()[0];
+  const float dataA_max = in_data[quantized_elemwise_add_enum::kAMax].data().dptr<float>()[0];
+  const float dataB_max = in_data[quantized_elemwise_add_enum::kBMax].data().dptr<float>()[0];
   const float dataA_absmax = MaxAbs(dataA_min, dataA_max);
   const float dataB_absmax = MaxAbs(dataB_min, dataB_max);
 
-  auto dataA_mem  = in_data[quantized_sum_enum::kDataA].GetMKLDNNData();
-  auto dataB_mem  = in_data[quantized_sum_enum::kDataB].GetMKLDNNData();
-  const bool is_dataA_int8 = (in_data[quantized_sum_enum::kDataA].dtype() == mshadow::kInt8);
+  auto dataA_mem  = in_data[quantized_elemwise_add_enum::kDataA].GetMKLDNNData();
+  auto dataB_mem  = in_data[quantized_elemwise_add_enum::kDataB].GetMKLDNNData();
+  const bool is_dataA_int8 = (in_data[quantized_elemwise_add_enum::kDataA].dtype()
+                              == mshadow::kInt8);
   const size_t dataA_range = is_dataA_int8 ? kInt8Range : kUint8Range;
 
-  const float A_scale = GetScale(in_data[quantized_sum_enum::kDataA], dataA_min, dataA_max);
-  const float B_scale = GetScale(in_data[quantized_sum_enum::kDataB], dataB_min, dataB_max);
+  const float A_scale = GetScale(in_data[quantized_elemwise_add_enum::kDataA],
+                                 dataA_min,
+                                 dataA_max);
+  const float B_scale = GetScale(in_data[quantized_elemwise_add_enum::kDataB],
+                                 dataB_min,
+                                 dataB_max);
   // rescaled_mem is for reorder mkldnn memory
   mkldnn::memory *rescaled_mem;
 
@@ -73,12 +75,15 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
   size_t output_data_range = kInt32Range;
   auto output_data_type = mkldnn::memory::s32;
   // dataA && dataB are uint8
-  if (out_data[quantized_sum_enum::kOut].dtype() == mshadow::kInt8) {
+  if (out_data[quantized_elemwise_add_enum::kOut].dtype() == mshadow::kInt8) {
     output_data_range = kInt8Range;
     output_data_type = mkldnn::memory::s8;
-  } else {
+  } else if (out_data[quantized_elemwise_add_enum::kOut].dtype() == mshadow::kUint8) {
     output_data_range = kUint8Range;
     output_data_type = mkldnn::memory::u8;
+  } else {
+    output_data_range = kInt32Range;
+    output_data_type = mkldnn::memory::s32;
   }
 
   float output_min = 0;
@@ -95,7 +100,8 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
   // 2: scale 0 for dataA, scale 1 for data B
   const int scales_num = 2;
   std::vector<float> scales(scales_num, 1);
-  if (in_data[quantized_sum_enum::kDataA].dtype() != in_data[quantized_sum_enum::kDataB].dtype()) {
+  if (in_data[quantized_elemwise_add_enum::kDataA].dtype()
+      != in_data[quantized_elemwise_add_enum::kDataB].dtype()) {
     auto s8_pd = (is_dataA_int8 == true)
                  ? dataA_mem->get_primitive_desc()
                  : dataB_mem->get_primitive_desc();
@@ -155,26 +161,26 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
   in_prims.push_back(*dataB_mem);
   in_pds.push_back(dataA_mem->get_primitive_desc());
   in_pds.push_back(dataB_mem->get_primitive_desc());
-  size_t i_ndim = in_data[quantized_sum_enum::kDataA].shape().ndim();
+  size_t i_ndim = in_data[quantized_elemwise_add_enum::kDataA].shape().ndim();
   mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
   for (size_t i = 0; i < i_ndim; i++) {
-    i_dims[i] = static_cast<int>(in_data[quantized_sum_enum::kDataA].shape()[i]);
+    i_dims[i] = static_cast<int>(in_data[quantized_elemwise_add_enum::kDataA].shape()[i]);
   }
   mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(
-                                   in_pds[quantized_sum_enum::kDataA].desc().data.format);
+                                   in_pds[quantized_elemwise_add_enum::kDataA].desc().data.format);
   auto output_desc = mkldnn::memory::desc(i_dims, output_data_type, i_fmt);
   mkldnn::sum::primitive_desc pdesc(output_desc, scales, in_pds);
-  auto mem = CreateMKLDNNMem(out_data[quantized_sum_enum::kOut],
+  auto mem = CreateMKLDNNMem(out_data[quantized_elemwise_add_enum::kOut],
                              pdesc.dst_primitive_desc(),
                              req[0],
                              &in_data[0]);
   MKLDNNStream *stream = MKLDNNStream::Get();
   stream->RegisterPrim(mkldnn::sum(pdesc, in_prims, *mem.second));
-  CommitOutput(out_data[quantized_sum_enum::kOut], mem);
+  CommitOutput(out_data[quantized_elemwise_add_enum::kOut], mem);
   stream->Submit();
 
-  out_data[quantized_sum_enum::kMin].data().dptr<float>()[0] = output_min;
-  out_data[quantized_sum_enum::kMax].data().dptr<float>()[0] = output_max;
+  out_data[quantized_elemwise_add_enum::kMin].data().dptr<float>()[0] = output_min;
+  out_data[quantized_elemwise_add_enum::kMax].data().dptr<float>()[0] = output_max;
 }
 
 inline static bool SumStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
@@ -188,7 +194,7 @@ inline static bool SumStorageType(const nnvm::NodeAttrs& attrs, const int dev_ma
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
 }
 
-NNVM_REGISTER_OP(_contrib_quantized_sum)
+NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)
 .set_attr<FInferStorageType>("FInferStorageType", SumStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedSumForward)
 .set_attr<bool>("TIsMKLDNN", true)
