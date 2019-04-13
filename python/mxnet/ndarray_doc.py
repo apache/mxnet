@@ -31,6 +31,7 @@ class ReshapeDoc(NDArrayDoc):
     """
     Examples
     --------
+
     Reshapes the input array into a new shape.
 
     >>> x = mx.nd.array([1, 2, 3, 4])
@@ -58,6 +59,7 @@ class ConcatDoc(NDArrayDoc):
     """
     Examples
     --------
+
     Joins input arrays along a given axis.
     >>> x = mx.nd.array([[1,1],[2,2]])
     >>> y = mx.nd.array([[3,3],[4,4],[5,5]])
@@ -85,6 +87,7 @@ class SwapAxisDoc(NDArrayDoc):
     """
     Examples
     --------
+
     Interchanges two axes of an array.
     >>> x = mx.nd.array([[1, 2, 3]])
     >>> mx.nd.swapaxes(x, 0, 1)
@@ -111,6 +114,7 @@ class whereDoc(NDArrayDoc):
     """
     Examples
     --------
+
     Return the elements, either from x or y, depending on the condition.
     >>> x = mx.nd.array([[1, 2], [3, 4]])
     >>> y = mx.nd.array([[5, 6], [7, 8]])
@@ -331,6 +335,7 @@ class BroadcastToDoc(NDArrayDoc):
     """
     Examples
     --------
+
     Broadcasts the input array into a new shape.
     >>> a = mx.nd.array(np.arange(6).reshape(6,1))
     >>> b = a.broadcast_to((6,2))
@@ -371,6 +376,7 @@ class StackDoc(NDArrayDoc):
     """
     Example
     --------
+
     Join a sequence of arrays along a new axis.
     >>> x = mx.nd.array([1, 2])
     >>> y = mx.nd.array([3, 4])
@@ -386,6 +392,7 @@ class CustomDoc(NDArrayDoc):
     """
     Example
     -------
+
     Applies a custom operator named `my_custom_operator` to `input`.
 
     >>> output = mx.symbol.Custom(op_type='my_custom_operator', data=input)
