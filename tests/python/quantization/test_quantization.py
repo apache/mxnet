@@ -278,7 +278,7 @@ def test_quantized_pooling():
 @with_seed()
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
-        if mx.current_context().device_type != 'gpu':
+        if is_test_for_native_cpu():
             hasMKL = False;
             for key in os.environ.keys():
                 if operator.eq(key, "BUILD_TAG"):
@@ -292,27 +292,55 @@ def test_quantized_fc():
             print('skipped testing quantized_fc for gpu uint8 since it is not supported yet')
             return
 
+        def maxabs(a, b):
+            return mx.nd.maximum(mx.nd.abs(a), mx.nd.abs(b))
+
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
         fc_fp32 = mx.sym.FullyConnected(data=data, num_hidden=num_hidden, no_bias=no_bias, flatten=flatten)
         arg_shapes, _, _ = fc_fp32.infer_shape(data=data_shape)
         arg_names = fc_fp32.list_arguments()
         fc_fp32_exe = fc_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        int8_range = 127.0
         if qdtype == 'uint8':
             data_low = 0.0
             data_high = 63.0
+            quantized_range = 255.0
         else:
             data_low = -63.0
             data_high = 63.0
-        fc_fp32_exe.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
-                                                                     shape=data_shape).astype('int32')
-        fc_fp32_exe.arg_dict[arg_names[1]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
-                                                                     shape=arg_shapes[1]).astype('int32')
+            quantized_range = 127.0
+
+        data = mx.nd.random.uniform(low=data_low, high=data_high,
+                                    shape=data_shape).astype('int32')
+        weight = mx.nd.random.uniform(low=data_low, high=data_high,
+                                      shape=arg_shapes[1]).astype('int32')
+        fc_fp32_exe.arg_dict[arg_names[0]][:] = data
+        fc_fp32_exe.arg_dict[arg_names[1]][:] = weight
+
+        data_min = mx.nd.min(data).astype('float32')
+        data_max = mx.nd.max(data).astype('float32')
+        weight_min = mx.nd.min(weight).astype('float32')
+        weight_max = mx.nd.max(weight).astype('float32')
+        data_range = maxabs(data_min, data_max)
+        weight_range = maxabs(weight_min, weight_max)
+
         if not no_bias:
-            fc_fp32_exe.arg_dict[arg_names[2]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
-                                                                         shape=arg_shapes[2]).astype('int32')
+            bias = mx.nd.random.uniform(low=data_low, high=data_high,
+                                        shape=arg_shapes[2]).astype('int32')
+            bias_min = mx.nd.min(bias).astype('float32')
+            bias_max = mx.nd.max(bias).astype('float32')
+            bias_range = maxabs(bias_min, bias_max)
+
+            bias_scale = int8_range / bias_range
+            data_scale = quantized_range / data_range
+            weight_scale = int8_range / weight_range
+            bias_int32_rescale = data_scale * weight_scale / bias_scale
+            new_bias = mx.nd.cast(bias, dtype='float32') * bias_int32_rescale
+            fc_fp32_exe.arg_dict[arg_names[2]][:] = new_bias.astype('int32')
+
         output = fc_fp32_exe.forward()[0]
 
-        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype='int8')
+        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype=qdtype)
         fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
                                                            no_bias=no_bias, flatten=flatten)
         qarg_names = fc_int8.list_arguments()
@@ -322,20 +350,19 @@ def test_quantized_fc():
         fc_int8_exe = fc_int8.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
         fc_int8_exe.arg_dict[qarg_names[0]][:] = fc_fp32_exe.arg_dict[arg_names[0]].astype(qdtype)
         fc_int8_exe.arg_dict[qarg_names[1]][:] = fc_fp32_exe.arg_dict[arg_names[1]].astype('int8')
-        quantized_range = 127.0
         if no_bias:
-            fc_int8_exe.arg_dict[qarg_names[2]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[3]][:] = quantized_range
-            fc_int8_exe.arg_dict[qarg_names[4]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[5]][:] = quantized_range
+            fc_int8_exe.arg_dict[qarg_names[2]][:] = -data_range
+            fc_int8_exe.arg_dict[qarg_names[3]][:] = data_range
+            fc_int8_exe.arg_dict[qarg_names[4]][:] = -weight_range
+            fc_int8_exe.arg_dict[qarg_names[5]][:] = weight_range
         else:
-            fc_int8_exe.arg_dict[qarg_names[2]][:] = fc_fp32_exe.arg_dict[arg_names[2]].astype('int8')
-            fc_int8_exe.arg_dict[qarg_names[3]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[4]][:] = quantized_range
-            fc_int8_exe.arg_dict[qarg_names[5]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[6]][:] = quantized_range
-            fc_int8_exe.arg_dict[qarg_names[7]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[8]][:] = quantized_range
+            fc_int8_exe.arg_dict[qarg_names[2]][:] = bias.astype('int8')
+            fc_int8_exe.arg_dict[qarg_names[3]][:] = -data_range
+            fc_int8_exe.arg_dict[qarg_names[4]][:] = data_range
+            fc_int8_exe.arg_dict[qarg_names[5]][:] = -weight_range
+            fc_int8_exe.arg_dict[qarg_names[6]][:] = weight_range
+            fc_int8_exe.arg_dict[qarg_names[7]][:] = -bias_range
+            fc_int8_exe.arg_dict[qarg_names[8]][:] = bias_range
         qoutput, min_range, max_range = fc_int8_exe.forward()
 
         if no_bias:
@@ -347,6 +374,11 @@ def test_quantized_fc():
             assert cond == 0
 
     for qdtype in ['int8', 'uint8']:
+        if is_test_for_mkldnn():
+            check_quantized_fc((32, 512, 2), 100, True, qdtype, flatten=False)
+            check_quantized_fc((32, 512, 2), 100, False, qdtype, flatten=False)
+            check_quantized_fc((32, 512, 2, 2), 100, True, qdtype, flatten=False)
+            check_quantized_fc((32, 512, 2, 2), 100, False, qdtype, flatten=False)
         check_quantized_fc((32, 512, 2, 2), 100, True, qdtype)
         check_quantized_fc((32, 111, 2, 2), 100, True, qdtype)
         check_quantized_fc((32, 512, 2, 2), 100, False, qdtype)
@@ -450,6 +482,16 @@ def get_fp32_sym_with_multiple_outputs(length=1):
 @with_seed()
 def test_quantize_model():
     def check_quantize_model(qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing quantize_model for native cpu since it is not supported yet')
+            return
+        elif qdtype == 'int8' and is_test_for_mkldnn():
+            print('skipped testing quantize_model for mkldnn cpu int8 since it is not supported yet')
+            return
+        elif qdtype == 'uint8' and is_test_for_gpu():
+            print('skipped testing quantize_model for gpu uint8 since it is not supported yet')
+            return
+
         def check_params(params, qparams, qsym=None):
             if qsym is None:
                 assert len(params) == len(qparams)
@@ -636,6 +678,101 @@ def test_quantize_model_with_forward():
         check_quantize_model(qdtype)
 
 @with_seed()
+def test_quantize_conv_with_forward():
+    def check_quantize_model(qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing test_quantize_model_with_forward for native cpu since it is not supported yet')
+            return
+        elif qdtype == 'int8' and is_test_for_mkldnn():
+            print('skipped testing test_quantize_model_with_forward for mkldnn cpu int8 since it is not supported yet')
+            return
+        elif qdtype == 'uint8' and is_test_for_gpu():
+            print('skipped testing test_quantize_model_with_forward for gpu uint8 since it is not supported yet')
+            return
+
+        def check_params(params, qparams, qsym=None):
+            if qsym is None:
+                assert len(params) == len(qparams)
+                for k, v in params.items():
+                    assert k in qparams
+                    assert same(v.asnumpy(), qparams[k].asnumpy())
+            else:
+                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
+                assert len(qparams) == len(qparams_ground_truth)
+                for k, v in qparams_ground_truth.items():
+                    assert k in qparams
+                    assert same(v.asnumpy(), qparams[k].asnumpy())
+
+        def check_qsym_calibrated(qsym):
+            attrs = qsym.attr_dict()
+            for k, v in attrs.items():
+                if k.find('requantize_') != -1:
+                    assert 'min_calib_range' in v
+                    assert 'max_calib_range' in v
+
+        def check_qsym_qdtype(qsym, qdtype):
+            attrs = qsym.attr_dict()
+            for k, v in attrs.items():
+                if k.find('_quantize') != -1:
+                    assert 'out_type' in v
+                    assert v['out_type'] == qdtype
+
+        def check_qsym_forward(qsym, qarg_params, qaux_params, data_shape):
+            mod = mx.mod.Module(symbol=qsym, label_names=None, context=mx.current_context())
+            mod.bind(for_training=False,
+                     data_shapes=[('data', data_shape)])
+            mod.set_params(qarg_params, qaux_params)
+            data = [mx.random.uniform(-1.0, 1.0, shape=shape) for _, shape in mod.data_shapes]
+            batch = mx.io.DataBatch(data, [])
+            mod.forward(batch, is_train=False)
+            for output in mod.get_outputs():
+                output.wait_to_read()
+
+        batch_size = 4
+        dshape = (batch_size, 4, 10, 10)
+        data = mx.sym.Variable('data')
+        sym = mx.sym.Convolution(data, kernel=(1, 1), num_filter=16, name='conv0')
+
+        mod = Module(symbol=sym, label_names=None)
+        mod.bind(data_shapes=[('data', dshape)])
+
+        mod.init_params()
+        arg_params, aux_params = mod.get_params()
+        excluded_sym_names = []
+
+        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
+                                                                            arg_params=arg_params,
+                                                                            aux_params=aux_params,
+                                                                            excluded_sym_names=excluded_sym_names,
+                                                                            ctx=mx.current_context(),
+                                                                            quantized_dtype=qdtype,
+                                                                            calib_mode='none')
+        check_params(arg_params, qarg_params, qsym)
+        check_params(aux_params, qaux_params)
+        check_qsym_forward(qsym, qarg_params, qaux_params, dshape)
+
+        calib_data = mx.nd.random.uniform(shape=dshape)
+        calib_data = NDArrayIter(data=calib_data, batch_size=batch_size)
+        calib_data = DummyIter(calib_data)
+        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
+                                                                            arg_params=arg_params,
+                                                                            aux_params=aux_params,
+                                                                            excluded_sym_names=excluded_sym_names,
+                                                                            ctx=mx.current_context(),
+                                                                            quantized_dtype=qdtype,
+                                                                            calib_mode='naive',
+                                                                            calib_data=calib_data,
+                                                                            num_calib_examples=20)
+        check_params(arg_params, qarg_params, qsym)
+        check_params(aux_params, qaux_params)
+        check_qsym_calibrated(qsym)
+        check_qsym_qdtype(qsym, qdtype)
+        check_qsym_forward(qsym, qarg_params, qaux_params, dshape)
+
+    for qdtype in ['uint8', 'int8']:
+        check_quantize_model(qdtype)
+
+@with_seed()
 def test_quantize_sym_with_calib():
     sym = get_fp32_sym()
     offline_params = [name for name in sym.list_arguments()
@@ -673,10 +810,11 @@ def test_optimal_threshold_adversarial_case():
     # The worst case for the optimal_threshold function is when the values are concentrated
     # at one edge: [0, 0, ..., 1000]. (histogram)
     # We want to make sure that the optimal threshold in this case is the max.
-    arr = np.array([2]*1000)
-    res = mx.contrib.quant._get_optimal_threshold(arr, num_quantized_bins=5)
-    # The threshold should be 2.
-    assert res[3] - 2 < 1e-5
+    arr = np.array([2] * 1000)
+    for dtype in ['uint8', 'int8', 'auto']:
+        res = mx.contrib.quant._get_optimal_threshold(arr, dtype, num_quantized_bins=5)
+        # The threshold should be 2.
+        assert res[3] - 2 < 1e-5
 
 
 @with_seed()
@@ -688,11 +826,12 @@ def test_get_optimal_thresholds():
         max_nd = mx.nd.max(nd)
         return mx.nd.maximum(mx.nd.abs(min_nd), mx.nd.abs(max_nd)).asnumpy()
 
-    nd_dict = {'layer1': mx.nd.uniform(low=-10.532, high=11.3432, shape=(8, 3, 23, 23), dtype=np.float64)}
-    expected_threshold = get_threshold(nd_dict['layer1'])
-    th_dict = mx.contrib.quant._get_optimal_thresholds(nd_dict)
-    assert 'layer1' in th_dict
-    assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
+    for dtype in ['uint8', 'int8', 'auto']:
+        nd_dict = {'layer1': mx.nd.uniform(low=-10.532, high=11.3432, shape=(8, 3, 23, 23), dtype=np.float64)}
+        expected_threshold = get_threshold(nd_dict['layer1'])
+        th_dict = mx.contrib.quant._get_optimal_thresholds(nd_dict, dtype)
+        assert 'layer1' in th_dict
+        assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
 
 if __name__ == "__main__":

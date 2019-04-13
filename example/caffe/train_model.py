@@ -14,14 +14,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Train module with using Caffe operator in MXNet"""
+"""Train module using Caffe operator in MXNet"""
 import os
 import logging
 import mxnet as mx
 
 
 def fit(args, network, data_loader, eval_metrics=None, batch_end_callback=None):
-    """Train the model with using Caffe operator in MXNet"""
+    """Train the model using Caffe operator in MXNet"""
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
 

@@ -91,7 +91,7 @@ class NDArray {
    * \param delay_alloc whether delay the allocation
    * \param dtype data type of this ndarray
    */
-  NDArray(const TShape &shape, Context ctx,
+  NDArray(const mxnet::TShape &shape, Context ctx,
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype)),
         shape_(shape), dtype_(dtype), storage_type_(kDefaultStorage),
@@ -99,10 +99,10 @@ class NDArray {
   }
   /*! \brief constructor for NDArray with storage type
    */
-  NDArray(const NDArrayStorageType stype, const TShape &shape, Context ctx,
+  NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
-          std::vector<int> aux_types = {}, std::vector<TShape> aux_shapes = {},
-          TShape storage_shape = TShape(mshadow::Shape1(0)));
+          std::vector<int> aux_types = {}, mxnet::ShapeVector aux_shapes = {},
+          mxnet::TShape storage_shape = mxnet::TShape(mshadow::Shape1(0)));
   /*!
    * \brief constructs a new dynamic NDArray whose shape is unknown,
    *        hence the NDArray is inherently lazily created
@@ -110,7 +110,7 @@ class NDArray {
    * \param dtype data type of this ndarray
    */
   explicit NDArray(Context ctx, int dtype = mshadow::default_type_flag) {
-    ptr_ = std::make_shared<Chunk>(TShape(mshadow::Shape1(0)), ctx, true, dtype);
+    ptr_ = std::make_shared<Chunk>(mxnet::TShape(mshadow::Shape1(0)), ctx, true, dtype);
     dtype_ = dtype;
     storage_type_ = kDefaultStorage;
     entry_ = {nullptr, 0, 0};
@@ -148,7 +148,7 @@ class NDArray {
   }
 
   /*! \brief create ndarray from shared memory */
-  NDArray(int shared_pid, int shared_id, const TShape& shape, int dtype)
+  NDArray(int shared_pid, int shared_id, const mxnet::TShape& shape, int dtype)
       : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)), shape_(shape),
         dtype_(dtype), storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
   }
@@ -163,7 +163,7 @@ class NDArray {
    * \param aux_data the memory content of static aux data
    * \param dev_id the device id this tensor sits at
    */
-  NDArray(const NDArrayStorageType stype, const TShape &shape,
+  NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape,
           const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
         dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
@@ -172,7 +172,7 @@ class NDArray {
    * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
    * \param shape the shape of the NDArray
    */
-  void Init(const TShape &shape) {
+  void Init(const mxnet::TShape &shape) {
     ptr_->Init(shape, this->dtype_);
     this->shape_ = shape;
   }
@@ -210,7 +210,7 @@ class NDArray {
   /*!
    * \return the shape of current NDArray.
    */
-  inline const TShape& shape() const {
+  inline const mxnet::TShape& shape() const {
     return shape_;
   }
   /*!
@@ -218,7 +218,7 @@ class NDArray {
    *  It is only intended for non-default storage. For row-sparse storage, it is the shape of
    *  the tensor which stores the non-zero values.
    */
-  inline const TShape &storage_shape() const {
+  inline const mxnet::TShape &storage_shape() const {
     CHECK(ptr_ != nullptr);
     CHECK_NE(storage_type(), kDefaultStorage)
              << "storage_shape() is not intended for kDefaultStorage.";
@@ -230,14 +230,14 @@ class NDArray {
    * \param index the index of the aux data
    * \return the shape of aux data at given index
    */
-  inline const TShape& aux_shape(size_t index) const {
+  inline const mxnet::TShape& aux_shape(size_t index) const {
     CHECK_NE(storage_type(), kDefaultStorage)
              << "aux_shape() is not intended for kDefaultStorage.";
     return ptr_->aux_shapes[index];
   }
 
   /* \return the shapes of all aux data */
-  const std::vector<TShape>& aux_shapes() const {
+  const mxnet::ShapeVector& aux_shapes() const {
     CHECK_NE(storage_type(), kDefaultStorage)
              << "aux_shapes() is not intended for kDefaultStorage.";
     return ptr_->aux_shapes;
@@ -257,7 +257,7 @@ class NDArray {
    * for the final result. After the operation is done, the exact size of
    * the shape is known and need to be reset using this function.
    */
-  inline void set_aux_shape(size_t index, const TShape& shape) const {
+  inline void set_aux_shape(size_t index, const mxnet::TShape& shape) const {
     CHECK_NE(storage_type(), kDefaultStorage)
       << "set_aux_shape() is not intended for kDefaultStorage.";
     ptr_->set_aux_shape(index, shape);
@@ -552,7 +552,7 @@ class NDArray {
    * \param dtype The data type.
    * \return NDArray in new shape and type.
    */
-  inline NDArray AsArray(const TShape &shape, int dtype) const {
+  inline NDArray AsArray(const mxnet::TShape &shape, int dtype) const {
     CHECK_EQ(storage_type(), kDefaultStorage)
              << "AsArray is intended only for kDefaultStorage.";
     CHECK_GE(ptr_->shandle.size,
@@ -628,13 +628,13 @@ class NDArray {
    * \param shape new shape
    * \return NDArray in new shape
    */
-  NDArray Reshape(const TShape &shape) const;
+  NDArray Reshape(const mxnet::TShape &shape) const;
   /*!
    * \brief Get an reshaped NDArray. Supports autograd recording
    * \param shape new shape
    * \return NDArray in new shape
    */
-  NDArray ReshapeWithRecord(const TShape &shape);
+  NDArray ReshapeWithRecord(const mxnet::TShape &shape);
   /*!
    * \brief Return a copy of this NDArray without autograd history
    */
@@ -660,10 +660,10 @@ class NDArray {
    * This function can only be called by ndarray of default
    * storage type and effectively changes the ndarray's shape_.
    * Note: This function is named as this to avoid overload conflict
-   * with CheckAndAlloc(const std::vector<TShape> &aux_shapes), since
-   * TShape tmp = some_shape is equivalent to TShape tmp = {some_shape}.
+   * with CheckAndAlloc(const mxnet::ShapeVector &aux_shapes), since
+   * mxnet::TShape tmp = some_shape is equivalent to mxnet::TShape tmp = {some_shape}.
    */
-  void ReshapeAndAlloc(const TShape& shape) {
+  void ReshapeAndAlloc(const mxnet::TShape& shape) {
     CHECK_EQ(storage_type(), kDefaultStorage);
     CHECK(!is_none());
     shape_ = shape;
@@ -674,17 +674,17 @@ class NDArray {
    * \brief Alloc memory for non-default storage
    * aux_shape is only known at run time
    */
-  inline void CheckAndAlloc(const std::vector<TShape> &aux_shapes) const {
+  inline void CheckAndAlloc(const mxnet::ShapeVector &aux_shapes) const {
     CHECK_NE(storage_type(), kDefaultStorage)
              << "CheckAndAlloc(aux_shapes) is not intended for kDefaultStorage";
     ptr_->CheckAndAlloc(shape_, aux_shapes, dtype_);
   }
-  inline void CheckAndAllocData(const TShape &storage_shape) const {
+  inline void CheckAndAllocData(const mxnet::TShape &storage_shape) const {
     CHECK_NE(storage_type(), kDefaultStorage)
              << "CheckAndAllocData is not intended for kDefaultStorage";
     ptr_->CheckAndAllocData(storage_shape, dtype_);
   }
-  inline void CheckAndAllocAuxData(size_t i, const TShape &aux_shape) const {
+  inline void CheckAndAllocAuxData(size_t i, const mxnet::TShape &aux_shape) const {
     CHECK_NE(storage_type(), kDefaultStorage)
              << "CheckAndAllocAuxData is not intended for kDefaultStorage";
     ptr_->CheckAndAllocAuxData(i, aux_shape);
@@ -775,7 +775,7 @@ class NDArray {
    * which can be expensive.
    * It's used by FullyConnected right now.
    */
-  NDArray MKLDNNDataReshape(const TShape &shape) const;
+  NDArray MKLDNNDataReshape(const mxnet::TShape &shape) const;
 
    /*!
    * \ Fix mkldnn memory descriptor mismatch from NDArray.
@@ -844,17 +844,21 @@ class NDArray {
     // The shape of the chunk data.
     // This might not be the same shape as the NDArray, since the storage may be sparse.
     // The default value for storage_shape is {0} when an empty non-default NDArray is created.
-    TShape storage_shape;
+    mxnet::TShape storage_shape;
     // The shape of aux data. The default value for the shape depends on the type of storage.
     // If aux_shapes[i].Size() is zero, aux data i is empty.
-    std::vector<TShape> aux_shapes;
+    mxnet::ShapeVector aux_shapes;
+    /*! \brief Reference to the storage to ensure proper destruct order */
+    std::shared_ptr<Storage> storage_ref_;
 
     /*! \brief default cosntructor */
-    Chunk() : static_data(true), delay_alloc(false) {}
+    Chunk() : static_data(true), delay_alloc(false),
+              storage_ref_(Storage::_GetSharedRef()) {}
 
     /*! \brief construct a new chunk */
-    Chunk(TShape shape, Context ctx_, bool delay_alloc_, int dtype)
-        : static_data(false), delay_alloc(true), ctx(ctx_) {
+    Chunk(mxnet::TShape shape, Context ctx_, bool delay_alloc_, int dtype)
+        : static_data(false), delay_alloc(true), ctx(ctx_),
+          storage_ref_(Storage::_GetSharedRef()) {
       auto size = shape.Size();
       storage_shape = shape;
       var = Engine::Get()->NewVariable();
@@ -864,7 +868,8 @@ class NDArray {
     }
 
     Chunk(const TBlob &data, int dev_id)
-        : static_data(true), delay_alloc(false) {
+        : static_data(true), delay_alloc(false),
+          storage_ref_(Storage::_GetSharedRef()) {
       CHECK(storage_type == kDefaultStorage);
       var = Engine::Get()->NewVariable();
       if (data.dev_mask() == cpu::kDevMask) {
@@ -880,8 +885,9 @@ class NDArray {
       storage_shape = data.shape_;
     }
 
-    Chunk(int shared_pid, int shared_id, const TShape& shape, int dtype)
-        : static_data(false), delay_alloc(false) {
+    Chunk(int shared_pid, int shared_id, const mxnet::TShape& shape, int dtype)
+        : static_data(false), delay_alloc(false),
+          storage_ref_(Storage::_GetSharedRef()) {
       var = Engine::Get()->NewVariable();
       ctx = Context::CPUShared(0);
       shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
@@ -892,12 +898,12 @@ class NDArray {
       storage_shape = shape;
     }
     // Constructor for a non-default storage chunk
-    Chunk(NDArrayStorageType storage_type_, const TShape &storage_shape_, Context ctx_,
+    Chunk(NDArrayStorageType storage_type_, const mxnet::TShape &storage_shape_, Context ctx_,
           bool delay_alloc_, int dtype, const std::vector<int> &aux_types_,
-          const std::vector<TShape> &aux_shapes_)
+          const mxnet::ShapeVector &aux_shapes_)
         : static_data(false), delay_alloc(delay_alloc_), storage_type(storage_type_),
           aux_types(aux_types_), ctx(ctx_), storage_shape(storage_shape_),
-          aux_shapes(aux_shapes_) {
+          aux_shapes(aux_shapes_), storage_ref_(Storage::_GetSharedRef()) {
       shandle.ctx = ctx;
       var = Engine::Get()->NewVariable();
       // aux_handles always reflect the correct number of aux data
@@ -914,7 +920,8 @@ class NDArray {
 
     Chunk(const NDArrayStorageType storage_type_, const TBlob &data,
           const std::vector<TBlob> &aux_data, int dev_id)
-        : static_data(true), delay_alloc(false), storage_type(storage_type_) {
+        : static_data(true), delay_alloc(false), storage_type(storage_type_),
+          storage_ref_(Storage::_GetSharedRef()) {
       using namespace mshadow;
       CHECK_NE(storage_type, kDefaultStorage);
       // init var
@@ -944,7 +951,7 @@ class NDArray {
     }
 
     /*! \brief set the shape for ith aux data, and update storage shape if necessary */
-    inline void set_aux_shape(const size_t i, const TShape& shape) {
+    inline void set_aux_shape(const size_t i, const mxnet::TShape& shape) {
       aux_shapes[i] = shape;
       if (storage_shape.ndim() > 0) {
         if (storage_type == kRowSparseStorage && i == rowsparse::kIdx) {
@@ -979,8 +986,8 @@ class NDArray {
 #endif
         delay_alloc = false;
       } else if (shandle.size < dbytes) {
-        // free storage if necessary and alloc again
-        if (shandle.size > 0) Storage::Get()->Free(shandle);
+        // free storage
+        Storage::Get()->Free(shandle);
         // init storage
         shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
 #if MXNET_USE_MKLDNN == 1
@@ -989,20 +996,20 @@ class NDArray {
       }
     }
     /*! \brief initialize the shape and dtype, assuming it is not initialized before. */
-    void Init(const TShape &shape, int dtype) {
+    void Init(const mxnet::TShape &shape, int dtype) {
       auto size = shape.Size();
       storage_shape = shape;
       shandle.size = size * mshadow::mshadow_sizeof(dtype);
       this->CheckAndAlloc();
     }
-    inline void CheckAndAlloc(const TShape &shape, const std::vector<TShape> &aux_shapes,
+    inline void CheckAndAlloc(const mxnet::TShape &shape, const mxnet::ShapeVector &aux_shapes,
                               int dtype) {
       // calculate size, perform allocation
       if (kRowSparseStorage == storage_type) {
         // For row sparse, aux_shape indicates the number of rows to allocate
         auto aux_shape = aux_shapes[rowsparse::kIdx];
         CheckAndAllocAuxData(rowsparse::kIdx, aux_shape);
-        TShape storage_shape(shape);
+        mxnet::TShape storage_shape(shape);
         storage_shape[0] = aux_shape[0];
         CheckAndAllocData(storage_shape, dtype);
       } else if (kCSRStorage == storage_type) {
@@ -1017,12 +1024,12 @@ class NDArray {
     // storage shape is also updated
     // if data is already allocated, try reuse the storage. Otherwise, free the current one
     // and allocate new storage
-    void CheckAndAllocData(const TShape &shape, int dtype);
+    void CheckAndAllocData(const mxnet::TShape &shape, int dtype);
 
 #if MXNET_USE_MKLDNN == 1
     // Have MKL memory reference to the data in the default storage
     // or create memory for MKLDNN.
-    void SetMKLMem(const TShape &shape, int dtype);
+    void SetMKLMem(const mxnet::TShape &shape, int dtype);
     // If the data is stored in MKLDNN layout, we reorder data in mkl_mem_ and
     // save the result in shandle.
     void Reorder2Default();
@@ -1037,7 +1044,7 @@ class NDArray {
     // aux shape is also updated
     // if aux data is already allocated, try reuse the storage. Otherwise, free the current one
     // and allocate new storage
-    inline void CheckAndAllocAuxData(size_t i, const TShape &shape) {
+    inline void CheckAndAllocAuxData(size_t i, const mxnet::TShape &shape) {
       CHECK_EQ(shape.ndim(), 1) << "shape must be 1D in CheckAndAllocAuxData";
       CHECK_NE(storage_type, kUndefinedStorage)
         << "storage type cannot be kUndefinedStorage in CheckAndAllocAuxData";
@@ -1048,8 +1055,8 @@ class NDArray {
       }
       size_t aux_bytes = shape.Size() * mshadow::mshadow_sizeof(aux_types[i]);
       if (aux_handles[i].size < aux_bytes) {
-        // free storage if necessary and alloc again
-        if (aux_handles[i].size > 0) Storage::Get()->Free(aux_handles[i]);
+        // free storage
+        Storage::Get()->Free(aux_handles[i]);
         // init aux storage
         aux_handles[i] = Storage::Get()->Alloc(aux_bytes, ctx);
       }
@@ -1065,7 +1072,7 @@ class NDArray {
   /*! \brief internal data of NDArray */
   std::shared_ptr<Chunk> ptr_{nullptr};
   /*! \brief shape of current NDArray */
-  TShape shape_;
+  mxnet::TShape shape_;
   /*! \brief byte offset in chunk */
   size_t byte_offset_ = 0;
   /*! \brief type of data */

@@ -45,10 +45,14 @@ namespace mshadow_op {
 __constant__ const float PI = 3.14159265358979323846;
 __constant__ const float SELU_ALPHA = 1.6732632423543772848170429916717;
 __constant__ const float SELU_LAMBDA = 1.0507009873554804934193349852946;
+__constant__ const float GELU_CUBIC_CONSTANT = 0.044715;
+__constant__ const float GELU_ROOT_2_OVER_PI = 0.7978845608028654;
 #else
 const float PI = 3.14159265358979323846;
 const float SELU_ALPHA = 1.6732632423543772848170429916717;
 const float SELU_LAMBDA = 1.0507009873554804934193349852946;
+const float GELU_CUBIC_CONSTANT = 0.044715;
+const float GELU_ROOT_2_OVER_PI = 0.7978845608028654;
 using std::isnan;
 #endif
 using std::enable_if;
@@ -127,9 +131,20 @@ MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
 MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
 
-MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
+#define MXNET_GELU_GX(a) \
+  a * (DType(1.0f) + DType(GELU_CUBIC_CONSTANT) * a * a)
 
-MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
+#define MXNET_GELU_GX_GRAD(a) \
+  (DType(1.0f) + DType(3.0f * GELU_CUBIC_CONSTANT) * a * a)
+
+#define MXNET_GELU_TANH(a) \
+  math::tanh(DType(GELU_ROOT_2_OVER_PI) * MXNET_GELU_GX(a))
+
+MXNET_UNARY_MATH_OP(gelu, DType(0.5f) * a * (DType(1.0f) + MXNET_GELU_TANH(a)));
+
+MXNET_BINARY_MATH_OP_NC(gelu_grad,
+  b / a + b * (DType(1.0f) - MXNET_GELU_TANH(a)) *
+  DType(GELU_ROOT_2_OVER_PI) * MXNET_GELU_GX_GRAD(a));
 
 MXNET_UNARY_MATH_OP_NC(selu, DType(SELU_LAMBDA) *
                          (a > DType(0) ? a : DType(math::id(SELU_ALPHA) * math::expm1(a))));
@@ -316,12 +331,6 @@ MXNET_BINARY_MATH_OP(power_rgrad, math::pow(a, b) * math::log(a));
 MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 
 MXNET_BINARY_MATH_OP(rpower_grad, math::id(a) * math::log(b));
-
-/*! \brief used for generate element of maximum */
-MXNET_BINARY_MATH_OP(maximum, a > b ? a : b);
-
-/*! \brief used for generate element of minimum */
-MXNET_BINARY_MATH_OP_NC(minimum, a < b ? a : b);
 
 MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
 
@@ -787,6 +796,44 @@ namespace isnan_typed {
     return (val.half_ & 0x7fff) > 0x7c00;
   }
 };  // namespace isnan_typed
+
+MXNET_UNARY_MATH_OP_NC(relu, isnan_typed::IsNan(a) || (a > DType(0)) ? a : DType(0));
+
+/*! \brief used for computing gradient of relu operator */
+struct relu_grad : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return a > DType(0) ? DType(1) : DType(0);
+    }
+  }
+};
+
+/*! \brief used for computing binary operator maximum */
+struct maximum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return (a > b ? a : b);
+    }
+  }
+};
+
+/*! \brief used for computing binary operator minimum */
+struct minimum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return DType(a < b ? a : b);
+    }
+  }
+};
 
 /*! \brief sum reducer that ignores NaN values in the input */
 struct nansum {

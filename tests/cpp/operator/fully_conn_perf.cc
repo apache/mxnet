@@ -26,7 +26,6 @@
 
 #include <dmlc/logging.h>
 #include <mxnet/tensor_blob.h>
-#include <nnvm/tuple.h>
 #include "../../src/operator/nn/fully_connected-inl.h"
 #include "../include/test_op_runner.h"
 #include "../include/test_core_op.h"
@@ -40,8 +39,8 @@ const kwargs_t basic_fullyconn_args = { {"num_hidden", "250"}, {"no_bias", "true
  * \brief Generic bidirectional sanity test
  */
 TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
-  TShape shape1({5, 5});
-  TShape shape2({250, 5});
+  mxnet::TShape shape1({5, 5});
+  mxnet::TShape shape2({250, 5});
   kwargs_t kwargs = basic_fullyconn_args;
   test::op::CoreOperatorRunner<float> runner;
   runner.set_verbose(true);
@@ -55,13 +54,13 @@ TEST(FULLY_CONNECTED, ExecuteBidirectionalFullyConnected) {
  */
 TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
   kwargs_t kwargs = basic_fullyconn_args;
-  TShape shape1({10, 10, 10, 10});
-  TShape shape2({250, 1000});
+  mxnet::TShape shape1({10, 10, 10, 10});
+  mxnet::TShape shape2({250, 1000});
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                            "_backward_FullyConnected");
   runner.RunBidirectional(false, { shape1, shape2 }, kwargs, 1);
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -76,8 +75,8 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
       {50, 3, 18,  32},
     };
   }
-  for (const TShape& shape : shapes) {
-    TShape shape2({250, static_cast<nnvm::dim_t>(shape.ProdShape(1, shape.ndim()))});
+  for (const mxnet::TShape& shape : shapes) {
+    mxnet::TShape shape2({250, static_cast<nnvm::dim_t>(shape.ProdShape(1, shape.ndim()))});
     kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                              "_backward_FullyConnected");
     runner.TimingTest("Fully connected CPU", false, false, kwargs, 2, 10,
@@ -91,13 +90,13 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingCPU) {
  */
 TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
   kwargs_t kwargs = basic_fullyconn_args;
-  TShape shape1({10, 10, 10, 10});
-  TShape shape2({250, 1000});
+  mxnet::TShape shape1({10, 10, 10, 10});
+  mxnet::TShape shape2({250, 1000});
   test::op::CoreOperatorRunner<float> runner;
   kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                            "_backward_FullyConnected");
   runner.RunBidirectional(false, { shape1, shape2 }, kwargs, 1);
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -112,8 +111,8 @@ TEST(FULLY_CONNECTED, FullyConnectedTimingGPU) {
       {50, 3, 18,  32},
     };
   }
-  for (const TShape& shape : shapes) {
-    TShape shape2({250, static_cast<nnvm::dim_t>(shape.ProdShape(1, shape.ndim()))});
+  for (const mxnet::TShape& shape : shapes) {
+    mxnet::TShape shape2({250, static_cast<nnvm::dim_t>(shape.ProdShape(1, shape.ndim()))});
     kwargs = test::op::CoreOpExecutor<float>::ArgsWithOpName(kwargs, "FullyConnected",
                                                              "_backward_FullyConnected");
     runner.TimingTest("Fully connected GPU", true, false, kwargs, 2, 10,

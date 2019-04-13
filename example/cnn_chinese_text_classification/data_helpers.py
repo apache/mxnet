@@ -14,8 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-"""Help functions to support for implementing CNN + Highway Network for Chinese Text Classification in MXNet"""
+"""Helper functions to support for implementing CNN + Highway Network for Chinese Text Classification in MXNet"""
 
 import codecs
 import itertools

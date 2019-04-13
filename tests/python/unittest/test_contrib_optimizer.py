@@ -107,6 +107,12 @@ def test_adamw():
     kwargs = {'eta': eta, 'lr': lr, 'wd': wd, 'epsilon': epsilon,
               'beta1': beta1, 'beta2': beta2}
 
+    # update is skipped for rescale = nan scalar
+    mx.nd.contrib.adamw_update(weight, grad, m, v,
+                               np.nan, out=weight, **kwargs)
+    # weight remains unchanged
+    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
+
     # update is skipped for rescale = 0
     mx.nd.contrib.adamw_update(weight, grad, m, v,
                                rescale_grad * 0, out=weight, **kwargs)
@@ -131,6 +137,12 @@ def test_adamw():
     weight_fp16_ref = weight_fp16.copy()
     mx.nd.contrib.mp_adamw_update(weight_fp16, grad_fp16, m, v, weight,
                                   rescale_grad * np.nan, out=weight_fp16, **kwargs)
+    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
+    mx.test_utils.assert_almost_equal(weight_fp16_ref.asnumpy(), weight_fp16.asnumpy())
+
+    # multi-precision update is skipped for rescale = nan scalar
+    mx.nd.contrib.mp_adamw_update(weight_fp16, grad_fp16, m, v, weight,
+                                  np.nan, out=weight_fp16, **kwargs)
     mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
     mx.test_utils.assert_almost_equal(weight_fp16_ref.asnumpy(), weight_fp16.asnumpy())
 

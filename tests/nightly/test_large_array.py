@@ -18,6 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet import gluon, nd
+from tests.python.unittest.common import with_seed
 
 # dimension constants
 MEDIUM_X = 10000
@@ -45,9 +46,22 @@ def test_ndarray_ones():
     assert a[-1][0] == 1
     assert nd.sum(a).asnumpy() == LARGE_SIZE
 
+@with_seed()
 def test_ndarray_random_uniform():
     a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
     assert a[-1][0] != 0
+
+@with_seed()
+def test_ndarray_random_randint():
+    a = nd.random.randint(100, 10000, shape=(LARGE_X, SMALL_Y))
+    assert a.shape == (LARGE_X, SMALL_Y)
+    # check if randint can generate value greater than 2**32 (large)
+    low_large_value = 2**32
+    high_large_value = 2**34
+    a = nd.random.randint(low_large_value,high_large_value)
+    low = mx.nd.array([low_large_value],dtype='int64')
+    high = mx.nd.array([high_large_value],dtype='int64')
+    assert a.__gt__(low) & a.__lt__(high)
 
 def test_ndarray_empty():
     a = nd.empty((LARGE_X, SMALL_Y))

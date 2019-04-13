@@ -106,7 +106,7 @@ Example::
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -118,7 +118,7 @@ NNVM_REGISTER_OP(_backward_softmax)
 .set_num_inputs(SoftmaxGradOpNumInputs)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
-.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
@@ -161,7 +161,7 @@ Example::
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -173,7 +173,7 @@ NNVM_REGISTER_OP(_backward_softmin)
 .set_num_inputs(SoftmaxGradOpNumInputs)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
-.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
@@ -204,7 +204,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -216,7 +216,7 @@ NNVM_REGISTER_OP(_backward_log_softmax)
 .set_num_inputs(SoftmaxGradOpNumInputs)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
-.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")

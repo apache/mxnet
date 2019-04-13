@@ -48,6 +48,12 @@ enum FullyConnectedOpResource {kTempSpace};
 enum FullyConnectedOpOutputs {kOut};
 }  // fullc
 
+namespace quantized_fullc {
+enum QuantizedFCInputMinMax {kDataMin, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax};
+enum QuantizedFCOutputs {kOut, kOutMin, kOutMax};
+}  // quantized_fullc
+
+
 struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
   bool no_bias;
@@ -84,8 +90,8 @@ void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
   CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
       << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-  const TShape& ishape = in_data[fullc::kData].shape_;
-  const TShape& oshape = out_data[fullc::kOut].shape_;
+  const mxnet::TShape& ishape = in_data[fullc::kData].shape_;
+  const mxnet::TShape& oshape = out_data[fullc::kOut].shape_;
 
   Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
   Tensor<xpu, 2, DType> data, out;
@@ -128,8 +134,8 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
   // TODO(bing): check the BLAS Handle, be careful
   //  maybe need blas handle from context
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TShape& ishape = in_data[fullc::kData].shape_;
-  const TShape& oshape = out_grad[fullc::kOut].shape_;
+  const mxnet::TShape& ishape = in_data[fullc::kData].shape_;
+  const mxnet::TShape& oshape = out_grad[fullc::kOut].shape_;
 
   Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
   Tensor<xpu, 2, DType> data, grad, gdata;

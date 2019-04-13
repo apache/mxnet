@@ -100,7 +100,7 @@ static void VerifyDefMem(const mkldnn::memory &mem) {
 
 TEST(MKLDNN_UTIL_FUNC, MemFormat) {
   // Check whether the number of format is correct.
-  CHECK_EQ(mkldnn_format_last, 112);
+  CHECK_EQ(mkldnn_format_last, 114);
   CHECK_EQ(mkldnn_nchw, 7);
   CHECK_EQ(mkldnn_oihw, 16);
 }
@@ -129,7 +129,7 @@ static void VerifyMem(const mkldnn::memory &mem) {
 
 TEST(MKLDNN_NDArray, GetDataReorder) {
   TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<TShape> shapes = tas.shapes;
+  mxnet::ShapeVector shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
 
@@ -373,7 +373,7 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
 
 TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
   auto shapes_pds = GetTestArrayShapes();
-  std::vector<nnvm::TShape> shapes; shapes = shapes_pds.shapes;
+  std::vector<mxnet::TShape> shapes; shapes = shapes_pds.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = shapes_pds.pds;
   for (auto &shape : shapes) {
     for (int dim = 0; dim < 5; dim++) {

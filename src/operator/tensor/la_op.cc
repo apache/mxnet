@@ -18,10 +18,11 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file la_op.cc
  * \brief CPU implementation of Operators for advanced linear algebra.
  */
+
 #include "./la_op.h"
 #include "./la_op-inl.h"
 
@@ -48,19 +49,18 @@ Here, *alpha* and *beta* are scalar parameters, and *op()* is either the identit
 matrix transposition (depending on *transpose_a*, *transpose_b*).
 
 If *n>2*, *gemm* is performed separately for a batch of matrices. The column indices of the matrices
-are given by the last dimensions of the tensors, the row indices by the axis specified with the *axis* 
+are given by the last dimensions of the tensors, the row indices by the axis specified with the *axis*
 parameter. By default, the trailing two dimensions will be used for matrix encoding.
 
 For a non-default axis parameter, the operation performed is equivalent to a series of swapaxes/gemm/swapaxes
-calls. For example let *A*, *B*, *C* be 5 dimensional tensors. Then gemm(*A*, *B*, *C*, axis=1) is equivalent to
+calls. For example let *A*, *B*, *C* be 5 dimensional tensors. Then gemm(*A*, *B*, *C*, axis=1) is equivalent
+to the following without the overhead of the additional swapaxis operations::
 
     A1 = swapaxes(A, dim1=1, dim2=3)
     B1 = swapaxes(B, dim1=1, dim2=3)
     C = swapaxes(C, dim1=1, dim2=3)
     C = gemm(A1, B1, C)
     C = swapaxis(C, dim1=1, dim2=3)
-
-without the overhead of the additional swapaxis operations.
 
 When the input data is of type float32 and the environment variables MXNET_CUDA_ALLOW_TENSOR_CORE
 and MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION are set to 1, this operator will try to use
@@ -90,7 +90,7 @@ Examples::
 .set_attr_parser(ParamParser<LaMatrixMacParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A", "B", "C"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", LaMatrixMultMacOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LaMatrixMultMacOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
   { return std::vector<std::pair<int, int>>{{2, 0}}; })
@@ -126,18 +126,17 @@ Here *alpha* is a scalar parameter and *op()* is either the identity or the matr
 transposition (depending on *transpose_a*, *transpose_b*).
 
 If *n>2*, *gemm* is performed separately for a batch of matrices. The column indices of the matrices
-are given by the last dimensions of the tensors, the row indices by the axis specified with the *axis* 
+are given by the last dimensions of the tensors, the row indices by the axis specified with the *axis*
 parameter. By default, the trailing two dimensions will be used for matrix encoding.
 
 For a non-default axis parameter, the operation performed is equivalent to a series of swapaxes/gemm/swapaxes
 calls. For example let *A*, *B* be 5 dimensional tensors. Then gemm(*A*, *B*, axis=1) is equivalent to
+the following without the overhead of the additional swapaxis operations::
 
     A1 = swapaxes(A, dim1=1, dim2=3)
     B1 = swapaxes(B, dim1=1, dim2=3)
     C = gemm2(A1, B1)
     C = swapaxis(C, dim1=1, dim2=3)
-
-without the overhead of the additional swapaxis operations.
 
 When the input data is of type float32 and the environment variables MXNET_CUDA_ALLOW_TENSOR_CORE
 and MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION are set to 1, this operator will try to use
@@ -165,7 +164,7 @@ Examples::
 .set_attr_parser(ParamParser<LaMatrixMultParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A", "B"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", LaMatrixMultMacOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LaMatrixMultMacOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", LaOpGemmForward<cpu, 2, 2, 2, 1, gemm2>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_gemm2"})
@@ -216,7 +215,7 @@ Examples::
 .set_attr_parser(ParamParser<LaCholeskyParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
   { return std::vector<std::pair<int, int>>{{0, 0}}; })
@@ -277,7 +276,7 @@ Examples::
 .set_attr_parser(ParamParser<LaCholeskyParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
   { return std::vector<std::pair<int, int>>{{0, 0}}; })
@@ -317,7 +316,6 @@ If *n>2*, *trmm* is performed separately on the trailing two dimensions for all 
 
 .. note:: The operator supports float32 and float64 data types only.
 
-
 Examples::
 
    // Single triangular matrix multiply
@@ -336,7 +334,7 @@ Examples::
 .set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A", "B"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", LaTriangMatrixMultOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LaTriangMatrixMultOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
   { return std::vector<std::pair<int, int>>{{1, 0}}; })
@@ -399,7 +397,7 @@ Examples::
 .set_attr_parser(ParamParser<LaTriangMatrixMultParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A", "B"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", LaTriangMatrixMultOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LaTriangMatrixMultOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
   { return std::vector<std::pair<int, int>>{{1, 0}}; })
@@ -447,7 +445,7 @@ Examples::
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", LaReduceShape<2>)
+.set_attr<mxnet::FInferShape>("FInferShape", LaReduceShape<2>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 0, 1, 1, sumlogdiag>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_sumlogdiag"})
@@ -504,7 +502,7 @@ Examples::
 .set_attr_parser(ParamParser<LaSyrkParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", LaSyrkShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LaSyrkShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, syrk>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_linalg_syrk"})
@@ -571,7 +569,7 @@ Examples::
 .set_num_outputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", LaLQFactShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LaLQFactShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
   { return std::vector<std::pair<int, int>>{{0, 0}}; })
@@ -640,7 +638,7 @@ Examples::
 .set_num_outputs(2)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
   { return std::vector<std::string>{"A"}; } )
-.set_attr<nnvm::FInferShape>("FInferShape", LaEigFactShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LaEigFactShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs)
   { return std::vector<std::pair<int, int>>{{0, 0}}; })

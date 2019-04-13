@@ -111,11 +111,11 @@ static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
     MKLDNNRequantizeForwardKer(attrs, ctx, inputs, req, outputs, real_range);
   // Model is not calibrated
   } else {
-    TShape src_shape, dst_shape;
+    mxnet::TShape src_shape, dst_shape;
     const size_t actual_float_size = sizeof(float);
     const size_t actual_quantized_size = sizeof(SrcDType);
     const size_t temp_reduce_size = ConfigReduce<cpu, SrcDType>(s,
-                         inputs[0].shape(), TShape({1}), &src_shape, &dst_shape);
+                         inputs[0].shape(), mxnet::TShape({1}), &src_shape, &dst_shape);
     Tensor<cpu, 1, char> temp_space =
       ctx.requested[0].get_space_typed<cpu, 1, char>(
       Shape1(2*actual_float_size+2*actual_quantized_size+temp_reduce_size), s);

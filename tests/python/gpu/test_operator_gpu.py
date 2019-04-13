@@ -33,6 +33,7 @@ from numpy.testing import assert_allclose
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import run_in_spawned_process
 from test_operator import *
 from test_optimizer import *
 from test_random import *
@@ -519,6 +520,66 @@ def test_convolution_options():
     sym = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), name='conv')
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
+
+
+@with_seed()
+def test_conv_deconv_guards():
+    # Test cases for convolution and deconvolution via strided fft.  Ensure that the framework
+    # guards against problematic CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING in cuDNN [7.3.1,7.5)
+    # see https://docs.nvidia.com/deeplearning/sdk/cudnn-release-notes/rel_750.html#rel_750
+    tol = 1e-1
+    for (op, opname) in [(mx.sym.Convolution, 'conv'), (mx.sym.Deconvolution, 'deconv')]:
+        dataname = opname + '_data'
+        ctx = {'ctx': mx.gpu(0), dataname: (32, 32, 64, 64), 'type_dict': {dataname: np.float32}}
+        test_cases = [
+            {'num_filter':32, 'kernel':(6,6), 'pad':(0,0), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(6,6), 'pad':(1,1), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(6,7), 'pad':(0,1), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(7,6), 'pad':(1,0), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(7,7), 'pad':(0,0), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(7,7), 'pad':(1,1), 'stride':(2,2), 'name': opname}]
+        for test_case_args in test_cases:
+            try:
+                sym = op(**test_case_args)
+                sym_no_cudnn = op(cudnn_off=True, **test_case_args)
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=tol)
+            except:
+                print('Test failure of mx.sym.{} with args: {}'.format(op.__name__, test_case_args))
+                raise
+
+
+def _conv_with_num_streams(seed):
+    with random_seed(seed):
+        # Try to expose timing-dependent improper workspace sharing by parallel dgrad and wgrad
+        num_trials = 20
+        for _ in range(num_trials):
+            size = np.random.randint(32, 128)
+            # The cudnn conv operator runs dgrad and wgrad in separate streams if enabled, with possible
+            # kernel overlap.  The non-cudnn conv op doesn't do this so is used as the 'golden copy'.
+            ctx = {'ctx': mx.gpu(0), 'conv_data': (2, 2, size, size),
+                   'type_dict': {'conv_data': np.float32}}
+            # Adding 'flip' here isolates the model from the input node (which can't use inplace store)
+            flipped = mx.sym.flip(axis=0, name='conv')
+            sym = mx.sym.Convolution(data=flipped, num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
+            flipped_no_cudnn = mx.sym.flip(axis=0, name='conv')
+            sym_no_cudnn = mx.sym.Convolution(data=flipped_no_cudnn, num_filter=3, kernel=(3,3), pad=(1,1),
+                                              cudnn_off=True, name='conv')
+            try:
+                # tol can be pretty high- we're looking for a large diff due to garbaged workspace
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=1e-2)
+            except:
+                print('Failing conv size = {}'.format(size))
+                raise
+
+@with_seed()
+def test_convolution_multiple_streams():
+    for num_streams in [1, 2]:
+        for engine in ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']:
+            print("Starting engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
+            run_in_spawned_process(_conv_with_num_streams,
+                {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
+            print("Finished engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
+
 
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
 # Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
@@ -2065,6 +2126,71 @@ def test_bilinear_sampler_versions():
                     assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
                 if req_dict['grid'] is 'write':
                     assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+
+
+# isolated execution bulking test function to be invoked with different env var settings
+def _test_bulking_in_process(seed, time_per_iteration):
+    data_shape = (10,)
+    num_ops = 1000
+    num_iterations = 20
+
+    ctx = default_context()
+    # build symbol
+    X = mx.sym.Variable('X')
+    sym = mx.sym.flip(X, axis=0)
+    for _ in range(num_ops-1):
+        sym = mx.sym.flip(sym, axis=0)
+    x = mx.ndarray.zeros(data_shape)
+    dx = mx.ndarray.zeros(data_shape)
+    dy = mx.ndarray.ones(data_shape)
+    exe = sym.bind(ctx=ctx, args=[x], args_grad = {'X':dx})
+
+    # time a number of forward() and backward() executions after some warm-up iterations
+    warmups = 1
+    for i in range(num_iterations+warmups):
+        if i == warmups:
+            start = time.time()
+        exe.forward(is_train=True)
+        exe.backward(dy)
+        dx.wait_to_read()
+    time_per_iteration.value = (time.time() - start) / num_iterations
+
+@with_seed()
+def test_bulking():
+    # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
+    test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
+    times = {}
+    times_str = ''
+    for seg_sizes in test_cases:
+        # Create shared variable to return measured time from test process
+        time_per_iteration = mp.Manager().Value('d', 0.0)
+        if not run_in_spawned_process(_test_bulking_in_process,
+                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : seg_sizes[0],
+                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : seg_sizes[1],
+                                       'MXNET_EXEC_BULK_EXEC_TRAIN' : seg_sizes[2]},
+                                      time_per_iteration):
+            # skip test since the python version can't run it properly.  Warning msg was logged.
+            return
+        times[seg_sizes] = time_per_iteration.value
+        times_str += \
+            '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
+            seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
+
+    fastest_non_bulked_time = min(times[(0,0,True)], times[(1,1,True)], times[(15,15,False)])
+    slowest_half_bulked_time = max(times[(0,15,True)], times[(15,0,True)])
+    fastest_half_bulked_time = min(times[(0,15,True)], times[(15,0,True)])
+    fully_bulked_time = times[(15,15,True)]
+
+    print(times_str)
+    # Non-bulked times[0,0,True], times[1,1,True] and times[15,15,False] should be about the same,
+    # slower than both half-bulked times[0,15,True] and times[15,0,True]
+    assert slowest_half_bulked_time < fastest_non_bulked_time, \
+        'A half-bulked exec time is slower than the non-bulked time by {} secs! {}' \
+            .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
+    # The fully bulked times[15,15,True] should be faster than both half-bulked runs
+    assert fully_bulked_time < fastest_half_bulked_time, \
+        'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
+            .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
 
 def test_context_num_gpus():
