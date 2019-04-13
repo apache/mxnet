@@ -38,13 +38,12 @@ namespace op {
 
 struct CumsumParam : public dmlc::Parameter<CumsumParam> {
   dmlc::optional<int> axis;
-  // bool keepdims; Do we need keepdims or not for cum_sum?
   DMLC_DECLARE_PARAMETER(CumsumParam) {
     DMLC_DECLARE_FIELD(axis)
       .set_default(dmlc::optional<int>())
       .describe("int or None. The axis along which the cumulative sum"
                 "is to be calculated."
-                "If is `None`, calculate the sum over the flattened input");    
+                "If is `None`, calculate the sum over the flattened input");
   }
 };
 
