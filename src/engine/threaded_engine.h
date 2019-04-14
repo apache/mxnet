@@ -375,8 +375,8 @@ class ThreadedEngine : public Engine {
           LOG(INFO) << "ExecuteOprFn ";
         }
         try {
-          if ((!(threaded_opr->opr_exception && *threaded_opr->opr_exception) || threaded_opr->prop == FnProperty::kNoSkip) ||
-              threaded_opr->wait) {
+          if ((!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
+              threaded_opr->prop == FnProperty::kNoSkip) || threaded_opr->wait) {
             threaded_opr->fn(run_ctx, callback);
           } else {
             callback();

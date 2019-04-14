@@ -161,7 +161,7 @@ class CustomOperator {
     num_free_threads_ = 0;
     destructing_ = false;
     naive_engine_ = true;
-		exception_ = nullptr;
+    exception_ = nullptr;
     if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
       naive_engine_ = false;
     }
