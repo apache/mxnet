@@ -498,6 +498,11 @@ inline void ThreadedEngine::ThrowException(ThreadedVar* threaded_var) {
   return;
 }
 
+void ThreadedEngine::Throw(VarHandle var) {
+  ThreadedVar *threaded_var = ThreadedVar::CastFromBase(var);
+  ThrowException(threaded_var);
+}
+
 void ThreadedEngine::OnCompleteStatic(Engine *engine, void *opr_block_,
                                       const dmlc::Error* error) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
