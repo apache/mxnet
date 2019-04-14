@@ -33,10 +33,10 @@
 (deftest infer-test
   (let [ctx (context/default-context)
         predictor (make-predictor ctx)
-        {:keys [idx2token token2idx]} (get-vocab)
+        {:keys [idx->token token->idx]} (get-vocab)
         ;;; samples taken from https://rajpurkar.github.io/SQuAD-explorer/explore/v2.0/dev/
         question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))]
     (let [qa-map (last question-answers)
-          {:keys [input-batch tokens qa-map]} (pre-processing ctx idx2token token2idx qa-map)
+          {:keys [input-batch tokens qa-map]} (pre-processing ctx idx->token token->idx qa-map)
           result (first (infer/predict-with-ndarray predictor input-batch))]
       (is (= ["rich" "hickey"] (post-processing result tokens))))))

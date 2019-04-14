@@ -44,7 +44,7 @@ The prediction in this case would be `solar power`
 
 For this tutorial, you can get the model and vocabulary by running following bash file. This script will use `wget` to download these artifacts from AWS S3.
 
-From the `scala-package/examples/scripts/infer/bert/` folder run:
+From the example directory:
 
 ```bash
 ./get_bert_data.sh

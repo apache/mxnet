@@ -49,7 +49,7 @@
     (break-out-punctuation s target-char)
     [s]))
 
-(defn tokenizer [s]
+(defn tokenize [s]
   (->> (string/split s #"\s+")
        (mapcat break-out-punctuations)
        (into [])))
@@ -61,14 +61,15 @@
 
 (defn get-vocab []
   (let [vocab (json/parse-stream (clojure.java.io/reader "model/vocab.json"))]
-    {:idx2token (get vocab "idx_to_token")
-     :token2idx (get vocab "token_to_idx")}))
+    {:idx->token (get vocab "idx_to_token")
+     :token->idx (get vocab "token_to_idx")}))
 
-(defn tokens->idxs [token2idx tokens]
-  (mapv #(get token2idx % (get token2idx "[UNK]"))  tokens))
+(defn tokens->idxs [token->idx tokens]
+  (let [unk-idx (get token->idx "[UNK]")]
+   (mapv #(get token->idx % unk-idx) tokens)))
 
-(defn idxs->tokens [idx2token idxs]
-  (mapv #(get idx2token %) idxs))
+(defn idxs->tokens [idx->token idxs]
+  (mapv #(get idx->token %) idxs))
 
 (defn post-processing [result tokens]
   (let [output1 (ndarray/slice-axis result 2 0 1)
@@ -107,11 +108,11 @@
      {:contexts [ctx]
       :epoch 2})))
 
-(defn pre-processing [ctx idx2token token2idx qa-map]
+(defn pre-processing [ctx idx->token token->idx qa-map]
   (let [{:keys [input-question input-answer ground-truth-answers]} qa-map
        ;;; pre-processing tokenize sentence
-        token-q (tokenizer (string/lower-case input-question))
-        token-a (tokenizer (string/lower-case input-answer))
+        token-q (tokenize (string/lower-case input-question))
+        token-a (tokenize (string/lower-case input-answer))
         valid-length (+ (count token-q) (count token-a))
         ;;; generate token types [0000...1111...0000]
         qa-embedded (into (pad [] 0 (count token-q))
@@ -123,7 +124,7 @@
         tokens (pad token-q "[PAD]" seq-length)
         ;;; pre-processing - token to index translation
 
-        indexes (tokens->idxs token2idx tokens)]
+        indexes (tokens->idxs token->idx tokens)]
     {:input-batch [(ndarray/array indexes [1 seq-length] {:context ctx})
                    (ndarray/array token-types [1 seq-length] {:context ctx})
                    (ndarray/array [valid-length] [1] {:context ctx})]
@@ -133,11 +134,11 @@
 (defn infer [ctx]
   (let [ctx (context/default-context)
         predictor (make-predictor ctx)
-        {:keys [idx2token token2idx]} (get-vocab)
+        {:keys [idx->token token->idx]} (get-vocab)
         ;;; samples taken from https://rajpurkar.github.io/SQuAD-explorer/explore/v2.0/dev/
         question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))]
     (doseq [qa-map question-answers]
-      (let [{:keys [input-batch tokens qa-map]} (pre-processing ctx idx2token token2idx qa-map)
+      (let [{:keys [input-batch tokens qa-map]} (pre-processing ctx idx->token token->idx qa-map)
             result (first (infer/predict-with-ndarray predictor input-batch))
             answer (post-processing result tokens)]
         (println "===============================")
