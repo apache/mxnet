@@ -33,7 +33,6 @@
 #include <utility>
 #include "../../operator_common.h"
 #include "mkldnn_act-inl.h"
-#include "./mkldnn_base-inl.h"
 
 #if MXNET_USE_MKLDNN == 1
 
@@ -83,25 +82,23 @@ mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
 
   auto alg = GetMKLDNNActAlgo(param);
 
-  mkldnn::eltwise_forward::desc desc = is_train
-      ? mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_training,
-                                      alg, data_md, 0.0f)
-      : mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_scoring,
-                                      alg, data_md, 0.0f);
+  auto prop = is_train ? mkldnn::prop_kind::forward_training :
+                         mkldnn::prop_kind::forward_scoring;
+  auto desc = mkldnn::eltwise_forward::desc(prop, alg, data_md, 0.0f);
   return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
 }
 
 void MKLDNNActForward::SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output) {
   if (this->data_ == nullptr)
-    this->data_ = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-            data.get_primitive_desc(), data.get_data_handle()));
+    this->data_ = std::make_shared<mkldnn::memory>(data.get_primitive_desc(),
+            data.get_data_handle());
   else
     this->data_->set_data_handle(data.get_data_handle());
 
   CHECK(fwd_pd.dst_primitive_desc() == output.get_primitive_desc());
   if (this->out_ == nullptr)
-    this->out_ = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-            fwd_pd.dst_primitive_desc(), output.get_data_handle()));
+    this->out_ = std::make_shared<mkldnn::memory>(fwd_pd.dst_primitive_desc(),
+            output.get_data_handle());
   else
     this->out_->set_data_handle(output.get_data_handle());
 

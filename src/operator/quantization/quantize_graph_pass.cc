@@ -95,10 +95,6 @@ inline NodePtr NeedQuantize(NodePtr node, const std::unordered_set<std::string>&
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
   const auto& op = node->op();
 
-  if (quantized_node.count(node)) {
-    return quantized_node[node];
-  }
-
   if (op && quantized_op_map.count(op)) {
     bool need = true;
     if (excluded_nodes.count(node->attrs.name)) {
@@ -154,8 +150,6 @@ Graph QuantizeGraph(Graph &&src) {
     auto tmp_node = NeedQuantize(node, excluded_nodes);
     if (tmp_node) {
       new_node = tmp_node;
-      // If the currently visited node's op registered the FQuantizedOp property, new_node is a
-      // quantizated version of a that op, such as quantized_conv2d.
 
       // add data into quantized op input
       for (size_t i = 0; i < node->inputs.size(); ++i) {

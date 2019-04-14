@@ -18,7 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file quantized_activation.cc
 */
 #include <mxnet/op_attr_types.h>
@@ -107,7 +107,7 @@ the float32 data into int8.
   [](const NodeAttrs& attrs) {
     const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
     CHECK(param.act_type == activation::kReLU)
-      << "QuantizedActivationOp only supports act_type=relu for now";
+      << "_contrib_quantized_act only supports act_type=relu for now";
     return false;
   })
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
