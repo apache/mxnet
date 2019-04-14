@@ -1099,10 +1099,8 @@ class NAG(Optimizer):
         self._update_impl(index, weight, grad, state, multi_precision=False)
 
     def update_multi_precision(self, index, weight, grad, state):
-        if not isinstance(index, (tuple, list)):
-            use_multi_precision = self.multi_precision and weight.dtype == numpy.float16
-        else:
-            use_multi_precision = self.multi_precision and weight[0].dtype == numpy.float16
+        use_multi_precision = self.multi_precision and weight.dtype == numpy.float16 \
+                                and isinstance(state, (tuple, list))
         self._update_impl(index, weight, grad, state,
                           multi_precision=use_multi_precision)
 
