@@ -20,6 +20,7 @@
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
+from functools import wraps
 import atexit
 import ctypes
 import os
@@ -27,7 +28,6 @@ import sys
 import inspect
 import platform
 import numpy as _np
-from functools import wraps
 
 from . import libinfo
 
