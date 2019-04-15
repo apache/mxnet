@@ -11,6 +11,6 @@ sym = x + x2 + x3
 result = mx.sym.add_n(sym, data2, data3)
 x = mx.viz.plot_network(result)
 casted_result = mx.contrib.amp._convert_symbol(result, fp32_op_names=["elemwise_add"], fp16_op_names=["sin", "cos", "exp"], widest_type_op_names=["add_n"])
-y = mx.viz.plot_network(casted_result)
+y = mx.viz.plot_network(casted_result, use_op_names=True)
 #x.render('test-output/round-table.gv', view=False)
 y.render('test-output/round-table.gv', view=False)
