@@ -200,7 +200,7 @@ inline void Symbol::InferShape(
   arg_ind_ptr.push_back(arg_shape_data.size());
 
   mx_uint in_shape_size;
-  const int*in_shape_ndim;
+  const int *in_shape_ndim;
   const int **in_shape_data;
   mx_uint out_shape_size;
   const int *out_shape_ndim;

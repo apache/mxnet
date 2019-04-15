@@ -366,6 +366,19 @@ class Tuple {
   }
 };
 
+
+/*! brief check if a shape's ndim is known. */
+inline bool ndim_is_known(const int ndim) {
+  CHECK_GE(ndim, -1) << "shape ndim must be >= -1, while received " << ndim;
+  return ndim != -1;
+}
+
+/*! brief check if a shape's dim size is known. */
+inline bool dim_size_is_known(const dim_t dim_size) {
+  CHECK_GE(dim_size, -1) << "shape dim size must be >= -1, while received " << dim_size;
+  return dim_size != -1;
+}
+
 /*!
  * \brief A Shape class that is used to represent shape of each tensor.
  *
@@ -461,11 +474,11 @@ class TShape : public Tuple<dim_t> {
   }
   /*! \return total number of elements in the shape */
   inline size_t Size() const {
-    CHECK_GE(this->ndim(), 0) << "Shape is unknown.";
+    CHECK(ndim_is_known(this->ndim())) << "Shape is unknown.";
     dim_t size = 1;
     const dim_t* start = begin(), *fin = end();
     for (const dim_t* it = start; it != fin; ++it) {
-      CHECK_GE(*it, 0) << "Shape dim size cannot be a negative value " << *it;
+      CHECK(dim_size_is_known(*it)) << "Shape dim size cannot be a negative value " << *it;
       size *= *it;
     }
     return size;
@@ -476,11 +489,14 @@ class TShape : public Tuple<dim_t> {
    * \param dimend end dimension
    */
   inline size_t ProdShape(int dimstart, int dimend) const {
-    CHECK_GE(this->ndim(), 0) << "Shape is unknown.";
+    CHECK(ndim_is_known(this->ndim())) << "Shape is unknown.";
+    CHECK_GE(dimstart, 0) << "dimstart must be >= 0, while received " << dimstart;
+    CHECK_LE(dimend, this->ndim()) << "dimend must be <= " << this->ndim()
+                                   << ", while received " << dimend;
     dim_t num = 1;
     const dim_t *d = this->data();
     for (int i = dimstart; i < dimend; ++i) {
-      CHECK_GE(d[i], 0) << "Shape dim size cannot be a negative value " << d[i];
+      CHECK(dim_size_is_known(d[i])) << "Shape dim size must be known, while received " << d[i];
       num *= d[i];
     }
     return num;
@@ -536,7 +552,7 @@ class TShape : public Tuple<dim_t> {
    */
   inline mshadow::Shape<2> FlatTo2D(void) const {
     mshadow::Shape<2> s;
-    CHECK_GE(ndim(), 0);
+    CHECK(ndim_is_known(ndim())) << "shape must have a valid ndim";
     if (ndim() == 0) return mshadow::Shape2(1, 1);
     const dim_t *d = this->data();
     s.shape_[1] = d[ndim() - 1];
@@ -556,7 +572,7 @@ class TShape : public Tuple<dim_t> {
   inline mshadow::Shape<3> FlatTo3D(size_t axis_begin, size_t axis_end) const {
     CHECK(axis_end >= axis_begin);
     mshadow::Shape<3> s;
-    CHECK_GE(ndim(), 0);
+    CHECK(ndim_is_known(ndim())) << "shape must have a valid ndim";
     if (ndim() == 0) return mshadow::Shape3(1, 1, 1);
     const dim_t *d = this->data();
     s.shape_[0] = 1;
@@ -616,20 +632,8 @@ class TShape : public Tuple<dim_t> {
 };
 
 /*! brief check if a shape's ndim is known. */
-inline bool ndim_is_known(const int ndim) {
-  CHECK_GE(ndim, -1) << "shape ndim must be >= -1, while received " << ndim;
-  return ndim != -1;
-}
-
-/*! brief check if a shape's ndim is known. */
 inline bool ndim_is_known(const TShape& x) {
   return ndim_is_known(x.ndim());
-}
-
-/*! brief check if a shape's dim size is known. */
-inline bool dim_size_is_known(const dim_t dim_size) {
-  CHECK_GE(dim_size, -1) << "shape dim size must be >= -1, while received " << dim_size;
-  return dim_size != -1;
 }
 
 /*! brief check if a shape's dim size is known. */
