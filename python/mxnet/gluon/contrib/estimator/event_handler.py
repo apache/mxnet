@@ -23,67 +23,67 @@ import logging
 import os
 import time
 import warnings
-
+import weakref
 from ....metric import *
 
 
 class TrainBegin(object):
-    def train_begin(self, *args, **kwargs):
+    def train_begin(self, estimator, *args, **kwargs):
         pass
 
 
 class TrainEnd(object):
-    def train_end(self, *args, **kwargs):
+    def train_end(self, estimator, *args, **kwargs):
         pass
 
 
 class EpochBegin(object):
-    def epoch_begin(self, *args, **kwargs):
+    def epoch_begin(self, estimator, *args, **kwargs):
         pass
 
 
 class EpochEnd(object):
-    def epoch_end(self, *args, **kwargs):
+    def epoch_end(self, estimator, *args, **kwargs):
         return False
 
 
 class BatchBegin(object):
-    def batch_begin(self, *args, **kwargs):
+    def batch_begin(self, estimator, *args, **kwargs):
         pass
 
 
 class BatchEnd(object):
-    def batch_end(self, *args, **kwargs):
+    def batch_end(self, estimator, *args, **kwargs):
         return False
 
 
 class MetricHandler(EpochBegin, BatchEnd):
-    def __init__(self, train_loss, train_metrics):
-        self.train_loss = train_loss
+    def __init__(self, train_metrics):
         self.train_metrics = train_metrics
         # order to be called among all callbacks
         # metrics need to be calculated before other callbacks can access them
         self.rank = 1
 
-    def epoch_begin(self, *args, **kwargs):
-        for metric in self.train_loss + self.train_metrics:
+    def epoch_begin(self, estimator, *args, **kwargs):
+        for metric in self.train_metrics:
             metric.reset()
 
-    def batch_end(self, *args, **kwargs):
+    def batch_end(self, estimator, *args, **kwargs):
         pred = kwargs['pred']
         label = kwargs['label']
         loss = kwargs['loss']
         for metric in self.train_metrics:
-            metric.update(label, pred)
-        for metric in self.train_loss:
-            metric.update(0, loss)
+            if isinstance(metric, Loss):
+                # metric wrapper for loss values
+                metric.update(0, loss)
+            else:
+                metric.update(label, pred)
 
 
 class ValidationHandler(BatchEnd, EpochEnd):
     def __init__(self,
                  val_data,
                  eval_fn,
-                 val_loss,
                  val_metrics=None,
                  epoch_period=1,
                  batch_period=None):
@@ -91,7 +91,6 @@ class ValidationHandler(BatchEnd, EpochEnd):
         self.eval_fn = eval_fn
         self.epoch_period = epoch_period
         self.batch_period = batch_period
-        self.val_loss = val_loss
         self.val_metrics = val_metrics
         self.num_batches = 0
         self.num_epochs = 0
@@ -99,17 +98,15 @@ class ValidationHandler(BatchEnd, EpochEnd):
         # validation metrics need to be calculated before other callbacks can access them
         self.rank = 1
 
-    def batch_end(self, *args, **kwargs):
+    def batch_end(self, estimator, *args, **kwargs):
         if self.batch_period and self.num_batches % self.batch_period == 0:
             self.eval_fn(val_data=self.val_data,
-                         val_loss=self.val_loss,
                          val_metrics=self.val_metrics)
         self.num_batches += 1
 
-    def epoch_end(self, *args, **kwargs):
+    def epoch_end(self, estimator, *args, **kwargs):
         if self.num_epochs % self.epoch_period == 0:
             self.eval_fn(val_data=self.val_data,
-                         val_loss=self.val_loss,
                          val_metrics=self.val_metrics)
 
         self.num_epochs += 1
@@ -123,8 +120,6 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
 
     Parameters
     ----------
-    estimator : Estimator
-        The :py:class:`Estimator` to get training statistics
     file_name : str
         file name to save the logs
     file_location: str
@@ -166,18 +161,17 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         self.current_epoch = 0
         self.processed_samples = 0
 
-    def train_begin(self, *args, **kwargs):
+    def train_begin(self, estimator, *args, **kwargs):
         self.train_start = time.time()
-        if 'trainer' in kwargs:
-            optimizer = kwargs['trainer'].optimizer.__class__.__name__
-            lr = kwargs['trainer'].learning_rate
-            self.logger.info("Training begin: using optimizer %s "
-                             "with current learning rate %.4f ",
-                             optimizer, lr)
-        if 'epochs' in kwargs:
-            self.logger.info("Train for %d epochs.", kwargs['epochs'])
+        trainer = estimator.trainer
+        optimizer = trainer.optimizer.__class__.__name__
+        lr = trainer.learning_rate
+        self.logger.info("Training begin: using optimizer %s "
+                         "with current learning rate %.4f ",
+                         optimizer, lr)
+        self.logger.info("Train for %d epochs.", estimator.max_epochs)
 
-    def train_end(self, *args, **kwargs):
+    def train_end(self, estimator, *args, **kwargs):
         train_time = time.time() - self.train_start
         msg = 'Train finished using total %ds with %d epochs.' % (train_time, self.current_epoch)
         # log every result in train stats including train/validation loss & metrics
@@ -186,15 +180,15 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
             msg += '%s : %.4f ' % (name, value)
         self.logger.info(msg)
 
-    def batch_begin(self, *args, **kwargs):
+    def batch_begin(self, estimator, *args, **kwargs):
         if self.verbose == self.LOG_VERBOSITY_PER_BATCH:
             self.batch_start = time.time()
 
-    def batch_end(self, *args, **kwargs):
+    def batch_end(self, estimator, *args, **kwargs):
         if self.verbose == self.LOG_VERBOSITY_PER_BATCH:
             batch_time = time.time() - self.batch_start
             msg = '[Epoch %d] [Batch %d] ' % (self.current_epoch, self.batch_index)
-            self.processed_samples += kwargs['batch_size']
+            self.processed_samples += kwargs['batch'][0].shape[0]
             msg += '[Samples %s] ' % (self.processed_samples)
             msg += 'time/batch: %.3fs ' % batch_time
             for metric in self.train_metrics:
@@ -204,11 +198,11 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
             self.logger.info(msg)
             self.batch_index += 1
 
-    def epoch_begin(self, *args, **kwargs):
+    def epoch_begin(self, estimator, *args, **kwargs):
         if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
             self.epoch_start = time.time()
 
-    def epoch_end(self, *args, **kwargs):
+    def epoch_end(self, estimator, *args, **kwargs):
         if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
             epoch_time = time.time() - self.epoch_start
             msg = '\n[Epoch %d] finished in %.3fs: ' % (self.current_epoch, epoch_time)
@@ -227,8 +221,6 @@ class CheckpointHandler(BatchEnd, EpochEnd):
 
     Parameters
     ----------
-    estimator : Estimator
-        The :py:class:`Estimator` to get training statistics
     filepath : str
         file name to save the parameters, it can contain directories,
         for example: ./saved_model/resnet.params
@@ -287,14 +279,12 @@ class CheckpointHandler(BatchEnd, EpochEnd):
                 self.monitor_op = numpy.less
                 self.best = numpy.Inf
 
-    def batch_end(self, *args, **kwargs):
-        net = kwargs['net']
-        self._save_checkpoint(net, "Batch", self.num_batches)
+    def batch_end(self, estimator, *args, **kwargs):
+        self._save_checkpoint(estimator.net, "Batch", self.num_batches)
         self.num_batches += 1
 
-    def epoch_end(self, *args, **kwargs):
-        net = kwargs['net']
-        self._save_checkpoint(net, "Epoch", self.num_epochs)
+    def epoch_end(self, estimator, *args, **kwargs):
+        self._save_checkpoint(estimator.net, "Epoch", self.num_epochs)
         self.num_epochs += 1
 
     def _save_checkpoint(self, net, period_name, period_value):
@@ -336,7 +326,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
     ----------
     estimator : Estimator
         The :py:class:`Estimator` to get training statistics
-    monitor: str
+    monitor: EvalMetric
         the metrics to monitor
     min_delta: float, default 0
         minimal change in monitored value to be considered as an improvement
@@ -390,7 +380,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         else:
             self.min_delta *= -1
 
-    def train_begin(self, *args, **kwargs):
+    def train_begin(self, estimator, *args, **kwargs):
         self.wait = 0
         self.stopped_epoch = 0
         if self.baseline is not None:
@@ -398,7 +388,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         else:
             self.best = numpy.Inf if self.monitor_op == numpy.less else -numpy.Inf
 
-    def epoch_end(self, *args, **kwargs):
+    def epoch_end(self, estimator, *args, **kwargs):
         monitor_name, monitor_value = self.monitor.get()
         if numpy.isnan(monitor_value):
             warnings.warn(RuntimeWarning('%s is not updated, make sure you pass one of the metric objects'
@@ -415,7 +405,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
                     self.stop_training = True
         return self.stop_training
 
-    def train_end(self, *args, **kwargs):
+    def train_end(self, estimator, *args, **kwargs):
         if self.stopped_epoch > 0:
             self.logger.info('Epoch %d: early stopping due to %s not improving',
                              self.stopped_epoch, self.monitor.get()[0])

@@ -20,6 +20,7 @@
 """Gluon Estimator"""
 
 import copy
+import weakref
 
 from .event_handler import *
 from .... import gluon, autograd
@@ -160,25 +161,22 @@ class Estimator(object):
         Create copies of train loss/metric objects to record validation values
         """
         if all(hasattr(self, attribute) for attribute in
-               ['train_loss', 'train_metrics', 'val_loss', 'val_metrics']):
-            return self.train_loss, self.train_metrics, self.val_loss, self.val_metrics
+               ['train_metrics', 'val_metrics']):
+            return self.train_metrics, self.val_metrics
         else:
-            self.train_loss = []
-            self.val_loss = []
             self.val_metrics = []
             for loss in self.loss:
-                self.train_loss.append(Loss("Train " + ''.join([i for i in loss.name if not i.isdigit()])))
-                self.val_loss.append(Loss("Validation " + ''.join([i for i in loss.name if not i.isdigit()])))
+                self.train_metrics.append(Loss("Train " + ''.join([i for i in loss.name if not i.isdigit()])))
+                self.val_metrics.append(Loss("Validation " + ''.join([i for i in loss.name if not i.isdigit()])))
             for metric in self.train_metrics:
                 val_metric = copy.deepcopy(metric)
                 metric.name = "Train " + metric.name
                 val_metric.name = "Validation " + val_metric.name
                 self.val_metrics.append(val_metric)
-            return self.train_loss, self.train_metrics, self.val_loss, self.val_metrics
+            return self.train_metrics, self.val_metrics
 
     def evaluate(self,
                  val_data,
-                 val_loss,
                  val_metrics):
         """Evaluate model on validation data
 
@@ -186,12 +184,11 @@ class Estimator(object):
          ----------
          val_data : DataLoader
              validation data with data and labels
-         batch_fn : function
-             custom batch function to extract data and label
-             from a data batch and load into contexts(devices)
+         val_metrics : EvalMetric or list of EvalMetrics
+             metrics to update validation result
          """
 
-        for metric in val_loss + val_metrics:
+        for metric in val_metrics:
             metric.reset()
 
         for _, batch in enumerate(val_data):
@@ -204,9 +201,10 @@ class Estimator(object):
             loss = [self.loss[0](y_hat, y) for y_hat, y in zip(pred, label)]
             # update metrics
             for metric in val_metrics:
-                metric.update(label, pred)
-            for metric in val_loss:
-                metric.update(0, loss)
+                if isinstance(metric, Loss):
+                    metric.update(0, loss)
+                else:
+                    metric.update(label, pred)
 
     def fit(self, train_data,
             val_data=None,
@@ -233,17 +231,17 @@ class Estimator(object):
             custom batch function to extract data and label
             from a data batch and load into contexts(devices)
         """
-
+        self.max_epochs = epochs
         event_handlers = event_handlers or []
         # provide default logging handler
         if not event_handlers:
-            train_loss, train_metrics, val_loss, val_metrics = self.prepare_loss_and_metrics()
-            event_handlers.append(MetricHandler(train_metrics=train_metrics, train_loss=train_loss))
+            train_metrics, val_metrics = self.prepare_loss_and_metrics()
+            event_handlers.append(MetricHandler(train_metrics=train_metrics))
             if val_data:
                 event_handlers.append(ValidationHandler(val_data=val_data, eval_fn=self.evaluate,
-                                                        val_loss=val_loss, val_metrics=val_metrics))
-            event_handlers.append(LoggingHandler(train_metrics=train_metrics + train_loss,
-                                                 val_metrics=val_metrics + val_loss))
+                                                        val_metrics=val_metrics))
+            event_handlers.append(LoggingHandler(train_metrics=train_metrics,
+                                                 val_metrics=val_metrics))
             warnings.warn("No Event Handler specified, default %s are used. "
                           "Please look at gluon.contrib.estimator.event_handler for more detail." %
                           ", ".join([handler.__class__.__name__ for handler in event_handlers]))
@@ -253,15 +251,16 @@ class Estimator(object):
         train_begin, epoch_begin, batch_begin, \
         batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
 
+        # only pass a weak reference to all event handlers
+        estimator_ref = weakref.proxy(self)
         # training begin
         for handler in train_begin:
-            # we only have net, trainer, and epochs to train information
-            handler.train_begin(net=self.net, trainer=self.trainer, epochs=epochs)
+            handler.train_begin(estimator_ref)
 
         for epoch in range(epochs):
             # epoch begin
             for handler in epoch_begin:
-                handler.epoch_begin(net=self.net, trainer=self.trainer, epochs=epochs)
+                handler.epoch_begin(estimator_ref)
 
             for i, batch in enumerate(train_data):
                 if not isinstance(train_data, gluon.data.DataLoader):
@@ -274,7 +273,7 @@ class Estimator(object):
 
                 # batch begin
                 for handler in batch_begin:
-                    handler.batch_begin(net=self.net, trainer=self.trainer, epochs=epochs, batch=batch)
+                    handler.batch_begin(estimator_ref, batch=batch)
 
                 with autograd.record():
                     pred = [self.net(x) for x in data]
@@ -286,16 +285,15 @@ class Estimator(object):
                 self.trainer.step(batch_size)
                 # batch end
                 for handler in batch_end:
-                    if handler.batch_end(net=self.net, trainer=self.trainer, epochs=epochs,
-                                         batch_size=batch_size, pred=pred, label=label, loss=loss): break
+                    if handler.batch_end(estimator_ref, batch=batch, pred=pred, label=label, loss=loss): break
 
             # epoch end
             for handler in epoch_end:
-                if handler.epoch_end(net=self.net, trainer=self.trainer, epochs=epochs): break
+                if handler.epoch_end(estimator_ref): break
 
         # train end
         for handler in train_end:
-            handler.train_end()
+            handler.train_end(estimator_ref)
 
     def _categorize_handlers(self, event_handlers):
         """
