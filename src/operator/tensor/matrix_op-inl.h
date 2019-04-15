@@ -238,6 +238,10 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
     DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape())
     .describe("Target axis order. By default the axes will be inverted.");
   }
+
+  bool operator==(const TransposeParam &other) const {
+    return this->axes == other.axes;
+  }
 };
 
 template<typename xpu>
@@ -1728,7 +1732,7 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
     inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
-  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false>(
       ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
@@ -1910,7 +1914,7 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
     inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
-  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false>(
       ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
@@ -2840,5 +2844,16 @@ inline uint32_t SplitNumOutputs(const NodeAttrs& attrs) {
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::TransposeParam> {
+  size_t operator()(const mxnet::op::TransposeParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.axes);
+    return ret;
+  }
+};
+}  // namespace std
 
 #endif  // MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_

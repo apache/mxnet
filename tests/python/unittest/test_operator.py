@@ -698,11 +698,11 @@ def test_symbol_pow():
 def test_pow_fn():
     shape = (3, 4)
     exp = mx.symbol.Variable("exp")
-    y = mx.sym.pow(2, exp)
     x = np.ones(shape)*3
-    check_numeric_gradient(y, [x], numeric_eps=1E-3)
-    check_symbolic_forward(y, [x], [2**x])
-    check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
+    for y in [mx.sym.pow(2, exp), mx.sym.power(2, exp)]:
+        check_numeric_gradient(y, [x], numeric_eps=1E-3)
+        check_symbolic_forward(y, [x], [2**x])
+        check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
 
 @with_seed()
@@ -857,6 +857,39 @@ def test_selu():
         xa[abs(xa) < eps] = 0.01
         ya = fselu(xa)
         ga = fselu_grad(np.ones(shape).astype(dtype), xa, ya)
+        check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+
+
+@with_seed()
+def test_gelu():
+    CUBE_CONSTANT = 0.044715
+    ROOT_TWO_OVER_PI = 0.7978845608028654
+    def g(x):
+        return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * np.power(x, 3))
+    def g_grad(x):
+        return ROOT_TWO_OVER_PI * (1.0 + 3.0 * CUBE_CONSTANT * np.power(x, 2))
+    def f(x):
+        return 1.0 + np.tanh(g(x))
+    def f_grad(x):
+        return (1.0 - np.tanh(g(x)) * np.tanh(g(x))) * g_grad(x)
+    def fgelu(x):
+        return 0.5 * x * f(x)
+    def fgelu_grad(grad, x, y):
+        return grad * (y / x + y * (1 - np.tanh(g(x))) * g_grad(x))
+
+    shape = (3, 4)
+    x = mx.sym.Variable("x")
+    y = mx.sym.LeakyReLU(data=x, act_type="gelu")
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
+        eps, rtol, atol = (7.5e-4, 1e-1, 1e-2) if dtype is np.float16 else (1e-4, 1e-2, 1e-4)
+        if dtype is np.float16:
+            xa /= 10.0
+        xa[abs(xa) < eps] = 0.01
+        ya = fgelu(xa)
+        ga = fgelu_grad(np.ones(shape).astype(dtype), xa, ya)
         check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
@@ -1596,6 +1629,128 @@ def test_batchnorm_training():
                 check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-2, rtol=0.2, atol=0.01)
 
     check_batchnorm_training('default')
+
+
+@with_seed()
+def test_batchnorm():
+    momentum = 0.9
+    epsilon = 1e-5
+
+    def _test_batchnorm_impl(op, shape, axis, cudnn_off, output_mean_var):
+        print(str((op, shape, axis, cudnn_off)))
+
+        kwargs = dict(output_mean_var=output_mean_var)
+        if op == mx.nd.contrib.SyncBatchNorm:
+            if axis != 1:
+                return
+            key = str(op) + str(shape) + str(axis)
+            kwargs.update(dict(key=key))
+            if cudnn_off:
+                return
+        else:
+            kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
+        nch = shape[axis]
+
+        bn_gamma = mx.nd.random.uniform(shape=(nch,))
+        bn_gamma.attach_grad()
+
+        bn_beta = mx.nd.random.uniform(shape=(nch,))
+        bn_beta.attach_grad()
+
+        bn_running_mean = mx.nd.zeros(nch)
+        bn_running_var = mx.nd.ones(nch)
+
+        running_mean = mx.nd.zeros(nch)
+        running_var = mx.nd.ones(nch)
+        num_iters = 10
+        expand_shape = [1] * len(shape)
+        expand_shape[axis] = shape[axis]
+        for _ in range(num_iters):
+            data = mx.nd.random.uniform(shape=shape)
+            data.attach_grad()
+            ograd = mx.nd.random.uniform(shape=shape)
+            with mx.autograd.record():
+                output = op(data, bn_gamma, bn_beta,
+                            bn_running_mean, bn_running_var,
+                            momentum=momentum, eps=epsilon,
+                            fix_gamma=False, **kwargs)
+                if output_mean_var:
+                    output, output_mean, output_std = output
+                output.backward(ograd)
+            mx.nd.waitall()
+
+            data_mean = data.mean(
+                axis=axis, exclude=True, keepdims=True)
+            data_var = (data - data_mean).square().mean(axis=axis,
+                                                        exclude=True,
+                                                        keepdims=True)
+
+            target_output = (data - data_mean) / \
+                (data_var + epsilon).sqrt() * \
+                bn_gamma.reshape(expand_shape) + \
+                bn_beta.reshape(expand_shape)
+
+            # squeeze data_mean and data_var
+            data_mean_flat = data_mean.squeeze()
+            data_var_flat = data_var.squeeze()
+
+            running_mean = running_mean * momentum + \
+                data_mean_flat * (1 - momentum)
+            running_var = running_var * momentum + \
+                data_var_flat * (1 - momentum)
+
+            W = bn_gamma.reshape(expand_shape)
+            dnx = ograd * W
+            xsm = data - data_mean
+            nd = 1.0 / mx.nd.sqrt(data_var + epsilon)
+            nx = xsm * nd
+            m = np.prod(shape) / shape[axis]
+            dvar = (dnx * xsm).sum(axis=axis, keepdims=True,
+                                   exclude=True) * (-0.5) * mx.nd.power(nd, 3)
+            dmean = -nd * dnx.sum(axis=axis, keepdims=True, exclude=True) - \
+                dvar * xsm.mean(axis=axis, keepdims=True,
+                                exclude=True) * 2.0
+            dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
+            dW = (ograd * nx).sum(axis=axis, exclude=True)
+            db = ograd.sum(axis=axis, exclude=True)
+
+            atol = 1e-2
+            rtol = 1e-2
+
+            if output_mean_var:
+                assert_almost_equal(output_mean.asnumpy(),
+                                    data_mean_flat.asnumpy(),
+                                    atol=atol, rtol=rtol)
+                if op != mx.nd.contrib.SyncBatchNorm:
+                    assert_almost_equal(output_std.asnumpy(),
+                                        (1.0 / (data_var_flat +
+                                                epsilon).sqrt()).asnumpy(),
+                                        atol=atol, rtol=rtol)
+                else:
+                    assert_almost_equal(output_std.asnumpy(),
+                                        data_var_flat.asnumpy(),
+                                        atol=atol, rtol=rtol)
+            assert_almost_equal(output.asnumpy(), target_output.asnumpy(),
+                                atol=atol, rtol=rtol)
+            assert_almost_equal(bn_running_mean.asnumpy(
+            ), running_mean.asnumpy(), atol=atol, rtol=rtol)
+            assert_almost_equal(bn_running_var.asnumpy(
+            ), running_var.asnumpy(), atol=atol, rtol=rtol)
+
+            assert_almost_equal(data.grad.asnumpy(),
+                                dX.asnumpy(), atol=atol, rtol=rtol)
+            assert_almost_equal(
+                bn_gamma.grad.asnumpy(), dW.asnumpy(), atol=atol, rtol=rtol)
+            assert_almost_equal(
+                bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
+
+    for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
+        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
+            for axis in range(len(shape)):
+                for cudnn_off in [False, True]:
+                    for output_mean_var in [False, True]:
+                        _test_batchnorm_impl(op, shape, axis,
+                                             cudnn_off, output_mean_var)
 
 
 @with_seed()
@@ -3229,41 +3384,46 @@ def test_norm():
     ctx = default_context()
     data = mx.symbol.Variable('data')
     in_data_dim = random_sample([4,5,6], 1)[0]
-    in_shape = rand_shape_nd(in_data_dim)
+    in_shape = rand_shape_nd(in_data_dim, dim=5)
     epsilon = 1e-3
+    acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64}
     for order in [1, 2]:
         for dtype in [np.float16, np.float32, np.float64]:
-            in_data = np.random.uniform(-1, 1, in_shape).astype(dtype)
-            in_data[abs(in_data) < epsilon] = 2 * epsilon
             for i in range(in_data_dim):
-                norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, keepdims=True)
-                npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
-                npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                check_symbolic_forward(norm_sym, [in_data], [npy_out],
-                                        rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                        atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                check_symbolic_backward(norm_sym, [in_data], [np.ones(npy_out.shape)],
-                                        [npy_out_backward],
-                                        rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                        atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
-                # # check gradient
-                # if dtype is not np.float16:
-                #     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-1, atol=1e-3)
-                if i < in_data_dim-1:
-                    norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
-                    npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+                for out_dtype in ['float32', 'float64']:
+                    backward_dtype = np.float32 if out_dtype == 'float32' else np.float64
+                    print(order, dtype, i, out_dtype, in_shape)
+                    in_data = np.random.uniform(-1, 1, in_shape).astype(acc_type[dtype])
+                    in_data[abs(in_data) < epsilon] = 2 * epsilon
+                    norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, out_dtype=out_dtype, keepdims=True)
+                    npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
                     npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                    check_symbolic_forward(norm_sym, [in_data], [npy_out],
-                                           rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                           atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                    check_symbolic_backward(norm_sym, [in_data], [np.ones(npy_out.shape)],
-                                            [npy_out_backward],
-                                            rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                            atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                    # # check gradient
-                    # if dtype is not np.float16:
-                    #     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-1, atol=1e-3)
+                    check_symbolic_forward(norm_sym, [in_data.astype(dtype)], [npy_out.astype(out_dtype)],
+                                           rtol=1e-3, atol=1e-5, ctx=ctx)
+                    check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
+                                            [np.ones(npy_out.shape).astype(out_dtype)],
+                                            [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
+                                            dtype=backward_dtype)
+                    # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
+                    # check gradient
+                    if dtype is not np.float16:
+                        check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
+                                               rtol=1e-1, atol=1e-3, dtype=backward_dtype)
+                    if i < in_data_dim-1:
+                        norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
+                        npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+                        npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
+                        check_symbolic_forward(norm_sym, [in_data], [npy_out.astype(dtype)],
+                                               rtol=1e-3 if dtype is np.float16 else 1e-3,
+                                               atol=1e-5 if dtype is np.float16 else 1e-5, ctx=ctx)
+                        check_symbolic_backward(norm_sym, [in_data],
+                                                [np.ones(npy_out.shape).astype(out_dtype)],
+                                                [npy_out_backward.astype(out_dtype)],
+                                                rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
+                        # check gradient
+                        if dtype is not np.float16:
+                            check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
+                                                   rtol=1e-1, atol=1e-3, dtype=backward_dtype)
 
 
 def test_layer_norm():
@@ -6520,7 +6680,12 @@ def test_binary_math_operators():
                 lambda x, y: np.power(x, y),
                 lambda x, y: np.power(x, y - 1.) * y,
                 lambda x, y: np.power(x, y) * np.log(x),
-                0.2, 5.0, -4.0, 4.0]
+                0.2, 5.0, -4.0, 4.0],
+        'power': [lambda x, y: mx.sym.power(x, y),
+                  lambda x, y: np.power(x, y),
+                  lambda x, y: np.power(x, y - 1.) * y,
+                  lambda x, y: np.power(x, y) * np.log(x),
+                  0.2, 5.0, -4.0, 4.0]
     }
     # Loop over operators
     for name, op in binary_ops.items():
@@ -7009,7 +7174,12 @@ def test_op_output_names_monitor():
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         op_exe.set_monitor_callback(get_output_names_callback, monitor_all=False)
-        op_exe.forward()
+        try:
+            op_exe.forward()
+            mx.nd.waitall()
+        except mx.base.MXNetError:
+            # skip errors since test is to check output names
+            pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 
@@ -7055,7 +7225,12 @@ def test_op_all_names_monitor():
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         op_exe.set_monitor_callback(get_output_names_callback, monitor_all=True)
-        op_exe.forward()
+        try:
+            op_exe.forward()
+            mx.nd.waitall()
+        except mx.base.MXNetError:
+            # skip errors since test is to check all names
+            pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 

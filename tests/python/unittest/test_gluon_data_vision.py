@@ -15,14 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 from __future__ import print_function
+from collections import namedtuple
+
 import mxnet as mx
 import mxnet.ndarray as nd
 from mxnet.base import MXNetError
 from mxnet import gluon
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
-from mxnet.test_utils import assert_almost_equal
-from mxnet.test_utils import almost_equal
+from mxnet import image
+from mxnet.test_utils import *
 from common import assertRaises, setup_module, with_seed, teardown
 
 import numpy as np
@@ -116,6 +118,75 @@ def test_resize():
 
     for dtype in ['uint8', 'float32', 'float64']:
         _test_resize_with_diff_type(dtype)    
+
+
+@with_seed()
+def test_crop_resize():
+    def _test_crop_resize_with_diff_type(dtype):
+        # test normal case
+        data_in = nd.arange(60).reshape((5, 4, 3)).astype(dtype)
+        out_nd = transforms.CropResize(0, 0, 3, 2)(data_in)
+        out_np = out_nd.asnumpy()
+        assert(out_np.sum() == 180)
+        assert((out_np[0:2,1,1].flatten() == [4, 16]).all())
+        # test 4D input
+        data_bath_in = nd.arange(180).reshape((2, 6, 5, 3)).astype(dtype)
+        out_batch_nd = transforms.CropResize(1, 2, 3, 4)(data_bath_in)
+        out_batch_np = out_batch_nd.asnumpy()
+        assert(out_batch_np.sum() == 7524)
+        assert((out_batch_np[0:2,0:4,1,1].flatten() == [37,  52,  67,  82, 127, 142, 157, 172]).all())
+        # test normal case with resize
+        data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype)
+        out_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 2)(data_in)
+        data_expected = image.imresize(nd.slice(data_in, (0, 0, 0), (50, 100 , 3)), 25, 25, 2)
+        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+        # test 4D input with resize
+        data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype)
+        out_batch_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 2)(data_bath_in)
+        for i in range(len(out_batch_nd)):
+            assert_almost_equal(image.imresize(nd.slice(data_bath_in[i], (0, 0, 0), (50, 100, 3)), 25, 25, 2).asnumpy(),
+                out_batch_nd[i].asnumpy())
+        # test with resize height and width should be greater than 0
+        transformer = transforms.CropResize(0, 0, 100, 50, (-25, 25), 2)
+        assertRaises(MXNetError, transformer, data_in)
+        # test height and width should be greater than 0 
+        transformer = transforms.CropResize(0, 0, -100, -50)
+        assertRaises(MXNetError, transformer, data_in)
+        # test cropped area is bigger than input data
+        transformer = transforms.CropResize(150, 200, 200, 500)
+        assertRaises(MXNetError, transformer, data_in)
+        assertRaises(MXNetError, transformer, data_bath_in)
+
+    for dtype in ['uint8', 'float32', 'float64']:
+        _test_crop_resize_with_diff_type(dtype)  
+
+    # test nd.image.crop backward
+    def test_crop_backward(test_nd_arr, TestCase):
+        a_np = test_nd_arr.asnumpy()
+        b_np = a_np[(slice(TestCase.y, TestCase.y + TestCase.height), slice(TestCase.x, TestCase.x + TestCase.width), slice(0, 3))]
+
+        data = mx.sym.Variable('data')
+        crop_sym = mx.sym.image.crop(data, TestCase.x, TestCase.y, TestCase.width, TestCase.height)
+
+        expected_in_grad = np.zeros_like(a_np)
+        expected_in_grad[(slice(TestCase.y, TestCase.y + TestCase.height), slice(TestCase.x, TestCase.x + TestCase.width), slice(0, 3))] = b_np
+        check_symbolic_backward(crop_sym, [a_np], [b_np], [expected_in_grad])
+
+    TestCase = namedtuple('TestCase', ['x', 'y', 'width', 'height'])
+    test_list = [TestCase(0, 0, 3, 3), TestCase(2, 1, 1, 2), TestCase(0, 1, 3, 2)]
+
+    for dtype in ['uint8', 'float32', 'float64']:
+        data_in = nd.arange(60).reshape((5, 4, 3)).astype(dtype)
+        for test_case in test_list:
+            test_crop_backward(data_in, test_case)
+        
+
+
+    # check numeric gradient of nd.image.crop
+    # in_data = np.arange(36).reshape(3, 4, 3)
+    # data = mx.sym.Variable('data')
+    # image_crop_sym = mx.sym.image.crop(data, 0, 0, 2, 2)
+    # check_numeric_gradient(image_crop_sym, [in_data])
 
 
 @with_seed()
