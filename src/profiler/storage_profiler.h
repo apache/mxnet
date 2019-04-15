@@ -66,7 +66,11 @@ class DeviceStorageProfiler {
         Init();  // In case of bug which tries to free first
         const size_t idx = prof->DeviceIndex(handle.ctx.dev_type, handle.ctx.dev_id);
         CHECK_LT(idx, mem_counters_.size()) << "Invalid device index: " << idx;
-        *mem_counters_[idx] -= handle.size;
+        if (*mem_counters_[idx] >= handle.size) {
+            *mem_counters_[idx] -= handle.size;
+        } else {
+            *mem_counters_[idx] = 0;
+        }
       }
     }
   }

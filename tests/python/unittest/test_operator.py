@@ -698,11 +698,11 @@ def test_symbol_pow():
 def test_pow_fn():
     shape = (3, 4)
     exp = mx.symbol.Variable("exp")
-    y = mx.sym.pow(2, exp)
     x = np.ones(shape)*3
-    check_numeric_gradient(y, [x], numeric_eps=1E-3)
-    check_symbolic_forward(y, [x], [2**x])
-    check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
+    for y in [mx.sym.pow(2, exp), mx.sym.power(2, exp)]:
+        check_numeric_gradient(y, [x], numeric_eps=1E-3)
+        check_symbolic_forward(y, [x], [2**x])
+        check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
 
 @with_seed()
@@ -857,6 +857,39 @@ def test_selu():
         xa[abs(xa) < eps] = 0.01
         ya = fselu(xa)
         ga = fselu_grad(np.ones(shape).astype(dtype), xa, ya)
+        check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+
+
+@with_seed()
+def test_gelu():
+    CUBE_CONSTANT = 0.044715
+    ROOT_TWO_OVER_PI = 0.7978845608028654
+    def g(x):
+        return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * np.power(x, 3))
+    def g_grad(x):
+        return ROOT_TWO_OVER_PI * (1.0 + 3.0 * CUBE_CONSTANT * np.power(x, 2))
+    def f(x):
+        return 1.0 + np.tanh(g(x))
+    def f_grad(x):
+        return (1.0 - np.tanh(g(x)) * np.tanh(g(x))) * g_grad(x)
+    def fgelu(x):
+        return 0.5 * x * f(x)
+    def fgelu_grad(grad, x, y):
+        return grad * (y / x + y * (1 - np.tanh(g(x))) * g_grad(x))
+
+    shape = (3, 4)
+    x = mx.sym.Variable("x")
+    y = mx.sym.LeakyReLU(data=x, act_type="gelu")
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
+        eps, rtol, atol = (7.5e-4, 1e-1, 1e-2) if dtype is np.float16 else (1e-4, 1e-2, 1e-4)
+        if dtype is np.float16:
+            xa /= 10.0
+        xa[abs(xa) < eps] = 0.01
+        ya = fgelu(xa)
+        ga = fgelu_grad(np.ones(shape).astype(dtype), xa, ya)
         check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
@@ -6642,7 +6675,12 @@ def test_binary_math_operators():
                 lambda x, y: np.power(x, y),
                 lambda x, y: np.power(x, y - 1.) * y,
                 lambda x, y: np.power(x, y) * np.log(x),
-                0.2, 5.0, -4.0, 4.0]
+                0.2, 5.0, -4.0, 4.0],
+        'power': [lambda x, y: mx.sym.power(x, y),
+                  lambda x, y: np.power(x, y),
+                  lambda x, y: np.power(x, y - 1.) * y,
+                  lambda x, y: np.power(x, y) * np.log(x),
+                  0.2, 5.0, -4.0, 4.0]
     }
     # Loop over operators
     for name, op in binary_ops.items():
@@ -7131,7 +7169,12 @@ def test_op_output_names_monitor():
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         op_exe.set_monitor_callback(get_output_names_callback, monitor_all=False)
-        op_exe.forward()
+        try:
+            op_exe.forward()
+            mx.nd.waitall()
+        except mx.base.MXNetError:
+            # skip errors since test is to check output names
+            pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 
@@ -7177,7 +7220,12 @@ def test_op_all_names_monitor():
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         op_exe.set_monitor_callback(get_output_names_callback, monitor_all=True)
-        op_exe.forward()
+        try:
+            op_exe.forward()
+            mx.nd.waitall()
+        except mx.base.MXNetError:
+            # skip errors since test is to check all names
+            pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 
