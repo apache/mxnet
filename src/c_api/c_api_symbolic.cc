@@ -695,6 +695,40 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
+int MXReducePrecisionSymbol(SymbolHandle sym_handle,
+                            SymbolHandle *ret_sym_handle,
+                            const mx_uint num_fp16_op_names,
+                            const char **fp16_op_names,
+                            const mx_uint num_fp32_op_names,
+                            const char **fp32_op_names,
+                            const mx_uint num_widest_type_op_names,
+                            const char **widest_type_op_names) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
+  nnvm::Graph g = Symbol2Graph(*sym);
+  std::unordered_set<std::string> fp16_node_names;
+  std::unordered_set<std::string> fp32_node_names;
+  std::unordered_set<std::string> widest_node_names;
+  for (size_t i = 0; i < num_fp16_op_names; ++i) {
+    fp16_node_names.emplace(fp16_op_names[i]);
+  }
+  for (size_t i = 0; i < num_fp32_op_names; ++i) {
+    fp32_node_names.emplace(fp32_op_names[i]);
+  }
+  for (size_t i = 0; i < num_widest_type_op_names; ++i) {
+    widest_node_names.emplace(widest_type_op_names[i]);
+  }
+  g.attrs["fp16_op_names"] = std::make_shared<nnvm::any>(std::move(fp16_node_names));
+  g.attrs["fp32_op_names"] = std::make_shared<nnvm::any>(std::move(fp32_node_names));
+  g.attrs["widest_type_op_names"] = std::make_shared<nnvm::any>(std::move(widest_node_names));
+  g = ApplyPass(std::move(g), "ReducePrecision");
+  s->outputs = g.outputs;
+  *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+
 int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
                                      const mx_uint num_layers,
                                      const char** layer_names,
@@ -722,15 +756,14 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
-  std::vector<mxnet::op::SubgraphPropertyPtr> properties =
-      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(backend);
-  for (auto property : properties) {
-    nnvm::Graph g = Symbol2Graph(*s);
-    property->SetAttr("graph", g);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
-    g = ApplyPass(std::move(g), "BuildSubgraph");
-    s->outputs = g.outputs;
-  }
+  nnvm::Graph g = Symbol2Graph(*s);
+  mxnet::op::SubgraphPropertyPtr property =
+      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(
+          backend);
+  g.attrs["subgraph_property"] =
+      std::make_shared<nnvm::any>(std::move(property));
+  g = ApplyPass(std::move(g), "PartitionGraph");
+  s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
