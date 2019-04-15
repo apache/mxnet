@@ -656,7 +656,7 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       << "step and begin must have the same length";
   }
 
-  for (index_t i = 0; i < param_begin.ndim(); ++i) {
+  for (int i = 0; i < param_begin.ndim(); ++i) {
     index_t s = param_step.ndim() != 0U && param_step[i].has_value() ? param_step[i].value() : 1;
     CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
 
