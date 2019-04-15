@@ -19,6 +19,11 @@ package org.apache.mxnet
 
 import org.apache.mxnet.Base._
 
+/**
+  * NumpyScope object provides util functions for turning on/off NumPy compatibility
+  * and checking whether NumPy compatibility has been turned on/off. NumPy compatibility
+  * is introduced first to support zero-dim and zero-size tensors as in NumPy.
+  */
 object NumpyScope {
   def setNumpyCompatible(isNpComp: Boolean): Boolean = {
     val prev = new RefInt()
