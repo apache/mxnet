@@ -30,7 +30,7 @@ import numpy as _np
 
 from . import libinfo
 
-__all__ = ['MXNetError', 'is_np_compat', 'set_np_compat', 'enable_np_compat', 'disable_np_compat']
+__all__ = ['MXNetError', 'is_np_compat', 'set_np_compat', 'np_compat']
 #----------------------------
 # library loading
 #----------------------------
@@ -791,13 +791,13 @@ class _NumpyCompatibilityStateScope(object):
             set_np_compat(self._prev_is_np_compat)
 
 
-def enable_np_compat():
+def np_compat(active=True):
     """Returns a NumPy compatibility state scope to be used in 'with' statement
     and captures code that needs the compatibility.
 
     Example::
 
-        with mx.enable_np_compat():
+        with mx.np_compat(active=True):
             # A scalar tensor's shape is `()`, whose `ndim` is `0`.
             scalar = mx.nd.ones(shape=())
             assert scalar.shape == ()
@@ -823,17 +823,8 @@ def enable_np_compat():
             arg_shapes, out_shapes, _ = ret.infer_shape_partial()
             assert arg_shapes[0] is None
             assert out_shapes[0] is None
-    """
-    return _NumpyCompatibilityStateScope(True)
 
-
-def disable_np_compat():
-    """Returns a state scope with NumPy-compatibility disabled to be used in 'with' statement
-    and captures code that does not need the compatibility.
-
-    Example::
-
-        with mx.disable_np_compat():
+        with mx.np_compat(active=False):
             # 0 means unknown shape dimension size in the legacy shape definition.
             data = mx.sym.var("data", shape=(0, 2, 3))
             ret = mx.sym.sin(data)
@@ -849,4 +840,4 @@ def disable_np_compat():
             assert arg_shapes[0] == ()
             assert out_shapes[0] == ()
     """
-    return _NumpyCompatibilityStateScope(False)
+    return _NumpyCompatibilityStateScope(active)
