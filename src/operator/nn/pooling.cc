@@ -118,7 +118,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   int layout = param.GetLayout(dshape.ndim());
   if (param.global_pool) {
     mxnet::TShape oshape = dshape;
-    size_t c_index = 0;
+    int c_index = 0;
     switch (layout) {
       case mshadow::kNCW:
       case mshadow::kNCHW:

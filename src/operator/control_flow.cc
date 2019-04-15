@@ -322,7 +322,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
 
     auto out = mxnet::TShape(g_out_shape.ndim() + 1);
     out[0] = len;
-    for (size_t i = 1; i < out.ndim(); i++)
+    for (int i = 1; i < out.ndim(); i++)
       out[i] = g_out_shape[i - 1];
     SHAPE_ASSIGN_CHECK(*out_shape, i, out);
   }
@@ -346,7 +346,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     } else {
       auto in = mxnet::TShape(shape.ndim() + 1);
       in[0] = len;
-      for (size_t i = 1; i < in.ndim(); i++)
+      for (int i = 1; i < in.ndim(); i++)
         in[i] = shape[i - 1];
       SHAPE_ASSIGN_CHECK(*in_shape, i, in);
     }
@@ -801,7 +801,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
       }
       auto out = mxnet::TShape(g_out_shape.ndim() + 1);
       out[0] = params.max_iterations;
-      for (size_t i = 1; i < out.ndim(); i++)
+      for (int i = 1; i < out.ndim(); i++)
         out[i] = g_out_shape[i - 1];
       SHAPE_ASSIGN_CHECK(*out_shape, i, out);
     }

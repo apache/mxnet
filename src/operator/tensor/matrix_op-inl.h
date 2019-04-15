@@ -724,13 +724,13 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape oshape = dshape;
 
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
-    common::StaticArray<index_t, ndim> begin, end, step;
+    common::StaticArray<int, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
     for (int i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(i, b, e, s, &oshape);
     }
-  });
+  })
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return !shape_is_none(dshape) && !shape_is_none(oshape);
@@ -939,11 +939,11 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
-    for (index_t i = 0; i < param.begin.ndim(); ++i) {
+    for (int i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(i, b, e, s, &vshape);
     }
-  });
+  })
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, vshape);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
   return true;
@@ -2152,7 +2152,7 @@ struct SqueezeParam : public dmlc::Parameter<SqueezeParam> {
 inline size_t SqueezeShapeHelper(mxnet::TShape* shape) {
   CHECK(shape != nullptr);
   size_t count = 0;
-  for (size_t i = 0; i < shape->ndim(); ++i) {
+  for (int i = 0; i < shape->ndim(); ++i) {
     if ((*shape)[i] == 0) {
       ++count;
     } else {
@@ -2175,7 +2175,7 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
   if (param.axis.has_value()) {
     // preprocess axis
     mxnet::TShape axes = param.axis.value();
-    for (size_t i = 0; i < axes.ndim(); ++i) {
+    for (int i = 0; i < axes.ndim(); ++i) {
       if (axes[i] < 0) {
         axes[i] += dndim;
         CHECK_GE(axes[i], 0)
@@ -2190,7 +2190,7 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
       oshape[axes[i]] = 0;
     }
   } else {
-    for (size_t i = 0; i < oshape.ndim(); ++i) {
+    for (int i = 0; i < oshape.ndim(); ++i) {
       if (oshape[i] == 1) oshape[i] = 0;
     }
   }
@@ -2237,7 +2237,7 @@ inline bool DepthToSpaceOpShape(const nnvm::NodeAttrs& attrs,
 
   expected_out[0] = in_shape[0];
   expected_out[1] = in_shape[1] / (block * block);
-  size_t i = 2;
+  int i = 2;
   while (i < expected_out.ndim()) {
     expected_out[i] = in_shape[i] * block;
     ++i;
@@ -2404,7 +2404,7 @@ inline bool SpaceToDepthOpShape(const nnvm::NodeAttrs& attrs,
 
   expected_out[0] = in_shape[0];
   expected_out[1] = in_shape[1] * block * block;
-  uint32_t i = 2;
+  int i = 2;
   while (i < expected_out.ndim()) {
     expected_out[i] = in_shape[i] / block;
     ++i;
