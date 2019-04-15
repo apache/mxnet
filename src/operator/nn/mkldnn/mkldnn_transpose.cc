@@ -57,7 +57,7 @@ class MKLDNNTransposeForward {
     auto axes_ndim = param.axes.ndim();
     auto axes = mxnet::TShape(data_ndim);
     if (axes_ndim == 0) {
-      for (size_t i = 0; i < data_ndim; i++) {
+      for (int i = 0; i < data_ndim; i++) {
         axes[i] = data_ndim - i - 1;
       }
     } else {
@@ -79,7 +79,7 @@ class MKLDNNTransposeForward {
     dst_fmt.data_type = mkldnn_f32;
     dst_fmt.format = mkldnn_blocked;
 
-    for (size_t i = 0; i < data_ndim; i++)
+    for (int i = 0; i < data_ndim; i++)
       dst_fmt.dims[i] = shape[i];
 
     unsigned int total_stride = 1;
