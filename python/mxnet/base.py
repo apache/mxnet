@@ -27,10 +27,11 @@ import sys
 import inspect
 import platform
 import numpy as _np
+from functools import wraps
 
 from . import libinfo
 
-__all__ = ['MXNetError', 'is_np_compat', 'set_np_compat', 'np_compat']
+__all__ = ['MXNetError', 'is_np_compat', 'set_np_compat', 'np_compat', 'use_np_compat']
 #----------------------------
 # library loading
 #----------------------------
@@ -736,13 +737,13 @@ ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 
-def set_np_compat(flag):
+def set_np_compat(active):
     """
     Turns on/off NumPy compatibility. NumPy-compatibility is turned off by default in backend.
 
     Parameters
     ----------
-    flag : bool
+    active : bool
         Indicates whether to turn on/off NumPy compatibility.
 
     Returns
@@ -750,7 +751,7 @@ def set_np_compat(flag):
         A bool value indicating the previous state of NumPy compatibility.
     """
     prev = ctypes.c_int()
-    check_call(_LIB.MXSetIsNumpyCompatible(ctypes.c_int(flag), ctypes.byref(prev)))
+    check_call(_LIB.MXSetIsNumpyCompatible(ctypes.c_int(active), ctypes.byref(prev)))
     return bool(prev.value)
 
 
@@ -770,6 +771,7 @@ def is_np_compat():
 
 class _NumpyCompatibilityStateScope(object):
     """Scope for managing numpy compatibility state.
+    Do not use this class directly. Use `np_compat(active)` instead.
 
     Example::
 
@@ -792,7 +794,7 @@ class _NumpyCompatibilityStateScope(object):
 
 
 def np_compat(active=True):
-    """Returns a NumPy compatibility state scope to be used in 'with' statement
+    """Returns an activated/deactivated NumPy compatibility state scope to be used in 'with' statement
     and captures code that needs the compatibility.
 
     Example::
@@ -841,3 +843,32 @@ def np_compat(active=True):
             assert out_shapes[0] == ()
     """
     return _NumpyCompatibilityStateScope(active)
+
+
+def use_np_compat(func):
+    """Wraps a function with an activated NumPy-compatibility scope. This ensures
+    that the execution of the function is guaranteed with NumPy compatible semantics,
+    such as zero-dim and zero size tensors.
+
+    Example::
+        import mxnet as mx
+        @mx.use_np_compat
+        def scalar_one():
+            return mx.nd.ones(())
+        print(scalar_one())
+
+    Parameters
+    ----------
+    func : a user-provided callable function to be scoped by the NumPy compatibility state.
+
+    Returns
+    -------
+    Function
+        A function for wrapping the user functions in the NumPy compatibility scope.
+    """
+    @wraps(func)
+    def _with_np_compat(*args, **kwargs):
+        with np_compat(active=True):
+            return func(*args, **kwargs)
+
+    return _with_np_compat

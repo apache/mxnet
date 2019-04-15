@@ -887,7 +887,7 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       mshadow::Shape<5> in_shape;
       mshadow::Shape<5> out_shape;
-      for (uint32_t i = 0; i < 5; ++i) {
+      for (int i = 0; i < 5; ++i) {
         if (i < dst_shape.ndim()) {
           in_shape[i] = src_shape[i];
           out_shape[i] = dst_shape[i];
@@ -1227,7 +1227,7 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
     Stream<xpu> *s = ctx.get_stream<xpu>();
     mshadow::Shape<5> in_shape;
     mshadow::Shape<5> out_shape;
-    for (uint32_t i = 0; i < 5; ++i) {
+    for (int i = 0; i < 5; ++i) {
       if (i < dst_shape.ndim()) {
         in_shape[i] = src_shape[i];
         out_shape[i] = dst_shape[i];

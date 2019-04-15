@@ -7948,6 +7948,38 @@ def test_concat_with_zero_size_tensor():
         assert ret.shape == (0, 12, 10)
 
 
+@with_seed()
+def test_np_compat_decorator():
+    @mx.use_np_compat
+    def check_scalar_one():
+        """Generate scalar one tensor"""
+        return mx.nd.ones(shape=())
+    assert check_scalar_one.__name__ == "check_scalar_one"
+    assert check_scalar_one.__doc__ == "Generate scalar one tensor"
+    assert check_scalar_one().shape == ()
+    for active in [True, False]:
+        with mx.np_compat(active=active):
+            assert check_scalar_one.__name__ == "check_scalar_one"
+            assert check_scalar_one.__doc__ == "Generate scalar one tensor"
+            assert check_scalar_one().shape == ()
+
+    @mx.use_np_compat
+    def check_concat(shape1, shape2, axis):
+        data1 = mx.nd.ones(shape1)
+        data2 = mx.nd.ones(shape2)
+        ret = mx.nd.Concat(data1, data2, dim=axis)
+        expected_ret = np.concatenate((data1.asnumpy(), data2.asnumpy()), axis=axis)
+        assert ret.shape == expected_ret.shape
+
+    check_concat((0, 3, 4), (5, 3, 4), 0)
+    check_concat((8, 0, 5), (8, 7, 5), 1)
+    check_concat((8, 0, 0), (8, 0, 0), 2)
+    for active in [True, False]:
+        check_concat((0, 3, 4), (5, 3, 4), 0)
+        check_concat((8, 0, 5), (8, 7, 5), 1)
+        check_concat((8, 0, 0), (8, 0, 0), 2)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
