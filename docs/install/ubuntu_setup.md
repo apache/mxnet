@@ -241,7 +241,7 @@ Cuda 10.1 in Ubuntu 18.04 builds fine but is not currently tested in CI.
     ninja
 ```
 
-*Note* - You can explore and use more compilation options in `CMakeLists.txt` and also review common [usage examples](build_from_source.html#usage-examples).
+*Note* - You can explore and use more compilation options as they are delcared in the top of `CMakeLists.txt` and also review common [usage examples](build_from_source.html#usage-examples).
 Optionally, you can also use a higher level, scripted version of the above with an editable CMake options file by doing the
 following:
 
@@ -250,17 +250,10 @@ cp cmake/cmake_options.yml .
 # Edit cmake_options.yml in the MXNet root to your taste
 $EDITOR cmake_options.yml
 # Launch a local CMake build
-./dev_menu.py menu 1
+./dev_menu.py build
 ```
 
 Building from source creates a library called ```libmxnet.so``` in the `build` folder in your MXNet project root.
-
-You may also want to add the MXNet shared library to your `LD_LIBRARY_PATH` and `MXNET_LIBRARY_PATH` accordingly:
-
-```bash
-export LD_LIBRARY_PATH=`realpath build`
-export MXNET_LIBRARY_PATH=`realpath build/libmxnet.so`
-```
 
 After building the MXNet library, you may install language bindings.
 
