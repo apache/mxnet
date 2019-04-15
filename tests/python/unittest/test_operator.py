@@ -5394,14 +5394,78 @@ def test_custom_op():
         assert not p.is_alive(), "deadlock may exist in custom operator"
 
     # test except handling
-    def custom_add_exc():
-        a = mx.nd.array([1, 2, 3])
-        b = mx.nd.array([4, 5])
-        # trigger exception by providing unmatched operand shapes
-        c = mx.nd.Custom(a, b, op_type='AdditionOP')
-        c.wait_to_read()
+    # see https://github.com/apache/incubator-mxnet/pull/14693
+    def build_dot_custom(fun_forward, name):
+        class Dot(mx.operator.CustomOp):
+            def __init__(self):
+                super(Dot, self).__init__()
+            def forward(self, is_train, req, in_data, out_data, aux):
+                fun_forward(in_data, out_data)
+            def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+                pass
 
-    assert_raises(MXNetError, custom_add_exc)
+        @mx.operator.register(name)
+        class DotProp(mx.operator.CustomOpProp):
+            def __init__(self):
+                super(DotProp, self).__init__()
+            def list_arguments(self):
+                return ['a', 'b']
+            def list_outputs(self):
+                return ['output']
+            def infer_shape(self, in_shape):
+                return in_shape, [(in_shape[0][0], in_shape[1][1])]
+            def create_operator(self, ctx, shapes, dtypes):
+                return Dot()
+
+    # 1. error in python code
+    def custom_exc1():
+        def f(in_data, out_data):
+            assert False
+            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
+        build_dot_custom(f, 'Dot1')
+        a = mx.nd.zeros((4, 1))
+        b = mx.nd.zeros((1, 4))
+        c = mx.nd.Custom(a, b, op_type='Dot1')
+        c.wait_to_read()
+    assert_raises(MXNetError, custom_exc1)
+
+    # 2. error in pushing operator to engine
+    def custom_exc2():
+        def f(in_data, out_data):
+            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
+        build_dot_custom(f, 'Dot2')
+        a = mx.nd.zeros((4, 2))
+        b = mx.nd.zeros((1, 4))
+        # trigger error by invalid input shapes of operands
+        c = mx.nd.Custom(a, b, op_type='Dot2')
+        c.wait_to_read()
+    assert_raises(MXNetError, custom_exc2)
+
+    # 3. error in real execution
+    def custom_exc3():
+        def f(in_data, out_data):
+            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
+            out_data[0].wait_to_read()
+        build_dot_custom(f, 'Dot3')
+        n = int(1e8)
+        a = mx.nd.zeros((n, 1))
+        b = mx.nd.zeros((1, n))
+        # trigger OOM
+        c = mx.nd.Custom(a, b, op_type='Dot3')
+        c.wait_to_read()
+    assert_raises(MXNetError, custom_exc3)
+
+    def custom_exc4():
+        def f(in_data, out_data):
+            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
+        build_dot_custom(f, 'Dot4')
+        n = int(1e8)
+        a = mx.nd.zeros((n, 1))
+        b = mx.nd.zeros((1, n))
+        # trigger OOM
+        c = mx.nd.Custom(a, b, op_type='Dot4')
+        c.wait_to_read()
+    assert_raises(MXNetError, custom_exc4)
 
 
 @with_seed()
