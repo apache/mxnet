@@ -250,7 +250,7 @@
       shape)))
 
 (defn map->scala-tuple-seq
-  "* Convert a map to a scala-Seq of scala-Tubple.
+  "* Convert a map to a scala-Seq of scala-Tuple.
    * Should also work if a seq of seq of 2 things passed.
    * Otherwise passed through unchanged."
   [map-or-tuple-seq]
