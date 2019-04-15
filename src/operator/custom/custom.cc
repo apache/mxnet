@@ -137,7 +137,7 @@ bool InferShape(const NodeAttrs& attrs,
   for (size_t i = 0; i < in_shape->size(); ++i) {
     shapes[i] = ptr;
     ndims[i] = (*in_shape)[i].ndim();
-    for (size_t j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
+    for (int j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
       *ptr = static_cast<uint32_t>((*in_shape)[i][j]);
     }
   }
@@ -263,7 +263,7 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
   for (size_t i = 0; i < in_shape.size(); ++i) {
     shapes[i] = ptr;
     ndims[i] = in_shape[i].ndim();
-    for (size_t j = 0; j < in_shape[i].ndim(); ++j, ++ptr) {
+    for (int j = 0; j < in_shape[i].ndim(); ++j, ++ptr) {
       *ptr = static_cast<uint32_t>(in_shape[i][j]);
     }
   }

@@ -133,7 +133,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       default:
         LOG(FATAL) << "Unsupported tensor layout " << param.layout.value();
     }
-    for (size_t i{1}; i < dshape.ndim(); i++)
+    for (int i = 1; i < dshape.ndim(); i++)
       if (i != c_index)
         oshape[i] = 1;
     out_shape->clear();

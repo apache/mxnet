@@ -224,8 +224,8 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape &dshape = (*in_attrs)[0];
   if (dshape.ndim() == 0) return false;
-  uint32_t target_dim = 1;
-  for (uint32_t i = 1; i < dshape.ndim(); ++i) {
+  int target_dim = 1;
+  for (int i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(dshape[0], target_dim));
@@ -335,7 +335,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
     }
   } else {
     CHECK_EQ(shp.ndim(), param.axes.ndim());
-    for (size_t i = 0; i < shp.ndim(); ++i) {
+    for (int i = 0; i < shp.ndim(); ++i) {
       CHECK(param.axes[i] < static_cast<int64_t>(shp.ndim()));
       ret[i] = shp[param.axes[i]];
     }
@@ -726,7 +726,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
-    for (index_t i = 0; i < param.begin.ndim(); ++i) {
+    for (int i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(i, b, e, s, &oshape);
     }
@@ -1110,9 +1110,9 @@ inline void GetSliceAxisParams(const SliceAxisParam& param, const mxnet::TShape&
                            int* axis, index_t* begin, index_t* end) {
   *axis = param.axis;
   if (*axis < 0) {
-    *axis += static_cast<int>(ishape.ndim());
+    *axis += ishape.ndim();
   }
-  CHECK(*axis < static_cast<int>(ishape.ndim()) && *axis >= 0) <<
+  CHECK(*axis < ishape.ndim() && *axis >= 0) <<
     "Transformed axis must be smaller than the source ndim and larger than zero! Recieved axis=" <<
     param.axis << ", src_ndim=" << ishape.ndim() << ", transformed axis=" << *axis;
   index_t axis_size = static_cast<index_t>(ishape[*axis]);
@@ -1153,8 +1153,8 @@ inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,
   index_t begin, end;
   GetSliceAxisParams(param, ishape, &axis, &begin, &end);
   mxnet::TShape shape(ishape.ndim());
-  for (index_t i = 0; i < ishape.ndim(); ++i) {
-    if (static_cast<int>(i) == axis) {
+  for (int i = 0; i < ishape.ndim(); ++i) {
+    if (i == axis) {
       shape[i] = static_cast<index_t>(end - begin);
     } else {
       shape[i] = ishape[i];
@@ -1177,7 +1177,7 @@ void SliceAxis(const nnvm::NodeAttrs& attrs,
   int axis;
   index_t begin, end;
   GetSliceAxisParams(param, inputs[0].shape_, &axis, &begin, &end);
-  int ndim = static_cast<int>(outputs[0].ndim());
+  int ndim = outputs[0].ndim();
 
   if (axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -1212,7 +1212,7 @@ void SliceAxisGrad_(const nnvm::NodeAttrs& attrs,
   int axis;
   index_t begin, end;
   GetSliceAxisParams(param, outputs[0].shape_, &axis, &begin, &end);
-  int ndim = static_cast<int>(outputs[0].shape_.ndim());
+  int ndim = outputs[0].shape_.ndim();
 
   if (axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -1278,12 +1278,12 @@ inline bool SliceLikeShape(const nnvm::NodeAttrs& attrs,
   } else {
     mxnet::TShape shape(ishape);
     for (index_t i = 0; i < param.axes.ndim(); ++i) {
-      int axis = static_cast<int>(param.axes[i]);
+      int axis = param.axes[i];
       if (axis < 0) {
-        axis += static_cast<int>(ishape.ndim());
+        axis += ishape.ndim();
       }
       CHECK_GE(axis, 0)
-        << "Slice axis: " << static_cast<int>(param.axes[i]) << " too small";
+        << "Slice axis: " << param.axes[i] << " too small";
       CHECK_GT(ishape.ndim(), axis)
         << "Slice axis: " << axis << " exceeds first input: " << ishape.ndim();
       CHECK_GT(from_shape.ndim(), axis)
@@ -1314,16 +1314,16 @@ inline void SliceLikeInferRanges(const mxnet::TShape& dshape,
       ps[i] = 1;
     }
   } else {
-    for (index_t i = 0; i < axes.ndim(); ++i) {
-      int axis = static_cast<int>(axes[i]);
+    for (int i = 0; i < axes.ndim(); ++i) {
+      int axis = axes[i];
       if (axis < 0) {
-        axis += static_cast<int>(dshape.ndim());
+        axis += dshape.ndim();
       }
       CHECK_GE(axis, 0)
-        << "Slice axis: " << static_cast<int>(axes[i]) << " too small";
-      CHECK_LT(axis, static_cast<int>(dshape.ndim()))
+        << "Slice axis: " << axes[i] << " too small";
+      CHECK_LT(axis, dshape.ndim())
         << "Slice axis: " << axis << " exceeds first input: " << dshape.ndim();
-      CHECK_LT(axis, static_cast<int>(fshape.ndim()))
+      CHECK_LT(axis, fshape.ndim())
         << "Slice axis: " << axis << " exceeds first input: " << fshape.ndim();
       pb[axis] = 0;
       pe[axis] = fshape[axis];
@@ -1542,7 +1542,7 @@ inline void GetRepeatParams(const RepeatParam& param, const mxnet::TShape& ishap
   CHECK_GE(*repeats, 0) << "repeats cannot be a negative number";
   *axisOpt = param.axis;
   if (static_cast<bool>(*axisOpt)) {
-    int ndims = static_cast<int>(ishape.ndim());
+    int ndims = ishape.ndim();
     int axis = axisOpt->value();
     if (axis < 0) {
       axis += ndims;
@@ -1569,14 +1569,14 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
 
   // If repeats > 0, multiply the size of the corresponding axis by repeats
   if (static_cast<bool>(axisOpt)) {
-    int ndims = static_cast<int>(ishape.ndim());
+    int ndims = ishape.ndim();
     int axis = axisOpt.value();
     if (axis < 0) {
       axis += ndims;
     }
     mxnet::TShape shape(ishape.ndim());
-    for (index_t i = 0; i < ishape.ndim(); ++i) {
-      if (static_cast<int>(i) == axis) {
+    for (int i = 0; i < ishape.ndim(); ++i) {
+      if (i == axis) {
         shape[i] = static_cast<index_t>(repeats) * ishape[i];
       } else {
         shape[i] = ishape[i];
@@ -1616,11 +1616,11 @@ inline std::pair<mxnet::TShape, mxnet::TShape> ReshapeInputOutputForRepeatOp(
   const int repeats) {
   if (static_cast<bool>(axisOpt)) {
     int axis = axisOpt.value();
-    int ndim = static_cast<int>(ishape.ndim());
+    int ndim = ishape.ndim();
     if (axis < 0)  {
       axis += ndim;
     }
-    CHECK(axis >= 0 && axis < static_cast<int>(ishape.ndim())) << "Invalid input of axis";
+    CHECK(axis >= 0 && axis < ishape.ndim()) << "Invalid input of axis";
 
     // reshape the input tensor by adding a dim at the (axis+1)-th dim
     mxnet::TShape rshape(ishape.ndim()+1);
@@ -1633,7 +1633,7 @@ inline std::pair<mxnet::TShape, mxnet::TShape> ReshapeInputOutputForRepeatOp(
     }
     rshape[i] = 1;
     bshape[i] = repeats;
-    while (i < static_cast<int>(ishape.ndim())) {
+    while (i < ishape.ndim()) {
       rshape[i+1] = ishape[i];
       bshape[i+1] = ishape[i];
       ++i;
@@ -1757,13 +1757,13 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
     return true;
   }
-  for (size_t i = 0; i < reps.ndim(); ++i) {
+  for (int i = 0; i < reps.ndim(); ++i) {
     CHECK_GT(reps[i], 0) << "invalid reps=" << i << ", dim size must be greater than zero";
   }
   mxnet::TShape oshape(std::max(ishape.ndim(), reps.ndim()));
-  int i1 = static_cast<int>(ishape.ndim()) - 1;
-  int i2 = static_cast<int>(reps.ndim()) - 1;
-  for (int i = static_cast<int>(oshape.ndim()) - 1; i >= 0; --i) {
+  int i1 = ishape.ndim() - 1;
+  int i2 = reps.ndim() - 1;
+  for (int i = oshape.ndim() - 1; i >= 0; --i) {
     if (i1 >= 0 && i2 >= 0) {
       oshape[i] = ishape[i1--] * reps[i2--];
     } else if (i1 >= 0) {
@@ -1808,9 +1808,9 @@ inline std::pair<mxnet::TShape, mxnet::TShape> ReshapeInputOutputForTileOp(
   // The shape of the input tensor after adding new axes before each dim
   mxnet::TShape rshape(bshape.ndim());
 
-  int i1 = static_cast<int>(ishape.ndim()) - 1;
-  int i2 = static_cast<int>(reps.ndim()) - 1;
-  for (int i = static_cast<int>(bshape.ndim()) - 1; i >= 0; --i) {
+  int i1 = ishape.ndim() - 1;
+  int i2 = reps.ndim() - 1;
+  for (int i = bshape.ndim() - 1; i >= 0; --i) {
     if (0 == (i & 1)) {
       bshape[i] = (i2 >= 0? reps[i2--] : 1);
       rshape[i] = 1;
@@ -1986,7 +1986,7 @@ void ReverseOpForward(const nnvm::NodeAttrs& attrs,
   std::vector<index_t>  trailing_(param.axis.ndim());
   index_t reverse_index = 0;
   for (int axis : param.axis) {
-    CHECK_LT(axis, static_cast<int>(ishape.ndim()));
+    CHECK_LT(axis, ishape.ndim());
     stride_[reverse_index] = ishape[axis];
     trailing_[reverse_index] = 1;
     for (index_t i2 = axis + 1; i2 < ishape.ndim(); ++i2) {
@@ -2599,7 +2599,7 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
   int num_outputs = (param.sections > 0) ? indices.ndim() - 1 : indices.ndim();
   // Pre-compute squeezed output shape for future usage
   mxnet::TShape squeezed_dshape = dshape;
-  for (int d = real_axis; d < static_cast<int>(squeezed_dshape.ndim()) - 1; ++d) {
+  for (int d = real_axis; d < squeezed_dshape.ndim() - 1; ++d) {
     squeezed_dshape[d] = squeezed_dshape[d+1];
   }
   squeezed_dshape = mxnet::TShape(&squeezed_dshape[0], &squeezed_dshape[squeezed_dshape.ndim()-1]);
@@ -2631,7 +2631,7 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
       back_calculate_dshape[real_axis] += (*out_attrs)[i][real_axis];
     }
   }
-  for (int d = real_axis + 1; d < static_cast<int>(ishape.ndim()); ++d) {
+  for (int d = real_axis + 1; d < ishape.ndim(); ++d) {
     if (param.squeeze_axis) {
       back_calculate_dshape[d] = (*out_attrs)[0][d - 1];
     } else {

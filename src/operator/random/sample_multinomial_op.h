@@ -87,10 +87,10 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   }
 
   mxnet::TShape oshape(ishape.ndim() - 1 + param.shape.ndim());
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) {
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
     oshape[i] = ishape[i];
   }
-  for (size_t i = 0; i < param.shape.ndim(); ++i) {
+  for (int i = 0; i < param.shape.ndim(); ++i) {
     oshape[i + ishape.ndim() - 1] = param.shape[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);

@@ -1272,7 +1272,9 @@ inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0]);
 
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) oshape[i] = ishape[i+1];
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
+    oshape[i] = ishape[i+1];
+  }
   for (int i = 0; i < dshape.ndim() - ishape[0]; ++i) {
     oshape[ishape.ndim()-1+i] = dshape[ishape[0] + i];
   }
@@ -1370,7 +1372,7 @@ inline bool ScatterNDShape(const nnvm::NodeAttrs& attrs,
 
   bool valid = dshape.ndim() == ishape.ndim() - 1 + oshape.ndim() - ishape[0];
 
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) {
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
     valid = valid && dshape[i] == ishape[i+1];
   }
   for (int i = 0; i < oshape.ndim() - ishape[0]; ++i) {
