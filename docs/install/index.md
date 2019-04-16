@@ -1125,7 +1125,8 @@ You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for
   options(repos = cran)
   install.packages("mxnet")
 ```
-Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
+Change cu92 to cu90, cu91 or cuda100 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
+Note : You also need to have cuDNN installed on Windows. Check out this [guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#installwindows) on the steps for installation.
 
 </div> <!-- END of GPU -->
 </div> <!-- END - Windows R -->
