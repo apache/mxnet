@@ -245,7 +245,7 @@ inline bool NormalizeOpShape(const nnvm::NodeAttrs& attrs,
       << "Input tensor must have shape (channels, height, width), or "
       << "(N, channels, height, width), but got " << dshape;
 
-  uint32_t nchannels;
+  int nchannels = 0;
   if (dshape.ndim() == 3) {
     nchannels = dshape[0];
     CHECK(nchannels == 3 || nchannels == 1)
