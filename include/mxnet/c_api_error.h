@@ -36,10 +36,6 @@
     on_enter_api(__FUNCTION__);
 #define MX_API_END()                                                           \
   }                                                                            \
-  catch (dmlc::Error &_except_) {                                              \
-    on_exit_api();                                                             \
-    return MXAPIHandleException(_except_);                                     \
-  }                                                                            \
   catch (std::exception &_except_) {                                           \
     on_exit_api();                                                             \
     return MXAPIHandleException(_except_);                                     \
@@ -47,11 +43,6 @@
   on_exit_api();                                                               \
   return 0; // NOLINT(*)
 #define MX_API_END_HANDLE_ERROR(Finalize)                                      \
-  }                                                                            \
-  catch (dmlc::Error &_except_) {                                              \
-    Finalize;                                                                  \
-    on_exit_api();                                                             \
-    return MXAPIHandleException(_except_);                                     \
   }                                                                            \
   catch (std::exception &_except_) {                                           \
     Finalize;                                                                  \
@@ -70,11 +61,6 @@ void MXAPISetLastError(const char* msg);
  * \param e the exception
  * \return the return value of API after exception is handled
  */
-inline int MXAPIHandleException(const dmlc::Error &e) {
-  MXAPISetLastError(e.what());
-  return -1;
-}
-
 inline int MXAPIHandleException(const std::exception &e) {
   MXAPISetLastError(e.what());
   return -1;
