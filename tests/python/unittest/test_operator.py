@@ -270,10 +270,11 @@ def test_rnnrelu_dropout():
     out = exe.forward(is_train=True)
     out[0].wait_to_read()
 
-def np_softmax(x, axis=-1, temperature=1.0):
+def np_softmax(x, axis=-1, temperature=1.0, odtype=None):
+    x = x.astype(odtype)
     x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x/temperature)
-    x /= np.sum(x, axis=axis, keepdims=True)
+    x /= np.sum(x, axis=axis, keepdims=True, dtype=odtype)
     return x
 
 
@@ -4748,28 +4749,34 @@ def test_softmax_dtype():
         op = getattr(mx.nd, op_name)
         input_data = mx.random.uniform(shape=(100, 500))
         dtype_input = input_data.astype(idtype)
+        np_op = {'softmax': np_softmax(dtype_input.asnumpy(), odtype=odtype),
+                 'softmin': np_softmax(-1 * dtype_input.asnumpy(), odtype=odtype),
+                 'log_softmax': np.log(np_softmax(dtype_input.asnumpy(),
+                                                  odtype=odtype)+1e-20)
+                 }
         ref_input = input_data.astype(ref_dtype)
         dtype_input.attach_grad()
         ref_input.attach_grad()
         with mx.autograd.record():
             dtype_softmax = op(dtype_input, axis=-1, dtype=odtype)
             ref_softmax = op(ref_input, axis=-1, dtype=odtype)
-        dtype_softmax_np = dtype_softmax.asnumpy()
+        dtype_mx_softmax = dtype_softmax.asnumpy()
+        dtype_np_softmax = np_op[op_name]
         ref_softmax_np = ref_softmax.asnumpy()
-        assert_almost_equal(dtype_softmax_np, ref_softmax_np, rtol=rtol, atol=atol)
+        assert_almost_equal(dtype_mx_softmax, dtype_np_softmax, rtol=rtol, atol=atol)
         dtype_softmax.backward()
         ref_softmax.backward()
         dtype_grad_np = dtype_input.grad.asnumpy()
         ref_grad_np = ref_input.grad.asnumpy()
         assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
 
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-3, 1e-5, 1e-3, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-3, 1e-5, 1e-3, 1e-5, 'float16', 'float32', 'float32')
     check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
     check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-3, 1e-5, 1e-3, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-3, 1e-5, 1e-3, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-3, 1e-5, 1e-3, 1e-5, 'float32', 'float64')
     check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
     check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
                               'float16', 'float32')
