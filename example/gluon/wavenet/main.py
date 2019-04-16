@@ -18,6 +18,7 @@
 Descrition : main module to run code
 """
 import argparse
+import numpy as np
 from trainer import Train
 
 def main():
@@ -34,7 +35,7 @@ def main():
     - use_gpu : use gpu for training
     - generation : whether or not to generate a wave file for model (default=True)
     - load_file : file name in loading wave file (default=parametric-2.wav)
-    - save_file : file name in saving result (default=wav.npy)
+    - save_file : file name in saving result (default='')
     """
     parser = argparse.ArgumentParser(description='argument for wavenet hyperparameters')
     parser.add_argument('--batch_size', type=int, default=64, help="batch size")
@@ -48,10 +49,10 @@ def main():
     parser.add_argument('--use_gpu', action='store_true', help='use gpu for training.')
     parser.add_argument('--generation', type=bool, default=True, help="generate a wave file")
     parser.add_argument('--load_file', type=str, default='parametric-2.wav', help="file name in loading wave file")
-    parser.add_argument('--save_file', type=str, default='wav.npy', help="file name in saving result")
+    parser.add_argument('--save_file', type=str, default='', help="file name in saving result")
     config = parser.parse_args()
     print(config)
-
+    np.save('./models/commandline_args.npy', config.__dict__)
     trainer = Train(config)
 
     trainer.train()

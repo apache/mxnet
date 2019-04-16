@@ -106,20 +106,27 @@ class Train():
         """
         dilations = [2**i for i in range(dilation_depth)] * n_repeat
         res = list(x.asnumpy())
-        for _ in trange(n):
-            x = nd.array(res[-sum(dilations)-1:], ctx=ctx)
+        for i in trange(n):
+            x = nd.array(res[i:-1], ctx=ctx)
+            x = nd.one_hot(x, self.mu)
+            x = nd.transpose(x.expand_dims(0), axes=(0, 2, 1))
             y = models(x)
             res.append(y.argmax(1).asnumpy()[-1])
         return res
 
-    def generation(self):
+    def generation(self, path, gen_size):
         """
         Description : module for generation
         """
+        ##setting hyper-parameters
+        net = WaveNet(input_length=self.seq_size, mu=self.mu, n_residue=self.n_residue, n_skip=self.n_skip,\
+         dilation_depth=self.dilation_depth, n_repeat=self.n_repeat)
+        net.load_parameters(path, ctx=self.ctx)
+        net.hybridize()
         _, data = load_wav(self.load_file)
-        initial_data = data_generation_sample(data, mu=self.mu, seq_size=3000, ctx=self.ctx)
-        gen_rst = self.generate_slow(initial_data[0:3000], self.net, dilation_depth=10,\
-         n_repeat=2, n=2000, ctx=self.ctx)
+        initial_data = data_generation_sample(data, mu=self.mu, seq_size=self.seq_size, ctx=self.ctx)
+        gen_rst = self.generate_slow(initial_data, models=net, dilation_depth=self.dilation_depth,\
+         n_repeat=self.n_repeat, n=gen_size, ctx=self.ctx)
         gen_wav = np.array(gen_rst)
-        gen_wav = decode_mu_law(gen_wav, 128)
-        np.save(self.self_file, gen_wav)
+        gen_wav = decode_mu_law(gen_wav, self.mu)
+        np.save(self.save_file, gen_wav)
