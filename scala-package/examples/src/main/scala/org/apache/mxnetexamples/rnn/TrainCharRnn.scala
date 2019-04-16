@@ -85,12 +85,13 @@ object TrainCharRnn {
       val auxNames = symbol.listAuxiliaryStates()
       val auxDict = auxNames.zip(auxShapes.map(NDArray.zeros(_, ctx))).toMap
 
+      val datasAndLabelsNames = datasAndLabels.map(_.name)
       val gradDict = argNames.zip(argShapes).filter { case (name, shape) =>
-        !datasAndLabels.contains(name)
+        !datasAndLabelsNames.contains(name)
       }.map(x => x._1 -> NDArray.empty(x._2, ctx)).toMap
 
       argDict.foreach { case (name, ndArray) =>
-        if (!datasAndLabels.contains(name)) {
+        if (!datasAndLabelsNames.contains(name)) {
           initializer.initWeight(name, ndArray)
         }
       }
