@@ -24,7 +24,7 @@ from trainer import Train
 def main():
     """
     Description : run wavenet code using argument info
-    - seq_size : Define sequence size when generating data (default=20000)
+    - seq_size : Define sequence size when generating data (default=3000)
     - use_gpu : use gpu for training
     - model_path : path for best model weigh
     - gen_size : length for data generation (default=10000)
