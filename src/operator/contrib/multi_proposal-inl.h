@@ -217,8 +217,8 @@ inline void GenerateAnchors(const std::vector<float>& base_anchor,
                             const mxnet::Tuple<float>& ratios,
                             const mxnet::Tuple<float>& scales,
                             std::vector<float> *out_anchors) {
-  for (size_t j = 0; j < ratios.ndim(); ++j) {
-    for (size_t k = 0; k < scales.ndim(); ++k) {
+  for (int j = 0; j < ratios.ndim(); ++j) {
+    for (int k = 0; k < scales.ndim(); ++k) {
       _Transform(scales[k], ratios[j], base_anchor, out_anchors);
     }
   }
