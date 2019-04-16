@@ -43,15 +43,15 @@ using namespace rapidjson;
 // layer name related
 const string PREFIX_BINARIZED_FILE= "binarized_";
 const string POSTFIX_SYM_JSON = "-symbol.json";
-const string PREFIX_GRAD_CANCEL = "_contrib_gradcancel";
-const string PREFIX_DET_SIGN = "det_sign";
-const string PREFIX_Q_CONV = "qconv";
-const string PREFIX_Q_DENSE = "qdense";
-const string PREFIX_Q_ACTIV = "qactivation";
-const string PREFIX_WEIGHT = "weight";
-const string PREFIX_BIAS = "bias";
-const string PREFIX_FORWARD = "fwd";
-const string PREFIX_ARG = "arg";
+const string PATTERN_GRAD_CANCEL = "_contrib_gradcancel";
+const string PATTERN_DET_SIGN = "det_sign";
+const string PATTERN_Q_CONV = "qconv";
+const string PATTERN_Q_DENSE = "qdense";
+const string PATTERN_Q_ACTIV = "qactivation";
+const string PATTERN_WEIGHT = "weight";
+const string PATTERN_BIAS = "bias";
+const string PATTERN_FORWARD = "fwd";
+const string PATTERN_ARG = "arg";
 const string PATTERN_PAD = "pad";
 // symbol json related
 const char* PREFIX_SYM_JSON_NODES = "nodes";
@@ -190,9 +190,9 @@ void convert_params(vector<mxnet::NDArray>& data, const vector<string>& keys){
     } 
 
     // concatenate the weights of qconv layer
-    if (tp == PREFIX_ARG 
-        && name.find(PREFIX_Q_CONV) != string::npos
-        && name.find("_"+PREFIX_WEIGHT) != string::npos){
+    if (tp == PATTERN_ARG
+        && name.find(PATTERN_Q_CONV) != string::npos
+        && name.find("_"+PATTERN_WEIGHT) != string::npos){
       // concatenates binary row 
       if(convert_to_binary_row(data[i]) < 0){
         cout << "Error: weights concatenation FAILED for operator '" << name <<"'" << endl;
@@ -201,9 +201,9 @@ void convert_params(vector<mxnet::NDArray>& data, const vector<string>& keys){
     }
 
     // concatenate the weights of qfc layer
-    if (tp == PREFIX_ARG 
-        && name.find(PREFIX_Q_DENSE) != string::npos
-        && name.find("_"+PREFIX_WEIGHT) != string::npos)
+    if (tp == PATTERN_ARG
+        && name.find(PATTERN_Q_DENSE) != string::npos
+        && name.find("_"+PATTERN_WEIGHT) != string::npos)
     {
       if (transpose_and_convert_to_binary_col(data[i]) < 0){
         cout << "Error: weights concatenation FAILED for operator '" << name <<"'" << endl;
@@ -386,7 +386,6 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
     newIds[i] = i;
   }
   std::map<uint, uint> inputChanges;
-  std::map<uint, bool> padding;
 
   uint currentId = 0;
   for (Value::ValueIterator itr = nodes.Begin(); itr != nodes.End(); ++itr, ++currentId) {
@@ -395,26 +394,23 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
 
     string nodeName = string((*itr)["name"].GetString());
     // 1. remove qactivation ops, containing _grad_cancel and det_sign
-    if (contains(nodeName, PREFIX_Q_ACTIV)) {
+    if (contains(nodeName, PATTERN_Q_ACTIV)) {
       adjustIdsForRemovalOf(itr, currentId, inputChanges, newIds);
       continue;
     }
 
     // adapt qconv and qdense ops
     bool retainCurrentNode = true;
-    bool paddingNode = false;
     // if qconv or qdense found
-    if (contains(nodeName, PREFIX_Q_CONV)
-        || contains(nodeName, PREFIX_Q_DENSE)) {
-      if (contains(nodeName, PATTERN_PAD)) {
-        paddingNode = true;
-      }
+    if (contains(nodeName, PATTERN_Q_CONV)
+        || contains(nodeName, PATTERN_Q_DENSE)) {
 
       // 2. for qconv and qdense, we only retain  'weight', 'bias' and 'fwd'
       retainCurrentNode = false;
-      if (contains(nodeName, PREFIX_WEIGHT)
-          || contains(nodeName, PREFIX_BIAS)
-          || contains(nodeName, PREFIX_FORWARD)
+      if (contains(nodeName, PATTERN_WEIGHT)
+          || contains(nodeName, PATTERN_BIAS)
+          || contains(nodeName, PATTERN_FORWARD)
+          || contains(nodeName, PATTERN_PAD)
          ) {
         retainCurrentNode = true;
       }
@@ -439,12 +435,6 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
 
     if (!retainCurrentNode) {
       adjustIdsForRemovalOf(itr, currentId, inputChanges, newIds);
-      if (paddingNode) {
-        // only check for 1,1 padding for now
-        CHECK(string((*itr)["attrs"]["constant_value"].GetString()) == "-1");
-        CHECK(string((*itr)["attrs"]["pad_width"].GetString()) == "[0, 0, 0, 0, 1, 1, 1, 1]");
-        padding[currentId] = true;
-      }
       continue;
     }
 
@@ -456,12 +446,6 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
 
     for (uint i = 0; i < arr_size; ++i) {
       uint input = (*itr)["inputs"][i][0].GetUint();
-      if (padding.count(input) > 0) {
-        cout << (*itr)["name"].GetString() << endl;
-        CHECK((*itr)["op"].IsString() && string((*itr)["op"].GetString()) == PREFIX_BINARY_INFERENCE_CONV_LAYER);
-        CHECK(string((*itr)["attrs"]["pad"].GetString()) == "(0, 0)");
-        (*itr)["attrs"]["pad"].SetString("(1, 1)");
-      }
       if (inputChanges.count(input) > 0) {
         cout << "set input: " << input << "=" << inputChanges[input] << endl;
         input = inputChanges[input];
