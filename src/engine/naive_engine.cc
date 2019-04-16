@@ -212,6 +212,9 @@ class NaiveEngine final : public Engine {
   void WaitForAll() override {
   }
 
+  void Throw(VarHandle var) override {
+  }
+
   void NotifyShutdown() override {
     shutdown_phase_.store(true);
   }
