@@ -175,7 +175,7 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       mxnet::TShape src_shape, dst_shape;
       const size_t actual_float_size = sizeof(float);
       const size_t temp_reduce_size = ConfigReduce<xpu, SrcDType>(
-          s, inputs[0].shape_, mxnet::TShape({1}), &src_shape, &dst_shape);
+          s, inputs[0].shape_, mxnet::TShape(1, 1), &src_shape, &dst_shape);
       Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
           Shape1(2 * actual_float_size + temp_reduce_size), s);
       const int dev_id = ctx.run_ctx.ctx.dev_id;

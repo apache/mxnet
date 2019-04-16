@@ -859,12 +859,15 @@ class NDArray {
     Chunk(mxnet::TShape shape, Context ctx_, bool delay_alloc_, int dtype)
         : static_data(false), delay_alloc(true), ctx(ctx_),
           storage_ref_(Storage::_GetSharedRef()) {
-      auto size = shape.Size();
       storage_shape = shape;
+      if (shape_is_known(storage_shape)) {
+        shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
+      }
       var = Engine::Get()->NewVariable();
-      shandle.size = size * mshadow::mshadow_sizeof(dtype);
       shandle.ctx = ctx_;
-      if (!delay_alloc_) this->CheckAndAlloc();
+      if (!delay_alloc_) {
+        this->CheckAndAlloc();
+      }
     }
 
     Chunk(const TBlob &data, int dev_id)
@@ -953,7 +956,7 @@ class NDArray {
     /*! \brief set the shape for ith aux data, and update storage shape if necessary */
     inline void set_aux_shape(const size_t i, const mxnet::TShape& shape) {
       aux_shapes[i] = shape;
-      if (storage_shape.ndim() > 0) {
+      if (storage_shape.ndim() >= 0) {
         if (storage_type == kRowSparseStorage && i == rowsparse::kIdx) {
           storage_shape[0] = shape[0];
         } else if (storage_type == kCSRStorage && i == csr::kIdx) {

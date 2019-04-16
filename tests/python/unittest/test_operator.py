@@ -4405,7 +4405,8 @@ def test_tile():
         assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
 
     test_normal_case()
-    test_empty_tensor()
+    with mx.np_compat():
+        test_empty_tensor()
     test_empty_reps()
     test_tile_backward()
     test_tile_numeric_gradient()
@@ -4465,7 +4466,8 @@ def test_one_hot():
     test_normal_case(index_type=np.float64)
     test_normal_case(index_type=np.float32)
     test_normal_case(index_type=np.float16)
-    test_empty_indices()
+    with mx.np_compat():
+        test_empty_indices()
     test_zero_depth()
 
 
@@ -6933,6 +6935,20 @@ def test_slice_partial_infer():
     check_slice_axis_partial_infer(var1, 0, 0, 5, (5, 0))
     check_slice_axis_partial_infer(var1, 1, 0, 5, (10, 0))
 
+    with mx.np_compat():
+        var1 = mx.sym.var(name="data", shape=(-1, 20))
+        check_slice_partial_infer(var1, (None, None), (None, 10), [], (-1, 10))
+        check_slice_partial_infer(var1, (None, None), (None, 10), (None, 2), (-1, 5))
+        check_slice_partial_infer(var1, (None, 3), (None, 10), [], (-1, 7))
+        check_slice_partial_infer(var1, (None, 3), (5, 10), [], (-1, 7))
+        check_slice_partial_infer(var1, (2, 3), (None, 10), [], (-1, 7))
+        check_slice_partial_infer(var1, (2, 3), (None, 10), (None, 1), (-1, 7))
+        check_slice_partial_infer(var1, (2, 3), (None, 10), (3, 3), (-1, 3))
+
+        var1 = mx.sym.var(name='data', shape=(10, -1))
+        check_slice_axis_partial_infer(var1, 0, 0, 5, (5, -1))
+        check_slice_axis_partial_infer(var1, 1, 0, 5, (10, -1))
+
 
 @with_seed()
 def test_float16_min_max():
@@ -7979,6 +7995,74 @@ def test_image_normalize():
 
     # check backward using finite difference
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
+
+
+@with_seed()
+def test_scalar_tensor_creation():
+    assertRaises(MXNetError, mx.nd.zeros, shape=())
+    assertRaises(MXNetError, mx.nd.ones, shape=())
+    with mx.np_compat():
+        data_mx = mx.nd.ones(shape=())
+        data_np = np.ones((), dtype=data_mx.dtype)
+        assert same(data_mx.asnumpy(), data_np)
+
+
+@with_seed()
+def test_zero_size_tensor_creation():
+    assertRaises(MXNetError, mx.nd.zeros, shape=(0, 1, 3, 0))
+    assertRaises(MXNetError, mx.nd.ones, shape=(0, 1, 3, 0))
+    with mx.np_compat():
+        data_mx = mx.nd.ones(shape=(0, 1, 0, 4))
+        data_np = np.ones(shape=data_mx.shape, dtype=data_mx.dtype)
+        assert same(data_mx.asnumpy(), data_np)
+
+
+@with_seed()
+def test_concat_with_zero_size_tensor():
+    with mx.np_compat():
+        data1 = mx.nd.ones((0, 8, 12))
+        data2 = mx.nd.ones((3, 8, 12))
+        data3 = mx.nd.ones((0, 8, 12))
+        ret = mx.nd.Concat(data1, data2, data3, dim=0)
+        assert ret.shape == (3, 8, 12)
+
+        data1 = mx.nd.ones((0, 3, 10))
+        data2 = mx.nd.ones((0, 4, 10))
+        data3 = mx.nd.ones((0, 5, 10))
+        ret = mx.nd.Concat(data1, data2, data3, dim=1)
+        assert ret.shape == (0, 12, 10)
+
+
+@with_seed()
+def test_np_compat_decorator():
+    @mx.use_np_compat
+    def check_scalar_one():
+        """Generate scalar one tensor"""
+        return mx.nd.ones(shape=())
+    assert check_scalar_one.__name__ == "check_scalar_one"
+    assert check_scalar_one.__doc__ == "Generate scalar one tensor"
+    assert check_scalar_one().shape == ()
+    for active in [True, False]:
+        with mx.np_compat(active=active):
+            assert check_scalar_one.__name__ == "check_scalar_one"
+            assert check_scalar_one.__doc__ == "Generate scalar one tensor"
+            assert check_scalar_one().shape == ()
+
+    @mx.use_np_compat
+    def check_concat(shape1, shape2, axis):
+        data1 = mx.nd.ones(shape1)
+        data2 = mx.nd.ones(shape2)
+        ret = mx.nd.Concat(data1, data2, dim=axis)
+        expected_ret = np.concatenate((data1.asnumpy(), data2.asnumpy()), axis=axis)
+        assert ret.shape == expected_ret.shape
+
+    check_concat((0, 3, 4), (5, 3, 4), 0)
+    check_concat((8, 0, 5), (8, 7, 5), 1)
+    check_concat((8, 0, 0), (8, 0, 0), 2)
+    for active in [True, False]:
+        check_concat((0, 3, 4), (5, 3, 4), 0)
+        check_concat((8, 0, 5), (8, 7, 5), 1)
+        check_concat((8, 0, 0), (8, 0, 0), 2)
 
 
 if __name__ == '__main__':

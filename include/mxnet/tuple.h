@@ -17,7 +17,7 @@
  * under the License.
  */
 /*!
- *  Copyright (c) 2016 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file mxnet/tuple.h
  * \brief Data structure Tuple and TShape to store dynamic sized shapes.
  */
@@ -39,10 +39,13 @@ namespace mxnet {
 
 /*!
  * \brief A dynamic sized array data structure that is optimized for storing
- *        small number of elements with same type.
+ * small number of elements with same type.
  *
  *  Data will be stored in stack when number of elements is small.
  *  It is suitable to hold shape of Tensor.
+ *
+ *  The ndim of a valid tuple is an integer in range [0, inf).
+ *  ndim = 0 means the tuple is empty.
  *
  * \tparam ValueType The type of data stored inside tuple.
  * \sa TShape
@@ -61,7 +64,11 @@ class Tuple {
    * \param s the source tuple
    */
   inline Tuple(const Tuple<ValueType>& s) {
-    this->assign(s.begin(), s.end());
+    if (s.ndim() == -1) {
+      this->SetDim(-1);
+    } else {
+      this->assign(s.begin(), s.end());
+    }
   }
   /*!
    * \brief constructor from initializer list
@@ -106,6 +113,7 @@ class Tuple {
   inline void assign(RandomAccessIterator begin,
                      RandomAccessIterator end) {
     this->SetDim(end - begin);
+    CHECK_GE(ndim(), 0);
     std::copy(begin, end, this->begin());
   }
   /*!
@@ -124,7 +132,11 @@ class Tuple {
    * \return reference of self
    */
   inline Tuple<ValueType>& operator=(const Tuple<ValueType>& src) {
-    this->assign(src.begin(), src.end());
+    if (src.ndim() == -1) {
+      this->SetDim(-1);
+    } else {
+      this->assign(src.begin(), src.end());
+    }
     return *this;
   }
   /*!
@@ -151,6 +163,7 @@ class Tuple {
    */
   inline bool operator==(const Tuple<ValueType> &s) const {
     if (ndim_ != s.ndim_) return false;
+    if (ndim() == -1) return true;
     return std::equal(begin(), end(), s.begin());
   }
   /*!
@@ -177,7 +190,7 @@ class Tuple {
     return ndim_ <= kStackCache ? (data_stack_ + ndim_): (data_heap_ + ndim_);
   }
   /*! \return number of dimension of the tuple */
-  inline uint32_t ndim() const {
+  inline int ndim() const {
     return ndim_;
   }
   /*!
@@ -185,7 +198,8 @@ class Tuple {
    * \param i dimension index
    * \return the corresponding dimension size
    */
-  inline ValueType& operator[](size_t i) {
+  inline ValueType& operator[](int i) {
+    CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
     return begin()[i];
   }
   /*!
@@ -193,7 +207,8 @@ class Tuple {
    * \param i dimension index
    * \return the corresponding dimension size
    */
-  inline const ValueType& operator[](size_t i) const {
+  inline const ValueType& operator[](int i) const {
+    CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
     return begin()[i];
   }
   /*!
@@ -220,6 +235,13 @@ class Tuple {
    * \return the ostream
    */
   friend std::ostream &operator<<(std::ostream &os, const Tuple<ValueType> &t) {
+    if (t.ndim() == -1) {
+      // If t is an unknown shape, return string "None".
+      // This is consistent with returning unknown shape in Python and generating
+      // C++ operator APIs by OpWrapperGenerator.py (defaultString) in cpp-package.
+      os << "None";
+      return os;
+    }
     os << '[';
     const ValueType* begin = t.begin();
     const ValueType* end = t.end();
@@ -252,14 +274,16 @@ class Tuple {
       if (!isspace(ch)) {
         is.setstate(std::ios::failbit);
         return is;
+      }
     }
-    }
-    // Handle empty tuple
+    // Handle empty tuple. A tensor whose shape is an empty tuple
+    // represents a scalar with ndim = 0.
     while (isspace(is.peek())) {
       is.get();
     }
     if (is.peek() == ')' || is.peek() == ']') {
       is.get();
+      t.SetDim(0);
       return is;
     }
     // Handle non-empty tuple
@@ -316,48 +340,85 @@ class Tuple {
 
  protected:
   // stack cache size
-  static const uint32_t kStackCache = 4;
+  static const int kStackCache = 4;
   /*! \brief number of dimension of the tuple */
-  uint32_t ndim_{0};
+  int ndim_{0};
   /*! \brief number of cells allocated in data_heap_ */
-  uint32_t num_heap_allocated_{0};
+  int num_heap_allocated_{0};
   /*! \brief in stack space used to store shape when it is small */
   ValueType data_stack_[kStackCache];
   /*! \brief space to store shape when dimension is big*/
   ValueType* data_heap_{nullptr};
   // internal function to change the dimension
-  inline void SetDim(uint32_t ndim) {
+  inline void SetDim(int ndim) {
+    CHECK_GE(ndim, -1) << "ndim cannot be less than -1, received " << ndim;
     if (ndim > kStackCache &&
         ndim > num_heap_allocated_) {
       delete [] data_heap_;
       data_heap_ = new ValueType[ndim];
       num_heap_allocated_ = ndim;
+    } else if (ndim <= 0 && data_heap_ != nullptr) {
+      delete [] data_heap_;
+      data_heap_ = nullptr;
+      num_heap_allocated_ = 0;
     }
     ndim_ = ndim;
   }
 };
 
+
+/*! brief check if a shape's ndim is known. */
+inline bool ndim_is_known(const int ndim) {
+  CHECK_GE(ndim, -1) << "shape ndim must be >= -1, while received " << ndim;
+  return ndim != -1;
+}
+
+/*! brief check if a shape's dim size is known. */
+inline bool dim_size_is_known(const dim_t dim_size) {
+  CHECK_GE(dim_size, -1) << "shape dim size must be >= -1, while received " << dim_size;
+  return dim_size != -1;
+}
+
 /*!
  * \brief A Shape class that is used to represent shape of each tensor.
+ *
+ * The ndim of a valid shape is an integer in range [-1, inf).
+ * ndim = -1 means the shape information is unknown and need to be inferred.
+ * ndim = 0 means the tensor with the shape is a scalar.
+ *
+ * The dimension size of a valid shape is an integer in range [-1, inf).
+ * dim_size = -1 means the size of that dimension is unknown and need to be inferred.
+ * dim_size = 0 means that dimension is empty.
+ *
+ * The definition of ndim = 0 and dim_size = 0 is consistent with NumPy.
  */
 class TShape : public Tuple<dim_t> {
  public:
   /*! \brief default constructor */
-  TShape() = default;
+  TShape() {
+    this->SetDim(-1);
+  }
   /*!
-   * constructor to construct a shape with all 1.
+   * constructor to construct a shape with all `value`.
    * \param ndim the number of dimension
+   * \param value the dimension size for all dims
    */
-  inline TShape(uint32_t ndim) {  // NOLINT(*)
+  inline TShape(const int ndim, const dim_t value) {  // NOLINT(*)
     this->SetDim(ndim);
-    std::fill_n(begin(), ndim, 1);
+    if (ndim > 0) {
+      std::fill_n(begin(), ndim, value);
+    }
   }
   /*!
    * \brief copy constructor of TShape
    * \param s source shape.
    */
   inline TShape(const Tuple<dim_t>& s) { // NOLINT(*)
-    this->assign(s.begin(), s.end());
+    if (s.ndim() == -1) {
+      this->SetDim(-1);
+    } else {
+      this->assign(s.begin(), s.end());
+    }
   }
   /*!
    * \brief constructor from initializer list
@@ -374,12 +435,17 @@ class TShape : public Tuple<dim_t> {
     this->swap(s);
   }
   /*!
-   * \brief construct the Tuple from content of iterator
+   * \brief construct the Tuple from content of iterator.
+   * This function is enforced with template arguments of random access iterator types.
+   * This is necessary to distinguish from another constructor: TShape(const int, const dim_t).
    * \param begin the beginning of iterator
    * \param end end the end of the iterator
    * \tparam RandomAccessIterator iterator type
    */
-  template<typename RandomAccessIterator>
+  template<typename RandomAccessIterator,
+           typename std::enable_if<
+               std::is_same<typename std::iterator_traits<RandomAccessIterator>::iterator_category,
+                            std::random_access_iterator_tag>::value, int>::type = 0>
   inline TShape(RandomAccessIterator begin,
                 RandomAccessIterator end) {
     this->assign(begin, end);
@@ -390,7 +456,11 @@ class TShape : public Tuple<dim_t> {
    * \return self.
    */
   inline TShape& operator=(const Tuple<dim_t>& src) {
-    this->assign(src.begin(), src.end());
+    if (src.ndim() == -1) {
+      this->SetDim(-1);
+    } else {
+      this->assign(src.begin(), src.end());
+    }
     return *this;
   }
   /*!
@@ -404,9 +474,11 @@ class TShape : public Tuple<dim_t> {
   }
   /*! \return total number of elements in the shape */
   inline size_t Size() const {
+    CHECK(ndim_is_known(this->ndim())) << "Shape is unknown.";
     dim_t size = 1;
     const dim_t* start = begin(), *fin = end();
     for (const dim_t* it = start; it != fin; ++it) {
+      CHECK(dim_size_is_known(*it)) << "Shape dim size cannot be a negative value " << *it;
       size *= *it;
     }
     return size;
@@ -417,9 +489,14 @@ class TShape : public Tuple<dim_t> {
    * \param dimend end dimension
    */
   inline size_t ProdShape(int dimstart, int dimend) const {
+    CHECK(ndim_is_known(this->ndim())) << "Shape is unknown.";
+    CHECK_GE(dimstart, 0) << "dimstart must be >= 0, while received " << dimstart;
+    CHECK_LE(dimend, this->ndim()) << "dimend must be <= " << this->ndim()
+                                   << ", while received " << dimend;
     dim_t num = 1;
     const dim_t *d = this->data();
     for (int i = dimstart; i < dimend; ++i) {
+      CHECK(dim_size_is_known(d[i])) << "Shape dim size must be known, while received " << d[i];
       num *= d[i];
     }
     return num;
@@ -460,7 +537,7 @@ class TShape : public Tuple<dim_t> {
    */
   template<int dim>
   inline mshadow::Shape<dim> get() const {
-    CHECK_EQ(dim, static_cast<int>(ndim()))
+    CHECK_EQ(dim, ndim())
         << "dimension do not match target dimension " << dim << " vs " << ndim();
     const dim_t *d = this->data();
     mshadow::Shape<dim> s;
@@ -475,11 +552,12 @@ class TShape : public Tuple<dim_t> {
    */
   inline mshadow::Shape<2> FlatTo2D(void) const {
     mshadow::Shape<2> s;
-    if (ndim() == 0) return mshadow::Shape2(0, 0);
+    CHECK(ndim_is_known(ndim())) << "shape must have a valid ndim";
+    if (ndim() == 0) return mshadow::Shape2(1, 1);
     const dim_t *d = this->data();
     s.shape_[1] = d[ndim() - 1];
     dim_t ymax = 1;
-    for (size_t i = 1; i < ndim(); ++i) {
+    for (int i = 1; i < ndim(); ++i) {
       ymax *= d[i - 1];
     }
     s.shape_[0] = ymax;
@@ -494,7 +572,8 @@ class TShape : public Tuple<dim_t> {
   inline mshadow::Shape<3> FlatTo3D(size_t axis_begin, size_t axis_end) const {
     CHECK(axis_end >= axis_begin);
     mshadow::Shape<3> s;
-    if (ndim() == 0) return mshadow::Shape3(0, 0, 0);
+    CHECK(ndim_is_known(ndim())) << "shape must have a valid ndim";
+    if (ndim() == 0) return mshadow::Shape3(1, 1, 1);
     const dim_t *d = this->data();
     s.shape_[0] = 1;
     s.shape_[1] = 1;
@@ -506,7 +585,7 @@ class TShape : public Tuple<dim_t> {
     for (size_t i = axis_begin; i <= axis_end; ++i) {
       s.shape_[1] *= d[i];
     }
-    for (size_t i = axis_end + 1; i < ndim(); ++i) {
+    for (int i = axis_end + 1; i < ndim(); ++i) {
       s.shape_[2] *= d[i];
     }
     return s;
@@ -552,6 +631,28 @@ class TShape : public Tuple<dim_t> {
 #endif
 };
 
+/*! brief check if a shape's ndim is known. */
+inline bool ndim_is_known(const TShape& x) {
+  return ndim_is_known(x.ndim());
+}
+
+/*! brief check if a shape's dim size is known. */
+inline bool dim_size_is_known(const TShape& x, const int idx) {
+  CHECK(idx >= 0 && idx < x.ndim())
+      << "idx = " << idx << " exceeds shape dimension range [0, " << x.ndim() << ")";
+  return dim_size_is_known(x[idx]);
+}
+
+/*! brief check if shape is known using the NumPy compatible definition.
+ * zero-dim and zero-size tensors are valid. -1 means unknown.*/
+inline bool shape_is_known(const TShape& x) {
+  if (!ndim_is_known(x)) return false;
+  for (int i = 0; i < x.ndim(); ++i) {
+    if (!dim_size_is_known(x, i)) return false;
+  }
+  return true;
+}
+
 /*! \brief helper function to cast type of container elements */
 template<typename SrcIter, typename DstIter>
 inline DstIter ShapeTypeCast(const SrcIter begin,
@@ -567,7 +668,7 @@ inline DstIter ShapeTypeCast(const SrcIter begin,
 template<typename SrcIter>
 inline TShape ShapeTypeCast(const SrcIter begin, const SrcIter end) {
   size_t ndim = std::distance(begin, end);
-  TShape res(ndim);
+  TShape res(ndim, -1);
   ShapeTypeCast(begin, end, res.begin());
   return res;
 }
@@ -613,7 +714,7 @@ struct hash<mxnet::Tuple<T> > {
   size_t operator()(const mxnet::Tuple<T>& val) const {
     std::hash<uint32_t> hash_uint;
     size_t res = hash_uint(val.ndim());
-    for (uint32_t i = 0; i < val.ndim(); ++i) {
+    for (int i = 0; i < val.ndim(); ++i) {
       res = dmlc::HashCombine(res, val[i]);
     }
     return res;
@@ -627,7 +728,7 @@ struct hash<mxnet::TShape> {
   size_t operator()(const mxnet::TShape& val) const {
     std::hash<uint32_t> hash_uint;
     size_t res = hash_uint(val.ndim());
-    for (uint32_t i = 0; i < val.ndim(); ++i) {
+    for (int i = 0; i < val.ndim(); ++i) {
       res = dmlc::HashCombine(res, val[i]);
     }
     return res;
@@ -638,6 +739,7 @@ struct hash<mxnet::TShape> {
 namespace dmlc {
 /*! \brief description for optional TShape */
 DMLC_DECLARE_TYPE_NAME(optional<mxnet::TShape>, "Shape or None");
+DMLC_DECLARE_TYPE_NAME(optional<mxnet::Tuple<int>>, "Shape or None");
 // avoid low version of MSVC
 #if !defined(_MSC_VER)
 template<typename T>

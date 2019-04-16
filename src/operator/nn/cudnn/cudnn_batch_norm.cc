@@ -37,7 +37,7 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector *in_
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, moving_mean, moving_var]";
   const mxnet::TShape &dshape = in_shape->at(0);
-  if (dshape.ndim() == 0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   in_shape->at(1) = mxnet::TShape(Shape1(dshape[1]));
   in_shape->at(2) = mxnet::TShape(Shape1(dshape[1]));
   in_shape->at(3) = mxnet::TShape(Shape1(dshape[1]));

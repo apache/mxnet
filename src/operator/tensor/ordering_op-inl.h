@@ -149,7 +149,7 @@ inline void ParseTopKParam(const mxnet::TShape& src_shape, const TopKParam& para
                                                   << src_shape.ndim() << ", found axis=" << *axis;
     *batch_size = src_shape.Size() / src_shape[*axis];
     *element_num = src_shape[*axis];
-    if (*axis != static_cast<int>(src_shape.ndim()) - 1) {
+    if (*axis != src_shape.ndim() - 1) {
       *do_transpose = true;
     }
   }
