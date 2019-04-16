@@ -484,19 +484,20 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
 std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> out_data(n->num_outputs());
-  for (uint32_t i = 0; i < out_data.size(); ++i) {
-    out_data[i] = nnvm::NodeEntry{n, i, 0};
+  out_data.reserve(n->num_outputs());
+  for (size_t i = 0; i < out_data.size(); ++i) {
+    out_data.emplace_back(n, i, 0);
   }
   std::vector<nnvm::NodeEntry> heads;
   heads.reserve(8);
-  heads.push_back(ograds[0]);
-  heads.push_back(out_data[batchnorm::kMean]);
-  heads.push_back(out_data[batchnorm::kVar]);
-  heads.push_back(n->inputs[batchnorm::kData]);
-  heads.push_back(n->inputs[batchnorm::kGamma]);
-  heads.push_back(n->inputs[batchnorm::kBeta]);
-  heads.push_back(n->inputs[batchnorm::kInMovingMean]);
-  heads.push_back(n->inputs[batchnorm::kInMovingVar]);
+  heads.emplace_back(ograds[0]);
+  heads.emplace_back(out_data[batchnorm::kMean]);
+  heads.emplace_back(out_data[batchnorm::kVar]);
+  heads.emplace_back(n->inputs[batchnorm::kData]);
+  heads.emplace_back(n->inputs[batchnorm::kGamma]);
+  heads.emplace_back(n->inputs[batchnorm::kBeta]);
+  heads.emplace_back(n->inputs[batchnorm::kInMovingMean]);
+  heads.emplace_back(n->inputs[batchnorm::kInMovingVar]);
 
   nnvm::NodePtr gnode = nnvm::Node::Create();
   gnode->inputs = std::move(heads);
@@ -505,19 +506,17 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
   gnode->attrs.op = nnvm::Op::Get("_backward_BatchNorm");
   gnode->attrs.name = n->attrs.name + "_backward";
   // The input of batchnorm
-  std::vector<nnvm::NodeEntry> in_grad(5);
-  for (uint32_t i = 0; i < 3; ++i) {
-    in_grad[i] = nnvm::NodeEntry{gnode, i, 0};
-  }
-
+  std::vector<nnvm::NodeEntry> in_grad;
+  in_grad.reserve(5);
+  for (size_t i = 0; i < 3; ++i)
+    in_grad.emplace_back(gnode, i, 0);
   // attach no gradient node to forbid gradient on aux_state
   nnvm::NodePtr ng = nnvm::Node::Create();
   ng->attrs.op = Op::Get("_NoGradient");
   ng->attrs.name = "NoGradient";
   // the aux state of batchnorm
-  for (uint32_t i = 0; i < 2; ++i) {
-    in_grad[i + 3] = nnvm::NodeEntry{ng, 0, 0};
-  }
+  for (size_t i = 3; i < 5; ++i)
+    in_grad.emplace_back(ng, 0, 0);
   return in_grad;
 }
 
