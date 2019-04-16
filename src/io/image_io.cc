@@ -295,7 +295,7 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
   int top, bot, left, right;
   int type;
   double value;
-  nnvm::Tuple<double> values;
+  mxnet::Tuple<double> values;
   DMLC_DECLARE_PARAMETER(MakeBorderParam) {
     DMLC_DECLARE_FIELD(top)
     .describe("Top margin.");

@@ -46,13 +46,13 @@ namespace op {
 
 struct HistogramParam : public dmlc::Parameter<HistogramParam> {
     dmlc::optional<int> bin_cnt;
-    dmlc::optional<nnvm::Tuple<double>> range;
+    dmlc::optional<mxnet::Tuple<double>> range;
     DMLC_DECLARE_PARAMETER(HistogramParam) {
       DMLC_DECLARE_FIELD(bin_cnt)
         .set_default(dmlc::optional<int>())
         .describe("Number of bins for uniform case");
       DMLC_DECLARE_FIELD(range)
-        .set_default(dmlc::optional<nnvm::Tuple<double>>())
+        .set_default(dmlc::optional<mxnet::Tuple<double>>())
         .describe("The lower and upper range of the bins. if not provided, "
                   "range is simply (a.min(), a.max()). values outside the "
                   "range are ignored. the first element of the range must be "

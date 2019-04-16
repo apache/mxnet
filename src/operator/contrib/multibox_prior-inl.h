@@ -57,11 +57,11 @@ enum MultiBoxPriorOpOutputs {kOut};
 }  // namespace mboxprior_enum
 
 struct MultiBoxPriorParam : public dmlc::Parameter<MultiBoxPriorParam> {
-  nnvm::Tuple<float> sizes;
-  nnvm::Tuple<float> ratios;
+  mxnet::Tuple<float> sizes;
+  mxnet::Tuple<float> ratios;
   bool clip;
-  nnvm::Tuple<float> steps;
-  nnvm::Tuple<float> offsets;
+  mxnet::Tuple<float> steps;
+  mxnet::Tuple<float> offsets;
   DMLC_DECLARE_PARAMETER(MultiBoxPriorParam) {
     DMLC_DECLARE_FIELD(sizes).set_default({1.0f})
     .describe("List of sizes of generated MultiBoxPriores.");

@@ -37,11 +37,11 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
   int num_outputs;
   int num_out_data;
   // The location of states in the subgraph inputs.
-  nnvm::Tuple<dim_t> in_state_locs;
+  mxnet::Tuple<dim_t> in_state_locs;
   // The location of data arrays in the subgraph inputs.
-  nnvm::Tuple<dim_t> in_data_locs;
+  mxnet::Tuple<dim_t> in_data_locs;
   // The location of remaining arrays in the subgraph inputs.
-  nnvm::Tuple<dim_t> remain_locs;
+  mxnet::Tuple<dim_t> remain_locs;
   DMLC_DECLARE_PARAMETER(ForeachParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs.");
@@ -258,7 +258,7 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
 
 template<typename T>
 static void remap(const std::vector<T> &op_in, size_t start,
-                  const nnvm::Tuple<dim_t> &locs, std::vector<T> *subg_in) {
+                  const mxnet::Tuple<dim_t> &locs, std::vector<T> *subg_in) {
   auto op_in_it = op_in.begin() + start;
   for (size_t i = 0; i < locs.ndim(); i++) {
     dim_t loc = locs[i];
@@ -488,9 +488,9 @@ struct WhileLoopParam : public dmlc::Parameter<WhileLoopParam> {
   // `cond_input_locs' contains indices of inputs fed to `cond', and
   // `func_input_locs' contains indices of inputs fed to `func'.
   // `func_var_locs' are indices in which input "variables" are stored in func's inputs.
-  nnvm::Tuple<dim_t> cond_input_locs;
-  nnvm::Tuple<dim_t> func_input_locs;
-  nnvm::Tuple<dim_t> func_var_locs;
+  mxnet::Tuple<dim_t> cond_input_locs;
+  mxnet::Tuple<dim_t> func_input_locs;
+  mxnet::Tuple<dim_t> func_var_locs;
   DMLC_DECLARE_PARAMETER(WhileLoopParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(2)
     .describe("Number of input arguments, including cond and func as two symbol inputs.");
@@ -538,9 +538,9 @@ class WhileLoopState: public LoopState {
                  n_iterations(0U),
                  cond_op(LoopState::MakeSharedOp(cond)),
                  oi_map(params.func_var_locs.ndim(), -1) {
-    const nnvm::Tuple<dim_t> &func_input_locs = params.func_input_locs;
-    const nnvm::Tuple<dim_t> &func_var_locs = params.func_var_locs;
-    const nnvm::Tuple<dim_t> &cond_input_locs = params.cond_input_locs;
+    const mxnet::Tuple<dim_t> &func_input_locs = params.func_input_locs;
+    const mxnet::Tuple<dim_t> &func_var_locs = params.func_var_locs;
+    const mxnet::Tuple<dim_t> &cond_input_locs = params.cond_input_locs;
     for (size_t i = 0; i < func_var_locs.ndim(); ++i) {
       dim_t pos_i = func_input_locs[func_var_locs[i]];
       for (size_t j = 0; j < cond_input_locs.ndim(); ++j) {
@@ -740,7 +740,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
   // infer shape for cond and func
   auto infer_subg = [&params, in_shape, out_shape](std::shared_ptr<Symbol> subg,
                                                    ShapeVector *_subg_out,
-                                                   const nnvm::Tuple<dim_t> &input_locs,
+                                                   const mxnet::Tuple<dim_t> &input_locs,
                                                    int num_out_data,
                                                    bool fill_out_shape) {
     // create subg_in
@@ -915,9 +915,9 @@ WhileLoopGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& og
 struct CondParam : public dmlc::Parameter<CondParam> {
   int num_args;
   int num_outputs;
-  nnvm::Tuple<dim_t> cond_input_locs;
-  nnvm::Tuple<dim_t> then_input_locs;
-  nnvm::Tuple<dim_t> else_input_locs;
+  mxnet::Tuple<dim_t> cond_input_locs;
+  mxnet::Tuple<dim_t> then_input_locs;
+  mxnet::Tuple<dim_t> else_input_locs;
   DMLC_DECLARE_PARAMETER(CondParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(3)
     .describe("Number of input arguments, including cond, then and else as three symbol inputs.");
@@ -992,7 +992,7 @@ static void CondComputeExCPU(const OpStatePtr& state_ptr,
   state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr);
   branch_selection = as_bool_scalar(*cond_output_ptr[0]);
   // select the right branch
-  const nnvm::Tuple<dim_t> &func_input_locs = branch_selection
+  const mxnet::Tuple<dim_t> &func_input_locs = branch_selection
                                             ? params.then_input_locs
                                             : params.else_input_locs;
   LoopState &loop_state = branch_selection
@@ -1017,7 +1017,7 @@ static void CondGradComputeExCPU(const OpStatePtr& state_ptr,
   // select the right branch
   int branch_selection = state.branch_selection;
   CHECK_NE(branch_selection, -1);
-  const nnvm::Tuple<dim_t> &func_input_locs = branch_selection
+  const mxnet::Tuple<dim_t> &func_input_locs = branch_selection
                                             ? params.then_input_locs
                                             : params.else_input_locs;
   LoopState &loop_state = branch_selection
@@ -1048,7 +1048,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
   // infer shape for cond, then and else
   auto infer_subg = [&params, in_shape, out_shape](std::shared_ptr<Symbol> subg,
                                                    ShapeVector *_subg_out,
-                                                   const nnvm::Tuple<dim_t> &input_locs,
+                                                   const mxnet::Tuple<dim_t> &input_locs,
                                                    bool fill_out_shape) {
     // create subg_in
     mxnet::ShapeVector subg_in;
@@ -1190,7 +1190,7 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
   static const std::function<bool(const int &)> is_udf = is_stype_udf;
-  auto sub_pass = [&](const std::shared_ptr<Symbol> &subg, const nnvm::Tuple<dim_t> &input_locs) {
+  auto sub_pass = [&](const std::shared_ptr<Symbol> &subg, const mxnet::Tuple<dim_t> &input_locs) {
     // A. first construct subg_in_attrs
     // need subg_in_attrs as subg_bwd_out (copy), subg_fwd_in (extract), subg_fwd_out (copy)
     std::vector<int> subg_in_attrs;

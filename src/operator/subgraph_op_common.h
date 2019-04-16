@@ -67,7 +67,7 @@ bool is_type_udf(const int &x);
 
 template <typename T>
 void extract_by_loc(const std::vector<T> &array,
-                    const nnvm::Tuple<dim_t> input_locs,
+                    const mxnet::Tuple<dim_t> input_locs,
                     std::vector<T> *out) {
   out->clear();
   out->reserve(input_locs.ndim());
@@ -94,7 +94,7 @@ bool fill_value(T *x, T *y, bool x_empty, bool y_empty) {
 }
 
 template <typename T>
-bool sync_in_in(const nnvm::Tuple<dim_t> &input_locs,
+bool sync_in_in(const mxnet::Tuple<dim_t> &input_locs,
                          std::vector<T> *in,
                          std::vector<T> *subg_in,
                          std::function<bool(const T &)> is_empty) {

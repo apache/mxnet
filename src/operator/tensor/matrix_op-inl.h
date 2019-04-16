@@ -49,11 +49,11 @@ namespace op {
 struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
   mxnet::TShape target_shape;
   bool keep_highest;
-  nnvm::Tuple<int> shape;
+  mxnet::Tuple<int> shape;
   bool reverse;
   DMLC_DECLARE_PARAMETER(ReshapeParam) {
     DMLC_DECLARE_FIELD(shape)
-    .set_default(nnvm::Tuple<int>())
+    .set_default(mxnet::Tuple<int>())
     .describe("The target shape");
     DMLC_DECLARE_FIELD(reverse)
     .set_default(false)
@@ -71,7 +71,7 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
 };
 
 template<typename IType>
-inline mxnet::TShape InferReshapeShape(const nnvm::Tuple<IType>& shape,
+inline mxnet::TShape InferReshapeShape(const mxnet::Tuple<IType>& shape,
                                 const mxnet::TShape& dshape, bool reverse) {
   std::vector<IType> dshape_vec;
   std::vector<IType> param_shape_vec(shape.begin(), shape.end());
@@ -634,9 +634,9 @@ void SliceEx(const nnvm::NodeAttrs& attrs,
 
 template<int ndim>
 inline void GetIndexRange(const mxnet::TShape& dshape,
-                          const nnvm::Tuple<dmlc::optional<int>>& param_begin,
-                          const nnvm::Tuple<dmlc::optional<int>>& param_end,
-                          const nnvm::Tuple<dmlc::optional<int>>& param_step,
+                          const mxnet::Tuple<dmlc::optional<int>>& param_begin,
+                          const mxnet::Tuple<dmlc::optional<int>>& param_end,
+                          const mxnet::Tuple<dmlc::optional<int>>& param_step,
                           common::StaticArray<index_t, ndim>* begin,
                           common::StaticArray<index_t, ndim>* end,
                           common::StaticArray<index_t, ndim>* step) {
@@ -997,8 +997,8 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
 
 struct SliceAssignScalarParam : public dmlc::Parameter<SliceAssignScalarParam> {
   double scalar;
-  nnvm::Tuple<dmlc::optional<int>> begin, end;
-  nnvm::Tuple<dmlc::optional<int>> step;
+  mxnet::Tuple<dmlc::optional<int>> begin, end;
+  mxnet::Tuple<dmlc::optional<int>> step;
   DMLC_DECLARE_PARAMETER(SliceAssignScalarParam) {
     DMLC_DECLARE_FIELD(scalar)
     .set_default(0)
@@ -1008,7 +1008,7 @@ struct SliceAssignScalarParam : public dmlc::Parameter<SliceAssignScalarParam> {
     DMLC_DECLARE_FIELD(end)
     .describe("ending indices for the slice operation, supports negative indices.");
     DMLC_DECLARE_FIELD(step)
-    .set_default(nnvm::Tuple<dmlc::optional<int>>())
+    .set_default(mxnet::Tuple<dmlc::optional<int>>())
     .describe("step for the slice operation, supports negative values.");
   }
 };
@@ -1305,9 +1305,9 @@ inline bool SliceLikeShape(const nnvm::NodeAttrs& attrs,
 inline void SliceLikeInferRanges(const mxnet::TShape& dshape,
                                  const mxnet::TShape& fshape,
                                  const mxnet::TShape& axes,
-                                 nnvm::Tuple<dmlc::optional<int>>* param_begin,
-                                 nnvm::Tuple<dmlc::optional<int>>* param_end,
-                                 nnvm::Tuple<dmlc::optional<int>>* param_step) {
+                                 mxnet::Tuple<dmlc::optional<int>>* param_begin,
+                                 mxnet::Tuple<dmlc::optional<int>>* param_end,
+                                 mxnet::Tuple<dmlc::optional<int>>* param_step) {
   std::vector<dmlc::optional<int>> pb(dshape.ndim());
   std::vector<dmlc::optional<int>> pe(dshape.ndim());
   std::vector<dmlc::optional<int>> ps(dshape.ndim());
@@ -1334,9 +1334,9 @@ inline void SliceLikeInferRanges(const mxnet::TShape& dshape,
       ps[axis] = 1;
     }
   }
-  *param_begin = nnvm::Tuple<dmlc::optional<int>>(pb.begin(), pb.end());
-  *param_end = nnvm::Tuple<dmlc::optional<int>>(pe.begin(), pe.end());
-  *param_step = nnvm::Tuple<dmlc::optional<int>>(ps.begin(), ps.end());
+  *param_begin = mxnet::Tuple<dmlc::optional<int>>(pb.begin(), pb.end());
+  *param_end = mxnet::Tuple<dmlc::optional<int>>(pe.begin(), pe.end());
+  *param_step = mxnet::Tuple<dmlc::optional<int>>(ps.begin(), ps.end());
 }
 
 template<typename xpu>
@@ -1355,9 +1355,9 @@ void SliceLikeForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out = outputs[0];
   const mxnet::TShape& ishape = data.shape_;
   const mxnet::TShape& from_shape = inputs[1].shape_;
-  nnvm::Tuple<dmlc::optional<int>> param_begin;
-  nnvm::Tuple<dmlc::optional<int>> param_end;
-  nnvm::Tuple<dmlc::optional<int>> param_step;
+  mxnet::Tuple<dmlc::optional<int>> param_begin;
+  mxnet::Tuple<dmlc::optional<int>> param_end;
+  mxnet::Tuple<dmlc::optional<int>> param_step;
   SliceLikeInferRanges(ishape, from_shape, param.axes, &param_begin, &param_end, &param_step);
 
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
@@ -1403,9 +1403,9 @@ void SliceLikeBackward(const nnvm::NodeAttrs& attrs,
 
   const mxnet::TShape& ishape = ograd.shape_;
   const mxnet::TShape& from_shape = outputs[1].shape_;
-  nnvm::Tuple<dmlc::optional<int>> param_begin;
-  nnvm::Tuple<dmlc::optional<int>> param_end;
-  nnvm::Tuple<dmlc::optional<int>> param_step;
+  mxnet::Tuple<dmlc::optional<int>> param_begin;
+  mxnet::Tuple<dmlc::optional<int>> param_end;
+  mxnet::Tuple<dmlc::optional<int>> param_step;
   SliceLikeInferRanges(ishape, from_shape, param.axes, &param_begin, &param_end, &param_step);
 
   MXNET_NDIM_SWITCH(ograd.ndim(), ndim, {
@@ -1919,7 +1919,7 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
 }
 
 struct ReverseParam : public dmlc::Parameter<ReverseParam> {
-  nnvm::Tuple<int> axis;
+  mxnet::Tuple<int> axis;
   DMLC_DECLARE_PARAMETER(ReverseParam) {
     DMLC_DECLARE_FIELD(axis)
     .describe("The axis which to reverse elements.");
