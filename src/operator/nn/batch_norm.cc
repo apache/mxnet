@@ -485,9 +485,8 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> out_data(n->num_outputs());
   out_data.reserve(n->num_outputs());
-  for (size_t i = 0; i < out_data.size(); ++i) {
+  for (size_t i = 0; i < n->num_outputs(); ++i)
     out_data.emplace_back(n, i, 0);
-  }
   std::vector<nnvm::NodeEntry> heads;
   heads.reserve(8);
   heads.emplace_back(ograds[0]);
