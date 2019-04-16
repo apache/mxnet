@@ -93,7 +93,7 @@ inline bool ToTensorShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
 
   mxnet::TShape &shp = (*in_attrs)[0];
-  if (!shp.ndim()) return false;
+  if (!shape_is_known(shp)) return false;
 
   CHECK((shp.ndim() == 3) || (shp.ndim() == 4))
       << "Input image must have shape (height, width, channels), or "
@@ -549,7 +549,7 @@ template<typename DType, int axis>
 void FlipImpl(const mxnet::TShape &shape, DType *src, DType *dst) {
   int head = 1, mid = shape[axis], tail = 1;
   for (int i = 0; i < axis; ++i) head *= shape[i];
-  for (uint32_t i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
+  for (int i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
 
   for (int i = 0; i < head; ++i) {
     for (int j = 0; j < (mid >> 1); ++j) {

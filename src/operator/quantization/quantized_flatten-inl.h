@@ -86,9 +86,9 @@ inline bool QuantizedFlattenShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 3U);
 
   const mxnet::TShape &dshape = (*in_attrs)[0];
-  if (shape_is_none(dshape)) return false;
+  if (!shape_is_known(dshape)) return false;
 
-  int target_dim = 1;
+  dim_t target_dim = 1;
   for (int i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
   }

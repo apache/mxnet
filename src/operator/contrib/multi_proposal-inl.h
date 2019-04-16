@@ -108,7 +108,7 @@ class MultiProposalProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 3) << "Input:[cls_prob, bbox_pred, im_info]";
     const mxnet::TShape &dshape = in_shape->at(proposal::kClsProb);
-    if (dshape.ndim() == 0) return false;
+    if (mxnet::op::shape_is_none(dshape)) return false;
     Shape<4> bbox_pred_shape;
     bbox_pred_shape = Shape4(dshape[0], dshape[1] * 2, dshape[2], dshape[3]);
     SHAPE_ASSIGN_CHECK(*in_shape, proposal::kBBoxPred,
