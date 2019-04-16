@@ -736,7 +736,7 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
-    for (uint32_t i = 0; i < param.begin.ndim(); ++i) {
+    for (int i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(i, b, e, s, &oshape);
     }
