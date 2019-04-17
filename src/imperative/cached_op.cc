@@ -159,11 +159,9 @@ CachedOp::CachedOp(
 
   // construct backward graph
   {
-    //ograd_entries_.resize(fwd_graph_.outputs.size());
     ograd_entries_.reserve(fwd_graph_.outputs.size());
-    for (size_t i = 0; i < fwd_graph_.outputs.size(); ++i) {
+    for (size_t i = 0; i < fwd_graph_.outputs.size(); ++i)
       ograd_entries_.emplace_back(Node::Create());
-    }
 
     std::vector<NodeEntry> xs;
     const IndexedGraph& indexed_graph = fwd_graph_.indexed_graph();

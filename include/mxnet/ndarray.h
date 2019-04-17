@@ -83,8 +83,7 @@ class NDArray {
  public:
   /*! \brief default constructor */
   NDArray()
-    : entry_(nullptr)
-  {
+    : entry_(nullptr) {
   }
   /*!
    * \brief constructs a new dynamic NDArray
