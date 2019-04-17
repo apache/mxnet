@@ -23,7 +23,7 @@ import os
 import time
 import warnings
 import numpy as np
-from ....metric import *
+from ....metric import EvalMetric, Loss
 
 
 class TrainBegin(object):
@@ -294,7 +294,7 @@ class CheckpointHandler(BatchEnd, EpochEnd):
             if self.save_best_only:
                 monitor_name, monitor_value = self.monitor.get()
                 # check if monitor exists in train stats
-                if numpy.isnan(monitor_value):
+                if np.isnan(monitor_value):
                     warnings.warn(RuntimeWarning('%s is not updated, make sure you pass one of the metric objects'
                                                  'as monitor, you can use estimator.prepare_loss_and_metrics to'
                                                  'create all metric objects', monitor_name))
@@ -389,7 +389,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
 
     def epoch_end(self, estimator, *args, **kwargs):
         monitor_name, monitor_value = self.monitor.get()
-        if numpy.isnan(monitor_value):
+        if np.isnan(monitor_value):
             warnings.warn(RuntimeWarning('%s is not updated, make sure you pass one of the metric objects'
                                          'as monitor, you can use estimator.prepare_loss_and_metrics to'
                                          'create all metric objects', monitor_name))
