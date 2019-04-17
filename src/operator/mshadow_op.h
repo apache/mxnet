@@ -45,14 +45,10 @@ namespace mshadow_op {
 __constant__ const float PI = 3.14159265358979323846;
 __constant__ const float SELU_ALPHA = 1.6732632423543772848170429916717;
 __constant__ const float SELU_LAMBDA = 1.0507009873554804934193349852946;
-__constant__ const float GELU_CUBIC_CONSTANT = 0.044715;
-__constant__ const float GELU_ROOT_2_OVER_PI = 0.7978845608028654;
 #else
 const float PI = 3.14159265358979323846;
 const float SELU_ALPHA = 1.6732632423543772848170429916717;
 const float SELU_LAMBDA = 1.0507009873554804934193349852946;
-const float GELU_CUBIC_CONSTANT = 0.044715;
-const float GELU_ROOT_2_OVER_PI = 0.7978845608028654;
 using std::isnan;
 #endif
 using std::enable_if;
@@ -131,21 +127,6 @@ MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
 MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
 
-#define MXNET_GELU_GX(a) \
-  a * (DType(1.0f) + DType(GELU_CUBIC_CONSTANT) * a * a)
-
-#define MXNET_GELU_GX_GRAD(a) \
-  (DType(1.0f) + DType(3.0f * GELU_CUBIC_CONSTANT) * a * a)
-
-#define MXNET_GELU_TANH(a) \
-  math::tanh(DType(GELU_ROOT_2_OVER_PI) * MXNET_GELU_GX(a))
-
-MXNET_UNARY_MATH_OP(gelu, DType(0.5f) * a * (DType(1.0f) + MXNET_GELU_TANH(a)));
-
-MXNET_BINARY_MATH_OP_NC(gelu_grad,
-  b / a + b * (DType(1.0f) - MXNET_GELU_TANH(a)) *
-  DType(GELU_ROOT_2_OVER_PI) * MXNET_GELU_GX_GRAD(a));
-
 MXNET_UNARY_MATH_OP_NC(selu, DType(SELU_LAMBDA) *
                          (a > DType(0) ? a : DType(math::id(SELU_ALPHA) * math::expm1(a))));
 
@@ -190,6 +171,13 @@ MXNET_UNARY_MATH_OP(erfinv_grad, 0.5 * math::sqrt(PI) * math::exp(math::sqr(erfi
 MXNET_UNARY_MATH_OP(erf_grad, 2.0 / math::sqrt(PI) * math::exp(-(a * a)));
 
 MXNET_SIMPLE_UNARY_MATH_OP(erf);
+
+MXNET_UNARY_MATH_OP(gelu,
+  DType(0.5f * float(a) * (1.0f + math::erf(float(a) / math::sqrt(2.0f)))));
+
+MXNET_BINARY_MATH_OP_NC(gelu_grad,
+  DType(float(b) / float(a) +
+        0.5f * float(a) * erf_grad::Map(float(a) / math::sqrt(2.0f)) / math::sqrt(2.0f)));
 
 MXNET_SIMPLE_UNARY_MATH_OP(exp);
 
@@ -355,7 +343,6 @@ MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
 MXNET_UNARY_MATH_OP(square_root_grad, 0.5f / math::id(a));
-
 MXNET_UNARY_MATH_OP(reciprocal_square_root, 1.0f / math::sqrt(a));
 
 MXNET_UNARY_MATH_OP(reciprocal_square_root_grad, -0.5f / (math::sqrt(a) * math::id(a)));
