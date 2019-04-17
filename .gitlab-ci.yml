@@ -17,19 +17,27 @@ build_base_image:
     - cd ci
     - docker build -f docker/Dockerfile.build.ubuntu_cpu --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --cache-from $BASE_IMAGE --cache-from $BASE_TEMPORARY_IMAGE -t $BASE_TEMPORARY_IMAGE docker
 
-build_and_test:
+before_script:
+  - sed -i "s#https://github.com/hpi-xnor/BMXNet-v2-examples#$TESTING_SUBMODULE_URL#g" .gitmodules
+  - git --version
+  - git submodule sync --recursive
+  - git submodule update --init --recursive
+  - ls && pwd
+  - export PYTHONPATH=./python/
+  - export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+  - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+  - python --version
+
+build_and_test_make:
   stage: test
   image: $BASE_TEMPORARY_IMAGE
-  before_script:
-    - sed -i "s#https://github.com/hpi-xnor/BMXNet-v2-examples#$TESTING_SUBMODULE_URL#g" .gitmodules
-    - git --version
-    - git submodule sync --recursive
-    - git submodule update --init --recursive
-    - ls && pwd
-    - export PYTHONPATH=./python/
-    - export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
-    - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    - python --version
+  script:
+    - make DEV=1 USE_CPP_PACKAGE=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 -j$(nproc)
+    - pytest tests/python/unittest/test_binary.py
+
+build_and_test_cmake:
+  stage: test
+  image: $BASE_TEMPORARY_IMAGE
   script:
     - mkdir build
     - cd build
@@ -41,6 +49,8 @@ build_and_test:
 tag_image:
   stage: tag
   image: docker:stable
+  before_script:
+    - docker info
   script:
     - docker tag $BASE_TEMPORARY_IMAGE $BASE_LATEST_IMAGE
     - docker image rm $BASE_TEMPORARY_IMAGE
