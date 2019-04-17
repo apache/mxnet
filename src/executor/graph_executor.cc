@@ -482,20 +482,31 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                   const std::unordered_set<std::string>& shared_arg_names,
                                   const Executor* shared_exec,
                                   std::unordered_map<std::string, NDArray>* shared_buffer,
+				  std::vector<std::string>* in_names,
                                   std::vector<NDArray>* in_arg_vec,
                                   std::vector<NDArray>* arg_grad_vec,
                                   std::vector<NDArray>* aux_state_vec) {
+  //build name/index map for graph input nodes
+  std::map<std::string,uint32_t> inv_name_map;
+  for (size_t i = 0; i < num_forward_inputs_; ++i) {
+    const uint32_t nid = idx.input_nodes().at(i);
+    const std::string& arg_name = idx[nid].source->attrs.name;
+    inv_name_map[arg_name] = nid;
+  }
+  
   // initialize in_args, arg_grads, and aux_states and populate grad_store_
   data_entry_.resize(idx.num_node_entries());
   size_t arg_top = 0, aux_top = 0;
   const auto& mutable_nodes = idx.mutable_input_nodes();
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
+    //get name from input names vector, and lookup new index of graph input node
+    const std::string arg_name = in_names->at(i);
+    const uint32_t nid = inv_name_map[arg_name];
     const uint32_t eid = idx.entry_id(nid, 0);
     const mxnet::TShape& inferred_shape = inferred_shapes[eid];
     const int inferred_dtype = inferred_dtypes[eid];
     const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
-    const std::string& arg_name = idx[nid].source->attrs.name;
+
     // aux_states
     if (mutable_nodes.count(nid)) {
       if (nullptr != shared_exec) {
@@ -700,6 +711,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const std::unordered_map<std::string, int>& arg_stype_map,
                          const std::vector<OpReqType>& grad_req_types,
                          const std::unordered_set<std::string>& shared_arg_names,
+			 std::vector<std::string>* in_names,
                          std::vector<NDArray>* in_arg_vec,
                          std::vector<NDArray>* arg_grad_vec,
                          std::vector<NDArray>* aux_state_vec,
@@ -766,7 +778,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                   g.GetAttr<StorageTypeVector>("storage_type"),
                   in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
                   grad_req_types, shared_arg_names, shared_exec,
-                  shared_buffer, in_arg_vec, arg_grad_vec, aux_state_vec);
+                  shared_buffer, in_names, in_arg_vec, arg_grad_vec, aux_state_vec);
   }
   // The above code of shape and dtype inferences and argument
   // initialization is for simple_bind only. Regular bind operation
@@ -1707,6 +1719,9 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                std::vector<NDArray>* aux_states,
                                std::unordered_map<std::string, NDArray>* shared_buffer,
                                Executor* shared_exec) {
+  //get input names from original symbol to use in returning shapes in same order
+  std::vector<std::string> in_names = symbol.ListInputNames(nnvm::Symbol::kAll);
+  
   auto exec = new exec::GraphExecutor();
   std::vector<Context> tmp_in_arg_ctxes = in_arg_ctxes;
   std::vector<Context> tmp_arg_grad_ctxes = arg_grad_ctxes;
@@ -1719,7 +1734,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
   }
   exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
              tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map, tmp_grad_req_types,
-             shared_arg_names, in_args, arg_grads, aux_states, shared_buffer, shared_exec);
+             shared_arg_names, &in_names, in_args, arg_grads, aux_states, shared_buffer, shared_exec);
   return exec;
 }
 
