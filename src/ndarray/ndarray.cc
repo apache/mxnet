@@ -113,20 +113,22 @@ NDArray::Chunk::~Chunk() {
   // We want to delete mkldnn memory after deleting the variable.
   mem.mem = this->mkl_mem_;
 #endif
-  Engine::Get()->DeleteVariable([mem, skip_free](RunContext s) {
-    if (skip_free == false) {
+  if (auto engine = engine_ref_.lock()) {
+    engine->DeleteVariable([mem, skip_free](RunContext s) {
+      if (skip_free == false) {
 #if MXNET_USE_MKLDNN == 1
-      if (mem.mem) {
-        CHECK_LE(mem.mem->GetSize(), mem.h.size);
-        CHECK_EQ(mem.mem->GetDataHandle(), mem.h.dptr);
-      }
+        if (mem.mem) {
+          CHECK_LE(mem.mem->GetSize(), mem.h.size);
+          CHECK_EQ(mem.mem->GetDataHandle(), mem.h.dptr);
+        }
 #endif
-      Storage::Get()->Free(mem.h);
-      for (const auto& aux : mem.aux_h) {
-        Storage::Get()->Free(aux);
+        Storage::Get()->Free(mem.h);
+        for (const auto &aux : mem.aux_h) {
+          Storage::Get()->Free(aux);
+        }
       }
-    }
-  }, shandle.ctx, var);
+    }, shandle.ctx, var);
+  }
 }
 
 void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {

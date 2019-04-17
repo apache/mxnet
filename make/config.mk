@@ -183,7 +183,8 @@ USE_S3 = 0
 USE_OPERATOR_TUNING = 1
 
 # Use gperftools if found
-USE_GPERFTOOLS = 1
+# Disable because of #8968
+USE_GPERFTOOLS = 0
 
 # path to gperftools (tcmalloc) library in case of a non-standard installation
 USE_GPERFTOOLS_PATH =
