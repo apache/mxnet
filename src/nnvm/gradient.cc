@@ -212,7 +212,7 @@ Graph Gradient(Graph src) {
         LOG(FATAL) << "Operator " << fwd_node->op()->name << " is non-differentiable "
                    << "because it didn't register FGradient attribute.";
       }
-      for(const auto& nodeEntry: input_grads)
+      for (const auto& nodeEntry : input_grads)
         CHECK(nodeEntry.node);
       auto git = input_grads.begin();
       for (auto it = (*rit)->inputs.begin(); it != (*rit)->inputs.end(); ++it, ++git) {
