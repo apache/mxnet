@@ -113,7 +113,7 @@ COMMANDS = OrderedDict([
     ('[Local] BUILD CMake/Ninja (using cmake_options.yaml (cp cmake/cmake_options.yml .) and edit) ({} virtualenv in "{}")'.format(DEFAULT_PYTHON, DEFAULT_PYENV),
     [
         CMake(),
-        create_virtualenv_default,
+        #create_virtualenv_default,
     ]),
     ('[Local] Python Unit tests',
         "./py3_venv/bin/nosetests -v tests/python/unittest/"
@@ -209,7 +209,7 @@ def build(args) -> None:
     else:
         cmake = CMake()
     cmake()
-    create_virtualenv(venv_exe, pyexe, args.venv)
+    #create_virtualenv(venv_exe, pyexe, args.venv)
 
 def main():
     logging.getLogger().setLevel(logging.INFO)

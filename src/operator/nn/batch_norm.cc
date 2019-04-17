@@ -489,14 +489,14 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
     out_data.emplace_back(n, i, 0);
   std::vector<nnvm::NodeEntry> heads;
   heads.reserve(8);
-  heads.push_back(ograds[0]);
-  heads.push_back(out_data[batchnorm::kMean]);
-  heads.push_back(out_data[batchnorm::kVar]);
-  heads.push_back(n->inputs[batchnorm::kData]);
-  heads.push_back(n->inputs[batchnorm::kGamma]);
-  heads.push_back(n->inputs[batchnorm::kBeta]);
-  heads.push_back(n->inputs[batchnorm::kInMovingMean]);
-  heads.push_back(n->inputs[batchnorm::kInMovingVar]);
+  heads.emplace_back(ograds.at(0));
+  heads.emplace_back(out_data.at(batchnorm::kMean));
+  heads.emplace_back(out_data.at(batchnorm::kVar));
+  heads.emplace_back(n->inputs.at(batchnorm::kData));
+  heads.emplace_back(n->inputs.at(batchnorm::kGamma));
+  heads.emplace_back(n->inputs.at(batchnorm::kBeta));
+  heads.emplace_back(n->inputs.at(batchnorm::kInMovingMean));
+  heads.emplace_back(n->inputs[batchnorm::kInMovingVar]);
 
   nnvm::NodePtr gnode = nnvm::Node::Create();
   gnode->inputs = std::move(heads);
