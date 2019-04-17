@@ -160,10 +160,8 @@ class Estimator(object):
         Create metric wrappers to record loss values,
         Create copies of train loss/metric objects to record validation values
         """
-        if all(hasattr(self, attribute) for attribute in
+        if any(not hasattr(self, attribute) for attribute in
                ['train_metrics', 'val_metrics']):
-            return self.train_metrics, self.val_metrics
-        else:
             self.val_metrics = []
             for loss in self.loss:
                 self.train_metrics.append(Loss("Train " + ''.join([i for i in loss.name if not i.isdigit()])))
@@ -173,7 +171,7 @@ class Estimator(object):
                 metric.name = "Train " + metric.name
                 val_metric.name = "Validation " + val_metric.name
                 self.val_metrics.append(val_metric)
-            return self.train_metrics, self.val_metrics
+        return self.train_metrics, self.val_metrics
 
     def evaluate(self,
                  val_data,
