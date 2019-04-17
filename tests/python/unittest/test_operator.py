@@ -1526,17 +1526,32 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
         assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
 
-def check_bilinear_upsampling_with_shape(shapes, scale, root_scale):
-    arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_context()) for i, shape in zip(range(len(shapes)), shapes)}
-    arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
+def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter):
+    def _init_bilinear(arr, f):
+        weight = np.zeros(np.prod(arr.shape), dtype='float32')
+        shape = arr.shape
+        c = (2 * f - 1 - f % 2) / (2. * f)
+        for i in range(np.prod(shape)):
+            x = i % shape[3]
+            y = (i // shape[3]) % shape[2]
+            weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+        arr[:] = weight.reshape(shape)
+        return arr
 
-    up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='bilinear', scale=root_scale)
+    up = mx.sym.UpSampling(mx.sym.Variable("data"),
+        mx.sym.Variable('weight'), sample_type='bilinear', scale=root_scale,
+        num_filter=num_filter, num_args=2)
+    arg_shapes, out_shapes, _ = up.infer_shape(data=data_shape)
+    arr = {'data': mx.random.uniform(-5, 5, data_shape, ctx=mx.cpu()).copyto(default_context()),
+        'weight':  mx.nd.array(_init_bilinear(mx.ndarray.empty(arg_shapes[1]).asnumpy(), root_scale))}
+
+    arr_grad = [mx.nd.empty(s) for s in arg_shapes]
     exe = up.bind(default_context(), args=arr, args_grad=arr_grad)
     exe.forward(is_train=True)
+    out = exe.outputs[0].asnumpy()
     exe.backward(exe.outputs)
-    for k in range(len(shapes)):
-        name = 'arg_%d'%k
-        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
+    target_shape = (data_shape[2] * root_scale, data_shape[3] * root_scale)
+    assert out.shape == data_shape[:2] + target_shape
 
 
 @with_seed()
@@ -1548,6 +1563,22 @@ def test_nearest_upsampling():
                     shapes = [(1,3,base*root_scale*scale**(num_shape-1-i),base*root_scale*scale**(num_shape-1-i)) for i in range(num_shape)]
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
+
+@with_seed()
+def test_bilinear_upsampling():
+    rootscale = [2,3]
+    scales = [1,2,3]
+    filters = [1,2,3]
+    bases = [1,2,3]
+    for params in itertools.product(rootscale, scales, filters, bases):
+        root_scale, scale, num_filter, base = params
+        # bilinear upsampling takes only 1 data and 1 weight
+        # multi input mode is not applicable
+        dimension = base*root_scale*scale
+        kernel = 2 * root_scale - root_scale % 2
+        data_shape = (1, num_filter, dimension, dimension)
+        weight_shape = (1, num_filter, kernel, kernel)
+        check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter)
 
 @with_seed()
 def test_batchnorm_training():
