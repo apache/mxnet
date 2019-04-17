@@ -44,7 +44,7 @@ class SgMKLDNNDequantizeOperator {
                const std::vector<OpReqType> &req, const std::vector<NDArray> &outputs);
 
  private:
-  bool initalized_{false};
+  bool initialized_{false};
   DequantizeParam param_;
   float cached_data_min_{0.f};
   float cached_data_max_{0.f};
@@ -62,10 +62,10 @@ void SgMKLDNNDequantizeOperator::Forward(const OpContext &ctx, const std::vector
   float data_min = *inputs[1].data().dptr<float>();
   float data_max = *inputs[2].data().dptr<float>();
 
-  if (initalized_ && (cached_data_min_ != data_min || cached_data_max_ != data_max))
-    initalized_ = false;
+  if (initialized_ && (cached_data_min_ != data_min || cached_data_max_ != data_max))
+    initialized_ = false;
 
-  if (!initalized_) {
+  if (!initialized_) {
     cached_data_min_ = data_min;
     cached_data_max_ = data_max;
     float real_range = MaxAbs(cached_data_min_, cached_data_max_);
@@ -104,7 +104,7 @@ void SgMKLDNNDequantizeOperator::Forward(const OpContext &ctx, const std::vector
     i_mem_ = std::make_shared<mkldnn::memory>(i_mpd, nullptr);
     o_mem_ = std::make_shared<mkldnn::memory>(o_mpd, nullptr);
     fwd_pd_ = std::make_shared<mkldnn::reorder>(reorder_pd, *i_mem_, *o_mem_);
-    initalized_ = true;
+    initialized_ = true;
   }
   auto o_mem = CreateMKLDNNMem(outputs[0], o_mem_->get_primitive_desc(), req[0]);
   i_mem_->set_data_handle(i_mem->get_data_handle());
