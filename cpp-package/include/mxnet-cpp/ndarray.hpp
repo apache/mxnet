@@ -391,7 +391,7 @@ inline mx_float NDArray::At(size_t c, size_t h, size_t w) const {
 }
 
 inline size_t NDArray::Size() const {
-  auto &shape = GetShape();
+  const auto &shape = GetShape();
   if (shape.empty())
     return 0u;
   size_t ret = 1;
