@@ -102,6 +102,9 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
         if (data_maxs[i] > data_max) data_max = data_maxs[i];
         if (data_mins[i] < data_min) data_min = data_mins[i];
       }
+
+      if (initalized_ && (cached_data_min_ != data_min || cached_data_max_ != data_max))
+        initalized_ = false;
     }
 
     // Write output min/max
@@ -118,9 +121,6 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     } else {
       LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
     }
-
-    if (initalized_ && (cached_data_min_ != data_min || cached_data_max_ != data_max))
-      initalized_ = false;
 
     if (!initalized_) {
       cached_data_min_ = data_min;
