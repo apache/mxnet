@@ -61,6 +61,7 @@ class ConcatDoc(NDArrayDoc):
     --------
 
     Joins input arrays along a given axis.
+
     >>> x = mx.nd.array([[1,1],[2,2]])
     >>> y = mx.nd.array([[3,3],[4,4],[5,5]])
     >>> z = mx.nd.array([[6,6], [7,7],[8,8]])
@@ -89,6 +90,7 @@ class SwapAxisDoc(NDArrayDoc):
     --------
 
     Interchanges two axes of an array.
+
     >>> x = mx.nd.array([[1, 2, 3]])
     >>> mx.nd.swapaxes(x, 0, 1)
     [[1.]
@@ -116,6 +118,7 @@ class whereDoc(NDArrayDoc):
     --------
 
     Return the elements, either from x or y, depending on the condition.
+
     >>> x = mx.nd.array([[1, 2], [3, 4]])
     >>> y = mx.nd.array([[5, 6], [7, 8]])
 
@@ -337,6 +340,7 @@ class BroadcastToDoc(NDArrayDoc):
     --------
 
     Broadcasts the input array into a new shape.
+
     >>> a = mx.nd.array(np.arange(6).reshape(6,1))
     >>> b = a.broadcast_to((6,2))
     >>> a.shape
@@ -378,6 +382,7 @@ class StackDoc(NDArrayDoc):
     --------
 
     Join a sequence of arrays along a new axis.
+
     >>> x = mx.nd.array([1, 2])
     >>> y = mx.nd.array([3, 4])
     >>> stack(x, y)
