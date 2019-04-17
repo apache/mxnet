@@ -59,6 +59,22 @@ core_logic: {
         }
       }
     },
+    'Test Large Tensor Size: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/large_tensor-cpu') {
+            utils.unpack_and_init('cpu', mx_lib)
+            utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_large_tensor USE_INT64_TENSOR_SIZE=1', false)
+        }
+      }
+    }
+    'Test Large Tensor Size: GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/large_tensor-gpu') {
+            utils.unpack_and_init('gpu', mx_lib)
+            utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_tensor USE_INT64_TENSOR_SIZE=1', false)
+        }
+      }
+    }
     'StraightDope: Python2 Single-GPU': {
       node(NODE_LINUX_GPU_P3) {
         ws('workspace/straight_dope-single_gpu') {

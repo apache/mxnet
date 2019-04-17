@@ -119,6 +119,34 @@ def compile_unix_openblas_debug_cpu() {
     }]
 }
 
+def compile_unix_int64_cpu() {
+    return ['CPU: USE_INT64_TENSOR_SIZE': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-int64') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_large_tensor', false)
+            utils.pack_lib('cpu', mx_lib, true)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_int64_gpu() {
+    return ['GPU: USE_INT64_TENSOR_SIZE': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/build-gpu-int64') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_large_tensor', false)
+            utils.pack_lib('gpu', mx_lib, true)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_mkl_cpu() {
     return ['CPU: MKL': {
       node(NODE_LINUX_CPU) {
