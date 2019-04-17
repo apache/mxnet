@@ -31,6 +31,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
 #include <mxnet/imperative.h>
+#include <algorithm>
 #include <map>
 #include <vector>
 #include <string>
@@ -95,7 +96,12 @@ class CustomOperator {
       bool prev_recording = Imperative::Get()->set_is_recording(recording);
       bool prev_training = Imperative::Get()->set_is_training(training);
 
-      func();
+      try {
+        func();
+      } catch (dmlc::Error& e) {
+        exception_ =
+            std::make_shared<std::exception_ptr>(std::current_exception());
+      }
 
       Imperative::Get()->set_is_training(prev_training);
       Imperative::Get()->set_is_recording(prev_recording);
@@ -115,6 +121,16 @@ class CustomOperator {
 
       Engine::Get()->PushSync(
           [=](RunContext rctx) {
+            try {
+              Throw();
+              for (const auto& i : arrs) {
+                Engine::Get()->Throw(i.var());
+              }
+            } catch(dmlc::Error& err) {
+              ctx.async_on_complete(&err);
+              return;
+            }
+
             for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
               if (arrs[i].storage_type() == kDefaultStorage ||
                   arrs[i].storage_type() == kUndefinedStorage)
@@ -124,54 +140,89 @@ class CustomOperator {
                 out_idx++;
               }
             }
+
             ctx.async_on_complete();
           },
-          ctx.run_ctx.ctx, vars, vars2, FnProperty::kNormal, 0,
+          ctx.run_ctx.ctx, vars, vars2, FnProperty::kNoSkip, 0,
           "CustomOperator");
     });
+    // increase num_threads if there is not enough threads to execute custom operator
+    if (q_.size() > num_free_threads_)
+      CreateThreads(q_.size() - num_free_threads_);
     cv_.notify_all();
   }
 
-  ~CustomOperator() {
+  static CustomOperator* Get() {
+    static CustomOperator inst;
+    return &inst;
+  }
+
+  void Start() {
+    num_free_threads_ = 0;
+    destructing_ = false;
+    naive_engine_ = true;
+    exception_ = nullptr;
+    if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
+      naive_engine_ = false;
+    }
+  }
+
+  void Stop() {
     if (naive_engine_) return;
     {
       std::unique_lock<std::mutex> lock(mutex_);
       destructing_ = true;
       cv_.notify_all();
     }
-    worker_.join();
+    for (auto &worker : workers_)
+      worker.join();
+    workers_.clear();
   }
 
-  static CustomOperator* Get();
+  inline void Throw() {
+    if (exception_ && *exception_) {
+      std::exception_ptr tmp = *exception_;
+      exception_ = nullptr;
+      std::rethrow_exception(tmp);
+    }
+  }
 
  private:
   CustomOperator() {
-    destructing_ = false;
-    naive_engine_ = true;
-    if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
-      naive_engine_ = false;
-      worker_ = std::thread(
-        [&]() {
-          std::unique_lock<std::mutex> lock(mutex_);
-          while (!q_.empty() || !destructing_) {
-            cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
-            while (!q_.empty()) {
-              auto fn = q_.front();
-              lock.unlock();
-              fn();
-              lock.lock();
-              q_.pop();
-            }
-          }
-        });
+    this->Start();
+  }
+  void ThreadTarget() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    while (!q_.empty() || !destructing_) {
+      cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
+      while (!q_.empty()) {
+        --num_free_threads_;
+        auto fn = q_.front();
+        q_.pop();
+        lock.unlock();
+        fn();
+        ++num_free_threads_;
+        lock.lock();
+      }
     }
+  }
+  void SetNumThreads(int num_threads) {
+    for (int i = workers_.size(); i < num_threads; ++i) {
+      workers_.emplace_back(std::thread([this]{this->ThreadTarget();}));
+      ++num_free_threads_;
+    }
+  }
+  void CreateThreads(int num_new_threads) {
+    SetNumThreads(workers_.size() + num_new_threads);
   }
   std::mutex mutex_;
   std::map<std::string, CustomOpPropCreator> registry_;
   // async worker
   std::condition_variable cv_;
-  std::thread worker_;
+  std::vector<std::thread> workers_;
+  std::atomic<uint32_t> num_free_threads_;
   std::queue<std::function<void(void)> > q_;
+  std::shared_ptr<std::exception_ptr> exception_;
   bool naive_engine_;
   bool destructing_;
 };

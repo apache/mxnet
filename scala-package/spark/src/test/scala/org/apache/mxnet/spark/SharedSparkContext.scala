@@ -92,20 +92,12 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
 
   private def getJarFilePath(root: String): String = {
     val jarFiles = findJars(s"$root/target/")
-    if (jarFiles != null && jarFiles.nonEmpty) {
-      jarFiles.head.getAbsolutePath
-    } else {
-      null
-    }
+    Option(jarFiles).flatMap(_.headOption).map(_.getAbsolutePath).orNull
   }
 
   private def getSparkJar: String = {
     val jarFiles = findJars(s"$composeWorkingDirPath/target/")
-    if (jarFiles != null && jarFiles.nonEmpty) {
-      jarFiles.head.getAbsolutePath
-    } else {
-      null
-    }
+    Option(jarFiles).flatMap(_.headOption).map(_.getAbsolutePath).orNull
   }
 
   private def getNativeJars(root: String): String =

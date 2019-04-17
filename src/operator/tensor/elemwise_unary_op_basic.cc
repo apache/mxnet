@@ -413,9 +413,9 @@ bool ReshapeLikeShapeCompute(const nnvm::NodeAttrs &attrs,
   GetReshapeLikeParams(param, lshape, rshape, &lhs_begin, &lhs_end, &rhs_begin,
                        &rhs_end);
 
-  int lhsrank = static_cast<int>(lshape.ndim());
+  int lhsrank = lshape.ndim();
   int orank = lhsrank + (rhs_end - rhs_begin) - (lhs_end - lhs_begin);
-  mxnet::TShape oshape(orank);
+  mxnet::TShape oshape(orank, -1);
 
   for (int i = 0; i < lhs_begin; ++i)
     oshape[i] = lshape[i];
@@ -436,7 +436,7 @@ bool ReshapeLikeShapeCompute(const nnvm::NodeAttrs &attrs,
       << "shape " << oshape << " because they have different "
       << "size.";
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 DMLC_REGISTER_PARAMETER(ReshapeLikeParam);
@@ -481,7 +481,16 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<mxnet::FInferShape>("FInferShape", ReshapeLikeShapeCompute)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 2) << " in operator " << attrs.name;
+    std::vector<int> checked_in_attrs = { (*in_attrs)[0] };
+    bool ret = !type_is_none((*in_attrs)[1]) &&
+               ElemwiseType<1, 1>(attrs, &checked_in_attrs, out_attrs);
+    (*in_attrs)[0] = checked_in_attrs[0];
+    return ret;
+  })
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
@@ -528,7 +537,7 @@ Example::
      mxnet::ShapeVector *out_attrs) {
     CHECK_EQ(in_attrs->size(), 1U);
     CHECK_EQ(out_attrs->size(), 1U);
-    mxnet::TShape target_shape(1);
+    mxnet::TShape target_shape(1, -1);
     target_shape[0] = in_attrs->at(0).ndim();
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
     return !shape_is_none(out_attrs->at(0));
@@ -580,7 +589,7 @@ Example::
      mxnet::ShapeVector *out_attrs) {
     CHECK_EQ(in_attrs->size(), 1U);
     CHECK_EQ(out_attrs->size(), 1U);
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, 1U);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, 1));
     return !shape_is_none(out_attrs->at(0));
   })
 .set_attr<nnvm::FInferType>("FInferType",

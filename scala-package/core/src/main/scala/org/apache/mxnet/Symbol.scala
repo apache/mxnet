@@ -260,17 +260,45 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
 
   def inferShape(keys: Array[String], indPtr: Array[Int], values: Array[Int])
     : (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
+    val res = inferShapeImpl(partial = false, keys, indPtr, values)
+    if (res._2 == null) {
+      val (argShapes, _, _) = inferShapeImpl(partial = true, keys, indPtr, values)
+      val argNames = listArguments()
+      val unknown = (argNames zip argShapes).map { case (name, shape) =>
+        val shapeIsNone = if (NumpyScope.isNumpyCompatible) {
+          shape == null || shape.toVector.contains(-1)
+        } else {
+          shape == null || shape.toVector.contains(0)
+        }
+        if (shapeIsNone) s"$name: $shape" else ""
+      }
+      logger.warn("Cannot decide shape for the following arguments. " +
+        "Consider providing them as input: \n\t{}",
+        unknown.filter(_ != "").mkString("\n\t"))
+    }
+    res
+  }
+
+  private def inferShapeImpl(partial: Boolean,
+                             keys: Array[String],
+                             indPtr: Array[Int],
+                             values: Array[Int])
+    : (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
     val argShapeData = ListBuffer.empty[Array[Int]]
     val outShapeData = ListBuffer.empty[Array[Int]]
     val auxShapeData = ListBuffer.empty[Array[Int]]
     val complete = new RefInt
-
-    checkCall(_LIB.mxSymbolInferShape(handle, indPtr.length - 1, keys, indPtr, values,
-      argShapeData, outShapeData, auxShapeData, complete))
+    if (partial) {
+      checkCall(_LIB.mxSymbolInferShapePartial(handle, indPtr.length - 1, keys, indPtr, values,
+        argShapeData, outShapeData, auxShapeData, complete))
+    } else {
+      checkCall(_LIB.mxSymbolInferShape(handle, indPtr.length - 1, keys, indPtr, values,
+        argShapeData, outShapeData, auxShapeData, complete))
+    }
     if (complete.value != 0) {
       (argShapeData.map(s => Shape(s)).toIndexedSeq,
-       outShapeData.map(s => Shape(s)).toIndexedSeq,
-       auxShapeData.map(s => Shape(s)).toIndexedSeq)
+        outShapeData.map(s => Shape(s)).toIndexedSeq,
+        auxShapeData.map(s => Shape(s)).toIndexedSeq)
     } else {
       (null, null, null)
     }
@@ -803,18 +831,23 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
                                    auxArgsHandle,
                                    sharedHandle,
                                    execHandle))
-    val executor = new Executor(execHandle.value, this.clone())
-    executor.argArrays = argsNDArray
-    executor.gradArrays = argsGradNDArray
-    executor.auxArrays = auxStatesNDArray
-    executor._ctx = new Context(ctx.deviceType, ctx.deviceId)
-    executor._gradsReq = gradsReq
-    executor._group2ctx =
+
+    val executorGroup2ctx =
       if (group2ctx == null) null
       else group2ctx.map { case (key, value) =>
         key -> new Context(value.deviceType, value.deviceId)
       }
-    executor
+
+    // If this is in a scope then we want to create the clone in the same scope
+    var newSymbol: Symbol = null
+    ResourceScope.usingIfScopeExists(this.scope) {
+      newSymbol = this.clone()
+    }
+
+    new Executor(execHandle.value, newSymbol, argsNDArray, argsGradNDArray,
+                                auxStatesNDArray, new Context(ctx.deviceType, ctx.deviceId),
+                                gradsReq, executorGroup2ctx)
+
   }
 
   /**

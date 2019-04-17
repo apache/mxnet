@@ -123,13 +123,32 @@ static void MKLDNNQuantizeV2Compute(const nnvm::NodeAttrs& attrs, const OpContex
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
   const QuantizeV2Param& param = nnvm::get<QuantizeV2Param>(attrs.parsed);
-  auto out_type = GetOutputType(param);
-  if (out_type == mshadow::kUint8) {
-    MKLDNNQuantizeComputeKer<float, uint8_t>(inputs, outputs, param, req);
-  } else if (out_type == mshadow::kInt8) {
-    MKLDNNQuantizeComputeKer<float, int8_t>(inputs, outputs, param, req);
+  if (inputs[0].dtype() == mshadow::kUint8 || inputs[0].dtype() == mshadow::kInt8) {
+    if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+      *outputs[1].data().dptr<float>() = param.min_calib_range.value();
+      *outputs[2].data().dptr<float>() = param.max_calib_range.value();
+    } else {
+      if (inputs[0].dtype() == mshadow::kUint8) {
+        *outputs[1].data().dptr<float>() = 0;
+        *outputs[2].data().dptr<float>() = 255;
+      } else {
+        *outputs[1].data().dptr<float>() = -127;
+        *outputs[2].data().dptr<float>() = 127;
+      }
+    }
+    if (req[0] != kWriteInplace) {
+      const_cast<NDArray&>(outputs[0]).CopyFrom(*inputs[0].GetMKLDNNData());
+      MKLDNNStream::Get()->Submit();
+    }
   } else {
-    LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
+    auto out_type = GetOutputType(param);
+    if (out_type == mshadow::kUint8) {
+      MKLDNNQuantizeComputeKer<float, uint8_t>(inputs, outputs, param, req);
+    } else if (out_type == mshadow::kInt8) {
+      MKLDNNQuantizeComputeKer<float, int8_t>(inputs, outputs, param, req);
+    } else {
+      LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
+    }
   }
 }
 

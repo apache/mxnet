@@ -58,7 +58,7 @@ class CrossEntropySoftmax(mx.operator.NumpyOp):
 
 
 class LogSoftmax(mx.operator.NumpyOp):
-    """Generate helper functions to evaluate softmax loss function"""
+    """Generate helper functions to calculate the logarithm of softmax"""
     def __init__(self):
         super(LogSoftmax, self).__init__(False)
 
@@ -160,7 +160,6 @@ def get_toy_sym(teacher=True, teacher_noise_precision=None):
 
 def dev(gpu_id=None):
     return mx.gpu(gpu_id) if gpu_id else mx.cpu()
-
 
 
 def run_mnist_SGD(num_training=50000, gpu_id=None):

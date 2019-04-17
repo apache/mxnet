@@ -352,7 +352,7 @@ Examples::
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NormParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NormShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", NormType)
 .set_attr<FInferStorageType>("FInferStorageType", LpNormStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_norm" })
 .set_attr<FResourceRequest>("FResourceRequest",

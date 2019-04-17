@@ -980,7 +980,9 @@ static void timingTest(const std::string& label,
 #endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 
 /*! \brief Stress-test random batch size/channels/dimension(s) */
-TEST(BATCH_NORM, TestStochasticTiming_2D) {
+TEST(BATCH_NORM, DISABLED_TestStochasticTiming_2D) {
+  // Test is disabled due to suspected flakiness
+  // https://github.com/apache/incubator-mxnet/issues/14411
   MSHADOW_REAL_TYPE_SWITCH_EX(
     mshadow::kFloat32, DType, AccReal,
     {
@@ -1264,7 +1266,7 @@ static void testSaveAndLoad(const std::vector<size_t>& dims,
   ChannelAxisTestData<DType> data;
   data.channel_data_ = inputChannelData;
 
-  mxnet::TShape shape(dims.size());
+  mxnet::TShape shape(dims.size(), -1);
   for (size_t i = 0, n = dims.size(); i < n; ++i) {
     shape[i] = index_t(dims[i]);
   }
@@ -1320,7 +1322,7 @@ static mxnet::TShape MakeShape(const std::vector<index_t>& shape,
   }
   CHECK_LT(channelAxis, shape.size() + 1);
   const index_t dim = index_t(shape.size()) + 1;
-  mxnet::TShape newShape(dim);
+  mxnet::TShape newShape(dim, -1);
   for (size_t x = 0; x < static_cast<size_t>(channelAxis); ++x) {
     newShape[x] = index_t(shape[x]);
   }

@@ -89,6 +89,10 @@ USE_NCCL_PATH = NONE
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 0
+# Add OpenCV include path, in which the directory `opencv2` exists
+USE_OPENCV_INC_PATH = NONE
+# Add OpenCV shared library path, in which the shared library exists
+USE_OPENCV_LIB_PATH = NONE
 
 #whether use libjpeg-turbo for image decode without OpenCV wrapper
 USE_LIBJPEG_TURBO = 0
@@ -162,7 +166,8 @@ USE_S3 = 0
 USE_OPERATOR_TUNING = 1
 
 # Use gperftools if found
-USE_GPERFTOOLS = 1
+# Disable because of #8968
+USE_GPERFTOOLS = 0
 
 # path to gperftools (tcmalloc) library in case of a non-standard installation
 USE_GPERFTOOLS_PATH =

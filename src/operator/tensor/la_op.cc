@@ -18,10 +18,11 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file la_op.cc
  * \brief CPU implementation of Operators for advanced linear algebra.
  */
+
 #include "./la_op.h"
 #include "./la_op-inl.h"
 
@@ -48,19 +49,18 @@ Here, *alpha* and *beta* are scalar parameters, and *op()* is either the identit
 matrix transposition (depending on *transpose_a*, *transpose_b*).
 
 If *n>2*, *gemm* is performed separately for a batch of matrices. The column indices of the matrices
-are given by the last dimensions of the tensors, the row indices by the axis specified with the *axis* 
+are given by the last dimensions of the tensors, the row indices by the axis specified with the *axis*
 parameter. By default, the trailing two dimensions will be used for matrix encoding.
 
 For a non-default axis parameter, the operation performed is equivalent to a series of swapaxes/gemm/swapaxes
-calls. For example let *A*, *B*, *C* be 5 dimensional tensors. Then gemm(*A*, *B*, *C*, axis=1) is equivalent to
+calls. For example let *A*, *B*, *C* be 5 dimensional tensors. Then gemm(*A*, *B*, *C*, axis=1) is equivalent
+to the following without the overhead of the additional swapaxis operations::
 
     A1 = swapaxes(A, dim1=1, dim2=3)
     B1 = swapaxes(B, dim1=1, dim2=3)
     C = swapaxes(C, dim1=1, dim2=3)
     C = gemm(A1, B1, C)
     C = swapaxis(C, dim1=1, dim2=3)
-
-without the overhead of the additional swapaxis operations.
 
 When the input data is of type float32 and the environment variables MXNET_CUDA_ALLOW_TENSOR_CORE
 and MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION are set to 1, this operator will try to use
@@ -126,18 +126,17 @@ Here *alpha* is a scalar parameter and *op()* is either the identity or the matr
 transposition (depending on *transpose_a*, *transpose_b*).
 
 If *n>2*, *gemm* is performed separately for a batch of matrices. The column indices of the matrices
-are given by the last dimensions of the tensors, the row indices by the axis specified with the *axis* 
+are given by the last dimensions of the tensors, the row indices by the axis specified with the *axis*
 parameter. By default, the trailing two dimensions will be used for matrix encoding.
 
 For a non-default axis parameter, the operation performed is equivalent to a series of swapaxes/gemm/swapaxes
 calls. For example let *A*, *B* be 5 dimensional tensors. Then gemm(*A*, *B*, axis=1) is equivalent to
+the following without the overhead of the additional swapaxis operations::
 
     A1 = swapaxes(A, dim1=1, dim2=3)
     B1 = swapaxes(B, dim1=1, dim2=3)
     C = gemm2(A1, B1)
     C = swapaxis(C, dim1=1, dim2=3)
-
-without the overhead of the additional swapaxis operations.
 
 When the input data is of type float32 and the environment variables MXNET_CUDA_ALLOW_TENSOR_CORE
 and MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION are set to 1, this operator will try to use
@@ -316,7 +315,6 @@ If *n>2*, *trmm* is performed separately on the trailing two dimensions for all 
 (batch mode).
 
 .. note:: The operator supports float32 and float64 data types only.
-
 
 Examples::
 
