@@ -29,12 +29,13 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
    - use US English data [audio link](https://storage.googleapis.com/deepmind-media/pixie/us-english/parametric-2.wav)
 
 ## Requirements
-- Python 3.6.1
-- Mxnet 1.3.1
+- python 3.6.1
+- mxnet 1.4.0
 - tqdm 4.29.0
 - scipy 1.2.0
+- numpy 1.16.2
 
-## Usage
+## Training
 
 - arguments
   - batch_size : Define batch size (default=64)
@@ -42,8 +43,12 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
   - mu : Define mu value for [mu-law algorithm](https://en.wikipedia.org/wiki/%CE%9C-law_algorithm) (default=128)
   - n_residue : Define number of residue (default=24)
   - dilation_depth : Define dilation depth (default=10)
-  - use_gpu : whether or not to use the GPU (default=True)
+  - n_repeat : Define number of repeat (default=2)
+  - seq_size : Define sequence size when generating data (default=20000)
+  - use_gpu : use gpu for training
   - generation : whether or not to generate a wave file for model (default=True)
+  - load_file : file name in loading wave file (default=parametric-2.wav)
+  - save_file : file name in saving result (default='')
 
 ###### default setting
 ```
@@ -55,6 +60,27 @@ or
 ```
 python main.py --use_gpu --batch_size=32 --epochs=100 ...
 ```
+
+## Inference
+
+- arguments
+  - seq_size : Define sequence size when generating data (default=3000)
+  - use_gpu : use gpu for training
+  - model_path : path for best model weigh
+  - gen_size : length for data generation (default=10000)
+  - save_file : file name in saving result (default=wav.npy)
+
+###### default setting
+```
+python generate_sound.py --use_gpu
+``` 
+or
+
+###### manual setting
+```
+python generate_sound.py --use_gpu --seq_size 3000 ...
+```
+
 ## Train progress
 ###### 0 epoch
 ![epoch0](https://github.com/dmlc/web-data/blob/master/mxnet/example/gluon/wavenet/progress_epoch0.png)
