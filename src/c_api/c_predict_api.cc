@@ -214,6 +214,7 @@ int _CreatePartialOut(const char* symbol_json_str,
       int dtype = arg_params[arg_names[i]].dtype();
       NDArray nd = NDArray(arg_shapes[i], ctx, false, dtype);
       CopyFromTo(arg_params[arg_names[i]], &nd);
+      arg_arrays.push_back(nd);
     } else {
       NDArray nd = NDArray(arg_shapes[i], ctx);
       arg_arrays.push_back(nd);
@@ -224,6 +225,7 @@ int _CreatePartialOut(const char* symbol_json_str,
       int dtype = aux_params[aux_names[i]].dtype();
       NDArray nd = NDArray(aux_shapes[i], ctx, false, dtype);
       CopyFromTo(aux_params[aux_names[i]], &nd);
+      aux_arrays.push_back(nd);
     } else {
       NDArray nd = NDArray(aux_shapes[i], ctx);
       aux_arrays.push_back(nd);
