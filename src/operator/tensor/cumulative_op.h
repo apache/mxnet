@@ -97,10 +97,9 @@ inline bool CumSumOpForwardStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 // template<int req>
-// struct quadratic_forward {
+// struct cumsum_forward {
 //   template<typename DType>
-//   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-//                                   const float a, const float b, const float c) {
+//   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data) {
 //     KERNEL_ASSIGN(out_data[i], req, in_data[i] * (a * in_data[i] + b) + c);
 //   }
 // };
@@ -120,13 +119,22 @@ void CumSumOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out_data = outputs[0];
   const CumsumParam& param = nnvm::get<CumsumParam>(attrs.parsed);
   using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      // Kernel<quadratic_forward<req_type>, xpu>::Launch(
-      //     s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
-      //     param.a, param.b, param.c);
-    });
-  });
+  // MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+  //   MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+  //     // Kernel<cumsum_forward<req_type>, xpu>::Launch(
+  //     //     s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
+  //     //     param.a, param.b, param.c);
+  //   });
+  // });
+  if (!param.axis) {
+    // for (size_t j = 0; j < in_data.ndim(); ++j) {
+    //   for (size_t j = 0; j < in_data[0]; ++j) {
+    //     for (size_t k = 0; k < in_data[1]; ++k) {
+    //   out_data[j][k] += in_data[j][k];
+    // }
+  } else {
+
+  }
 }
 
 }  // namespace op
