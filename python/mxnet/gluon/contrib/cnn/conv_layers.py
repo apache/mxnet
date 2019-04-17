@@ -107,7 +107,7 @@ class DeformableConvolution(HybridBlock):
                  weight_initializer=None, bias_initializer='zeros',
                  offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bias=True,
                  op_name='DeformableConvolution', adj=None, prefix=None, params=None):
-        super(Deformable_Convolution, self).__init__(prefix=prefix, params=params)
+        super(DeformableConvolution, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
             self._channels = channels
             self._in_channels = in_channels
