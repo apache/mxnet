@@ -775,7 +775,6 @@ build_ubuntu_gpu_large_tensor() {
     make  \
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
-        USE_CPP_PACKAGE=1                         \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
