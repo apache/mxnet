@@ -210,18 +210,24 @@ int _CreatePartialOut(const char* symbol_json_str,
 
   std::vector<NDArray> arg_arrays, aux_arrays;
   for (size_t i = 0; i < arg_shapes.size(); ++i) {
-    NDArray nd = NDArray(arg_shapes[i], ctx);
     if (arg_params.count(arg_names[i]) != 0) {
+      int dtype = arg_params[arg_names[i]].dtype();
+      NDArray nd = NDArray(arg_shapes[i], ctx, false, dtype);
       CopyFromTo(arg_params[arg_names[i]], &nd);
+    } else {
+      NDArray nd = NDArray(arg_shapes[i], ctx);
+      arg_arrays.push_back(nd);
     }
-    arg_arrays.push_back(nd);
   }
   for (size_t i = 0; i < aux_shapes.size(); ++i) {
-    NDArray nd = NDArray(aux_shapes[i], ctx);
     if (aux_params.count(aux_names[i]) != 0) {
+      int dtype = aux_params[aux_names[i]].dtype();
+      NDArray nd = NDArray(aux_shapes[i], ctx, false, dtype);
       CopyFromTo(aux_params[aux_names[i]], &nd);
+    } else {
+      NDArray nd = NDArray(aux_shapes[i], ctx);
+      aux_arrays.push_back(nd);
     }
-    aux_arrays.push_back(nd);
   }
   // bind
   for (int i = 0; i < num_threads; i++) {
