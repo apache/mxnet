@@ -344,7 +344,7 @@ inline std::vector<NodeEntry> OpPropGradient(
   std::vector<NodeEntry> in_grad;
   in_grad.reserve(prop.arguments.size() + prop.aux_states.size());
   for (size_t i = 0; i < prop.arguments.size(); ++i) {
-    in_grad.emplace_back(std::move(gnode), i, 0);
+    in_grad.emplace_back(gnode, i, 0);
   }
   // attach no gradient node to forbid gradient on aux_state
   if (prop.aux_states.size() != 0) {
