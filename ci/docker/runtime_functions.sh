@@ -1212,7 +1212,12 @@ nightly_test_KVStore_singleNode() {
     python tests/nightly/test_kvstore.py
 }
 
-#Test
+#Test Large Tensor Size
+nightly_test_large_tensor() {
+    set -ex
+    export PYTHONPATH=./python/
+    python tests/nightly/test_large_array.py
+}
 
 #Tests Amalgamation Build with 5 different sets of flags
 nightly_test_amalgamation() {
