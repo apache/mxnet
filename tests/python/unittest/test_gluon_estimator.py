@@ -251,7 +251,7 @@ def test_context():
                     metrics=metrics)
     # input list of context
     gpus = mx.context.num_gpus()
-    ctx = [mx.gpu(i) for i in gpus] if gpus > 0 else [mx.cpu()]
+    ctx = [mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()]
     net = get_model()
     est = Estimator(net=net,
                     loss=loss,

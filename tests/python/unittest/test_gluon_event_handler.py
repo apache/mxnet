@@ -22,7 +22,7 @@ import mxnet as mx
 from mxnet import nd
 from mxnet.gluon import nn, loss
 from mxnet.gluon.contrib.estimator import estimator, event_handler
-
+from common import TemporaryDirectory
 
 def _get_test_network():
     net = nn.Sequential()
@@ -85,18 +85,17 @@ def test_early_stopping():
 
 
 def test_logging():
-    tmpdir = tempfile.mkdtemp()
-    test_data = _get_test_data()
-    file_name = 'test_log'
-    output_dir = os.path.join(tmpdir, file_name)
+    with TemporaryDirectory() as tmpdir:
+        test_data = _get_test_data()
+        file_name = 'test_log'
+        output_dir = os.path.join(tmpdir, file_name)
 
-    net = _get_test_network()
-    ce_loss = loss.SoftmaxCrossEntropyLoss()
-    ce_loss_metric = mx.metric.Loss(ce_loss.name)
-    acc = mx.metric.Accuracy()
-    est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-    logging_handler = [event_handler.LoggingHandler(file_name=file_name,
-                                                    file_location=tmpdir, train_metrics=[acc, ce_loss_metric])]
-    est.fit(test_data, event_handlers=logging_handler, epochs=1)
-    assert os.path.isfile(output_dir)
-    os.remove(output_dir)
+        net = _get_test_network()
+        ce_loss = loss.SoftmaxCrossEntropyLoss()
+        ce_loss_metric = mx.metric.Loss(ce_loss.name)
+        acc = mx.metric.Accuracy()
+        est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+        logging_handler = [event_handler.LoggingHandler(file_name=file_name,
+                                                        file_location=tmpdir, train_metrics=[acc, ce_loss_metric])]
+        est.fit(test_data, event_handlers=logging_handler, epochs=1)
+        assert os.path.isfile(output_dir)

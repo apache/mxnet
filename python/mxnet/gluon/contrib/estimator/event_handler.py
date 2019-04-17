@@ -16,14 +16,13 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import
 """Gluon EventHandlers for Estimators"""
 
 import logging
 import os
 import time
 import warnings
-import weakref
+import numpy as np
 from ....metric import *
 
 
@@ -265,19 +264,19 @@ class CheckpointHandler(BatchEnd, EpochEnd):
             mode = 'auto'
 
         if mode == 'min':
-            self.monitor_op = numpy.less
-            self.best = numpy.Inf
+            self.monitor_op = np.less
+            self.best = np.Inf
         elif mode == 'max':
-            self.monitor_op = numpy.greater
-            self.best = -numpy.Inf
+            self.monitor_op = np.greater
+            self.best = -np.Inf
         else:
             # use greater for accuracy and less otherwise
             if 'acc' in self.monitor.get()[0].lower():
-                self.monitor_op = numpy.greater
-                self.best = -numpy.Inf
+                self.monitor_op = np.greater
+                self.best = -np.Inf
             else:
-                self.monitor_op = numpy.less
-                self.best = numpy.Inf
+                self.monitor_op = np.less
+                self.best = np.Inf
 
     def batch_end(self, estimator, *args, **kwargs):
         self._save_checkpoint(estimator.net, "Batch", self.num_batches)
@@ -366,16 +365,16 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
             mode = 'auto'
 
         if mode == 'min':
-            self.monitor_op = numpy.less
+            self.monitor_op = np.less
         elif mode == 'max':
-            self.monitor_op = numpy.greater
+            self.monitor_op = np.greater
         else:
             if 'acc' in self.monitor.get()[0].lower():
-                self.monitor_op = numpy.greater
+                self.monitor_op = np.greater
             else:
-                self.monitor_op = numpy.less
+                self.monitor_op = np.less
 
-        if self.monitor_op == numpy.greater:
+        if self.monitor_op == np.greater:
             self.min_delta *= 1
         else:
             self.min_delta *= -1
@@ -386,7 +385,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         if self.baseline is not None:
             self.best = self.baseline
         else:
-            self.best = numpy.Inf if self.monitor_op == numpy.less else -numpy.Inf
+            self.best = np.Inf if self.monitor_op == np.less else -np.Inf
 
     def epoch_end(self, estimator, *args, **kwargs):
         monitor_name, monitor_value = self.monitor.get()
