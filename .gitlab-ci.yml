@@ -5,7 +5,7 @@ stages:
 
 variables:
   BASE_IMAGE: bmxnet2-base/build.ubuntu_cpu
-  BASE_TEMPORARY_IMAGE: bmxnet2-base/build.ubuntu_cpu:$CI_PIPELINE_ID
+  BASE_TEMPORARY_IMAGE: bmxnet2-base/build.ubuntu_cpu:$CI_COMMIT_REF_SLUG
   BASE_LATEST_IMAGE: bmxnet2-base/build.ubuntu_cpu:latest
 
 build_base_image:
@@ -15,7 +15,7 @@ build_base_image:
     - docker info
   script:
     - cd ci
-    - docker build -f docker/Dockerfile.build.ubuntu_cpu --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --cache-from $BASE_IMAGE -t $BASE_TEMPORARY_IMAGE docker
+    - docker build -f docker/Dockerfile.build.ubuntu_cpu --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --cache-from $BASE_IMAGE --cache-from $BASE_TEMPORARY_IMAGE -t $BASE_TEMPORARY_IMAGE docker
 
 build_and_test:
   stage: test
@@ -31,7 +31,11 @@ build_and_test:
     - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     - python --version
   script:
-    - make DEV=1 USE_CPP_PACKAGE=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 -j$(nproc)
+    - mkdir build
+    - cd build
+    - cmake -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
+    - cd ..
+    - cmake --build build
     - pytest tests/python/unittest/test_binary.py
 
 tag_image:
