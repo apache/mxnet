@@ -43,7 +43,7 @@ inline bool SoftmaxCrossEntropyShape(const nnvm::NodeAttrs& attrs,
       << "SoftmaxCrossEntropy only accept 1D label";
   CHECK_EQ((*in_attrs)[0][0], (*in_attrs)[1][0])
       << "SoftmaxCrossEntropy: data label shape mismatch";
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, 1));
   return true;
 }
 

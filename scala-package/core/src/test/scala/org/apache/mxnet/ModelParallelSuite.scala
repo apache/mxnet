@@ -58,11 +58,6 @@ class ModelParallelSuite extends FunSuite with BeforeAndAfterAll {
     val arrGrad2 = arrGrad.map(_.copyTo(ctx1))
     val exec2 = net.bind(ctx1, args = arr2, argsGrad = arrGrad2)
 
-    // Show the execution plan that involves copynode
-    // scalastyle:off println
-    print(exec1.debugStr)
-    // scalastyle:on println
-
     exec1.forward()
     exec2.forward()
     assert(reldiff(exec1.outputs(0).copyTo(ctx1),

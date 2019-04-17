@@ -64,11 +64,11 @@ struct ConvolutionV1Param : public dmlc::Parameter<ConvolutionV1Param> {
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(ConvolutionV1Param) {
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, 0))
     .describe("convolution stride: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0, 0))
     .describe("convolution dilate: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, 0))
     .describe("pad for convolution: (h, w) or (d, h, w)");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("convolution filter(channel) number");
@@ -405,7 +405,7 @@ class ConvolutionV1Prop : public OperatorProperty {
     // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
     out_shape->resize(1, mxnet::TShape());
     const mxnet::TShape &dshp = (*in_shape)[conv_v1::kData];
-    if (dshp.ndim() ==  0) return false;
+    if (!mxnet::ndim_is_known(dshp)) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv_v1
       CHECK_EQ(dshp.ndim(), 4U) \

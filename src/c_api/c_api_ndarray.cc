@@ -276,6 +276,18 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
+int MXIsNumpyCompatible(bool* curr) {
+  API_BEGIN();
+  *curr = Imperative::Get()->is_np_comp();
+  API_END();
+}
+
+int MXSetIsNumpyCompatible(int is_np_comp, int* prev) {
+  API_BEGIN();
+  *prev = Imperative::Get()->set_is_np_comp(static_cast<bool>(is_np_comp));
+  API_END();
+}
+
 int MXAutogradMarkVariables(mx_uint num_var,
                             NDArrayHandle *var_handles,
                             mx_uint *reqs_array,

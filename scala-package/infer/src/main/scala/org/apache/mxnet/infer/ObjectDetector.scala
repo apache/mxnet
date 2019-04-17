@@ -111,6 +111,13 @@ class ObjectDetector(modelPathPrefix: String,
     batchResult.toIndexedSeq
   }
 
+  /**
+    * Formats detection results by sorting in descending order of accuracy (topK only)
+    * and combining with synset labels
+    * @param predictResultND The results from the objectDetect call
+    * @param topK The number of top results to return or None for all
+    * @return The top predicted results as (className, [Accuracy, Xmin, Ymin, Xmax, Ymax])
+    */
   private[infer] def sortAndReformat(predictResultND: NDArray, topK: Option[Int])
   : IndexedSeq[(String, Array[Float])] = {
     // iterating over the all the predictions
@@ -170,6 +177,18 @@ class ObjectDetector(modelPathPrefix: String,
     result
   }
 
+  /**
+    * Creates an image classifier from the object detector model
+    * @param modelPathPrefix    Path prefix from where to load the model artifacts.
+    *                           These include the symbol, parameters, and synset.txt.
+    *                           Example: file://model-dir/resnet-152 (containing
+    *                           resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
+    * @param inputDescriptors   Descriptors defining the input node names, shape,
+    *                           layout and type parameters
+    * @param contexts           Device contexts on which you want to run inference; defaults to CPU
+    * @param epoch              Model epoch to load; defaults to 0
+    * @return The corresponding image classifier
+    */
   private[infer] def getImageClassifier(modelPathPrefix: String,
                                         inputDescriptors: IndexedSeq[DataDesc],
                          contexts: Array[Context] = Context.cpu(),

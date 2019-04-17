@@ -92,13 +92,13 @@ void MKLDNNConcatBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   auto gz_mem = inputs[0].GetMKLDNNData();
   mkldnn::memory::primitive_desc gz_pd = gz_mem->get_primitive_desc();
   /* init the offset */
-  mkldnn::memory::dims offsets = {0, 0, 0, 0};
+  mkldnn::memory::dims offsets(outputs[0].shape().ndim());
+  for (auto &v : offsets) {
+    v = 0;
+  }
+
   for (int i = 0; i < num_in_data; i++) {
-    mkldnn::memory::dims diff_src_tz
-        = {static_cast<int>(outputs[i].shape()[0]),
-          static_cast<int>(outputs[i].shape()[1]),
-          static_cast<int>(outputs[i].shape()[2]),
-          static_cast<int>(outputs[i].shape()[3])};
+    mkldnn::memory::dims diff_src_tz(outputs[i].shape().begin(), outputs[i].shape().end());
     auto diff_src_mpd = outputs[i].GetMKLDNNData()->get_primitive_desc();
     auto gradi_mem_ = CreateMKLDNNMem(outputs[i], diff_src_mpd, req[i]);
     // create view from gy to gxs[i]

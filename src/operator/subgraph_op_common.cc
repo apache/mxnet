@@ -178,7 +178,7 @@ bool as_bool_scalar(const NDArray &a) {
 }
 
 bool is_shape_udf(const mxnet::TShape &x) {
-  return x.ndim() == 0 || x.Size() == 0;
+  return !shape_is_known(x);
 }
 
 bool is_stype_udf(const int &x) {
@@ -225,7 +225,7 @@ void LoopState::Forward(int iter_no,
     if (!out_bufs[i].IsSame(coutputs[i])) {
       // The line below checks whether dynamic shape exists.
       // If so, re-initialize the shape.
-      if (coutputs[i].shape().ndim() == 0) {
+      if (!shape_is_known(coutputs[i].shape())) {
         const_cast<NDArray &>(coutputs[i]).Init(out_bufs[i].shape());
       }
       CopyFromTo(out_bufs[i], coutputs[i]);
