@@ -46,7 +46,6 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
   - n_repeat : Define number of repeat (default=2)
   - seq_size : Define sequence size when generating data (default=20000)
   - use_gpu : use gpu for training
-  - generation : whether or not to generate a wave file for model (default=True)
   - load_file : file name in loading wave file (default=parametric-2.wav)
   - save_file : file name in saving result (default='')
 

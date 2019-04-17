@@ -33,7 +33,6 @@ def main():
     - n_repeat : Define number of repeat (default=2)
     - seq_size : Define sequence size when generating data (default=20000)
     - use_gpu : use gpu for training
-    - generation : whether or not to generate a wave file for model (default=True)
     - load_file : file name in loading wave file (default=parametric-2.wav)
     - save_file : file name in saving result (default='')
     """
@@ -47,17 +46,13 @@ def main():
     parser.add_argument('--n_repeat', type=int, default=2, help="number of repeat")
     parser.add_argument('--seq_size', type=int, default=20000, help="number of sequence size")
     parser.add_argument('--use_gpu', action='store_true', help='use gpu for training.')
-    parser.add_argument('--generation', type=bool, default=True, help="generate a wave file")
     parser.add_argument('--load_file', type=str, default='parametric-2.wav', help="file name in loading wave file")
     parser.add_argument('--save_file', type=str, default='', help="file name in saving result")
     config = parser.parse_args()
     print(config)
     np.save('./models/commandline_args.npy', config.__dict__)
     trainer = Train(config)
-
     trainer.train()
-    if config.generation:
-        trainer.generation()
 
 if __name__ == "__main__":
     main()
