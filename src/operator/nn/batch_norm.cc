@@ -483,7 +483,7 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
 
 std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
-  std::vector<nnvm::NodeEntry> out_data(n->num_outputs());
+  std::vector<nnvm::NodeEntry> out_data;
   out_data.reserve(n->num_outputs());
   for (size_t i = 0; i < n->num_outputs(); ++i)
     out_data.emplace_back(n, i, 0);

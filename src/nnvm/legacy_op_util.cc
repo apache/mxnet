@@ -323,9 +323,9 @@ inline std::vector<NodeEntry> OpPropGradient(
   auto& prop = nnvm::get<ParsedOpProp>(ptr->attrs.parsed);
   std::vector<NodeEntry> out_data;
   out_data.reserve(prop.outputs.size());
-  for (size_t i = 0; i < out_data.size(); ++i) {
+  for (size_t i = 0; i < prop.outputs.size(); ++i)
     out_data.emplace_back(ptr, i, 0);
-  }
+
   std::vector<NodeEntry> in_data(
       ptr->inputs.begin(), ptr->inputs.begin() + prop.arguments.size());
   std::vector<NodeEntry> ograd(
