@@ -67,7 +67,7 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
 .. autosummary::
     :nosignatures:
     
-    Deformable_Convolution
+    DeformableConvolution
 ```
 
 ### Recurrent neural network
@@ -125,6 +125,10 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.nn
+    :members:
+    :imported-members:
+    
+.. automodule:: mxnet.gluon.contrib.cnn
     :members:
     :imported-members:
 

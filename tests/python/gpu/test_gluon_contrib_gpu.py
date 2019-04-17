@@ -14,27 +14,32 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+"""Tests of the contrib APIs in Gluon only with gpu"""
 
 from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon import nn
 from mxnet.gluon import contrib
-from mxnet.gluon.contrib.cnn import Deformable_Convolution
+from mxnet.gluon.contrib.cnn import DeformableConvolution
 
 
-def test_deformable_convolution():
+def test_DeformableConvolution():
+    """test of the deformable convolution layer with possible combinations of arguments,
+    currently this layer only supports gpu
+    """
     net = nn.HybridSequential()
     net.add(
-        Deformable_Convolution(10, kernel_size=(3, 3), strides=1, padding=0),
-        Deformable_Convolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+        DeformableConvolution(10, kernel_size=(3, 3), strides=1, padding=0),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
                                offset_use_bias=False, use_bias=False),
-        Deformable_Convolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
                                offset_use_bias=False),
-        Deformable_Convolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
                                use_bias=False),
-        Deformable_Convolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False, use_bias=False),
-        Deformable_Convolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False),
-        Deformable_Convolution(10, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False, use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
+        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
     )
 
     try:

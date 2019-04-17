@@ -19,18 +19,18 @@
 # pylint: disable= arguments-differ
 """Custom convolutional neural network layers in model_zoo."""
 
-__all__ = ['Deformable_Convolution']
+__all__ = ['DeformableConvolution']
 
 from .... import symbol
 from ...block import HybridBlock
 from ....base import numeric_types
 from ...nn import Activation
 
-class Deformable_Convolution(HybridBlock):
+class DeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v_1
 
     Normal Convolution uses sampling points in a regular grid, while the sampling points of Deformable Convolution[1]
-    can be offset. The offset is learned with a separately convolution layer during the training. Both the convolution
+    can be offset. The offset is learned with a separate convolution layer during the training. Both the convolution
     layer for generating the output features and the offsets are included in this gluon layer.
 
     Parameters
