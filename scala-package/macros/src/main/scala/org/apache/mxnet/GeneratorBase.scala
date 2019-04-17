@@ -27,7 +27,7 @@ private[mxnet] abstract class GeneratorBase {
 
   case class Arg(argName: String, argType: String, argDesc: String, isOptional: Boolean) {
     /**
-      * filter the arg name with the Scala keyword that are not allow to use as arg name
+      * Filter the arg name with the Scala keyword that are not allow to use as arg name,
       * such as var and type listed in here. This is due to the diff between C and Scala
       * @return argname that works in Scala
       */
@@ -42,10 +42,10 @@ private[mxnet] abstract class GeneratorBase {
 
   /**
     * Non Type-safe function generation method
-    * this method will filter all "_" functions
-    * @param isSymbol check if generate the Symbol method
-    * @param isContrib check if generate the contrib method
-    * @param isJava check if generate Corresponding Java method
+    * This method will filter all "_" functions
+    * @param isSymbol Check if generate the Symbol method
+    * @param isContrib Check if generate the contrib method
+    * @param isJava Check if generate Corresponding Java method
     * @return List of functions
     */
   def functionsToGenerate(isSymbol: Boolean, isContrib: Boolean,
@@ -59,9 +59,9 @@ private[mxnet] abstract class GeneratorBase {
   }
 
   /**
-    * filter the operators to generate in the type-safe Symbol.api and NDArray.api
-    * @param isSymbol check if generate the Symbol method
-    * @param isContrib check if generate the contrib method
+    * Filter the operators to generate in the type-safe Symbol.api and NDArray.api
+    * @param isSymbol Check if generate the Symbol method
+    * @param isContrib Check if generate the contrib method
     * @return List of functions
     */
   protected def typeSafeFunctionsToGenerate(isSymbol: Boolean, isContrib: Boolean): List[Func] = {
@@ -79,8 +79,8 @@ private[mxnet] abstract class GeneratorBase {
 
   /**
     * Extract and format the functions obtained from C API
-    * @param isSymbol check if generate for Symbol
-    * @param isJava check if extracting in Java format
+    * @param isSymbol Check if generate for Symbol
+    * @param isJava Check if extracting in Java format
     * @return List of functions
     */
   protected def getBackEndFunctions(isSymbol: Boolean, isJava: Boolean = false): List[Func] = {
@@ -131,7 +131,7 @@ private[mxnet] abstract class GeneratorBase {
     *
     * @param c Context used for generation
     * @param funcDef DefDef type of function definitions
-    * @param annottees annottees used to define Class or Module
+    * @param annottees Annottees used to define Class or Module
     * @return Expr used for code generation
     */
   protected def structGeneration(c: blackbox.Context)
@@ -166,8 +166,8 @@ private[mxnet] abstract class GeneratorBase {
   }
 
   /**
-    * build function argument definition, with optionality, and safe names
-    * @param func functions
+    * Build function argument definition, with optionality, and safe names
+    * @param func Functions
     * @return List of string representing the functions interface
     */
   protected def typedFunctionCommonArgDef(func: Func): List[String] = {
@@ -192,10 +192,10 @@ private[mxnet] trait RandomHelpers {
   self: GeneratorBase =>
 
 /**
-  * a generic type spec used in Symbol.random and NDArray.random modules
-  * @param isSymbol check if generate for Symbol
-  * @param fullPackageSpec check if leave the full name of the classTag
-  * @return a formatted string for random Symbol/NDArray
+  * A generic type spec used in Symbol.random and NDArray.random modules
+  * @param isSymbol Check if generate for Symbol
+  * @param fullPackageSpec Check if leave the full name of the classTag
+  * @return A formatted string for random Symbol/NDArray
   */
   protected def randomGenericTypeSpec(isSymbol: Boolean, fullPackageSpec: Boolean): String = {
     val classTag = if (fullPackageSpec) "scala.reflect.ClassTag" else "ClassTag"
@@ -204,8 +204,8 @@ private[mxnet] trait RandomHelpers {
   }
 
 /**
-  * filter the operators to generate in the type-safe Symbol.random and NDArray.random
-  * @param isSymbol check if generate Symbol functions
+  * Filter the operators to generate in the type-safe Symbol.random and NDArray.random
+  * @param isSymbol Check if generate Symbol functions
   * @return List of functions
   */
   protected def typeSafeRandomFunctionsToGenerate(isSymbol: Boolean): List[Func] = {
@@ -240,10 +240,10 @@ private[mxnet] trait RandomHelpers {
   }
 
   /**
-    * hacks to manage the fact that random_normal and sample_normal have
+    * Hacks to manage the fact that random_normal and sample_normal have
     * non-consistent parameter naming in the back-end
     * this first one, merge loc/scale and mu/sigma
-    * @param arg argument need to modify
+    * @param arg Argument need to modify
     * @return Arg case class with clean arg names
     */
   protected def hackNormalFunc(arg: Arg): Arg = {
@@ -253,9 +253,9 @@ private[mxnet] trait RandomHelpers {
   }
 
   /**
-    * this second one reverts this merge prior to back-end call
-    * @param func function case class
-    * @return a string contains the implementation of random args
+    * This second one reverts this merge prior to back-end call
+    * @param func Function case class
+    * @return A string contains the implementation of random args
     */
   protected def unhackNormalFunc(func: Func): String = {
     if (func.name.equals("normal")) {

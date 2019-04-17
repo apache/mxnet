@@ -46,7 +46,7 @@ object Base {
     */
   type FunctionHandle = CPtrAddress
   /**
-    * KVStorHandle is the C pointer to
+    * KVStoreHandle is the C pointer to
     * the KVStore
     */
   type KVStoreHandle = CPtrAddress

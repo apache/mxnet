@@ -26,9 +26,9 @@ import scala.reflect.macros.blackbox
 
 private[mxnet] class AddJNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
 /**
-  * generate typesafe method for Java NDArray operations
-  * @param annottees annottees used to define Class or Module
-  * @return generated code for injection
+  * Generate typesafe method for Java NDArray operations
+  * @param annottees Annottees used to define Class or Module
+  * @return Generated code for injection
   */
   private[mxnet] def macroTransform(annottees: Any*) = macro JavaNDArrayMacro.typeSafeAPIDefs
 }
@@ -36,10 +36,10 @@ private[mxnet] class AddJNDArrayAPIs(isContrib: Boolean) extends StaticAnnotatio
 private[mxnet] object JavaNDArrayMacro extends GeneratorBase {
 
   /**
-    * methods that call code generation
+    * Methods that call code generation
     * @param c Context used for code gen
-    * @param annottees annottees used to define Class or Module
-    * @return generated code for injection
+    * @param annottees Annottees used to define Class or Module
+    * @return Generated code for injection
     */
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
     typeSafeAPIImpl(c)(annottees: _*)
