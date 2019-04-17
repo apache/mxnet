@@ -757,14 +757,14 @@ build_ubuntu_gpu_cmake() {
 
 build_ubuntu_cpu_large_tensor() {
     set -ex
-
+    cd /work/build
     build_ccache_wrappers
-
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make  \
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
         USE_INT64_TENSOR_SIZE=1       \
         USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
@@ -772,14 +772,12 @@ build_ubuntu_cpu_large_tensor() {
 
 build_ubuntu_gpu_large_tensor() {
     set -ex
-
+    cd /work/build
     build_ccache_wrappers
-
     make  \
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
         USE_CPP_PACKAGE=1                         \
-        USE_BLAS=openblas                         \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
