@@ -549,7 +549,7 @@ const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     // If they have different shapes, we need to reshape the array first.
     // Since this method will only be used inside an operator, we can call
     // MKLDNNDataReshape to reshape an array.
-    mxnet::TShape required_shape(desc2.data.ndims);
+    mxnet::TShape required_shape(desc2.data.ndims, -1);
     for (int i = 0; i < desc2.data.ndims; i++)
       required_shape[i] = desc2.data.dims[i];
     NDArray reshaped = MKLDNNDataReshape(required_shape);
@@ -575,7 +575,7 @@ NDArray NDArray::Reorder2Default() const {
 
   // create new ndarray from  mkldnn layout
   mkldnn::memory::desc from_desc = ptr_->mkl_mem_->GetPrimitiveDesc().desc();
-  mxnet::TShape tshape(from_desc.data.ndims);
+  mxnet::TShape tshape(from_desc.data.ndims, -1);
   for (int i = 0; i < from_desc.data.ndims; i++) tshape[i] = from_desc.data.dims[i];
   NDArray ret(tshape, ctx(), false, dtype());
   mkldnn::memory::primitive_desc def_pd = ptr_->mkl_mem_->GetPrimitiveDesc(format);
@@ -1191,8 +1191,8 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
   CHECK(from.shape() == to.shape())
       << "operands shape mismatch"
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
-  CHECK(from.shape().ndim() != 0)
-      << "source operands have zero dimension shape";
+  CHECK(!mxnet::op::shape_is_none(from.shape()))
+      << "source operands have undefined shape";
   // important: callback must always capture by value
   const Context from_ctx = from.ctx();
   const int a = from_ctx.dev_mask();
@@ -1650,7 +1650,7 @@ bool LegacyTShapeLoad(dmlc::Stream *strm, mxnet::TShape *shape, const uint32_t m
     default:
       // meet legacy mxnet::TShape, magic is ndim here
       uint32_t ndim = magic;
-      *shape = mxnet::TShape(ndim);
+      *shape = mxnet::TShape(ndim, -1);
       std::vector<uint32_t> buffer(ndim);
       size_t nread = ndim * sizeof(uint32_t);
       if (strm->Read(buffer.data(), nread) != nread) return false;
@@ -1663,7 +1663,7 @@ bool NDArray::LegacyLoad(dmlc::Stream *strm, const uint32_t magic) {
   // load shape
   mxnet::TShape shape;
   if (!LegacyTShapeLoad(strm, &shape, magic)) return false;
-  if (shape.ndim() == 0) {
+  if (mxnet::op::shape_is_none(shape)) {
     *this = NDArray(); return true;
   }
   // load context
@@ -1711,7 +1711,10 @@ bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   mxnet::TShape shape;
   if (!shape.Load(strm)) return false;
-  if (shape.ndim() == 0) {
+  if (!Imperative::Get()->is_np_comp()) {
+    common::ConvertToNumpyShape(&shape);
+  }
+  if (mxnet::op::shape_is_none(shape)) {
     *this = NDArray(); return true;
   }
 

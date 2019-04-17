@@ -122,7 +122,11 @@ def test_ndarray_setitem():
 
     # numpy assignment for empty axis
     for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
-        x = mx.nd.zeros(trivial_shape)
+        if trivial_shape == tuple():
+            with mx.np_compat():
+                x = mx.nd.zeros(trivial_shape)
+        else:
+            x = mx.nd.zeros(trivial_shape)
         x[:] = np.ones(trivial_shape)
         x_np = np.ones(trivial_shape, dtype=x.dtype)
         assert x.shape == trivial_shape

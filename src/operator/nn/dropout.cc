@@ -95,10 +95,10 @@ Example::
   CHECK_EQ(in_shape->size(), 1U);
   const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
   mxnet::TShape dshape(in_shape->at(0));
-  if (dshape.ndim() == 0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
-  for (index_t i = 0; i < param.axes.ndim(); ++i) {
+  for (int i = 0; i < param.axes.ndim(); ++i) {
     dshape[param.axes[i]] = 1;
   }
   out_shape->push_back(dshape);

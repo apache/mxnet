@@ -87,8 +87,9 @@ inline bool MPUpdateInferShape(const nnvm::NodeAttrs& attrs,
                                mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(total_in)) << " in operator " << attrs.name;
   CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
-  // rescale_grad.shape = (1,)
-  SHAPE_ASSIGN_CHECK(*in_attrs, total_in - 1, mshadow::Shape1(1));
+  // rescale_grad.shape = ()
+  SHAPE_ASSIGN_CHECK(*in_attrs, total_in - 1, mxnet::TShape());
+  // TODO(@reminisce): change "none" behavior in ElemwiseAttr
   return ElemwiseAttr<mxnet::TShape, shape_is_none, shape_assign, true, shape_string, n_in, n_out>(
       attrs, in_attrs, out_attrs, mxnet::TShape());
 }

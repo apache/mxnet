@@ -52,7 +52,7 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape dshape = (*in_shape)[fullc::kData];
   mxnet::TShape oshape = (*out_shape)[0];
   // require data to be known
-  if (dshape.ndim() ==  0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
 
   index_t num_input;
   if (!param.flatten) {
@@ -75,7 +75,7 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
   } else {
     SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param.num_hidden));
   }
-  if (oshape.ndim() != 0) {
+  if (oshape.ndim() > 0) {
     dshape[0] = oshape[0];
     SHAPE_ASSIGN_CHECK(*in_shape, fullc::kData, dshape);
   }

@@ -259,34 +259,28 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
 
   // Output
   bool success = true;
-  mxnet::TShape out_shape(1);
+  mxnet::TShape out_shape(1, -1);
   // We use the last element to store the actual
   // number of vertices in the subgraph.
   out_shape[0] = params.max_num_vertices + 1;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i, out_shape);
-    success = success &&
-              out_attrs->at(i).ndim() != 0U &&
-              out_attrs->at(i).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i));
   }
   // sub_csr
-  mxnet::TShape out_csr_shape(2);
+  mxnet::TShape out_csr_shape(2, -1);
   out_csr_shape[0] = params.max_num_vertices;
   out_csr_shape[1] = in_attrs->at(0)[1];
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + num_subgraphs, out_csr_shape);
-    success = success &&
-              out_attrs->at(i + num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + num_subgraphs));
   }
   // sub_layer
-  mxnet::TShape out_layer_shape(1);
+  mxnet::TShape out_layer_shape(1, -1);
   out_layer_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 2*num_subgraphs, out_layer_shape);
-    success = success &&
-              out_attrs->at(i + 2*num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + 2*num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + 2 * num_subgraphs));
   }
 
   return success;
@@ -317,43 +311,35 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
 
   // Output
   bool success = true;
-  mxnet::TShape out_shape(1);
+  mxnet::TShape out_shape(1, -1);
   // We use the last element to store the actual
   // number of vertices in the subgraph.
   out_shape[0] = params.max_num_vertices + 1;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i, out_shape);
-    success = success &&
-              out_attrs->at(i).ndim() != 0U &&
-              out_attrs->at(i).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i));
   }
   // sub_csr
-  mxnet::TShape out_csr_shape(2);
+  mxnet::TShape out_csr_shape(2, -1);
   out_csr_shape[0] = params.max_num_vertices;
   out_csr_shape[1] = in_attrs->at(0)[1];
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + num_subgraphs, out_csr_shape);
-    success = success &&
-              out_attrs->at(i + num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + num_subgraphs));
   }
   // sub_probability
-  mxnet::TShape out_prob_shape(1);
+  mxnet::TShape out_prob_shape(1, -1);
   out_prob_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 2*num_subgraphs, out_prob_shape);
-    success = success &&
-              out_attrs->at(i + 2*num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + 2*num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + 2 * num_subgraphs));
   }
   // sub_layer
-  mxnet::TShape out_layer_shape(1);
+  mxnet::TShape out_layer_shape(1, -1);
   out_layer_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 3*num_subgraphs, out_prob_shape);
-    success = success &&
-              out_attrs->at(i + 3*num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + 3*num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + 3 * num_subgraphs));
   }
 
   return success;
@@ -679,8 +665,8 @@ static void SampleSubgraph(const NDArray &csr,
     }
   }
   // Construct sub_csr_graph
-  mxnet::TShape shape_1(1);
-  mxnet::TShape shape_2(1);
+  mxnet::TShape shape_1(1, -1);
+  mxnet::TShape shape_2(1, -1);
   shape_1[0] = num_edges;
   shape_2[0] = max_num_vertices+1;
   sub_csr.CheckAndAllocData(shape_1);
@@ -960,13 +946,13 @@ static bool DGLSubgraphShape(const nnvm::NodeAttrs& attrs,
 
   size_t num_g = params.num_args - 1;
   for (size_t i = 0; i < num_g; i++) {
-    mxnet::TShape gshape(2);
+    mxnet::TShape gshape(2, -1);
     gshape[0] = in_attrs->at(i + 1)[0];
     gshape[1] = in_attrs->at(i + 1)[0];
     out_attrs->at(i) = gshape;
   }
   for (size_t i = num_g; i < out_attrs->size(); i++) {
-    mxnet::TShape gshape(2);
+    mxnet::TShape gshape(2, -1);
     gshape[0] = in_attrs->at(i - num_g + 1)[0];
     gshape[1] = in_attrs->at(i - num_g + 1)[0];
     out_attrs->at(i) = gshape;
@@ -1081,9 +1067,9 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
     row_idx[i + 1] = col_idx.size();
   }
 
-  mxnet::TShape nz_shape(1);
+  mxnet::TShape nz_shape(1, -1);
   nz_shape[0] = col_idx.size();
-  mxnet::TShape indptr_shape(1);
+  mxnet::TShape indptr_shape(1, -1);
   indptr_shape[0] = row_idx.size();
 
   // Store the non-zeros in a subgraph with edge attributes of new edge ids.
@@ -1199,7 +1185,7 @@ inline bool EdgeIDShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(1));
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 2, out_attrs->at(0));
-  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
+  return !mxnet::op::shape_is_none(out_attrs->at(0));
 }
 
 inline bool EdgeIDType(const nnvm::NodeAttrs& attrs,
@@ -1357,7 +1343,7 @@ inline bool DGLAdjacencyShape(const nnvm::NodeAttrs& attrs,
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
+  return !mxnet::op::shape_is_none(out_attrs->at(0));
 }
 
 inline bool DGLAdjacencyType(const nnvm::NodeAttrs& attrs,
@@ -1460,9 +1446,9 @@ static void CompactSubgraph(const NDArray &csr, const NDArray &vids,
     CHECK_NE(row_ids[i], -1);
   }
 
-  mxnet::TShape nz_shape(1);
+  mxnet::TShape nz_shape(1, -1);
   nz_shape[0] = num_elems;
-  mxnet::TShape indptr_shape(1);
+  mxnet::TShape indptr_shape(1, -1);
   CHECK_EQ(out_csr.shape()[0], graph_size);
   indptr_shape[0] = graph_size + 1;
   CHECK_GE(in_ptr_data.shape_[0], indptr_shape[0]);
@@ -1540,7 +1526,7 @@ static bool SubgraphCompactShape(const nnvm::NodeAttrs& attrs,
   }
 
   for (size_t i = 0; i < num_g; i++) {
-    mxnet::TShape gshape(2);
+    mxnet::TShape gshape(2, -1);
     gshape[0] = params.graph_sizes[i];
     gshape[1] = params.graph_sizes[i];
     out_attrs->at(i) = gshape;

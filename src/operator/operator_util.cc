@@ -774,7 +774,7 @@ class SimpleUnaryOpProp : public SimpleOpPropBase {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
     const mxnet::TShape &dshape = in_shape->at(0);
-    if (dshape.ndim() == 0) return false;
+    if (!shape_is_known(dshape)) return false;
     out_shape->clear();
     if (source->unary_shape_ == nullptr) {
       out_shape->push_back(dshape);
