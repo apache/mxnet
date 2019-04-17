@@ -757,7 +757,6 @@ build_ubuntu_gpu_cmake() {
 
 build_ubuntu_cpu_large_tensor() {
     set -ex
-    cd /work/build
     build_ccache_wrappers
     export CC="ccache gcc"
     export CXX="ccache g++"
@@ -772,7 +771,6 @@ build_ubuntu_cpu_large_tensor() {
 
 build_ubuntu_gpu_large_tensor() {
     set -ex
-    cd /work/build
     build_ccache_wrappers
     make  \
         DEV=1                                     \
@@ -1214,6 +1212,8 @@ nightly_test_KVStore_singleNode() {
     export PYTHONPATH=./python/
     python tests/nightly/test_kvstore.py
 }
+
+#Test
 
 #Tests Amalgamation Build with 5 different sets of flags
 nightly_test_amalgamation() {
