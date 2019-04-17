@@ -158,8 +158,7 @@ class ELU(HybridBlock):
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-        _x = F.where(x < 0, x, F.zeros_like(x))
-        return F.where(x > 0, x, self._alpha * (F.exp(_x) - 1.0))
+         F.LeakyReLU(x, act_type='elu', slope=self._alpha)
 
 
 class SELU(HybridBlock):
