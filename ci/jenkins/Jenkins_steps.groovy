@@ -126,7 +126,7 @@ def compile_unix_int64_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_large_tensor', false)
-            utils.pack_lib('cpu', mx_lib, true)
+            utils.pack_lib('ubuntu_cpu_int64', mx_lib, true)
           }
         }
       }
@@ -140,7 +140,7 @@ def compile_unix_int64_gpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_large_tensor', false)
-            utils.pack_lib('gpu', mx_lib, true)
+            utils.pack_lib('ubuntu_gpu_int64', mx_lib, true)
           }
         }
       }
