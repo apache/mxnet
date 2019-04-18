@@ -1327,7 +1327,7 @@ deploy_jl_docs() {
     # ...
 }
 
-build_scala_static_mkl() {
+build_static_scala_mkl() {
     set -ex
     pushd .
     scala_prepare
@@ -1341,6 +1341,14 @@ build_static_python_mkl() {
     set -ex
     pushd .
     export mxnet_variant=mkl
+    ./ci/publish/python/build.sh
+    popd
+}
+
+build_static_python_cu100mkl() {
+    set -ex
+    pushd .
+    export mxnet_variant=cu100mkl
     ./ci/publish/python/build.sh
     popd
 }
