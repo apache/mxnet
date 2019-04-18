@@ -26,7 +26,7 @@ from ..symbol import Symbol
 from ..symbol import load as sym_load
 from .. import ndarray
 from ..ndarray import load as nd_load
-from ..ndarray import NDArray
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX
 from ..io import DataIter
 from ..context import cpu, Context
 from ..module import Module
@@ -44,7 +44,7 @@ def _convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     ----------
     sym : Symbol
         FP32 neural network symbol
-    target_dtype : str
+    target_dtype : str or numpy
         currently only supports float16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
     target_precision_ops : list of strs
@@ -97,21 +97,20 @@ def _convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
         num_conditional_fp32_ops = len(conditional_fp32_ops)
     else:
         conditional_fp32_ops = []
-    print num_conditional_fp32_ops
-
+    target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
     out = SymbolHandle()
     check_call(_LIB.MXReducePrecisionSymbol(sym.handle,
                                             ctypes.byref(out),
-                                            mx_uint(num_target_dtype_ops),
+                                            ctypes.byref(ctypes.c_int(target_dtype)),
+                                            mx_uint(len(target_dtype_ops)),
+                                            mx_uint(len(fp32_ops)),
+                                            mx_uint(len(widest_dtype_ops)),
+                                            mx_uint(len(conditional_fp32_ops)),
                                             c_str_array(target_dtype_ops),
-                                            mx_uint(num_fp32_ops),
                                             c_str_array(fp32_ops),
-                                            mx_uint(num_widest_dtype_ops),
-                                            c_str_array(widest_dtype_ops)),
-                                            mx_uint(len(num_conditional_fp32_ops)),
-                                            c_str_array(conditional_fp32_ops),
-                                            c_str(target_dtype))
+                                            c_str_array(widest_dtype_ops),
+                                            c_str_array(conditional_fp32_ops)))
     return Symbol(out)
 
 

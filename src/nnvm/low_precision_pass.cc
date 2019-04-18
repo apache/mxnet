@@ -116,8 +116,8 @@ Graph ReducePrecision(Graph&& src) {
       src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
   const auto conditional_fp32_ops =
       src.GetAttr<std::unordered_set<std::string>>("conditional_fp32_ops");
-  const auto target_dtype = src.GetAttr<std::string>("target_dtype");
-  CHECK(target_dtype == "float16") << "Only float16 target dtype is supported";
+  const auto target_dtype = src.GetAttr<int>("target_dtype");
+  CHECK(target_dtype == mshadow::kFloat16) << "Only float16 target dtype is supported";
   std::unordered_map<Node*, NodePtr> mirror_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_entry_map;
   DFSVisit(src.outputs, [&](const NodePtr &node) {
