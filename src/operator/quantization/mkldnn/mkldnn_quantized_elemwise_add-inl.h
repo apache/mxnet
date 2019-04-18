@@ -31,10 +31,10 @@
 namespace mxnet {
 namespace op {
 
-struct RequantizeSumParam : public dmlc::Parameter<RequantizeSumParam> {
+struct RequantizeElemwiseAddParam : public dmlc::Parameter<RequantizeElemwiseAddParam> {
   dmlc::optional<float> min_calib_range;
   dmlc::optional<float> max_calib_range;
-  DMLC_DECLARE_PARAMETER(RequantizeSumParam) {
+  DMLC_DECLARE_PARAMETER(RequantizeElemwiseAddParam) {
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -49,8 +49,8 @@ struct RequantizeSumParam : public dmlc::Parameter<RequantizeSumParam> {
 };
 
 namespace quantized_elemwise_add_enum {
-enum QuantizedSumOutputs { kOut, kMin, kMax };
-enum QuantizedSumInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax};
+enum QuantizedElemwiseAddOutputs { kOut, kMin, kMax };
+enum QuantizedElemwiseAddInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax};
 }
 
 }  // namespace op

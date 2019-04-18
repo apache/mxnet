@@ -32,18 +32,18 @@
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(RequantizeSumParam);
+DMLC_REGISTER_PARAMETER(RequantizeElemwiseAddParam);
 
 static inline float GetScale(const NDArray& data, float min, float max) {
   auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
   return data_range / MaxAbs(min, max);
 }
 
-static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
                                       const std::vector<NDArray>& in_data,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& out_data) {
-  const RequantizeSumParam& params = nnvm::get<RequantizeSumParam>(attrs.parsed);
+  const RequantizeElemwiseAddParam& params = nnvm::get<RequantizeElemwiseAddParam>(attrs.parsed);
   // A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_data.size(), 6U);
   // C, C_min, C_max
@@ -183,7 +183,7 @@ static void MKLDNNQuantizedSumForward(const nnvm::NodeAttrs& attrs, const OpCont
   out_data[quantized_elemwise_add_enum::kMax].data().dptr<float>()[0] = output_max;
 }
 
-inline static bool SumStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+inline static bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
                                   DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
                                   std::vector<int>* out_attrs) {
   // A, B, A_min, A_max, B_min, B_max
@@ -195,11 +195,11 @@ inline static bool SumStorageType(const nnvm::NodeAttrs& attrs, const int dev_ma
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)
-.set_attr<FInferStorageType>("FInferStorageType", SumStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedSumForward)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedElemwiseAddForward)
 .set_attr<bool>("TIsMKLDNN", true)
-.set_attr_parser(ParamParser<RequantizeSumParam>)
-.add_arguments(RequantizeSumParam::__FIELDS__());
+.set_attr_parser(ParamParser<RequantizeElemwiseAddParam>)
+.add_arguments(RequantizeElemwiseAddParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
 

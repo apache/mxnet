@@ -30,7 +30,7 @@
 namespace mxnet {
 namespace op {
 
-static bool SumShape(const nnvm::NodeAttrs& attrs,  mxnet::ShapeVector* in_shape,
+static bool ElemwiseAddShape(const nnvm::NodeAttrs& attrs,  mxnet::ShapeVector* in_shape,
                      mxnet::ShapeVector* out_shape) {
   // A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_shape->size(), 6U);
@@ -50,7 +50,7 @@ static bool SumShape(const nnvm::NodeAttrs& attrs,  mxnet::ShapeVector* in_shape
   return true;
 }
 
-static bool SumType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
+static bool ElemwiseAddType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
                     std::vector<int>* out_type) {
   // A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_type->size(), 6U);
@@ -69,7 +69,7 @@ static bool SumType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
   // C
   int dtype = mshadow::kInt32;
 #if MXNET_USE_MKLDNN == 1
-  const RequantizeSumParam& params = nnvm::get<RequantizeSumParam>(attrs.parsed);
+  const RequantizeElemwiseAddParam& params = nnvm::get<RequantizeElemwiseAddParam>(attrs.parsed);
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
     dtype = (in_type->at(0) == in_type->at(1)) ? in_type->at(0) : mshadow::kInt8;
   }
@@ -83,7 +83,7 @@ static bool SumType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
   return true;
 }
 
-void QuantizedSumForward(const nnvm::NodeAttrs& attrs,
+void QuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs,
                          const OpContext &ctx,
                          const std::vector<TBlob> &in_data,
                          const std::vector<OpReqType> &req,
@@ -115,9 +115,9 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"output", "min_output", "max_output"};
 })
-.set_attr<nnvm::FInferType>("FInferType", SumType)
-.set_attr<mxnet::FInferShape>("FInferShape", SumShape)
-.set_attr<FCompute>("FCompute<cpu>", QuantizedSumForward)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseAddType)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseAddShape)
+.set_attr<FCompute>("FCompute<cpu>", QuantizedElemwiseAddForward)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .add_argument("lhs", "NDArray-or-Symbol", "first input")
 .add_argument("rhs", "NDArray-or-Symbol", "4th input")
