@@ -390,7 +390,7 @@ class UnaryOp : public OpBase {
         mkl_func::check_type(type_flag)) {
       // set DType as float or double according to type_flag
       MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
-        MKL_OP::Map(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+        MKL_OP::Vectorize(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
       });
     } else {
       Compute<cpu, OP>(attrs, ctx, inputs, req, outputs);
@@ -562,7 +562,7 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
   NNVM_REGISTER_OP(__name$)                                         \
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
@@ -578,7 +578,7 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
   NNVM_REGISTER_OP(__name$)                                         \
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
@@ -591,27 +591,27 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
    *  *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
    *   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
   */
-  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$, __mkl_kernel$)      \
-    MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                           \
-    MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                                   \
-    .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)      \
-    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)         \
-    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__kernel$, __mkl_kernel$>)
+#define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$, __mkl_kernel$) \
+  MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                      \
+  MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                              \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>) \
+  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)    \
+  .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__kernel$, __mkl_kernel$>)
 
-  /*! \bried MKL Unary compute.
-   *  *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
-   *   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
-  */
-  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$, __mkl_kernel$)          \
-    MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                           \
-    MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                                   \
-    .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)     \
-    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)         \
-    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__kernel$, __mkl_kerbel$>)
+/*! \bried MKL Unary compute.
+ *  *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
+ *   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
+*/
+#define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$, __mkl_kernel$)     \
+  MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                      \
+  MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                              \
+  .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)\
+  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)    \
+  .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__kernel$, __mkl_kerbel$>)
 
-  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$, __mkl_kernel$)    \
-    MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                           \
-    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)
+#define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$, __mkl_kernel$)\
+  MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                       \
+  .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)
 #endif
 
 /*! \brief Unary compute, with FComputeEx for csr and rsp available  */
