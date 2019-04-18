@@ -30,20 +30,37 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyReduceAxesParam);
 
+inline bool NumpySumType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int> *in_attrs,
+                         std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const NumpyReduceAxesParam &param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+
+  if (param.dtype.has_value()) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype.value());
+  } else {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  }
+
+  return out_attrs->at(0) != -1 && in_attrs->at(0) != -1;
+}
+
 NNVM_REGISTER_OP(_numpy_sum)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", NumpySumType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a"};
   })
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
-.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow::red::sum>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

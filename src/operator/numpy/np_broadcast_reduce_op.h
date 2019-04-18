@@ -36,10 +36,24 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
   bool keepdims;
   dmlc::optional<double> initial;
   DMLC_DECLARE_PARAMETER(NumpyReduceAxesParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<nnvm::Tuple<int>>())
-      .describe(R"code()code");
-    DMLC_DECLARE_FIELD(dtype).set_default(dmlc::optional<int>())
-      .describe("");
+    DMLC_DECLARE_FIELD(axis)
+      .set_default(dmlc::optional<nnvm::Tuple<int>>())
+      .describe("Axis or axes along which a sum is performed. The default, axis=None, will sum "
+                "all of the elements of the input array. If axis is negative it counts from the "
+                "last to the first axis.");
+    DMLC_DECLARE_FIELD(dtype)
+      .add_enum("float16", mshadow::kFloat16)
+      .add_enum("float32", mshadow::kFloat32)
+      .add_enum("float64", mshadow::kFloat64)
+      .add_enum("int8", mshadow::kInt8)
+      .add_enum("int32", mshadow::kInt32)
+      .add_enum("int64", mshadow::kInt64)
+      .set_default(dmlc::optional<int>())
+      .describe("The type of the returned array and of the accumulator in which the elements are "
+                "summed. The dtype of a is used by default unless a has an integer dtype of less "
+                "precision than the default platform integer. In that case, if a is signed then "
+                "the platform integer is used while if a is unsigned then an unsigned integer of "
+                "the same precision as the platform integer is used.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
@@ -134,7 +148,13 @@ inline bool NumpyReduceAxesShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
-template<typename xpu, typename reducer, bool normalize = false,
+template<bool safe_acc_hint = false>
+inline bool NeedSafeAcc(int itype, int otype) {
+  bool rule = (itype != otype) || (itype != mshadow::kFloat32 && itype != mshadow::kFloat64);
+  return safe_acc_hint && rule;
+}
+
+template<typename xpu, typename reducer, bool safe_acc_hint = false, bool normalize = false,
          typename OP = op::mshadow_op::identity>
 void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
@@ -152,7 +172,11 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     small = NumpyReduceAxesShapeImpl(inputs[0].shape_, param.axis, true);
   }
 
-  ReduceAxesComputeImpl<xpu, reducer, normalize, OP>(ctx, inputs, req, outputs, small);
+  if (NeedSafeAcc<safe_acc_hint>(inputs[0].type_flag_, outputs[0].type_flag_)) {
+    ReduceAxesComputeImpl<xpu, reducer, true, normalize, OP>(ctx, inputs, req, outputs, small);
+  } else {
+    ReduceAxesComputeImpl<xpu, reducer, false, normalize, OP>(ctx, inputs, req, outputs, small);
+  }
 }
 
 template<typename xpu, bool normalize = false>

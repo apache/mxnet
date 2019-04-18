@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(_numpy_sum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow::red::sum>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true>);
 
 NNVM_REGISTER_OP(_backward_numpy_sum)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
