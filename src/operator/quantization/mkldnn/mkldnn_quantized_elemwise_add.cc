@@ -40,9 +40,9 @@ static inline float GetScale(const NDArray& data, float min, float max) {
 }
 
 static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                                      const std::vector<NDArray>& in_data,
-                                      const std::vector<OpReqType>& req,
-                                      const std::vector<NDArray>& out_data) {
+                                              const std::vector<NDArray>& in_data,
+                                              const std::vector<OpReqType>& req,
+                                              const std::vector<NDArray>& out_data) {
   const RequantizeElemwiseAddParam& params = nnvm::get<RequantizeElemwiseAddParam>(attrs.parsed);
   // A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_data.size(), 6U);
@@ -92,7 +92,7 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
     output_min = params.min_calib_range.value();
     output_max = params.max_calib_range.value();
-    out_data_scale = output_data_range/MaxAbs(output_min, output_max);
+    out_data_scale = output_data_range / MaxAbs(output_min, output_max);
   } else {
     output_max = dataA_absmax + dataB_absmax;
     output_min = -output_max;
@@ -109,24 +109,24 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
     float u8_reorder_scale = 0;
     if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
       if (is_dataA_int8 == true) {
-        u8_reorder_scale = out_data_scale/B_scale;
-        scales[0] = out_data_scale/A_scale;
+        u8_reorder_scale = out_data_scale / B_scale;
+        scales[0] = out_data_scale / A_scale;
       } else {
-        u8_reorder_scale = out_data_scale/A_scale;
-        scales[1] = out_data_scale/B_scale;
+        u8_reorder_scale = out_data_scale / A_scale;
+        scales[1] = out_data_scale / B_scale;
       }
     } else {
       // x*dataA_absmax/dataA_range = y*(dataA_absmax+dataB_absmax)/output_range
       if (is_dataA_int8 == true) {
         u8_reorder_scale = dataB_absmax*output_data_range
-                           /((dataA_absmax + dataB_absmax)*kUint8Range);
+                           / ((dataA_absmax + dataB_absmax)*kUint8Range);
         scales[0] = dataA_absmax*output_data_range
-                         /((dataA_absmax + dataB_absmax)*dataA_range);
+                         / ((dataA_absmax + dataB_absmax)*dataA_range);
       } else {
         u8_reorder_scale = dataA_absmax*output_data_range
-                           /((dataA_absmax + dataB_absmax)*dataA_range);
+                           / ((dataA_absmax + dataB_absmax)*dataA_range);
         scales[1] = dataB_absmax*output_data_range
-                         /((dataA_absmax + dataB_absmax)*kInt8Range);
+                         / ((dataA_absmax + dataB_absmax)*kInt8Range);
       }
     }
     std::vector<float> reorder_scale = {u8_reorder_scale};
@@ -147,11 +147,11 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
   } else {
     // same data type and has same data range
     if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
-      scales[0] = out_data_scale/A_scale;
-      scales[1] = out_data_scale/B_scale;
+      scales[0] = out_data_scale / A_scale;
+      scales[1] = out_data_scale / B_scale;
     } else {
-      scales[0] = dataA_absmax*output_data_range/((dataA_absmax + dataB_absmax)*dataA_range);
-      scales[1] = dataB_absmax*output_data_range/((dataA_absmax + dataB_absmax)*dataA_range);
+      scales[0] = dataA_absmax*output_data_range / ((dataA_absmax + dataB_absmax)*dataA_range);
+      scales[1] = dataB_absmax*output_data_range / ((dataA_absmax + dataB_absmax)*dataA_range);
     }
   }
 
@@ -184,11 +184,11 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
 }
 
 inline static bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                  DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
-                                  std::vector<int>* out_attrs) {
-  // A, B, A_min, A_max, B_min, B_max
+                                          DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                          std::vector<int>* out_attrs) {
+  // Check num of inputs: A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_attrs->size(), 6U);
-  // C, C_min, C_max
+  // Check num of outputs: C, C_min, C_max
   CHECK_EQ(out_attrs->size(), 3U);
 
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);

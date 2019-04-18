@@ -269,7 +269,7 @@ def test_quantized_elemwise_add():
 
         fp32_rslt = output.asnumpy()
         int8_rslt = qoutput.asnumpy()*max_val/0x7fffffff
-        assert_almost_equal(int8_rslt, int8_rslt, atol = 1)
+        assert_almost_equal(int8_rslt, int8_rslt, atol = 1e-4)
 
     for qtype in ['int8', 'uint8']:
         check_quantized_elemwise_add((4, 6), qtype)
