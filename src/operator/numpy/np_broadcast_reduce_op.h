@@ -31,13 +31,13 @@ namespace mxnet {
 namespace op {
 
 struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
-  dmlc::optional<nnvm::Tuple<int>> axis;
+  dmlc::optional<mxnet::Tuple<int>> axis;
   dmlc::optional<int> dtype;
   bool keepdims;
   dmlc::optional<double> initial;
   DMLC_DECLARE_PARAMETER(NumpyReduceAxesParam) {
     DMLC_DECLARE_FIELD(axis)
-      .set_default(dmlc::optional<nnvm::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<int>>())
       .describe("Axis or axes along which a sum is performed. The default, axis=None, will sum "
                 "all of the elements of the input array. If axis is negative it counts from the "
                 "last to the first axis.");
@@ -61,13 +61,13 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
 };
 
 inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
-                                       const dmlc::optional<nnvm::Tuple<int>>& axis,
+                                       const dmlc::optional<mxnet::Tuple<int>>& axis,
                                        bool keepdims) {
   // TODO(junwu): improve the logic
   // If input is a scalar, output should be a scalar too
   if (ishape.ndim() == 0) {
     if (axis.has_value()) {
-      const nnvm::Tuple<int>& axes = axis.value();
+      const mxnet::Tuple<int>& axes = axis.value();
       if (axes.ndim() > 0) {
         CHECK_EQ(axes.ndim(), 1);
         CHECK(axes[0] == 0 || axes[0] == -1);
@@ -91,7 +91,7 @@ inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
   }
 
   // axis has value
-  nnvm::Tuple<int> axes(axis.value());
+  mxnet::Tuple<int> axes(axis.value());
   for (index_t i = 0; i < axes.ndim(); i++) {
     if (axes[i] < 0) {
       axes[i] += ishape.ndim();
@@ -198,9 +198,10 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);
   if (normalize) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Tensor<xpu, 1, DType> igrad = outputs[0].FlatTo1D<xpu, DType>(s);
-      igrad /= scalar<DType>(outputs[0].Size()/inputs[0].Size());
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
+      Tensor<xpu, 1, IType> igrad = outputs[0].FlatTo1D<xpu, IType>(s);
+      printf("output size: %lu input_size: %lu\n", outputs[0].Size(), inputs[0].Size());
+      igrad /= scalar<IType>(outputs[0].Size()/inputs[0].Size());
     });
   }
 }
