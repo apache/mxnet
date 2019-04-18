@@ -123,7 +123,7 @@ COMMANDS = OrderedDict([
     ('[Docker] sanity_check. Check for linting and code formatting and licenses.',
     [
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check",
-        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh nightly_test_rat_check",
+        "ci/build.py --platform ubuntu_rat /work/runtime_functions.sh nightly_test_rat_check",
     ]),
     ('[Docker] Python3 CPU unittests',
     [

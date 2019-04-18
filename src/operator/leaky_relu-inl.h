@@ -315,7 +315,7 @@ class LeakyReLUOp : public Operator {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
   }
   static inline mxnet::TShape expand_shape(const mxnet::TShape& src, const mxnet::TShape& dst) {
-    mxnet::TShape result(dst.ndim());
+    mxnet::TShape result(dst.ndim(), -1);
     int s = src.ndim() - 1;
     for (int i = dst.ndim() - 1; i >= 0; i--) {
       if (s >= 0 && i <= 1 && (dst[i] == src[s] || src[s] == 1)) {
@@ -355,10 +355,10 @@ class LeakyReLUProp : public OperatorProperty {
       CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
     }
     const mxnet::TShape &dshape = in_shape->at(leakyrelu::kData);
-    if (dshape.ndim() == 0) return false;
+    if (!mxnet::ndim_is_known(dshape)) return false;
     if (param_.act_type == leakyrelu::kPReLU) {
       const mxnet::TShape &gshape = in_shape->at(leakyrelu::kGamma);
-      if (gshape.ndim() == 0) {
+      if (!mxnet::ndim_is_known(gshape)) {
         in_shape->at(leakyrelu::kGamma) = mxnet::TShape(Shape1(dshape[1]));
       }
       if (dshape == gshape) {

@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=wildcard-import, unused-wildcard-import,redefined-outer-name
 """Contrib NDArray API of MXNet."""
+from __future__ import absolute_import
 import math
 import numpy as np
 from ..context import current_context

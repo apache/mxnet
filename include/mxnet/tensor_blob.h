@@ -198,7 +198,6 @@ class TBlob {
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(),
-                                             shape_[shape_.ndim() - 1],
                                              stream);
   }
   /*!
@@ -419,6 +418,8 @@ class TBlob {
 namespace dmlc {
 // Add a few patches to support mxnet::TShape in dmlc/parameter.
 DMLC_DECLARE_TYPE_NAME(mxnet::TShape, "Shape(tuple)");
+DMLC_DECLARE_TYPE_NAME(mxnet::Tuple<int>, "Shape(tuple)");
+DMLC_DECLARE_TYPE_NAME(mxnet::Tuple<dmlc::optional<int>>, "Shape(tuple)");
 DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<int>, "Shape(tuple)");
 DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<dmlc::optional<int>>, "Shape(tuple)");
 
