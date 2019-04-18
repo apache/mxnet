@@ -85,7 +85,7 @@ def check_qsym_scale_align(qsym):
 
 
 def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape):
-  mod = mx.mod.Module(symbol=qsym, context=mx.current_context())
+  mod = Module(symbol=qsym, context=mx.current_context())
   mod.bind(for_training=False,
            data_shapes=[('data', data_shape)],
            label_shapes=[('softmax_label', label_shape)])
@@ -96,7 +96,7 @@ def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_
   return mod.get_outputs()
 
 def check_qsym_dummy_forward(qsym, batch, data_shape, label_shape):
-  mod = mx.mod.Module(symbol=qsym, context=mx.current_context())
+  mod = Module(symbol=qsym, context=mx.current_context())
   mod.bind(for_training=False,
            data_shapes=[('data', data_shape)],
            label_shapes=[('softmax_label', label_shape)])
@@ -183,6 +183,55 @@ def check_quantize(sym, data_shape, out_type, name='conv',
     quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
     for i in range(len(ref_out)):
       assert_almost_equal(ref_out[i].asnumpy(), quantized_out[i].asnumpy(), atol = 1)
+
+@with_seed()
+def check_quantize_whole_model_with_forward():
+  def check_qsym_forward(qsym, qarg_params, qaux_params, data_shape):
+    mod = Module(symbol=qsym, label_names=None, context=mx.current_context())
+    mod.bind(for_training=False,
+             data_shapes=[('data', data_shape)])
+    mod.set_params(qarg_params, qaux_params)
+    data = [mx.random.uniform(-1.0, 1.0, shape=shape) for _, shape in mod.data_shapes]
+    batch = mx.io.DataBatch(data, [])
+    mod.forward(batch, is_train=False)
+    for output in mod.get_outputs():
+        output.wait_to_read()
+
+  def check_quantize_whole_model(out_type):
+    batch_size = 4
+    data_shape = (batch_size, 4, 10, 10)
+    data = mx.sym.Variable('data')
+    conv0 = mx.sym.Convolution(data, kernel=(1, 1), num_filter=16, name='conv0')
+    sym = mx.sym.Convolution(conv0, kernel=(1, 1), num_filter=16, name='conv1')
+    sym_sg = sym.get_backend_symbol('MKLDNN')
+    mod = Module(symbol=sym, label_names=[])
+    mod.bind(for_training=False,
+             data_shapes=[('data', data_shape)])
+
+    mod.init_params(mx.init.Normal(0.5))
+    arg_params, aux_params = mod.get_params()
+
+    excluded_sym_names = []
+
+    calib_data = mx.nd.random.uniform(shape=data_shape)
+    calib_data = NDArrayIter(data=calib_data)
+    calib_data = DummyIter(calib_data)
+    calib_layer = lambda name: name.endswith('_output')
+    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                     arg_params=arg_params,
+                                                                     aux_params=aux_params,
+                                                                     ctx=mx.current_context(),
+                                                                     excluded_sym_names=excluded_sym_names,
+                                                                     quantized_dtype=out_type,
+                                                                     calib_mode='naive',
+                                                                     calib_data=calib_data,
+                                                                     calib_layer=calib_layer,
+                                                                     num_calib_examples=5)
+    qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')
+    check_qsym_forward(qsym, qarg_params, qaux_params, data_shape)
+
+  for qdtype in ['uint8', 'int8', 'auto']:
+    check_quantize_whole_model(qdtype)
 
 @with_seed()
 def check_fusion(sym, data_shape, attrs_op, name='conv', check_quantization=True):

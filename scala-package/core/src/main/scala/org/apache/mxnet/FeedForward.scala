@@ -180,6 +180,7 @@ class FeedForward private(
 
   // Initialize the predictor module for running prediction.
   private def initPredictor(inputShapes: Map[String, Shape]): Unit = {
+    var shouldInit = true
     if (this.predExec != null) {
       val (argShapes, _, _) = symbol.inferShape(inputShapes)
       require(argShapes != null, "Shape inference failed." +
@@ -187,14 +188,16 @@ class FeedForward private(
         s"and aux states ${symbol.listAuxiliaryStates()}")
       val predShapes = this.predExec.argArrays.map(_.shape)
       if (argShapes.sameElements(predShapes)) {
-        return
+        shouldInit = false
       }
     }
-    // for now only use the first device
-    val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
-    predExec.copyParamsFrom(_argParams, _auxParams)
-    ExecutorManager.checkArguments(symbol)
-    this.predExec = predExec
+    if(shouldInit) {
+      // for now only use the first device
+      val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
+      predExec.copyParamsFrom(_argParams, _auxParams)
+      ExecutorManager.checkArguments(symbol)
+      this.predExec = predExec
+    }
   }
 
   // Initialize the iterator given input.

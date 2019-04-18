@@ -106,7 +106,9 @@ enum class FnProperty {
   /*! \brief Delete variable call */
   kDeleteVar,
   /*! \brief Prioritized sync operation on GPU */
-  kGPUPrioritized
+  kGPUPrioritized,
+  /*! \brief Operation not to be skipped even with associated exception */
+  kNoSkip
 };  // enum class FnProperty
 
 /*!
@@ -230,6 +232,8 @@ class MXNET_API Engine {
    * \brief Wait until all the activity of engine finishes.
    */
   virtual void WaitForAll() = 0;
+  /*!\brief Throw if threre are associated exception with var */
+  virtual void Throw(VarHandle var) = 0;
   /*!\brief virtual destructor */
   virtual ~Engine() noexcept(false) {}
   /*!

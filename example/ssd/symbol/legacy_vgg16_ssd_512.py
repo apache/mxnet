@@ -203,8 +203,7 @@ def get_symbol(num_classes=20, nms_thresh=0.5, force_suppress=False, nms_topk=40
     loc_preds = net.get_internals()["multibox_loc_pred_output"]
     anchor_boxes = net.get_internals()["multibox_anchors_output"]
 
-    cls_prob = mx.symbol.SoftmaxActivation(data=cls_preds, mode='channel', \
-        name='cls_prob')
+    cls_prob = mx.symbol.softmax(data=cls_preds, axis=1, name='cls_prob')
     out = mx.symbol.contrib.MultiBoxDetection(*[cls_prob, loc_preds, anchor_boxes], \
         name="detection", nms_threshold=nms_thresh, force_suppress=force_suppress,
         variances=(0.1, 0.1, 0.2, 0.2), nms_topk=nms_topk)
