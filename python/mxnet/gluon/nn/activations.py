@@ -158,7 +158,7 @@ class ELU(HybridBlock):
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-         F.LeakyReLU(x, act_type='elu', slope=self._alpha)
+         return F.LeakyReLU(x, act_type='elu', slope=self._alpha)
 
 
 class SELU(HybridBlock):
