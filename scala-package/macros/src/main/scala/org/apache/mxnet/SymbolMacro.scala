@@ -56,7 +56,7 @@ private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnot
 private[mxnet] object SymbolMacro extends GeneratorBase {
 
   /**
-    * Methods that check the isContrib and call code generation
+    * Methods that check the ``isContrib`` and call code generation
     * @param c Context used for code gen
     * @param annottees Annottees used to define Class or Module
     * @return Generated code for injection
@@ -98,7 +98,7 @@ private[mxnet] object SymbolMacro extends GeneratorBase {
 private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
 
   /**
-    * Methods that check the isContrib and call code generation
+    * Methods that check the ``isContrib`` and call code generation
     * @param c Context used for code gen
     * @param annottees Annottees used to define Class or Module
     * @return Generated code for injection
@@ -174,7 +174,7 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
   with RandomHelpers {
 
   /**
-    * Methods that check the isContrib and call code generation
+    * Methods that check the ``isContrib`` and call code generation
     * @param c Context used for code gen
     * @param annottees Annottees used to define Class or Module
     * @return Generated code for injection

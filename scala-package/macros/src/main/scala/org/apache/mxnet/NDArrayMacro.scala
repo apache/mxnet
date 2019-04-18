@@ -54,7 +54,7 @@ private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnno
   */
 private[mxnet] object NDArrayMacro extends GeneratorBase {
   /**
-    * Methods that check the isContrib and call code generation
+    * Methods that check the ``isContrib`` and call code generation
     * @param c Context used for code gen
     * @param annottees Annottees used to define Class or Module
     * @return Generated code for injection
@@ -102,7 +102,7 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
   */
 private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
   /**
-    * Methods that check the isContrib and call code generation
+    * Methods that check the ``isContrib`` and call code generation
     * @param c Context used for code gen
     * @param annottees Annottees used to define Class or Module
     * @return Generated code for injection
@@ -179,7 +179,7 @@ private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
 private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
   with RandomHelpers {
   /**
-    * methods that check the isContrib and call code generation
+    * methods that check the ``isContrib`` and call code generation
     * @param c Context used for code gen
     * @param annottees annottees used to define Class or Module
     * @return generated code for injection

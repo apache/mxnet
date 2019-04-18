@@ -24,22 +24,22 @@ import scala.collection.mutable.ListBuffer
 class LibInfo {
   /**
     * Get the list of the symbol ids
-    * @param symbolList pass in an empty ListBuffer and obtain a list of operator ids
-    * @return callback result
+    * @param symbolList Pass in an empty ListBuffer and obtain a list of operator IDs
+    * @return Callback result
     */
   @native def mxSymbolListAtomicSymbolCreators(symbolList: ListBuffer[SymbolHandle]): Int
 
   /**
     * Get the detailed information of an operator
-    * @param handle The id of the operator
-    * @param name name of the operator
-    * @param desc description of the operator
-    * @param numArgs number of arguments
-    * @param argNames argument names
-    * @param argTypes argument types
-    * @param argDescs argument descriptions
+    * @param handle The ID of the operator
+    * @param name Name of the operator
+    * @param desc Description of the operator
+    * @param numArgs Number of arguments
+    * @param argNames Argument names
+    * @param argTypes Argument types
+    * @param argDescs Argument descriptions
     * @param keyVarNumArgs Kwargs number
-    * @return callback result
+    * @return Callback result
     */
   @native def mxSymbolGetAtomicSymbolInfo(handle: SymbolHandle,
                                           name: RefString,
@@ -51,16 +51,16 @@ class LibInfo {
                                           keyVarNumArgs: RefString): Int
   /**
     * Get the name list of all operators
-    * @param names names of all operators
-    * @return callback result
+    * @param names Names of all operator
+    * @return Callback result
     */
   @native def mxListAllOpNames(names: ListBuffer[String]): Int
 
   /**
-    * get operator id from its name
+    * Get operator ID from its name
     * @param opName Operator name
-    * @param opHandle Operator id
-    * @return callback result
+    * @param opHandle Operator ID
+    * @return Callback result
     */
   @native def nnGetOpHandle(opName: String, opHandle: RefLong): Int
 }
