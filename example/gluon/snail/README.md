@@ -24,10 +24,10 @@
 Gluon inplementation of [A Simple Neural Attentive Meta-Learner](https://openreview.net/pdf?id=B1DmUzWAW)
 
 ##### network structore
-![net_structure](https://github.com/dmlc/web-data/tree/master/mxnet/example/gluon/snail/net_structure.png)
+![net_structure](https://github.com/dmlc/web-data/blob/master/mxnet/example/gluon/snail/net_structure.png)
 
 ##### building block structure
-![block_structure](https://github.com/dmlc/web-data/tree/master/mxnet/example/gluon/snail/blocks.png)
+![block_structure](https://github.com/dmlc/web-data/blob/master/mxnet/example/gluon/snail/blocks.png)
 
 ## Requirements
 - Python 3.6.1
@@ -67,7 +67,7 @@ python main.py --batch_size=24 --epochs=200 ..
 
 ## Results
 ##### 10-way 5-shot case
-![perf_acc](https://github.com/dmlc/web-data/tree/master/mxnet/example/gluon/snail/perf_acc.png)
+![perf_acc](https://github.com/dmlc/web-data/blob/master/mxnet/example/gluon/snail/perf_acc.png)
 
 
 ## Reference
