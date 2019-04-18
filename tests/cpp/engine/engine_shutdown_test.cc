@@ -18,17 +18,24 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
- * \file quantize_v2.cu
- * \brief
+ * Copyright (c) 2019 by Contributors
+ * \file engine_shutdown_test.cc
+ * \brief Tests engine shutdown for possible crashes
+*/
+#include <gtest/gtest.h>
+
+#include "../src/engine/engine_impl.h"
+#include "../include/test_util.h"
+
+/**
+ * This test will help ensure we don't crash during engine shutdown.
+ * The crash happens during a static destructor call, so this test may pass and then cause a test-run process crash.
  */
-#include "./quantize_v2-inl.h"
-
-namespace mxnet {
-namespace op {
-
-NNVM_REGISTER_OP(_contrib_quantize_v2)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", QuantizeV2Forward<gpu>);
-
-}  // namespace op
-}  // namespace mxnet
+TEST(EngineShutdown, stop_without_crashing) {
+    static std::unique_ptr<mxnet::NDArray> ndArray;
+    {
+        auto engine = mxnet::Engine::_GetSharedRef();
+        ndArray = std::make_unique<mxnet::NDArray>(mxnet::Context::CPU());
+        engine->Stop();
+    }
+}

@@ -34,99 +34,37 @@
 namespace mxnet {
 namespace op {
 
-template <typename SrcType, typename DstType>
-static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
-                                     const std::vector<NDArray>& outputs,
-                                     const QuantizeV2Param& param,
-                                     const std::vector<OpReqType>& req) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using red::limits::MaxValue;
-  using red::limits::MinValue;
-  SrcType real_range = 0.f;
-  DstType quantized_range = 0;
+class SgMKLDNNQuantizeOperator {
+ public:
+  explicit SgMKLDNNQuantizeOperator(const nnvm::NodeAttrs &attrs)
+      : param_(nnvm::get<QuantizeV2Param>(attrs.parsed)) {}
+
+  void Forward(const OpContext &ctx, const std::vector<NDArray> &inputs,
+               const std::vector<OpReqType> &req, const std::vector<NDArray> &outputs);
+
+ private:
+  bool initalized_{false};
+  QuantizeV2Param param_;
+  float cached_data_min_{0.f};
+  float cached_data_max_{0.f};
+  std::shared_ptr<mkldnn::memory> i_mem_;
+  std::shared_ptr<mkldnn::memory> o_mem_;
+  std::shared_ptr<mkldnn::reorder> fwd_pd_;
+};
+
+void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<NDArray> &inputs,
+                                       const std::vector<OpReqType> &req,
+                                       const std::vector<NDArray> &outputs) {
+  float quantized_range = 0.0;
   NDArray in_buffer = inputs[0];
-  SrcType data_min = red::limits::MaxValue<SrcType>();
-  SrcType data_max = red::limits::MinValue<SrcType>();
-  if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-    data_min = param.min_calib_range.value();
-    data_max = param.max_calib_range.value();
-  } else {
-    // no calib info
-    in_buffer = inputs[0].Reorder2Default();
-    auto in_ptr = in_buffer.data().dptr<SrcType>();
-    auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    std::vector<SrcType> data_maxs(nthreads, data_max);
-    std::vector<SrcType> data_mins(nthreads, data_min);
-#pragma omp parallel for num_threads(nthreads)
-    for (index_t i = 0; i < static_cast<index_t>(in_buffer.shape().Size()); i++) {
-      int tid = omp_get_thread_num();
-      if (in_ptr[i] > data_maxs[tid]) data_maxs[tid] = in_ptr[i];
-      if (in_ptr[i] < data_mins[tid]) data_mins[tid] = in_ptr[i];
-    }
-    for (index_t i = 0; i < nthreads; i++) {
-      if (data_maxs[i] > data_max) data_max = data_maxs[i];
-      if (data_mins[i] < data_min) data_min = data_mins[i];
-    }
-  }
+  float data_min = mshadow::red::limits::MaxValue<float>();
+  float data_max = mshadow::red::limits::MinValue<float>();
 
-  auto out_type = GetOutputType(param);
-  if (out_type == mshadow::kUint8) {
-    real_range = std::max<SrcType>(0.f, data_max);
-    quantized_range = MaxValue<DstType>();
-    *outputs[1].data().dptr<float>() = 0.f;
-    *outputs[2].data().dptr<float>() = real_range;
-  } else if (out_type == mshadow::kInt8) {
-    real_range = MaxAbs(data_min, data_max);
-    quantized_range = MinAbs(MaxValue<DstType>(), MinValue<DstType>());
-    *outputs[1].data().dptr<float>() = -real_range;
-    *outputs[2].data().dptr<float>() = real_range;
-  } else {
-    LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
-  }
-  float scale = static_cast<float>(quantized_range) / real_range;
-
-  primitive_attr attr;
-  const int mask = 0;
-  std::vector<float> scales = {scale};
-  attr.set_output_scales(mask, scales);
-  attr.set_int_output_round_mode(round_nearest);
-  mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
-
-  if (in_buffer.IsView() && in_buffer.IsMKLDNNData()) in_buffer = inputs[0].Reorder2Default();
-  auto i_mem = in_buffer.GetMKLDNNData();
-  auto i_mpd = i_mem->get_primitive_desc();
-  auto i_desc = i_mpd.desc();
-  mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
-  if (i_fmt == mkldnn::memory::format::nchw ||
-      i_fmt == mkldnn::memory::format::nChw8c ||
-      i_fmt == mkldnn_nChw16c) {
-    i_fmt = mkldnn::memory::format::nhwc;
-  }
-  size_t i_ndim = in_buffer.shape().ndim();
-  mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
-  for (size_t i = 0; i < i_ndim; i++) {
-    i_dims[i] = static_cast<int>(in_buffer.shape()[i]);
-  }
-  auto o_desc =
-      mkldnn::memory::desc(i_dims, (mkldnn::memory::data_type)data_type_enum<DstType>::type, i_fmt);
-  auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
-  auto reorder_pd = reorder::primitive_desc(i_mpd, o_mpd, attr);
-  auto o_mem = CreateMKLDNNMem(outputs[0], o_mpd, req[0]);
-  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(reorder_pd, *i_mem, *o_mem.second));
-  CommitOutput(outputs[0], o_mem);
-  MKLDNNStream::Get()->Submit();
-}
-
-static void MKLDNNQuantizeV2Compute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                                    const std::vector<NDArray>& inputs,
-                                    const std::vector<OpReqType>& req,
-                                    const std::vector<NDArray>& outputs) {
-  const QuantizeV2Param& param = nnvm::get<QuantizeV2Param>(attrs.parsed);
+  // Pass through quantized data
   if (inputs[0].dtype() == mshadow::kUint8 || inputs[0].dtype() == mshadow::kInt8) {
-    if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-      *outputs[1].data().dptr<float>() = param.min_calib_range.value();
-      *outputs[2].data().dptr<float>() = param.max_calib_range.value();
+    if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
+      *outputs[1].data().dptr<float>() = param_.min_calib_range.value();
+      *outputs[2].data().dptr<float>() = param_.max_calib_range.value();
     } else {
       if (inputs[0].dtype() == mshadow::kUint8) {
         *outputs[1].data().dptr<float>() = 0;
@@ -137,19 +75,99 @@ static void MKLDNNQuantizeV2Compute(const nnvm::NodeAttrs& attrs, const OpContex
       }
     }
     if (req[0] != kWriteInplace) {
-      const_cast<NDArray&>(outputs[0]).CopyFrom(*inputs[0].GetMKLDNNData());
+      const_cast<NDArray &>(outputs[0]).CopyFrom(*inputs[0].GetMKLDNNData());
       MKLDNNStream::Get()->Submit();
     }
   } else {
-    auto out_type = GetOutputType(param);
+    if (in_buffer.IsView() && in_buffer.IsMKLDNNData()) in_buffer = inputs[0].Reorder2Default();
+    auto i_mem = in_buffer.GetMKLDNNData();
+
+    if (param_.min_calib_range.has_value() && param_.max_calib_range.has_value()) {
+      data_min = param_.min_calib_range.value();
+      data_max = param_.max_calib_range.value();
+    } else {
+      // no calib info
+      in_buffer = inputs[0].Reorder2Default();
+      auto in_ptr = in_buffer.data().dptr<float>();
+      auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+      std::vector<float> data_maxs(nthreads, data_max);
+      std::vector<float> data_mins(nthreads, data_min);
+#pragma omp parallel for num_threads(nthreads)
+      for (index_t i = 0; i < static_cast<index_t>(in_buffer.shape().Size()); i++) {
+        int tid = omp_get_thread_num();
+        if (in_ptr[i] > data_maxs[tid]) data_maxs[tid] = in_ptr[i];
+        if (in_ptr[i] < data_mins[tid]) data_mins[tid] = in_ptr[i];
+      }
+      for (index_t i = 0; i < nthreads; i++) {
+        if (data_maxs[i] > data_max) data_max = data_maxs[i];
+        if (data_mins[i] < data_min) data_min = data_mins[i];
+      }
+
+      if (initalized_ && (cached_data_min_ != data_min || cached_data_max_ != data_max))
+        initalized_ = false;
+    }
+
+    // Write output min/max
+    auto out_type = GetOutputType(param_);
     if (out_type == mshadow::kUint8) {
-      MKLDNNQuantizeComputeKer<float, uint8_t>(inputs, outputs, param, req);
+      quantized_range = kUint8Range;
+      *outputs[1].data().dptr<float>() = data_min;
+      *outputs[2].data().dptr<float>() = data_max;
     } else if (out_type == mshadow::kInt8) {
-      MKLDNNQuantizeComputeKer<float, int8_t>(inputs, outputs, param, req);
+      float real_range = MaxAbs(data_min, data_max);
+      quantized_range = kInt8Range;
+      *outputs[1].data().dptr<float>() = -real_range;
+      *outputs[2].data().dptr<float>() = real_range;
     } else {
       LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
     }
+
+    if (!initalized_) {
+      cached_data_min_ = data_min;
+      cached_data_max_ = data_max;
+      float real_range = MaxAbs(data_min, data_max);
+      float scale = quantized_range / real_range;
+      primitive_attr attr;
+      const int mask = 0;
+      std::vector<float> scales = {scale};
+      attr.set_output_scales(mask, scales);
+      attr.set_int_output_round_mode(round_nearest);
+      mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+      auto i_mpd = i_mem->get_primitive_desc();
+      auto i_desc = i_mpd.desc();
+      mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
+      if (i_fmt == mkldnn::memory::format::nchw || i_fmt == mkldnn::memory::format::nChw8c ||
+          i_fmt == mkldnn_nChw16c) {
+        i_fmt = mkldnn::memory::format::nhwc;
+      }
+      size_t i_ndim = in_buffer.shape().ndim();
+      mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
+      for (size_t i = 0; i < i_ndim; i++) {
+        i_dims[i] = static_cast<int>(in_buffer.shape()[i]);
+      }
+      auto o_desc = mkldnn::memory::desc(i_dims, get_mkldnn_type(out_type), i_fmt);
+      auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
+      auto reorder_pd = reorder::primitive_desc(i_mpd, o_mpd, attr);
+      i_mem_ = std::make_shared<mkldnn::memory>(i_mpd, nullptr);
+      o_mem_ = std::make_shared<mkldnn::memory>(o_mpd, nullptr);
+      fwd_pd_ = std::make_shared<mkldnn::reorder>(reorder_pd, *i_mem_, *o_mem_);
+      initalized_ = true;
+    }
+    auto o_mem = CreateMKLDNNMem(outputs[0], o_mem_->get_primitive_desc(), req[0]);
+    i_mem_->set_data_handle(i_mem->get_data_handle());
+    o_mem_->set_data_handle(o_mem.second->get_data_handle());
+    MKLDNNStream::Get()->RegisterPrim(*fwd_pd_);
+    CommitOutput(outputs[0], o_mem);
+    MKLDNNStream::Get()->Submit();
   }
+}
+
+static void SgMKLDNNQuantizeForward(const OpStatePtr &state_ptr, const OpContext &ctx,
+                                    const std::vector<NDArray> &inputs,
+                                    const std::vector<OpReqType> &req,
+                                    const std::vector<NDArray> &outputs) {
+  SgMKLDNNQuantizeOperator &op = state_ptr.get_state<SgMKLDNNQuantizeOperator>();
+  op.Forward(ctx, inputs, req, outputs);
 }
 
 }  // namespace op

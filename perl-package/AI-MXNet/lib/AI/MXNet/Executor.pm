@@ -471,7 +471,7 @@ method reshape(HashRef[Shape] $kwargs, Int :$partial_shaping=0, Int :$allow_up_s
     my $shared_handle = $self->handle;
 
     my ($in_args_and_grad_handles, $aux_state_handles, $handle) = check_call(
-        AI::MXNetCAPI::ExecutorReshape(
+        AI::MXNetCAPI::ExecutorReshapeEx(
             $partial_shaping,
             $allow_up_sizing,
             $self->_ctx->device_type_id,

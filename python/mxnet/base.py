@@ -20,17 +20,18 @@
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
+from functools import wraps
 import atexit
 import ctypes
 import os
 import sys
 import inspect
 import platform
-import numpy as np
+import numpy as _np
 
 from . import libinfo
 
-__all__ = ['MXNetError']
+__all__ = ['MXNetError', 'is_np_compat', 'set_np_compat', 'np_compat', 'use_np_compat']
 #----------------------------
 # library loading
 #----------------------------
@@ -44,8 +45,8 @@ except NameError:
     long = int
 # pylint: enable=pointless-statement
 
-integer_types = (int, long, np.int32, np.int64)
-numeric_types = (float, int, long, np.generic)
+integer_types = (int, long, _np.int32, _np.int64)
+numeric_types = (float, int, long, _np.generic)
 string_types = basestring,
 
 if sys.version_info[0] > 2:
@@ -213,10 +214,11 @@ __version__ = libinfo.__version__
 _LIB = _load_lib()
 
 # type definitions
+mx_int = ctypes.c_int
 mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
 mx_float_p = ctypes.POINTER(mx_float)
-mx_real_t = np.float32
+mx_real_t = _np.float32
 NDArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
 OpHandle = ctypes.c_void_p
@@ -455,7 +457,7 @@ def ctypes2numpy_shared(cptr, shape):
     for s in shape:
         size *= s
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
-    return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
+    return _np.frombuffer(dbuffer, dtype=_np.float32).reshape(shape)
 
 
 def build_param_doc(arg_names, arg_types, arg_descs, remove_dup=True):
@@ -733,3 +735,140 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+
+
+def set_np_compat(active):
+    """
+    Turns on/off NumPy compatibility. NumPy-compatibility is turned off by default in backend.
+
+    Parameters
+    ----------
+    active : bool
+        Indicates whether to turn on/off NumPy compatibility.
+
+    Returns
+    -------
+        A bool value indicating the previous state of NumPy compatibility.
+    """
+    prev = ctypes.c_int()
+    check_call(_LIB.MXSetIsNumpyCompatible(ctypes.c_int(active), ctypes.byref(prev)))
+    return bool(prev.value)
+
+
+def is_np_compat():
+    """
+    Checks whether the NumPy compatibility is currently turned on.
+    NumPy-compatibility is turned off by default in backend.
+
+    Returns
+    -------
+        A bool value indicating whether the NumPy compatibility is currently on.
+    """
+    curr = ctypes.c_bool()
+    check_call(_LIB.MXIsNumpyCompatible(ctypes.byref(curr)))
+    return curr.value
+
+
+class _NumpyCompatibilityStateScope(object):
+    """Scope for managing numpy compatibility state.
+    Do not use this class directly. Use `np_compat(active)` instead.
+
+    Example::
+
+        with _NumpyCompatibilityStateScope(True):
+            y = model(x)
+            backward([y])
+
+    """
+    def __init__(self, is_np_compat):  #pylint: disable=redefined-outer-name
+        self._enter_is_np_compat = is_np_compat
+        self._prev_is_np_compat = None
+
+    def __enter__(self):
+        if self._enter_is_np_compat is not None:
+            self._prev_is_np_compat = set_np_compat(self._enter_is_np_compat)
+
+    def __exit__(self, ptype, value, trace):
+        if self._enter_is_np_compat is not None and self._prev_is_np_compat != self._enter_is_np_compat:
+            set_np_compat(self._prev_is_np_compat)
+
+
+def np_compat(active=True):
+    """Returns an activated/deactivated NumPy compatibility state scope to be used in 'with' statement
+    and captures code that needs the compatibility.
+
+    Example::
+
+        with mx.np_compat(active=True):
+            # A scalar tensor's shape is `()`, whose `ndim` is `0`.
+            scalar = mx.nd.ones(shape=())
+            assert scalar.shape == ()
+
+            # In NumPy compatible mode, 0 in a shape means that dimension contains zero elements.
+            data = mx.sym.var("data", shape=(0, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape()
+            assert arg_shapes[0] == (0, 2, 3)
+            assert out_shapes[0] == (0, 2, 3)
+
+            # -1 means unknown shape dimension size in the new NumPy-compatible shape definition
+            data = mx.sym.var("data", shape=(-1, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == (-1, 2, 3)
+            assert out_shapes[0] == (-1, 2, 3)
+
+            # When a shape is completely unknown in NumPy-compatible mode, it is
+            # represented as `None` in Python.
+            data = mx.sym.var("data")
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] is None
+            assert out_shapes[0] is None
+
+        with mx.np_compat(active=False):
+            # 0 means unknown shape dimension size in the legacy shape definition.
+            data = mx.sym.var("data", shape=(0, 2, 3))
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == (0, 2, 3)
+            assert out_shapes[0] == (0, 2, 3)
+
+            # When a shape is completely unknown in the legacy mode (default), its ndim is
+            # equal to 0 and it is represented as `()` in Python.
+            data = mx.sym.var("data")
+            ret = mx.sym.sin(data)
+            arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+            assert arg_shapes[0] == ()
+            assert out_shapes[0] == ()
+    """
+    return _NumpyCompatibilityStateScope(active)
+
+
+def use_np_compat(func):
+    """Wraps a function with an activated NumPy-compatibility scope. This ensures
+    that the execution of the function is guaranteed with NumPy compatible semantics,
+    such as zero-dim and zero size tensors.
+
+    Example::
+        import mxnet as mx
+        @mx.use_np_compat
+        def scalar_one():
+            return mx.nd.ones(())
+        print(scalar_one())
+
+    Parameters
+    ----------
+    func : a user-provided callable function to be scoped by the NumPy compatibility state.
+
+    Returns
+    -------
+    Function
+        A function for wrapping the user functions in the NumPy compatibility scope.
+    """
+    @wraps(func)
+    def _with_np_compat(*args, **kwargs):
+        with np_compat(active=True):
+            return func(*args, **kwargs)
+
+    return _with_np_compat
