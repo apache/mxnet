@@ -7890,6 +7890,7 @@ def test_image_normalize():
     # check backward using finite difference
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
 
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
