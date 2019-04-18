@@ -301,7 +301,7 @@ void Predictor::PredictImage(const std::string& image_file) {
   executor->Forward(false);
 
   // The output is available in executor->outputs.
-  auto array = executor->outputs[0].Copy(global_ctx);
+  auto array = executor->outputs[0].Copy(Context::cpu());
 
   /*
    * Find out the maximum accuracy and the index associated with that accuracy.

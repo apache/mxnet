@@ -180,7 +180,7 @@ class MultiBoxPriorProp: public OperatorProperty {
     int in_width = dshape[3];
     CHECK_GT(in_width, 0) << "Input width should > 0";
     // since input sizes are same in each batch, we could share MultiBoxPrior
-    mxnet::TShape oshape = mxnet::TShape(3);
+    mxnet::TShape oshape = mxnet::TShape(3, -1);
     int num_sizes = param_.sizes.ndim();
     int num_ratios = param_.ratios.ndim();
     oshape[0] = 1;
@@ -189,7 +189,7 @@ class MultiBoxPriorProp: public OperatorProperty {
     out_shape->clear();
     out_shape->push_back(oshape);
     CHECK_EQ(param_.steps.ndim(), 2) << "Step ndim must be 2: (step_y, step_x)";
-    return true;
+    return shape_is_known(oshape);
   }
 
   OperatorProperty* Copy() const override {

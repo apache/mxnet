@@ -1963,19 +1963,21 @@ def test_multi_proposal_op():
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
     os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
-    b = mx.nd.array([],ctx=mx.gpu(0))
-    c = (a / b).asnumpy()
+    with mx.np_compat(active=True):
+        a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
+        b = mx.nd.array([],ctx=mx.gpu(0))
+        c = (a / b).asnumpy()
 
 def kernel_error_check_symbolic():
     os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    a = mx.sym.Variable('a')
-    b = mx.sym.Variable('b')
-    c = a / b
-    f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
-                            'b':mx.nd.array([],ctx=mx.gpu(0))})
-    f.forward()
-    g = f.outputs[0].asnumpy()
+    with mx.np_compat(active=True):
+        a = mx.sym.Variable('a')
+        b = mx.sym.Variable('b')
+        c = a / b
+        f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+                                'b':mx.nd.array([],ctx=mx.gpu(0))})
+        f.forward()
+        g = f.outputs[0].asnumpy()
 
 def test_kernel_error_checking():
     # Running tests that may throw exceptions out of worker threads will stop CI testing

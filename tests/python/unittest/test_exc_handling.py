@@ -165,6 +165,22 @@ def test_multiple_waitalls():
     assert caught, "No exception thrown"
     mx.nd.waitall()
 
+@with_seed()
+def test_exc_profiler():
+    def run_training_iteration(data):
+        output = net(data)
+
+    net = gluon.nn.HybridSequential()
+    with net.name_scope():
+        net.add(gluon.nn.Dense(10))
+
+    ctx = default_context()
+    net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+    data = mx.nd.ones((3, 4))
+    mx.profiler.set_state("run")
+    run_training_iteration(data)
+    mx.nd.waitall()
+    mx.profiler.set_state("stop")
 
 
 if __name__ == '__main__':

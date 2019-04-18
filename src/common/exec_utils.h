@@ -380,7 +380,7 @@ inline void HandleInferShapeError(const size_t num_forward_inputs,
     const uint32_t nid = idx.input_nodes().at(i);
     const uint32_t eid = idx.entry_id(nid, 0);
     const mxnet::TShape& inferred_shape = inferred_shapes[eid];
-    if (inferred_shape.ndim() == 0 || inferred_shape.Size() == 0U) {
+    if (!shape_is_known(inferred_shape)) {
       const std::string& arg_name = idx[nid].source->attrs.name;
       oss << arg_name << ": " << inferred_shape << ", ";
       if (--cnt == 0) {
@@ -390,7 +390,7 @@ inline void HandleInferShapeError(const size_t num_forward_inputs,
     }
   }
   LOG(FATAL) << "InferShape pass cannot decide shapes for the following arguments "
-                "(0s means unknown dimensions). Please consider providing them as inputs:\n"
+                "(-1 means unknown dimensions). Please consider providing them as inputs:\n"
              << oss.str();
 }
 

@@ -397,11 +397,11 @@ inline size_t NDArray::Size() const {
 }
 
 inline std::vector<mx_uint> NDArray::GetShape() const {
-  const mx_uint *out_pdata;
-  mx_uint out_dim;
-  MXNDArrayGetShape(blob_ptr_->handle_, &out_dim, &out_pdata);
+  const int *out_pdata;
+  int out_dim;
+  MXNDArrayGetShapeEx(blob_ptr_->handle_, &out_dim, &out_pdata);
   std::vector<mx_uint> ret;
-  for (mx_uint i = 0; i < out_dim; ++i) {
+  for (int i = 0; i < out_dim; ++i) {
     ret.push_back(out_pdata[i]);
   }
   return ret;
