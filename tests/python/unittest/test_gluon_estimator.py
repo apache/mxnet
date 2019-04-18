@@ -221,6 +221,7 @@ def test_metric():
                     loss=loss,
                     trainer=trainer,
                     context=ctx)
+    est.prepare_loss_and_metrics()
     assert isinstance(est.train_metrics[0], mx.metric.Accuracy)
 
 

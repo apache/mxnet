@@ -63,10 +63,6 @@ class Estimator(object):
         self.loss = self._check_loss(loss)
         self.train_metrics = self._check_metrics(metrics)
 
-        # Use default mx.metric.Accuracy() for gluon.loss.SoftmaxCrossEntropyLoss()
-        if not self.train_metrics and any([isinstance(l, gluon.loss.SoftmaxCrossEntropyLoss) for l in self.loss]):
-            self.train_metrics = [Accuracy()]
-
         self.context = self._check_context(context)
         self._initialize(initializer)
         self.trainer = self._check_trainer(trainer)
@@ -164,6 +160,9 @@ class Estimator(object):
         """
         if any(not hasattr(self, attribute) for attribute in
                ['train_metrics', 'val_metrics']):
+            # Use default mx.metric.Accuracy() for gluon.loss.SoftmaxCrossEntropyLoss()
+            if not self.train_metrics and any([isinstance(l, gluon.loss.SoftmaxCrossEntropyLoss) for l in self.loss]):
+                self.train_metrics = [Accuracy()]
             self.val_metrics = []
             for loss in self.loss:
                 self.train_metrics.append(Loss("Train " + ''.join([i for i in loss.name if not i.isdigit()])))
