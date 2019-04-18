@@ -125,95 +125,14 @@ struct quantize_v2_zero_centered {
   }
 };
 
-template <typename xpu>
-void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
-                       const std::vector<TBlob> &inputs, const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &outputs) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  typedef float SrcDType;
-  using mshadow::red::limits::MaxValue;
-  using mshadow::red::limits::MinValue;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
-  auto out_type = GetOutputType(param);
-  if (out_type == mshadow::kUint8 && std::is_same<xpu, gpu>::value) {
-    LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
-                  "please switch to the context of CPU or int8 data type for GPU.";
-  }
-
-  if (inputs[0].type_flag_ == mshadow::kUint8 || inputs[0].type_flag_ == mshadow::kInt8) {
-    if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-      *outputs[1].dptr<float>() = param.min_calib_range.value();
-      *outputs[2].dptr<float>() = param.max_calib_range.value();
-    } else {
-      if (inputs[0].type_flag_ == mshadow::kUint8) {
-        *outputs[1].dptr<float>() = 0;
-        *outputs[2].dptr<float>() = 255;
-      } else {
-        *outputs[1].dptr<float>() = -127;
-        *outputs[2].dptr<float>() = 127;
-      }
-    }
-    UnaryOp::IdentityCompute<xpu>(attrs, ctx, {inputs[0]}, req, outputs);
-  } else {
-    if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-      if (out_type == mshadow::kUint8) {
-        Kernel<quantize_v2_unsigned, xpu>::Launch(
-            s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
-            outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), param.min_calib_range.value(),
-            param.max_calib_range.value(), MinValue<uint8_t>(), MaxValue<uint8_t>());
-      } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
-        Kernel<quantize_v2_zero_centered, xpu>::Launch(
-            s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
-            outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), param.min_calib_range.value(),
-            param.max_calib_range.value(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-      } else {
-        LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
-      }
-    } else {  // model is not calibrated
-      mxnet::TShape src_shape, dst_shape;
-      const size_t actual_float_size = sizeof(float);
-      const size_t temp_reduce_size = ConfigReduce<xpu, SrcDType>(
-          s, inputs[0].shape_, mxnet::TShape(1, 1), &src_shape, &dst_shape);
-      Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
-          Shape1(2 * actual_float_size + temp_reduce_size), s);
-      const int dev_id = ctx.run_ctx.ctx.dev_id;
-      TBlob in_min_t(reinterpret_cast<SrcDType *>(temp_space.dptr_), Shape1(1), xpu::kDevMask,
-                    dev_id);
-      TBlob in_max_t(reinterpret_cast<SrcDType *>(temp_space.dptr_) + 1, Shape1(1), xpu::kDevMask,
-                    dev_id);
-      Tensor<xpu, 1, char> workspace(temp_space.dptr_ + 2 * actual_float_size,
-                                    Shape1(temp_reduce_size), s);
-      broadcast::Reduce<red::minimum, 2, SrcDType, mshadow::op::identity>(
-          s, in_min_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
-      broadcast::Reduce<red::maximum, 2, SrcDType, mshadow::op::identity>(
-          s, in_max_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
-      if (out_type == mshadow::kUint8) {
-        Kernel<quantize_v2_unsigned, xpu>::Launch(
-            s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
-            outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min_t.dptr<float>(),
-            in_max_t.dptr<float>(), MinValue<uint8_t>(), MaxValue<uint8_t>());
-      } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
-        Kernel<quantize_v2_zero_centered, xpu>::Launch(
-            s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
-            outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min_t.dptr<float>(),
-            in_max_t.dptr<float>(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-      } else {
-        LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
-      }
-    }
-  }
-}
-
-static inline bool QuantizeV2Shape(const nnvm::NodeAttrs &attrs, mxnet::ShapeVector *in_attrs,
-                                   mxnet::ShapeVector *out_attrs) {
+static inline bool QuantizeV2Shape(const nnvm::NodeAttrs &attrs, std::vector<TShape> *in_attrs,
+                                   std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 3U);
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape{1});
-  SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape{1});
   return !shape_is_none(out_attrs->at(0));
 }
 
@@ -235,6 +154,102 @@ static inline bool QuantizeV2Type(const nnvm::NodeAttrs &attrs, std::vector<int>
   TYPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_attrs, 2, mshadow::kFloat32);
   return (*in_attrs)[0] != -1;
+}
+
+template<typename xpu>
+class QuantizeV2Operator {
+ public:
+  explicit QuantizeV2Operator(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
+
+  void Forward(const OpContext &ctx, const std::vector<TBlob> &inputs,
+               const std::vector<OpReqType> &req, const std::vector<TBlob> &outputs) {
+    using namespace mshadow;
+    using namespace mxnet_op;
+    typedef float SrcDType;
+    using mshadow::red::limits::MaxValue;
+    using mshadow::red::limits::MinValue;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs_.parsed);
+    auto out_type = GetOutputType(param);
+    if (out_type == mshadow::kUint8 && std::is_same<xpu, gpu>::value) {
+      LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
+                    "please switch to the context of CPU or int8 data type for GPU.";
+    }
+
+    if (inputs[0].type_flag_ == mshadow::kUint8 || inputs[0].type_flag_ == mshadow::kInt8) {
+      if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+        *outputs[1].dptr<float>() = param.min_calib_range.value();
+        *outputs[2].dptr<float>() = param.max_calib_range.value();
+      } else {
+        if (inputs[0].type_flag_ == mshadow::kUint8) {
+          *outputs[1].dptr<float>() = 0;
+          *outputs[2].dptr<float>() = 255;
+        } else {
+          *outputs[1].dptr<float>() = -127;
+          *outputs[2].dptr<float>() = 127;
+        }
+      }
+      UnaryOp::IdentityCompute<xpu>(attrs_, ctx, {inputs[0]}, req, outputs);
+    } else {
+      if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+        if (out_type == mshadow::kUint8) {
+          Kernel<quantize_v2_unsigned, xpu>::Launch(
+              s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
+              outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), param.min_calib_range.value(),
+              param.max_calib_range.value(), MinValue<uint8_t>(), MaxValue<uint8_t>());
+        } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
+          Kernel<quantize_v2_zero_centered, xpu>::Launch(
+              s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
+              outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), param.min_calib_range.value(),
+              param.max_calib_range.value(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
+        } else {
+          LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
+        }
+      } else {  // model is not calibrated
+        mxnet::TShape src_shape, dst_shape;
+        const size_t actual_float_size = sizeof(float);
+        const size_t temp_reduce_size = ConfigReduce<xpu, SrcDType>(
+            s, inputs[0].shape_, mxnet::TShape(1, 1), &src_shape, &dst_shape);
+        Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
+            Shape1(2 * actual_float_size + temp_reduce_size), s);
+        const int dev_id = ctx.run_ctx.ctx.dev_id;
+        TBlob in_min_t(reinterpret_cast<SrcDType *>(temp_space.dptr_), Shape1(1), xpu::kDevMask,
+                       dev_id);
+        TBlob in_max_t(reinterpret_cast<SrcDType *>(temp_space.dptr_) + 1, Shape1(1), xpu::kDevMask,
+                       dev_id);
+        Tensor<xpu, 1, char> workspace(temp_space.dptr_ + 2 * actual_float_size,
+                                       Shape1(temp_reduce_size), s);
+        broadcast::Reduce<red::minimum, 2, SrcDType, mshadow::op::identity>(
+            s, in_min_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
+        broadcast::Reduce<red::maximum, 2, SrcDType, mshadow::op::identity>(
+            s, in_max_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
+        if (out_type == mshadow::kUint8) {
+          Kernel<quantize_v2_unsigned, xpu>::Launch(
+              s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
+              outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min_t.dptr<float>(),
+              in_max_t.dptr<float>(), MinValue<uint8_t>(), MaxValue<uint8_t>());
+        } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
+          Kernel<quantize_v2_zero_centered, xpu>::Launch(
+              s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
+              outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min_t.dptr<float>(),
+              in_max_t.dptr<float>(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
+        } else {
+          LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
+        }
+      }
+    }
+  }
+
+ private:
+  nnvm::NodeAttrs attrs_;
+};
+
+template <typename xpu>
+static void QuantizeV2Forward(const OpStatePtr &state_ptr, const OpContext &ctx,
+                              const std::vector<TBlob> &inputs, const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &outputs) {
+  auto &op = state_ptr.get_state<QuantizeV2Operator<xpu>>();
+  op.Forward(ctx, inputs, req, outputs);
 }
 
 }  // namespace op
