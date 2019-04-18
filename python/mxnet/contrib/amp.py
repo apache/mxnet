@@ -32,8 +32,8 @@ from ..context import cpu, Context
 from ..module import Module
 
 
-def _convert_symbol(sym, target_dtype="float16", target_precision_ops=None,
-                    fp32_ops=None, widest_precision_ops=None, conditional_fp32_ops=None,
+def _convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
+                    fp32_ops=None, widest_dtype_ops=None, conditional_fp32_ops=None,
                     excluded_sym_names=None):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
     add cast layers according to the op lists (target_precision_ops, fp32_ops,
@@ -70,33 +70,34 @@ def _convert_symbol(sym, target_dtype="float16", target_precision_ops=None,
     if target_dtype != "float16":
         raise ValueError("Only target_dtype float16 is supported currently")
     num_target_dtype_ops = 0
-    num_original_dtype_ops = 0
+    num_fp32_ops = 0
     num_widest_dtype_ops = 0
-    num_condition_dtype_ops = 0
+    num_conditional_fp32_ops = 0
 
-    if target_precision_ops is not None:
-        assert isinstance(target_precision_ops, list)
-        num_target_dtype_ops = len(target_dtype_op_names)
+    if target_dtype_ops is not None:
+        assert isinstance(target_dtype_ops, list)
+        num_target_dtype_ops = len(target_dtype_ops)
     else:
         target_dtype_ops = []
 
-    if original_precision_ops is not None:
-        assert isinstance(original_precision_ops, list)
-        num_original_dtype_ops = len(num_original_dtype_op_names)
+    if fp32_ops is not None:
+        assert isinstance(fp32_ops, list)
+        num_fp32_ops = len(fp32_ops)
     else:
-        original_dtype_ops = []
+        fp32_ops = []
 
-    if widest_precision_ops is not None:
-        assert isinstance(widest_precision_ops, list)
-        num_widest_dtype_ops = len(widest_precision_ops)
+    if widest_dtype_ops is not None:
+        assert isinstance(widest_dtype_ops, list)
+        num_widest_dtype_ops = len(widest_dtype_ops)
     else:
         widest_dtype_ops = []
 
-    if conditional_input_precision_ops is not None:
-        assert isinstance(conditional_input_precision_ops, list)
-        num_cond_original_dtype_ops = len(conditional_input_precision_ops)
+    if conditional_fp32_ops is not None:
+        assert isinstance(conditional_fp32_ops, list)
+        num_conditional_fp32_ops = len(conditional_fp32_ops)
     else:
-        conditional_input_dtype_ops = []
+        conditional_fp32_ops = []
+    print num_conditional_fp32_ops
 
 
     out = SymbolHandle()
@@ -104,10 +105,13 @@ def _convert_symbol(sym, target_dtype="float16", target_precision_ops=None,
                                             ctypes.byref(out),
                                             mx_uint(num_target_dtype_ops),
                                             c_str_array(target_dtype_ops),
-                                            mx_uint(num_original_dtype_ops),
-                                            c_str_array(original_dtype_ops),
+                                            mx_uint(num_fp32_ops),
+                                            c_str_array(fp32_ops),
                                             mx_uint(num_widest_dtype_ops),
-                                            c_str_array(widest_dtype_ops)))
+                                            c_str_array(widest_dtype_ops)),
+                                            mx_uint(len(num_conditional_fp32_ops)),
+                                            c_str_array(conditional_fp32_ops),
+                                            c_str(target_dtype))
     return Symbol(out)
 
 

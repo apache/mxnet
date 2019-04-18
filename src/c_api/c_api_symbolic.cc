@@ -697,31 +697,42 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
 
 int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             SymbolHandle *ret_sym_handle,
-                            const mx_uint num_fp16_op_names,
-                            const char **fp16_op_names,
+                            const mx_uint num_target_dtype_op_names,
+                            const char **target_dtype_op_names,
                             const mx_uint num_fp32_op_names,
                             const char **fp32_op_names,
-                            const mx_uint num_widest_type_op_names,
-                            const char **widest_type_op_names) {
+                            const mx_uint num_widest_dtype_op_names,
+                            const char **widest_dtype_op_names,
+                            const mx_uint num_conditional_fp32_op_names,
+                            const char **conditional_fp32_op_names,
+                            const char *target_dtype) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
   nnvm::Graph g = Symbol2Graph(*sym);
-  std::unordered_set<std::string> fp16_node_names;
-  std::unordered_set<std::string> fp32_node_names;
-  std::unordered_set<std::string> widest_node_names;
-  for (size_t i = 0; i < num_fp16_op_names; ++i) {
-    fp16_node_names.emplace(fp16_op_names[i]);
+  std::unordered_set<std::string> target_dtype_ops;
+  std::unordered_set<std::string> fp32_ops;
+  std::unordered_set<std::string> widest_dtype_ops;
+  std::unordered_set<std::string> conditional_fp32_ops;
+  for (size_t i = 0; i < num_target_dtype_op_names; ++i) {
+    target_dtype_ops.emplace(target_dtype_op_names[i]);
   }
   for (size_t i = 0; i < num_fp32_op_names; ++i) {
-    fp32_node_names.emplace(fp32_op_names[i]);
+    fp32_ops.emplace(fp32_op_names[i]);
   }
-  for (size_t i = 0; i < num_widest_type_op_names; ++i) {
-    widest_node_names.emplace(widest_type_op_names[i]);
+  for (size_t i = 0; i < num_widest_dtype_op_names; ++i) {
+    widest_dtype_ops.emplace(widest_dtype_op_names[i]);
   }
-  g.attrs["fp16_op_names"] = std::make_shared<nnvm::any>(std::move(fp16_node_names));
-  g.attrs["fp32_op_names"] = std::make_shared<nnvm::any>(std::move(fp32_node_names));
-  g.attrs["widest_type_op_names"] = std::make_shared<nnvm::any>(std::move(widest_node_names));
+  LOG(INFO) << "conditional_fp32_ops len is " << num_conditional_fp32_op_names;
+  for (size_t i = 0; i < num_conditional_fp32_op_names; ++i) {
+    conditional_fp32_ops.emplace(conditional_fp32_op_names[i]);
+  }
+  std::string target_dtype(target_dtype);
+  g.attrs["target_dtype_ops"] = std::make_shared<nnvm::any>(std::move(target_dtype_ops));
+  g.attrs["fp32_ops"] = std::make_shared<nnvm::any>(std::move(fp32_ops));
+  g.attrs["widest_dtype_ops"] = std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
+  g.attrs["conditional_fp32_ops"] = std::make_shared<nnvm::any>(std::move(conditional_fp32_ops));
+  g.attrs["target_dtype"] = std::make_shared<nnvm::any>(std::move(target_dtype));
   g = ApplyPass(std::move(g), "ReducePrecision");
   s->outputs = g.outputs;
   *ret_sym_handle = s;

@@ -108,19 +108,23 @@ void AddMultiCastNode(const std::vector<NodeEntry>& inputs, const std::string& n
 
 Graph ReducePrecision(Graph&& src) {
   static const auto &flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
-  const auto fp16_op_names =
-      src.GetAttr<std::unordered_set<std::string>>("fp16_op_names");
-  const auto fp32_op_names =
-      src.GetAttr<std::unordered_set<std::string>>("fp32_op_names");
-  const auto widest_type_op_names =
-      src.GetAttr<std::unordered_set<std::string>>("widest_type_op_names");
+  const auto target_dtype_ops =
+      src.GetAttr<std::unordered_set<std::string>>("target_dtype_ops");
+  const auto fp32_ops =
+      src.GetAttr<std::unordered_set<std::string>>("fp32_ops");
+  const auto widest_dtype_ops =
+      src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
+  const auto conditional_fp32_ops =
+      src.GetAttr<std::unordered_set<std::string>>("conditional_fp32_ops");
+  const auto target_dtype = src.GetAttr<std::string>("target_dtype");
+  CHECK(target_dtype == "float16") << "Only float16 target dtype is supported";
   std::unordered_map<Node*, NodePtr> mirror_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_entry_map;
   DFSVisit(src.outputs, [&](const NodePtr &node) {
     NodePtr new_node = Node::Create();
     *new_node = *node;
     new_node->inputs.clear();
-    if (!node->is_variable() && fp32_op_names.count(node->op()->name) > 0) {
+    if (!node->is_variable() && fp32_ops.count(node->op()->name) > 0) {
       for (size_t i = 0; i < node->inputs.size(); ++i) {
         const auto &e = node->inputs[i];
         if (mirror_entry_map.count(e)) {
@@ -132,7 +136,7 @@ Graph ReducePrecision(Graph&& src) {
           AddCastNode(e, suffix, mirror_entry, "float32", mirror_entry_map, new_node);
         }
       }
-    } else if (!node->is_variable() && fp16_op_names.count(node->op()->name) > 0) {
+    } else if (!node->is_variable() && target_dtype_ops.count(node->op()->name) > 0) {
       for (size_t i = 0; i < node->inputs.size(); ++i) {
         const auto &e = node->inputs[i];
         if (mirror_entry_map.count(e)) {
@@ -144,7 +148,7 @@ Graph ReducePrecision(Graph&& src) {
           AddCastNode(e, suffix, mirror_entry, "float16", mirror_entry_map, new_node);
         }
       }
-    } else if (!node->is_variable() && widest_type_op_names.count(node->op()->name) > 0) {
+    } else if (!node->is_variable() && widest_dtype_ops.count(node->op()->name) > 0) {
         CHECK(node->inputs.size() > 0)
             << "Please check the symbol. node name " << node << node->attrs.name
             << "op name " << node->op()->name << "has no inputs";

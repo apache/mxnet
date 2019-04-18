@@ -1623,14 +1623,29 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_ha
                                const mx_uint num_offline, const char **offline_params,
                                const char *quantized_dtype, const bool calib_quantize);
 
+/*!
+ * \brief Convert a symbol into a mixed precision symbol with cast operators for target dtype casting
+ * \param sym_handle symbol to be converted
+ * \param ret_sym_handle mixed precision symbol result
+ * \param num_target_dtype_op_names number of ops to be casted to target_dtype
+ * \param target_dtype_op_names op names to be casted to target_dtype
+ * \param num_fp32_op_names number of ops to be casted to FP32
+ * \param fp32_op_names op names to be casted to FP32
+ * \param num_widest_dtype_op_names number of ops to be casted to widest dtype
+ * \param widest_dtype_op_names names to be casted to widest dtype
+ * \param num_conditional_fp32_op_names number of ops to be cast to fp32 based on condition
+ */
 MXNET_DLL int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                                       SymbolHandle *ret_sym_handle,
-                                      const mx_uint num_fp16,
-                                      const char **fp16_op_names,
-                                      const mx_uint num_fp32,
+                                      const mx_uint num_target_dtype_op_names,
+                                      const char **target_dtype_op_names,
+                                      const mx_uint num_fp32_op_names,
                                       const char **fp32_op_names,
-                                      const mx_uint num_widest,
-                                      const char **widest_type_op_names);
+                                      const mx_uint num_widest_dtype_op_names,
+                                      const char **widest_dtype_op_names,
+                                      const mx_uint num_conditional_fp32_op_names,
+                                      const char **conditional_fp32_op_names,
+                                      const char *target_dtype);
 
 /*!
  * \brief Set calibration table to node attributes in the sym
