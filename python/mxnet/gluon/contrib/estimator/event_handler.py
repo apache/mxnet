@@ -22,7 +22,9 @@ import logging
 import os
 import time
 import warnings
+
 import numpy as np
+
 from ....metric import EvalMetric, Loss
 
 
@@ -57,11 +59,23 @@ class BatchEnd(object):
 
 
 class MetricHandler(EpochBegin, BatchEnd):
+    """Metric Handler that update metric values at batch end
+
+    :py:class:`MetricHandler` takes model predictions and true labels
+    and update the metrics, it also update metric wrapper for loss with loss values
+    Validation loss and metrics will be handled by :py:class:`ValidationHandler`
+
+    Parameters
+    ----------
+    train_metrics : List of EvalMetrics
+        training metrics to be updated at batch end
+    """
+
     def __init__(self, train_metrics):
-        self.train_metrics = train_metrics
+        self.train_metrics = train_metrics or []
         # order to be called among all callbacks
         # metrics need to be calculated before other callbacks can access them
-        self.rank = 1
+        self.priority = -np.Inf
 
     def epoch_begin(self, estimator, *args, **kwargs):
         for metric in self.train_metrics:
@@ -80,6 +94,29 @@ class MetricHandler(EpochBegin, BatchEnd):
 
 
 class ValidationHandler(BatchEnd, EpochEnd):
+    """"Validation Handler that evaluate model on validation dataset
+
+    :py:class:`ValidationHandler` takes validation dataset, an evaluation function,
+    metrics to be evaluated, and how often to run the validation. You can provide custom
+    evaluation function or use the one provided my :py:class:`Estimator`
+
+    Parameters
+    ----------
+    val_data : DataLoader
+        validation data set to run evaluation
+    eval_fn : function
+        a function defines how to run evaluation and
+        calculate loss and metrics
+    val_metrics : List of EvalMetrics
+        validation metrics to be updated
+    epoch_period : int, default 1
+        how often to run validation at epoch end, by default
+        validate every epoch
+    batch_period : int, default None
+        how often to run validation at batch end, by default
+        does not validate at batch end
+    """
+
     def __init__(self,
                  val_data,
                  eval_fn,
@@ -95,7 +132,7 @@ class ValidationHandler(BatchEnd, EpochEnd):
         self.num_epochs = 0
         # order to be called among all callbacks
         # validation metrics need to be calculated before other callbacks can access them
-        self.rank = 1
+        self.priority = -np.Inf
 
     def batch_end(self, estimator, *args, **kwargs):
         if self.batch_period and self.num_batches % self.batch_period == 0:
@@ -121,12 +158,16 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     ----------
     file_name : str
         file name to save the logs
-    file_location: str
+    file_location : str
         file location to save the logs
-    verbose: int, default LOG_VERBOSITY_PER_EPOCH
+    verbose : int, default LOG_VERBOSITY_PER_EPOCH
         Limit the granularity of metrics displayed during training process
         verbose=LOG_VERBOSITY_PER_EPOCH: display metrics every epoch
         verbose=LOG_VERBOSITY_PER_BATCH: display metrics every batch
+    train_metrics : list of EvalMetrics
+        training metrics to be logged, logged at batch end, epoch end, train end
+    val_metrics : list of EvalMetrics
+        validation metrics to be logged, logged at epoch end, train end
     """
 
     LOG_VERBOSITY_PER_EPOCH = 1
@@ -159,6 +200,9 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         self.batch_index = 0
         self.current_epoch = 0
         self.processed_samples = 0
+        # logging handler need to be called at last to make sure all states are updated
+        # it will also shut down logging at train end
+        self.priority = np.Inf
 
     def train_begin(self, estimator, *args, **kwargs):
         self.train_start = time.time()
@@ -178,6 +222,10 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
             name, value = metric.get()
             msg += '%s : %.4f ' % (name, value)
         self.logger.info(msg)
+        for handler in self.logger.handlers:
+            handler.close()
+            self.logger.removeHandler(handler)
+        logging.shutdown()
 
     def batch_begin(self, estimator, *args, **kwargs):
         if self.verbose == self.LOG_VERBOSITY_PER_BATCH:

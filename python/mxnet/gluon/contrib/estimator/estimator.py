@@ -20,9 +20,11 @@
 """Gluon Estimator"""
 
 import copy
+import warnings
 import weakref
 
-from .event_handler import *
+from .event_handler import MetricHandler, ValidationHandler, LoggingHandler
+from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
 from .... import gluon, autograd
 from ....context import Context, cpu, gpu, num_gpus
 from ....metric import EvalMetric, Loss, Accuracy
@@ -47,7 +49,7 @@ class Estimator(object):
     trainer : Trainer
         Trainer to apply optimizer on network parameters
     context : Context or list of Context
-        devices to run the training on
+        device(s) to run the training on
     """
 
     def __init__(self, net,
@@ -283,11 +285,14 @@ class Estimator(object):
                 self.trainer.step(batch_size)
                 # batch end
                 for handler in batch_end:
-                    if handler.batch_end(estimator_ref, batch=batch, pred=pred, label=label, loss=loss): break
+                    if handler.batch_end(estimator_ref, batch=batch,
+                                         pred=pred, label=label, loss=loss):
+                        break
 
             # epoch end
             for handler in epoch_end:
-                if handler.epoch_end(estimator_ref): break
+                if handler.epoch_end(estimator_ref):
+                    break
 
         # train end
         for handler in train_end:
