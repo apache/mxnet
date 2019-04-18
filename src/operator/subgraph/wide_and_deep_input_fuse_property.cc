@@ -84,7 +84,7 @@ static std::string int_vector_to_attr(T v) {
   ss << "]";
   return ss.str();
 }
-static std::string int_vector_to_tuple_attr(nnvm::Tuple<dmlc::optional<int>> v) {
+static std::string int_vector_to_tuple_attr(mxnet::Tuple<dmlc::optional<int>> v) {
   std::stringstream ss;
   ss << "(";
   index_t i = 0;

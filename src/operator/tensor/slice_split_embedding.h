@@ -32,8 +32,8 @@ struct SliceSplitEmbeddingConcatFuseParam
     : public dmlc::Parameter<SliceSplitEmbeddingConcatFuseParam> {
   // From SliceParam, do not support step
   // Only support kWriteTo
-  nnvm::Tuple<dmlc::optional<int>> cont_begin, cont_end;
-  nnvm::Tuple<dmlc::optional<int>> embed_begin, embed_end;
+  mxnet::Tuple<dmlc::optional<int>> cont_begin, cont_end;
+  mxnet::Tuple<dmlc::optional<int>> embed_begin, embed_end;
   // From SliceChannelParam, do not support Axis
   int num_outputs;
   bool squeeze_axis;

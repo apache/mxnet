@@ -32,47 +32,48 @@
 namespace mxnet {
 namespace op {
 
+
+bool ConcatSetShape(std::vector<TShape>* in_shape,
+                    std::vector<TShape>* out_shape,
+                    int num_args, int dim) {
+  CHECK_EQ(in_shape->size(), static_cast<size_t>(num_args));
+  TShape dshape;
+  index_t size = 0;
+  bool has_zero = false;
+  int axis = -1;
+  for (int i = 0; i < num_args; ++i) {
+    TShape tmp = (*in_shape)[i];
+    if (tmp.ndim()) {
+      axis = CheckAxis(dim, tmp.ndim());
+      has_zero = tmp[axis] == 0 || has_zero;
+      size += tmp[axis];
+      tmp[axis] = 0;
+      shape_assign(&dshape, tmp);
+    }
+  }
+  TShape tmp = (*out_shape)[0];
+  if (tmp.ndim()) {
+    axis = CheckAxis(dim, tmp.ndim());
+    tmp[axis] = 0;
+    shape_assign(&dshape, tmp);
+  }
+  if (dshape.ndim() == 0) return false;
+  for (int i = 0; i < num_args; ++i) {
+    CHECK(shape_assign(&(*in_shape)[i], dshape))
+        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
+  }
+  if (!has_zero) dshape[axis] = size;
+  CHECK(shape_assign(&(*out_shape)[0], dshape))
+      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
+  return dshape.Size() != 0;
+}
+
 static bool ConcatShape(const nnvm::NodeAttrs& attrs,
                         mxnet::ShapeVector *in_shape,
                         mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
-  CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-  mxnet::TShape dshape;
-  dim_t size = 0;
-  bool has_unknown_dim_size = false;
-  int axis = -1;
-  for (int i = 0; i < param_.num_args; ++i) {
-    mxnet::TShape tmp = (*in_shape)[i];
-    if (tmp.ndim() > 0) {
-      axis = CheckAxis(param_.dim, tmp.ndim());
-      has_unknown_dim_size = !mxnet::dim_size_is_known(tmp, axis) || has_unknown_dim_size;
-      size += tmp[axis];
-      tmp[axis] = -1;
-      shape_assign(&dshape, tmp);
-    }
-  }
-
-  mxnet::TShape tmp = (*out_shape)[0];
-  if (tmp.ndim() > 0) {
-    axis = CheckAxis(param_.dim, tmp.ndim());
-    tmp[axis] = -1;
-    shape_assign(&dshape, tmp);
-  }
-
-  if (dshape.ndim() == -1) return false;
-  CHECK_NE(dshape.ndim(), 0) << "zero-dimensional arrays cannot be concatenated";
-
-  for (int i = 0; i < param_.num_args; ++i) {
-    CHECK(shape_assign(&(*in_shape)[i], dshape))
-        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
-  }
-
-  if (!has_unknown_dim_size) dshape[axis] = size;
-  CHECK(shape_assign(&(*out_shape)[0], dshape))
-      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
-
-  return shape_is_known(dshape);
+  return ConcatSetShape(in_shape, out_shape, param_.num_args, param_.dim);
 }
 
 // Concat for RNN param deals with the reverse shape inference from output
