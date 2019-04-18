@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import
+# pylint: disable=wildcard-import, unused-variable
 """Gluon Estimator"""
 
 import copy
