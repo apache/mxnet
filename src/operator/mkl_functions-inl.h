@@ -44,36 +44,31 @@ static bool check_type(const int t) {
   return (t == mshadow::kFloat32 || t == mshadow::kFloat64);
 }
 
-#define MXNET_MKL_UNARY_MATH_FUNC(name, func)                                          \
-  struct name : public mxnet_op::tunable {                                             \
-    template <typename DType>                                                          \
-    MSHADOW_XINLINE static void Map(const index_t n, const DType *src, float *dst) {   \
-      vs##func(static_cast<MKL_INT>(n), reinterpret_cast<const float *>(src), dst);    \
-    }                                                                                  \
-    MSHADOW_XINLINE static void Map(const index_t n, const double *src, double *dst) { \
-      vd##func(static_cast<MKL_INT>(n), src, dst);                                     \
-    }                                                                                  \
-  }
+#define MXNET_MKL_UNARY_MATH_FUNC(name, func)                                               \
+struct name {                                                                               \
+  MSHADOW_XINLINE static void Vectorize(const index_t n, const float *src, float *dst) {    \
+    vs##func(static_cast<MKL_INT>(n), src, dst);                                            \
+  }                                                                                         \
+  MSHADOW_XINLINE static void Vectorize(const index_t n, const double *src, double *dst) {  \
+    vd##func(static_cast<MKL_INT>(n), src, dst);                                            \
+  }                                                                                         \
+};
 
-#define MXNET_MKL_BINARY_MATH_FUNC(name, func)                                         \
-  struct name : public mxnet_op::tunable {                                             \
-    template <typename DType>                                                          \
-    MSHADOW_XINLINE static void Map(const index_t n,                                   \
-                                    const DType *a,                                    \
-                                    const DType *b,                                    \
-                                    float *c) {                                        \
-      vs##func(static_cast<MKL_INT>(n),                                                \
-               reinterpret_cast<const float *>(a),                                     \
-               reinterpret_cast<const float *>(b),                                     \
-               c);                                                                     \
-    }                                                                                  \
-    MSHADOW_XINLINE static void Map(const index_t n,                                   \
-                                    const double *a,                                   \
-                                    const double *b,                                   \
-                                    double *c) {                                       \
-      vd##func(static_cast<MKL_INT>(n), a, b, c);                                      \
-    }                                                                                  \
-  }
+#define MXNET_MKL_BINARY_MATH_FUNC(name, func)                                        \
+struct name {                                                                         \
+  MSHADOW_XINLINE static void Vectorize(const index_t n,                              \
+                                        const float *a,                               \
+                                        const float *b,                               \
+                                        float *c) {                                   \
+    vs##func(static_cast<MKL_INT>(n), a, b, c);                                       \
+  }                                                                                   \
+  MSHADOW_XINLINE static void Vectorize(const index_t n,                              \
+                                        const double *a,                              \
+                                        const double *b,                              \
+                                        double *c) {                                  \
+    vd##func(static_cast<MKL_INT>(n), a, b, c);                                       \
+  }                                                                                   \
+};
 
 MXNET_MKL_UNARY_MATH_FUNC(erf, Erf);
 MXNET_MKL_UNARY_MATH_FUNC(exp, Exp);
@@ -117,6 +112,104 @@ MXNET_MKL_BINARY_MATH_FUNC(mul, Mul);
 MXNET_MKL_BINARY_MATH_FUNC(pow, Pow);
 MXNET_MKL_BINARY_MATH_FUNC(hypot, Hypot);
 
+
+template <typename DType>
+MSHADOW_XINLINE static void sub_(index_t n, DType *in, DType b, DType *dst) {
+  for (index_t i = 0; i < n; i++)
+    dst[i] = in[i] - b;
+}
+
+template <typename DType>
+MSHADOW_XINLINE static void div_(index_t n, DType *in, DType b, DType *dst) {
+  for (index_t i = 0; i < n; i++)
+    dst[i] = in[i] / b;
+}
+
+template <typename DType>
+MSHADOW_XINLINE static void sum_(index_t n, DType *in, DType *dst) {
+  // dst[0] = cblas_sasum(n, in, 1);
+  DType sum = 0.0f;
+  for (index_t i = 0; i < n; i++)
+    sum += in[i];
+
+  dst[0] = sum;
+}
+
+template <typename DType>
+MSHADOW_XINLINE static void max_(int n, DType * __restrict__ in, DType *dst) {
+  dst[0] = in[0];
+  for (int i = 1; i < n; i++)
+    dst[0] = (dst[0] < in[i]) ? in[i] : dst[0];
+}
+
+// LayerNorm on the last dimension
+template <typename DType>
+MSHADOW_XINLINE static void LayerNormLastDim(const index_t m,
+                                             const index_t n,
+                                             const DType *a,
+                                             const DType *b,
+                                             const DType *ws,
+                                             const DType *gamma,
+                                             const DType *beta,
+                                             const DType *mean,
+                                             const DType *var,
+                                             const DType eps) {
+#pragma omp parallel for
+  for (index_t i = 0; i < m; i++) {
+    DType* in_offset = a + i * n;
+    DType* out_offset = b + i * n;
+    DType* ws_offset = ws + i * n;
+
+    sum_(n, in_offset, &(mean[i]));
+    mean[i] /= n;
+    sub_(n, in_offset, mean[i], out_offset);
+    square(n, out_offset, ws_offset);
+    sum_(n, ws_offset, &(var[i]));
+    var[i] = sqrt(var[i] / n + eps);
+
+    mul(n, out_offset, gamma, out_offset);
+    div_(n, out_offset, var[i], out_offset);
+    add(n, out_offset, beta, out_offset);
+  }
+}
+
+// softmax on the last dimension
+template <typename DType>
+MSHADOW_XINLINE static void SoftmaxLastDim(const index_t m,
+                                           const index_t n,
+                                           const DType *a,
+                                           const DType *b) {
+#pragma omp paralle for
+  for (index_t i = 0; i < m; i++) {
+    DType* in_offset = a + i * n;
+    DType* out_offset = b + i * n;
+
+    exp(n, in_offset, out_offset);
+    float sum = 0.0f;
+    sum_(n, out_offset, &sum);
+    div_(n, out_offset, sum, out_offset);
+  }
+}
+
+template <typename DType>
+MSHADOW_XINLINE static void LogSoftmaxLastDim(const index_t m,
+                                              const index_t n,
+                                              const DType *a,
+                                              const DType *b) {
+#pragma parallel for
+  for (index_t i = 0; i < m; i++) {
+    DType* in_offset = a + i * n;
+    DType* out_offset = b + i * n;
+
+    DType b, logsum;
+    max_(n, in_offset, &b);
+    sub_(n, in_offset, b, out_offset);
+    exp(n, out_offset, out_offset);
+    sum_(n, out_offset, &logsum);
+    logsum = b + logf(logsum);
+    sub_(n, in_offset, logsum, out_offset);
+  }
+}
 
 }  // namespace mkl_func
 }  // namespace op
