@@ -26,6 +26,8 @@
 #define MXNET_OPERATOR_NUMPY_NP_BROADCAST_REDUCE_OP_H_
 
 #include "../tensor/broadcast_reduce_op.h"
+#include <algorithm>
+#include <vector>
 
 namespace mxnet {
 namespace op {
