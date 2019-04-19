@@ -170,7 +170,7 @@ CachedOp::CachedOp(
       if (indexed_graph.mutable_input_nodes().count(node_id))
         continue;
       fwd_input_to_grad_output_[i] = xs.size();
-      xs.emplace_back(std::move(indexed_graph[node_id].weak_ref.lock()));
+      xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
     }
 
     CHECK(!xs.empty())
