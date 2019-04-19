@@ -19,12 +19,11 @@
 
 import sys
 import unittest
-import warnings
 
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet.gluon.contrib.estimator import Estimator, EventHandler
+from mxnet.gluon.contrib.estimator import *
 from nose.tools import assert_raises
 
 
@@ -222,6 +221,7 @@ def test_metric():
                     loss=loss,
                     trainer=trainer,
                     context=ctx)
+    est.prepare_loss_and_metrics()
     assert isinstance(est.train_metrics[0], mx.metric.Accuracy)
 
 
@@ -252,7 +252,7 @@ def test_context():
                     metrics=metrics)
     # input list of context
     gpus = mx.context.num_gpus()
-    ctx = [mx.gpu(i) for i in gpus] if gpus > 0 else [mx.cpu()]
+    ctx = [mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()]
     net = get_model()
     est = Estimator(net=net,
                     loss=loss,
@@ -267,16 +267,12 @@ def test_context():
 
 
 def test_categorize_handlers():
-    class CustomHandler1(EventHandler):
-        def __init__(self):
-            super(CustomHandler1, self).__init__()
+    class CustomHandler1(TrainBegin):
 
         def train_begin(self):
             print("custom train begin")
 
-    class CustomHandler2(EventHandler):
-        def __init__(self):
-            super(CustomHandler2, self).__init__()
+    class CustomHandler2(EpochBegin, BatchBegin, TrainEnd):
 
         def epoch_begin(self):
             print("custom epoch begin")
@@ -287,9 +283,7 @@ def test_categorize_handlers():
         def train_end(self):
             print("custom train end")
 
-    class CustomHandler3(EventHandler):
-        def __init__(self):
-            super(CustomHandler3, self).__init__()
+    class CustomHandler3(EpochBegin, BatchBegin, BatchEnd, TrainEnd):
 
         def epoch_begin(self):
             print("custom epoch begin")
