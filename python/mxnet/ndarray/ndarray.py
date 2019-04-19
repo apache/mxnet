@@ -4146,7 +4146,7 @@ class DLTensor(ctypes.Structure):
                 ("byte_offset", ctypes.c_uint64)]
 
 class DLManagedTensor(ctypes.Structure):
-  pass
+    pass
 
 
 DeleterFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(DLManagedTensor))
@@ -4164,7 +4164,47 @@ def dl_managed_tensor_deleter(dl_managed_tensor_handle):
     ctypes.pythonapi.Py_DecRef(pyobj)
 
 
-def from_numpy(array):
+def from_numpy(array, zero_copy=True):
+    """Returns an MXNet's NDArray backed by Numpy's ndarray.
+
+    Parameters
+    ----------
+    array: numpy.ndarray
+        input data
+
+    zero_copy: bool
+        Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
+        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+
+    Returns
+    -------
+    NDArray
+        a NDArray backed by a dlpack tensor
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> y = mx.nd.to_dlpack_for_read(x)
+    >>> type(y)
+    <class 'PyCapsule'>
+    >>> z = mx.nd.from_dlpack(y)
+    >>> type(z)
+    <class 'mxnet.ndarray.ndarray.NDArray'>
+    >>> z
+    [[ 1.  1.  1.]
+     [ 1.  1.  1.]]
+    <NDArray 2x3 @cpu(0)>
+
+    >>> w = mx.nd.to_dlpack_for_write(x)
+    >>> type(w)
+    <class 'PyCapsule'>
+    >>> u = mx.nd.from_dlpack(w)
+    >>> u += 1
+    >>> x
+    [[2. 2. 2.]
+     [2. 2. 2.]]
+    <NDArray 2x3 @cpu(0)>
+    """
 
     def make_manager_ctx(obj):
         pyobj = ctypes.py_object(obj)
@@ -4190,10 +4230,13 @@ def from_numpy(array):
         c_obj.deleter = dl_managed_tensor_deleter
         return c_obj
 
-    assert array.flags['C_CONTIGUOUS'], "We only support c-contiguous numpy arrays"
+    if not zero_copy:
+        return NDArray(handle=handle)
+
+    assert array.flags['C_CONTIGUOUS'], "Only c-contiguous arrays are supported for zero-copy"
     c_obj = make_dl_managed_tensor(array)
     address = ctypes.addressof(c_obj)
     address = ctypes.cast(address, ctypes.c_void_p)
     handle = NDArrayHandle()
     check_call(_LIB.MXNDArrayFromDLManagedTensor(address, ctypes.byref(handle)))
-    return NDArray(handle=handle)
+    return NDArray(array)
