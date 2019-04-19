@@ -69,13 +69,13 @@ def test_dequantize_int8_to_float32():
         min_range = mx.nd.array([-real_range], dtype=np.float32)
         max_range = mx.nd.array([real_range], dtype=np.float32)
         return qdata, min_range, max_range
-    
+
     def baseline_dequantization(qdata, real_range, qdata_np):
         quantized_range = 127.0
         scale = real_range / quantized_range
         data_np = qdata_np * scale
         return data_np
-    
+
     def test_nd_array_dequantization(qdata, min_range, max_range, expected_result):
         data = mx.nd.contrib.dequantize(qdata, min_range, max_range, out_type='float32')
         assert data.dtype == np.float32
@@ -164,8 +164,6 @@ def test_requantize_int32_to_int8():
                                                    'max_range':max_range}) 
             qdata_int8, min_output, max_output = out.forward()
         else:
-            sym_min_calib_range = mx.sym.Variable('min_calib_range')
-            sym_max_calib_range = mx.sym.Variable('max_calib_range')
             requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range, 
                                                 min_calib_range, max_calib_range)
             out = requant.bind(ctx=mx.cpu(), args={'data':qdata, 'min_range':min_range, 
