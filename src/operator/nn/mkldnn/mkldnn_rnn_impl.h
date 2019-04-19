@@ -637,6 +637,12 @@ void MKLDNNRNNForward(bool state_outputs,
         }
       }
       if (D == 1) {
+        if (state_outputs) {
+          hy_ptr += cell_size;
+          if (mode == rnn_enum::kLstm) {
+            cy_ptr += cell_size;
+          }
+        }
         w_size = (H + H) * H * ngates;
         MKLDNNRNNForwardUnidi(state_outputs, L - 1, T, N, H, H, tmpNull, user_src_layer_memory_l,
             hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, concat_weight_memory,

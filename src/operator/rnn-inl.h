@@ -854,7 +854,7 @@ class RNNOp {
                                            param_.mode);
         } else {
           //  Before integrating MKLDNN GRU fp32 inference
-          //  using below code for keep func being OK"
+          //  using below code for keep func being OK
           const size_t work_cpu_space_size =
               GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                 param_.state_size, direction, param_.mode);
