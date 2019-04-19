@@ -63,6 +63,7 @@ class TrtGraphExecutor : public GraphExecutor {
                     std::unordered_map<std::string, int> *arg_stype_map,
                     std::vector<OpReqType> *grad_req_types,
                     const std::unordered_set<std::string>& shared_arg_names,
+                    std::vector<std::string>* in_names,
                     std::vector<NDArray>* in_arg_vec,
                     std::vector<NDArray>* arg_grad_vec,
                     std::vector<NDArray>* aux_state_vec,
