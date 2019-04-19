@@ -59,7 +59,8 @@ core_logic: {
     custom_steps.test_unix_python3_integration_gpu(),
     custom_steps.test_unix_cpp_package_gpu(),
     custom_steps.test_unix_scala_gpu(),
-    custom_steps.test_unix_distributed_kvstore_gpu()
+    custom_steps.test_unix_distributed_kvstore_gpu(),
+    custom_steps.test_static_python_gpu()
 
     // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
     //custom_steps.test_unix_caffe_gpu()

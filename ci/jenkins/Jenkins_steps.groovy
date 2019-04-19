@@ -521,7 +521,7 @@ def test_static_scala_cpu() {
         ws('workspace/ut-publish-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run("publish.ubuntu1404_cpu", 'build_scala_static_mkl', false)
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_static_scala_mkl', false)
           }
         }
     }
@@ -535,6 +535,19 @@ def test_static_python_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run("publish.ubuntu1404_cpu", 'build_static_python_mkl', false)
+          }
+        }
+    }
+  }]
+}
+
+def test_static_python_gpu() {
+  return ['Static build GPU 14.04 Python' : {
+    node(NODE_LINUX_GPU) {
+        ws('workspace/ut-publish-python-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run("publish.ubuntu1404_gpu", 'build_static_python_cu100mkl', true)
           }
         }
     }
