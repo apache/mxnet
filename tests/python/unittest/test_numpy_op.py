@@ -16,10 +16,13 @@
 # under the License.
 
 # pylint: skip-file
+from __future__ import absolute_import
 import numpy as _np
 import mxnet as mx
+from mxnet import numpy as np
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
+from mxnet.test_utils import check_numeric_gradient
 from common import with_seed
 import random
 
@@ -40,8 +43,8 @@ def test_np_sum():
     def is_int(dtype):
         return 'int' in dtype
 
-    in_data_dim = random.choice([4, 5, 6])
-    shape = rand_shape_nd(in_data_dim, dim=5)
+    in_data_dim = random.choice([2, 3, 4])
+    shape = rand_shape_nd(in_data_dim, dim=3)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
     for hybridize in [False, True]:
@@ -51,6 +54,7 @@ def test_np_sum():
                     for dtype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
                         if is_int(dtype) and not is_int(itype):
                             continue
+                        # test gluon
                         test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims)
                         if hybridize:
                             test_sum.hybridize()
@@ -70,6 +74,17 @@ def test_np_sum():
 
                         y.backward()
                         assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
+
+                        # test numeric
+                        if itype == 'float32' and dtype == 'float32':
+                            x_sym = mx.sym.Variable("x")
+                            mx_sym = mx.sym.numpy.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims)
+                            check_numeric_gradient(mx_sym, [x], numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
+
+                        # test imperative
+                        mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims)
+                        np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':
