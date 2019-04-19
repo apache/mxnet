@@ -757,31 +757,49 @@ build_ubuntu_gpu_cmake() {
 
 build_ubuntu_cpu_large_tensor() {
     set -ex
+    cd /work/build
     build_ccache_wrappers
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make  \
-        DEV=1                         \
-        ENABLE_TESTCOVERAGE=1         \
-        USE_CPP_PACKAGE=1             \
-        USE_INT64_TENSOR_SIZE=1       \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=OFF                          \
+        -DUSE_CUDNN=OFF                         \
+        -DUSE_MKLDNN=OFF                        \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DUSE_INT64_TENSOR_SIZE=ON              \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
 }
 
 build_ubuntu_gpu_large_tensor() {
     set -ex
+    cd /work/build
     build_ccache_wrappers
-    make  \
-        DEV=1                                     \
-        ENABLE_TESTCOVERAGE=1                     \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_INT64_TENSOR_SIZE=1                   \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=ON                           \
+        -DUSE_CUDNN=ON                          \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_MKLML_MKL=OFF                     \
+        -DUSE_MKLDNN=OFF                        \
+        -DUSE_DIST_KVSTORE=ON                   \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DUSE_INT64_TENSOR_SIZE=ON              \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
 }
 
 build_ubuntu_blc() {
