@@ -60,6 +60,13 @@ class Symbol(SymbolBase):
     # Make numpy functions return Symbol instead of numpy object array
     __array_priority__ = 1000.0
 
+    def as_np_ndarray(self):
+        """Convert mxnet.symbol.Symbol to _NumpySymbol."""
+        from .numpy import _NumpySymbol
+        hdl = SymbolHandle()
+        check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
+        return _NumpySymbol(hdl)
+
     def __repr__(self):
         """Gets a string representation of the symbol."""
         name = self.name

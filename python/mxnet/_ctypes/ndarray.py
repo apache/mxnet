@@ -26,7 +26,7 @@ import ctypes
 from ..base import _LIB
 from ..base import c_str_array, c_handle_array
 from ..base import NDArrayHandle, CachedOpHandle
-from ..base import check_call
+from ..base import check_call, _is_np_op
 
 
 class NDArrayBase(object):
@@ -55,11 +55,19 @@ class NDArrayBase(object):
 
 
 _ndarray_cls = None
+_np_ndarray_cls = None
+
 
 def _set_ndarray_class(cls):
     """Set the symbolic class to be cls"""
     global _ndarray_cls
     _ndarray_cls = cls
+
+
+def _set_np_ndarray_class(cls):
+    """Set the symbolic class to be cls"""
+    global _np_ndarray_cls
+    _np_ndarray_cls = cls
 
 
 def _imperative_invoke(handle, ndargs, keys, vals, out):
@@ -93,13 +101,20 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
 
     if original_output is not None:
         return original_output
-    if num_output.value == 1:
-        return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
-                            stype=out_stypes[0])
+    if _is_np_op(handle):
+        if num_output.value == 1:
+            return _np_ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle))
+        else:
+            return [_np_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle))
+                    for i in range(num_output.value)]
     else:
-        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
-                             stype=out_stypes[i])
-                for i in range(num_output.value)]
+        if num_output.value == 1:
+            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
+                                stype=out_stypes[0])
+        else:
+            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
+                                 stype=out_stypes[i])
+                    for i in range(num_output.value)]
 
 
 class CachedOp(object):

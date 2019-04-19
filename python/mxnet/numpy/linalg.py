@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,14 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""NumPy module for imperative programming."""
-
-from __future__ import absolute_import
-from .multiarray import *
-from . import _op
-from . import random
-from . import linalg
-from . import _register
-from ._op import *
+# coding: utf-8
 
 __all__ = []

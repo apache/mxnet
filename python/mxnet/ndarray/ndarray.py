@@ -183,6 +183,14 @@ fixed-size items.
     # See C++ side of definition(kTVMNDArrayTypeCode) at include/mxmet/tensor_blob.h
     _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
+
+    def as_np_ndarray(self):
+        """Convert mxnet.ndarray.NDArray to mxnet.numpy.ndarray."""
+        from ..numpy import ndarray
+        hdl = NDArrayHandle()
+        check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
+        return ndarray(handle=hdl, writable=self.writable)
+
     @property
     def _tvm_handle(self):
         return self.handle.value

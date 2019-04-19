@@ -2788,6 +2788,26 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
                                EngineVarHandle mutable_vars_handle, int num_mutable_vars,
                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
+/*!
+  * \brief Determines if an op is a Numpy op by its name prefix.
+  * Every Numpy op starts with a prefix string "_numpy_".
+  * \param creator Operator handle
+  * \param is_np_op Indicator of whether creator is a numpy op handle
+  */
+MXNET_DLL int MXIsNumpyOp(AtomicSymbolCreator creator,
+                          int* is_np_op);
+/*!
+ * \brief Create an NDArray from source sharing the same data chunk.
+ * \param src source NDArray
+ * \param out new NDArray sharing the same data chunck with src
+ */
+MXNET_DLL int MXShallowCopyNDArray(NDArrayHandle src, NDArrayHandle* out);
+/*!
+ * \brief Create an Symbol from source sharing the same graph structure.
+ * \param src source Symbol
+ * \param out new Symbol sharing the same graph structure with src
+ */
+MXNET_DLL int MXShallowCopySymbol(SymbolHandle src, SymbolHandle * out);
 
 #ifdef __cplusplus
 }
