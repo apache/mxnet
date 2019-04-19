@@ -4164,12 +4164,12 @@ def dl_managed_tensor_deleter(dl_managed_tensor_handle):
     ctypes.pythonapi.Py_DecRef(pyobj)
 
 
-def from_numpy(array, zero_copy=True):
+def from_numpy(ndarray, zero_copy=True):
     """Returns an MXNet's NDArray backed by Numpy's ndarray.
 
     Parameters
     ----------
-    array: numpy.ndarray
+    ndarray: numpy.ndarray
         input data
 
     zero_copy: bool
@@ -4181,29 +4181,6 @@ def from_numpy(array, zero_copy=True):
     NDArray
         a NDArray backed by a dlpack tensor
 
-    Examples
-    --------
-    >>> x = mx.nd.ones((2,3))
-    >>> y = mx.nd.to_dlpack_for_read(x)
-    >>> type(y)
-    <class 'PyCapsule'>
-    >>> z = mx.nd.from_dlpack(y)
-    >>> type(z)
-    <class 'mxnet.ndarray.ndarray.NDArray'>
-    >>> z
-    [[ 1.  1.  1.]
-     [ 1.  1.  1.]]
-    <NDArray 2x3 @cpu(0)>
-
-    >>> w = mx.nd.to_dlpack_for_write(x)
-    >>> type(w)
-    <class 'PyCapsule'>
-    >>> u = mx.nd.from_dlpack(w)
-    >>> u += 1
-    >>> x
-    [[2. 2. 2.]
-     [2. 2. 2.]]
-    <NDArray 2x3 @cpu(0)>
     """
 
     def make_manager_ctx(obj):
@@ -4231,12 +4208,12 @@ def from_numpy(array, zero_copy=True):
         return c_obj
 
     if not zero_copy:
-        return NDArray(handle=handle)
+        return array(ndarray)
 
-    assert array.flags['C_CONTIGUOUS'], "Only c-contiguous arrays are supported for zero-copy"
-    c_obj = make_dl_managed_tensor(array)
+    assert ndarray.flags['C_CONTIGUOUS'], "Only c-contiguous arrays are supported for zero-copy"
+    c_obj = make_dl_managed_tensor(ndarray)
     address = ctypes.addressof(c_obj)
     address = ctypes.cast(address, ctypes.c_void_p)
     handle = NDArrayHandle()
     check_call(_LIB.MXNDArrayFromDLManagedTensor(address, ctypes.byref(handle)))
-    return NDArray(array)
+    return NDArray(handle=handle)
