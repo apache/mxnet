@@ -257,8 +257,8 @@ class SliceChannelProp : public OperatorProperty {
   }
 
   bool InferShape(mxnet::ShapeVector *in_shape,
-      mxnet::ShapeVector *out_shape,
-      mxnet::ShapeVector *aux_shape) const override {
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
       return SliceChannelInferShape(
           in_shape, out_shape, aux_shape, param_.num_outputs, param_.axis, param_.squeeze_axis);
   }

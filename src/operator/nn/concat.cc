@@ -74,10 +74,10 @@ bool ConcatSetShape(mxnet::ShapeVector *in_shape,
   return shape_is_known(dshape);
 }
 static bool ConcatShape(const nnvm::NodeAttrs& attrs,
-    mxnet::ShapeVector *in_shape,
-    mxnet::ShapeVector *out_shape) {
-    const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
-    return ConcatSetShape(in_shape, out_shape, param_.num_args, param_.dim);
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape) {
+  const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
+  return ConcatSetShape(in_shape, out_shape, param_.num_args, param_.dim);
 }
 // Concat for RNN param deals with the reverse shape inference from output
 // for the special case of concatenating RNN parameters.
