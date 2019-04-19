@@ -781,6 +781,7 @@ struct Kernel<OP, gpu> {
   /*! \brief Launch GPU kernel */
   template<typename ...Args>
   inline static void Launch(mshadow::Stream<gpu> *s, int N, Args... args) {
+    if (0 == N) return;
     using namespace mshadow::cuda;
     int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel<OP, Args...>
@@ -791,6 +792,7 @@ struct Kernel<OP, gpu> {
 
   template<typename ...Args>
   inline static void LaunchEx(mshadow::Stream<gpu> *s, const int N, Args... args) {
+    if (0 == N) return;
     using namespace mshadow::cuda;
     int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel_ex<OP, Args...>

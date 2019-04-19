@@ -241,7 +241,7 @@ class FFTProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 1) <<"Input:[data]";
     const mxnet::TShape &dshape = (*in_shape)[fft::kData];
     // require data to be known
-    if (dshape.ndim() == 0) return false;
+    if (mxnet::op::shape_is_none(dshape)) return false;
 
     out_shape->clear();
     if (dshape.ndim() == 4) {
