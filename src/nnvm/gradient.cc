@@ -144,13 +144,13 @@ Graph Gradient(Graph src) {
         << "because it is unreachable from the outputs.";
   }
 
-  // construct mirror reduece memory strategy if needed
+  // construct mirror as memory reduction strategy if needed
   std::unordered_map<Node*, NodePtr> mirror_map;
   if (mirror_fun != nullptr) {
-    for (const NodePtr& n : topo_order) {
-      if (mirror_fun(*n)) {
+    for (const NodePtr& node_ptr : topo_order) {
+      if (mirror_fun(*node_ptr)) {
         NodePtr new_node = Node::Create();
-        *new_node = *n;
+        *new_node = *node_ptr;
         new_node->attrs.name += "_mirror";
         for (auto& e : new_node->inputs) {
           e.node = mirror_map.at(e.node.get());
@@ -158,9 +158,9 @@ Graph Gradient(Graph src) {
         for (auto& n : new_node->control_deps) {
           n = mirror_map.at(n.get());
         }
-        mirror_map[n.get()] = std::move(new_node);
+        mirror_map[node_ptr.get()] = std::move(new_node);
       } else {
-        mirror_map[n.get()] = n;
+        mirror_map[node_ptr.get()] = node_ptr;
       }
     }
   }
