@@ -107,7 +107,7 @@ object ExampleCustomOp {
     val (trainIter, testIter) =
       Data.mnistIterator(dataPath, batchSize = 100, inputShape = Shape(784))
 
-    val datasAndLabels = trainIter.provideData ++ trainIter.provideLabel
+    val datasAndLabels = trainIter.provideDataDesc ++ trainIter.provideLabelDesc
     val (argShapes, outputShapes, auxShapes) = mlp.inferShape(datasAndLabels)
 
     val initializer = new Xavier(factorType = "in", magnitude = 2.34f)

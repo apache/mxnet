@@ -54,7 +54,7 @@ class SyntheticDataIter(numClasses: Int, val batchSize: Int, datumShape: List[In
   override def next(): DataBatch = {
     if (hasNext) {
       curIter += batchSize
-      new DataBatch(data, label, getIndex, getPad, null, null, null)
+      new DataBatch(data, label, getIndex, getPad)
     } else {
       throw new NoSuchElementException
     }
