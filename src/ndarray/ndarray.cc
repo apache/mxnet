@@ -365,6 +365,18 @@ NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
   return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id, deleter);
 }
 
+NDArray NDArray::FromDLManagedTensor(const DLManagedTensor* tensor) {
+  const DLTensor &dl_tensor = tensor->dl_tensor;
+  void (*tensor_deleter)(struct DLManagedTensor * self) = tensor->deleter;
+  void *manager_ctx = tensor->manager_ctx;
+  auto deleter = [manager_ctx, tensor_deleter](){
+    if (tensor_deleter != nullptr) {
+      tensor_deleter(static_cast<DLManagedTensor*>(manager_ctx));
+    }
+  };
+  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id, deleter);
+}
+
 bool NDArray::fresh_out_grad() const {
   if (Imperative::AGInfo::IsNone(*this)) return false;
   Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
