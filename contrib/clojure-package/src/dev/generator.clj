@@ -176,6 +176,18 @@
                      (util/buffer->vec arg-descs))
          :key-var-num-args (clojure-case (.value key-var-num-args))})))
 
+;;;;;;; Util
+
+(defn format-newline!
+  "Changes `filename` content from `\n` to actual newlines."
+  [filename]
+  (let [content (slurp filename)
+        formatted-content (-> content
+                              (clojure.string/replace #"\\n" "\n")
+                              (print)
+                              (with-out-str))]
+    (spit filename formatted-content)))
+
 ;;;;;;; Symbol
 
 (def symbol-public-no-default
@@ -467,8 +479,10 @@
   (:import (org.apache.mxnet SymbolAPI)))")
 
 (defn generate-symbol-api-file []
-  (println "Generating symbol-api file")
-  (write-to-file all-symbol-api-functions symbol-api-gen-ns "src/org/apache/clojure_mxnet/gen/symbol_api.clj"))
+  (let [filename "src/org/apache/clojure_mxnet/gen/symbol_api.clj"]
+    (println "Generating symbol-api file")
+    (write-to-file all-symbol-api-functions symbol-api-gen-ns filename)
+    (format-newline! filename)))
 
 ;;;;;;; NDArrayAPI
 
@@ -547,12 +561,13 @@
             [org.apache.clojure-mxnet.util :as util])
   (:import (org.apache.mxnet NDArrayAPI)))")
 
-
 (defn generate-ndarray-api-file []
-  (println "Generating ndarray-api file")
-  (write-to-file all-ndarray-api-functions
-                 ndarray-api-gen-ns
-                 "src/org/apache/clojure_mxnet/gen/ndarray_api.clj"))
+  (let [filename "src/org/apache/clojure_mxnet/gen/ndarray_api.clj"]
+    (println "Generating ndarray-api file")
+    (write-to-file all-ndarray-api-functions
+                   ndarray-api-gen-ns
+                   filename)
+    (format-newline! filename)))
 
 ;;; autogen the files
 (do
