@@ -101,17 +101,15 @@ Install the dependencies, required for MXNet, with the following commands:
 ### Build MXNet Shared Library
 After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```. You can clone the repository as described in the following code block, or you may try the [download links](download.md) for your desired MXNet version.
 
-The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
-
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet ~/mxnet
-cd ~/mxnet
+cd ~/mxnet && pushd .
 mkdir build && cd build
 cmake \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    -DUSE_MKL_IF_AVAILABLE=O \
-    -DUSE_CPP_PACKAGE=ON \
+    -DUSE_MKL_IF_AVAILABLE=OFF \
+    -DUSE_MKLDNN=ON \
     -DUSE_CUDA=OFF \
     -DUSE_OPENMP=OFF \
     -DUSE_OPENCV=ON \
@@ -119,6 +117,7 @@ cmake \
     -DCMAKE_BUILD_TYPE=Debug \
     -GNinja ..
 ninja
+popd
 ```
 
 To build with MKLDNN
@@ -156,12 +155,15 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 To install the MXNet Python binding navigate to the root of the MXNet folder then run the following:
 
 ```bash
-virtualenv -p`which python3` py3_venv
-source py3_venv/bin/activate
+virtualenv -p`which python3` mxnet_py3
+source mxnet_py3/bin/activate
 pip install -e python
 ```
 First we create a [virtualenv](https://docs.python-guide.org/dev/virtualenvs/#lower-level-virtualenv) to isolate this installation from our global environment.
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
+
+If you don't want to use virtualenv, a simple `pip install -e python` or `pip3 install -e python`
+will suffice.
 
 ## Install the MXNet Package for R
 You have 2 options:
