@@ -42,6 +42,8 @@ def test_np_sum():
 
     in_data_dim = random.choice([4, 5, 6])
     shape = rand_shape_nd(in_data_dim, dim=5)
+    acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
+                'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
     for hybridize in [False, True]:
         for keepdims in [True, False]:
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
@@ -58,12 +60,13 @@ def test_np_sum():
                         else:
                             x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
                         x.attach_grad()
-                        expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=dtype, keepdims=keepdims)
+                        expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
+                        expected_ret = expected_ret.astype(dtype)
                         with mx.autograd.record():
                             y = test_sum(x)
                         assert y.shape == expected_ret.shape
-                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=5e-3 if dtype == 'float16' else 1e-3,
-                                            atol=1e-3 if dtype == 'float16' else 1e-5)
+                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                                            atol=1e-5 if dtype == 'float16' else 1e-5)
 
                         y.backward()
                         assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
