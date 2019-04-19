@@ -486,8 +486,8 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                   std::vector<NDArray>* in_arg_vec,
                                   std::vector<NDArray>* arg_grad_vec,
                                   std::vector<NDArray>* aux_state_vec) {
-  //build name/index map for graph input nodes
-  std::map<std::string,uint32_t> inv_name_map;
+  // build name/index map for graph input nodes
+  std::map<std::string, uint32_t> inv_name_map;
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& arg_name = idx[nid].source->attrs.name;
@@ -1735,7 +1735,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
   exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
              tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map, tmp_grad_req_types,
              shared_arg_names, &in_names, in_args, arg_grads,
-	     aux_states, shared_buffer, shared_exec);
+             aux_states, shared_buffer, shared_exec);
   return exec;
 }
 
