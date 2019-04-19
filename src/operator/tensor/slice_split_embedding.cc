@@ -25,21 +25,23 @@
 namespace mxnet {
 namespace op {
 
-bool ConcatSetShape(std::vector<TShape>* in_shape,
-                    std::vector<TShape>* out_shape, int num_args, int dim);
+bool ConcatSetShape(mxnet::ShapeVector *in_shape,
+        mxnet::ShapeVector *out_shape, int num_args, int dim);
+
 // call from SliceOpShape
 static TShape get_slice_output_shape(
     const mxnet::Tuple<dmlc::optional<int>>& _pbegin,
     const mxnet::Tuple<dmlc::optional<int>>& _pend,
-    const mxnet::Tuple<dmlc::optional<int>>& _pstep, const mxnet::TShape& dshape) {
-    TShape oshape(dshape);
+    const mxnet::Tuple<dmlc::optional<int>>& _pstep,
+    const mxnet::TShape& dshape) {
+  TShape oshape(dshape);
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
-    common::StaticArray<int64_t, ndim> begin, end, step;
-    GetIndexRange(dshape, _pbegin, _pend, _pstep, &begin, &end, &step);
-    for (index_t i = 0; i < _pbegin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
-      SetSliceOpOutputDimSize(i, b, e, s, &oshape);
-    }
+  common::StaticArray<index_t, ndim> begin, end, step;
+  GetIndexRange(dshape, _pbegin, _pend, _pstep, &begin, &end, &step);
+  for (index_t i = 0; i < _pbegin.ndim(); ++i) {
+    const int b = begin[i], e = end[i], s = step[i];
+    SetSliceOpOutputDimSize(i, b, e, s, &oshape);
+  }
   });
   return oshape;
 }
@@ -50,10 +52,9 @@ static EmbeddingParam GetEmbeddedParam(
   embedding_param.input_dim = param_.input_dims[i];
   embedding_param.output_dim = param_.output_dims[i];
   embedding_param.dtype = mshadow::kFloat32;
-  embedding_param.sparse_grad = 0;
+  embedding_param.sparse_grad = false;
   return embedding_param;
 }
-
 static bool SliceSplitEmbeddingConcatOpShape(const nnvm::NodeAttrs& attrs,
                                              std::vector<TShape>* in_shape,
                                              std::vector<TShape>* out_shape) {
@@ -126,8 +127,8 @@ struct slice_forward_window<ndim, req, cpu> {
   MSHADOW_XINLINE static void Map(
       int i, DType* out, const DType* data, const mshadow::Shape<ndim> dshape,
       const mshadow::Shape<ndim> oshape,
-      const common::StaticArray<int64_t, ndim> begin,
-      const common::StaticArray<int64_t, ndim> step, int out_count_per_row) {
+      const common::StaticArray<mxnet::index_t, ndim> begin,
+      const common::StaticArray<mxnet::index_t, ndim> step, int out_count_per_row) {
     const int data_last_dim_size = dshape[ndim - 1];
     const int out_last_dim_size = oshape[ndim - 1];
     const int step_last_dim = step[ndim - 1];
@@ -179,7 +180,7 @@ void SliceSplitEmbeddingConcatOpForward(const nnvm::NodeAttrs& attrs,
   TShape cont_slice_oshape = get_slice_output_shape(param_.cont_begin, param_.cont_end,
                          param_step, dshape);
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
-    common::StaticArray<int64_t, ndim> begin, end, step;
+    common::StaticArray<mxnet::index_t, ndim> begin, end, step;
     GetIndexRange(data.shape_, param_.cont_begin, param_.cont_end, param_step,
                   &begin, &end, &step);
     MSHADOW_TYPE_SWITCH(

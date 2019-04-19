@@ -71,4 +71,4 @@ struct SliceSplitEmbeddingConcatFuseParam
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_TENSOR_SLICE_SPLIT_EMBEDDING_H_
+#endif  // MXNET_OPERATOR_TENSOR_SLICE_SPLIT_EMBEDDING_H__
