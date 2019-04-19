@@ -24,7 +24,7 @@ find_path(NVTX_INCLUDE_DIRS
   )
 
 find_library(NVTX_LIBRARIES
-  NAMES nvToolsExt64_1 nvToolsExt32_1 nvToolsExt
+  NAMES nvToolsExt64_1.lib nvToolsExt32_1.lib nvToolsExt
   PATHS $ENV{NVTOOLSEXT_PATH} ${NVTX_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
   PATH_SUFFIXES lib lib64 lib/Win32 lib/x64
   )
