@@ -75,7 +75,7 @@ std::string GetSuffix(const nnvm::NodeEntry &e,
 void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
                  const nnvm::NodeEntry &input,
                  const std::string dtype,
-                 nnvm::NodeEntryMap<NodeEntry> &mirror_entry_map,
+                 nnvm::NodeEntryMap<NodeEntry>* mirror_entry_map,
                  NodePtr curr_node) {
   NodePtr cast_node =
       InsertNode("amp_cast", e.node->attrs.name + suffix + "_cast", curr_node,
@@ -88,7 +88,7 @@ void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
 
 void AddMultiCastNode(const std::vector<NodeEntry>& inputs, const std::string& node_name,
                       const std::unordered_map<Node*, NodePtr>& mirror_map,
-                      nnvm::NodeEntryMap<NodeEntry> &mirror_entry_map,
+                      nnvm::NodeEntryMap<NodeEntry>* mirror_entry_map,
                       NodePtr curr_node) {
   NodePtr node = CreateNode("amp_multicast", node_name);
   for (size_t i = 0; i < inputs.size(); ++i) {
@@ -133,7 +133,7 @@ Graph ReducePrecision(Graph&& src) {
           NodePtr mirror_node = mirror_map.at(e.node.get());
           NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
           std::string suffix = GetSuffix(e, mirror_map);
-          AddCastNode(e, suffix, mirror_entry, "float32", mirror_entry_map, new_node);
+          AddCastNode(e, suffix, mirror_entry, "float32", &mirror_entry_map, new_node);
         }
       }
     } else if (!node->is_variable() && target_dtype_ops.count(node->op()->name) > 0) {
@@ -145,7 +145,7 @@ Graph ReducePrecision(Graph&& src) {
           NodePtr mirror_node = mirror_map.at(e.node.get());
           NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
           std::string suffix = GetSuffix(e, mirror_map);
-          AddCastNode(e, suffix, mirror_entry, "float16", mirror_entry_map, new_node);
+          AddCastNode(e, suffix, mirror_entry, "float16", &mirror_entry_map, new_node);
         }
       }
     } else if (!node->is_variable() && widest_dtype_ops.count(node->op()->name) > 0) {
@@ -154,7 +154,7 @@ Graph ReducePrecision(Graph&& src) {
             << "op name " << node->op()->name << "has no inputs";
         const auto &e = node->inputs[0];
         std::string suffix = GetSuffix(e, mirror_map);
-        AddMultiCastNode(node->inputs, suffix, mirror_map, mirror_entry_map, new_node);
+        AddMultiCastNode(node->inputs, suffix, mirror_map, &mirror_entry_map, new_node);
     }
     mirror_map[node.get()] = std::move(new_node);
   });
@@ -173,4 +173,4 @@ NNVM_REGISTER_PASS(ReducePrecision)
     .describe("add cast layers for low precision inference")
     .set_body(ReducePrecision)
     .set_change_graph(true);
-} // namespace mxnet
+}  // namespace mxnet
