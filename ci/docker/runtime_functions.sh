@@ -1350,31 +1350,19 @@ nightly_scala_demo_test_cpu() {
     bash bin/run_im.sh
 }
 
-nightly_estimator_cnn_gpu() {
+nightly_estimator_gpu() {
     set -ex
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
     python test_estimator_cnn.py --type gpu
+    python test_sentiment_rnn.py --type gpu
 }
 
-nightly_estimator_cnn_cpu() {
+nightly_estimator_cpu() {
     set -ex
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
     python test_estimator_cnn.py --type cpu
-}
-
-nightly_estimator_rnn_gpu() {
-    set -ex
-    cd /work/mxnet/tests/nightly/estimator
-    export PYTHONPATH=/work/mxnet/python/
-    python test_sentiment_rnn.py --type gpu
-}
-
-nightly_estimator_rnn_cpu() {
-    set -ex
-    cd /work/mxnet/tests/nightly/estimator
-    export PYTHONPATH=/work/mxnet/python/
     python test_sentiment_rnn.py --type cpu
 }
 

@@ -137,19 +137,19 @@ core_logic: {
         }
       }
     },
-    'estimator: RNN GPU': {
+    'Gluon estimator: GPU': {
       node(NODE_LINUX_GPU) {
-        ws('workspace/estimator-test-rnn-gpu') {
+        ws('workspace/estimator-test-gpu') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator_test_rnn_gpu', true)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator_gpu', true)
         }
       }
     },
-    'estimator: RNN CPU': {
+    'Gluon estimator: CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/estimator-test-rnn-cpu') {
+        ws('workspace/estimator-test-cpu') {
           utils.unpack_and_init('cpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_estimator_test_rnn_cpu', false)
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_estimator_cpu', false)
         }
       }
     }

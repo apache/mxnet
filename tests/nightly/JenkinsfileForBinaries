@@ -140,22 +140,6 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python3_gpu', true, '1500m')
         }
       }
-    },
-    'estimator: CNN GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/estimator-test-cnn-gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator_test_cnn_gpu', true)
-        }
-      }
-    },
-    'estimator: CNN CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/estimator-test-cnn-cpu') {
-          utils.unpack_and_init('cpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_estimator_test_cnn_cpu', true)
-        }
-      }
     }
   }
 }
