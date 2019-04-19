@@ -310,7 +310,7 @@ void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   }
   (*y_memory)[layer_index].set_data_handle(y_ptr);
 
-  if (rnn_forward_prim->size() <= layer_index) {
+  if (rnn_forward_prim->size() <= (size_t)layer_index) {
     primitive rnn_prim = rnn_forward(prim_desc, (*x_memory)[layer_index],
           (*hcx_memory)[layer_index], (*wx_memory)[layer_index],
           (*wh_memory)[layer_index], (*bias_memory)[layer_index],
@@ -513,7 +513,7 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
   }
   (*y_memory)[layer_index].set_data_handle(y_ptr);
 
-  if (rnn_forward_prim->size() <= layer_index) {
+  if (rnn_forward_prim->size() <= (size_t)layer_index) {
     primitive rnn_prim = rnn_forward(prim_desc, (*x_memory)[layer_index],
           (*hcx_memory)[layer_index], (*wx_memory)[layer_index],
           (*wh_memory)[layer_index], (*bias_memory)[layer_index],
