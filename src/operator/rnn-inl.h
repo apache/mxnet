@@ -44,6 +44,7 @@
 #include "./operator_common.h"
 #include "./rnn_impl.h"
 
+
 namespace mxnet {
 namespace op {
 
