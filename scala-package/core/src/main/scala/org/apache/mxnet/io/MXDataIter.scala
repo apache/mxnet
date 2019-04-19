@@ -107,8 +107,7 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     checkCall(_LIB.mxDataIterNext(handle, next))
     if (next.value > 0) {
       currentBatch = new DataBatch(data = getData(), label = getLabel(),
-        index = getIndex(), pad = getPad(),
-        null, null, null)
+        index = getIndex(), pad = getPad())
     } else {
       currentBatch = null
     }

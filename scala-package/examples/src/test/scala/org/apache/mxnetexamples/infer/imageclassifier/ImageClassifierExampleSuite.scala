@@ -23,6 +23,7 @@ import java.io.File
 import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
 
+import scala.language.postfixOps
 import sys.process.Process
 
 /**

@@ -357,6 +357,10 @@
               <version>2.1.0</version>
             </compilerPlugin>
           </compilerPlugins>
+          <args>
+            <arg>-feature</arg>
+            <arg>-deprecation</arg>
+          </args>
         </configuration>
         <executions>
           <execution>
