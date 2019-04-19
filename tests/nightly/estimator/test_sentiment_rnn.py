@@ -183,7 +183,7 @@ def run(net, train_dataloader, test_dataloader, **kwargs):
     # Begin training
     est.fit(train_data=train_dataloader, val_data=test_dataloader,
             epochs=num_epochs)
-    return est
+    return acc
 
 
 def test_estimator_cpu(**kwargs):
@@ -250,9 +250,9 @@ def test_estimator_gpu(**kwargs):
     net.embedding.weight.set_data(glove_embedding.idx_to_vec)
     net.embedding.collect_params().setattr('grad_req', 'null')
 
-    est = run(net, train_dataloader, test_dataloader, **kwargs)
+    acc = run(net, train_dataloader, test_dataloader, **kwargs)
 
-    assert est.train_stats['train_accuracy'] > 0.70
+    assert acc.get()[1] > 0.70
 
 
 parser = argparse.ArgumentParser(description='test gluon estimator')
