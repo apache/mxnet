@@ -1644,10 +1644,12 @@ MXNET_DLL int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                                       const mx_uint num_fp32_op_names,
                                       const mx_uint num_widest_dtype_op_names,
                                       const mx_uint num_conditional_fp32_op_names,
+                                      const mx_uint num_excluded_symbols,
                                       const char **target_dtype_op_names,
                                       const char **fp32_op_names,
                                       const char **widest_dtype_op_names,
-                                      const char **conditional_fp32_op_names);
+                                      const char **conditional_fp32_op_names,
+                                      const char **excluded_symbols);
 
 /*!
  * \brief Set calibration table to node attributes in the sym
