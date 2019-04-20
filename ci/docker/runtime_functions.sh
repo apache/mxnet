@@ -1234,7 +1234,7 @@ nightly_test_KVStore_singleNode() {
 nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
-    python tests/nightly/test_large_array.py
+    nosetests-3.4 tests/nightly/test_large_array.py
 }
 
 #Tests Amalgamation Build with 5 different sets of flags
