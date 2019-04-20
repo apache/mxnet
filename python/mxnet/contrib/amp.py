@@ -100,6 +100,7 @@ def _convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
     out = SymbolHandle()
+    # currently this passes str for conditional_fp32_ops for PoC, this will change
     check_call(_LIB.MXReducePrecisionSymbol(sym.handle,
                                             ctypes.byref(out),
                                             ctypes.byref(ctypes.c_int(target_dtype)),

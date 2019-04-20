@@ -88,7 +88,6 @@ void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
 
 void AddMultiCastNode(const std::vector<NodeEntry>& inputs, const std::string& node_name,
                       const std::unordered_map<Node*, NodePtr>& mirror_map,
-                      nnvm::NodeEntryMap<NodeEntry>* mirror_entry_map,
                       NodePtr curr_node) {
   NodePtr node = CreateNode("amp_multicast", node_name);
   for (size_t i = 0; i < inputs.size(); ++i) {
@@ -154,7 +153,7 @@ Graph ReducePrecision(Graph&& src) {
             << "op name " << node->op()->name << "has no inputs";
         const auto &e = node->inputs[0];
         std::string suffix = GetSuffix(e, mirror_map);
-        AddMultiCastNode(node->inputs, suffix, mirror_map, &mirror_entry_map, new_node);
+        AddMultiCastNode(node->inputs, suffix, mirror_map, new_node);
     }
     mirror_map[node.get()] = std::move(new_node);
   });

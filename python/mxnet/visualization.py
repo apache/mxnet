@@ -369,6 +369,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
             attr["fillcolor"] = cm[5]
         elif op == "Softmax":
             attr["fillcolor"] = cm[6]
+        elif op == "amp_multicast":
+            label = "amp_multicast"
+        elif op == "amp_cast":
+            label = "amp_cast"
         else:
             attr["fillcolor"] = cm[7]
             if op == "Custom":
