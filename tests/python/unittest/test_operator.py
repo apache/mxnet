@@ -6991,7 +6991,8 @@ def test_float16_min_max():
 
 
 @with_seed()
-def test_zero_sized_min_max():
+@mx.use_np_compat
+def test_zero_size_min_max():
     def min():
         a = mx.nd.zeros(shape=(5, 0))
         a.min()
