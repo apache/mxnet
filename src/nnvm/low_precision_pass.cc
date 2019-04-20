@@ -82,7 +82,7 @@ void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
                  input);
   cast_node->attrs.dict["dtype"] = dtype;
   cast_node->op()->attr_parser(&(cast_node->attrs));
-  mirror_entry_map[e] = NodeEntry{cast_node, 0, e.version};
+  (*mirror_entry_map)[e] = NodeEntry{cast_node, 0, e.version};
   return;
 }
 
