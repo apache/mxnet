@@ -435,14 +435,14 @@ class Module(symbolVar: Symbol,
     val newDataShapes = dataBatch.data.map(_.shape)
     if (currDataShapes != newDataShapes) {
       val newDShapes: IndexedSeq[DataDesc] =
-        if (dataBatch.provideData != null) dataBatch.provideData
+        if (dataBatch.provideDataDesc != null) dataBatch.provideDataDesc
         else {
           this.dataShapes.zip(newDataShapes).map { case (i, shape) =>
             DataDesc(i.name, shape, i.dtype, i.layout)
           }
         }
       val newLShapes: Option[IndexedSeq[DataDesc]] =
-        if (dataBatch.provideLabel != null) Some(dataBatch.provideLabel)
+        if (dataBatch.provideLabelDesc != null) Some(dataBatch.provideLabelDesc)
         else if (dataBatch.label != null && dataBatch.label.length > 0
             && this.labelShapes != null) {
           Some(this.labelShapes.zip(dataBatch.label).map { case (i, j) =>

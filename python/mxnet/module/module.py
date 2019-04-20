@@ -505,14 +505,14 @@ class Module(BaseModule):
             batch_size *= kvstore.num_workers
         rescale_grad = 1.0/batch_size
 
+        idx2name = {}
+        if update_on_kvstore:
+            idx2name.update(enumerate(self._exec_group.param_names))
+        else:
+            for k in range(len(self._context)):
+                idx2name.update({i*len(self._context)+k: n
+                                 for i, n in enumerate(self._exec_group.param_names)})
         if isinstance(optimizer, str):
-            idx2name = {}
-            if update_on_kvstore:
-                idx2name.update(enumerate(self._exec_group.param_names))
-            else:
-                for k in range(len(self._context)):
-                    idx2name.update({i*len(self._context)+k: n
-                                     for i, n in enumerate(self._exec_group.param_names)})
             optimizer_params = dict(optimizer_params)
             if 'rescale_grad' not in optimizer_params:
                 optimizer_params['rescale_grad'] = rescale_grad
@@ -528,6 +528,8 @@ class Module(BaseModule):
                     "is not normalized to 1.0/batch_size/num_workers (%s vs. %s). "%(
                         optimizer.rescale_grad, rescale_grad) +
                     "Is this intended?", stacklevel=2)
+            if not optimizer.idx2name:
+                optimizer.idx2name = idx2name.copy()
 
         self._optimizer = optimizer
         self._kvstore = kvstore

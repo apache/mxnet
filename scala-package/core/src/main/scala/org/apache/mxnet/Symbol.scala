@@ -21,6 +21,7 @@ import org.apache.mxnet.Base._
 import org.apache.mxnet.DType.DType
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.implicitConversions
 
@@ -207,6 +208,33 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
     } else {
       (null, null, null)
     }
+  }
+
+  /**
+    * Infer the shape of outputs and arguments of given known shapes of arguments.
+    * User can either pass in the known shapes in positional way or keyword argument way.
+    * Tuple of Nones is returned if there is not enough information passed in.
+    * An error will be raised if there is inconsistency found in the known shapes passed in.
+    * @param args Provide a list of DataDesc containing the shapes to resolve
+    * @return
+    * argShapes List of shapes of arguments. The order is in the same order as list_arguments()
+    * outShapes List of shapes of outputs. The order is in the same order as list_outputs()
+    * auxShapes List of shapes of outputs. The order is in the same order as list_auxiliary()
+    */
+  def inferShape(args: IndexedSeq[DataDesc]):
+  (IndexedSeq[Shape], IndexedSeq[Shape], IndexedSeq[Shape]) = {
+    val keys = ArrayBuffer.empty[String]
+    val indPtr = ArrayBuffer(0)
+    val sdata = ArrayBuffer.empty[Int]
+    args.foreach { arg =>
+      val shape = arg.shape
+      if (shape != null) {
+        keys += arg.name
+        sdata ++= shape.toVector
+        indPtr += sdata.size
+      }
+    }
+    inferShape(keys.toArray, indPtr.toArray, sdata.toArray)
   }
 
   /**
@@ -415,6 +443,29 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
     val keys = symbols.keys.toArray
     val args = symbols.values.map(_.handle).toArray
     checkCall(_LIB.mxSymbolCompose(handle, name, keys, args))
+  }
+
+  /**
+    * Bind current symbol to get an executor, allocate all the ndarrays needed.
+    * Allows specifying data types.
+    * This function will ask user to pass in ndarray of position
+    * they like to bind to, and it will automatically allocate the ndarray
+    * for arguments and auxiliary states that user did not specify explicitly.
+    *
+    * @param ctx The device context the generated executor to run on.
+    * @param gradReq {'write', 'add', 'null'}, or list of str or dict of str to str, optional
+    *                Specifies how we should update the gradient to the args_grad.
+    *                - 'write' means everytime gradient is write to specified args_grad NDArray.
+    *                - 'add' means everytime gradient is add to the specified NDArray.
+    *                - 'null' means no action is taken, the gradient may not be calculated.
+    * @param dataDesc List of dataDescriptors
+    * @return The generated Executor
+    */
+  def simpleBind(ctx: Context, gradReq: String,
+                 descs: IndexedSeq[DataDesc]) : Executor = {
+    val (shapes, types) = descs.map(desc =>
+      ( desc.name -> desc.shape, desc.name -> desc.dtype )).unzip
+    simpleBind(ctx, gradReq, shapes.toMap, types.toMap)
   }
 
   /**
@@ -1217,7 +1268,7 @@ object Symbol extends SymbolBase {
 
   // a more friendly interface for creating symbols
   // all values except symbols in kwargs will be cast to String using its toString() method
-  @Deprecated
+  @deprecated("Use Checked version", "0.1.2")
   def createFromNamedSymbolsNoCheck(
       operator: String, name: String = null, attr: Map[String, String] = null)(
       kwargs: Map[String, Any]): Symbol = {
@@ -1236,7 +1287,7 @@ object Symbol extends SymbolBase {
 
   // a more friendly interface for creating symbols
   // all values except symbols in kwargs will be cast to String using its toString() method
-  @Deprecated
+  @deprecated("Use Checked version", "0.1.2")
   def createFromListedSymbolsNoCheck(
       operator: String, name: String = null, attr: Map[String, String] = null)(
       symbols: Array[Symbol], kwargs: Map[String, Any] = null): Symbol = {
