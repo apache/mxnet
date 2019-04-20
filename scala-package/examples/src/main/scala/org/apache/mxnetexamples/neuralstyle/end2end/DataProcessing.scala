@@ -29,7 +29,7 @@ object DataProcessing {
 
   def preprocessContentImage(path: String,
       dShape: Shape = null, ctx: Context): NDArray = {
-    val img = Image(new File(path))
+    val img = Image.fromFile(new File(path))
     val resizedImg = img.scaleTo(dShape(3), dShape(2))
     val sample = NDArray.empty(Shape(1, 3, resizedImg.height, resizedImg.width), ctx)
     val datas = {
@@ -46,7 +46,7 @@ object DataProcessing {
   }
 
   def preprocessStyleImage(path: String, shape: Shape, ctx: Context): NDArray = {
-    val img = Image(new File(path))
+    val img = Image.fromFile(new File(path))
     val resizedImg = img.scaleTo(shape(3), shape(2))
     val sample = NDArray.empty(Shape(1, 3, shape(2), shape(3)), ctx)
     val datas = {

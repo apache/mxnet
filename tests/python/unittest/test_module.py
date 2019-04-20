@@ -931,6 +931,34 @@ def test_module_update_no_pragram():
     mod.update()
     assert(mod.get_outputs()[0].shape == data_shape)
 
+
+def test_module_init_optimizer():
+    def get_module_idx2name(mod):
+        idx2name = {}
+        idx2name.update(enumerate(mod._exec_group.param_names))
+        return idx2name
+
+    data = mx.sym.Variable('data')
+    sym = mx.sym.FullyConnected(data, num_hidden=20, name='fc')
+    batch_size = 8
+    opt_params = {'learning_rate': 1, 'rescale_grad': 1.0 / batch_size}
+
+    # Pass an optimizer str
+    mod1 = mx.mod.Module(sym, ('data',), None, context=mx.cpu(0))
+    mod1.bind(data_shapes=[('data', (batch_size, 20))])
+    mod1.init_params()
+    mod1.init_optimizer(optimizer='sgd', optimizer_params=opt_params)
+    assert mod1._optimizer.idx2name == get_module_idx2name(mod1)
+
+    # Pass an Optimizer object
+    mod2 = mx.mod.Module(sym, ('data',), None, context=mx.cpu(0))
+    mod2.bind(data_shapes=[('data', (batch_size, 20))])
+    mod2.init_params()
+    opt = mx.optimizer.SGD(**opt_params)
+    mod2.init_optimizer(optimizer=opt)
+    assert mod2._optimizer.idx2name == get_module_idx2name(mod2)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

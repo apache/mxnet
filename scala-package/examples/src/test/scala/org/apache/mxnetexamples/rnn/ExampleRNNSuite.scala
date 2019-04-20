@@ -23,6 +23,7 @@ import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory
 
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 class ExampleRNNSuite extends FunSuite with BeforeAndAfterAll {
