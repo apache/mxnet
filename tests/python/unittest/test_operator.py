@@ -271,11 +271,10 @@ def test_rnnrelu_dropout():
     out[0].wait_to_read()
 
 def np_softmax(x, axis=-1, temperature=1.0, odtype=None):
-    x = x.astype(odtype)
     x = x - np.max(x, axis=axis, keepdims=True)
     x = np.exp(x/temperature)
-    x /= np.sum(x, axis=axis, keepdims=True, dtype=odtype)
-    return x
+    y = x /np.sum(x, axis=axis, keepdims=True, dtype=odtype)
+    return y
 
 
 def check_elementwise_sum_with_shape(shape, n):
@@ -4686,11 +4685,11 @@ def test_softmin():
 
 
 @with_seed()
-def test_new_softmax():
+def test_new_softmax(idtype=None):
     for ndim in range(1, 5):
         shape = np.random.randint(1, 5, size=ndim)
         axis = np.random.randint(-ndim, ndim)
-        data = np.random.uniform(-2, 2, size=shape)
+        data = np.random.uniform(-2, 2, size=shape).astype(idtype)
         sym = mx.sym.softmax(axis=axis)
         expected_fwd = np_softmax(data, axis=axis)
         expected_bwd = np.zeros(shape)
@@ -4745,47 +4744,55 @@ def test_softmax_dtype():
     def check_dtypes_almost_equal(op_name,
                                   atol, rtol,
                                   grad_atol, grad_rtol,
-                                  idtype, ref_dtype, odtype=None):
+                                  idtype, odtype=None):
         op = getattr(mx.nd, op_name)
-        input_data = mx.random.uniform(shape=(100, 500))
-        dtype_input = input_data.astype(idtype)
-        np_op = {'softmax': np_softmax(dtype_input.asnumpy(), odtype=odtype),
-                 'softmin': np_softmax(-1 * dtype_input.asnumpy(), odtype=odtype),
-                 'log_softmax': np.log(np_softmax(dtype_input.asnumpy(),
-                                                  odtype=odtype)+1e-20)
+
+        input_data = mx.random.uniform(shape=(3, 4)).astype(idtype)
+
+        np_op = {'softmax': np_softmax(input_data.asnumpy(), odtype=odtype if odtype else idtype),
+                 'softmin': np_softmax(-1 * input_data.asnumpy(), odtype=odtype if odtype else idtype),
+                 'log_softmax': np.log(np_softmax(input_data.asnumpy(),
+                                                  odtype=odtype if odtype else idtype)+1e-20)
                  }
-        ref_input = input_data.astype(ref_dtype)
-        dtype_input.attach_grad()
-        ref_input.attach_grad()
+
+        input_data.attach_grad()
         with mx.autograd.record():
-            dtype_softmax = op(dtype_input, axis=-1, dtype=odtype)
-            ref_softmax = op(ref_input, axis=-1, dtype=odtype)
+            dtype_softmax = op(input_data, axis=-1, dtype=odtype)
+
         dtype_mx_softmax = dtype_softmax.asnumpy()
         dtype_np_softmax = np_op[op_name]
-        ref_softmax_np = ref_softmax.asnumpy()
-        assert_almost_equal(dtype_mx_softmax, dtype_np_softmax, rtol=rtol, atol=atol)
-        dtype_softmax.backward()
-        ref_softmax.backward()
-        dtype_grad_np = dtype_input.grad.asnumpy()
-        ref_grad_np = ref_input.grad.asnumpy()
-        assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
 
-    check_dtypes_almost_equal('softmax', 1e-3, 1e-5, 1e-3, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-3, 1e-5, 1e-3, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-3, 1e-5, 1e-3, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-3, 1e-5, 1e-3, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-3, 1e-5, 1e-3, 1e-5, 'float32', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                              'float16', 'float32')
-    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                              'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                              'float32', 'float64')
-    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                              'float32', 'float64', 'float64')
+        assert_almost_equal(dtype_mx_softmax, dtype_np_softmax, rtol=rtol, atol=atol,
+                            names=("mx_softmax", "np_softmax"))
+
+        data_var = mx.sym.Variable('data')
+        op_sym = getattr(mx.sym, op_name)
+
+        sym = op_sym(data=data_var) if not odtype else op_sym(data=data_var, dtype=odtype)
+
+        expected_fwd = np_op[op_name]
+        expected_bwd = np.zeros(input_data.shape)
+        check_symbolic_forward(sym, [input_data], [expected_fwd], dtype='asnumpy', atol=atol,
+                               rtol=rtol)
+
+        if op_name is not 'log_softmax':
+            check_symbolic_backward(sym, [input_data], [np.ones(expected_fwd.shape)], [expected_bwd],
+                                        rtol=grad_rtol, atol=grad_atol, dtype=idtype)
+        if idtype is not np.float16:
+            check_numeric_gradient(sym, location=[input_data], rtol=grad_rtol, atol=grad_atol,
+                                   dtype=idtype,
+                                   odtype=odtype)
+
+    check_dtypes_almost_equal('softmax', 1e-3, 1e-5, 1e-2, 1e-5, np.float16)
+    check_dtypes_almost_equal('softmax', 1e-4, 1e-5, 1e-2, 1e-5, np.float16, np.float32)
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-3, 1e-5, np.float32)
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-3, 1e-5, np.float32, np.float64)
+    check_dtypes_almost_equal('softmin', 1e-3, 1e-5, 1e-2, 1e-5, np.float16, np.float32)
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-3, 1e-5, np.float32, np.float64)
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-3, 1e-5, np.float16)
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-3, 1e-5, np.float16, np.float32)
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-5, 1e-3, 1e-5, np.float32)
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-5, 1e-3, 1e-5, np.float32, np.float64)
 
 @with_seed()
 def test_pick():
