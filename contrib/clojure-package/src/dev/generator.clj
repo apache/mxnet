@@ -123,7 +123,11 @@
     (.write w "\n\n")
     (.write w "\n\n")
   (doseq [f functions]
-    (clojure.pprint/pprint f w)
+    (let [fstr (-> f
+                   clojure.pprint/pprint
+                   with-out-str
+                   (clojure.string/replace #"\\n\\n" "\n"))]
+      (.write w fstr))
     (.write w "\n"))))
 
 ;;;;;;; Common operations
@@ -447,7 +451,10 @@
                             :type "Map[String, String]"
                             :optional? true
                             :description "Attributes of the symbol"}))
-        doc (gen-symbol-api-doc fn-description params)
+        doc (clojure.string/join
+             "\n\n  "
+             (-> (gen-symbol-api-doc fn-description params)
+                 (clojure.string/split #"\n")))
         default-call (gen-symbol-api-default-arity op-name params)]
     `(~'defn ~(symbol fn-name)
       ~doc
@@ -520,7 +527,10 @@
                                  :type "NDArray-or-Symbol"
                                  :optional? true
                                  :description "Output array."}))
-        doc (gen-ndarray-api-doc fn-description params)
+        doc (clojure.string/join
+             "\n\n  "
+             (-> (gen-ndarray-api-doc fn-description params)
+                 (clojure.string/split #"\n")))
         opt-params (filter :optional? params)
         req-params (remove :optional? params)
         req-call (gen-ndarray-api-required-arity fn-name req-params)
