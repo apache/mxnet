@@ -31,7 +31,7 @@ __all__ = ['zeros']
 
 
 class _NumpySymbol(Symbol):
-    def asNDArray(self):
+    def as_legacy_ndarray(self):
         """Convert _NumpySymbol to mxnet.symbol.Symbol to use its fluent methods."""
         hdl = SymbolHandle()
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
@@ -47,7 +47,7 @@ class _NumpySymbol(Symbol):
         raise NotImplementedError('mxnet.numpy.ndarray.sin is not implemented. Please '
                                   'convert the mxnet.numpy.ndarray to mxnet.ndarray.NDArray '
                                   'and call the sin function as follows: '
-                                  'self.asNDArray().sin(*args, **kwargs).')
+                                  'self.as_legacy_ndarray().sin(*args, **kwargs).')
 
     @use_np_compat
     def sum(self, *args, **kwargs):

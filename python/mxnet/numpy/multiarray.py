@@ -40,7 +40,7 @@ _set_np_ndarray_class(_np_ndarray_cls)
 
 
 class ndarray(NDArray):
-    def asNDArray(self):
+    def as_legacy_ndarray(self):
         """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
         hdl = NDArrayHandle()
         check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
@@ -62,7 +62,7 @@ class ndarray(NDArray):
         raise NotImplementedError('mxnet.numpy.ndarray.sin is not implemented. Please '
                                   'convert the mxnet.numpy.ndarray to mxnet.ndarray.NDArray '
                                   'and call the sin function as follows: '
-                                  'self.asNDArray().sin(*args, **kwargs).')
+                                  'self.as_legacy_ndarray().sin(*args, **kwargs).')
 
     @use_np_compat
     def sum(self, *args, **kwargs):
