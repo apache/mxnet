@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
 from common import run_in_spawned_process
 from test_operator import *
+from test_numpy_op import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
