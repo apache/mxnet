@@ -59,6 +59,8 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
+      .describe("Starting value for the sum.");
   }
 };
 
@@ -164,6 +166,9 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                             const std::vector<OpReqType>& req,
                             const std::vector<TBlob>& outputs) {
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+  if (param.initial.has_value()) {
+    LOG(FATAL) << "initial is not supported yet";
+  }
   if (param.axis.has_value() && param.axis.value().ndim() == 0) {
     UnaryOp::IdentityCompute<xpu>(attrs, ctx, inputs, req, outputs);
   }
