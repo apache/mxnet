@@ -639,6 +639,7 @@ NNVM_REGISTER_OP(_backward_cast)
 
 // negative
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(negative, cpu, mshadow_op::negation)
+.add_alias("_numpy_negative")
 .describe(R"code(Numerical negative of the argument, element-wise.
 
 The storage type of ``negative`` output depends upon the input storage type:
@@ -652,6 +653,7 @@ The storage type of ``negative`` output depends upon the input storage type:
 
 // reciprocal
 MXNET_OPERATOR_REGISTER_UNARY(reciprocal)
+.add_alias("_numpy_reciprocal")
 .describe(R"code(Returns the reciprocal of the argument, element-wise.
 
 Calculates 1/x.
@@ -670,6 +672,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_reciprocal)
 
 // abs
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(abs, cpu, mshadow_op::abs)
+.add_alias("_numpy_abs")
 .describe(R"code(Returns element-wise absolute value of the input.
 
 Example::
@@ -689,6 +692,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_abs, unary_bwd<mshadow_
 
 // sign
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sign, cpu, mshadow_op::sign)
+.add_alias("_numpy_sign")
 .describe(R"code(Returns element-wise sign of the input.
 
 Example::
@@ -725,6 +729,7 @@ The storage type of ``round`` output depends upon the input storage type:
 
 // rint
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(rint, cpu, mshadow_op::rint)
+.add_alias("_numpy_rint")
 .describe(R"code(Returns element-wise rounded value to the nearest integer of the input.
 
 .. note::
@@ -746,6 +751,7 @@ The storage type of ``rint`` output depends upon the input storage type:
 
 // ceil
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(ceil, cpu, mshadow_op::ceil)
+.add_alias("_numpy_ceil")
 .describe(R"code(Returns element-wise ceiling of the input.
 
 The ceil of the scalar x is the smallest integer i, such that i >= x.
@@ -765,6 +771,7 @@ The storage type of ``ceil`` output depends upon the input storage type:
 
 // floor
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(floor, cpu, mshadow_op::floor)
+.add_alias("_numpy_floor")
 .describe(R"code(Returns element-wise floor of the input.
 
 The floor of the scalar x is the largest integer i, such that i <= x.
@@ -784,6 +791,7 @@ The storage type of ``floor`` output depends upon the input storage type:
 
 // trunc
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(trunc, cpu, mshadow_op::trunc)
+.add_alias("_numpy_trunc")
 .describe(R"code(Return the element-wise truncated value of the input.
 
 The truncated value of the scalar x is the nearest integer i which is closer to
@@ -804,6 +812,7 @@ The storage type of ``trunc`` output depends upon the input storage type:
 
 // fix
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(fix, cpu, mshadow_op::fix)
+.add_alias("_numpy_fix")
 .describe(R"code(Returns element-wise rounded value to the nearest \
 integer towards zero of the input.
 
@@ -822,6 +831,7 @@ The storage type of ``fix`` output depends upon the input storage type:
 
 // square
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(square, cpu, mshadow_op::square)
+.add_alias("_numpy_square")
 .describe(R"code(Returns element-wise squared value of the input.
 
 .. math::
@@ -845,6 +855,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_square,
 
 // sqrt
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sqrt, cpu, mshadow_op::square_root)
+.add_alias("_numpy_sqrt")
 .describe(R"code(Returns element-wise square-root value of the input.
 
 .. math::
@@ -888,6 +899,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(
 
 // cbrt
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(cbrt, cpu, mshadow_op::cube_root)
+.add_alias("_numpy_cbrt")
 .describe(R"code(Returns element-wise cube-root value of the input.
 
 .. math::
@@ -964,6 +976,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
 // exp
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(exp, cpu, mshadow_op::exp)
 MXNET_ADD_SPARSE_OP_ALIAS(exp)
+.add_alias("_numpy_exp")
 .describe(R"code(Returns element-wise exponential value of the input.
 
 .. math::
@@ -981,6 +994,7 @@ The storage type of ``exp`` output is always dense
 // log
 MXNET_OPERATOR_REGISTER_UNARY(log)
 MXNET_ADD_SPARSE_OP_ALIAS(log)
+.add_alias("_numpy_log")
 .describe(R"code(Returns element-wise Natural logarithmic value of the input.
 
 The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
@@ -994,6 +1008,7 @@ The storage type of ``log`` output is always dense
 // log10
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(log10, cpu, mshadow_op::log10)
 MXNET_ADD_SPARSE_OP_ALIAS(log10)
+.add_alias("_numpy_log10")
 .describe(R"code(Returns element-wise Base-10 logarithmic value of the input.
 
 ``10**log10(x) = x``
@@ -1006,6 +1021,7 @@ The storage type of ``log10`` output is always dense
 // log2
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(log2, cpu, mshadow_op::log2)
 MXNET_ADD_SPARSE_OP_ALIAS(log2)
+.add_alias("_numpy_log2")
 .describe(R"code(Returns element-wise Base-2 logarithmic value of the input.
 
 ``2**log2(x) = x``
@@ -1026,6 +1042,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
 
 // log1p
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(log1p, cpu, mshadow_op::log1p)
+.add_alias("_numpy_log1p")
 .describe(R"code(Returns element-wise ``log(1 + x)`` value of the input.
 
 This function is more accurate than ``log(1 + x)``  for small ``x`` so that
@@ -1045,6 +1062,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log1p,
 
 // expm1
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(expm1, cpu, mshadow_op::expm1)
+.add_alias("_numpy_expm1")
 .describe(R"code(Returns ``exp(x) - 1`` computed element-wise on the input.
 
 This function provides greater precision than ``exp(x) - 1`` for small values of ``x``.
@@ -1090,6 +1108,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gammaln,
                                                   unary_bwd<mshadow_op::gammaln_grad>);
 
 MXNET_OPERATOR_REGISTER_UNARY(logical_not)
+.add_alias("_numpy_logical_not")
 .describe(R"code(Returns the result of logical NOT (!) function
 
 Example:
