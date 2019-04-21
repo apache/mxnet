@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,17 +17,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Symbol API of MXNet."""
-
-from . import _internal, contrib, linalg, op, random, sparse, image, symbol, numpy
-# pylint: disable=wildcard-import, redefined-builtin
-try:
-    from .gen_op import * # pylint: disable=unused-wildcard-import
-except ImportError:
-    pass
-from . import register
-from .op import *
-from .symbol import *
-# pylint: enable=wildcard-import
-
-__all__ = op.__all__ + symbol.__all__ + ['contrib', 'linalg', 'random', 'sparse', 'image']
+__all__ = []
