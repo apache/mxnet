@@ -968,6 +968,34 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
   ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
 }
 
+template<typename OP>
+struct broadcast_kernel {
+  template<typename IType, typename OType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  IType *input,
+                                  OType *output,
+                                  mshadow::Shape<5> in_shape,
+                                  mshadow::Shape<5> out_shape,
+                                  const OpReqType req,
+                                  const uint32_t ndim) {
+    size_t in_stride = 1;
+    size_t out_stride = 1;
+    index_t idx = i;
+    index_t in_idx = i;
+    for (int iter = ndim - 1; iter >= 0; --iter) {
+      size_t dim_idx = idx % out_shape[iter];
+      in_idx -= dim_idx * out_stride;
+      if (in_shape[iter] != 1) {
+        in_idx += dim_idx * in_stride;
+      }
+      idx /= out_shape[iter];
+      in_stride *= in_shape[iter];
+      out_stride *= out_shape[iter];
+    }
+    KERNEL_ASSIGN(output[i], req, OP::Map(input[in_idx]));
+  }
+};
+
 template<typename xpu>
 inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
@@ -977,24 +1005,40 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
                                  const mxnet::TShape& small) {
   using namespace mshadow;
   using namespace mshadow::expr;
+  using namespace mxnet_op;
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &dst_shape, &src_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (dst_shape.ndim() == 2) {
-      Tensor<xpu, 2, DType> out =
-        outputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
-      Tensor<xpu, 2, DType> data =
-        inputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-      ASSIGN_DISPATCH(out, req[0], broadcast_to(data, dst_shape));
-    } else {
-      const int ndim = MXNET_SPECIAL_MAX_NDIM;
-      Tensor<xpu, ndim, DType> out =
-        outputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
-      Tensor<xpu, ndim, DType> data =
-        inputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-      ASSIGN_DISPATCH(out, req[0], broadcast_to(data, dst_shape));
-    }
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      mshadow::Shape<5> in_shape;
+      mshadow::Shape<5> out_shape;
+      for (int i = 0; i < 5; ++i) {
+        if (i < dst_shape.ndim()) {
+          in_shape[i] = src_shape[i];
+          out_shape[i] = dst_shape[i];
+        } else {
+          in_shape[i] = 1;
+          out_shape[i] = 1;
+        }
+      }
+      if (dst_shape.ndim() == 2) {
+        Tensor<xpu, 2, OType> out =
+          outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
+        Tensor<xpu, 2, IType> data =
+          inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
+        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+          s, out.shape_.Size(), data.dptr_, out.dptr_, in_shape, out_shape, req[0], 2);
+      } else {
+        const int ndim = MXNET_SPECIAL_MAX_NDIM;
+        Tensor<xpu, ndim, OType> out =
+          outputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, IType> data =
+          inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
+        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+          s, out.shape_.Size(), data.dptr_, out.dptr_, in_shape, out_shape, req[0], ndim);
+      }
+    });
   });
 }
 
