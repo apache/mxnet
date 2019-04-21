@@ -561,7 +561,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_', '_numpy_']
 
 
 def _get_op_name_prefix(op_name):
@@ -607,6 +607,15 @@ def _init_op_module(root_namespace, module_name, make_op_func):
     # use mx.nd.contrib or mx.sym.contrib from now on
     contrib_module_name_old = "%s.contrib.%s" % (root_namespace, module_name)
     contrib_module_old = sys.modules[contrib_module_name_old]
+    # special handling of registering numpy ops
+    # only expose mxnet.numpy.op_name to users for imperative mode.
+    # Symbolic mode should be used in Gluon.
+    if module_name == 'ndarray':
+        numpy_module_name = "%s.numpy" % root_namespace
+        numpy_module = sys.modules[numpy_module_name]
+    else:
+        numpy_module_name = None
+        numpy_module = None
     submodule_dict = {}
     for op_name_prefix in _OP_NAME_PREFIX_LIST:
         submodule_dict[op_name_prefix] =\
@@ -645,6 +654,16 @@ def _init_op_module(root_namespace, module_name, make_op_func):
             function.__module__ = contrib_module_name_old
             setattr(contrib_module_old, function.__name__, function)
             contrib_module_old.__all__.append(function.__name__)
+        elif op_name_prefix == '_numpy_' and numpy_module_name is not None:
+            # only register numpy ops under mxnet.numpy in imperative mode
+            hdl = OpHandle()
+            check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+            # TODO(reminisce): Didn't consider third level module here, e.g. mxnet.numpy.random.
+            func_name = name[len(op_name_prefix):]
+            function = make_op_func(hdl, name, func_name)
+            function.__module__ = numpy_module_name
+            setattr(numpy_module, function.__name__, function)
+            numpy_module.__all__.append(function.__name__)
 
 
 def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func):
