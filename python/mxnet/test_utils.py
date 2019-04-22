@@ -800,7 +800,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
 
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
-                           grad_stype_dict=None, dtype=default_dtype(), odtype=None):
+                           grad_stype_dict=None, dtype=default_dtype()):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -841,8 +841,6 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     [1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
     assert dtype in (np.float16, np.float32, np.float64)
-    odtype = dtype if odtype is None else odtype
-
     # cannot use finite differences with small eps without high precision
     if dtype in (np.float32, np.float16):
         assert numeric_eps >= 1e-5
@@ -889,12 +887,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     location = dict(list(location.items()) +
                     [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
-                                                   ctx=ctx, dtype=odtype))])
-    args_grad_npy = dict([(k, np.random.normal(0, 0.01, size=location[k].shape).astype(odtype))
+                                                   ctx=ctx, dtype=dtype))])
+    args_grad_npy = dict([(k, np.random.normal(0, 0.01, size=location[k].shape))
                           for k in grad_nodes]
                          + [("__random_proj", np.random.normal(0, 0.01, size=out_shape[0]))])
 
-    args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=odtype) for k, v in args_grad_npy.items()}
+    args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_npy.items()}
     if grad_stype_dict is not None:
         assert isinstance(grad_stype_dict, dict), "grad_stype_dict must be a dict"
         for k, v in grad_stype_dict.items():
@@ -1018,7 +1016,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
 def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
                             aux_states=None, grad_req='write', ctx=None, grad_stypes=None,
-                            equal_nan=False, dtype=default_dtype(), odtype=None):
+                            equal_nan=False, dtype=default_dtype()):
     """Compares a symbol's backward results with the expected ones.
     Prints error messages if the backward results are not the same as the expected results.
 
@@ -1078,8 +1076,6 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
     assert dtype in (np.float16, np.float32, np.float64)
-    odtype = dtype if odtype is None else odtype
-
     if ctx is None:
         ctx = default_context()
 
@@ -1089,10 +1085,10 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
 
-    args_grad_npy = {k:np.random.normal(size=v.shape).astype(odtype) for k, v in expected.items()}
+    args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
-        nd = mx.nd.array(v, ctx=ctx, dtype=odtype)
+        nd = mx.nd.array(v, ctx=ctx, dtype=dtype)
         if grad_stypes is not None and k in grad_stypes:
             stype = grad_stypes[k]
             if stype is not None and stype != 'default':
