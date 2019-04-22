@@ -299,7 +299,7 @@ class CheckpointHandler(BatchEnd, EpochEnd):
         self.save_best_only = save_best_only
         if self.save_best_only and not isinstance(self.monitor, EvalMetric):
             raise ValueError("To save best model only, please provide one of the metric objects as monitor, "
-                             "You can create these objects using estimator.prepare_loss_and_metric()")
+                             "You can get these objects using estimator.prepare_loss_and_metric()")
         self.epoch_period = epoch_period
         self.batch_period = batch_period
         self.num_batches = 0
