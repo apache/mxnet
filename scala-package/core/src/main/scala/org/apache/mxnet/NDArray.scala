@@ -36,6 +36,11 @@ import scala.util.Try
   */
 @AddNDArrayFunctions(false)
 object NDArray extends NDArrayBase {
+  /**
+    * method to convert NDArrayFunctionReturn to NDArray
+    * @param ret the returned NDArray list
+    * @return NDArray result
+    */
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
 

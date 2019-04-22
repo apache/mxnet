@@ -29,17 +29,41 @@ object Base {
   class RefFloat(val value: Float = 0)
   class RefString(val value: String = null)
 
+  /**
+    * This C Pointer Address point to the
+    * actual memory piece created in MXNet Engine
+    */
   type CPtrAddress = Long
 
+  /**
+    * NDArrayHandle is the C pointer to
+    * the NDArray
+    */
   type NDArrayHandle = CPtrAddress
+  /**
+    * FunctionHandle is the C pointer to
+    * the ids of the operators
+    */
   type FunctionHandle = CPtrAddress
+  /**
+    * KVStoreHandle is the C pointer to
+    * the KVStore
+    */
   type KVStoreHandle = CPtrAddress
+  /**
+    * ExecutorHandle is the C pointer to
+    * the Executor
+    */
   type ExecutorHandle = CPtrAddress
+  /**
+    * SymbolHandle is the C pointer to
+    * the Symbol
+    */
   type SymbolHandle = CPtrAddress
 
   @throws(classOf[UnsatisfiedLinkError])
   private def tryLoadInitLibrary(): Unit = {
-    var userDir : File = new File(System.getProperty("user.dir"))
+    val userDir : File = new File(System.getProperty("user.dir"))
     var nativeDir : File = new File(userDir, "init-native")
     if (!nativeDir.exists()) {
       nativeDir = new File(userDir.getParent, "init-native")
@@ -50,7 +74,6 @@ object Base {
     val baseDir = nativeDir.getAbsolutePath
 
     val os = System.getProperty("os.name")
-    // ref: http://lopica.sourceforge.net/os.html
     if (os.startsWith("Linux")) {
       System.load(s"$baseDir/target/libmxnet-init-scala.so")
     } else if (os.startsWith("Mac")) {
