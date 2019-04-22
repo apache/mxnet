@@ -313,23 +313,23 @@ class Estimator(object):
                   "Please use the same set of metrics for all your other handlers." % \
                   ", ".join(default_handlers)
             warnings.warn(msg)
+            references = []
             for handler in event_handlers:
                 for attribute in dir(handler):
                     if any(keyword in attribute for keyword in ['metric' or 'monitor']):
                         reference = getattr(handler, attribute)
-                        msg = "We have added following default handlers for you: %s and used " \
-                              "estimator.prepare_loss_and_metrics() to pass metrics to " \
-                              "those handlers. Please use the same set of metrics " \
-                              "for all your handlers. You have used %s in handler %s, " \
-                              "which is not prepared by estimator." \
-                              "in " % \
-                              (", ".join(default_handlers), attribute, handler.__class__.__name__)
                         if isinstance(reference, list):
-                            for item in reference:
-                                if item and item not in train_metrics + val_metrics:
-                                    raise ValueError(msg)
-                        elif reference and reference not in train_metrics + val_metrics:
-                            raise ValueError(msg)
+                            references += reference
+                        else:
+                            references.append(reference)
+            for metric in references:
+                if metric and metric not in train_metrics + val_metrics:
+                    msg = "We have added following default handlers for you: %s and used " \
+                          "estimator.prepare_loss_and_metrics() to pass metrics to " \
+                          "those handlers. Please use the same set of metrics " \
+                          "for all your handlers." % \
+                          ", ".join(default_handlers)
+                    raise ValueError(msg)
 
         event_handlers.sort(key=lambda handler: getattr(handler, 'priority', 0))
         return event_handlers
