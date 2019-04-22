@@ -412,8 +412,8 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 endif
 
 #sparse-matrix
+SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
 ifeq ($(USE_BLAS), mkl)
-	SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
 	LIB_DEP += $(SPARSE_MATRIX_DIR)/libsparse_matrix.so
 	CFLAGS += -I$(SPARSE_MATRIX_DIR)
 	LDFLAGS += -L$(SPARSE_MATRIX_DIR) -lsparse_matrix -Wl,-rpath,'$${ORIGIN}'
