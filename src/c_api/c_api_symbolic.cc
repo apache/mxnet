@@ -842,9 +842,8 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
 
 int MXIsNumpyOp(AtomicSymbolCreator creator, int* is_np_op) {
   API_BEGIN();
-  static std::string prefix = "_numpy_";
   const nnvm::Op* op = static_cast<Op*>(creator);
-  *is_np_op = (op->name.find(prefix.c_str(), 0, prefix.size()) != std::string::npos ? 1 : 0);
+  *is_np_op = (IsNumpyOp(op->name) ? 1 : 0);
   API_END();
 }
 

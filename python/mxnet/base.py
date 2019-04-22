@@ -562,7 +562,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_', '_numpy_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_']
 
 
 def _get_op_name_prefix(op_name):
@@ -610,15 +610,15 @@ def _init_op_module(root_namespace, module_name, make_op_func):
     contrib_module_old = sys.modules[contrib_module_name_old]
     submodule_dict = {}
     for op_name_prefix in _OP_NAME_PREFIX_LIST:
-        submodule_dict[op_name_prefix] =\
-            sys.modules["%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])]
+        if op_name_prefix != '_numpy_':
+            submodule_dict[op_name_prefix] =\
+                sys.modules["%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
         op_name_prefix = _get_op_name_prefix(name)
         module_name_local = module_name
         if len(op_name_prefix) > 0:
-            # TODO(junwu): Didn't consider numpy submodules, e.g. numpy.random, numpy.linalg
             if op_name_prefix != '_random_' or name.endswith('_like'):
                 func_name = name[len(op_name_prefix):]
                 cur_module = submodule_dict[op_name_prefix]
@@ -886,3 +886,76 @@ def _sanity_check_params(func_name, unsupported_params, param_dict):
         if param_name in param_dict:
             raise NotImplementedError("function {} does not support parameter {}"
                                       .format(func_name, param_name))
+
+
+_NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
+_NP_OP_PREFIX = '_numpy_'
+
+
+def _get_np_op_submodule_name(op_name):
+    assert op_name.startswith(_NP_OP_PREFIX)
+    for name in _NP_OP_SUBMODULE_LIST:
+        if op_name[len(_NP_OP_PREFIX):].startswith(name):
+            return name
+    return ""
+
+
+def _init_np_op_module(root_namespace, module_name, make_op_func):
+    """
+    Register numpy operators in namespaces `mxnet.ndarray.numpy`
+    and `mxnet.symbol.numpy`. They are used in Gluon APIs w/ and w/o
+    hybridization, respectively. Essentially, they are same as operators
+    registered in `mxnet.numpy`. This is just need for dispatching
+    operator calls in Gluon's `HybridBlock` by `F`.
+
+    Parameters
+    ----------
+    root_namespace : str
+        Top level module name, `mxnet` in the current cases.
+    module_name : str
+        Second level module name, `ndarray` or `symbol` in the current case.
+    make_op_func : function
+        Function for creating op functions.
+    """
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size), ctypes.byref(plist)))
+    op_names = []
+    for i in range(size.value):
+        name = py_str(plist[i])
+        if name.startswith(_NP_OP_PREFIX):
+            op_names.append(name)
+
+    if module_name == 'numpy':
+        # register ops for mxnet.numpy
+        module_pattern = "%s.%s._op"
+        submodule_pattern = "%s.%s.%s"
+    else:
+        # register ops for mxnet.ndarray.numpy or mxnet.symbol.numpy
+        module_pattern = "%s.%s.numpy._op"
+        submodule_pattern = "%s.%s.numpy.%s"
+    module_np_op = sys.modules[module_pattern % (root_namespace, module_name)]
+    submodule_dict = {}
+    # TODO(junwu): uncomment the following lines when adding numpy ops in submodules, e.g. np.random
+    # for submodule_name in _NP_OP_SUBMODULE_LIST:
+    #     submodule_dict[submodule_name] = \
+    #         sys.modules[submodule_pattern % (root_namespace, module_name, submodule_name[1:-1])]
+    for name in op_names:
+        hdl = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+        submodule_name = _get_np_op_submodule_name(name)
+        module_name_local = module_name
+        if len(submodule_name) > 0:
+            func_name = name[(len(_NP_OP_PREFIX) + len(submodule_name)):]
+            cur_module = submodule_dict[submodule_name]
+            module_name_local = submodule_pattern % (root_namespace,
+                                                     module_name, submodule_name[1:-1])
+        else:
+            func_name = name[len(_NP_OP_PREFIX):]
+            cur_module = module_np_op
+
+        function = make_op_func(hdl, name, func_name)
+        function.__module__ = module_name_local
+        setattr(cur_module, function.__name__, function)
+        cur_module.__all__.append(function.__name__)

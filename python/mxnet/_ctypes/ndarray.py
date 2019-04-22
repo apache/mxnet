@@ -117,6 +117,13 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
                     for i in range(num_output.value)]
 
 
+def _is_output_from_np_op(handle, idx):
+    is_from_np_op = ctypes.c_int(0)
+    check_call(_LIB.MXIsCachedOpOutputFromNumpyOp(handle, ctypes.c_int(idx),
+                                                  ctypes.byref(is_from_np_op)))
+    return is_from_np_op.value != 0
+
+
 class CachedOp(object):
     """Cached operator handle."""
     __slots__ = ["handle"]
@@ -167,9 +174,12 @@ class CachedOp(object):
         if original_output is not None:
             return original_output
         if num_output.value == 1:
-            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
-                                stype=out_stypes[0])
+            if _is_output_from_np_op(self.handle, 0):
+                return _np_ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle))
+            else:
+                return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle), stype=out_stypes[0])
         else:
-            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
-                                 stype=out_stypes[i])
+            return [_np_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle))
+                    if _is_output_from_np_op(self.handle, i) else
+                    _ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle), stype=out_stypes[i])
                     for i in range(num_output.value)]

@@ -2808,6 +2808,15 @@ MXNET_DLL int MXShallowCopyNDArray(NDArrayHandle src, NDArrayHandle* out);
  * \param out new Symbol sharing the same graph structure with src
  */
 MXNET_DLL int MXShallowCopySymbol(SymbolHandle src, SymbolHandle * out);
+/*!
+ * \brief Create an Symbol from source sharing the same graph structure.
+ * \param handle CachedOp shared ptr
+ * \param output_idx index of the output of the CachedOp
+ * \param is_from_np_op indicator of whether the output is from a numpy op
+ */
+MXNET_DLL int MXIsCachedOpOutputFromNumpyOp(CachedOpHandle handle,
+                                            int output_idx,
+                                            int* is_from_np_op);
 
 #ifdef __cplusplus
 }

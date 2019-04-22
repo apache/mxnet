@@ -15,48 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy namespace for operators used in Gluon APIs dispatched by F=symbol module."""
+"""numpy namespace for operators used in Gluon APIs dispatched by F=ndarray module."""
 
 from __future__ import absolute_import
-import ctypes
 import numpy as _np
-from ..base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
-from ..context import current_context
-from . import _internal
-from .symbol import Symbol
-from . import op as _op
-from ._internal import _set_np_symbol_class
+from ...base import _sanity_check_params, use_np_compat
+from ...context import current_context
+from .. import _internal
 
 __all__ = ['zeros']
-
-
-class _NumpySymbol(Symbol):
-    def as_legacy_ndarray(self):
-        """Convert _NumpySymbol to mxnet.symbol.Symbol to use its fluent methods."""
-        hdl = SymbolHandle()
-        check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
-        return Symbol(handle=hdl)
-
-    @use_np_compat
-    def sin(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`sin`.
-
-        The arguments are the same as for :py:func:`sin`, with
-        this array as data.
-        """
-        raise NotImplementedError('mxnet.numpy.ndarray.sin is not implemented. Please '
-                                  'convert the mxnet.numpy.ndarray to mxnet.ndarray.NDArray '
-                                  'and call the sin function as follows: '
-                                  'self.as_legacy_ndarray().sin(*args, **kwargs).')
-
-    @use_np_compat
-    def sum(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`sum`.
-
-        The arguments are the same as for :py:func:`sum`, with
-        this array as data.
-        """
-        return _op.sum(self, *args, **kwargs)
 
 
 @use_np_compat
@@ -75,7 +42,7 @@ def zeros(shape, dtype=_np.float64, **kwargs):
 
     Returns
     -------
-    out : Symbol
+    out : NDArray
         Array of zeros with the given shape, dtype, and ctx.
     """
     _sanity_check_params('zeros', ['order'], kwargs)
@@ -83,7 +50,4 @@ def zeros(shape, dtype=_np.float64, **kwargs):
     if ctx is None:
         ctx = current_context()
     dtype = _np.float64 if dtype is None else dtype
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
-
-
-_set_np_symbol_class(_NumpySymbol)
+    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs).as_np_ndarray()

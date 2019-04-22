@@ -162,4 +162,9 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
 extern const std::vector<std::string> kHiddenKeys;
 }  // namespace mxnet
 
+inline bool IsNumpyOp(const std::string& op_name) {
+  static std::string prefix = "_numpy_";
+  return op_name.find(prefix.c_str(), 0, prefix.size()) != std::string::npos;
+}
+
 #endif  // MXNET_C_API_C_API_COMMON_H_

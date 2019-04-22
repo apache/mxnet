@@ -15,11 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Register backend ops in mxnet.ndarray namespace"""
-from __future__ import absolute_import
+from . import _op
+from ._symbol import _NumpySymbol
+from . import _register
+from ._op import *
+from ._symbol import *
 
-from ..base import _init_np_op_module
-from ..ndarray.register import _make_ndarray_function
-
-
-_init_np_op_module('mxnet', 'numpy', _make_ndarray_function)
+__all__ = _op.__all__ + _symbol.__all__
