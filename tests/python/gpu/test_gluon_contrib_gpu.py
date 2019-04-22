@@ -39,7 +39,7 @@ def test_DeformableConvolution():
         DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False, use_bias=False),
         DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False),
         DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
-        DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
+        DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
     )
 
     try:
