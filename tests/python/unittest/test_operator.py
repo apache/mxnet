@@ -5393,6 +5393,9 @@ def test_custom_op():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
     assert_almost_equal(x.asnumpy(), np.ones(shape=(10, 10), dtype=np.float32))
 
+
+@with_seed()
+def test_custom_op_fork():
     # test custom operator fork
     # see https://github.com/apache/incubator-mxnet/issues/14396
     class AdditionOP(mx.operator.CustomOp):
@@ -5430,7 +5433,7 @@ def test_custom_op():
         p.daemon = True
         p.start()
         p.join(5)
-        assert not p.is_alive(), "deadlock may exist in custom operator"
+        assert not p.is_alive() and p.exitcode == 0
 
 
 def _build_dot_custom(fun_forward, name):
