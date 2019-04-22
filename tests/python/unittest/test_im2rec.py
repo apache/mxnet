@@ -80,7 +80,7 @@ def test_im2rec():
             q_out = queue.PriorityQueue(5)
             img_path = os.path.abspath("data/test_im2rec/test_images/ILSVRC2012_val_00000007.JPEG")
             data_record = [0, 0, img_path, 0.0]
-            mx.io.im2rec._read_list(q_out, transformer, color=1, quality=95, encoding='.jpg',
+            mx.io.im2rec._read_worker(q_out, transformer, color=1, quality=95, encoding='.jpg',
                                     pass_through=False, pack_labels=True, exception_counter=0,
                                     data_record=data_record)
             output = q_out.get()
@@ -89,6 +89,26 @@ def test_im2rec():
         except:
             assert False, "Failed to process image"
 
+    def test_im2rec():
+        try:
+            try:
+                import Queue as queue
+            except ImportError:
+                import queue as queue
+            output_path = mx.io.im2rec.im2rec(lst_filename, output_path,
+                                              transformations=None, num_workers=mp.cpu_count() - 1,
+                                              batch_size=4096, pack_labels=True, color=1,
+                                              encoding='.jpg', quality=95, pass_through=False,
+                                              error_limit=2)
+            rec_file = os.path.join(output_path, 'img.rec')
+            idx_file = os.path.join(output_path, 'img.idx')
+            read_record = mx.recordio.MXIndexedRecordIO(rec_file, idx_file, 'r')
+            for i, file in enumerate(filenames):
+                item = read_record.read_idx(i)
+                header, img = mx.recordio.unpack_img(item)
+                assert img == cv2.imread(file, 1)
+        except:
+            assert False, "Failed to process image"
 
 if __name__ == "__main__":
     test_im2rec()
