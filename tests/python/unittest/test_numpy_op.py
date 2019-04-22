@@ -148,6 +148,17 @@ def test_np_unary_funcs():
         assert_almost_equal(np_out, mx_out.asnumpy(), rtol=1e-5, atol=1e-5, equal_nan=True)
 
 
+@with_seed()
+def test_np_clip():
+    ndim = random.choice([1, 2, 3])
+    shape = rand_shape_nd(ndim, dim=5)
+    mx_test_data = rand_ndarray(shape)
+    np_test_data = mx_test_data.asnumpy()
+    mx_out = np.clip(mx_test_data, -0.1, 0.1)
+    np_out = _np.clip(np_test_data, -0.1, 0.1)
+    assert_almost_equal(np_out, mx_out.asnumpy(), rtol=1e-5, atol=1e-5, equal_nan=True)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
