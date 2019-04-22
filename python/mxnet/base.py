@@ -901,11 +901,11 @@ def _get_np_op_submodule_name(op_name):
 
 def _init_np_op_module(root_namespace, module_name, make_op_func):
     """
-    Register numpy operators in namespaces `mxnet.ndarray.numpy`
-    and `mxnet.symbol.numpy`. They are used in Gluon APIs w/ and w/o
-    hybridization, respectively. Essentially, they are same as operators
-    registered in `mxnet.numpy`. This is just need for dispatching
-    operator calls in Gluon's `HybridBlock` by `F`.
+    Register numpy operators in namespaces `mxnet.numpy`, `mxnet.ndarray.numpy`
+    and `mxnet.symbol.numpy`. They are used in imperative mode, Gluon APIs w/o hybridization,
+    and Gluon APIs w/ hybridization, respectively. Essentially, operators with the same name
+    registered in three namespaces, respectively share the same functionality in C++ backend.
+    Different namespaces are needed for dispatching operator calls in Gluon's `HybridBlock` by `F`.
 
     Parameters
     ----------
