@@ -36,7 +36,7 @@
     on_enter_api(__FUNCTION__);
 #define MX_API_END()                                                           \
   }                                                                            \
-  catch (std::exception &_except_) {                                           \
+  catch (const std::exception &_except_) {                                     \
     on_exit_api();                                                             \
     return MXAPIHandleException(_except_);                                     \
   }                                                                            \
@@ -44,7 +44,7 @@
   return 0; // NOLINT(*)
 #define MX_API_END_HANDLE_ERROR(Finalize)                                      \
   }                                                                            \
-  catch (std::exception &_except_) {                                           \
+  catch (const std::exception &_except_) {                                     \
     Finalize;                                                                  \
     on_exit_api();                                                             \
     return MXAPIHandleException(_except_);                                     \
