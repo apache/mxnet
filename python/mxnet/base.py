@@ -610,9 +610,8 @@ def _init_op_module(root_namespace, module_name, make_op_func):
     contrib_module_old = sys.modules[contrib_module_name_old]
     submodule_dict = {}
     for op_name_prefix in _OP_NAME_PREFIX_LIST:
-        if op_name_prefix != '_numpy_':
-            submodule_dict[op_name_prefix] =\
-                sys.modules["%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])]
+        submodule_dict[op_name_prefix] =\
+            sys.modules["%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
