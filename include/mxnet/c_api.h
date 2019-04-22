@@ -1169,14 +1169,7 @@ MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
                                  int *num_outputs,
                                  NDArrayHandle **outputs,
                                  const int** out_stypes);
-/*!
- * \brief invoke cached operator
- */
-MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
-                               int num_inputs,
-                               NDArrayHandle *inputs,
-                               int *num_outputs,
-                               NDArrayHandle **outputs);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
