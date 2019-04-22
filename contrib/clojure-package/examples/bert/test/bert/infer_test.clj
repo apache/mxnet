@@ -17,7 +17,7 @@
 
 
 (ns bert-qa.infer-test
-  (:require [bert-qa.infer :refer :all]
+  (:require [bert.infer :refer :all]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [clojure.test :refer :all]

@@ -16,7 +16,11 @@
 <!--- under the License. -->
 
 
-# bert-qa
+# BERT
+
+There are two examples showcasing the power of BERT. One is BERT-QA for inference and the other is BERT Sentence Pair Classification which uses fine tuning of the BERT base model. For more information about BERT please read [http://jalammar.github.io/illustrated-bert/](http://jalammar.github.io/illustrated-bert/).
+
+## bert-qa
 
 **This example was based off of the Java API one. It shows how to do inference with a pre-trained BERT network that is trained on Questions and Answers using the [SQuAD Dataset](https://rajpurkar.github.io/SQuAD-explorer/)**
 
@@ -38,9 +42,9 @@ Example:
 
 The prediction in this case would be `solar power`
 
-## Setup Guide
+### Setup Guide
 
-### Step 1: Download the model
+#### Step 1: Download the model
 
 For this tutorial, you can get the model and vocabulary by running following bash file. This script will use `wget` to download these artifacts from AWS S3.
 
@@ -53,7 +57,7 @@ From the example directory:
 Some sample questions and answers are provide in the `squad-sample.edn` file. Some are taken directly from the SQuAD dataset and one was just made up. Feel free to edit the file and add your own!
 
 
-## To run
+### To run
 
 * `lein install` in the root of the main project directory
 * cd into this project directory and do `lein run`. This will execute the cpu version.
@@ -61,7 +65,7 @@ Some sample questions and answers are provide in the `squad-sample.edn` file. So
 `lein run :cpu` - to run with cpu
 `lein run :gpu` - to run with gpu
 
-## Background
+### Background
 
 To learn more about how BERT works in MXNet, please follow this [MXNet Gluon tutorial on NLP using BERT](https://medium.com/apache-mxnet/gluon-nlp-bert-6a489bdd3340).
 
@@ -89,3 +93,59 @@ f.close()
 This would export the token vocabulary in json format.
 Once you have these three files, you will be able to run this example without problems.
 
+## Fine-tuning Sentence Pair Classification with BERT
+
+This was based off of the great tutorial for in Gluon-NLP [https://gluon-nlp.mxnet.io/examples/sentence_embedding/bert.html](https://gluon-nlp.mxnet.io/examples/sentence_embedding/bert.html).
+
+We use the pre-trained BERT model that was exported from GluonNLP via the scripts/bert/staticbert/static_export_base.py. For convience, the model has been downloaded for you by running the get_bert_data.sh file in the root directory of this example.
+
+It will fine tune the base bert model for use in a classification task for 3 epochs.
+
+
+### Setup Guide
+
+#### Step 1: Download the model
+
+For this tutorial, you can get the model and vocabulary by running following bash file. This script will use `wget` to download these artifacts from AWS S3.
+
+From the example directory:
+
+```bash
+./get_bert_data.sh
+```
+
+### To run the notebook walkthrough
+
+There is a Jupyter notebook that uses the `lein juptyer` plugin to be able to execute Clojure code in project setting. The first time that you run it you will need to install the kernal with `lein jupyter install-kernel`. After that you can open the notebook in the project directory with `lein jupyter notebook`.
+
+There is also an exported copy of the walkthrough to markdown `fine-tune-bert.md`.
+
+
+### To run
+
+* `lein install` in the root of the main project directory
+* cd into this project directory and do `lein run`. This will execute the cpu version.
+
+`lein run -m bert.bert-sentence-classification :cpu` - to run with cpu
+`lein run -m bert.bert-sentence-classification :gpu` - to run with gpu
+
+
+Sample results from cpu run on OSX
+```
+INFO  org.apache.mxnet.module.BaseModule: Epoch[1] Train-accuracy=0.65384614
+INFO  org.apache.mxnet.module.BaseModule: Epoch[1] Time cost=464187
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [1]	Speed: 0.91 samples/sec	Train-accuracy=0.656250
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [2]	Speed: 0.90 samples/sec	Train-accuracy=0.656250
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [3]	Speed: 0.91 samples/sec	Train-accuracy=0.687500
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [4]	Speed: 0.90 samples/sec	Train-accuracy=0.693750
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [5]	Speed: 0.91 samples/sec	Train-accuracy=0.703125
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [6]	Speed: 0.92 samples/sec	Train-accuracy=0.696429
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [7]	Speed: 0.91 samples/sec	Train-accuracy=0.699219
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [8]	Speed: 0.90 samples/sec	Train-accuracy=0.701389
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [9]	Speed: 0.90 samples/sec	Train-accuracy=0.690625
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [10]	Speed: 0.89 samples/sec	Train-accuracy=0.690341
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [11]	Speed: 0.90 samples/sec	Train-accuracy=0.695313
+INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [12]	Speed: 0.91 samples/sec	Train-accuracy=0.701923
+INFO  org.apache.mxnet.module.BaseModule: Epoch[2] Train-accuracy=0.7019231
+INFO  org.apache.mxnet.module.BaseModule: Epoch[2] Time cost=459809
+````

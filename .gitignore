@@ -162,3 +162,9 @@ coverage.xml
 
 # Local CMake build config
 cmake_options.yml
+contrib/clojure-package/examples/bert/.lein-failures
+contrib/clojure-package/examples/bert/.lein-repl-history
+contrib/clojure-package/examples/bert/.nrepl-port
+contrib/clojure-package/examples/bert/target/classes/META-INF/maven/bert-qa/bert-qa/pom.properties
+contrib/clojure-package/examples/bert/target/repl-port
+contrib/clojure-package/examples/bert/target/stale/leiningen.core.classpath.extract-native-dependencies
