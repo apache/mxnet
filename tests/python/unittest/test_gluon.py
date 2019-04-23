@@ -21,7 +21,7 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, same
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from common import (setup_module, with_seed, assertRaises, teardown,
                     assert_raises_cudnn_not_satisfied)
@@ -951,6 +951,24 @@ def test_sequential_warning():
         b.add(gluon.nn.Dense(20))
         b.hybridize()
         assert len(w) == 1
+
+
+@with_seed()
+def test_dense_backward():
+    import mxnet.autograd as ag
+    import mxnet.ndarray as nd
+    x = nd.array([[1,2,3,400]])
+    net = gluon.nn.Sequential()
+    with net.name_scope():
+        net.add(gluon.nn.Dense(1, in_units=x.shape[1]))
+    net.initialize(mx.initializer.Constant(.5))
+    params = [p.data() for p in net.collect_params().values()]
+    x.attach_grad()
+    with ag.record():
+        y = net.forward(x)
+        y_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
+    y_grad.backward()
+    same(x.grad, nd.zeros(4))
 
 
 @with_seed()
