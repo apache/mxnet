@@ -569,7 +569,7 @@ class TShape : public Tuple<dim_t> {
    * \param axis_end The ending axis specified.
    * \return the flat 3d shape
    */
-  inline mshadow::Shape<3> FlatTo3D(size_t axis_begin, size_t axis_end) const {
+  inline mshadow::Shape<3> FlatTo3D(int axis_begin, int axis_end) const {
     CHECK(axis_end >= axis_begin);
     mshadow::Shape<3> s;
     CHECK(ndim_is_known(ndim())) << "shape must have a valid ndim";
@@ -579,10 +579,10 @@ class TShape : public Tuple<dim_t> {
     s.shape_[1] = 1;
     s.shape_[2] = 1;
 
-    for (size_t i = 0; i < axis_begin; ++i) {
+    for (int i = 0; i < axis_begin; ++i) {
       s.shape_[0] *= d[i];
     }
-    for (size_t i = axis_begin; i <= axis_end; ++i) {
+    for (int i = axis_begin; i <= axis_end; ++i) {
       s.shape_[1] *= d[i];
     }
     for (int i = axis_end + 1; i < ndim(); ++i) {
@@ -595,7 +595,7 @@ class TShape : public Tuple<dim_t> {
    * \param axis The axis specified.
    * \return the flat 3d shape
    */
-  inline mshadow::Shape<3> FlatTo3D(size_t axis) const {
+  inline mshadow::Shape<3> FlatTo3D(int axis) const {
     return FlatTo3D(axis, axis);
   }
   inline bool operator==(const TShape &s) const {
@@ -712,8 +712,8 @@ template<typename T>
 struct hash<mxnet::Tuple<T> > {
   /*! \brief hash a Tuple into unsigned int */
   size_t operator()(const mxnet::Tuple<T>& val) const {
-    std::hash<uint32_t> hash_uint;
-    size_t res = hash_uint(val.ndim());
+    std::hash<int> hash_int;
+    size_t res = hash_int(val.ndim());
     for (int i = 0; i < val.ndim(); ++i) {
       res = dmlc::HashCombine(res, val[i]);
     }
@@ -726,8 +726,8 @@ template<>
 struct hash<mxnet::TShape> {
   /*! \brief hash a TShape into unsigned int */
   size_t operator()(const mxnet::TShape& val) const {
-    std::hash<uint32_t> hash_uint;
-    size_t res = hash_uint(val.ndim());
+    std::hash<int> hash_int;
+    size_t res = hash_int(val.ndim());
     for (int i = 0; i < val.ndim(); ++i) {
       res = dmlc::HashCombine(res, val[i]);
     }

@@ -290,7 +290,7 @@ void SparseRetainOpForwardRspImpl(mshadow::Stream<xpu> *s,
     Kernel<set_zero, xpu>::Launch(s, output_data.Size(), output_data.dptr<DType>());
     MSHADOW_IDX_TYPE_SWITCH(output_idx.type_flag_, RType, {  // row index data type
       MSHADOW_TYPE_SWITCH(idx_data.type_flag_, IType, {  // index array data type
-        if (input_idx.Size() == input_nd.shape()[0]) {  // input rsp is dense
+        if (input_idx.Size() == static_cast<size_t>(input_nd.shape()[0])) {  // input rsp is dense
           using namespace mshadow;
           // copy indices
           Tensor<xpu, 1, RType> output_idx_tensor = output_idx.FlatTo1D<xpu, RType>(s);

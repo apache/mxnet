@@ -52,7 +52,7 @@ struct MultiBoxDetectionParam : public dmlc::Parameter<MultiBoxDetectionParam> {
   bool force_suppress;
   int keep_topk;
   int nms_topk;
-  nnvm::Tuple<float> variances;
+  mxnet::Tuple<float> variances;
   DMLC_DECLARE_PARAMETER(MultiBoxDetectionParam) {
     DMLC_DECLARE_FIELD(clip).set_default(true)
     .describe("Clip out-of-boundary boxes.");
