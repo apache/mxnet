@@ -1,4 +1,4 @@
-/*
+  /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -165,6 +165,7 @@ static bool FullyConnectedType(const nnvm::NodeAttrs& attrs,
       attrs, in_type, out_type, -1);
 }
 
+
 struct FullyConnectedGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
@@ -175,6 +176,16 @@ struct FullyConnectedGrad {
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
+
+
+std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(const nnvm::NodePtr& n,
+      const std::vector<nnvm::NodeEntry>& ograds) {
+  auto zero_node = MakeNode("zeros_like", n->attrs.name + "_backward", {n->inputs[0]}, nullptr, &n);
+  std::vector<nnvm::NodeEntry> ret;
+  ret.emplace_back(nnvm::NodeEntry{zero_node, 0, 0});
+  return ret;
+}
+
 
 inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
                                  const int dev_mask,
@@ -310,6 +321,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 .add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(FullyConnectedParam::__FIELDS__());
 
+
 NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_num_inputs(3)
 .set_num_outputs([](const NodeAttrs& attrs) {
@@ -325,6 +337,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{1, 0}};
 })
+.set_attr<nnvm::FGradient>("FGradient", FullyConnectedBackwardGrad)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 #if MXNET_USE_MKLDNN == 1
@@ -332,6 +345,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);
+
 
 }  // namespace op
 }  // namespace mxnet
