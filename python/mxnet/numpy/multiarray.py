@@ -52,9 +52,135 @@ class ndarray(NDArray):
     def __add__(self, other):
         return super(ndarray, self).__add__(other).as_np_ndarray()
 
+    @use_np_compat
+    def __iadd__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __sub__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __isub__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __rsub__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __mul__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __neg__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __imul__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __rmul__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __div__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __rdiv__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __idiv__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __truediv__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __rtruediv__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __itruediv__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __mod__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __rmod__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __imod__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __pow__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __rpow__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __eq__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __hash__(self):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __ne__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __gt__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __ge__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __lt__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __le__(self, other):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __bool__(self):
+        raise NotImplementedError
+
+    @use_np_compat
+    def __len__(self):
+        """Number of element along the first axis."""
+        return self.shape[0]
+
+    def __reduce__(self):
+        return ndarray, (None,), self.__getstate__()
+
+    @use_np_compat
+    def _slice(self, start, stop):
+        raise NotImplementedError
+
+    @use_np_compat
+    def _at(self, idx):
+        raise NotImplementedError
+
+    @use_np_compat
     def all(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
+    @use_np_compat
     def any(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
@@ -119,6 +245,12 @@ class ndarray(NDArray):
 
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute as_scalar')
+
+    def copyto(self, other):
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute copyto')
+
+    def as_in_context(self, context):
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute as_in_context')
 
     @use_np_compat
     def copy(self, order='C'):
@@ -793,6 +925,36 @@ class ndarray(NDArray):
 
     def broadcast_like(self, other):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
+
+    @property
+    @use_np_compat
+    def shape(self):
+        return super(ndarray, self).shape
+
+    @property
+    @use_np_compat
+    def ndim(self):
+        """Number of array dimensions."""
+        return len(self.shape)
+
+    @property
+    @use_np_compat
+    def size(self):
+        """Number of elements in the array."""
+        return super(ndarray, self).size
+
+    @property
+    @use_np_compat
+    def stype(self):
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute stype')
+
+    @property
+    @use_np_compat
+    def T(self):
+        raise NotImplementedError
+
+    def tostype(self, stype):
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute tostype')
 
 
 @use_np_compat
