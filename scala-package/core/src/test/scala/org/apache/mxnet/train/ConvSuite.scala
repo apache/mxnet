@@ -23,6 +23,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.ListBuffer
+import scala.language.postfixOps
 import scala.sys.process._
 
 class ConvSuite extends FunSuite with BeforeAndAfterAll {

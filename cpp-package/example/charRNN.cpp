@@ -42,6 +42,7 @@
 #include <thread>
 #include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
+#include "utils.h"
 
 using namespace mxnet::cpp;
 
@@ -721,6 +722,7 @@ int main(int argc, char** argv) {
   TIME_MAJOR = task.find("TimeMajor") != std::string::npos;
   std::cout << "use BuiltIn cuDNN RNN: " << builtIn << std::endl
          << "use data as TimeMajor: " << TIME_MAJOR << std::endl;
+  TRY
   if (task.find("train") == 0) {
     std::cout << "train batch size:      " << argv[3] << std::endl
            << "train max epoch:       " << argv[4] << std::endl;
@@ -746,5 +748,6 @@ int main(int argc, char** argv) {
   }
 
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

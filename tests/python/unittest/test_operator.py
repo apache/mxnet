@@ -29,6 +29,8 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
+from common import run_in_spawned_process
+from nose.tools import assert_raises
 import unittest
 import os
 
@@ -697,11 +699,11 @@ def test_symbol_pow():
 def test_pow_fn():
     shape = (3, 4)
     exp = mx.symbol.Variable("exp")
-    y = mx.sym.pow(2, exp)
     x = np.ones(shape)*3
-    check_numeric_gradient(y, [x], numeric_eps=1E-3)
-    check_symbolic_forward(y, [x], [2**x])
-    check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
+    for y in [mx.sym.pow(2, exp), mx.sym.power(2, exp)]:
+        check_numeric_gradient(y, [x], numeric_eps=1E-3)
+        check_symbolic_forward(y, [x], [2**x])
+        check_symbolic_backward(y, [x], [np.ones(shape)], [np.log(2) * 2**x])
 
 
 @with_seed()
@@ -856,6 +858,39 @@ def test_selu():
         xa[abs(xa) < eps] = 0.01
         ya = fselu(xa)
         ga = fselu_grad(np.ones(shape).astype(dtype), xa, ya)
+        check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+
+
+@with_seed()
+def test_gelu():
+    CUBE_CONSTANT = 0.044715
+    ROOT_TWO_OVER_PI = 0.7978845608028654
+    def g(x):
+        return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * np.power(x, 3))
+    def g_grad(x):
+        return ROOT_TWO_OVER_PI * (1.0 + 3.0 * CUBE_CONSTANT * np.power(x, 2))
+    def f(x):
+        return 1.0 + np.tanh(g(x))
+    def f_grad(x):
+        return (1.0 - np.tanh(g(x)) * np.tanh(g(x))) * g_grad(x)
+    def fgelu(x):
+        return 0.5 * x * f(x)
+    def fgelu_grad(grad, x, y):
+        return grad * (y / x + y * (1 - np.tanh(g(x))) * g_grad(x))
+
+    shape = (3, 4)
+    x = mx.sym.Variable("x")
+    y = mx.sym.LeakyReLU(data=x, act_type="gelu")
+    for dtype in [np.float16, np.float32, np.float64]:
+        xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
+        eps, rtol, atol = (7.5e-4, 1e-1, 1e-2) if dtype is np.float16 else (1e-4, 1e-2, 1e-4)
+        if dtype is np.float16:
+            xa /= 10.0
+        xa[abs(xa) < eps] = 0.01
+        ya = fgelu(xa)
+        ga = fgelu_grad(np.ones(shape).astype(dtype), xa, ya)
         check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
@@ -1490,17 +1525,32 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
         assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
 
-def check_bilinear_upsampling_with_shape(shapes, scale, root_scale):
-    arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_context()) for i, shape in zip(range(len(shapes)), shapes)}
-    arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
+def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter):
+    def _init_bilinear(arr, f):
+        weight = np.zeros(np.prod(arr.shape), dtype='float32')
+        shape = arr.shape
+        c = (2 * f - 1 - f % 2) / (2. * f)
+        for i in range(np.prod(shape)):
+            x = i % shape[3]
+            y = (i // shape[3]) % shape[2]
+            weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+        arr[:] = weight.reshape(shape)
+        return arr
 
-    up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='bilinear', scale=root_scale)
+    up = mx.sym.UpSampling(mx.sym.Variable("data"),
+        mx.sym.Variable('weight'), sample_type='bilinear', scale=root_scale,
+        num_filter=num_filter, num_args=2)
+    arg_shapes, out_shapes, _ = up.infer_shape(data=data_shape)
+    arr = {'data': mx.random.uniform(-5, 5, data_shape, ctx=mx.cpu()).copyto(default_context()),
+        'weight':  mx.nd.array(_init_bilinear(mx.ndarray.empty(arg_shapes[1]).asnumpy(), root_scale))}
+
+    arr_grad = [mx.nd.empty(s) for s in arg_shapes]
     exe = up.bind(default_context(), args=arr, args_grad=arr_grad)
     exe.forward(is_train=True)
+    out = exe.outputs[0].asnumpy()
     exe.backward(exe.outputs)
-    for k in range(len(shapes)):
-        name = 'arg_%d'%k
-        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
+    target_shape = (data_shape[2] * root_scale, data_shape[3] * root_scale)
+    assert out.shape == data_shape[:2] + target_shape
 
 
 @with_seed()
@@ -1512,6 +1562,22 @@ def test_nearest_upsampling():
                     shapes = [(1,3,base*root_scale*scale**(num_shape-1-i),base*root_scale*scale**(num_shape-1-i)) for i in range(num_shape)]
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
+
+@with_seed()
+def test_bilinear_upsampling():
+    rootscale = [2,3]
+    scales = [1,2,3]
+    filters = [1,2,3]
+    bases = [1,2,3]
+    for params in itertools.product(rootscale, scales, filters, bases):
+        root_scale, scale, num_filter, base = params
+        # bilinear upsampling takes only 1 data and 1 weight
+        # multi input mode is not applicable
+        dimension = base*root_scale*scale
+        kernel = 2 * root_scale - root_scale % 2
+        data_shape = (1, num_filter, dimension, dimension)
+        weight_shape = (1, num_filter, kernel, kernel)
+        check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter)
 
 @with_seed()
 def test_batchnorm_training():
@@ -3346,41 +3412,46 @@ def test_norm():
     ctx = default_context()
     data = mx.symbol.Variable('data')
     in_data_dim = random_sample([4,5,6], 1)[0]
-    in_shape = rand_shape_nd(in_data_dim)
+    in_shape = rand_shape_nd(in_data_dim, dim=5)
     epsilon = 1e-3
+    acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64}
     for order in [1, 2]:
         for dtype in [np.float16, np.float32, np.float64]:
-            in_data = np.random.uniform(-1, 1, in_shape).astype(dtype)
-            in_data[abs(in_data) < epsilon] = 2 * epsilon
             for i in range(in_data_dim):
-                norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, keepdims=True)
-                npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
-                npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                check_symbolic_forward(norm_sym, [in_data], [npy_out],
-                                        rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                        atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                check_symbolic_backward(norm_sym, [in_data], [np.ones(npy_out.shape)],
-                                        [npy_out_backward],
-                                        rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                        atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
-                # # check gradient
-                # if dtype is not np.float16:
-                #     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-1, atol=1e-3)
-                if i < in_data_dim-1:
-                    norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
-                    npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+                for out_dtype in ['float32', 'float64']:
+                    backward_dtype = np.float32 if out_dtype == 'float32' else np.float64
+                    print(order, dtype, i, out_dtype, in_shape)
+                    in_data = np.random.uniform(-1, 1, in_shape).astype(acc_type[dtype])
+                    in_data[abs(in_data) < epsilon] = 2 * epsilon
+                    norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, out_dtype=out_dtype, keepdims=True)
+                    npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
                     npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                    check_symbolic_forward(norm_sym, [in_data], [npy_out],
-                                           rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                           atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                    check_symbolic_backward(norm_sym, [in_data], [np.ones(npy_out.shape)],
-                                            [npy_out_backward],
-                                            rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                            atol=1e-2 if dtype is np.float16 else 1e-5, ctx=ctx)
-                    # # check gradient
-                    # if dtype is not np.float16:
-                    #     check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon, rtol=1e-1, atol=1e-3)
+                    check_symbolic_forward(norm_sym, [in_data.astype(dtype)], [npy_out.astype(out_dtype)],
+                                           rtol=1e-3, atol=1e-5, ctx=ctx)
+                    check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
+                                            [np.ones(npy_out.shape).astype(out_dtype)],
+                                            [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
+                                            dtype=backward_dtype)
+                    # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
+                    # check gradient
+                    if dtype is not np.float16:
+                        check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
+                                               rtol=1e-1, atol=1e-3, dtype=backward_dtype)
+                    if i < in_data_dim-1:
+                        norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
+                        npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+                        npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
+                        check_symbolic_forward(norm_sym, [in_data], [npy_out.astype(dtype)],
+                                               rtol=1e-3 if dtype is np.float16 else 1e-3,
+                                               atol=1e-5 if dtype is np.float16 else 1e-5, ctx=ctx)
+                        check_symbolic_backward(norm_sym, [in_data],
+                                                [np.ones(npy_out.shape).astype(out_dtype)],
+                                                [npy_out_backward.astype(out_dtype)],
+                                                rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
+                        # check gradient
+                        if dtype is not np.float16:
+                            check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
+                                                   rtol=1e-1, atol=1e-3, dtype=backward_dtype)
 
 
 def test_layer_norm():
@@ -4354,7 +4425,8 @@ def test_tile():
         assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
 
     test_normal_case()
-    test_empty_tensor()
+    with mx.np_compat():
+        test_empty_tensor()
     test_empty_reps()
     test_tile_backward()
     test_tile_numeric_gradient()
@@ -4414,7 +4486,8 @@ def test_one_hot():
     test_normal_case(index_type=np.float64)
     test_normal_case(index_type=np.float32)
     test_normal_case(index_type=np.float16)
-    test_empty_indices()
+    with mx.np_compat():
+        test_empty_indices()
     test_zero_depth()
 
 
@@ -5212,31 +5285,34 @@ def test_custom_op():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
     assert_almost_equal(x, np.ones(shape=(10, 10), dtype=np.float32))
 
+
+@with_seed()
+def test_custom_op_fork():
     # test custom operator fork
     # see https://github.com/apache/incubator-mxnet/issues/14396
+    class AdditionOP(mx.operator.CustomOp):
+        def __init__(self):
+            super(AdditionOP, self).__init__()
+        def forward(self, is_train, req, in_data, out_data, aux):
+            out_data[0][:] = in_data[0] + in_data[1]
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            in_grad[0][:] = out_grad[0]
+            in_grad[1][:] = out_grad[0]
+
+    @mx.operator.register("AdditionOP")
+    class AdditionOPProp(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(AdditionOPProp, self).__init__()
+        def list_arguments(self):
+            return ['a', 'b']
+        def list_outputs(self):
+            return ['output']
+        def infer_shape(self, in_shape):
+            return in_shape, [in_shape[0]]
+        def create_operator(self, ctx, shapes, dtypes):
+            return AdditionOP()
+
     if not sys.platform.startswith('win'):  # no fork in windows
-        class AdditionOP(mx.operator.CustomOp):
-            def __init__(self):
-                super(AdditionOP, self).__init__()
-            def forward(self, is_train, req, in_data, out_data, aux):
-                out_data[0][:] = in_data[0] + in_data[1]
-            def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-                in_grad[0][:] = out_grad[0]
-                in_grad[1][:] = out_grad[0]
-
-        @mx.operator.register("AdditionOP")
-        class AdditionOPProp(mx.operator.CustomOpProp):
-            def __init__(self):
-                super(AdditionOPProp, self).__init__()
-            def list_arguments(self):
-                return ['a', 'b']
-            def list_outputs(self):
-                return ['output']
-            def infer_shape(self, in_shape):
-                return in_shape, [in_shape[0]]
-            def create_operator(self, ctx, shapes, dtypes):
-                return AdditionOP()
-
         def custom_add():
             a = mx.nd.array([1, 2, 3])
             b = mx.nd.array([4, 5, 6])
@@ -5249,7 +5325,90 @@ def test_custom_op():
         p.daemon = True
         p.start()
         p.join(5)
-        assert not p.is_alive(), "deadlock may exist in custom operator"
+        assert not p.is_alive() and p.exitcode == 0
+
+
+def _build_dot_custom(fun_forward, name):
+    class Dot(mx.operator.CustomOp):
+        def __init__(self):
+            super(Dot, self).__init__()
+        def forward(self, is_train, req, in_data, out_data, aux):
+            fun_forward(in_data, out_data)
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            pass
+
+    @mx.operator.register(name)
+    class DotProp(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(DotProp, self).__init__()
+        def list_arguments(self):
+            return ['a', 'b']
+        def list_outputs(self):
+            return ['output']
+        def infer_shape(self, in_shape):
+            return in_shape, [(in_shape[0][0], in_shape[1][1])]
+        def create_operator(self, ctx, shapes, dtypes):
+            return Dot()
+
+def _custom_exc3(seed):
+    def custom_exc3():
+        def f(in_data, out_data):
+            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
+            out_data[0].wait_to_read()
+        _build_dot_custom(f, 'Dot3')
+        n = int(1e8)
+        a = mx.nd.zeros((n, 1))
+        b = mx.nd.zeros((1, n))
+        # trigger OOM
+        c = mx.nd.Custom(a, b, op_type='Dot3')
+        c.wait_to_read()
+    assert_raises(MXNetError, custom_exc3)
+
+def _custom_exc4(seed):
+    def custom_exc4():
+        def f(in_data, out_data):
+            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
+        _build_dot_custom(f, 'Dot4')
+        n = int(1e8)
+        a = mx.nd.zeros((n, 1))
+        b = mx.nd.zeros((1, n))
+        # trigger OOM
+        c = mx.nd.Custom(a, b, op_type='Dot4')
+        c.wait_to_read()
+    assert_raises(MXNetError, custom_exc4)
+
+@with_seed()
+def test_custom_op_exc():
+    # test except handling
+    # see https://github.com/apache/incubator-mxnet/pull/14693
+    # 1. error in python code
+    def custom_exc1():
+        def f(in_data, out_data):
+            assert False
+            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
+        _build_dot_custom(f, 'Dot1')
+        a = mx.nd.zeros((4, 1))
+        b = mx.nd.zeros((1, 4))
+        c = mx.nd.Custom(a, b, op_type='Dot1')
+        c.wait_to_read()
+    assert_raises(MXNetError, custom_exc1)
+
+    # 2. error in pushing operator to engine
+    def custom_exc2():
+        def f(in_data, out_data):
+            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
+        _build_dot_custom(f, 'Dot2')
+        a = mx.nd.zeros((4, 2))
+        b = mx.nd.zeros((1, 4))
+        # trigger error by invalid input shapes of operands
+        c = mx.nd.Custom(a, b, op_type='Dot2')
+        c.wait_to_read()
+    assert_raises(MXNetError, custom_exc2)
+
+    # 3. error in real execution
+    run_in_spawned_process(_custom_exc3, {})
+    run_in_spawned_process(_custom_exc4, {})
+
 
 @with_seed()
 def test_psroipooling():
@@ -6499,7 +6658,12 @@ def test_binary_math_operators():
                 lambda x, y: np.power(x, y),
                 lambda x, y: np.power(x, y - 1.) * y,
                 lambda x, y: np.power(x, y) * np.log(x),
-                0.2, 5.0, -4.0, 4.0]
+                0.2, 5.0, -4.0, 4.0],
+        'power': [lambda x, y: mx.sym.power(x, y),
+                  lambda x, y: np.power(x, y),
+                  lambda x, y: np.power(x, y - 1.) * y,
+                  lambda x, y: np.power(x, y) * np.log(x),
+                  0.2, 5.0, -4.0, 4.0]
     }
     # Loop over operators
     for name, op in binary_ops.items():
@@ -6662,6 +6826,20 @@ def test_slice_partial_infer():
     check_slice_axis_partial_infer(var1, 0, 0, 5, (5, 0))
     check_slice_axis_partial_infer(var1, 1, 0, 5, (10, 0))
 
+    with mx.np_compat():
+        var1 = mx.sym.var(name="data", shape=(-1, 20))
+        check_slice_partial_infer(var1, (None, None), (None, 10), [], (-1, 10))
+        check_slice_partial_infer(var1, (None, None), (None, 10), (None, 2), (-1, 5))
+        check_slice_partial_infer(var1, (None, 3), (None, 10), [], (-1, 7))
+        check_slice_partial_infer(var1, (None, 3), (5, 10), [], (-1, 7))
+        check_slice_partial_infer(var1, (2, 3), (None, 10), [], (-1, 7))
+        check_slice_partial_infer(var1, (2, 3), (None, 10), (None, 1), (-1, 7))
+        check_slice_partial_infer(var1, (2, 3), (None, 10), (3, 3), (-1, 3))
+
+        var1 = mx.sym.var(name='data', shape=(10, -1))
+        check_slice_axis_partial_infer(var1, 0, 0, 5, (5, -1))
+        check_slice_axis_partial_infer(var1, 1, 0, 5, (10, -1))
+
 
 @with_seed()
 def test_float16_min_max():
@@ -6670,6 +6848,21 @@ def test_float16_min_max():
     assert a.dtype == np.float16
     assert np.finfo('float16').min == mx.nd.min(a).asscalar()
     assert np.finfo('float16').max == mx.nd.max(a).asscalar()
+
+
+@with_seed()
+@mx.use_np_compat
+def test_zero_size_min_max():
+    def min():
+        a = mx.nd.zeros(shape=(5, 0))
+        a.min()
+
+    def max():
+        a = mx.nd.zeros(shape=(5, 0))
+        a.max()
+
+    assert_raises(MXNetError, min)
+    assert_raises(MXNetError, max)
 
 
 @with_seed()
@@ -7060,7 +7253,12 @@ def test_op_output_names_monitor():
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         op_exe.set_monitor_callback(get_output_names_callback, monitor_all=False)
-        op_exe.forward()
+        try:
+            op_exe.forward()
+            mx.nd.waitall()
+        except mx.base.MXNetError:
+            # skip errors since test is to check output names
+            pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 
@@ -7106,7 +7304,12 @@ def test_op_all_names_monitor():
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         op_exe.set_monitor_callback(get_output_names_callback, monitor_all=True)
-        op_exe.forward()
+        try:
+            op_exe.forward()
+            mx.nd.waitall()
+        except mx.base.MXNetError:
+            # skip errors since test is to check all names
+            pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 
@@ -7752,6 +7955,74 @@ def test_image_normalize():
 
     # check backward using finite difference
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
+
+
+@with_seed()
+def test_scalar_tensor_creation():
+    assertRaises(MXNetError, mx.nd.zeros, shape=())
+    assertRaises(MXNetError, mx.nd.ones, shape=())
+    with mx.np_compat():
+        data_mx = mx.nd.ones(shape=())
+        data_np = np.ones((), dtype=data_mx.dtype)
+        assert same(data_mx.asnumpy(), data_np)
+
+
+@with_seed()
+def test_zero_size_tensor_creation():
+    assertRaises(MXNetError, mx.nd.zeros, shape=(0, 1, 3, 0))
+    assertRaises(MXNetError, mx.nd.ones, shape=(0, 1, 3, 0))
+    with mx.np_compat():
+        data_mx = mx.nd.ones(shape=(0, 1, 0, 4))
+        data_np = np.ones(shape=data_mx.shape, dtype=data_mx.dtype)
+        assert same(data_mx.asnumpy(), data_np)
+
+
+@with_seed()
+def test_concat_with_zero_size_tensor():
+    with mx.np_compat():
+        data1 = mx.nd.ones((0, 8, 12))
+        data2 = mx.nd.ones((3, 8, 12))
+        data3 = mx.nd.ones((0, 8, 12))
+        ret = mx.nd.Concat(data1, data2, data3, dim=0)
+        assert ret.shape == (3, 8, 12)
+
+        data1 = mx.nd.ones((0, 3, 10))
+        data2 = mx.nd.ones((0, 4, 10))
+        data3 = mx.nd.ones((0, 5, 10))
+        ret = mx.nd.Concat(data1, data2, data3, dim=1)
+        assert ret.shape == (0, 12, 10)
+
+
+@with_seed()
+def test_np_compat_decorator():
+    @mx.use_np_compat
+    def check_scalar_one():
+        """Generate scalar one tensor"""
+        return mx.nd.ones(shape=())
+    assert check_scalar_one.__name__ == "check_scalar_one"
+    assert check_scalar_one.__doc__ == "Generate scalar one tensor"
+    assert check_scalar_one().shape == ()
+    for active in [True, False]:
+        with mx.np_compat(active=active):
+            assert check_scalar_one.__name__ == "check_scalar_one"
+            assert check_scalar_one.__doc__ == "Generate scalar one tensor"
+            assert check_scalar_one().shape == ()
+
+    @mx.use_np_compat
+    def check_concat(shape1, shape2, axis):
+        data1 = mx.nd.ones(shape1)
+        data2 = mx.nd.ones(shape2)
+        ret = mx.nd.Concat(data1, data2, dim=axis)
+        expected_ret = np.concatenate((data1.asnumpy(), data2.asnumpy()), axis=axis)
+        assert ret.shape == expected_ret.shape
+
+    check_concat((0, 3, 4), (5, 3, 4), 0)
+    check_concat((8, 0, 5), (8, 7, 5), 1)
+    check_concat((8, 0, 0), (8, 0, 0), 2)
+    for active in [True, False]:
+        check_concat((0, 3, 4), (5, 3, 4), 0)
+        check_concat((8, 0, 5), (8, 7, 5), 1)
+        check_concat((8, 0, 0), (8, 0, 0), 2)
 
 
 if __name__ == '__main__':

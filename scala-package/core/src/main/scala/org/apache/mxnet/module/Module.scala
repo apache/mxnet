@@ -121,36 +121,35 @@ class Module(symbolVar: Symbol,
                           allowMissing: Boolean = false,
                           forceInit: Boolean = false,
                           allowExtra: Boolean = false): Unit = {
-    if (paramsInitialized && !forceInit) {
-      return
+    if (!paramsInitialized || forceInit) {
+      require(binded, "call bind before initializing the parameters")
+
+      if (this.argParams == null) {
+        val paramArrays =
+          execGroup.paramArrays.map(nds => NDArray.zeros(nds(0).shape, dtype = nds(0).dtype))
+        this.argParams = this.paramNames.zip(paramArrays).toMap
+      }
+
+      if (this.auxParams == null) {
+        val auxArrays =
+          execGroup.auxArrays.map(nds => NDArray.zeros(nds(0).shape, dtype = nds(0).dtype))
+        this.auxParams = this.auxNames.zip(auxArrays).toMap
+      }
+
+      this.argParams.foreach { case (name, arr) =>
+        impl(name, arr, allowMissing, Option(initializer), argParams)
+      }
+
+      this.auxParams.foreach { case (name, arr) =>
+        impl(name, arr, allowMissing, Option(initializer), auxParams)
+      }
+
+      this.paramsInitialized = true
+      this.paramsDirty = false
+
+      // copy the initialized parameters to devices
+      this.execGroup.setParams(this.argParams, this.auxParams, allowExtra = allowExtra)
     }
-    require(binded, "call bind before initializing the parameters")
-
-    if (this.argParams == null) {
-      val paramArrays =
-        execGroup.paramArrays.map(nds => NDArray.zeros(nds(0).shape, dtype = nds(0).dtype))
-      this.argParams = this.paramNames.zip(paramArrays).toMap
-    }
-
-    if (this.auxParams == null) {
-      val auxArrays =
-        execGroup.auxArrays.map(nds => NDArray.zeros(nds(0).shape, dtype = nds(0).dtype))
-      this.auxParams = this.auxNames.zip(auxArrays).toMap
-    }
-
-    this.argParams.foreach { case (name, arr) =>
-      impl(name, arr, allowMissing, Option(initializer), argParams)
-    }
-
-    this.auxParams.foreach { case (name, arr) =>
-      impl(name, arr, allowMissing, Option(initializer), auxParams)
-    }
-
-    this.paramsInitialized = true
-    this.paramsDirty = false
-
-    // copy the initialized parameters to devices
-    this.execGroup.setParams(this.argParams, this.auxParams, allowExtra = allowExtra)
   }
 
   // Internal helper for parameter initialization
@@ -246,64 +245,64 @@ class Module(symbolVar: Symbol,
 
     if (binded) {
       logger.warn("Already binded, ignoring bind()")
-      return
-    }
-
-    this.forTraining = forTraining
-    this.inputsNeedGrad = inputsNeedGrad
-    this.binded = true
-
-    if (!forTraining) {
-      require(!inputsNeedGrad, "Invalid inputsNeedGrad (cannot be true if not forTraining)")
     } else {
-      // this is not True, as some module might not contains a loss function
-      // that consumes the labels
-      // require(labelShapes != None)
+      this.forTraining = forTraining
+      this.inputsNeedGrad = inputsNeedGrad
+      this.binded = true
+
+      if (!forTraining) {
+        require(!inputsNeedGrad, "Invalid inputsNeedGrad (cannot be true if not forTraining)")
+      } else {
+        // this is not True, as some module might not contains a loss function
+        // that consumes the labels
+        // require(labelShapes != None)
+      }
+
+      this.dataShapesVar = dataShapes
+      this.labelShapesVar = labelShapes
+
+      val sharedGroup =
+        sharedModule.map(sharedModuleInst => {
+          require(sharedModuleInst.binded && sharedModuleInst.paramsInitialized,
+            s"bind() and initParams() must be called first on shared module.")
+          sharedModuleInst.execGroup
+        })
+
+      val inputTypes = this.dataShapesVar.map(dataDesc => (dataDesc.name, dataDesc.dtype)).toMap ++
+        labelShapes.map(shapes => shapes.map(dataDesc => (dataDesc.name, dataDesc.dtype)).toMap)
+          .getOrElse(Map.empty[String, DType])
+
+      execGroup = new Builder(symbol, contexts, paramNames)
+        .setWorkLoadList(workLoads)
+        .setDataShapes(dataShapes)
+        .setLabelShapes(labelShapes.orNull)
+        .setForTraining(forTraining)
+        .setInputsNeedGrad(inputsNeedGrad)
+        .setSharedGroup(sharedGroup.orNull)
+        .setFixedParamNames(fixedParamNames.orNull)
+        .setGradReq(gradReq)
+        .setInputTypes(inputTypes)
+        .build()
+
+      if (sharedModule.isDefined) {
+        paramsInitialized = true
+        argParams = sharedModule.get.argParams
+        auxParams = sharedModule.get.auxParams
+      } else if (paramsInitialized) {
+        // if the parameters are already initialized, we are re-binding
+        // so automatically copy the already initialized params
+        execGroup.setParams(argParams, auxParams)
+      }
+
+      sharedModule.foreach {
+        case sharedModuleInst: Module =>
+          if (sharedModuleInst.optimizerInitialized) {
+            borrowOptimizer(sharedModuleInst)
+          }
+        case _ =>
+      }
     }
 
-    this.dataShapesVar = dataShapes
-    this.labelShapesVar = labelShapes
-
-    val sharedGroup =
-      sharedModule.map(sharedModuleInst => {
-        require(sharedModuleInst.binded && sharedModuleInst.paramsInitialized,
-          s"bind() and initParams() must be called first on shared module.")
-        sharedModuleInst.execGroup
-      })
-
-    val inputTypes = this.dataShapesVar.map(dataDesc => (dataDesc.name, dataDesc.dtype)).toMap ++
-      labelShapes.map(shapes => shapes.map(dataDesc => (dataDesc.name, dataDesc.dtype)).toMap)
-                 .getOrElse(Map.empty[String, DType])
-
-    execGroup = new Builder(symbol, contexts, paramNames)
-      .setWorkLoadList(workLoads)
-      .setDataShapes(dataShapes)
-      .setLabelShapes(labelShapes.orNull)
-      .setForTraining(forTraining)
-      .setInputsNeedGrad(inputsNeedGrad)
-      .setSharedGroup(sharedGroup.orNull)
-      .setFixedParamNames(fixedParamNames.orNull)
-      .setGradReq(gradReq)
-      .setInputTypes(inputTypes)
-      .build()
-
-    if (sharedModule.isDefined) {
-      paramsInitialized = true
-      argParams = sharedModule.get.argParams
-      auxParams = sharedModule.get.auxParams
-    } else if (paramsInitialized) {
-      // if the parameters are already initialized, we are re-binding
-      // so automatically copy the already initialized params
-      execGroup.setParams(argParams, auxParams)
-    }
-
-    sharedModule.foreach {
-      case sharedModuleInst: Module =>
-        if (sharedModuleInst.optimizerInitialized) {
-          borrowOptimizer(sharedModuleInst)
-        }
-      case _ =>
-    }
   }
 
   /**
@@ -436,14 +435,14 @@ class Module(symbolVar: Symbol,
     val newDataShapes = dataBatch.data.map(_.shape)
     if (currDataShapes != newDataShapes) {
       val newDShapes: IndexedSeq[DataDesc] =
-        if (dataBatch.provideData != null) dataBatch.provideData
+        if (dataBatch.provideDataDesc != null) dataBatch.provideDataDesc
         else {
           this.dataShapes.zip(newDataShapes).map { case (i, shape) =>
             DataDesc(i.name, shape, i.dtype, i.layout)
           }
         }
       val newLShapes: Option[IndexedSeq[DataDesc]] =
-        if (dataBatch.provideLabel != null) Some(dataBatch.provideLabel)
+        if (dataBatch.provideLabelDesc != null) Some(dataBatch.provideLabelDesc)
         else if (dataBatch.label != null && dataBatch.label.length > 0
             && this.labelShapes != null) {
           Some(this.labelShapes.zip(dataBatch.label).map { case (i, j) =>

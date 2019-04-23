@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
-__all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish']
+__all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish', 'GELU']
 
 from ... import initializer
 from ..block import HybridBlock
@@ -153,12 +153,13 @@ class ELU(HybridBlock):
     Outputs:
         - **out**: output tensor with the same shape as `data`.
     """
+
     def __init__(self, alpha=1.0, **kwargs):
         super(ELU, self).__init__(**kwargs)
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-        return F.where(x > 0, x, self._alpha * (F.exp(x) - 1.0))
+        return F.LeakyReLU(x, act_type='elu', slope=self._alpha)
 
 
 class SELU(HybridBlock):
@@ -179,6 +180,25 @@ class SELU(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.LeakyReLU(x, act_type='selu', name='fwd')
+
+class GELU(HybridBlock):
+    r"""
+    Gaussian Exponential Linear Unit (GELU)
+        "Gaussian Error Linear Units (GELUs)", Hendrycks et al, 2016
+        https://arxiv.org/abs/1606.08415
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+    """
+    def __init__(self, **kwargs):
+        super(GELU, self).__init__(**kwargs)
+
+    def hybrid_forward(self, F, x):
+        return F.LeakyReLU(x, act_type='gelu', name='fwd')
 
 
 class Swish(HybridBlock):

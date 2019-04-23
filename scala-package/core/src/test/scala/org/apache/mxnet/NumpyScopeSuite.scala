@@ -15,18 +15,20 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.utils
+package org.apache.mxnet
 
-private[mxnet] object OperatorBuildUtils {
-  // Convert ctypes returned doc string information into parameters docstring.
-  def ctypes2docstring(argNames: Seq[String],
-                       argTypes: Seq[String],
-                       argDescs: Seq[String]): String = {
-    val params =
-      (argNames zip argTypes zip argDescs) map { case ((argName, argType), argDesc) =>
-        val desc = if (argDesc.isEmpty) "" else s"\n$argDesc"
-        s"$argName : $argType$desc"
-      }
-    s"Parameters\n----------\n${params.mkString("\n")}\n"
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
+
+class NumpyScopeSuite extends FunSuite with BeforeAndAfterAll {
+  test("compatible") {
+    NumpyScope.enableNumpyCompatible.withScope {
+      assert(NumpyScope.isNumpyCompatible === true)
+    }
+  }
+
+  test("incompatible") {
+    NumpyScope.disableNumpyCompatible.withScope {
+      assert(NumpyScope.isNumpyCompatible === false)
+    }
   }
 }

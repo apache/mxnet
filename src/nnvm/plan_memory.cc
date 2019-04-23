@@ -30,6 +30,7 @@
 #include <mxnet/base.h>
 #include <memory>
 #include "graph_algorithm.h"
+#include "../operator/operator_common.h"
 
 namespace nnvm {
 namespace pass {
@@ -75,7 +76,7 @@ class GraphAllocator {
 
   // request a free storage
   StorageID Request(int dev_id, int dtype, mxnet::TShape shape, uint32_t node_id) {
-    if (shape.ndim() == 0) return kBadStorageID;
+    if (!mxnet::shape_is_known(shape)) return kBadStorageID;
     // search memory block in [size / match_range_, size * match_range_)
     // TODO(tqchen) add size of the dtype, assume 4 bytes for now
     size_t size = shape.Size() * 4;
@@ -267,8 +268,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
       // only request memory for kBadStorageID
       if (storage[eid] == GraphAllocator::kBadStorageID) {
         auto &eshape = shape_vec[eid];
-        size_t esize = 0;
-        if (eshape.ndim() != 0) esize = eshape.Size();
+        size_t esize = eshape.Size();
         eids.insert(std::make_pair(esize, eid));
       }
     }

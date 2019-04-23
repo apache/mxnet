@@ -202,11 +202,11 @@
   (Image/toImage input))
 
 (s/def ::buffered-image #(instance? BufferedImage %))
-(s/def ::xmin integer?)
-(s/def ::xmax integer?)
-(s/def ::ymin integer?)
-(s/def ::ymax integer?)
-(s/def ::coordinate (s/keys :req-un [::xmin ::xmax ::ymin ::ymax]))
+(s/def ::x-min number?)
+(s/def ::x-max number?)
+(s/def ::y-min number?)
+(s/def ::y-max number?)
+(s/def ::coordinate (s/keys :req-un [::x-min ::x-max ::y-min ::y-max]))
 (s/def ::coordinates (s/coll-of ::coordinate))
 (s/def ::names (s/nilable (s/coll-of string?)))
 (s/def ::stroke (s/and integer? pos?))
@@ -217,11 +217,11 @@
 
 (defn- convert-coordinate
   "Convert bounding box coordinate to Scala correct types."
-  [{:keys [xmin xmax ymin ymax]}]
-  {:xmin (int xmin)
-   :xmax (int xmax)
-   :ymin (int ymin)
-   :ymax (int ymax)})
+  [{:keys [x-min x-max y-min y-max]}]
+  {:xmin (int x-min)
+   :xmax (int x-max)
+   :ymin (int y-min)
+   :ymax (int y-max)})
 
 (defn draw-bounding-box!
   "Draw bounding boxes on `buffered-image` and Mutate the input image.
@@ -233,9 +233,9 @@
   `transparency`: float in (0.0, 1.0) - Transparency of the bounding box
   returns: Modified `buffered-image`
   Ex:
-    (draw-bounding-box! img [{:xmin 0 :xmax 100 :ymin 0 :ymax 100}])
-    (draw-bounding-box! [{:xmin 190 :xmax 850 :ymin 50 :ymax 450}
-                         {:xmin 200 :xmax 350 :ymin 440 :ymax 530}]
+    (draw-bounding-box! img [{:x-min 0 :x-max 100 :y-min 0 :y-max 100}])
+    (draw-bounding-box! [{:x-min 190 :x-max 850 :y-min 50 :y-max 450}
+                         {:x-min 200 :x-max 350 :y-min 440 :y-max 530}]
                         {:stroke 2
                          :names [\"pug\" \"cookie\"]
                          :transparency 0.8
