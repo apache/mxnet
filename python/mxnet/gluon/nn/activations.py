@@ -153,6 +153,7 @@ class ELU(HybridBlock):
     Outputs:
         - **out**: output tensor with the same shape as `data`.
     """
+
     def __init__(self, alpha=1.0, **kwargs):
         super(ELU, self).__init__(**kwargs)
         self._alpha = alpha
