@@ -96,6 +96,13 @@ void ConcatData(mkldnn::memory::format src_format,
   MKLDNNStream::Get()->Submit();
 }
 
+//  cached mkldnn memory
+//  first layer wx, wh with next L - 1 layers wx and wh
+//  with L layers hx and cx, src and dst data/iter etc.
+//  it will prepare memory on before and after reorder and concat.
+//  for unidirectional, it will fused as dim like 1  + (L - 1) when I != H.
+//  for bidirectional, it will fused as data + back_data (weight, bias, iter etc),
+//  also need to identify first layer and next layers
 inline size_t GetMKLDNNRNNCacheMemorySize(int L,
                                           int D,
                                           int T,
@@ -155,7 +162,7 @@ void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
                                    const int I,
                                    const int H,
                                    DType* x_ptr,
-                                   mkldnn::memory user_src_layer_memory,
+                                   mkldnn::memory *user_src_layer_memory,
                                    DType* hx_ptr,
                                    DType* cx_ptr,
                                    DType* w_ptr,
@@ -207,7 +214,6 @@ void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   mkldnn::memory::dims src_iter_tz = {1, 2, nstates, N, H};  //  ldsnc
   mkldnn::memory::dims dst_iter_tz = {1, 2, nstates, N, H};  //  ldsnc
 
-  std::vector<float> weights_scales(ngates * H);
   if (!cached) {
     if (mode == rnn_enum::kGru) {
       AdjustGruGateOrder(wx, I, H);
@@ -306,7 +312,7 @@ void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   if (x_ptr && layer_index == 0) {
     (*x_memory)[layer_index].set_data_handle(x_ptr);
   } else {
-    (*x_memory)[layer_index].set_data_handle(user_src_layer_memory.get_data_handle());
+    (*x_memory)[layer_index].set_data_handle((*user_src_layer_memory).get_data_handle());
   }
   (*y_memory)[layer_index].set_data_handle(y_ptr);
 
@@ -351,7 +357,7 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
                            const int I,
                            const int H,
                            DType* x_ptr,
-                           mkldnn::memory user_src_layer_memory,
+                           mkldnn::memory *user_src_layer_memory,
                            DType* hx_ptr,
                            DType* cx_ptr,
                            DType* w_ptr,
@@ -454,7 +460,6 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
   std::vector<void*> srcs_data_h;
   std::vector<mkldnn::memory::dims> src_l_dim_x;
   std::vector<mkldnn::memory::dims> src_l_dim_h;
-  std::vector<float> weights_scales(ngates * H);
   if (!cached) {
     if (L == 1) {
       DType* wx = w_ptr;
@@ -509,7 +514,7 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
   if (x_ptr && layer_index == 0) {
     (*x_memory)[layer_index].set_data_handle(x_ptr);
   } else {
-    (*x_memory)[layer_index].set_data_handle(user_src_layer_memory.get_data_handle());
+    (*x_memory)[layer_index].set_data_handle((*user_src_layer_memory).get_data_handle());
   }
   (*y_memory)[layer_index].set_data_handle(y_ptr);
 
@@ -586,7 +591,7 @@ void MKLDNNRNNForward(bool state_outputs,
   DType* tmpNull = NULL;
   // when D = 1 and I == H, L layers can be fused together
   if (D == 1 && I == H) {
-    MKLDNNRNNForwardUnidi(state_outputs, L, T, N, I, H, x_ptr, null_memory_,
+    MKLDNNRNNForwardUnidi(state_outputs, L, T, N, I, H, x_ptr, &null_memory_,
         hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, concat_weight_memory,
         concat_iter_memory, x_memory, hcx_memory, wx_memory, wh_memory,
         bias_memory, y_memory, hcy_memory, rnn_forward_prim,
@@ -594,13 +599,13 @@ void MKLDNNRNNForward(bool state_outputs,
   } else {
     auto user_src_layer_memory_l = null_memory_;
     if (D == 2) {
-      MKLDNNRNNForwardSingleLayerBi(state_outputs, T, N, I, H, x_ptr, user_src_layer_memory_l,
+      MKLDNNRNNForwardSingleLayerBi(state_outputs, T, N, I, H, x_ptr, &user_src_layer_memory_l,
           hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, concat_weight_memory,
           concat_iter_memory, x_memory, hcx_memory, wx_memory, wh_memory,
           bias_memory, y_memory, hcy_memory, rnn_forward_prim,
           0, has_cache, 0, dtype, is_train, mode);
     } else {
-      MKLDNNRNNForwardUnidi(state_outputs, 1, T, N, I, H, x_ptr, user_src_layer_memory_l,
+      MKLDNNRNNForwardUnidi(state_outputs, 1, T, N, I, H, x_ptr, &user_src_layer_memory_l,
           hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, concat_weight_memory,
           concat_iter_memory, x_memory, hcx_memory, wx_memory, wh_memory,
           bias_memory, y_memory, hcy_memory, rnn_forward_prim,
@@ -626,7 +631,7 @@ void MKLDNNRNNForward(bool state_outputs,
             cx_ptr += cell_size;
           }
           MKLDNNRNNForwardSingleLayerBi(state_outputs, T, N, D * H, H, tmpNull,
-              user_src_layer_memory_l, hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr,
+              &user_src_layer_memory_l, hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr,
               cy_ptr, concat_weight_memory, concat_iter_memory, x_memory,
               hcx_memory, wx_memory, wh_memory, bias_memory,
               y_memory, hcy_memory, rnn_forward_prim,
@@ -644,7 +649,7 @@ void MKLDNNRNNForward(bool state_outputs,
           }
         }
         w_size = (H + H) * H * ngates;
-        MKLDNNRNNForwardUnidi(state_outputs, L - 1, T, N, H, H, tmpNull, user_src_layer_memory_l,
+        MKLDNNRNNForwardUnidi(state_outputs, L - 1, T, N, H, H, tmpNull, &user_src_layer_memory_l,
             hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, concat_weight_memory,
             concat_iter_memory, x_memory, hcx_memory, wx_memory,
             wh_memory, bias_memory, y_memory, hcy_memory,
