@@ -27,5 +27,6 @@ from . import register
 from .op import *
 from .symbol import *
 # pylint: enable=wildcard-import
+from . import numpy as np
 
 __all__ = op.__all__ + symbol.__all__ + ['contrib', 'linalg', 'random', 'sparse', 'image']

@@ -214,6 +214,9 @@ fixed-size items.
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
+        from ..numpy import ndarray
+        if isinstance(other, ndarray):
+            return other + self
         return add(self, other)
 
     def __iadd__(self, other):
