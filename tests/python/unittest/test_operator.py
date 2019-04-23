@@ -6994,6 +6994,21 @@ def test_float16_min_max():
 
 
 @with_seed()
+@mx.use_np_compat
+def test_zero_size_min_max():
+    def min():
+        a = mx.nd.zeros(shape=(5, 0))
+        a.min()
+
+    def max():
+        a = mx.nd.zeros(shape=(5, 0))
+        a.max()
+
+    assert_raises(MXNetError, min)
+    assert_raises(MXNetError, max)
+
+
+@with_seed()
 def test_squeeze_op():
     def check_squeeze_op(shape, axis=None):
         data = mx.nd.random.uniform(low=-10.0, high=10.0, shape=shape)
