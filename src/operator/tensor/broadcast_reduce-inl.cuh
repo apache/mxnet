@@ -617,6 +617,8 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   ReduceImplConfig<ndim> config =
     ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
   if (safe_acc) {
+    // TODO(haojin2): Use real-only type swtich for windows temporarily due to CI issues.
+#ifndef _WIN32
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
@@ -626,6 +628,17 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
           stream, small, req, big, workspace, config);
       });
     });
+#else
+    MXNET_REAL_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
+      typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
+      MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+        typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
+        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
+        ReduceImpl<Reducer, ndim, AccType, DataType, OutType, OP>(
+          stream, small, req, big, workspace, config);
+      });
+    });
+#endif
   } else {
     ReduceImpl<Reducer, ndim, DType, DType, DType, OP>(stream, small, req, big, workspace, config);
   }
