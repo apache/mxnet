@@ -1,4 +1,4 @@
-  /*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -179,7 +179,7 @@ struct FullyConnectedGrad {
 
 
 std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(const nnvm::NodePtr& n,
-      const std::vector<nnvm::NodeEntry>& ograds) {
+                                                        const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
   size_t i = 0;
   for (const auto& x: n->inputs) {
@@ -326,7 +326,6 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
 .add_argument("bias", "NDArray-or-Symbol", "Bias parameter.")
 .add_arguments(FullyConnectedParam::__FIELDS__());
 
-
 NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_num_inputs(3)
 .set_num_outputs([](const NodeAttrs& attrs) {
@@ -350,7 +349,6 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);
-
 
 }  // namespace op
 }  // namespace mxnet
