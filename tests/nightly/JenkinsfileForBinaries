@@ -140,6 +140,14 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python3_gpu', true, '1500m')
         }
       }
+    },
+    'Gluon estimator: GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/estimator-test-gpu') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator', true)
+        }
+      }
     }
   }
 }

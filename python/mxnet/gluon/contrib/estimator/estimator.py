@@ -157,6 +157,8 @@ class Estimator(object):
         Based on loss functions and training metrics in estimator
         Create metric wrappers to record loss values,
         Create copies of train loss/metric objects to record validation values
+        Returns train_metrics and val_metrics
+
         """
         if any(not hasattr(self, attribute) for attribute in
                ['train_metrics', 'val_metrics']):
@@ -165,8 +167,7 @@ class Estimator(object):
                 self.train_metrics = [Accuracy()]
             self.val_metrics = []
             for loss in self.loss:
-                self.train_metrics.append(Loss("Train " + ''.join([i for i in loss.name if not i.isdigit()])))
-                self.val_metrics.append(Loss("Validation " + ''.join([i for i in loss.name if not i.isdigit()])))
+                self.train_metrics.append(Loss(''.join([i for i in loss.name if not i.isdigit()])))
             for metric in self.train_metrics:
                 val_metric = copy.deepcopy(metric)
                 metric.name = "Train " + metric.name
@@ -231,21 +232,9 @@ class Estimator(object):
             from a data batch and load into contexts(devices)
         """
         self.max_epochs = epochs
-        event_handlers = event_handlers or []
-        # provide default logging handler
-        if not event_handlers:
-            train_metrics, val_metrics = self.prepare_loss_and_metrics()
-            event_handlers.append(MetricHandler(train_metrics=train_metrics))
-            if val_data:
-                event_handlers.append(ValidationHandler(val_data=val_data, eval_fn=self.evaluate,
-                                                        val_metrics=val_metrics))
-            event_handlers.append(LoggingHandler(train_metrics=train_metrics,
-                                                 val_metrics=val_metrics))
-            warnings.warn("No Event Handler specified, default %s are used. "
-                          "Please look at gluon.contrib.estimator.event_handler for more detail." %
-                          ", ".join([handler.__class__.__name__ for handler in event_handlers]))
 
-        event_handlers.sort(key=lambda handler: getattr(handler, 'rank', 0), reverse=True)
+        # provide default handlers
+        event_handlers = self._prepare_default_handlers(val_data, event_handlers)
 
         train_begin, epoch_begin, batch_begin, \
         batch_end, epoch_end, train_end = self._categorize_handlers(event_handlers)
@@ -296,6 +285,54 @@ class Estimator(object):
         # train end
         for handler in train_end:
             handler.train_end(estimator_ref)
+
+    def _prepare_default_handlers(self, val_data, event_handlers):
+        event_handlers = event_handlers or []
+        default_handlers = []
+        train_metrics, val_metrics = self.prepare_loss_and_metrics()
+
+        if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
+            event_handlers.append(MetricHandler(train_metrics=train_metrics))
+            default_handlers.append("MetricHandler")
+
+        if val_data and not any(isinstance(handler, ValidationHandler) for handler in event_handlers):
+            event_handlers.append(ValidationHandler(val_data=val_data, eval_fn=self.evaluate,
+                                                    val_metrics=val_metrics))
+            default_handlers.append("ValidationHandler")
+
+        if not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
+            event_handlers.append(LoggingHandler(train_metrics=train_metrics,
+                                                 val_metrics=val_metrics))
+            default_handlers.append("LoggingHandler")
+
+        # if there is a mix of user defined event handlers and default event handlers
+        # they should have the save set of loss and metrics
+        if default_handlers:
+            msg = "You are training with the following default event handlers: %s. " \
+                  "They use loss and metrics from estimator.prepare_loss_and_metrics(). " \
+                  "Please use the same set of metrics for all your other handlers." % \
+                  ", ".join(default_handlers)
+            warnings.warn(msg)
+            references = []
+            for handler in event_handlers:
+                for attribute in dir(handler):
+                    if any(keyword in attribute for keyword in ['metric' or 'monitor']):
+                        reference = getattr(handler, attribute)
+                        if isinstance(reference, list):
+                            references += reference
+                        else:
+                            references.append(reference)
+            for metric in references:
+                if metric and metric not in train_metrics + val_metrics:
+                    msg = "We have added following default handlers for you: %s and used " \
+                          "estimator.prepare_loss_and_metrics() to pass metrics to " \
+                          "those handlers. Please use the same set of metrics " \
+                          "for all your handlers." % \
+                          ", ".join(default_handlers)
+                    raise ValueError(msg)
+
+        event_handlers.sort(key=lambda handler: getattr(handler, 'priority', 0))
+        return event_handlers
 
     def _categorize_handlers(self, event_handlers):
         """

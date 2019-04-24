@@ -27,17 +27,28 @@ from mxnet.gluon.contrib.estimator import *
 from nose.tools import assert_raises
 
 
-def get_model():
+def _get_test_network():
     net = nn.Sequential()
     net.add(nn.Dense(4, activation='relu', flatten=False))
     return net
 
 
+def _get_test_data():
+    batch_size = 4
+    in_data = mx.nd.random.uniform(shape=(10, 3))
+    out_data = mx.nd.random.uniform(shape=(10, 4))
+    # Input dataloader
+    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
+    dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
+    dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
+    return dataloader, dataiter
+
+
 def test_fit():
     ''' test estimator with different train data types '''
-    net = get_model()
+    net = _get_test_network()
+    dataloader, dataiter = _get_test_data()
     num_epochs = 1
-    batch_size = 4
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
@@ -48,31 +59,25 @@ def test_fit():
                     metrics=acc,
                     trainer=trainer,
                     context=ctx)
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
-    # Input dataloader
-    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
-    train_dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
-    est.fit(train_data=train_dataloader,
+
+    est.fit(train_data=dataloader,
             epochs=num_epochs)
 
-    # Input dataiter
-    train_dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
     with assert_raises(ValueError):
-        est.fit(train_data=train_dataiter,
+        est.fit(train_data=dataiter,
                 epochs=num_epochs)
 
     # Input NDArray
     with assert_raises(ValueError):
-        est.fit(train_data=[in_data, out_data],
+        est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
 
 
 def test_validation():
     ''' test different validation data types'''
-    net = get_model()
+    net = _get_test_network()
+    dataloader, dataiter = _get_test_data()
     num_epochs = 1
-    batch_size = 4
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
@@ -83,41 +88,35 @@ def test_validation():
                     metrics=acc,
                     trainer=trainer,
                     context=ctx)
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
     # Input dataloader
-    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
-    train_dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
-    val_dataloader = gluon.data.DataLoader(dataset, batch_size=batch_size)
-    est.fit(train_data=train_dataloader,
-            val_data=val_dataloader,
+    est.fit(train_data=dataloader,
+            val_data=dataloader,
             epochs=num_epochs)
 
-    # Input dataiter
-    train_dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
-    val_dataiter = mx.io.NDArrayIter(data=in_data, label=out_data, batch_size=batch_size)
+    # using validation handler
+    train_metrics, val_metrics = est.prepare_loss_and_metrics()
+    validation_handler = ValidationHandler(val_data=dataloader, eval_fn=est.evaluate,
+                                           val_metrics=val_metrics)
+
     with assert_raises(ValueError):
-        est.fit(train_data=train_dataiter,
-                val_data=val_dataiter,
+        est.fit(train_data=dataiter,
+                val_data=dataiter,
                 epochs=num_epochs)
     # Input NDArray
     with assert_raises(ValueError):
-        est.fit(train_data=[in_data, out_data],
-                val_data=[in_data, out_data],
+        est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
+                val_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
 
 
 @unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_initializer():
     ''' test with no initializer, inconsistent initializer '''
-    net = get_model()
+    net = _get_test_network()
+    train_data, _ = _get_test_data()
     num_epochs = 1
-    batch_size = 4
     ctx = mx.cpu()
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
-    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
-    train_data = gluon.data.DataLoader(dataset, batch_size=batch_size)
+
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
     # no initializer
@@ -129,7 +128,7 @@ def test_initializer():
             epochs=num_epochs)
 
     # different initializer for net and estimator
-    net = get_model()
+    net = _get_test_network()
     net.initialize(mx.init.Xavier(), ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # catch reinit warning
@@ -148,14 +147,11 @@ def test_initializer():
 @unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_trainer():
     ''' test with no trainer and invalid trainer '''
-    net = get_model()
+    net = _get_test_network()
+    train_data, _ = _get_test_data()
     num_epochs = 1
-    batch_size = 4
     ctx = mx.cpu()
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
-    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
-    train_data = gluon.data.DataLoader(dataset, batch_size=batch_size)
+
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
@@ -181,14 +177,11 @@ def test_trainer():
 
 def test_metric():
     ''' test with no metric, list of metrics, invalid metric '''
-    net = get_model()
+    net = _get_test_network()
+    train_data, _ = _get_test_data()
     num_epochs = 1
-    batch_size = 4
     ctx = mx.cpu()
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
-    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
-    train_data = gluon.data.DataLoader(dataset, batch_size=batch_size)
+
     loss = gluon.loss.L2Loss()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
@@ -227,7 +220,7 @@ def test_metric():
 
 def test_loss():
     ''' test with invalid loss '''
-    net = get_model()
+    net = _get_test_network()
     ctx = mx.cpu()
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
@@ -243,7 +236,7 @@ def test_loss():
 
 def test_context():
     ''' test with no context, list of context, invalid context '''
-    net = get_model()
+    net = _get_test_network()
     loss = gluon.loss.L2Loss()
     metrics = mx.metric.Accuracy()
     # input no context
@@ -253,7 +246,7 @@ def test_context():
     # input list of context
     gpus = mx.context.num_gpus()
     ctx = [mx.gpu(i) for i in range(gpus)] if gpus > 0 else [mx.cpu()]
-    net = get_model()
+    net = _get_test_network()
     est = Estimator(net=net,
                     loss=loss,
                     metrics=metrics,
@@ -309,3 +302,57 @@ def test_categorize_handlers():
     assert len(batch_begin) == 2
     assert len(batch_end) == 1
     assert len(train_end) == 2
+
+
+@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
+def test_default_handlers():
+    net = _get_test_network()
+    train_data, _ = _get_test_data()
+
+    num_epochs = 1
+    ctx = mx.cpu()
+
+    net.initialize(ctx=ctx)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
+
+    train_acc = mx.metric.RMSE()
+    loss = gluon.loss.L2Loss()
+
+    est = Estimator(net=net,
+                    loss=loss,
+                    metrics=train_acc,
+                    trainer=trainer,
+                    context=ctx)
+    # no handler
+    with warnings.catch_warnings(record=True) as w:
+        est.fit(train_data=train_data, epochs=num_epochs)
+        assert 'You are training with the' in str(w[-1].message)
+
+    # handler with prepared loss and metrics
+    train_metrics, val_metrics = est.prepare_loss_and_metrics()
+    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
+    with warnings.catch_warnings(record=True) as w:
+        est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
+        assert 'You are training with the' in str(w[-1].message)
+        # provide metric handler by default
+        assert 'MetricHandler' in str(w[-1].message)
+
+    # handler with all user defined metrics
+    val_metrics = [mx.metric.RMSE("val acc")]
+    metric = MetricHandler(train_metrics=[train_acc])
+    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
+    est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[metric, logging])
+
+    # handler with mixed metrics, some handler use metrics prepared by estimator
+    # some handler use metrics user prepared
+    val_metrics = [mx.metric.RMSE("val acc")]
+    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
+    with assert_raises(ValueError):
+        est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
+
+    # test handler order
+    early_stopping = EarlyStoppingHandler(monitor=val_metrics[0])
+    handlers = est._prepare_default_handlers(val_data=None, event_handlers=[early_stopping])
+    assert len(handlers) == 3
+    assert isinstance(handlers[0], MetricHandler)
+    assert isinstance(handlers[2], LoggingHandler)
