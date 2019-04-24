@@ -32,9 +32,11 @@ import logging
 import yaml
 import shutil
 
+
 DEFAULT_PYENV=os.environ.get('DEFAULT_PYENV','py3_venv')
 DEFAULT_PYTHON=os.environ.get('DEFAULT_PYTHON','python3')
 DEFAULT_CMAKE_OPTIONS=os.environ.get('DEFAULT_CMAKE_OPTIONS','cmake_options.yml')
+
 
 class Confirm(object):
     def __init__(self, cmds):
@@ -50,6 +52,7 @@ class Confirm(object):
                 return
             else:
                 resp = input("Please answer yes or no: ")
+
 
 class CMake(object):
     def __init__(self, cmake_options_yaml=DEFAULT_CMAKE_OPTIONS, cmake_options_yaml_default='cmake/cmake_options.yml'):
@@ -93,27 +96,38 @@ class CMake(object):
             logging.info('Now building')
             check_call(shlex.split(build_cmd))
 
+
 def create_virtualenv(venv_exe, pyexe, venv) -> None:
     logging.info("Creating virtualenv in %s with python %s", venv, pyexe)
     if not (venv_exe and pyexe and venv):
         logging.warn("Skipping creation of virtualenv")
         return
     check_call([venv_exe, '-p', pyexe, venv])
-    activate_this_py = os.path.join(venv, 'bin', 'activate_this.py')
-    # Activate virtualenv in this interpreter
-    exec(open(activate_this_py).read(), dict(__file__=activate_this_py))
-    check_call(['pip', 'install', '--upgrade','--force-reinstall', '-e', 'python'])
-    check_call(['pip', 'install', '-r', 'tests/requirements.txt'])
+
 
 def create_virtualenv_default():
     create_virtualenv('virtualenv', DEFAULT_PYTHON, DEFAULT_PYENV)
     logging.info("You can use the virtualenv by executing 'source %s/bin/activate'", DEFAULT_PYENV)
+
+
+def provision_virtualenv(venv_path=DEFAULT_PYENV):
+    pip = os.path.join(venv_path, 'bin', 'pip')
+    if os.path.exists(pip):
+        # Install MXNet python bindigs
+        check_call([pip, 'install', '--upgrade', '--force-reinstall', '-e', 'python'])
+        # Install test dependencies
+        check_call([pip, 'install', '--upgrade', '--force-reinstall', '-r', os.path.join('tests',
+            'requirements.txt')])
+    else:
+        logging.warn("Can't find pip: '%s' not found", pip)
+
 
 COMMANDS = OrderedDict([
     ('[Local] BUILD CMake/Ninja (using cmake_options.yaml (cp cmake/cmake_options.yml .) and edit) ({} virtualenv in "{}")'.format(DEFAULT_PYTHON, DEFAULT_PYENV),
     [
         CMake(),
         create_virtualenv_default,
+        provision_virtualenv,
     ]),
     ('[Local] Python Unit tests',
         "./py3_venv/bin/nosetests -v tests/python/unittest/"
@@ -209,7 +223,8 @@ def build(args) -> None:
     else:
         cmake = CMake()
     cmake()
-    create_virtualenv(venv_exe, pyexe, args.venv)
+    create_virtualenv_default()
+    provision_virtualenv()
 
 def main():
     logging.getLogger().setLevel(logging.INFO)
