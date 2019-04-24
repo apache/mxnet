@@ -27,6 +27,18 @@
   (is (= "foo-bar" (gen/clojure-case "Foo_Bar")))
   (is (= "div+" (gen/clojure-case "/+"))))
 
+(deftest random-fn-name->fn-name
+  (is (= "poisson" (gen/random-fn-name->fn-name "-random-poisson")))
+  (is (= "sample-poisson" (gen/random-fn-name->fn-name "-sample-poisson"))))
+
+;; TODO
+(deftest remove-prefix
+  (is (= 42 1)))
+
+;; TODO
+(deftest ndarray-api-random?
+  (is (= 42 1)))
+
 (defn ndarray-reflect-info [name]
   (->> gen/ndarray-public-no-default
        (filter #(= name (str (:name %))))
@@ -317,9 +329,9 @@
 (deftest test-write-to-file
   (testing "symbol-api"
     (let [fname "test/test-symbol-api.clj"
-          _ (gen/write-to-file [(first gen/all-symbol-api-functions)
-                                (second gen/all-symbol-api-functions)]
-                               gen/symbol-api-gen-ns
+          fns (gen/all-symbol-api-functions gen/op-names)
+          _ (gen/write-to-file [(first fns) (second fns)]
+                               (gen/symbol-api-gen-ns false)
                                fname)
           good-contents (slurp "test/good-test-symbol-api.clj")
           contents (slurp fname)]
@@ -336,9 +348,9 @@
 
   (testing "ndarray-api"
     (let [fname "test/test-ndarray-api.clj"
-          _ (gen/write-to-file [(first gen/all-ndarray-api-functions)
-                                (second gen/all-ndarray-api-functions)]
-                               gen/ndarray-api-gen-ns
+          fns (gen/all-ndarray-api-functions gen/op-names)
+          _ (gen/write-to-file [(first fns) (second fns)]
+                               (gen/ndarray-api-gen-ns false)
                                fname)
           good-contents (slurp "test/good-test-ndarray-api.clj")
           contents (slurp fname)]
