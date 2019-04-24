@@ -916,6 +916,23 @@ def test_sequential_warning():
 
 
 @with_seed()
+def test_dense_backward():
+    import mxnet.autograd as ag
+    import mxnet.ndarray as nd
+    x = nd.array([[1,2,3,4]])
+    net = gluon.nn.Sequential()
+    with net.name_scope():
+        net.add(gluon.nn.Dense(1, in_units=x.shape[1]))
+    net.initialize(mx.initializer.Constant(.5))
+    params = [x.data() for x in net.collect_params().values()]
+    with ag.record():
+        y = net.forward(x)
+        params_grad = ag.grad(y, params, create_graph=True, retain_graph=True)
+        params_grad_grad = ag.grad(params_grad, x)
+    print(params_grad_grad.grad())
+
+
+@with_seed()
 def test_global_norm_clip():
     stypes = ['default', 'row_sparse']
     def check_global_norm_clip(stype, check_isfinite):

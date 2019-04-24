@@ -180,9 +180,14 @@ struct FullyConnectedGrad {
 
 std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(const nnvm::NodePtr& n,
       const std::vector<nnvm::NodeEntry>& ograds) {
-  auto zero_node = MakeNode("zeros_like", n->attrs.name + "_backward", {n->inputs[0]}, nullptr, &n);
   std::vector<nnvm::NodeEntry> ret;
-  ret.emplace_back(nnvm::NodeEntry{zero_node, 0, 0});
+  size_t i = 0;
+  for (const auto& x: n->inputs) {
+    std::ostringstream os;
+    os << n->attrs.name << "_backward_" << i;
+    ret.emplace_back(nnvm::NodeEntry{MakeNode("zeros_like", os.str(), {x}, nullptr, &n), 0, 0});
+    ++i;
+  }
   return ret;
 }
 
