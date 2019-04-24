@@ -29,7 +29,7 @@
 
 
 (defn clojure-case
-  "Transforms a scale string (function name) to clojure case"
+  "Transforms a scala string (function name) to clojure case"
   [string]
   (-> string
       (clojure.string/replace #"(\s+)([A-Z][a-z]+)" "$1-$2")
