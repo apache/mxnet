@@ -222,7 +222,7 @@ class ndarray(NDArray):
         return _np_ndarray_cls(hdl)
 
     @use_np_compat
-    def astype(self, dtype, *args, **kwargs):  # pylint: disable=arguments-differ
+    def astype(self, dtype, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument
         """
         Copy of the array, cast to a specified type.
 

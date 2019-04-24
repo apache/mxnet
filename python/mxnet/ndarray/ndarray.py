@@ -42,6 +42,7 @@ from . import _internal
 from . import op
 from ._internal import NDArrayBase
 
+# pylint: disable=undefined-all-variable
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
