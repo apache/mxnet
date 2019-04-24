@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""module for registering numpy ops under mxnet.ndarray.numpy."""
+
 from ...base import _init_np_op_module
 from ..register import _make_ndarray_function
 

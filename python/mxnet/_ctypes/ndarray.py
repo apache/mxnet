@@ -118,6 +118,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
 
 
 def _is_output_from_np_op(handle, idx):
+    """Check if the CachedOp's idx-th output is from a numpy op."""
     is_from_np_op = ctypes.c_int(0)
     check_call(_LIB.MXIsCachedOpOutputFromNumpyOp(handle, ctypes.c_int(idx),
                                                   ctypes.byref(is_from_np_op)))

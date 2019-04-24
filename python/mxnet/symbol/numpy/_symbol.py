@@ -43,11 +43,11 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __add__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__add__(other).as_np_ndarray()
 
     @use_np_compat
     def __sub__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__sub__(other).as_np_ndarray()
 
     @use_np_compat
     def __rsub__(self, other):
@@ -55,19 +55,15 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __mul__(self, other):
-        raise NotImplementedError
-
-    @use_np_compat
-    def __imul__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__mul__(other).as_np_ndarray()
 
     @use_np_compat
     def __rmul__(self, other):
-        raise NotImplementedError
+        return self.__mul__(other)
 
     @use_np_compat
     def __div__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__div__(other).as_np_ndarray()
 
     @use_np_compat
     def __rdiv__(self, other):
@@ -75,7 +71,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __mod__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__mod__(other).as_np_ndarray()
 
     @use_np_compat
     def __rmod__(self, other):
@@ -99,7 +95,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __pow__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__pow__().as_np_ndarray()
 
     @use_np_compat
     def __rpow__(self, other):
@@ -107,7 +103,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __neg__(self):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__neg__().as_np_ndarray()
 
     @use_np_compat
     def __deepcopy__(self, _):
@@ -115,33 +111,33 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __eq__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__eq__(other).as_np_ndarray()
 
     @use_np_compat
     def __ne__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__ne__(other).as_np_ndarray()
 
     @use_np_compat
     def __gt__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__gt__(other).as_np_ndarray()
 
     @use_np_compat
     def __ge__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__ge__(other).as_np_ndarray()
 
     @use_np_compat
     def __lt__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__lt__(other).as_np_ndarray()
 
     @use_np_compat
     def __le__(self, other):
-        raise NotImplementedError
+        return super(_NumpySymbol, self).__le__(other).as_np_ndarray()
 
     def __len__(self):
         raise NotImplementedError
 
     def as_legacy_ndarray(self):
-        """Convert _NumpySymbol to mxnet.symbol.Symbol to use its fluent methods."""
+        """Convert _NumpySymbol to mxnet.symbol.Symbol to use its convenience fluent methods."""
         hdl = SymbolHandle()
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
         return Symbol(handle=hdl)

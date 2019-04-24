@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""numpy ndarray and util functions."""
 
 from __future__ import absolute_import
 import numpy as _np
@@ -58,7 +59,7 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __sub__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__sub__(other).as_np_ndarray()
 
     @use_np_compat
     def __isub__(self, other):
@@ -70,11 +71,11 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __mul__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__mul__(other).as_np_ndarray()
 
     @use_np_compat
     def __neg__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__neg__().as_np_ndarray()
 
     @use_np_compat
     def __imul__(self, other):
@@ -82,11 +83,11 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __rmul__(self, other):
-        raise NotImplementedError
+        return self.__mul__(other)
 
     @use_np_compat
     def __div__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__div__(other).as_np_ndarray()
 
     @use_np_compat
     def __rdiv__(self, other):
@@ -110,7 +111,7 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __mod__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__mod__(other).as_np_ndarray()
 
     @use_np_compat
     def __rmod__(self, other):
@@ -122,7 +123,7 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __pow__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__pow__(other).as_np_ndarray()
 
     @use_np_compat
     def __rpow__(self, other):
@@ -130,7 +131,7 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __eq__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__eq__(other).as_np_ndarray()
 
     @use_np_compat
     def __hash__(self):
@@ -138,23 +139,23 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __ne__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__ne__(other).as_np_ndarray()
 
     @use_np_compat
     def __gt__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__gt__(other).as_np_ndarray()
 
     @use_np_compat
     def __ge__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__ge__(other).as_np_ndarray()
 
     @use_np_compat
     def __lt__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__lt__(other).as_np_ndarray()
 
     @use_np_compat
     def __le__(self, other):
-        raise NotImplementedError
+        return super(ndarray, self).__le__(other).as_np_ndarray()
 
     @use_np_compat
     def __bool__(self):

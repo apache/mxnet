@@ -15,6 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
+"""namespace for registering numpy ops for imperative programming."""
 
 __all__ = []

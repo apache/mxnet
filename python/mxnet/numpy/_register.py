@@ -15,7 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Register backend ops in mxnet.ndarray namespace"""
+"""Register backend ops in mxnet.ndarray namespace."""
+
 from __future__ import absolute_import
 
 from ..base import _init_np_op_module

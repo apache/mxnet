@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""numpy module for numpy ops under mxnet.symbol."""
+
 from . import _op
 from ._symbol import _NumpySymbol
 from . import _register

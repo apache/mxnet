@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""NumPy module for imperative programming."""
+"""numpy module for imperative programming."""
 
 from __future__ import absolute_import
 from .multiarray import *

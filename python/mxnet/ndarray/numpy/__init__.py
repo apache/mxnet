@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""numpy module for numpy ops under mxnet.ndarray."""
+
 from . import _op
 from . import _register
 from ._op import *
