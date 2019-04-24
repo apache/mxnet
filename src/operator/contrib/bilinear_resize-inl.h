@@ -134,7 +134,7 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_shape->size(), 1U) << "Output:[data]";
   const BilinearSampleParam& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
   mxnet::TShape dshape(in_shape->at(0));
-  if (dshape.ndim() == 0) return false;
+  if (mxnet::op::shape_is_none(dshape)) return false;
   if (param.scale_height.has_value()) {
     dshape[2] = static_cast<int>(param.scale_height.value() * in_shape->at(0)[2]);
   } else {

@@ -161,11 +161,11 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayAt
 
 /*
  * Class:     org_apache_mxnet_LibInfo
- * Method:    mxNDArrayReshape
- * Signature: (JI[ILorg/apache/mxnet/Base/RefLong;)I
+ * Method:    mxNDArrayReshape64
+ * Signature: (JI[JZLorg/apache/mxnet/Base/RefLong;)I
  */
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayReshape
-  (JNIEnv *, jobject, jlong, jint, jintArray, jobject);
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayReshape64
+  (JNIEnv *, jobject, jlong, jint, jlongArray, jboolean, jobject);
 
 /*
  * Class:     org_apache_mxnet_LibInfo
@@ -513,6 +513,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorSetMonitorCallbac
 
 /*
  * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxExecutorReshape
+ * Signature: (IIII[Ljava/lang/String;[I[I[Ljava/lang/String;[I[ILscala/collection/mutable/ArrayBuffer;Lscala/collection/mutable/ArrayBuffer;Lscala/collection/mutable/ArrayBuffer;JLorg/apache/mxnet/Base/RefLong;)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorReshape
+  (JNIEnv *, jobject, jint, jint, jint, jint, jobjectArray, jintArray, jintArray, jobjectArray, jintArray, jintArray, jobject, jobject, jobject, jlong, jobject);
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
  * Method:    mxSymbolListAtomicSymbolCreators
  * Signature: (Lscala/collection/mutable/ListBuffer;)I
  */
@@ -653,6 +661,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferType
  * Signature: (JI[Ljava/lang/String;[I[ILscala/collection/mutable/ListBuffer;Lscala/collection/mutable/ListBuffer;Lscala/collection/mutable/ListBuffer;Lorg/apache/mxnet/Base/RefInt;)I
  */
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
+  (JNIEnv *, jobject, jlong, jint, jobjectArray, jintArray, jintArray, jobject, jobject, jobject, jobject);
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxSymbolInferShapePartial
+ * Signature: (JI[Ljava/lang/String;[I[ILscala/collection/mutable/ListBuffer;Lscala/collection/mutable/ListBuffer;Lscala/collection/mutable/ListBuffer;Lorg/apache/mxnet/Base/RefInt;)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShapePartial
   (JNIEnv *, jobject, jlong, jint, jobjectArray, jintArray, jintArray, jobject, jobject, jobject, jobject);
 
 /*
@@ -854,6 +870,22 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetProfilerState
  */
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxDumpProfile
   (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxIsNumpyCompatible
+ * Signature: (Lorg/apache/mxnet/Base/RefInt;)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyCompatible
+  (JNIEnv *, jobject, jobject);
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxSetIsNumpyCompatible
+ * Signature: (ILorg/apache/mxnet/Base/RefInt;)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyCompatible
+  (JNIEnv *, jobject, jint, jobject);
 
 #ifdef __cplusplus
 }

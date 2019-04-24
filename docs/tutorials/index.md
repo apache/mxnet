@@ -52,7 +52,7 @@ Another great resource for learning MXNet is our [examples section](https://gith
 
 We have two types of API available for Python: Gluon APIs and Module APIs. [See here](/api/python/gluon/gluon.html) for a comparison.
 
-A comprehensive introduction to Gluon can be found at [The Straight Dope](http://gluon.mxnet.io/). Structured like a book, it build up from first principles of deep learning and take a theoretical walkthrough of progressively more complex models using the Gluon API. Also check out the [60-Minute Gluon Crash Course](http://gluon-crash-course.mxnet.io/) if you're short on time or have used other deep learning frameworks before.
+A comprehensive introduction to Gluon can be found at [Dive into Deep Learning](http://www.d2l.ai/). Structured like a book, it build up from first principles of deep learning and take a theoretical walkthrough of progressively more complex models using the Gluon API. Also check out the [60-Minute Gluon Crash Course](http://gluon-crash-course.mxnet.io/) if you're short on time or have used other deep learning frameworks before.
 
 Use the tutorial selector below to filter to the relevant tutorials. You might see a download link in the top right corner of some tutorials. Use this to download a Jupyter Notebook version of the tutorial, and re-run and adjust the code as you wish.
 
@@ -90,8 +90,9 @@ Select API:&nbsp;
     * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
-    * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
+    * [Module to Gluon API](/tutorials/python/module_to_gluon.html)<span style="color:red"> (new!)</span>
     * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
+
 * API Guides
     * Core APIs
         * NDArray
@@ -114,6 +115,7 @@ Select API:&nbsp;
             * [HybridBlocks](/tutorials/gluon/hybrid.html) ([Alternative](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Block Naming](/tutorials/gluon/naming.html)
             * [Custom Operators](/tutorials/gluon/customop.html)
+            * [Control Flow operators](/tutorials/control_flow/ControlFlowTutorial.html)<span style="color:red"> (new!)</span>
         * Autograd
             * [AutoGrad API](/tutorials/gluon/autograd.html)
             * [AutoGrad API with chain rule](http://gluon.mxnet.io/chapter01_crashcourse/autograd.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
@@ -135,7 +137,6 @@ Select API:&nbsp;
     * [MNIST Handwritten Digit Classification](/tutorials/python/mnist.html)
     * [Movie Review Classification using Convolutional Networks](/tutorials/nlp/cnn.html)
     * [Generative Adversarial Networks (GANs)](/tutorials/unsupervised_learning/gan.html)
-    * [Recommender Systems using Matrix Factorization](/tutorials/python/matrix_factorization.html)
     * [Speech Recognition with Connectionist Temporal Classification Loss](/tutorials/speech_recognition/ctc.html)
 * Practitioner Guides
     * [Predicting on new images using a pre-trained ImageNet model](/tutorials/python/predict_image.html)

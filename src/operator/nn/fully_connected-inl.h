@@ -48,6 +48,12 @@ enum FullyConnectedOpResource {kTempSpace};
 enum FullyConnectedOpOutputs {kOut};
 }  // fullc
 
+namespace quantized_fullc {
+enum QuantizedFCInputMinMax {kDataMin, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax};
+enum QuantizedFCOutputs {kOut, kOutMin, kOutMax};
+}  // quantized_fullc
+
+
 struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
   bool no_bias;

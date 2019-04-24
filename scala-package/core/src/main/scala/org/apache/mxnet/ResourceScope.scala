@@ -48,8 +48,10 @@ class ResourceScope extends AutoCloseable {
     */
   override def close(): Unit = {
     ResourceScope.removeFromThreadLocal(this)
-    resourceQ.foreach(resource => if (resource != null) resource.dispose(false) )
-    resourceQ.clear()
+    if (!ResourceScope.threadLocalScopes.get().contains(this)) {
+      resourceQ.foreach(resource => if (resource != null) resource.dispose(false))
+      resourceQ.clear()
+    }
   }
 
   /**
@@ -145,7 +147,7 @@ object ResourceScope {
         null.asInstanceOf[A] // we'll throw in finally
     } finally {
       var toThrow: Throwable = retThrowable
-      if (retThrowable eq null) curScope.close()
+      if (retThrowable eq null) curScope.close
       else {
         try {
           curScope.close
@@ -156,6 +158,17 @@ object ResourceScope {
         } finally {
           throw toThrow
         }
+      }
+    }
+  }
+
+  private[mxnet] def usingIfScopeExists[A](scope: Option[ResourceScope])(body: => A): A = {
+    if (scope == None) {
+      body
+    } else {
+      ResourceScope.addToThreadLocal(scope.get)
+      ResourceScope.using(scope.get){
+        body
       }
     }
   }
@@ -179,7 +192,7 @@ object ResourceScope {
     * @param r ResourceScope to remove
     */
   private[mxnet] def removeFromThreadLocal(r: ResourceScope): Unit = {
-    threadLocalScopes.get() -= r
+    threadLocalScopes.get().remove(threadLocalScopes.get().lastIndexOf(r))
   }
 
   /**

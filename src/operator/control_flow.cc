@@ -37,11 +37,11 @@ struct ForeachParam : public dmlc::Parameter<ForeachParam> {
   int num_outputs;
   int num_out_data;
   // The location of states in the subgraph inputs.
-  nnvm::Tuple<dim_t> in_state_locs;
+  mxnet::Tuple<dim_t> in_state_locs;
   // The location of data arrays in the subgraph inputs.
-  nnvm::Tuple<dim_t> in_data_locs;
+  mxnet::Tuple<dim_t> in_data_locs;
   // The location of remaining arrays in the subgraph inputs.
-  nnvm::Tuple<dim_t> remain_locs;
+  mxnet::Tuple<dim_t> remain_locs;
   DMLC_DECLARE_PARAMETER(ForeachParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs.");
@@ -82,7 +82,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
   CHECK_GT(params.in_data_locs.ndim(), 0);
   size_t len = inputs[0].shape()[iter_dim];
   state.num_iterations = len;
-  for (size_t i = 1; i < params.in_data_locs.ndim(); i++)
+  for (int i = 1; i < params.in_data_locs.ndim(); i++)
     CHECK_EQ(inputs[i].shape()[iter_dim], len);
   for (size_t i = 0; i < (size_t) params.num_out_data; i++)
     CHECK_EQ(len, outputs[i].shape()[iter_dim]);
@@ -120,7 +120,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
   // and the loop states.
   std::vector<NDArray> subg_inputs(inputs.size());
   // The remaining arrays (other than input data and states) only need to be set once.
-  for (size_t j = 0; j < params.remain_locs.ndim(); j++) {
+  for (int j = 0; j < params.remain_locs.ndim(); j++) {
     CHECK_LT(params.remain_locs[j], subg_inputs.size());
     subg_inputs[params.remain_locs[j]] = inputs[j + params.in_data_locs.ndim()
         + params.in_state_locs.ndim()];
@@ -148,7 +148,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
 
     // Initialize inputs for the subgraph.
     // Get a slice from the input data arrays.
-    for (size_t j = 0; j < params.in_data_locs.ndim(); j++) {
+    for (int j = 0; j < params.in_data_locs.ndim(); j++) {
       size_t loc = params.in_data_locs[j];
       subg_inputs[loc] = inputs[j].At(i);
     }
@@ -161,7 +161,7 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
         subg_inputs[params.in_state_locs[idx]] = (*subg_out_prev)[j];
       }
     } else {
-      for (size_t j = 0; j < params.in_state_locs.ndim(); j++) {
+      for (int j = 0; j < params.in_state_locs.ndim(); j++) {
         CHECK_LT(params.in_state_locs[j], subg_inputs.size());
         subg_inputs[params.in_state_locs[j]] = inputs[j + params.in_data_locs.ndim()];
       }
@@ -203,7 +203,7 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
   // [data vars], [loop vars], [remaining vars]
 
   // [remaining vars]
-  for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+  for (int i = 0; i < params.remain_locs.ndim(); i++) {
     size_t loc = params.remain_locs[i];
     size_t orig_loc = i + params.in_data_locs.ndim() + params.in_state_locs.ndim();
     subg_igrads[loc] = outputs[orig_loc];
@@ -216,20 +216,20 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
     if (iter_num < len - 1) {
       // For the rest of the iterations, we should add graidents to the
       // remaining vars.
-      for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+      for (int i = 0; i < params.remain_locs.ndim(); i++) {
         size_t loc = params.remain_locs[i];
         subg_req[loc] = kAddTo;
       }
     }
 
     // [data vars]
-    for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+    for (int i = 0; i < params.in_data_locs.ndim(); i++) {
       size_t loc = params.in_data_locs[i];
       subg_igrads[loc] = outputs[i].At(iter_num);
       subg_req[loc] = req[i];
     }
     // [loop vars]
-    for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {
+    for (int i = 0; i < params.in_state_locs.ndim(); i++) {
       size_t loc = params.in_state_locs[i];
       const NDArray &output = outputs[i + params.in_data_locs.ndim()];
       if (iter_num != 0) {
@@ -258,9 +258,9 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
 
 template<typename T>
 static void remap(const std::vector<T> &op_in, size_t start,
-                  const nnvm::Tuple<dim_t> &locs, std::vector<T> *subg_in) {
+                  const mxnet::Tuple<dim_t> &locs, std::vector<T> *subg_in) {
   auto op_in_it = op_in.begin() + start;
-  for (size_t i = 0; i < locs.ndim(); i++) {
+  for (int i = 0; i < locs.ndim(); i++) {
     dim_t loc = locs[i];
     subg_in->at(loc) = *(op_in_it + i);
   }
@@ -284,7 +284,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   mxnet::ShapeVector subg_in_shape(in_shape->size());
   // data shape
   std::vector<bool> data_1d(params.in_data_locs.ndim(), false);
-  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+  for (int i = 0; i < params.in_data_locs.ndim(); i++) {
     size_t loc = params.in_data_locs[i];
     if (in_shape->at(i).ndim() == 1)
       data_1d[i] = true;
@@ -301,7 +301,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < params.num_out_data; i++) {
     mxnet::TShape shape = subg_out_shape[i];
     // If we don't have shape info, we don't need to do anything.
-    if (shape.ndim() == 0)
+    if (!mxnet::ndim_is_known(shape))
       continue;
     subg_out_shape[i] = SliceFirstDim(shape);
   }
@@ -317,12 +317,12 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < params.num_out_data; i++) {
     // If the output shape isn't inferred, we don't need to propogate the info.
     const auto& g_out_shape = subg_out_shape[i];
-    if (g_out_shape.ndim() == 0)
+    if (!mxnet::ndim_is_known(g_out_shape))
       continue;
 
-    auto out = mxnet::TShape(g_out_shape.ndim() + 1);
+    auto out = mxnet::TShape(g_out_shape.ndim() + 1, -1);
     out[0] = len;
-    for (size_t i = 1; i < out.ndim(); i++)
+    for (int i = 1; i < out.ndim(); i++)
       out[i] = g_out_shape[i - 1];
     SHAPE_ASSIGN_CHECK(*out_shape, i, out);
   }
@@ -331,34 +331,34 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_shape, i, subg_out_shape[i]);
 
   // For the shape of input data.
-  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+  for (int i = 0; i < params.in_data_locs.ndim(); i++) {
     size_t loc = params.in_data_locs[i];
     const auto &shape = subg_in_shape[loc];
     // If the input data shape isn't inferred, we don't need to propogate the
     // info.
-    if (shape.ndim() == 0)
+    if (!mxnet::ndim_is_known(shape))
       continue;
 
     if (data_1d[i]) {
-      mxnet::TShape s(1);
+      mxnet::TShape s(1, -1);
       s[0] = len;
       SHAPE_ASSIGN_CHECK(*in_shape, i, s);
     } else {
-      auto in = mxnet::TShape(shape.ndim() + 1);
+      auto in = mxnet::TShape(shape.ndim() + 1, -1);
       in[0] = len;
-      for (size_t i = 1; i < in.ndim(); i++)
+      for (int i = 1; i < in.ndim(); i++)
         in[i] = shape[i - 1];
       SHAPE_ASSIGN_CHECK(*in_shape, i, in);
     }
   }
   // For the shape of state.
-  for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {
+  for (int i = 0; i < params.in_state_locs.ndim(); i++) {
     size_t loc = params.in_state_locs[i];
     SHAPE_ASSIGN_CHECK(*in_shape, i + params.in_data_locs.ndim(),
                        subg_in_shape[loc]);
   }
   // For the shape of remaining data.
-  for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+  for (int i = 0; i < params.remain_locs.ndim(); i++) {
     size_t loc = params.remain_locs[i];
     SHAPE_ASSIGN_CHECK(*in_shape,
                        i + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
@@ -387,15 +387,15 @@ static bool ForeachType(const nnvm::NodeAttrs& attrs,
   remap(*in_type, params.in_data_locs.ndim() + params.in_state_locs.ndim(),
         params.remain_locs, &subg_in_type);
   bool success = InferSubgraphDataType(*attrs.subgraphs[0], &subg_in_type, out_type);
-  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+  for (int i = 0; i < params.in_data_locs.ndim(); i++) {
     size_t loc = params.in_data_locs[i];
     TYPE_ASSIGN_CHECK(*in_type, i, subg_in_type[loc]);
   }
-  for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {
+  for (int i = 0; i < params.in_state_locs.ndim(); i++) {
     size_t loc = params.in_state_locs[i];
     TYPE_ASSIGN_CHECK(*in_type, i + params.in_data_locs.ndim(), subg_in_type[loc]);
   }
-  for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+  for (int i = 0; i < params.remain_locs.ndim(); i++) {
     size_t loc = params.remain_locs[i];
     TYPE_ASSIGN_CHECK(*in_type, i + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
                       subg_in_type[loc]);
@@ -418,16 +418,16 @@ static bool ForeachStorageType(const nnvm::NodeAttrs& attrs,
         params.remain_locs, &subg_in_attrs);
   bool success = InferSubgraphStorage(*attrs.subgraphs[0], dev_mask,
                                       dispatch_mode, &subg_in_attrs, out_attrs);
-  for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
+  for (int i = 0; i < params.in_data_locs.ndim(); i++) {
     size_t loc = params.in_data_locs[i];
     STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, subg_in_attrs[loc]);
   }
-  for (size_t i = 0; i < params.in_state_locs.ndim(); i++) {
+  for (int i = 0; i < params.in_state_locs.ndim(); i++) {
     size_t loc = params.in_state_locs[i];
     STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i + params.in_data_locs.ndim(),
                               subg_in_attrs[loc]);
   }
-  for (size_t i = 0; i < params.remain_locs.ndim(); i++) {
+  for (int i = 0; i < params.remain_locs.ndim(); i++) {
     size_t loc = params.remain_locs[i];
     STORAGE_TYPE_ASSIGN_CHECK(*in_attrs,
                               i + params.in_data_locs.ndim() + params.in_state_locs.ndim(),
@@ -488,9 +488,9 @@ struct WhileLoopParam : public dmlc::Parameter<WhileLoopParam> {
   // `cond_input_locs' contains indices of inputs fed to `cond', and
   // `func_input_locs' contains indices of inputs fed to `func'.
   // `func_var_locs' are indices in which input "variables" are stored in func's inputs.
-  nnvm::Tuple<dim_t> cond_input_locs;
-  nnvm::Tuple<dim_t> func_input_locs;
-  nnvm::Tuple<dim_t> func_var_locs;
+  mxnet::Tuple<dim_t> cond_input_locs;
+  mxnet::Tuple<dim_t> func_input_locs;
+  mxnet::Tuple<dim_t> func_var_locs;
   DMLC_DECLARE_PARAMETER(WhileLoopParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(2)
     .describe("Number of input arguments, including cond and func as two symbol inputs.");
@@ -538,12 +538,12 @@ class WhileLoopState: public LoopState {
                  n_iterations(0U),
                  cond_op(LoopState::MakeSharedOp(cond)),
                  oi_map(params.func_var_locs.ndim(), -1) {
-    const nnvm::Tuple<dim_t> &func_input_locs = params.func_input_locs;
-    const nnvm::Tuple<dim_t> &func_var_locs = params.func_var_locs;
-    const nnvm::Tuple<dim_t> &cond_input_locs = params.cond_input_locs;
-    for (size_t i = 0; i < func_var_locs.ndim(); ++i) {
+    const mxnet::Tuple<dim_t> &func_input_locs = params.func_input_locs;
+    const mxnet::Tuple<dim_t> &func_var_locs = params.func_var_locs;
+    const mxnet::Tuple<dim_t> &cond_input_locs = params.cond_input_locs;
+    for (int i = 0; i < func_var_locs.ndim(); ++i) {
       dim_t pos_i = func_input_locs[func_var_locs[i]];
-      for (size_t j = 0; j < cond_input_locs.ndim(); ++j) {
+      for (int j = 0; j < cond_input_locs.ndim(); ++j) {
         dim_t pos_j = cond_input_locs[j];
         if (pos_i == pos_j) {
           this->oi_map[i] = j;
@@ -740,7 +740,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
   // infer shape for cond and func
   auto infer_subg = [&params, in_shape, out_shape](std::shared_ptr<Symbol> subg,
                                                    ShapeVector *_subg_out,
-                                                   const nnvm::Tuple<dim_t> &input_locs,
+                                                   const mxnet::Tuple<dim_t> &input_locs,
                                                    int num_out_data,
                                                    bool fill_out_shape) {
     // create subg_in
@@ -781,7 +781,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     for (size_t i = 0; i < subg_in.size(); ++i) {
       auto eid = idx.entry_id(input_nids[i], 0);
       auto g_out_shape = new_shapes[eid];
-      if (g_out_shape.ndim() == 0 || g_out_shape.Size() == 0) {
+      if (!shape_is_known(g_out_shape)) {
         // when the shape is not fully inferred
         continue;
       }
@@ -795,13 +795,13 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     for (int i = 0; i < num_out_data; ++i) {
       auto eid = idx.entry_id(g.outputs[i]);
       auto g_out_shape = new_shapes[eid];
-      if (g_out_shape.ndim() == 0 || g_out_shape.Size() == 0) {
+      if (!shape_is_known(g_out_shape)) {
         // when the shape is not fully inferred
         continue;
       }
-      auto out = mxnet::TShape(g_out_shape.ndim() + 1);
+      auto out = mxnet::TShape(g_out_shape.ndim() + 1, -1);
       out[0] = params.max_iterations;
-      for (size_t i = 1; i < out.ndim(); i++)
+      for (int i = 1; i < out.ndim(); i++)
         out[i] = g_out_shape[i - 1];
       SHAPE_ASSIGN_CHECK(*out_shape, i, out);
     }
@@ -809,7 +809,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     for (size_t i = num_out_data; i < g.outputs.size(); ++i) {
       auto eid = idx.entry_id(g.outputs[i]);
       auto g_out_shape = new_shapes[eid];
-      if (g_out_shape.ndim() == 0 || g_out_shape.Size() == 0) {
+      if (!shape_is_known(g_out_shape)) {
         // when the shape is not fully inferred
         continue;
       }
@@ -817,7 +817,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     }
     return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
   };
-  mxnet::ShapeVector cond_out_shape{mxnet::TShape(1U)};  // this means: [(1, )]
+  mxnet::ShapeVector cond_out_shape{mxnet::TShape(1, 1)};  // this means: [(1, )]
   mxnet::ShapeVector func_out_shape(params.num_outputs);
   CHECK(params.sync_in_out(in_shape, out_shape, is_udf));
   bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, params.cond_input_locs, 0, false);
@@ -915,9 +915,9 @@ WhileLoopGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& og
 struct CondParam : public dmlc::Parameter<CondParam> {
   int num_args;
   int num_outputs;
-  nnvm::Tuple<dim_t> cond_input_locs;
-  nnvm::Tuple<dim_t> then_input_locs;
-  nnvm::Tuple<dim_t> else_input_locs;
+  mxnet::Tuple<dim_t> cond_input_locs;
+  mxnet::Tuple<dim_t> then_input_locs;
+  mxnet::Tuple<dim_t> else_input_locs;
   DMLC_DECLARE_PARAMETER(CondParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(3)
     .describe("Number of input arguments, including cond, then and else as three symbol inputs.");
@@ -992,7 +992,7 @@ static void CondComputeExCPU(const OpStatePtr& state_ptr,
   state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr);
   branch_selection = as_bool_scalar(*cond_output_ptr[0]);
   // select the right branch
-  const nnvm::Tuple<dim_t> &func_input_locs = branch_selection
+  const mxnet::Tuple<dim_t> &func_input_locs = branch_selection
                                             ? params.then_input_locs
                                             : params.else_input_locs;
   LoopState &loop_state = branch_selection
@@ -1017,7 +1017,7 @@ static void CondGradComputeExCPU(const OpStatePtr& state_ptr,
   // select the right branch
   int branch_selection = state.branch_selection;
   CHECK_NE(branch_selection, -1);
-  const nnvm::Tuple<dim_t> &func_input_locs = branch_selection
+  const mxnet::Tuple<dim_t> &func_input_locs = branch_selection
                                             ? params.then_input_locs
                                             : params.else_input_locs;
   LoopState &loop_state = branch_selection
@@ -1048,7 +1048,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
   // infer shape for cond, then and else
   auto infer_subg = [&params, in_shape, out_shape](std::shared_ptr<Symbol> subg,
                                                    ShapeVector *_subg_out,
-                                                   const nnvm::Tuple<dim_t> &input_locs,
+                                                   const mxnet::Tuple<dim_t> &input_locs,
                                                    bool fill_out_shape) {
     // create subg_in
     mxnet::ShapeVector subg_in;
@@ -1086,7 +1086,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
     for (size_t i = 0; i < subg_in.size(); ++i) {
       auto eid = idx.entry_id(input_nids[i], 0);
       auto g_out_shape = new_shapes[eid];
-      if (g_out_shape.ndim() == 0 || g_out_shape.Size() == 0) {
+      if (!shape_is_known(g_out_shape)) {
         // when the shape is not fully inferred
         continue;
       }
@@ -1099,7 +1099,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
     for (size_t i = 0; i < g.outputs.size(); ++i) {
       auto eid = idx.entry_id(g.outputs[i]);
       auto g_out_shape = new_shapes[eid];
-      if (g_out_shape.ndim() == 0 || g_out_shape.Size() == 0) {
+      if (!shape_is_known(g_out_shape)) {
         // when the shape is not fully inferred
         continue;
       }
@@ -1107,7 +1107,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
     }
     return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
   };
-  ShapeVector cond_out_shape{mxnet::TShape(1U)};  // this means: [(1, )]
+  ShapeVector cond_out_shape{mxnet::TShape(1, 1)};  // this means: [(1, )]
   ShapeVector then_out_shape(params.num_outputs);
   ShapeVector else_out_shape(params.num_outputs);
   bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, \
@@ -1190,7 +1190,7 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
   static const std::function<bool(const int &)> is_udf = is_stype_udf;
-  auto sub_pass = [&](const std::shared_ptr<Symbol> &subg, const nnvm::Tuple<dim_t> &input_locs) {
+  auto sub_pass = [&](const std::shared_ptr<Symbol> &subg, const mxnet::Tuple<dim_t> &input_locs) {
     // A. first construct subg_in_attrs
     // need subg_in_attrs as subg_bwd_out (copy), subg_fwd_in (extract), subg_fwd_out (copy)
     std::vector<int> subg_in_attrs;
