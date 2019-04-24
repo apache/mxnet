@@ -19,10 +19,11 @@ import os
 import tempfile
 
 import mxnet as mx
+from common import TemporaryDirectory
 from mxnet import nd
 from mxnet.gluon import nn, loss
 from mxnet.gluon.contrib.estimator import estimator, event_handler
-from common import TemporaryDirectory
+
 
 def _get_test_network():
     net = nn.Sequential()
@@ -92,10 +93,12 @@ def test_logging():
 
         net = _get_test_network()
         ce_loss = loss.SoftmaxCrossEntropyLoss()
-        ce_loss_metric = mx.metric.Loss(ce_loss.name)
         acc = mx.metric.Accuracy()
         est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+        train_metrics, val_metrics = est.prepare_loss_and_metrics()
         logging_handler = [event_handler.LoggingHandler(file_name=file_name,
-                                                        file_location=tmpdir, train_metrics=[acc, ce_loss_metric])]
+                                                        file_location=tmpdir,
+                                                        train_metrics=train_metrics,
+                                                        val_metrics=val_metrics)]
         est.fit(test_data, event_handlers=logging_handler, epochs=1)
         assert os.path.isfile(output_dir)
