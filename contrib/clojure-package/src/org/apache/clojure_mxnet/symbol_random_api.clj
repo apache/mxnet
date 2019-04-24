@@ -14,15 +14,19 @@
 ;; limitations under the License.
 ;;
 
-(ns org.apache.clojure-mxnet.ndarray-random-api
-  "Experimental NDArray Random API"
+(ns org.apache.clojure-mxnet.symbol-random-api
+  "Experimental Symbol Random API"
+  (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
+                            min repeat reverse set sort take to-array empty sin
+                            get apply shuffle ref])
   (:require [org.apache.clojure-mxnet.base :as base]
             [org.apache.clojure-mxnet.context :as mx-context]
+            [org.apache.clojure-mxnet.executor :as ex]
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
-            [clojure.reflect :as r]
-            [t6.from-scala.core :refer [$] :as $])
-  (:import (org.apache.mxnet NDArrayAPI)))
+            [t6.from-scala.core :refer [$] :as $]
+            [org.apache.clojure-mxnet.ndarray :as ndarray])
+  (:import (org.apache.mxnet SymbolAPI)))
 
 ;; loads the generated functions into the namespace
-(do (clojure.core/load "gen/ndarray_random_api"))
+(do (clojure.core/load "gen/symbol_random_api"))

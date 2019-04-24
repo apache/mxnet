@@ -16,10 +16,10 @@
 
 (ns org.apache.clojure-mxnet.ndarray-api
   "Experimental NDArray API"
-  (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
-                            min repeat reverse set sort take to-array empty shuffle
-                            ref])
-
+  (:refer-clojure
+    :exclude [* - + > >= < <= / cast concat flatten identity load max
+              min repeat reverse set sort take to-array empty shuffle
+              ref])
   (:require [org.apache.clojure-mxnet.base :as base]
             [org.apache.clojure-mxnet.context :as mx-context]
             [org.apache.clojure-mxnet.shape :as mx-shape]
