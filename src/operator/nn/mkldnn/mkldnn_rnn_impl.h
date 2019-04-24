@@ -136,9 +136,9 @@ inline size_t GetMKLDNNRNNCacheMemorySize(int L,
 }
 
 template <typename DType>
-void AdjustGruGateOrder(DType* weight,
-                        const int I,
-                        const int H) {
+void AdjustGruWeightGateOrder(DType* weight,
+                              const int I,
+                              const int H) {
   // mxnet gru gate order is reset, update and new gates
   // mkldnn gru gate order is update, reset and new gates
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
@@ -149,6 +149,22 @@ void AdjustGruGateOrder(DType* weight,
     DType tmp = weight_update[i];
     weight_update[i] = weight_reset[i];
     weight_reset[i] = tmp;
+  }
+}
+
+template <typename DType>
+void AdjustGruBiasGateOrder(DType* bias,
+                            const int H) {
+  // mxnet gru gate order is reset, update and new gates
+  // mkldnn gru gate order is update, reset and new gates
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  DType* bias_reset = bias;
+  DType* bias_update = bias + H;
+  #pragma omp parallel for num_threads(omp_threads)
+  for (int i = 0; i < H; i++) {
+    DType tmp = bias_update[i];
+    bias_update[i] = bias_reset[i];
+    bias_reset[i] = tmp;
   }
 }
 // since there is different sematics of MKLDNN's Fused RNN and Mxnet FusedRNN,
@@ -216,10 +232,14 @@ void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
 
   if (!cached) {
     if (mode == rnn_enum::kGru) {
-      AdjustGruGateOrder(wx, I, H);
-      AdjustGruGateOrder(back_wx, I, H);
-      AdjustGruGateOrder(wh, H, H);
-      AdjustGruGateOrder(back_wh, H, H);
+      AdjustGruWeightGateOrder(wx, I, H);
+      AdjustGruWeightGateOrder(back_wx, I, H);
+      AdjustGruWeightGateOrder(wh, H, H);
+      AdjustGruWeightGateOrder(back_wh, H, H);
+      AdjustGruBiasGateOrder(bx, H);
+      AdjustGruBiasGateOrder(back_bx, H);
+      AdjustGruBiasGateOrder(bh, H);
+      AdjustGruBiasGateOrder(back_bh, H);
     }
     auto src_wx = (*concat_weight_memory)[2 * layer_index];
     auto src_wh = (*concat_weight_memory)[2 * layer_index + 1];
@@ -465,8 +485,8 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
       DType* wx = w_ptr;
       DType* wh = w_ptr + I * H * ngates;
       if (mode == rnn_enum::kGru) {
-        AdjustGruGateOrder(wx, I, H);
-        AdjustGruGateOrder(wh, H, H);
+        AdjustGruWeightGateOrder(wx, I, H);
+        AdjustGruWeightGateOrder(wh, H, H);
       }
       src_wx_f.set_data_handle(wx);
       src_wh_f.set_data_handle(wh);
@@ -474,9 +494,13 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
       for (int l = 0; l < L; l++) {
         DType* wx = w_ptr;
         DType* wh = w_ptr + I * H * ngates;
+        DType* bx = b_ptr + l * ngates * H * 2;
+        DType* bh = b_ptr + l * ngates * H * 2 + H * ngates;
         if (mode == rnn_enum::kGru) {
-          AdjustGruGateOrder(wx, I, H);
-          AdjustGruGateOrder(wh, H, H);
+          AdjustGruWeightGateOrder(wx, I, H);
+          AdjustGruWeightGateOrder(wh, H, H);
+          AdjustGruBiasGateOrder(bx, H);
+          AdjustGruBiasGateOrder(bh, H);
         }
         srcs_data_x.push_back(wx);
         srcs_data_h.push_back(wh);
