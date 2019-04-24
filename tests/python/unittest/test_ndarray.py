@@ -1655,7 +1655,6 @@ def test_ndarray_nan_comparison():
 
 
 def test_zero_from_numpy():
-    print("test_zero_from_numpy")
     np_array = np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
     mx_array = mx.nd.from_numpy(np_array)
     print(mx_array)

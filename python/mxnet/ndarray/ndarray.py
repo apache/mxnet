@@ -4183,13 +4183,13 @@ def from_numpy(ndarray, zero_copy=True):
 
     """
 
-    def make_manager_ctx(obj):
+    def _make_manager_ctx(obj):
         pyobj = ctypes.py_object(obj)
         void_p = ctypes.c_void_p.from_buffer(pyobj)
         ctypes.pythonapi.Py_IncRef(pyobj)
         return void_p
 
-    def make_dl_tensor(array):
+    def _make_dl_tensor(array):
         dl_tensor = DLTensor()
         dl_tensor.data = array.ctypes.data_as(ctypes.c_void_p)
         dl_tensor.ctx = DLContext(1, 0)
@@ -4200,18 +4200,19 @@ def from_numpy(ndarray, zero_copy=True):
         dl_tensor.byte_offset = 0
         return dl_tensor
 
-    def make_dl_managed_tensor(array):
+    def _make_dl_managed_tensor(array):
         c_obj = DLManagedTensor()
-        c_obj.dl_tensor = make_dl_tensor(array)
-        c_obj.manager_ctx = make_manager_ctx(array)
+        c_obj.dl_tensor = _make_dl_tensor(array)
+        c_obj.manager_ctx = _make_manager_ctx(array)
         c_obj.deleter = dl_managed_tensor_deleter
         return c_obj
 
     if not zero_copy:
-        return array(ndarray)
+        return array(ndarray, dtype=ndarray.dtype)
 
-    assert ndarray.flags['C_CONTIGUOUS'], "Only c-contiguous arrays are supported for zero-copy"
-    c_obj = make_dl_managed_tensor(ndarray)
+    if not ndarray.flags['C_CONTIGUOUS']:
+        raise ValueError("Only c-contiguous arrays are supported for zero-copy")
+    c_obj = _make_dl_managed_tensor(ndarray)
     address = ctypes.addressof(c_obj)
     address = ctypes.cast(address, ctypes.c_void_p)
     handle = NDArrayHandle()
