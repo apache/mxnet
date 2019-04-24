@@ -1,4 +1,4 @@
-# Licensed to the Apache Software Foundation (ASF) under one
+        # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
 # regarding copyright ownership.  The ASF licenses this file
@@ -928,8 +928,9 @@ def test_dense_backward():
     x.attach_grad()
     with ag.record():
         y = net.forward(x)
-        params_grad = ag.grad(y, params[0], create_graph=True, retain_graph=True)[0]
-    same(params_grad, x)
+        y_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
+    y_grad.backward()
+    same(x.grad, nd.zeros(4))
 
 
 @with_seed()
