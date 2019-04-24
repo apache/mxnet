@@ -1180,7 +1180,7 @@ def test_activations():
     elu = mx.gluon.nn.ELU()
     def elu_test(x):
         def elu(x):
-            return 1.0 * (mx.nd.exp(x) - 1) if x < 0 else x
+            return mx.nd.expm1(x) if x <= 0.0 else x
         return [elu(x_i) for x_i in x]
 
     for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):

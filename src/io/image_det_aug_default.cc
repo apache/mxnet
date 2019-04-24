@@ -34,7 +34,7 @@
 namespace mxnet {
 namespace io {
 
-using nnvm::Tuple;
+using mxnet::Tuple;
 
 namespace image_det_aug_default_enum {
 enum ImageDetAugDefaultCropEmitMode {kCenter, kOverlap};
@@ -462,7 +462,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
 
   /*! \brief Check number of crop samplers and given parameters */
   template<typename DType>
-  void ValidateCropParameters(nnvm::Tuple<DType> *param, const int num_sampler) {
+  void ValidateCropParameters(mxnet::Tuple<DType> *param, const int num_sampler) {
     if (num_sampler == 1) {
       CHECK_EQ(param->ndim(), 1);
     } else if (num_sampler > 1) {
