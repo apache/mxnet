@@ -136,22 +136,6 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_javascript', false)
         }
       }
-    },
-    'Gluon estimator: GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/estimator-test-gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator_gpu', true)
-        }
-      }
-    },
-    'Gluon estimator: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/estimator-test-cpu') {
-          utils.unpack_and_init('cpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_cpu', 'nightly_estimator_cpu', false)
-        }
-      }
     }
   }
 }
