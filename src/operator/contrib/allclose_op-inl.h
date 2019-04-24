@@ -36,6 +36,16 @@
 namespace mxnet {
 namespace op {
 
+// Intermediate and Output data types could be integers OR unsigned characters
+#define USE_INTEGER   0
+#if USE_INTEGER
+  #define INTERM_DATA_TYPE int32_t
+  #define OUT_DATA_TYPE    mshadow::kInt32
+#else
+  #define INTERM_DATA_TYPE uint8_t
+  #define OUT_DATA_TYPE    mshadow::kUint8
+#endif
+
 struct AllCloseParam : public dmlc::Parameter<AllCloseParam> {
   float rtol, atol;
   bool equal_nan;
@@ -69,8 +79,8 @@ inline bool AllCloseType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  // The output will be boolean stored as an integer
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt32);
+  // The output will be boolean stored as an OUT_DATA_TYPE format
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, OUT_DATA_TYPE);
   return (*out_attrs)[0] != -1;
 }
 
@@ -79,7 +89,8 @@ using namespace mshadow_op::isnan_typed;
 template<int req>
 struct allclose_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int *out_data, const DType* in_a, const DType* in_b,
+  MSHADOW_XINLINE static void Map(int i, INTERM_DATA_TYPE *out_data,
+                                  const DType *in_a, const DType *in_b,
                                   const float rtol, const float atol, bool equal_nan) {
       const DType a = in_a[i], b = in_b[i];
       bool val;
@@ -93,17 +104,24 @@ struct allclose_forward {
 };
 
 template<typename xpu>
-size_t GetAdditionalMemorySize(const int num_items);
+size_t GetAdditionalMemoryLogical(mshadow::Stream<xpu> *s, const int num_items);
 
 template<typename xpu>
-void AllCloseAction(mshadow::Stream<xpu> *s,
-                    int *workspaceMemory,
-                    size_t extraStorageBytes,
-                    const TBlob& in_array0,
-                    const TBlob& in_array1,
-                    const std::vector<OpReqType>& req,
-                    const AllCloseParam& param,
-                    int *outPntr);
+INTERM_DATA_TYPE *GetAdditionalMemoryLogical(const OpContext& ctx,
+                                             int num_items, size_t *pExtraStorageBytes) {
+// Get length of the additional memory (which is used only by DeviceReduce::Min(...) on gpu)
+  *pExtraStorageBytes = GetAdditionalMemoryLogical<xpu>(ctx.get_stream<xpu>(), num_items);
+  const size_t workspace_total_bytes_ = num_items * sizeof(INTERM_DATA_TYPE) + *pExtraStorageBytes;
+  mshadow::Tensor<xpu, 1, uint8_t> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, uint8_t>(
+      mshadow::Shape1(workspace_total_bytes_), ctx.get_stream<xpu>());
+
+  return reinterpret_cast<INTERM_DATA_TYPE *>(workspace.dptr_);
+}
+
+template<typename xpu>
+void GetResultLogical(mshadow::Stream<xpu> *s, INTERM_DATA_TYPE *workMem, size_t extraStorageBytes,
+                      int num_items, INTERM_DATA_TYPE *outPntr);
 
 template<typename xpu>
 void AllClose(const nnvm::NodeAttrs& attrs,
@@ -115,24 +133,25 @@ void AllClose(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
 
-  const TBlob& in_array0 = inputs[0];
-  const TBlob& in_array1 = inputs[1];
+  const TBlob& in0 = inputs[0];
+  const TBlob& in1 = inputs[1];
+  const int num_items = in0.Size();
 
-  const AllCloseParam& param = nnvm::get<AllCloseParam>(attrs.parsed);
-
+  size_t extraStorageBytes;
+  auto workspaceMem = GetAdditionalMemoryLogical<xpu>(ctx, num_items, &extraStorageBytes);
   auto s = ctx.get_stream<xpu>();
-  const int num_items = in_array0.Size();
+  const AllCloseParam& param = nnvm::get<AllCloseParam>(attrs.parsed);
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(in0.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<allclose_forward<req_type>, xpu>::Launch(
+        s, num_items, workspaceMem, in0.dptr<DType>(), in1.dptr<DType>(),
+        param.rtol, param.atol, param.equal_nan);
+    });
+  });
 
-  // Get length of the additional memory (which is used only by DeviceReduce::Min(...) on gpu)
-  const size_t extraStorageBytes = GetAdditionalMemorySize<xpu>(num_items);
-  const size_t workspace_total_bytes_ = num_items * sizeof(int) + extraStorageBytes;
-  mshadow::Tensor<xpu, 1, uint8_t> workspace =
-    ctx.requested[0].get_space_typed<xpu, 1, uint8_t>(
-      mshadow::Shape1(workspace_total_bytes_), s);
-
-  auto workspaceMem = reinterpret_cast<int *>(workspace.dptr_);
-  AllCloseAction(s, workspaceMem, extraStorageBytes, in_array0, in_array1,
-                 req, param, outputs[0].dptr<int>());
+  auto *pOut = outputs[0].dptr<INTERM_DATA_TYPE>();
+  GetResultLogical<xpu>(s, workspaceMem, extraStorageBytes, num_items, pOut);
 }
 
 }  // namespace op

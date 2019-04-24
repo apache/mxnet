@@ -28,36 +28,27 @@
 namespace mxnet {
 namespace op {
 
-template<>
-size_t GetAdditionalMemorySize<gpu>(const int num_items) {
-  float *d_in = nullptr;
-  float *d_out = nullptr;
+template<typename T>
+size_t GetAdditionalMemory(mshadow::Stream<gpu> *s, const int num_items) {
+  T *d_in = nullptr;
+  T *d_out = nullptr;
   size_t temp_storage_bytes = 0;
-  cub::DeviceReduce::Min(nullptr, temp_storage_bytes, d_in, d_out, num_items);
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+  cub::DeviceReduce::Min(nullptr, temp_storage_bytes, d_in, d_out, num_items, stream);
   return temp_storage_bytes;
 }
 
 template<>
-void AllCloseAction<gpu>(mshadow::Stream<gpu> *s,
-                         int *workspaceMemory,
-                         size_t extraStorageBytes,
-                         const TBlob& in0,
-                         const TBlob& in1,
-                         const std::vector<OpReqType>& req,
-                         const AllCloseParam& param,
-                         int *outPntr) {
-  const int num_items = in0.Size();
-  using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(in0.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<allclose_forward<req_type>, gpu>::Launch(
-        s, num_items, workspaceMemory, in0.dptr<DType>(), in1.dptr<DType>(),
-        param.rtol, param.atol, param.equal_nan);
-    });
-  });
+size_t GetAdditionalMemoryLogical<gpu>(mshadow::Stream<gpu> *s, const int num_items) {
+  return GetAdditionalMemory<INTERM_DATA_TYPE>(s, num_items);
+}
 
-  cub::DeviceReduce::Min(workspaceMemory + num_items, extraStorageBytes,
-                         workspaceMemory, outPntr, num_items);
+template<>
+void GetResultLogical<gpu>(mshadow::Stream<gpu> *s, INTERM_DATA_TYPE *workMem,
+                           size_t extraStorageBytes, int num_items, INTERM_DATA_TYPE *outPntr) {
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+  cub::DeviceReduce::Min(workMem + num_items, extraStorageBytes,
+                         workMem, outPntr, num_items, stream);
 }
 
 NNVM_REGISTER_OP(_contrib_allclose)

@@ -60,7 +60,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "b"};
   })
-.set_attr<mxnet::FInferShape>("FInferShape", AllCloseShape)
+.set_attr<nnvm::FInferShape>("FInferShape", AllCloseShape)
 .set_attr<nnvm::FInferType>("FInferType", AllCloseType)
 .set_attr<FCompute>("FCompute<cpu>", AllClose<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
@@ -71,30 +71,14 @@ Examples::
 .add_arguments(AllCloseParam::__FIELDS__());
 
 template<>
-size_t GetAdditionalMemorySize<cpu>(const int num_items) {
+size_t GetAdditionalMemoryLogical<cpu>(mshadow::Stream<cpu> *s, const int num_items) {
   return 0;
 }
 
 template<>
-void AllCloseAction<cpu>(mshadow::Stream<cpu> *s,
-             int *workSpaceMemory,
-             size_t extraStorageBytes,
-             const TBlob& in0,
-             const TBlob& in1,
-             const std::vector<OpReqType>& req,
-             const AllCloseParam& param,
-             int *outPntr) {
-  int num_items = in0.Size();
-  using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(in0.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<allclose_forward<req_type>, cpu>::Launch(
-        s, num_items, workSpaceMemory, in0.dptr<DType>(), in1.dptr<DType>(),
-        param.rtol, param.atol, param.equal_nan);
-    });
-  });
-
-  while (num_items-- > 0 && workSpaceMemory[num_items] > 0.5) {}
+void GetResultLogical<cpu>(mshadow::Stream<cpu> *s, INTERM_DATA_TYPE *workMem,
+                           size_t extraStorageBytes, int num_items, INTERM_DATA_TYPE *outPntr) {
+  while (num_items-- > 0 && workMem[num_items]) {}
   outPntr[0] = num_items >= 0? 0 : 1;
 }
 
