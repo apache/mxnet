@@ -28,12 +28,12 @@ before_script:
   - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - python --version
 
-build_and_test_make:
-  stage: test
-  image: $BASE_TEMPORARY_IMAGE
-  script:
-    - make DEV=1 USE_CPP_PACKAGE=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 -j$(nproc)
-    - pytest tests/python/unittest/test_binary.py
+#build_and_test_make:
+#  stage: test
+#  image: $BASE_TEMPORARY_IMAGE
+#  script:
+#    - make DEV=1 USE_CPP_PACKAGE=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 -j$(nproc)
+#    - pytest tests/python/unittest/test_binary.py
 
 build_and_test_cmake:
   stage: test
