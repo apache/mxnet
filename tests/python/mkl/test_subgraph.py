@@ -30,7 +30,7 @@ from mxnet.test_utils import DummyIter
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 import itertools
 
 OP_NAME='op_name'
@@ -51,13 +51,13 @@ config =  {
 DATA_SHAPE=[(64, 4, 10, 10), (4, 3, 24, 24), (1, 16, 32, 32)]
 
 def check_qsym_calibrated(qsym, out_type, name='conv'):
-  quantized_op_name = config[name][QUANTIZED_OP_NAME]
+  quantized_op_name = 'quantized_' + name
   assert ''.join(qsym.attr_dict().keys()).find(quantized_op_name) != -1
   for k, v in qsym.attr_dict().items():
     if k.find('_quantize') != -1:
       assert v['out_type'] == out_type
     if k.find(quantized_op_name) != -1:
-      if name == 'fc' and 'enable_float_output' in v:
+      if quantized_op_name.startswith("quantized_sg_mkldnn_fully_connected") and 'enable_float_output' in v:
         continue
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
@@ -129,6 +129,8 @@ class CalibIter(mx.io.DataIter):
 
 def check_quantize(sym, data_shape, out_type, name='conv',
                    check_calibration=True, gluon_forward=False, check_scale_align=False):
+  if name in config:
+    name = config[name][OP_NAME]
   sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
   mod = Module(symbol=sym, label_names=None)
   mod.bind(for_training=False,
@@ -178,7 +180,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
       min_range = mx.nd.min(ref_out[i]).asscalar()
       max_range = mx.nd.max(ref_out[i]).asscalar()
       atol = 0.1 * max(abs(min_range), abs(max_range))
-      assert_almost_equal(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
+      assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
     check_qsym_dummy_forward(qsym, batch, data_shape)
 
 @with_seed()
@@ -232,15 +234,23 @@ def check_quantize_whole_model_with_forward():
     check_quantize_whole_model(qdtype)
 
 @with_seed()
-def check_fusion(sym, data_shape, attrs_op, name='conv', check_fp32_fusion=True, check_quantization=True):
+def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quantization=True, out_types=['uint8', 'int8', 'auto']):
   if check_fp32_fusion:
-    op_name = config[name][OP_NAME]
     sym_sg = sym.get_backend_symbol(SG_PASS_NAME)
-    assert ''.join(sym_sg.get_internals().list_outputs()).find(op_name) != -1
-    for k, v in sym_sg.attr_dict().items():
-      if k.find(op_name) != -1:
-        for attr_op in attrs_op:
-          assert v[attr_op] in ['true', 'True']
+    for name, attrs in attrs_dict.items():
+      if name in config:
+        op_name = config[name][OP_NAME]
+      else:
+        op_name = name
+      assert ''.join(sym_sg.get_internals().list_outputs()).find(op_name) != -1
+      if len(attrs):
+          found = False
+          for k, v in sym_sg.attr_dict().items():
+            if k.find(op_name) != -1:
+              found = True
+              for attr_name, attr_value in attrs.items():
+                assert v[attr_name].lower() == attr_value.lower()
+          assert found
 
     arg_shapes, _, aux_shapes = sym.infer_shape()
     arg_array = [mx.nd.random.uniform(-1.0, 1.0, shape=shape) for shape in arg_shapes]
@@ -256,14 +266,13 @@ def check_fusion(sym, data_shape, attrs_op, name='conv', check_fp32_fusion=True,
 
   if check_quantization:
     # fp32 to int8
-    out_type_list = ['uint8', 'int8', 'auto']
-    for out_type in out_type_list:
-      check_quantize(sym, data_shape, out_type, name=name)
+    for out_type in out_types:
+      check_quantize(sym, data_shape, out_type, name=op_name)
       # TODO(ciyong), since quantized fc save its params in int8, while gluon treat the default
       # variable from symbol file as fp32 which results in mismatch dtype of params.
       # Skip quantized fc in gluon pass.
       if name != 'fc':
-        check_quantize(sym, data_shape, out_type, name=name, gluon_forward=True)
+        check_quantize(sym, data_shape, out_type, name=op_name, gluon_forward=True)
 
 def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None,
                      date_shape=(4,4,10,10), name='conv'):
@@ -288,7 +297,7 @@ def head_symbol(data_shape):
 
 # single conv fuision case
 def single_conv(no_bias, data_shape):
-  attr = ['']
+  attr = {'conv': []}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
@@ -296,7 +305,7 @@ def single_conv(no_bias, data_shape):
 
 # conv + bn fusion case
 def conv_bn(no_bias, data_shape):
-  attr = ['with_bn']
+  attr = {'conv': {'with_bn': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
@@ -305,7 +314,7 @@ def conv_bn(no_bias, data_shape):
 
 # conv + act fusion case
 def conv_act(no_bias, data_shape, alg):
-  attr = ['with_act']
+  attr = {'conv': {'with_act': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
@@ -317,7 +326,7 @@ def conv_act(no_bias, data_shape, alg):
 
 # conv + act + sum fusion case
 def conv_act_sum(no_bias, data_shape, alg):
-  attr = ['with_act', 'with_sum']
+  attr = {'conv': {'with_act': 'true', 'with_sum': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
@@ -332,7 +341,7 @@ def conv_act_sum(no_bias, data_shape, alg):
 
 # conv + add fusion case
 def conv_add(no_bias, data_shape):
-  attr = ['with_sum']
+  attr = {'conv': {'with_sum': 'true'}}
   data, weight = head_symbol(data_shape)
   conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
@@ -344,7 +353,7 @@ def conv_add(no_bias, data_shape):
 
 # conv + add fusion case 2
 def conv_add2(no_bias, data_shape):
-  attr = ['with_sum']
+  attr = {'conv': {'with_sum': 'true'}}
   data, weight = head_symbol(data_shape)
   conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
@@ -356,7 +365,7 @@ def conv_add2(no_bias, data_shape):
 
 # conv + bn + act fusion case
 def conv_bn_act(no_bias, data_shape, alg):
-  attr = ['with_bn', 'with_act']
+  attr = {'conv': {'with_bn': 'true', 'with_act': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
@@ -369,7 +378,7 @@ def conv_bn_act(no_bias, data_shape, alg):
 
 # conv + bn + add + act fusion case
 def conv_bn_sum_act(no_bias, data_shape, alg):
-  attr = ['with_sum', 'with_postsum_act', 'with_bn']
+  attr = {'conv': {'with_sum': 'true', 'with_postsum_act': 'true', 'with_bn': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
@@ -405,6 +414,22 @@ def concat_scale_align(data_shape):
                                kernel=(3, 3), stride=(1, 1), no_bias=True)
   concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
   return concat
+
+
+# mobilenetv2 case
+def mobilenetv2_struct(data_shape):
+  attr = {'sg_mkldnn_conv_bn_0' : {'with_bn': 'true'}}
+  data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
+  weight1 = mx.symbol.Variable('conv1_weight', dtype='float32')
+  weight2 = mx.symbol.Variable('conv2_weight', dtype='float32')
+  conv1 = mx.symbol.Convolution(data=data, weight=weight1, name='conv1', num_filter=64,
+                               kernel=(1, 1), stride=(1, 1), no_bias=True)
+  bn1 = mx.symbol.BatchNorm(data=conv1, name="bn1")
+  conv2 = mx.symbol.Convolution(data=bn1, weight=weight2, name='conv2', num_filter=64,
+                               kernel=(1, 1), stride=(1, 1), no_bias=True)
+  bn2 = mx.symbol.BatchNorm(data=conv2, name="bn2")
+  sum = bn1 + bn2
+  return sum, attr
 
 def tail_neg_symbol(sym1, sym2):
   fc1 = mx.sym.FullyConnected(data=sym1, num_hidden=10, flatten=True, name='fc1')
@@ -585,14 +610,14 @@ def neg_conv_bn_add_relu(data_shape):
   return syms, attrs, excluded_attrs
 
 def single_fc(no_bias, data_shape, flatten=True):
-  attr = ['']
+  attr = {'fc': {}}
   data, weight = head_symbol(data_shape)
   fc = mx.symbol.FullyConnected(name='fc', data=data, weight=weight, num_hidden=64,
                                 no_bias=no_bias, flatten=flatten)
   return fc, attr
 
 def fc_relu(no_bias, data_shape, flatten=True):
-  attr = ['with_relu']
+  attr = {'fc': {'with_relu': 'true'}}
   data, weight = head_symbol(data_shape)
   fc = mx.symbol.FullyConnected(name='fc', data=data, weight=weight, num_hidden=64,
                                 no_bias=no_bias, flatten=flatten)
@@ -720,6 +745,12 @@ def test_pos_concat_scale_align():
       check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True, gluon_forward=True)
 
 @with_seed()
+def test_mobilenetv2_struct():
+  for data_shape in DATA_SHAPE:
+      net, attrs = mobilenetv2_struct(data_shape)
+      check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'])
+
+@with_seed()
 def test_neg_conv_bn():
   for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_bn(data_shape)
@@ -754,9 +785,9 @@ def test_single_fc():
   for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
     syms, attrs = single_fc(no_bias, dshape, flatten)
     if flatten is True:
-      check_fusion(syms, dshape, attrs, name='fc', check_quantization=True)
+      check_fusion(syms, dshape, attrs, check_quantization=True)
     else:
-      check_fusion(syms, dshape, attrs, name='fc', check_quantization=False)
+      check_fusion(syms, dshape, attrs, check_quantization=False)
 
 
 @with_seed()
@@ -764,9 +795,9 @@ def test_fc_relu():
   for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
     syms, attrs = fc_relu(no_bias, dshape, flatten)
     if flatten is True:
-      check_fusion(syms, dshape, attrs, name='fc', check_quantization=True)
+      check_fusion(syms, dshape, attrs, check_quantization=True)
     else:
-      check_fusion(syms, dshape, attrs, name='fc', check_quantization=False)
+      check_fusion(syms, dshape, attrs, check_quantization=False)
 
 @with_seed()
 def test_neg_fc_relu():

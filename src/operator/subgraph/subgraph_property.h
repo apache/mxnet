@@ -104,6 +104,11 @@ class SubgraphSelector {
   virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
     return candidates;
   }
+  /*!
+   * \brief Reset the state of selector for SelectInput.
+   *        Note: the state should reset to Select() is successful.
+   */
+  virtual void Reset() {}
 };
 
 using SubgraphSelectorPtr = std::shared_ptr<SubgraphSelector>;
@@ -141,6 +146,12 @@ class SubgraphSelectorV2 {
       const std::vector<BiDirectedNode*>& candidates) {
     return candidates;
   }
+
+  /*!
+   * \brief Reset the state of selector for SelectInput.
+   *        Note: the state should reset to Select() is successful.
+   */
+  virtual void Reset() {}
 };
 
 using SubgraphSelectorV2Ptr = std::shared_ptr<SubgraphSelectorV2>;
@@ -178,6 +189,8 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
     for (auto i : n_ret) ret.push_back(node_2_snode_map[i]);
     return ret;
   }
+
+  void Reset() override { ss_ptr_->Reset(); }
 
   const SubgraphSelectorPtr& GetV1ptr() const { return ss_ptr_; }
 

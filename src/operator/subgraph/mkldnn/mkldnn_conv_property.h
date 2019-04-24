@@ -152,6 +152,14 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
       return ret;
     }
   }
+
+  void Reset() override {
+    CHECK_GE(matched_list_.size(), 1);
+    auto new_selector = SgMKLDNNConvSelector(disable_all_, disable_conv_bn_, disable_conv_act_,
+                                             disable_conv_sum_, quantize_);
+    new_selector.Select(*matched_list_[0]);
+    *this = new_selector;
+  }
 };
 
 class SgMKLDNNConvProperty : public SubgraphProperty {

@@ -53,7 +53,6 @@ def _check_input_names(symbol, names, typename, throw):
             raise ValueError(msg)
         else:
             warnings.warn(msg)
-            raise ValueError(msg)
 
 
 def _check_names_match(data_names, data_shapes, name, throw):

@@ -476,8 +476,31 @@ def almost_equal(a, b, rtol=None, atol=None, equal_nan=False):
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
     # pylint: enable=unexpected-keyword-arg
 
-def assert_almost_equal(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False):
+def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False):
     """Test that two numpy arrays are almost equal. Raise exception message if not.
+
+    Parameters
+    ----------
+    a : np.ndarray
+    b : np.ndarray
+    threshold : None or float
+        The checking threshold. Default threshold will be used if set to ``None``.
+    """
+    rtol = get_rtol(rtol)
+    atol = get_atol(atol)
+    if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+        return
+    index, rel = find_max_violation(a, b, rtol, atol)
+    np.set_printoptions(threshold=4, suppress=True)
+    msg = npt.build_err_msg([a, b],
+                            err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
+                                    " Location of maximum error:%s, a=%f, b=%f"
+                            % (rel, rtol, atol, str(index), a[index], b[index]),
+                            names=names)
+    raise AssertionError(msg)
+
+def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False):
+    """Test that two numpy arrays are almost equal within given error rate. Raise exception message if not.
 
     Parameters
     ----------

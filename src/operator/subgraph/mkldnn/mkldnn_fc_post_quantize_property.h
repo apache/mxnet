@@ -132,6 +132,14 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
       return ret;
     }
   }
+
+  void Reset() override {
+    CHECK_GE(matched_list.size(), 1);
+    auto new_selector = SgMKLDNNFCPostQuantizeSelector(disable_all, disable_float_output);
+    new_selector.Select(*matched_list[0]);
+    *this = new_selector;
+  }
+
 };
 
 class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
