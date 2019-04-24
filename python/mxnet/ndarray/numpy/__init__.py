@@ -19,6 +19,6 @@
 
 from . import _op
 from . import _register
-from ._op import *
+from ._op import *  # pylint: disable=wildcard-import
 
 __all__ = _op.__all__

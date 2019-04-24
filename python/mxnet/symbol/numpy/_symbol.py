@@ -20,7 +20,8 @@
 from __future__ import absolute_import
 import ctypes
 import numpy as _np
-from . import _op
+from . import _op as _np_op
+from .. import op as _op
 from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
 from ...context import current_context
 from .. import _internal
@@ -43,11 +44,18 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __add__(self, other):
-        return super(_NumpySymbol, self).__add__(other).as_np_ndarray()
+        """x.__add__(y) <=> x+y"""
+        if isinstance(other, Symbol):
+            return _op.broadcast_add(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__add__(other).as_np_ndarray()
 
     @use_np_compat
     def __sub__(self, other):
-        return super(_NumpySymbol, self).__sub__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_sub(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__sub__(other).as_np_ndarray()
 
     @use_np_compat
     def __rsub__(self, other):
@@ -55,7 +63,10 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __mul__(self, other):
-        return super(_NumpySymbol, self).__mul__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_mul(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__mul__(other).as_np_ndarray()
 
     @use_np_compat
     def __rmul__(self, other):
@@ -63,7 +74,10 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __div__(self, other):
-        return super(_NumpySymbol, self).__div__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_div(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__div__(other).as_np_ndarray()
 
     @use_np_compat
     def __rdiv__(self, other):
@@ -71,7 +85,10 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __mod__(self, other):
-        return super(_NumpySymbol, self).__mod__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_mod(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__mod__(other).as_np_ndarray()
 
     @use_np_compat
     def __rmod__(self, other):
@@ -95,7 +112,10 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __pow__(self, other):
-        return super(_NumpySymbol, self).__pow__().as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_power(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__pow__(other).as_np_ndarray()
 
     @use_np_compat
     def __rpow__(self, other):
@@ -111,27 +131,45 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __eq__(self, other):
-        return super(_NumpySymbol, self).__eq__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_equal(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__eq__(other).as_np_ndarray()
 
     @use_np_compat
     def __ne__(self, other):
-        return super(_NumpySymbol, self).__ne__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_not_equal(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__ne__(other).as_np_ndarray()
 
     @use_np_compat
     def __gt__(self, other):
-        return super(_NumpySymbol, self).__gt__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_greater(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__gt__(other).as_np_ndarray()
 
     @use_np_compat
     def __ge__(self, other):
-        return super(_NumpySymbol, self).__ge__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_greater_equal(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__ge__(other).as_np_ndarray()
 
     @use_np_compat
     def __lt__(self, other):
-        return super(_NumpySymbol, self).__lt__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_lesser(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__lt__(other).as_np_ndarray()
 
     @use_np_compat
     def __le__(self, other):
-        return super(_NumpySymbol, self).__le__(other).as_np_ndarray()
+        if isinstance(other, Symbol):
+            return _op.broadcast_lesser_equal(self, other).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__le__(other).as_np_ndarray()
 
     def __len__(self):
         raise NotImplementedError
@@ -143,7 +181,7 @@ class _NumpySymbol(Symbol):
         return Symbol(handle=hdl)
 
     @use_np_compat
-    def astype(self, dtype, **kwargs):
+    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ
         raise NotImplementedError
 
     @use_np_compat
@@ -439,7 +477,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`sum`, with
         this array as data.
         """
-        return _op.sum(self, *args, **kwargs)
+        return _np_op.sum(self, *args, **kwargs)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -807,10 +845,10 @@ class _NumpySymbol(Symbol):
         """
         raise NotImplementedError
 
-    def broadcast_to(self, shape):
+    def broadcast_to(self,  *args, **kwargs):
         raise AttributeError('_NumpySymbol object has no attribute broadcast_to')
 
-    def broadcast_like(self, other):
+    def broadcast_like(self, *args, **kwarg):
         raise AttributeError('_NumpySymbol object has no attribute broadcast_like')
 
 

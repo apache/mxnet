@@ -17,10 +17,10 @@
 
 """numpy module for numpy ops under mxnet.symbol."""
 
-from . import _op
+from . import _op, _symbol
 from ._symbol import _NumpySymbol
 from . import _register
-from ._op import *
-from ._symbol import *
+from ._op import *  # pylint: disable=wildcard-import
+from ._symbol import *  # pylint: disable=wildcard-import
 
 __all__ = _op.__all__ + _symbol.__all__

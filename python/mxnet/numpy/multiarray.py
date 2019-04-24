@@ -17,11 +17,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=too-many-lines
 """numpy ndarray and util functions."""
 
 from __future__ import absolute_import
-import numpy as _np
 import ctypes
+import numpy as _np
 from ..ndarray import NDArray, _new_alloc_handle
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op
@@ -41,8 +42,15 @@ _set_np_ndarray_class(_np_ndarray_cls)
 
 
 class ndarray(NDArray):
+    """An array object represents a multidimensional, homogeneous array of fixed-size items.
+    An associated data-type object describes the format of each element in the array
+    (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
+    floating point number, or something else, etc.). Arrays should be constructed using
+    `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
+
     @use_np_compat
     def __getitem__(self, item):
+        # TODO(junwu): make output shape of integer indexing correct
         raise NotImplementedError
 
     @use_np_compat
@@ -74,7 +82,7 @@ class ndarray(NDArray):
         return super(ndarray, self).__mul__(other).as_np_ndarray()
 
     @use_np_compat
-    def __neg__(self, other):
+    def __neg__(self):
         return super(ndarray, self).__neg__().as_np_ndarray()
 
     @use_np_compat
@@ -214,7 +222,7 @@ class ndarray(NDArray):
         return _np_ndarray_cls(hdl)
 
     @use_np_compat
-    def astype(self, dtype, **kwargs):
+    def astype(self, dtype, *args, **kwargs):  # pylint: disable=arguments-differ
         """
         Copy of the array, cast to a specified type.
 
@@ -247,14 +255,11 @@ class ndarray(NDArray):
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute as_scalar')
 
-    def copyto(self, other):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute copyto')
-
     def as_in_context(self, context):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute as_in_context')
+        return super(ndarray, self).as_in_context(context).as_np_ndarray()
 
     @use_np_compat
-    def copy(self, order='C'):
+    def copy(self, order='C'):  # pylint: disable=arguments-differ
         if order != 'C':
             raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
                                       'received {}'.format(str(order)))
@@ -262,6 +267,7 @@ class ndarray(NDArray):
 
     @use_np_compat
     def reshape(self, *shape, **kwargs):
+        """Returns an array containing the same data with a new shape."""
         raise NotImplementedError
 
     def reshape_like(self, *args, **kwargs):
