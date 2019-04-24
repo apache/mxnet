@@ -41,14 +41,14 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape &dshape = in_shape->at(layernorm::kData);
   int axis = param.axis;
   if (axis < 0) {
-    axis += static_cast<int>(dshape.ndim());
+    axis += dshape.ndim();
   }
-  CHECK(axis >= 0 && axis < static_cast<int>(dshape.ndim()))
+  CHECK(axis >= 0 && axis < dshape.ndim())
     << "Channel axis out of range: axis=" << param.axis;
 
   const int channelCount = dshape[axis];
 
-  if (dshape.ndim() == 0) {
+  if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
 

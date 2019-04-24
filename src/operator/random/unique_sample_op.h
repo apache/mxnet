@@ -60,7 +60,7 @@ inline bool SampleUniqueShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 2U);
   // output shape is known
-  if ((*out_attrs)[0].ndim() == 2 && param.shape.ndim() == 0) {
+  if ((*out_attrs)[0].ndim() == 2 && !mxnet::ndim_is_known(param.shape)) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::Shape1((*out_attrs)[0][0]));
     return true;
   }

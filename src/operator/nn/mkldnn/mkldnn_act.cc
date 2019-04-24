@@ -32,8 +32,7 @@
 #include <string>
 #include <utility>
 #include "../../operator_common.h"
-#include "../activation-inl.h"
-#include "./mkldnn_base-inl.h"
+#include "mkldnn_act-inl.h"
 
 #if MXNET_USE_MKLDNN == 1
 
@@ -58,7 +57,7 @@ bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input) {
   return SupportMKLDNNAct(param);
 }
 
-static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
+mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
   switch (param.act_type) {
     case activation::kReLU:
       return mkldnn::algorithm::eltwise_relu;
@@ -74,9 +73,7 @@ static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
   }
 }
 
-typedef std::shared_ptr<mkldnn::eltwise_forward::primitive_desc> mkldnn_act_pdesc_ptr;
-
-static mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
+mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
     const ActivationParam& param, bool is_train,
     const mkldnn::memory &input_mem, int dtype) {
   mkldnn::memory::primitive_desc data_mpd = input_mem.get_primitive_desc();
@@ -84,65 +81,41 @@ static mkldnn::eltwise_forward::primitive_desc GetActFwdDescImpl(
   auto cpu_engine = data_mpd.get_engine();
 
   auto alg = GetMKLDNNActAlgo(param);
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    DType alpha = 0;
-    mkldnn::eltwise_forward::desc desc = is_train
-        ? mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_training,
-                                        alg, data_md, alpha)
-        : mkldnn::eltwise_forward::desc(mkldnn::prop_kind::forward_scoring,
-                                        alg, data_md, alpha);
-    return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
-  });
-  LOG(FATAL) << "Unsupported data type for MKLDNN activation";
-  mkldnn::eltwise_forward::desc desc = mkldnn::eltwise_forward::desc(
-      mkldnn::prop_kind::forward_training, alg, data_md, 0.0);
+
+  auto prop = is_train ? mkldnn::prop_kind::forward_training :
+                         mkldnn::prop_kind::forward_scoring;
+  auto desc = mkldnn::eltwise_forward::desc(prop, alg, data_md, 0.0f);
   return mkldnn::eltwise_forward::primitive_desc(desc, cpu_engine);
 }
 
-typedef ParamOpSign<ActivationParam> MKLDNNActSignature;
+void MKLDNNActForward::SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output) {
+  if (this->data_ == nullptr)
+    this->data_ = std::make_shared<mkldnn::memory>(data.get_primitive_desc(),
+            data.get_data_handle());
+  else
+    this->data_->set_data_handle(data.get_data_handle());
 
-class MKLDNNActForward {
-  std::shared_ptr<mkldnn::eltwise_forward> fwd;
-  std::shared_ptr<mkldnn::memory> data;
-  std::shared_ptr<mkldnn::memory> out;
+  CHECK(fwd_pd.dst_primitive_desc() == output.get_primitive_desc());
+  if (this->out_ == nullptr)
+    this->out_ = std::make_shared<mkldnn::memory>(fwd_pd.dst_primitive_desc(),
+            output.get_data_handle());
+  else
+    this->out_->set_data_handle(output.get_data_handle());
 
- public:
-  const mkldnn::eltwise_forward::primitive_desc fwd_pd;
-
-  MKLDNNActForward(const ActivationParam& param, bool is_train,
-                   const NDArray &data, const mkldnn::memory &mem): fwd_pd(
-                       GetActFwdDescImpl(param, is_train, mem, data.dtype())) {
+  if (this->fwd_ == nullptr) {
+    this->fwd_ = std::shared_ptr<mkldnn::eltwise_forward>(
+        new mkldnn::eltwise_forward(fwd_pd, mkldnn::primitive::at(*this->data_),
+                                    *this->out_));
   }
+}
 
-  void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output) {
-    if (this->data == nullptr)
-      this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-              data.get_primitive_desc(), data.get_data_handle()));
-    else
-      this->data->set_data_handle(data.get_data_handle());
+const mkldnn::eltwise_forward &MKLDNNActForward::GetFwd() const {
+  return *fwd_;
+}
 
-    CHECK(fwd_pd.dst_primitive_desc() == output.get_primitive_desc());
-    if (this->out == nullptr)
-      this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-              fwd_pd.dst_primitive_desc(), output.get_data_handle()));
-    else
-      this->out->set_data_handle(output.get_data_handle());
-
-    if (this->fwd == nullptr) {
-      this->fwd = std::shared_ptr<mkldnn::eltwise_forward>(
-          new mkldnn::eltwise_forward(fwd_pd, mkldnn::primitive::at(*this->data),
-                                      *this->out));
-    }
-  }
-
-  const mkldnn::eltwise_forward &GetFwd() const {
-    return *fwd;
-  }
-};
-
-static MKLDNNActForward &GetActForward(const ActivationParam& param,
-                                       const OpContext &ctx, const NDArray &in_data,
-                                       const mkldnn::memory &in_mem) {
+MKLDNNActForward &GetActForward(const ActivationParam& param,
+                                const OpContext &ctx, const NDArray &in_data,
+                                const mkldnn::memory &in_mem) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNActSignature, MKLDNNActForward, OpHash> fwds;
 #else

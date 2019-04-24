@@ -182,7 +182,7 @@ typedef int (*CustomOpFBFunc)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
 typedef int (*CustomOpDelFunc)(void* /*state*/);
 typedef int (*CustomOpListFunc)(char*** /*args*/, void* /*state*/);
 typedef int (*CustomOpInferShapeFunc)(int /*num_input*/, int* /*ndims*/,
-                                      unsigned** /*shapes*/, void* /*state*/);
+                                      int** /*shapes*/, void* /*state*/);
 typedef int (*CustomOpInferStorageTypeFunc)(int /*num_input*/, int* /*stypes*/, void* /*state*/);
 typedef int (*CustomOpBackwardInferStorageTypeFunc)(int /*num_input*/,
                                                     int * /*stypes*/,
@@ -768,7 +768,8 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
                                  bool reverse,
                                  NDArrayHandle *out);
 /*!
- * \brief get the shape of the array
+ * \brief DEPRECATED. Use MXNDArrayGetShapeEx instead.
+ * get the shape of the array
  * \param handle the handle to the narray
  * \param out_dim the output dimension
  * \param out_pdata pointer holder to get data pointer of the shape
@@ -777,6 +778,16 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
 MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
                                 mx_uint *out_dim,
                                 const mx_uint **out_pdata);
+/*!
+ * \brief get the shape of the array
+ * \param handle the handle to the narray
+ * \param out_dim the output dimension
+ * \param out_pdata pointer holder to get data pointer of the shape
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayGetShapeEx(NDArrayHandle handle,
+                                  int *out_dim,
+                                  const int **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the ndarray
@@ -1048,6 +1059,19 @@ MXNET_DLL int MXAutogradIsRecording(bool* curr);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXAutogradIsTraining(bool* curr);
+/*!
+ * \brief get whether numpy compatibility is on
+ * \param curr returns the current status
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXIsNumpyCompatible(bool* curr);
+/*!
+ * \brief set numpy compatibility switch
+ * \param is_np_comp 1 when numpy compatibility is on, 0 when off
+ * \param prev returns the previous status before this set
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSetIsNumpyCompatible(int is_np_comp, int* prev);
 /*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
@@ -1468,7 +1492,8 @@ MXNET_DLL int MXSymbolGrad(SymbolHandle sym,
                            const char** wrt,
                            SymbolHandle* out);
 /*!
- * \brief infer shape of unknown input shapes given the known one.
+ * \brief DEPRECATED. Use MXSymbolInferShapeEx instead.
+ * infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
  *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
  *
@@ -1504,8 +1529,47 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  const mx_uint **aux_shape_ndim,
                                  const mx_uint ***aux_shape_data,
                                  int *complete);
+
 /*!
- * \brief partially infer shape of unknown input shapes given the known one.
+ * \brief infer shape of unknown input shapes given the known one.
+ *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
+ *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *
+ * \param sym symbol handle
+ * \param num_args numbe of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_ind_ptr the head pointer of the rows in CSR
+ * \param arg_shape_data the content of the CSR
+ * \param in_shape_size sizeof the returning array of in_shapes
+ * \param in_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param in_shape_data returning array of pointers to head of the input shape.
+ * \param out_shape_size sizeof the returning array of out_shapes
+ * \param out_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param out_shape_data returning array of pointers to head of the input shape.
+ * \param aux_shape_size sizeof the returning array of aux_shapes
+ * \param aux_shape_ndim returning array of shape dimensions of eachs auxiliary shape.
+ * \param aux_shape_data returning array of pointers to head of the auxiliary shape.
+ * \param complete whether infer shape completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolInferShapeEx(SymbolHandle sym,
+                                   mx_uint num_args,
+                                   const char** keys,
+                                   const mx_uint *arg_ind_ptr,
+                                   const int *arg_shape_data,
+                                   mx_uint *in_shape_size,
+                                   const int **in_shape_ndim,
+                                   const int ***in_shape_data,
+                                   mx_uint *out_shape_size,
+                                   const int **out_shape_ndim,
+                                   const int ***out_shape_data,
+                                   mx_uint *aux_shape_size,
+                                   const int **aux_shape_ndim,
+                                   const int ***aux_shape_data,
+                                   int *complete);
+/*!
+ * \brief DEPRECATED. Use MXSymbolInferShapePartialEx instead.
+ * partially infer shape of unknown input shapes given the known one.
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
@@ -1543,6 +1607,47 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
                                         const mx_uint **aux_shape_ndim,
                                         const mx_uint ***aux_shape_data,
                                         int *complete);
+
+
+/*!
+ * \brief partially infer shape of unknown input shapes given the known one.
+ *
+ *  Return partially inferred results if not all shapes could be inferred.
+ *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
+ *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *
+ * \param sym symbol handle
+ * \param num_args numbe of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_ind_ptr the head pointer of the rows in CSR
+ * \param arg_shape_data the content of the CSR
+ * \param in_shape_size sizeof the returning array of in_shapes
+ * \param in_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param in_shape_data returning array of pointers to head of the input shape.
+ * \param out_shape_size sizeof the returning array of out_shapes
+ * \param out_shape_ndim returning array of shape dimensions of eachs input shape.
+ * \param out_shape_data returning array of pointers to head of the input shape.
+ * \param aux_shape_size sizeof the returning array of aux_shapes
+ * \param aux_shape_ndim returning array of shape dimensions of eachs auxiliary shape.
+ * \param aux_shape_data returning array of pointers to head of the auxiliary shape.
+ * \param complete whether infer shape completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolInferShapePartialEx(SymbolHandle sym,
+                                          mx_uint num_args,
+                                          const char** keys,
+                                          const mx_uint *arg_ind_ptr,
+                                          const int *arg_shape_data,
+                                          mx_uint *in_shape_size,
+                                          const int **in_shape_ndim,
+                                          const int ***in_shape_data,
+                                          mx_uint *out_shape_size,
+                                          const int **out_shape_ndim,
+                                          const int ***out_shape_data,
+                                          mx_uint *aux_shape_size,
+                                          const int **aux_shape_ndim,
+                                          const int ***aux_shape_data,
+                                          int *complete);
 
 /*!
  * \brief infer type of unknown input types given the known one.
@@ -1807,7 +1912,8 @@ MXNET_DLL int MXExecutorBindEX(SymbolHandle symbol_handle,
                                NDArrayHandle *aux_states,
                                ExecutorHandle shared_exec,
                                ExecutorHandle *out);
-
+/*! \brief DEPRECATED. Use MXExecutorSimpleBindEx instead.
+ */
 MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    int dev_type,
                                    int dev_id,
@@ -1843,8 +1949,44 @@ MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
                                    ExecutorHandle shared_exec_handle,
                                    ExecutorHandle* out);
 
+
+MXNET_DLL int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
+                                     int dev_type,
+                                     int dev_id,
+                                     const mx_uint num_g2c_keys,
+                                     const char** g2c_keys,
+                                     const int* g2c_dev_types,
+                                     const int* g2c_dev_ids,
+                                     const mx_uint provided_grad_req_list_len,
+                                     const char** provided_grad_req_names,
+                                     const char** provided_grad_req_types,
+                                     const mx_uint num_provided_arg_shapes,
+                                     const char** provided_arg_shape_names,
+                                     const int* provided_arg_shape_data,
+                                     const mx_uint* provided_arg_shape_idx,
+                                     const mx_uint num_provided_arg_dtypes,
+                                     const char** provided_arg_dtype_names,
+                                     const int* provided_arg_dtypes,
+                                     const mx_uint num_provided_arg_stypes,
+                                     const char** provided_arg_stype_names,
+                                     const int* provided_arg_stypes,
+                                     const mx_uint num_shared_arg_names,
+                                     const char** shared_arg_name_list,
+                                     int* shared_buffer_len,
+                                     const char** shared_buffer_name_list,
+                                     NDArrayHandle* shared_buffer_handle_list,
+                                     const char*** updated_shared_buffer_name_list,
+                                     NDArrayHandle** updated_shared_buffer_handle_list,
+                                     mx_uint* num_in_args,
+                                     NDArrayHandle** in_args,
+                                     NDArrayHandle** arg_grads,
+                                     mx_uint* num_aux_states,
+                                     NDArrayHandle** aux_states,
+                                     ExecutorHandle shared_exec_handle,
+                                     ExecutorHandle* out);
 /*!
- * \brief Return a new executor with the same symbol and shared memory,
+ * \brief DEPRECATED. Use MXExecutorReshapeEx instead.
+ * Return a new executor with the same symbol and shared memory,
  * but different input/output shapes.
  *
  * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
@@ -1883,6 +2025,46 @@ MXNET_DLL int MXExecutorReshape(int partial_shaping,
                                 NDArrayHandle** aux_states,
                                 ExecutorHandle shared_exec,
                                 ExecutorHandle *out);
+/*!
+ * \brief Return a new executor with the same symbol and shared memory,
+ * but different input/output shapes.
+ *
+ * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
+ * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the original.
+ * \param dev_type device type of default context
+ * \param dev_id device id of default context
+ * \param num_map_keys size of group2ctx map
+ * \param map_keys keys of group2ctx map
+ * \param map_dev_types device type of group2ctx map
+ * \param map_dev_ids device id of group2ctx map
+ * \param num_in_args length of in_args
+ * \param in_args in args array
+ * \param arg_grads arg grads handle array
+ * \param num_aux_states length of auxiliary states
+ * \param aux_states auxiliary states array
+ * \param shared_exec input executor handle for memory sharing
+ * \param out output executor handle
+ * \return a new executor
+ */
+MXNET_DLL int MXExecutorReshapeEx(int partial_shaping,
+                                  int allow_up_sizing,
+                                  int dev_type,
+                                  int dev_id,
+                                  mx_uint num_map_keys,
+                                  const char** map_keys,
+                                  const int* map_dev_types,
+                                  const int* map_dev_ids,
+                                  const mx_uint num_provided_arg_shapes,
+                                  const char** provided_arg_shape_names,
+                                  const int* provided_arg_shape_data,
+                                  const mx_uint* provided_arg_shape_idx,
+                                  mx_uint* num_in_args,
+                                  NDArrayHandle** in_args,
+                                  NDArrayHandle** arg_grads,
+                                  mx_uint* num_aux_states,
+                                  NDArrayHandle** aux_states,
+                                  ExecutorHandle shared_exec,
+                                  ExecutorHandle *out);
 
 /*!
  * \brief get optimized graph from graph executor
@@ -2542,7 +2724,8 @@ MXNET_DLL int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** ar
 MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
                                           int* shared_id);
 /*!
- * \brief Reconstruct NDArray from shared memory handle
+ * \brief DEPRECATED. Use MXNDArrayCreateFromSharedMemEx instead.
+ * Reconstruct NDArray from shared memory handle
  * \param shared_pid shared PID
  * \param shared_id shared memory id
  * \param shape pointer to NDArray dimensions
@@ -2552,6 +2735,19 @@ MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
  */
 MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
                                            mx_uint ndim, int dtype, NDArrayHandle *out);
+
+
+/*!
+ * \brief Reconstruct NDArray from shared memory handle
+ * \param shared_pid shared PID
+ * \param shared_id shared memory id
+ * \param shape pointer to NDArray dimensions
+ * \param ndim number of NDArray dimensions
+ * \param dtype data type of NDArray
+ * \param out constructed NDArray
+ */
+MXNET_DLL int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
+                                             int ndim, int dtype, NDArrayHandle *out);
 
 /*!
   * \brief Push an asynchronous operation to the engine.

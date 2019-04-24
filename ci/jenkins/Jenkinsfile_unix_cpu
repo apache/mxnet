@@ -38,7 +38,8 @@ core_logic: {
     custom_steps.compile_unix_openblas_debug_cpu(),
     custom_steps.compile_unix_mkl_cpu(),
     custom_steps.compile_unix_mkldnn_cpu(),
-    custom_steps.compile_unix_mkldnn_mkl_cpu()
+    custom_steps.compile_unix_mkldnn_mkl_cpu(),
+    custom_steps.compile_unix_int64_cpu()
   ])
 
   utils.parallel_stage('Tests', [

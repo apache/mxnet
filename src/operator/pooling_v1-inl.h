@@ -55,7 +55,7 @@ struct PoolingV1Param : public dmlc::Parameter<PoolingV1Param> {
   int pooling_convention;
   bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingV1Param) {
-    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape(0, -1))
     .enforce_nonzero()
     .describe("pooling kernel size: (y, x) or (d, y, x)");
 
@@ -73,11 +73,11 @@ struct PoolingV1Param : public dmlc::Parameter<PoolingV1Param> {
     .add_enum("valid", pool_v1_enum::kValid)
     .describe("Pooling convention to be applied.");
 
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, -1))
     .enforce_nonzero()
     .describe("stride: for pooling (y, x) or (d, y, x)");
 
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, -1))
     .describe("pad for pooling: (y, x) or (d, y, x)");
   }
 };
@@ -217,19 +217,20 @@ class PoolingV1Prop : public OperatorProperty {
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     using namespace mshadow;
     param_.Init(kwargs);
-    if (!param_.global_pool) {
-      if (param_.kernel.ndim() == 2) {
-        if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
-        if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
-      } else {
-        CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D pooling not supported";
-        if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
-        if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
-      }
-      CHECK_EQ(param_.stride.ndim(), param_.kernel.ndim())
-        << "stride and kernel should have the same length";
-      CHECK_EQ(param_.pad.ndim(), param_.kernel.ndim())
-        << "pad and kernel should have the same length";
+    if (param_.kernel.ndim() == 1) {
+      if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
+    } else if (param_.kernel.ndim() == 2) {
+      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+    } else {
+        // ignore kernel size only if global_pool not assigned false
+        if (param_.global_pool == false) {
+          CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim()
+              << "D pooling not supported";
+        }
+      if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
     }
   }
 
@@ -247,7 +248,7 @@ class PoolingV1Prop : public OperatorProperty {
     CHECK_LE(dshape.ndim(), 5U) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
                                << "Or 5D in (batch, channel, d, y, x)";
     mxnet::TShape oshape = dshape;
-    if (dshape.ndim() ==  0) return false;
+    if (dshape.ndim() ==  -1) return false;
     if (param_.global_pool) {
       if (dshape.ndim() == 4) {
         oshape[2] = 1;
