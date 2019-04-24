@@ -60,7 +60,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "b"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", AllCloseShape)
+.set_attr<mxnet::FInferShape>("FInferShape", AllCloseShape)
 .set_attr<nnvm::FInferType>("FInferType", AllCloseType)
 .set_attr<FCompute>("FCompute<cpu>", AllClose<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
