@@ -96,7 +96,7 @@ class CuDNNAlgoReg {
       if (param.cudnn_tune.value() && reg_.size() % 50 == 0) {
         LOG(INFO) << "Running performance tests to find the best convolution "
             "algorithm, "
-            "this can take a while... (setting env variable "
+            "this can take a while... (set the environment variable "
             "MXNET_CUDNN_AUTOTUNE_DEFAULT to 0 to disable)";
         if (reg_.size() >= 1000) {
           // Many people are very concerned about this warning, so change the warning once.

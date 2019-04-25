@@ -36,8 +36,8 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   bool static_alloc;
   bool static_shape;
   bool is_dynamic;
-  nnvm::Tuple<uint32_t> data_indices;
-  nnvm::Tuple<uint32_t> param_indices;
+  mxnet::Tuple<uint32_t> data_indices;
+  mxnet::Tuple<uint32_t> param_indices;
   std::string subgraph;
   DMLC_DECLARE_PARAMETER(CachedOpConfig) {
     DMLC_DECLARE_FIELD(static_alloc)
@@ -59,10 +59,10 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     .set_default(Imperative::BulkExecMaxNodeTrainBwd())
     .describe("Segment size of bulk execution during backward pass.");
     DMLC_DECLARE_FIELD(data_indices)
-    .set_default(nnvm::Tuple<uint32_t>())
+    .set_default(mxnet::Tuple<uint32_t>())
     .describe("Position of argument variables.");
     DMLC_DECLARE_FIELD(param_indices)
-    .set_default(nnvm::Tuple<uint32_t>())
+    .set_default(mxnet::Tuple<uint32_t>())
     .describe("Position of parameters.");
     DMLC_DECLARE_FIELD(subgraph)
     .set_default(std::string(""))

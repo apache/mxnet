@@ -417,7 +417,8 @@ std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(
   for (uint32_t i = 0; i < shape_inputs.size(); ++i) {
     std::string name = ig[ig.input_nodes()[i]].source->attrs.name;
     mxnet::TShape shp = shape_inputs[i];
-    if (shp.ndim() > 0) {
+    if (!mxnet::op::shape_is_none(shp)) {
+      // TODO(@reminisce): confirm
       placeholder_shapes.emplace(name, shp);
     }
   }

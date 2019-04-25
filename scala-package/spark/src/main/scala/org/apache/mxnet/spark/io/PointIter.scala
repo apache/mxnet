@@ -114,13 +114,13 @@ class PointIter private[mxnet](
   }
 
   // The name and shape of label provided by this iterator
-  @deprecated
+  @deprecated("Use provideLabelDesc instead", "1.3.0")
   override def provideLabel: ListMap[String, Shape] = {
     ListMap(labelName -> Shape(_batchSize))
   }
 
   // The name and shape of data provided by this iterator
-  @deprecated
+  @deprecated("Use provideDataDesc instead", "1.3.0")
   override def provideData: ListMap[String, Shape] = {
     ListMap(dataName -> dataShape)
   }

@@ -62,7 +62,7 @@ struct MultiBoxTargetParam : public dmlc::Parameter<MultiBoxTargetParam> {
   float negative_mining_ratio;
   float negative_mining_thresh;
   int minimum_negative_samples;
-  nnvm::Tuple<float> variances;
+  mxnet::Tuple<float> variances;
   DMLC_DECLARE_PARAMETER(MultiBoxTargetParam) {
     DMLC_DECLARE_FIELD(overlap_threshold).set_default(0.5f)
     .describe("Anchor-GT overlap threshold to be regarded as a positive match.");

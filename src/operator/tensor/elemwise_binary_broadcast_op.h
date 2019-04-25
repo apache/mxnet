@@ -48,33 +48,32 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& rhs = (*in_attrs)[1];
 
   // avoid pre-mature shape inference.
-  if (lhs.ndim() == 0 || rhs.ndim() == 0) return false;
+  if (!mxnet::ndim_is_known(lhs) || !mxnet::ndim_is_known(rhs)) return false;
 
   if (lhs == rhs) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, lhs);
-    return true;
+    return shape_is_known(lhs);
   }
-  mxnet::TShape out(std::max(lhs.ndim(), rhs.ndim()));
-  index_t bl = out.ndim() - lhs.ndim();
-  index_t br = out.ndim() - rhs.ndim();
-  for (index_t i = 0; i < out.ndim(); ++i) {
-    index_t l = 1, r = 1;
+  mxnet::TShape out(std::max(lhs.ndim(), rhs.ndim()), -1);
+  const int bl = out.ndim() - lhs.ndim();
+  const int br = out.ndim() - rhs.ndim();
+  for (int i = 0; i < out.ndim(); ++i) {
+    int l = 1, r = 1;
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
+    if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r)) continue;
     if (l != r) {
-      if (l == 0 || r == 0) {
-        out[i] = 0;
-      } else {
-        CHECK(l == 1 || r == 1)
-          << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
-        out[i] = std::max(l, r);
-      }
+      // Make it compatible with NumPy.
+      // For example, (2, 3) cannot broadcast to (2, 0, 3), but (1, 3) can broadcast to (2, 0, 3).
+      CHECK(l == 1 || r == 1)
+        << "operands could not be broadcast together with shapes " << lhs << " " << rhs;
+      out[i] = (l == 1 ? r : l);
     } else {
       out[i] = l;
     }
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
-  return true;
+  return shape_is_known(lhs) && shape_is_known(rhs) && shape_is_known(out);
 }
 
 inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
@@ -146,15 +145,15 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
                                        const mxnet::TShape& oshape, mxnet::TShape *new_lshape,
                                        mxnet::TShape *new_rshape, mxnet::TShape *new_oshape) {
   if (lshape == rshape) return 0;
-  index_t odim = std::max<index_t>(oshape.ndim(), broadcast::MAX_DIM);
-  *new_lshape = mxnet::TShape(odim);
-  *new_rshape = mxnet::TShape(odim);
-  *new_oshape = mxnet::TShape(odim);
-  index_t bl = oshape.ndim() - lshape.ndim();
-  index_t br = oshape.ndim() - rshape.ndim();
-  index_t j = 0, lprod = 1, rprod = 1, oprod = 1;
-  for (index_t i = 0; i < oshape.ndim(); ++i) {
-    index_t l = 1, r = 1, o = oshape[i];
+  const int odim = std::max(oshape.ndim(), broadcast::MAX_DIM);
+  *new_lshape = mxnet::TShape(odim, 1);
+  *new_rshape = mxnet::TShape(odim, 1);
+  *new_oshape = mxnet::TShape(odim, 1);
+  int bl = oshape.ndim() - lshape.ndim();
+  int br = oshape.ndim() - rshape.ndim();
+  int j = 0, lprod = 1, rprod = 1, oprod = 1;
+  for (int i = 0; i < oshape.ndim(); ++i) {
+    int l = 1, r = 1, o = oshape[i];
     if (i >= bl) l = lshape[i-bl];
     if (i >= br) r = rshape[i-br];
     if ((lprod != rprod || l != r) &&
@@ -176,9 +175,9 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
   }
   if (j <= broadcast::MAX_DIM) {
     BROADCAST_NDIM_SWITCH(j, NDim, {
-      new_lshape->assign(&(*new_lshape)[0], &(*new_lshape)[NDim]);
-      new_rshape->assign(&(*new_rshape)[0], &(*new_rshape)[NDim]);
-      new_oshape->assign(&(*new_oshape)[0], &(*new_oshape)[NDim]);
+      new_lshape->assign(new_lshape->begin(), new_lshape->begin() + NDim);
+      new_rshape->assign(new_rshape->begin(), new_rshape->begin() + NDim);
+      new_oshape->assign(new_oshape->begin(), new_oshape->begin() + NDim);
     });
   } else {
     LOG(FATAL) << "Too many broadcast dimensions with operands " << lshape << " " << rshape;

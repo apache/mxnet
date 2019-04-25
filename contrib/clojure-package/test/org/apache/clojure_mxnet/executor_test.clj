@@ -65,10 +65,10 @@
                                 (map ndarray/->vec)
                                 first)))
     ;; test shared memory
-    (is (= [4.0 4.0 4.0]) (->> (executor/outputs exec)
-                               (map ndarray/->vec)
-                               first
-                               (take 3)))
+    (is (= [4.0 4.0 4.0] (->> (executor/outputs exec)
+                              (map ndarray/->vec)
+                              first
+                              (take 3))))
     ;; test base exec forward
     (executor/forward exec)
     (is (every? #(= 4.0 %) (->> (executor/outputs exec)
