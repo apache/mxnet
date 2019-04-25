@@ -66,29 +66,37 @@ build_ccache_wrappers() {
     # But in the beginning, we'll make this opt-in. In future, loads of processes like
     # the scala make step or numpy compilation and other pip package generations
     # could be heavily sped up by using ccache as well.
-    mkdir -p /tmp/ccache-redirects
+    mkdir /tmp/ccache-redirects
     export PATH=/tmp/ccache-redirects:$PATH
-    CCACHE=`which ccache`
-    ln -sf $CCACHE /tmp/ccache-redirects/gcc
-    ln -sf $CCACHE /tmp/ccache-redirects/gcc-8
-    ln -sf $CCACHE /tmp/ccache-redirects/g++
-    ln -sf $CCACHE /tmp/ccache-redirects/g++-8
-    ln -sf $CCACHE /tmp/ccache-redirects/nvcc
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-3.9
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-3.9
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-5.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-5.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-6.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-6.0
-    # Doesn't work: https://github.com/ccache/ccache/issues/373
-    #ln -sf $CCACHE /tmp/ccache-redirects/nvcc
-    #export NVCC="/tmp/ccache-redirects/nvcc"
+    ln -s ccache /tmp/ccache-redirects/gcc
+    ln -s ccache /tmp/ccache-redirects/gcc-8
+    ln -s ccache /tmp/ccache-redirects/g++
+    ln -s ccache /tmp/ccache-redirects/g++-8
+    ln -s ccache /tmp/ccache-redirects/nvcc
+    ln -s ccache /tmp/ccache-redirects/clang++-3.9
+    ln -s ccache /tmp/ccache-redirects/clang-3.9
+    ln -s ccache /tmp/ccache-redirects/clang++-5.0
+    ln -s ccache /tmp/ccache-redirects/clang-5.0
+    ln -s ccache /tmp/ccache-redirects/clang++-6.0
+    ln -s ccache /tmp/ccache-redirects/clang-6.0
+    ln -s ccache /usr/local/bin/gcc
+    ln -s ccache /usr/local/bin/gcc-8
+    ln -s ccache /usr/local/bin/g++
+    ln -s ccache /usr/local/bin/g++-8
+    ln -s ccache /usr/local/bin/nvcc
+    ln -s ccache /usr/local/bin/clang++-3.9
+    ln -s ccache /usr/local/bin/clang-3.9
+    ln -s ccache /usr/local/bin/clang++-5.0
+    ln -s ccache /usr/local/bin/clang-5.0
+    ln -s ccache /usr/local/bin/clang++-6.0
+    ln -s ccache /usr/local/bin/clang-6.0
+
+    export NVCC=ccache
 
     # Uncomment if you would like to debug CCache hit rates.
     # You can monitor using tail -f ccache-log
-    #export CCACHE_LOGFILE=/work/mxnet/ccache-log
-    #export CCACHE_LOGFILE=/tmp/ccache-log
-    #export CCACHE_DEBUG=1
+    # export CCACHE_LOGFILE=/work/mxnet/ccache-log
+    # export CCACHE_DEBUG=1
 }
 
 build_wheel() {
@@ -659,7 +667,8 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 
 build_ubuntu_gpu_cuda100_cudnn7() {
     set -ex
-    build_ccache_wrappers
+    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
+    # build_ccache_wrappers
     make \
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
