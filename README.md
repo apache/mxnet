@@ -95,7 +95,7 @@ Features
 * Mix and match imperative and symbolic programming to maximize flexibility and efficiency
 * Lightweight, memory efficient and portable to smart devices
 * Scales up to multi GPUs and distributed setting with auto parallelism
-* Support for Python, Scala, C++, Java, Clojure, R and Julia
+* Support for Python, Scala, C++, Java, Clojure, R, Go, Javascript, Perl, and Julia
 * Cloud-friendly and directly compatible with S3, HDFS, and Azure
 
 License
