@@ -389,6 +389,7 @@ class NDArray {
   }
   /*! \return the associated variable of the ndarray.*/
   inline Engine::VarHandle var() const {
+    CHECK(ptr_);
     return ptr_->var;
   }
   /*! \return byte offset in chunk of the ndarray*/
@@ -397,6 +398,7 @@ class NDArray {
   }
   /*! \brief return var version of the NDArray*/
   inline size_t version() const {
+    CHECK(var());
     return var()->version();
   }
   /*!
