@@ -68,15 +68,15 @@ public class BertQA {
      */
     static List<String> postProcessing(NDArray result, List<String> tokens) {
         NDArray[] output = NDArray.split(
-                NDArray.new splitParam(result, 2).setAxis(2));
+                new splitParam(result, 2).setAxis(2));
         // Get the formatted logits result
         NDArray startLogits = output[0].reshape(new int[]{0, -3});
         NDArray endLogits = output[1].reshape(new int[]{0, -3});
         // Get Probability distribution
         float[] startProb = NDArray.softmax(
-                NDArray.new softmaxParam(startLogits))[0].toArray();
+                new softmaxParam(startLogits))[0].toArray();
         float[] endProb = NDArray.softmax(
-                NDArray.new softmaxParam(endLogits))[0].toArray();
+                new softmaxParam(endLogits))[0].toArray();
         int startIdx = argmax(startProb);
         int endIdx = argmax(endProb);
         return tokens.subList(startIdx, endIdx + 1);
