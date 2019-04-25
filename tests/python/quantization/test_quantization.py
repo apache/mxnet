@@ -112,9 +112,9 @@ def test_requantize_int32_to_int8():
         min_range = mx.nd.array([-1010.0])
         max_range = mx.nd.array([1020.0])
         if min_calib_range is None or max_calib_range is None:
-            qdata_int8, min_output, max_output = mx.nd.contrib.requantize(qdata, min_range, max_range)
+            qdata_int8, min_output, max_output = mx.nd.contrib.requantize(qdata, min_range, max_range, 'int8')
         else:
-            qdata_int8, min_output, max_output = mx.nd.contrib.requantize(qdata, min_range, max_range,
+            qdata_int8, min_output, max_output = mx.nd.contrib.requantize(qdata, min_range, max_range, 'int8',
                                                                           min_calib_range, max_calib_range)
 
         qdata_int8_np, min_output_np, max_output_np = requantize_baseline(qdata.asnumpy(), min_range.asscalar(),

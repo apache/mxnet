@@ -38,9 +38,9 @@ namespace mxnet {
 namespace op {
 
 struct RequantizeParam : public dmlc::Parameter<RequantizeParam> {
+  int out_type;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
-  int out_type;
   DMLC_DECLARE_PARAMETER(RequantizeParam) {
     DMLC_DECLARE_FIELD(out_type)
       .add_enum("auto", QuantizeOutType::kAuto)
