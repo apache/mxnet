@@ -396,7 +396,7 @@ inline size_t NDArray::Size() const {
   if (static_cast<mxnet::NDArray*>(handle)->is_none())
     return 0u;
   size_t ret = 1;
-  for (auto &i : shape) ret *= i;
+  for (auto &i : GetShape()) ret *= i;
   return ret;
 }
 
