@@ -31,7 +31,23 @@
 
 (defn
  exponential
- "Draw random samples from an exponential distribution.\n\nSamples are distributed according to an exponential distribution parametrized by *lambda* (rate).\n\nExample::\n\n   exponential(lam=4, shape=(2,2)) = [[ 0.0097189 ,  0.08999364],\n                                      [ 0.04146638,  0.31715935]]\n\n\nDefined in src/operator/random/sample_op.cc:L137\n\n`lam`: Lambda parameter (rate) of the exponential distribution. (optional)\n`shape`: Shape of the output. (optional)\n`ctx`: Context of output, in format [cpu|gpu|cpu_pinned](n). Only used for imperative calls. (optional)\n`dtype`: DType of the output in case this can't be inferred. Defaults to float32 if not defined (dtype=None). (optional)\n`out`: Output array. (optional)\n"
+ "Draw random samples from an exponential distribution.
+  
+  Samples are distributed according to an exponential distribution parametrized by *lambda* (rate).
+  
+  Example::
+  
+     exponential(lam=4, shape=(2,2)) = [[ 0.0097189 ,  0.08999364],
+                                        [ 0.04146638,  0.31715935]]
+  
+  
+  Defined in src/operator/random/sample_op.cc:L137
+  
+  `lam`: Lambda parameter (rate) of the exponential distribution. (optional)
+  `shape`: Shape of the output. (optional)
+  `ctx`: Context of output, in format [cpu|gpu|cpu_pinned](n). Only used for imperative calls. (optional)
+  `dtype`: DType of the output in case this can't be inferred. Defaults to float32 if not defined (dtype=None). (optional)
+  `out`: Output array. (optional)"
  ([] (exponential {}))
  ([{:keys [lam shape ctx dtype out],
     :or {lam nil, shape nil, ctx nil, dtype nil, out nil},
@@ -46,7 +62,24 @@
 
 (defn
  gamma
- "Draw random samples from a gamma distribution.\n\nSamples are distributed according to a gamma distribution parametrized by *alpha* (shape) and *beta* (scale).\n\nExample::\n\n   gamma(alpha=9, beta=0.5, shape=(2,2)) = [[ 7.10486984,  3.37695289],\n                                            [ 3.91697288,  3.65933681]]\n\n\nDefined in src/operator/random/sample_op.cc:L125\n\n`alpha`: Alpha parameter (shape) of the gamma distribution. (optional)\n`beta`: Beta parameter (scale) of the gamma distribution. (optional)\n`shape`: Shape of the output. (optional)\n`ctx`: Context of output, in format [cpu|gpu|cpu_pinned](n). Only used for imperative calls. (optional)\n`dtype`: DType of the output in case this can't be inferred. Defaults to float32 if not defined (dtype=None). (optional)\n`out`: Output array. (optional)\n"
+ "Draw random samples from a gamma distribution.
+  
+  Samples are distributed according to a gamma distribution parametrized by *alpha* (shape) and *beta* (scale).
+  
+  Example::
+  
+     gamma(alpha=9, beta=0.5, shape=(2,2)) = [[ 7.10486984,  3.37695289],
+                                              [ 3.91697288,  3.65933681]]
+  
+  
+  Defined in src/operator/random/sample_op.cc:L125
+  
+  `alpha`: Alpha parameter (shape) of the gamma distribution. (optional)
+  `beta`: Beta parameter (scale) of the gamma distribution. (optional)
+  `shape`: Shape of the output. (optional)
+  `ctx`: Context of output, in format [cpu|gpu|cpu_pinned](n). Only used for imperative calls. (optional)
+  `dtype`: DType of the output in case this can't be inferred. Defaults to float32 if not defined (dtype=None). (optional)
+  `out`: Output array. (optional)"
  ([] (gamma {}))
  ([{:keys [alpha beta shape ctx dtype out],
     :or {alpha nil, beta nil, shape nil, ctx nil, dtype nil, out nil},
