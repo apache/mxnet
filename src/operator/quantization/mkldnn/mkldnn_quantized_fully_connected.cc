@@ -74,7 +74,7 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
     int32_t *quantized_bias_ptr = quantized_bias.data().dptr<int32_t>();
     size_t bias_size = bias.shape().Size();
     #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (size_t i = 0; i < bias_size; ++i) {
+    for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
       quantized_bias_ptr[i] = bias_ptr[i] * bias_int32_rescale;
     }
   }

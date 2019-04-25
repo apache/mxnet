@@ -40,6 +40,7 @@ core_logic: {
     custom_steps.compile_unix_cmake_mkldnn_gpu(),
     custom_steps.compile_unix_cmake_gpu(),
     custom_steps.compile_unix_tensorrt_gpu(),
+    custom_steps.compile_unix_int64_gpu()
   ]) 
 
   utils.parallel_stage('Tests', [
@@ -50,8 +51,7 @@ core_logic: {
     custom_steps.test_unix_python2_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
-// Disabled temporarily for https://github.com/apache/incubator-mxnet/issues/14626
-//    custom_steps.test_unix_python3_tensorrt_gpu(),
+    custom_steps.test_unix_python3_tensorrt_gpu(),
     custom_steps.test_unix_perl_gpu(),
     custom_steps.test_unix_r_gpu(),
     custom_steps.test_unix_cpp_gpu(),

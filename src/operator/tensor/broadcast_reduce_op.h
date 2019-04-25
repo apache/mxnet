@@ -312,6 +312,23 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+inline bool ReduceMinMaxAxesShape(const nnvm::NodeAttrs& attrs,
+                                  mxnet::ShapeVector *in_attrs,
+                                  mxnet::ShapeVector *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if (!shape_is_known((*in_attrs)[0])) return false;
+  CHECK_GT((*in_attrs)[0].Size(), 0U)
+    << "Reduction input's size should > 0 "
+    << (*in_attrs)[0];
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
+                                         param.keepdims, param.exclude));
+  return true;
+}
+
+
 inline bool NormType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_attrs,
                      std::vector<int> *out_attrs) {
@@ -1484,6 +1501,16 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   .set_num_outputs(1)                                           \
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<mxnet::FInferShape>("FInferShape", ReduceAxesShape)  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
+  .add_argument("data", "NDArray-or-Symbol", "The input")       \
+  .add_arguments(ReduceAxesParam::__FIELDS__())
+
+#define MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(name)             \
+  NNVM_REGISTER_OP(name)                                        \
+  .set_num_inputs(1)                                            \
+  .set_num_outputs(1)                                           \
+  .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
+  .set_attr<mxnet::FInferShape>("FInferShape", ReduceMinMaxAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .add_argument("data", "NDArray-or-Symbol", "The input")       \
   .add_arguments(ReduceAxesParam::__FIELDS__())

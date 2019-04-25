@@ -49,7 +49,7 @@ template<typename T>
 inline size_t SerializedSize(const T &obj);
 
 template<typename T>
-inline size_t SerializedSize(const nnvm::Tuple <T> &obj);
+inline size_t SerializedSize(const mxnet::Tuple <T> &obj);
 
 template<typename K, typename V>
 inline size_t SerializedSize(const std::map <K, V> &obj);
@@ -64,7 +64,7 @@ template<typename T>
 inline void Serialize(const T &obj, char **buffer);
 
 template<typename T>
-inline void Serialize(const nnvm::Tuple <T> &obj, char **buffer);
+inline void Serialize(const mxnet::Tuple <T> &obj, char **buffer);
 
 template<typename K, typename V>
 inline void Serialize(const std::map <K, V> &obj, char **buffer);
@@ -79,7 +79,7 @@ template<typename T>
 inline void Deserialize(T *obj, const std::string &buffer, size_t *curr_pos);
 
 template<typename T>
-inline void Deserialize(nnvm::Tuple <T> *obj, const std::string &buffer, size_t *curr_pos);
+inline void Deserialize(mxnet::Tuple <T> *obj, const std::string &buffer, size_t *curr_pos);
 
 template<typename K, typename V>
 inline void Deserialize(std::map <K, V> *obj, const std::string &buffer, size_t *curr_pos);
@@ -102,7 +102,7 @@ inline size_t SerializedSize(const T &obj) {
 }
 
 template<typename T>
-inline size_t SerializedSize(const nnvm::Tuple <T> &obj) {
+inline size_t SerializedSize(const mxnet::Tuple <T> &obj) {
   if (is_container<T>::value) {
     size_t sum_val = 4;
     for (const auto& el : obj) {
@@ -180,7 +180,7 @@ inline void Serialize(const T &obj, char **buffer) {
 }
 
 template<typename T>
-inline void Serialize(const nnvm::Tuple <T> &obj, char **buffer) {
+inline void Serialize(const mxnet::Tuple <T> &obj, char **buffer) {
   uint32_t size = obj.ndim();
   std::memcpy(*buffer, &size, 4);
   *buffer += 4;
@@ -244,7 +244,7 @@ inline void Deserialize(T *obj, const std::string &buffer, size_t *curr_pos) {
 }
 
 template<typename T>
-inline void Deserialize(nnvm::Tuple <T> *obj, const std::string &buffer, size_t *curr_pos) {
+inline void Deserialize(mxnet::Tuple <T> *obj, const std::string &buffer, size_t *curr_pos) {
   uint32_t size = obj->ndim();
   std::memcpy(&size, &buffer[*curr_pos], 4);
   *curr_pos += 4;
