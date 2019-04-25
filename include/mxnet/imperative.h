@@ -168,7 +168,7 @@ class Imperative {
   /*! \brief find the input/output ndarrays that are needed for backward */
   void GetBackwardDependency(
       const nnvm::NodePtr& node,
-      uint32_t num_inputs, uint32_t num_outputs,
+      size_t num_inputs, size_t num_outputs,
       std::vector<bool> *p_save_inputs,
       std::vector<bool> *p_save_outputs);
   /*! \brief indicate whether is training. */

@@ -124,7 +124,7 @@ void Imperative::MarkVariables(
     const std::vector<NDArray*>& variables,
     const std::vector<mx_uint>& grad_reqs,
     const std::vector<NDArray*>& gradients) {
-  for (uint32_t i = 0; i < variables.size(); ++i) {
+  for (size_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
 
     variables[i]->entry_ = nnvm::NodeEntry{
@@ -146,7 +146,7 @@ void Imperative::MarkVariables(
 
 void Imperative::GetBackwardDependency(
     const nnvm::NodePtr& node,
-    uint32_t num_inputs, uint32_t num_outputs,
+    size_t num_inputs, size_t num_outputs,
     std::vector<bool> *p_save_inputs,
     std::vector<bool> *p_save_outputs) {
   static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
@@ -159,14 +159,14 @@ void Imperative::GetBackwardDependency(
 
   node->inputs.clear();
   node->inputs.reserve(num_inputs);
-  for (uint32_t i = 0; i < num_inputs; ++i) {
+  for (size_t i = 0; i < num_inputs; ++i) {
     node->inputs.emplace_back(nnvm::NodeEntry{nullptr, i, 0});
   }
 
   if (fgradient.count(node->op())) {
     std::vector<nnvm::NodeEntry> ograd_entries;
     ograd_entries.reserve(num_outputs);
-    for (uint32_t i = 0; i < num_outputs; ++i) {
+    for (size_t i = 0; i < num_outputs; ++i) {
       ograd_entries.emplace_back(nnvm::NodeEntry{nullptr, i, 1});
     }
     auto igrad_entries = fgradient[node->op()](node, ograd_entries);
@@ -263,7 +263,7 @@ void Imperative::RecordOp(
       << "recording with autograd.";
   }
 
-  for (uint32_t i = 0; i < outputs.size(); ++i) {
+  for (size_t i = 0; i < outputs.size(); ++i) {
     if (save_outputs[i]) {
       info.outputs.emplace_back(outputs[i]->Detach());
     } else {
