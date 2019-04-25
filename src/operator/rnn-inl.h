@@ -28,7 +28,6 @@
 
 #define MXNET_USE_CUDNN_RNN MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 #define USE_CUDNN_LSTM_PROJ MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
-#define MXNET_USE_MKLDNN_RNN MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -44,7 +43,7 @@
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
 #include "./rnn_impl.h"
-#if MXNET_USE_MKLDNN_RNN
+#if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
 #include "./nn/mkldnn/mkldnn_rnn_impl.h"
 #endif
 
@@ -819,7 +818,7 @@ class RNNOp {
                                   param_.p,
                                   param_.mode);
       } else {
-        #if MXNET_USE_MKLDNN_RNN
+        #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
         if (param_.mode != rnn_enum::kGru) {
           //  mkldnn Gru has precision issue
           int dtype = in_data[rnn_enum::kData].type_flag_;
@@ -1517,7 +1516,7 @@ void RNNStatefulCompute(const OpStatePtr& state,
   });
 }
 
-#if MXNET_USE_MKLDNN_RNN
+#if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
 static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
                                   const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
