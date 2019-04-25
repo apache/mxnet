@@ -182,7 +182,7 @@ std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(
     const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
-  size_t i = 0;
+  decltype(nnvm::NodeEntry::index) i = 0;
   for (const auto& x : n->inputs) {
     std::ostringstream os;
     os << n->attrs.name << "_backward_" << i;
