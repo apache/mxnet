@@ -45,9 +45,9 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
                                               const std::vector<NDArray>& out_data) {
   const RequantizeElemwiseAddParam& params = nnvm::get<RequantizeElemwiseAddParam>(attrs.parsed);
   // A, B, A_min, A_max, B_min, B_max
-  CHECK_EQ(in_data.size(), 6U);
+  CHECK_EQ(in_data.size(), 6U) << "should be A, B, A_min, A_max, B_min, B_max";
   // C, C_min, C_max
-  CHECK_EQ(out_data.size(), 3U);
+  CHECK_EQ(out_data.size(), 3U) << "should be C, C_min, C_max";
   // Collect data min,max,absmax
   const float dataA_min = in_data[quantized_elemwise_add_enum::kAMin].data().dptr<float>()[0];
   const float dataB_min = in_data[quantized_elemwise_add_enum::kBMin].data().dptr<float>()[0];
@@ -118,14 +118,14 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
     } else {
       // x*dataA_absmax/dataA_range = y*(dataA_absmax+dataB_absmax)/output_range
       if (is_dataA_int8 == true) {
-        u8_reorder_scale = dataB_absmax*output_data_range
+        u8_reorder_scale = dataB_absmax * output_data_range
                            / ((dataA_absmax + dataB_absmax)*kUint8Range);
         scales[0] = dataA_absmax*output_data_range
                          / ((dataA_absmax + dataB_absmax)*dataA_range);
       } else {
-        u8_reorder_scale = dataA_absmax*output_data_range
+        u8_reorder_scale = dataA_absmax * output_data_range
                            / ((dataA_absmax + dataB_absmax)*dataA_range);
-        scales[1] = dataB_absmax*output_data_range
+        scales[1] = dataB_absmax * output_data_range
                          / ((dataA_absmax + dataB_absmax)*kInt8Range);
       }
     }
@@ -150,8 +150,8 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
       scales[0] = out_data_scale / A_scale;
       scales[1] = out_data_scale / B_scale;
     } else {
-      scales[0] = dataA_absmax*output_data_range / ((dataA_absmax + dataB_absmax)*dataA_range);
-      scales[1] = dataB_absmax*output_data_range / ((dataA_absmax + dataB_absmax)*dataA_range);
+      scales[0] = dataA_absmax * output_data_range / ((dataA_absmax + dataB_absmax) * dataA_range);
+      scales[1] = dataB_absmax * output_data_range / ((dataA_absmax + dataB_absmax) * dataA_range);
     }
   }
 

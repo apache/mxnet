@@ -122,7 +122,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .set_attr<FCompute>("FCompute<cpu>", QuantizedElemwiseAddForward)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .add_argument("lhs", "NDArray-or-Symbol", "first input")
-.add_argument("rhs", "NDArray-or-Symbol", "4th input")
+.add_argument("rhs", "NDArray-or-Symbol", "second input")
 .add_argument("lhs_min", "NDArray-or-Symbol", "second input")
 .add_argument("lhs_max", "NDArray-or-Symbol", "third input")
 .add_argument("rhs_min", "NDArray-or-Symbol", "5th input")
