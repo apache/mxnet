@@ -1255,14 +1255,16 @@ void GraphExecutor::ExecuteMonInputCallback(size_t nid) {
   CHECK_EQ(opnode.exec->in_array.size(), input_names.size());
   for (size_t i = 0; i < opnode.exec->in_array.size(); ++i) {
     if (node->inputs[i].node->is_variable()) {
-    // Monitor variable
-    NDArray *cpy = new NDArray(opnode.exec->in_array[i]);
-    std::string name = node->inputs[i].node->attrs.name;
-    this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+      // Monitor variable
+      NDArray *cpy = new NDArray(opnode.exec->in_array[i]);
+      std::string name = node->inputs[i].node->attrs.name;
+      this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+      delete cpy;
     }
     NDArray *cpy = new NDArray(opnode.exec->in_array[i]);
     std::string name = inode.source->attrs.name + "_" + input_names[i];
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+    delete cpy;
   }
 }
 
@@ -1286,6 +1288,7 @@ void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
     std::string name = inode.source->attrs.name + "_" + output_names[i];
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+    delete cpy;
   }
 }
 
