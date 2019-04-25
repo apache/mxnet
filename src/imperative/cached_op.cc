@@ -285,7 +285,7 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   CheckAndInferShape(&g, std::move(shape_inputs), true,
                      {0, 0}, {0, 0},
                      &contain_dynamic_shape);
-  if (erase_result) {
+  if (contain_dynamic_shape && erase_result) {
     g.attrs.erase("shape");
     g.attrs.erase("shape_inputs");
   }
@@ -705,6 +705,10 @@ void CachedOp::StaticRunOps(
           arg_shapes.emplace_back(ndinput->shape());
           arg_dtypes.emplace_back(ndinput->dtype());
         }
+        if (!state.op_states[i]) {
+          state.op_states[i] =
+              createop[node.source->op()](node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
+        }
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
             dispatch_mode, state.op_states[i]);
@@ -908,7 +912,7 @@ OpStatePtr CachedOp::Forward(
 
   OpStatePtr op_state;
   try {
-    if (config_.is_dynamic && CheckDynamicShapeExists(default_ctx, inputs, true)) {
+    if (config_.is_dynamic || CheckDynamicShapeExists(default_ctx, inputs, true)) {
       config_.is_dynamic = true;
       config_.static_alloc = false;
       op_state = DynamicForward(default_ctx, inputs, outputs, true);

@@ -302,7 +302,10 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
 
     OpStatePtr state = fcreate_op_state[op](
         inode.source->attrs, vctx[i], ishape, itype);
-    if (p_state) p_state->at(i) = state;
+    if (p_state) {
+      CHECK_GT(p_state->size(), i);
+      p_state->at(i) = state;
+    }
     FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
         op, "FStatefulComputeEx", vctx[i]);
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
