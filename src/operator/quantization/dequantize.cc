@@ -84,6 +84,10 @@ by keep zero centered for the quantized value:
 .set_attr_parser(ParamParser<DequantizeParam>)
 .set_num_inputs(3)
 .set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "min_range", "max_range"};
+  })
 .set_attr<mxnet::FInferShape>("FInferShape", DequantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", DequantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", DequantizeStorageType)
