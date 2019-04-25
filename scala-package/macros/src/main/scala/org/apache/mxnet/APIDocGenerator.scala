@@ -23,12 +23,16 @@ import java.security.MessageDigest
 import scala.collection.mutable.ListBuffer
 
 /**
-  * This object will generate the Scala documentation of the new Scala API
-  * Two file namely: SymbolAPIBase.scala and NDArrayAPIBase.scala
+  * This object will generate the Scala documentation of the Scala/Java APIs
   * The code will be executed during Macros stage and file live in Core stage
   */
 private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
 
+  /**
+    * Main method used to generate code and write to files
+    * A hash check placed at the end to verify changes
+    * @param args Input args
+    */
   def main(args: Array[String]): Unit = {
     val FILE_PATH = args(0)
     val hashCollector = ListBuffer[String]()
@@ -42,6 +46,12 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
     val finalHash = hashCollector.mkString("\n")
   }
 
+  /**
+    * Generate MD5 result from an input string
+    * Encoded in UTF-8
+    * @param input The input string
+    * @return A MD5 value from the string
+    */
   def MD5Generator(input: String): String = {
     val md = MessageDigest.getInstance("MD5")
     md.update(input.getBytes("UTF-8"))
@@ -49,6 +59,12 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
     org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString(digest)
   }
 
+  /**
+    * Type-safe class body generation for NDArray/Symbol
+    * @param FILE_PATH File path write the file to
+    * @param isSymbol Check if write the Symbol API, NDArray otherwise
+    * @return MD5 String
+    */
   def typeSafeClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
     val generated = typeSafeFunctionsToGenerate(isSymbol, isContrib = false)
       .map { func =>
@@ -65,6 +81,12 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
       generated)
   }
 
+  /**
+    * Generate the Random classes for Symbol/NDArray
+    * @param FILE_PATH File path write the file to
+    * @param isSymbol Check if write the Symbol API, NDArray otherwise
+    * @return MD5 String
+    */
   def typeSafeRandomClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
     val generated = typeSafeRandomFunctionsToGenerate(isSymbol)
       .map { func =>
@@ -83,6 +105,16 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
       generated)
   }
 
+  /**
+    * Non Type-safe interface of Scala Symbol/NDArray
+    * It includes class definition : e.g class SymbolBase
+    * and function definitions : e.g def softmax(...)(...)(...) : NDArray
+    * Users can directly use the api by calling NDArray.<function_name>
+    * It support both positional input or Map input
+    * @param FILE_PATH File path write the file to
+    * @param isSymbol Check if write the Symbol API, NDArray otherwise
+    * @return MD5 String
+    */
   def nonTypeSafeClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
     val absFuncs = functionsToGenerate(isSymbol, isContrib = false)
       .map { func =>
@@ -112,7 +144,12 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
       absFuncs)
   }
 
-  def javaClassGen(filePath : String) : String = {
+  /**
+    * Type-safe interface of Java NDArray
+    * @param FILE_PATH File path write the file to
+    * @return MD5 String
+    */
+  def javaClassGen(FILE_PATH : String) : String = {
     val notGenerated = Set("Custom")
     val absClassFunctions = functionsToGenerate(false, false, true)
     val absFuncs = absClassFunctions.filterNot(ele => notGenerated.contains(ele.name))
@@ -133,13 +170,19 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
     val packageName = "NDArrayBase"
     val packageDef = "package org.apache.mxnet.javaapi"
     writeFile(
-      filePath + "javaapi/",
+      FILE_PATH + "javaapi/",
       packageDef,
       packageName,
       "import org.apache.mxnet.annotation.Experimental",
       absFuncs)
   }
 
+  /**
+    * Generate Scala docs from the function description
+    * @param func The function case class
+    * @param withParam Whether to generate param field
+    * @return A formatted string for the function description
+    */
   def generateAPIDocFromBackend(func: Func, withParam: Boolean = true): String = {
     def fixDesc(desc: String): String = {
       var curDesc = desc
@@ -173,6 +216,14 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
     }
   }
 
+  /**
+    * Generate the function interface
+    * e.g: def softmax(data: NDArray, name ...): NDArrayFunctionReturn
+    * @param func The function case class
+    * @param isSymbol Check if generate Symbol function, NDArray otherwise
+    * @param typeParameter Type param specifically used in Random Module
+    * @return Formatted string for the function
+    */
   def generateAPISignature(func: Func, isSymbol: Boolean, typeParameter: String = ""): String = {
     val argDef = ListBuffer[String]()
 
@@ -192,6 +243,11 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
        |def ${func.name}$typeParameter (${argDef.mkString(", ")}): $returnType""".stripMargin
   }
 
+  /**
+    * Generate Java function interface
+    * @param func The function case class
+    * @return A formatted string for the function
+    */
   def generateJavaAPISignature(func : Func) : String = {
     val useParamObject = func.listOfArgs.count(arg => arg.isOptional) >= 2
     var argDef = ListBuffer[String]()
@@ -250,6 +306,15 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
     }
   }
 
+  /**
+    * Write the formatted string to file
+    * @param FILE_PATH Location of the file writes to
+    * @param packageDef Package definition
+    * @param className Class name
+    * @param imports Packages need to import
+    * @param absFuncs All formatted functions
+    * @return A MD5 string
+    */
   def writeFile(FILE_PATH: String, packageDef: String, className: String,
                 imports: String, absFuncs: Seq[String]): String = {
 

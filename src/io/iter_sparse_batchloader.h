@@ -67,7 +67,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     this->head_ = 0;
     // if overflown from previous round, directly return false, until before first is called
     if (num_overflow_ != 0) return false;
-    index_t top = 0;
+    size_t top = 0;
     offsets_.clear();
     while (sparse_base_->Next()) {
       const DataInst& inst = sparse_base_->Value();
