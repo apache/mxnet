@@ -316,9 +316,6 @@ void adjustIdsForRemovalOf(Value::ValueIterator& itr, uint currentId,
       it->second -= 1;
     }
   }
-//  for (uint i = currentId + 1; i <= nodes.Size(); i++) {
-//    newIds[i] -= 1;
-//  }
   newIds.erase(currentId);
 }
 
@@ -473,18 +470,13 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
     //cout << (*itr)["name"].GetString() << endl;
   }
 
-  uint maxId = 0;
-  for (uint i = 0; i <= nodes.Size(); i++) {
-    if (newIds.count(i) == 0) {
-      continue;
-    }
-    cout << i << " -> " << newIds[i] << endl;
-    maxId = newIds[i];
-  }
 
   // update heads 
-  // heads : total num of nodes : [[index last element, 0, 0]]
-  heads[0][0].SetInt(maxId - 1);
+  for (Value::ValueIterator itr = heads.Begin(); itr != heads.End(); ++itr) {
+    uint formerId = (*itr)[0].GetUint();
+    CHECK(newIds.count(formerId) > 0);
+    (*itr)[0].SetUint(newIds[formerId]);
+  }
 
   // update nodes  
   nodes = nodes_new;
