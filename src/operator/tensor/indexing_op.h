@@ -1273,7 +1273,9 @@ inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0], -1);
 
-  for (int i = 0; i < ishape.ndim() - 1; ++i) oshape[i] = ishape[i+1];
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
+    oshape[i] = ishape[i+1];
+  }
   for (int i = 0; i < dshape.ndim() - ishape[0]; ++i) {
     oshape[ishape.ndim()-1+i] = dshape[ishape[0] + i];
   }

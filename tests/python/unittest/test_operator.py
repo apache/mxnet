@@ -3419,12 +3419,19 @@ def test_norm():
     in_data_dim = random_sample([4,5,6], 1)[0]
     in_shape = rand_shape_nd(in_data_dim, dim=5)
     epsilon = 1e-3
-    acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64}
+    acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64,
+                np.int32: np.int32, np.int64: np.int64}
+    is_windows = sys.platform.startswith('win')
     for order in [1, 2]:
-        for dtype in [np.float16, np.float32, np.float64]:
+        for dtype in [np.float16, np.float32, np.float64, np.int32, np.int64]:
             for i in range(in_data_dim):
-                for out_dtype in ['float32', 'float64']:
+                for out_dtype in ['float32', 'float64', 'int32', 'int64']:
+                    if (dtype == np.int32 or dtype == np.int64) and ('int' not in out_dtype or is_windows):
+                        continue
+                    if dtype != np.int32 and dtype != np.int64 and 'int' in out_dtype:
+                        continue
                     backward_dtype = np.float32 if out_dtype == 'float32' else np.float64
+                    skip_backward = 'int' in out_dtype
                     print(order, dtype, i, out_dtype, in_shape)
                     in_data = np.random.uniform(-1, 1, in_shape).astype(acc_type[dtype])
                     in_data[abs(in_data) < epsilon] = 2 * epsilon
@@ -3433,13 +3440,14 @@ def test_norm():
                     npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
                     check_symbolic_forward(norm_sym, [in_data.astype(dtype)], [npy_out.astype(out_dtype)],
                                            rtol=1e-3, atol=1e-5, ctx=ctx)
-                    check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
-                                            [np.ones(npy_out.shape).astype(out_dtype)],
-                                            [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
-                                            dtype=backward_dtype)
+                    if not skip_backward:
+                        check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
+                                                [np.ones(npy_out.shape).astype(out_dtype)],
+                                                [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
+                                                dtype=backward_dtype)
                     # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
                     # check gradient
-                    if dtype is not np.float16:
+                    if dtype is not np.float16 and not skip_backward:
                         check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
                                                rtol=1e-1, atol=1e-3, dtype=backward_dtype)
                     if i < in_data_dim-1:
@@ -3449,12 +3457,13 @@ def test_norm():
                         check_symbolic_forward(norm_sym, [in_data], [npy_out.astype(dtype)],
                                                rtol=1e-3 if dtype is np.float16 else 1e-3,
                                                atol=1e-5 if dtype is np.float16 else 1e-5, ctx=ctx)
-                        check_symbolic_backward(norm_sym, [in_data],
-                                                [np.ones(npy_out.shape).astype(out_dtype)],
-                                                [npy_out_backward.astype(out_dtype)],
-                                                rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
+                        if not skip_backward:
+                            check_symbolic_backward(norm_sym, [in_data],
+                                                    [np.ones(npy_out.shape).astype(out_dtype)],
+                                                    [npy_out_backward.astype(out_dtype)],
+                                                    rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
                         # check gradient
-                        if dtype is not np.float16:
+                        if dtype is not np.float16 and not skip_backward:
                             check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
                                                    rtol=1e-1, atol=1e-3, dtype=backward_dtype)
 

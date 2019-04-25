@@ -662,7 +662,7 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       << "step and begin must have the same length";
   }
 
-  for (index_t i = 0; i < param_begin.ndim(); ++i) {
+  for (int i = 0; i < param_begin.ndim(); ++i) {
     index_t s = param_step.ndim() != 0U && param_step[i].has_value() ? param_step[i].value() : 1;
     CHECK_NE(s, 0) << "slice op step[" << i << "] cannot be 0";
 
@@ -736,11 +736,11 @@ inline bool SliceOpShape(const nnvm::NodeAttrs& attrs,
   MXNET_NDIM_SWITCH(dshape.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
-    for (index_t i = 0; i < param.begin.ndim(); ++i) {
+    for (int i = 0; i < param.begin.ndim(); ++i) {
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(i, b, e, s, &oshape);
     }
-  });
+  })
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return shape_is_known(oshape);
@@ -953,7 +953,7 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(i, b, e, s, &vshape);
     }
-  });
+  })
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, vshape);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
   return true;
@@ -1169,7 +1169,7 @@ inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,
   }
   mxnet::TShape shape(ishape.ndim(), -1);
   for (int i = 0; i < ishape.ndim(); ++i) {
-    if (static_cast<int>(i) == axis) {
+    if (i == axis) {
       shape[i] = static_cast<index_t>(end - begin);
     } else {
       shape[i] = ishape[i];
@@ -1227,7 +1227,7 @@ void SliceAxisGrad_(const nnvm::NodeAttrs& attrs,
   int axis;
   index_t begin, end;
   GetSliceAxisParams(param, outputs[0].shape_, &axis, &begin, &end);
-  int ndim = static_cast<int>(outputs[0].shape_.ndim());
+  int ndim = outputs[0].shape_.ndim();
 
   if (axis + 1 == ndim) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -1293,12 +1293,12 @@ inline bool SliceLikeShape(const nnvm::NodeAttrs& attrs,
   } else {
     mxnet::TShape shape(ishape);
     for (int i = 0; i < param.axes.ndim(); ++i) {
-      int axis = static_cast<int>(param.axes[i]);
+      int axis = param.axes[i];
       if (axis < 0) {
-        axis += static_cast<int>(ishape.ndim());
+        axis += ishape.ndim();
       }
       CHECK_GE(axis, 0)
-        << "Slice axis: " << static_cast<int>(param.axes[i]) << " too small";
+        << "Slice axis: " << param.axes[i] << " too small";
       CHECK_GT(ishape.ndim(), axis)
         << "Slice axis: " << axis << " exceeds first input: " << ishape.ndim();
       CHECK_GT(from_shape.ndim(), axis)
@@ -1330,15 +1330,15 @@ inline void SliceLikeInferRanges(const mxnet::TShape& dshape,
     }
   } else {
     for (int i = 0; i < axes.ndim(); ++i) {
-      int axis = static_cast<int>(axes[i]);
+      int axis = axes[i];
       if (axis < 0) {
-        axis += static_cast<int>(dshape.ndim());
+        axis += dshape.ndim();
       }
       CHECK_GE(axis, 0)
-        << "Slice axis: " << static_cast<int>(axes[i]) << " too small";
-      CHECK_LT(axis, static_cast<int>(dshape.ndim()))
+        << "Slice axis: " << axes[i] << " too small";
+      CHECK_LT(axis, dshape.ndim())
         << "Slice axis: " << axis << " exceeds first input: " << dshape.ndim();
-      CHECK_LT(axis, static_cast<int>(fshape.ndim()))
+      CHECK_LT(axis, fshape.ndim())
         << "Slice axis: " << axis << " exceeds first input: " << fshape.ndim();
       pb[axis] = 0;
       pe[axis] = fshape[axis];
