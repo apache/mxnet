@@ -1251,7 +1251,7 @@ void EdgeIDForwardCsrImpl(const OpContext& ctx,
   CHECK_EQ(req, kWriteTo) << "EdgeID with CSR only supports kWriteTo";
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const NDArray& u = inputs[1];
-  const nnvm::dim_t out_elems = u.shape().Size();
+  const dim_t out_elems = u.shape().Size();
   if (!inputs[0].storage_initialized()) {
     MSHADOW_TYPE_SWITCH(output.dtype(), DType, {
       Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
@@ -1408,7 +1408,7 @@ Example:
 struct SubgraphCompactParam : public dmlc::Parameter<SubgraphCompactParam> {
   int num_args;
   bool return_mapping;
-  nnvm::Tuple<nnvm::dim_t> graph_sizes;
+  mxnet::Tuple<dim_t> graph_sizes;
   DMLC_DECLARE_PARAMETER(SubgraphCompactParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(2)
     .describe("Number of input arguments.");

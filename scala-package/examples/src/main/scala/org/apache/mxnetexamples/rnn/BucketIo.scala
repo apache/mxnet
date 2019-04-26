@@ -251,11 +251,11 @@ object BucketIo {
     override def getPad(): Int = 0
 
     // The name and shape of label provided by this iterator
-    @deprecated
+    @deprecated("Use provideLabelDesc instead", "1.3.0")
     override def provideLabel: ListMap[String, Shape] = this._provideLabel
 
     // The name and shape of data provided by this iterator
-    @deprecated
+    @deprecated("Use provideDataDesc instead", "1.3.0")
     override def provideData: ListMap[String, Shape] = this._provideData
 
     // Provide type:DataDesc of the data

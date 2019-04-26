@@ -1233,9 +1233,7 @@ You can do a dockerized cross compilation build on your local machine or a nativ
 The complete MXNet library and its requirements can take almost 200MB of RAM, and loading large models with the library can take over 1GB of RAM. Because of this, we recommend running MXNet on the Raspberry Pi 3 or an equivalent device that has more than 1 GB of RAM and a Secure Digital (SD) card that has at least 4 GB of free memory.
 
 ## Quick installation
-You can use this [pre-built Python wheel](wget https://mxnet-public.s3.amazonaws.com/install/raspbian/mxnet-1.5.0-py2.py3-none-any.whl) on a Raspberry Pi 3B with Stretch. You will likely need to install several dependencies to get MXNet to work. Refer to the following **Build** section for details.
-
-**Cross compilation build (Experimental)**
+You can use this [pre-built Python wheel](https://mxnet-public.s3.amazonaws.com/install/raspbian/mxnet-1.5.0-py2.py3-none-any.whl) on a Raspberry Pi 3B with Stretch. You will likely need to install several dependencies to get MXNet to work. Refer to the following **Build** section for details.
 
 ## Docker installation
 **Step 1**  Install Docker on your machine by following the [docker installation instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
@@ -1248,18 +1246,22 @@ Follow the four steps in this [docker documentation](https://docs.docker.com/eng
 
 ## Build
 
-**Please use a Native build with gcc 4 as explained below, higher compiler versions currently cause test
-failures on ARM**
+**This cross compilation build is experimental.**
 
-The following command will build a container with dependencies and tools and then compile MXNet for
-ARMv7. The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none-any.whl`, copy this
-file to your Raspberry Pi.
+**Please use a Native build with gcc 4 as explained below, higher compiler versions currently cause test failures on ARM.**
+
+The following command will build a container with dependencies and tools,
+and then compile MXNet for ARMv7.
+You will want to run this on a fast cloud instance or locally on a fast PC to save time.
+The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none-any.whl`.
+Copy this file to your Raspberry Pi.
+The previously mentioned pre-built wheel was created using this method.
 
 ```
 ci/build.py -p armv7
 ```
 
-## Install
+## Install using a pip wheel
 
 Your Pi will need several dependencies.
 
@@ -1282,6 +1284,7 @@ sudo apt-get install -y \
     libzmq3-dev \
     ninja-build \
     python-dev \
+    python-pip \
     software-properties-common \
     sudo \
     unzip \
@@ -1298,18 +1301,24 @@ virtualenv -p `which python` mxnet_py27
 ```
 You may use Python 3, however the [wine bottle detection example](https://mxnet.incubator.apache.org/versions/master/tutorials/embedded/wine_detector.html) for the Pi with camera requires Python 2.7.
 
-Create a virtualenv and install the wheel we created previously, or the wheel that you downloaded.
+Activate the environment, then install the wheel we created previously, or install this [prebuilt wheel](https://mxnet-public.s3.amazonaws.com/install/raspbian/mxnet-1.5.0-py2.py3-none-any.whl).
 
 ```
-virtualenv -p `which python3` mxnet_py27
 source mxnet_py27/bin/activate
 pip install mxnet-x.x.x-py2.py3-none-any.whl
 ```
 
+Test MXNet with the Python interpreter:
+```
+$ python
 
-**Native Build**
+>>> import mxnet
+```
+If there are no errors then you're ready to start using MXNet on your Pi!
 
-Installing MXNet is a two-step process:
+## Native Build
+
+Installing MXNet from source is a two-step process:
 
 1. Build the shared library from the MXNet C++ source code.
 2. Install the supported language-specific packages for MXNet.

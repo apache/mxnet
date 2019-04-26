@@ -63,19 +63,45 @@ def test_quantize_float32_to_int8():
 
 @with_seed()
 def test_dequantize_int8_to_float32():
+
+    def get_test_data(real_range, qdata_np):
+        qdata = mx.nd.array(qdata_np, dtype=np.int8)
+        min_range = mx.nd.array([-real_range], dtype=np.float32)
+        max_range = mx.nd.array([real_range], dtype=np.float32)
+        return qdata, min_range, max_range
+
+    def baseline_dequantization(qdata, real_range, qdata_np):
+        quantized_range = 127.0
+        scale = real_range / quantized_range
+        data_np = qdata_np * scale
+        return data_np
+
+    def test_nd_array_dequantization(qdata, min_range, max_range, expected_result):
+        data = mx.nd.contrib.dequantize(qdata, min_range, max_range, out_type='float32')
+        assert data.dtype == np.float32
+        assert_almost_equal(data.asnumpy(), expected_result)
+
+    def test_symbolic_api_dequantization(qdata, min_range, max_range, expected_result):
+        sym_data = mx.sym.Variable('data')
+        sym_min_range = mx.sym.Variable('min_range')
+        sym_max_range = mx.sym.Variable('max_range')
+        dequant = mx.sym.contrib.dequantize(sym_data, sym_min_range, 
+                                            sym_max_range, out_type='float32')
+        out = dequant.bind(ctx=mx.current_context(), 
+                           args={'data':qdata, 'min_range':min_range, 'max_range':max_range})
+        data = out.forward()[0]
+        assert data.dtype == np.float32
+        assert_almost_equal(data.asnumpy(), expected_result)
+
+    real_range = 402.3347
     shape = rand_shape_nd(4)
     qdata_np = np.random.uniform(low=-127, high=127, size=shape).astype(dtype=np.int8)
-    qdata = mx.nd.array(qdata_np, dtype=np.int8)
-    real_range = 402.3347
-    min_range = mx.nd.array([-real_range], dtype=np.float32)
-    max_range = mx.nd.array([real_range], dtype=np.float32)
-    data = mx.nd.contrib.dequantize(qdata, min_range, max_range, out_type='float32')
-    quantized_range = 127.0
-    scale = real_range / quantized_range
-    assert data.dtype == np.float32
-    data_np = qdata_np * scale
-    assert_almost_equal(data.asnumpy(), data_np)
-
+    qdata, min_range, max_range = get_test_data(real_range, qdata_np)
+    expected_result = baseline_dequantization(qdata, real_range, qdata_np)
+    # test nd array implementation.
+    test_nd_array_dequantization(qdata, min_range, max_range, expected_result)
+    # test symbolic api implementaion.
+    test_symbolic_api_dequantization(qdata, min_range, max_range, expected_result)
 
 @with_seed()
 def test_requantize_int32_to_int8():
@@ -124,7 +150,41 @@ def test_requantize_int32_to_int8():
         assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol = 1)
         assert_almost_equal(min_output.asnumpy(), np.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), np.array([max_output_np]))
+    
+    def check_requantize_with_symbol(shape, min_calib_range=None, max_calib_range=None):
+        qdata = mx.nd.random.uniform(low=-1000.0, high=1000.0, shape=shape).astype('int32')
+        min_range = mx.nd.array([-1010.0])
+        max_range = mx.nd.array([1020.0])
+        sym_data = mx.sym.Variable('data')
+        sym_min_range = mx.sym.Variable('min_range')
+        sym_max_range = mx.sym.Variable('max_range')
+        if min_calib_range is None or max_calib_range is None:
+            requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range)
+            out = requant.bind(ctx=mx.current_context(), 
+                               args={'data':qdata, 'min_range':min_range, 
+                               'max_range':max_range}) 
+            qdata_int8, min_output, max_output = out.forward()
+        else:
+            requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range, 
+                                                min_calib_range, max_calib_range)
+            out = requant.bind(ctx=mx.current_context(), args={'data':qdata, 'min_range':min_range, 
+                                                   'max_range':max_range})  
+            qdata_int8, min_output, max_output = out.forward()                                   
+           
+        qdata_int8_np, min_output_np, max_output_np = requantize_baseline(qdata.asnumpy(), min_range.asscalar(),
+                                                                          max_range.asscalar(),
+                                                                          min_calib_range=min_calib_range,
+                                                                          max_calib_range=max_calib_range)
+        assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np)
+        assert_almost_equal(min_output.asnumpy(), np.array([min_output_np]))
+        assert_almost_equal(max_output.asnumpy(), np.array([max_output_np]))
 
+    # test with symbol API.
+    check_requantize_with_symbol((3, 4, 10, 10))
+    check_requantize_with_symbol((32, 3, 23, 23))
+    check_requantize_with_symbol((3, 4, 10, 10), min_calib_range=-1050.0, max_calib_range=1040.0)
+    check_requantize_with_symbol((32, 3, 23, 23), min_calib_range=-134.349, max_calib_range=523.43)
+    # Test with nd array API
     check_requantize((3, 4, 10, 10))
     check_requantize((32, 3, 23, 23))
     check_requantize((3, 4, 10, 10), min_calib_range=-1050.0, max_calib_range=1040.0)
@@ -414,6 +474,57 @@ def test_quantized_flatten():
         check_quantized_flatten((10, 15, 18), qdtype)
         check_quantized_flatten((3, 4, 23, 23), qdtype)
 
+@with_seed()
+def test_quantized_act():
+    def check_quantized_act(data_shape, qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing quantized_act for native cpu since it is not supported yet')
+            return
+        elif qdtype == 'int8' and is_test_for_mkldnn():
+            print('skipped testing quantized_act for mkldnn cpu int8 since it is not supported yet')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing quantized_act for gpu since it is not supported yet')
+            return
+        data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
+        act_fp32 = mx.sym.Activation(data=data, act_type='relu', name='relu')
+        arg_shapes, _, _ = act_fp32.infer_shape(data=data_shape)
+        arg_names = act_fp32.list_arguments()
+        act_fp32_exe = act_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        if qdtype == 'uint8':
+            data_low = 0.0
+            data_high = 127.0
+        else:
+            data_low = -127.0
+            data_high = 127.0
+
+        act_fp32_exe.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=data_low,
+                                                high=data_high, shape=data_shape).astype(qdtype)
+        output = act_fp32_exe.forward()[0]
+
+        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype=qdtype)
+        min_data = mx.sym.Variable(name='min_data')
+        max_data = mx.sym.Variable(name='max_data')
+        quantized_act = mx.sym.contrib.quantized_act(data=qdata, min_data=min_data, max_data=max_data, act_type='relu')
+        act_int8_exe = quantized_act.simple_bind(ctx=mx.current_context(), grad_req='null')
+        qarg_names = quantized_act.list_arguments()
+
+        act_int8_exe.arg_dict[qarg_names[0]][:] = act_fp32_exe.arg_dict[arg_names[0]].astype(qdtype)
+        quantized_range_min = mx.nd.min(act_int8_exe.arg_dict[qarg_names[0]][:])
+        quantized_range_max = mx.nd.max(act_int8_exe.arg_dict[qarg_names[0]][:])
+        act_int8_exe.arg_dict[qarg_names[1]][:] = quantized_range_min.astype(qdtype)
+        act_int8_exe.arg_dict[qarg_names[2]][:] = quantized_range_max.astype(qdtype)
+        qoutput, min_range, max_range = act_int8_exe.forward()
+
+        assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
+        assert_almost_equal(min_range.asscalar(), quantized_range_min.asscalar())
+        assert_almost_equal(max_range.asscalar(), quantized_range_max.asscalar())
+
+    for qdtype in ['int8', 'uint8']:
+        check_quantized_act((10,), qdtype)
+        check_quantized_act((10, 15), qdtype)
+        check_quantized_act((10, 15, 18), qdtype)
+        check_quantized_act((3, 4, 23, 23), qdtype)
 
 @with_seed()
 def test_quantize_params():
@@ -634,7 +745,9 @@ def test_quantize_model_with_forward():
             arg_params, aux_params = mod.get_params()
             excluded_names = []
             if mx.current_context() == mx.cpu():
-               excluded_names += ['fc']
+               excluded_names += ['fc', 'conv1']
+            if mx.current_context() == mx.gpu():
+               excluded_names += ['relu0', 'relu1']
             excluded_names += ['concat']
 
             optional_names = ['pool0']

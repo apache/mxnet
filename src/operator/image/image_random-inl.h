@@ -215,16 +215,16 @@ void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
 }
 
 struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
-  nnvm::Tuple<float> mean;
-  nnvm::Tuple<float> std;
+  mxnet::Tuple<float> mean;
+  mxnet::Tuple<float> std;
 
   DMLC_DECLARE_PARAMETER(NormalizeParam) {
     DMLC_DECLARE_FIELD(mean)
-    .set_default(nnvm::Tuple<float> {0.0f, 0.0f, 0.0f, 0.0f})
+    .set_default(mxnet::Tuple<float> {0.0f, 0.0f, 0.0f, 0.0f})
     .describe("Sequence of means for each channel. "
               "Default value is 0.");
     DMLC_DECLARE_FIELD(std)
-    .set_default(nnvm::Tuple<float> {1.0f, 1.0f, 1.0f, 1.0f})
+    .set_default(mxnet::Tuple<float> {1.0f, 1.0f, 1.0f, 1.0f})
     .describe("Sequence of standard deviations for each channel. "
               "Default value is 1.");
   }
@@ -245,7 +245,7 @@ inline bool NormalizeOpShape(const nnvm::NodeAttrs& attrs,
       << "Input tensor must have shape (channels, height, width), or "
       << "(N, channels, height, width), but got " << dshape;
 
-  uint32_t nchannels;
+  int nchannels = 0;
   if (dshape.ndim() == 3) {
     nchannels = dshape[0];
     CHECK(nchannels == 3 || nchannels == 1)
@@ -981,7 +981,7 @@ inline void RandomColorJitter(const nnvm::NodeAttrs &attrs,
 }
 
 struct AdjustLightingParam : public dmlc::Parameter<AdjustLightingParam> {
-  nnvm::Tuple<float> alpha;
+  mxnet::Tuple<float> alpha;
   DMLC_DECLARE_PARAMETER(AdjustLightingParam) {
     DMLC_DECLARE_FIELD(alpha)
     .describe("The lighting alphas for the R, G, B channels.");
@@ -997,7 +997,7 @@ struct RandomLightingParam : public dmlc::Parameter<RandomLightingParam> {
   }
 };
 
-inline void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
+inline void AdjustLightingImpl(const mxnet::Tuple<float>& alpha,
                         const OpContext &ctx,
                         const std::vector<TBlob> &inputs,
                         const std::vector<OpReqType> &req,

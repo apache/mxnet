@@ -218,15 +218,16 @@ class TBlob {
     return shape_.ndim();
   }
   /*!
-   * \brief return size of i-th dimension, start counting from highest dimension
+   * \brief return size of i-th dimension, start counting from highest dimension.
+   * return type needs to be a signed integer.
    * \param idx the dimension count from the highest dimensin
-   * \return the size
+   * \return the size. -1 means unknown size to support zero-size tensor.
    */
   inline index_t size(index_t idx) const {
     return shape_[idx];
   }
   /*! \brief total number of elements in the tensor */
-  inline index_t Size(void) const {
+  inline size_t Size(void) const {
     return shape_.Size();
   }
   /*! \brief get pointer in dtype */
@@ -443,7 +444,7 @@ class FieldEntry<mxnet::TShape>
         throw dmlc::ParamError(os.str());
     }
     if (enforce_nonzero_) {
-      for (mxnet::index_t i = 0; i < v.ndim(); ++i) {
+      for (int i = 0; i < v.ndim(); ++i) {
         if (v[i] == 0U) {
           std::ostringstream os;
           os << "value " << v << "for Parameter " << this->key_
@@ -457,7 +458,7 @@ class FieldEntry<mxnet::TShape>
     this->enforce_nonzero_ = true;
     return this->self();
   }
-  inline FieldEntry<mxnet::TShape> &set_expect_ndim(mxnet::index_t ndim) {
+  inline FieldEntry<mxnet::TShape> &set_expect_ndim(int ndim) {
     expect_ndim_ = ndim;
     return this->self();
   }
@@ -466,7 +467,7 @@ class FieldEntry<mxnet::TShape>
   // whether all the entries need to be nonzero
   bool enforce_nonzero_;
   // expected number of dimension, default = 0 means no restriction.
-  mxnet::index_t expect_ndim_;
+  int expect_ndim_;
 };
 
 }  // namespace parameter
