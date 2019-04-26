@@ -1,19 +1,3 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
 
 # Fine-tuning Sentence Pair Classification with BERT
 
@@ -107,8 +91,8 @@ Now that we have loaded the BERT model, we only need to attach an additional lay
 ```clojure
 (defn fine-tune-model
   "msymbol: the pretrained network symbol
-    arg-params: the argument parameters of the pretrained model
-    num-classes: the number of classes for the fine-tune datasets"
+   num-classes: the number of classes for the fine-tune datasets
+   dropout: the dropout rate"
   [msymbol {:keys [num-classes dropout]}]
   (as-> msymbol data
     (sym/dropout {:data data :p dropout})
@@ -184,7 +168,6 @@ We will do pre-processing on the inputs to get them in the right format and to p
 
 
 ```clojure
-
 (defn pre-processing
   "Preprocesses the sentences in the format that BERT is expecting"
   [ctx idx->token token->idx train-item]
@@ -300,7 +283,7 @@ train-data
 
 
 
-    #object[org.apache.mxnet.io.NDArrayIter 0x4195d68 "non-empty iterator"]
+    #object[org.apache.mxnet.io.NDArrayIter 0x34050a17 "non-empty iterator"]
 
 
 
@@ -321,66 +304,53 @@ Putting everything together, now we can fine-tune the model with a few epochs. F
                                                    :aux-params (m/aux-params bert-base)
                                                    :optimizer (optimizer/adam {:learning-rate 5e-6 :episilon 1e-9})
                                                    :batch-end-callback (callback/speedometer batch-size 1)})})
-;;; Note you can check your `lein jupyter notebook` terminal to see progress in the training 
-;;; example 
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [1]	Speed: 0.76 samples/sec	Train-accuracy=0.562500
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [2]	Speed: 0.86 samples/sec	Train-accuracy=0.572917
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [3]	Speed: 0.97 samples/sec	Train-accuracy=0.539063
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [4]	Speed: 1.03 samples/sec	Train-accuracy=0.500000
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [5]	Speed: 1.04 samples/sec	Train-accuracy=0.536458
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [6]	Speed: 1.04 samples/sec	Train-accuracy=0.549107
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [7]	Speed: 1.05 samples/sec	Train-accuracy=0.566406
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [8]	Speed: 1.07 samples/sec	Train-accuracy=0.576389
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [9]	Speed: 1.03 samples/sec	Train-accuracy=0.565625
-;; WARN  org.apache.mxnet.WarnIfNotDisposed: LEAK: [one-time warning] An instance of org.apache.mxnet.Symbol was not disposed. Set property mxnet.traceLeakedObjects to true to enable tracing
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [10]	Speed: 1.03 samples/sec	Train-accuracy=0.565341
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [11]	Speed: 1.03 samples/sec	Train-accuracy=0.572917
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[0] Batch [12]	Speed: 1.03 samples/sec	Train-accuracy=0.576923
-;; INFO  org.apache.mxnet.module.BaseModule: Epoch[0] Train-accuracy=0.5769231
-;; INFO  org.apache.mxnet.module.BaseModule: Epoch[0] Time cost=407219
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [1]	Speed: 1.05 samples/sec	Train-accuracy=0.656250
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [2]	Speed: 1.04 samples/sec	Train-accuracy=0.635417
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [3]	Speed: 1.04 samples/sec	Train-accuracy=0.648438
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [4]	Speed: 1.03 samples/sec	Train-accuracy=0.637500
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [5]	Speed: 1.04 samples/sec	Train-accuracy=0.625000
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [6]	Speed: 1.04 samples/sec	Train-accuracy=0.638393
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [7]	Speed: 1.04 samples/sec	Train-accuracy=0.652344
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [8]	Speed: 1.04 samples/sec	Train-accuracy=0.666667
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [9]	Speed: 0.97 samples/sec	Train-accuracy=0.653125
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [10]	Speed: 1.05 samples/sec	Train-accuracy=0.647727
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [11]	Speed: 1.05 samples/sec	Train-accuracy=0.653646
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[1] Batch [12]	Speed: 1.04 samples/sec	Train-accuracy=0.653846
-;; INFO  org.apache.mxnet.module.BaseModule: Epoch[1] Train-accuracy=0.65384614
-;; INFO  org.apache.mxnet.module.BaseModule: Epoch[1] Time cost=404094
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [1]	Speed: 1.05 samples/sec	Train-accuracy=0.656250
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [2]	Speed: 1.06 samples/sec	Train-accuracy=0.656250
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [3]	Speed: 1.06 samples/sec	Train-accuracy=0.687500
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [4]	Speed: 1.07 samples/sec	Train-accuracy=0.693750
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [5]	Speed: 1.05 samples/sec	Train-accuracy=0.703125
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [6]	Speed: 1.07 samples/sec	Train-accuracy=0.696429
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [7]	Speed: 1.05 samples/sec	Train-accuracy=0.699219
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [8]	Speed: 1.05 samples/sec	Train-accuracy=0.701389
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [9]	Speed: 1.03 samples/sec	Train-accuracy=0.690625
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [10]	Speed: 0.99 samples/sec	Train-accuracy=0.690341
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [11]	Speed: 0.90 samples/sec	Train-accuracy=0.695313
-;; INFO  org.apache.mxnet.Callback$Speedometer: Epoch[2] Batch [12]	Speed: 0.82 samples/sec	Train-accuracy=0.701923
-;; INFO  org.apache.mxnet.module.BaseModule: Epoch[2] Train-accuracy=0.7019231
-;; INFO  org.apache.mxnet.module.BaseModule: Epoch[2] Time cost=411626
 
 ```
 
+    Speedometer: epoch  0  count  0  metric  [accuracy 0.6875]
+    Speedometer: epoch  0  count  1  metric  [accuracy 0.5625]
+    Speedometer: epoch  0  count  2  metric  [accuracy 0.5729167]
+    Speedometer: epoch  0  count  3  metric  [accuracy 0.5390625]
+    Speedometer: epoch  0  count  4  metric  [accuracy 0.5]
+    Speedometer: epoch  0  count  5  metric  [accuracy 0.5364583]
+    Speedometer: epoch  0  count  6  metric  [accuracy 0.54910713]
+    Speedometer: epoch  0  count  7  metric  [accuracy 0.56640625]
+    Speedometer: epoch  0  count  8  metric  [accuracy 0.5763889]
+    Speedometer: epoch  0  count  9  metric  [accuracy 0.565625]
+    Speedometer: epoch  0  count  10  metric  [accuracy 0.56534094]
+    Speedometer: epoch  0  count  11  metric  [accuracy 0.5729167]
+    Speedometer: epoch  0  count  12  metric  [accuracy 0.5769231]
+    Speedometer: epoch  1  count  0  metric  [accuracy 0.625]
+    Speedometer: epoch  1  count  1  metric  [accuracy 0.65625]
+    Speedometer: epoch  1  count  2  metric  [accuracy 0.6354167]
+    Speedometer: epoch  1  count  3  metric  [accuracy 0.6484375]
+    Speedometer: epoch  1  count  4  metric  [accuracy 0.6375]
+    Speedometer: epoch  1  count  5  metric  [accuracy 0.625]
+    Speedometer: epoch  1  count  6  metric  [accuracy 0.63839287]
+    Speedometer: epoch  1  count  7  metric  [accuracy 0.65234375]
+    Speedometer: epoch  1  count  8  metric  [accuracy 0.6666667]
+    Speedometer: epoch  1  count  9  metric  [accuracy 0.653125]
+    Speedometer: epoch  1  count  10  metric  [accuracy 0.64772725]
+    Speedometer: epoch  1  count  11  metric  [accuracy 0.6536458]
+    Speedometer: epoch  1  count  12  metric  [accuracy 0.65384614]
+    Speedometer: epoch  2  count  0  metric  [accuracy 0.78125]
+    Speedometer: epoch  2  count  1  metric  [accuracy 0.65625]
+    Speedometer: epoch  2  count  2  metric  [accuracy 0.65625]
+    Speedometer: epoch  2  count  3  metric  [accuracy 0.6875]
+    Speedometer: epoch  2  count  4  metric  [accuracy 0.69375]
+    Speedometer: epoch  2  count  5  metric  [accuracy 0.703125]
+    Speedometer: epoch  2  count  6  metric  [accuracy 0.6964286]
+    Speedometer: epoch  2  count  7  metric  [accuracy 0.69921875]
+    Speedometer: epoch  2  count  8  metric  [accuracy 0.7013889]
+    Speedometer: epoch  2  count  9  metric  [accuracy 0.690625]
+    Speedometer: epoch  2  count  10  metric  [accuracy 0.69034094]
+    Speedometer: epoch  2  count  11  metric  [accuracy 0.6953125]
+    Speedometer: epoch  2  count  12  metric  [accuracy 0.7019231]
 
 
 
-    #object[org.apache.mxnet.module.Module 0x3dbc97e6 "org.apache.mxnet.module.Module@3dbc97e6"]
 
 
+    #object[org.apache.mxnet.module.Module 0x35e65d46 "org.apache.mxnet.module.Module@35e65d46"]
 
-
-```clojure
-(let [score (m/score fine-tune-model {:eval-data train-data :eval-metric (eval-metric/accuracy)})]
-      (println "High level predict score is " score))
-```
-
-    High level predict score is  [accuracy 0.7692308]
 
