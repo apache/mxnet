@@ -291,7 +291,7 @@ NNVM_REGISTER_OP(broadcast_like)
                                  {{"keepdims", "true"}});
       auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                          {n->inputs[1]}, nullptr, &n);
-      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      lhs.emplace_back(ng, 0, 0);
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
