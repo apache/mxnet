@@ -315,6 +315,7 @@ def test_sampler():
     assert list(interval_sampler) == [0, 3, 6, 9]
 
 
+<<<<<<< 14d3b54e8cb2d53be603e568b58079b1cbdbfb5a
 <<<<<<< 0a8b223442ef47b8cb66c94f7e611c3c8ecf2584
 class TestRNNLayer(gluon.HybridBlock):
     def __init__(self, cell_type, hidden_size, layout, prefix=None, params=None):
@@ -431,6 +432,8 @@ def test_deformable_convolution():
 >>>>>>> fixed typos and added a test function
 
 
+=======
+>>>>>>> 	modified:   python/mxnet/gluon/contrib/nn/__init__.py
 if __name__ == '__main__':
     import nose
     nose.runmodule()

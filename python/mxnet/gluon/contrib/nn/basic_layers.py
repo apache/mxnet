@@ -30,20 +30,16 @@ from ...nn import Sequential, HybridSequential, BatchNorm
 
 class Concurrent(Sequential):
     """Lays `Block` s concurrently.
-
     This block feeds its input to all children blocks, and
     produce the output by concatenating all the children blocks' outputs
     on the specified axis.
-
     Example::
-
         net = Concurrent()
         # use net's name_scope to give children blocks appropriate names.
         with net.name_scope():
             net.add(nn.Dense(10, activation='relu'))
             net.add(nn.Dense(20))
             net.add(Identity())
-
     Parameters
     ----------
     axis : int, default -1
@@ -63,20 +59,16 @@ class Concurrent(Sequential):
 
 class HybridConcurrent(HybridSequential):
     """Lays `HybridBlock` s concurrently.
-
     This block feeds its input to all children blocks, and
     produce the output by concatenating all the children blocks' outputs
     on the specified axis.
-
     Example::
-
         net = HybridConcurrent()
         # use net's name_scope to give children blocks appropriate names.
         with net.name_scope():
             net.add(nn.Dense(10, activation='relu'))
             net.add(nn.Dense(20))
             net.add(Identity())
-
     Parameters
     ----------
     axis : int, default -1
@@ -96,12 +88,9 @@ class HybridConcurrent(HybridSequential):
 
 class Identity(HybridBlock):
     """Block that passes through the input directly.
-
     This block can be used in conjunction with HybridConcurrent
     block for residual connection.
-
     Example::
-
         net = HybridConcurrent()
         # use net's name_scope to give child Blocks appropriate names.
         with net.name_scope():
@@ -118,16 +107,13 @@ class Identity(HybridBlock):
 class SparseEmbedding(Block):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
     of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
-
     This SparseBlock is designed for distributed training with extremely large
     input dimension. Both weight and gradient w.r.t. weight are `RowSparseNDArray`.
-
     Note: if `sparse_grad` is set to True, the gradient w.r.t weight will be
     sparse. Only a subset of optimizers support sparse gradients, including SGD, AdaGrad
     and Adam. By default lazy updates is turned on, which may perform differently
     from standard updates. For more details, please check the Optimization API at:
     https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
-
     Parameters
     ----------
     input_dim : int
@@ -138,7 +124,6 @@ class SparseEmbedding(Block):
         Data type of output embeddings.
     weight_initializer : Initializer
         Initializer for the `embeddings` matrix.
-
     Inputs:
         - **data**: (N-1)-D tensor with shape: `(x1, x2, ..., xN-1)`.
     Output:
@@ -164,7 +149,6 @@ class SparseEmbedding(Block):
 
 class SyncBatchNorm(BatchNorm):
     """Cross-GPU Synchronized Batch normalization (SyncBN)
-
     Standard BN [1]_ implementation only normalize the data within each device.
     SyncBN normalizes the input within the whole mini-batch.
     We follow the implementation described in the paper [2]_.
@@ -203,13 +187,10 @@ class SyncBatchNorm(BatchNorm):
         Initializer for the moving mean.
     moving_variance_initializer: str or `Initializer`, default 'ones'
         Initializer for the moving variance.
-
-
     Inputs:
         - **data**: input tensor with arbitrary shape.
     Outputs:
         - **out**: output tensor with the same shape as `data`.
-
     Reference:
         .. [1] Ioffe, Sergey, and Christian Szegedy. "Batch normalization: Accelerating \
           deep network training by reducing internal covariate shift." *ICML 2015*

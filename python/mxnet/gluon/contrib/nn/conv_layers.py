@@ -134,7 +134,7 @@ class Deformable_Convolution(HybridBlock):
                 'num_deformable_group': num_deformable_group,
                 'no_bias': not use_bias, 'layout': layout}
 
-            if adj is not None:
+            if adj:
                 self._kwargs_offset['adj'] = adj
                 self._kwargs_deformable_conv['adj'] = adj
 
@@ -175,7 +175,7 @@ class Deformable_Convolution(HybridBlock):
             else:
                 self.deformable_conv_bias = None
 
-            if activation is not None:
+            if activation:
                 self.act = Activation(activation, prefix=activation + '_')
             else:
                 self.act = None
@@ -194,7 +194,7 @@ class Deformable_Convolution(HybridBlock):
                                                   bias=deformable_conv_bias, name='fwd',
                                                   **self._kwargs_deformable_conv)
 
-        if self.act is not None:
+        if self.act:
             act = self.act(act)
         return act
 
