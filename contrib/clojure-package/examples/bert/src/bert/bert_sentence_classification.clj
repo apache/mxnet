@@ -48,6 +48,7 @@
         valid-length (+ (count token-1) (count token-2))
         ;;; generate token types [0000...1111...0000]
         qa-embedded (into (bert-util/pad [] 0 (count token-1))
+
                           (bert-util/pad [] 1 (count token-2)))
         token-types (bert-util/pad qa-embedded 0 seq-length)
         ;;; make BERT pre-processing standard
@@ -84,10 +85,13 @@
        (flatten)
        (into [])))
 
+(defn get-raw-data []
+  (csv/parse-csv (slurp "data/dev.tsv") :delimiter \tab))
+
 (defn prepare-data
   "This prepares the senetence pairs into NDArrays for use in NDArrayIterator"
   [dev]
-  (let [raw-file (csv/parse-csv (slurp "data/dev.tsv") :delimiter \tab)
+  (let [raw-file (get-raw-data)
         vocab (bert-util/get-vocab)
         idx->token (:idx->token vocab)
         token->idx (:token->idx vocab)

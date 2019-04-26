@@ -19,7 +19,7 @@
 (defproject bert "0.1.0-SNAPSHOT"
   :description "BERT Examples"
   :plugins [[lein-cljfmt "0.5.7"]
-            [lein-jupyter "0.1.16" :exclusions [org.clojure/clojure]]]
+            [lein-jupyter "0.1.16" :exclusions [org.clojure/tools.nrepl org.clojure/clojure org.codehaus.plexus/plexus-utils org.clojure/tools.reader]]]
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
                  [cheshire "5.8.1"]
