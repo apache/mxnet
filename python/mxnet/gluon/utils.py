@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=no-else-raise
 """Parallelization utility optimizer."""
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']

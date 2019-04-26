@@ -16,7 +16,7 @@
 # under the License.
 
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
-# pylint: disable=too-many-branches, too-many-statements
+# pylint: disable=too-many-branches, too-many-statements, no-else-raise
 """MXNet model module"""
 from __future__ import absolute_import, print_function
 

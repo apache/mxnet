@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, no-else-raise
 """Parameter optimizer."""
 __all__ = ['Trainer']
 

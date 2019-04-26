@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import, unused-wildcard-import, too-many-lines
+# pylint: disable=wildcard-import, unused-wildcard-import, too-many-lines, no-else-raise
 """Sparse NDArray API of MXNet."""
 
 from __future__ import absolute_import

@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=unused-import
+# pylint: disable=unused-import, no-else-raise
 """Read images and perform augmentations for object detection."""
 
 from __future__ import absolute_import, print_function

@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=consider-iterating-dictionary
+# pylint: disable=consider-iterating-dictionary, no-else-raise
 
 """Text token indexer."""
 from __future__ import absolute_import

@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable=no-member, invalid-name, protected-access, no-self-use
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, unbalanced-tuple-unpacking
 """Definition of various recurrent neural network cells."""
 from __future__ import print_function
 

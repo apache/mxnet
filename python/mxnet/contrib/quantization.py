@@ -14,6 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
+# pylint: disable=unbalanced-tuple-unpacking
 """Quantization module for generating quantized (INT8) models from FP32 models."""
 
 from __future__ import absolute_import

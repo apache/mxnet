@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, no-else-raise
 """Weight updating functions."""
 import logging
 import math

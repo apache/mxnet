@@ -16,6 +16,7 @@
 # under the License.
 """export helper functions"""
 # coding: utf-8
+# pylint: disable=no-else-raise
 import os
 import logging
 import mxnet as mx

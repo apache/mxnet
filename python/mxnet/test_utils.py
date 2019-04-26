@@ -16,7 +16,7 @@
 # under the License.
 
 """Tools for testing."""
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, no-else-raise
 from __future__ import absolute_import, print_function, division
 import time
 import gzip
@@ -1536,7 +1536,7 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """
 
     get_mnist_ubyte()
-    flat = False if len(input_shape) == 3 else True
+    flat = False if len(input_shape) == 3 else True # pylint: disable=simplifiable-if-expression
 
     train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
@@ -1990,7 +1990,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if w_stype == 'default':
         w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         w1 = w2.copyto(default_context())
-    elif w_stype == 'row_sparse' or w_stype == 'csr':
+    elif w_stype in ('row_sparse', 'w_stype') == 'csr':
         w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
         w1 = w2.copyto(default_context()).tostype('default')
     else:
@@ -1998,7 +1998,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if g_stype == 'default':
         g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         g1 = g2.copyto(default_context())
-    elif g_stype == 'row_sparse' or g_stype == 'csr':
+    elif g_stype in ('row_sparse', 'csr'):
         g2 = rand_ndarray(shape, g_stype, dtype=dtype)
         g1 = g2.copyto(default_context()).tostype('default')
     else:
