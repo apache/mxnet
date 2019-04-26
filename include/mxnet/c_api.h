@@ -2809,7 +2809,7 @@ MXNET_DLL int MXShallowCopyNDArray(NDArrayHandle src, NDArrayHandle* out);
  */
 MXNET_DLL int MXShallowCopySymbol(SymbolHandle src, SymbolHandle * out);
 /*!
- * \brief Create an Symbol from source sharing the same graph structure.
+ * \brief Checks if an output of CachedOp is from a numpy op.
  * \param handle CachedOp shared ptr
  * \param output_idx index of the output of the CachedOp
  * \param is_from_np_op indicator of whether the output is from a numpy op

@@ -848,7 +848,7 @@ class _NumpySymbol(Symbol):
     def broadcast_to(self, *args, **kwargs):
         raise AttributeError('_NumpySymbol object has no attribute broadcast_to')
 
-    def broadcast_like(self, *args, **kwarg):
+    def broadcast_like(self, *args, **kwargs):
         raise AttributeError('_NumpySymbol object has no attribute broadcast_like')
 
 

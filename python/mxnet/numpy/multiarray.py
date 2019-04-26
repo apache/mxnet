@@ -21,12 +21,14 @@
 """numpy ndarray and util functions."""
 
 from __future__ import absolute_import
+from array import array as native_array
 import ctypes
 import numpy as _np
-from ..ndarray import NDArray, _new_alloc_handle
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op
 from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check_params
+from ..base import mx_real_t, c_array_buf, mx_uint
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 
@@ -34,7 +36,36 @@ from ..ndarray import numpy as _mx_nd_np
 __all__ = ['ndarray', 'empty', 'array', 'zeros']
 
 
-def _np_ndarray_cls(handle, writable=True):
+# This function is copied from ndarray.py since pylint
+# keeps giving false alarm error of undefined-all-variable
+def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
+    """Return a new handle with specified shape and context.
+
+    Empty handle is only used to hold results.
+
+    Returns
+    -------
+    handle
+        A new empty `ndarray` handle.
+    """
+    hdl = NDArrayHandle()
+    check_call(_LIB.MXNDArrayCreateEx(
+        c_array_buf(mx_uint, native_array('I', shape)),
+        mx_uint(len(shape)),
+        ctypes.c_int(ctx.device_typeid),
+        ctypes.c_int(ctx.device_id),
+        ctypes.c_int(int(delay_alloc)),
+        ctypes.c_int(int(_DTYPE_NP_TO_MX[_np.dtype(dtype).type])),
+        ctypes.byref(hdl)))
+    return hdl
+
+
+# Have to use 0 as default value for stype since plylint does not allow
+# importing _STORAGE_TYPE_DEFAULT from ndarray.py.
+def _np_ndarray_cls(handle, writable=True, stype=0):
+    if stype != 0:
+        raise ValueError('_np_ndarray_cls currently only supports default storage '
+                         'type, while received stype = {}'.format(stype))
     return ndarray(handle, writable=writable)
 
 
