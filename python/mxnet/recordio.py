@@ -15,6 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=not-callable
+# It's bug from pylint(astroid). See https://github.com/PyCQA/pylint/issues/1699
+
 """Read and write for the RecordIO data format."""
 from __future__ import absolute_import
 from collections import namedtuple
