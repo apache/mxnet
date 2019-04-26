@@ -261,6 +261,8 @@ def test_quantized_conv():
             conv_exe_int8.arg_dict[qarg_names[8]][:] = quantized_range
         qoutput, min_range, max_range = conv_exe_int8.forward()
 
+        if is_test_for_native_cpu():
+            return qoutput.asnumpy()
         if no_bias:
             assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
         else:
@@ -269,9 +271,31 @@ def test_quantized_conv():
             cond = mx.nd.lesser(2, diff).sum().asscalar()
             assert cond == 0
 
+    def check_proper_error_with_native_cpu():
+        def simple_quantized_conv_example():
+            shp = (3, 4, 28, 28)
+            data = mx.sym.Variable(name='data', shape=shp, dtype='int8')
+            weight = mx.sym.Variable(name='weight', dtype='int8')
+            min_data = mx.sym.Variable(name='min_data')
+            max_data = mx.sym.Variable(name='max_data')
+            min_weight = mx.sym.Variable(name='min_weight')
+            max_weight = mx.sym.Variable(name='max_weight')
+            quantized_conv2d = mx.sym.contrib.quantized_conv(data=data, weight=weight, min_data=min_data,
+                                                             max_data=max_data, min_weight=min_weight,
+                                                             max_weight=max_weight, kernel=(3,3),
+                                                             num_filter=128, pad=(1,1), stride=(1,1),
+                                                             no_bias=True)
+            type_dict = None
+            conv_exe_int8 = quantized_conv2d.simple_bind(ctx=mx.cpu(), type_dict=type_dict, grad_req='null')
+            outputs, min_range, max_range = conv_exe_int8.forward()
+            outputs.asnumpy()
+        assertRaises(MXNetError, simple_quantized_conv_example)
+
     for qdtype in ['int8', 'uint8']:
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), True, qdtype)
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), False, qdtype)
+
+    check_proper_error_with_native_cpu()
 
 @with_seed()
 def test_quantized_pooling():
@@ -323,6 +347,18 @@ def test_quantized_pooling():
             cond = mx.nd.lesser(2, diff).sum().asscalar()
             assert cond == 0
 
+    def check_proper_error_with_native_cpu():
+        def simple_quantized_pooling_example():
+            min_ = mx.symbol.Variable('min_')
+            max_ = mx.symbol.Variable('max_')
+            shp = (4,4,4,4)
+            data = mx.symbol.Variable('data', shape=shp, dtype='int8')
+            sym = mx.symbol.contrib.quantized_pooling(data, min_, max_, kernel=(3, 3), pool_type='max', pad=(0,0), stride=(2,2), global_pool=False, pooling_convention='valid')
+            ex = sym.simple_bind(ctx=mx.cpu(), grad_req='null')
+            outputs, min_range, max_range = ex.forward()
+            outputs.asnumpy()
+        assertRaises(MXNetError, simple_quantized_pooling_example)
+
     for qdtype in ['int8', 'uint8']:
         check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), False, qdtype)
         check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), True, qdtype)
@@ -334,6 +370,7 @@ def test_quantized_pooling():
         check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), False, qdtype, 'full')
         check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), True, qdtype, 'full')
 
+    check_proper_error_with_native_cpu()
 
 @with_seed()
 def test_quantized_fc():
@@ -433,6 +470,19 @@ def test_quantized_fc():
             cond = mx.nd.lesser(2, diff).sum().asscalar()
             assert cond == 0
 
+    def check_proper_error_with_native_cpu():
+        def simple_quantized_fc_example():
+            shp = (32, 512, 2, 2)
+            data = mx.symbol.Variable('data', shape=shp, dtype='int8')
+            fc_int8 = mx.sym.contrib.quantized_fully_connected(data=data, num_hidden=100,
+                                                               no_bias=True, flatten=True)
+            qarg_names = fc_int8.list_arguments()
+            type_dict = {qarg_names[1]: 'int8'}
+            fc_int8_exe = fc_int8.simple_bind(ctx=mx.cpu(), type_dict=type_dict, grad_req='null')
+            outputs, min_range, max_range = fc_int8_exe.forward()
+            outputs.asnumpy()
+        assertRaises(MXNetError, simple_quantized_fc_example)
+
     for qdtype in ['int8', 'uint8']:
         if is_test_for_mkldnn():
             check_quantized_fc((32, 512, 2), 100, True, qdtype, flatten=False)
@@ -447,6 +497,21 @@ def test_quantized_fc():
         check_quantized_fc((256, 111, 2, 2), 800, False, qdtype)
         check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype)
         check_quantized_fc((256, 111, 2, 2), 800, True, qdtype)
+
+    check_proper_error_with_native_cpu()
+
+def test_quantized_concat_proper_error_with_native_cpu():
+    def simple_quantized_concat_example():
+        shp = (3, 4, 28, 28)
+        input1 = mx.symbol.Variable('input1', shape=shp, dtype='int8')
+        input2 = mx.symbol.Variable('input2', shape=shp, dtype='int8')
+        output = mx.symbol.Variable('data', shape=shp, dtype='int8')
+        quantized_concat = mx.sym.contrib.quantized_concat(input1, input2, dim=0)
+        type_dict = None
+        concat_exec = quantized_concat.simple_bind(ctx=mx.cpu(), type_dict=type_dict, grad_req='null')
+        outputs, min_range, max_range = concat_exec.forward()
+        outputs.asnumpy()
+    assertRaises(MXNetError, simple_quantized_concat_example)
 
 @with_seed()
 def test_quantized_flatten():

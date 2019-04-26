@@ -34,6 +34,9 @@
 #include "./operator_tune.h"
 #include "../engine/openmp.h"
 
+#include <cxxabi.h>
+#include <execinfo.h>
+
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
 #endif  // __CUDACC__
@@ -806,6 +809,61 @@ struct Kernel<OP, gpu> {
   }
 };
 #endif  // __CUDACC__
+
+inline std::string Demangle(char const *msg_str) {
+  using std::string;
+  string msg(msg_str);
+  size_t symbol_start = string::npos;
+  size_t symbol_end = string::npos;
+  if ( ((symbol_start = msg.find("_Z")) != string::npos)
+       && (symbol_end = msg.find_first_of(" +", symbol_start)) ) {
+    string left_of_symbol(msg, 0, symbol_start);
+    string symbol(msg, symbol_start, symbol_end - symbol_start);
+    string right_of_symbol(msg, symbol_end);
+
+    int status = 0;
+    size_t length = string::npos;
+    std::unique_ptr<char, decltype(&std::free)> demangled_symbol =
+            {abi::__cxa_demangle(symbol.c_str(), 0, &length, &status), &std::free};
+    if (demangled_symbol && status == 0 && length > 0) {
+      string symbol_str(demangled_symbol.get());
+      std::ostringstream os;
+      os << left_of_symbol << symbol_str << right_of_symbol;
+      return os.str();
+    }
+  }
+  return string(msg_str);
+}
+
+inline std::string StackTrace() {
+  using std::string;
+  std::ostringstream stacktrace_os;
+  const int MAX_STACK_SIZE = DMLC_LOG_STACK_TRACE_SIZE;
+  void *stack[MAX_STACK_SIZE];
+  int nframes = backtrace(stack, MAX_STACK_SIZE);
+  stacktrace_os << "Stack trace returned " << nframes << " entries:" << std::endl;
+  char **msgs = backtrace_symbols(stack, nframes);
+  if (msgs != nullptr) {
+    for (int frameno = 0; frameno < nframes; ++frameno) {
+      string msg = Demangle(msgs[frameno]);
+      stacktrace_os << "[bt] (" << frameno << ") " << msg << "\n";
+    }
+  }
+  free(msgs);
+  string stack_trace = stacktrace_os.str();
+  return stack_trace;
+}
+
+inline void log_fatal(std::string error){
+  time_t tt;
+  struct tm * ti;
+  ti = localtime(&tt);
+  std::string msg;
+  msg.append("[").append(std::to_string(ti->tm_hour)).append(":").append(std::to_string(ti->tm_min)).append(":")
+     .append(std::to_string(ti->tm_sec)).append("] ").append(__FILE__).append(":").append(std::to_string(__LINE__))
+     .append(": ").append(error).append("\n\n").append(StackTrace()).append("\n");
+  throw dmlc::Error(msg);
+}
 
 /*!
  * \brief Set to immediate scalar value kernel

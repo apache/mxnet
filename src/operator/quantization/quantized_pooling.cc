@@ -23,6 +23,7 @@
 */
 #include <mxnet/op_attr_types.h>
 #include "../nn/pooling-inl.h"
+#include "../mxnet_op.h"
 #if MXNET_USE_MKLDNN == 1
 #include "../nn/mkldnn/mkldnn_pooling-inl.h"
 #endif
@@ -135,6 +136,13 @@ inline static bool QuantizedPoolingStorageType(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
+void QuantizedPoolingForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                                          const std::vector<TBlob> &in_data,
+                                          const std::vector<OpReqType> &req,
+                                          const std::vector<TBlob> &out_data) {
+  mxnet::op::mxnet_op::log_fatal("Currently quantized_pooling is not supported by mx.cpu() without MKLDNN");
+}
+
 NNVM_REGISTER_OP(_contrib_quantized_pooling)
 .describe(R"code(Pooling operator for input and output data type of int8.
 The input and output data comes with min and max thresholds for quantizing
@@ -167,6 +175,7 @@ the float32 data into int8.
       << "QuantizedPoolingOp only supports pool_type=max/avg for now";
     return false;
   })
+.set_attr<FCompute>("FCompute<cpu>", QuantizedPoolingForward)
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_argument("min_data", "NDArray-or-Symbol", "Minimum value of data.")
 .add_argument("max_data", "NDArray-or-Symbol", "Maximum value of data.")
