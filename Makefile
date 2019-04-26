@@ -412,8 +412,8 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 endif
 
 #sparse-matrix
-SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
 ifeq ($(USE_BLAS), mkl)
+  SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
 	LIB_DEP += $(SPARSE_MATRIX_DIR)/libsparse_matrix.so
 	CFLAGS += -I$(SPARSE_MATRIX_DIR)
 	LDFLAGS += -L$(SPARSE_MATRIX_DIR) -lsparse_matrix -Wl,-rpath,'$${ORIGIN}'
@@ -705,7 +705,9 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
+ifeq ($(USE_BLAS), mkl)
 	cd $(SPARSE_MATRIX_DIR); $(MAKE) clean; cd -
+endif
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
@@ -716,7 +718,9 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
+ifeq ($(USE_BLAS), mkl)
 	cd $(SPARSE_MATRIX_DIR); $(MAKE) clean; cd -
+endif
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif
