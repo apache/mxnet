@@ -353,8 +353,21 @@ class BatchNorm(HybridBlock):
         super(BatchNorm, self).cast(dtype)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
+        use_global_stats = self._kwargs['use_global_stats']
+        if isinstance(use_global_stats, str):
+            if use_global_stats == "auto":
+                from ... import autograd
+                use_global_stats = not autograd.is_training()
+                the_kwargs = dict(**self._kwargs)
+                the_kwargs['use_global_stats'] = use_global_stats
+            else:
+                raise ValueError('unrecognzied use_global_stats')
+        else:
+            the_kwargs = self._kwargs
+
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,
-                           name='fwd', **self._kwargs)
+                           name='fwd', **the_kwargs)
+
 
     def __repr__(self):
         s = '{name}({content}'
