@@ -1990,7 +1990,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if w_stype == 'default':
         w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         w1 = w2.copyto(default_context())
-    elif w_stype in ('row_sparse', 'w_stype') == 'csr':
+    elif w_stype in ('row_sparse', 'csr'):
         w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
         w1 = w2.copyto(default_context()).tostype('default')
     else:
