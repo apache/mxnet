@@ -37,7 +37,7 @@ Example:
   :input-question "Along with geothermal and nuclear, what is a notable non-combustion heat source?"
   :ground-truth-answers ["solar"
                          "solar power"
-                         "solar power, nuclear power or geothermal energysolar"]}
+                         "solar power, nuclear power or geothermal energy solar"]}
 ```
 
 The prediction in this case would be `solar power`
@@ -78,7 +78,7 @@ The original description can be found in the [MXNet GluonNLP model zoo](https://
 python static_finetune_squad.py --optimizer adam --accumulate 2 --batch_size 6 --lr 3e-5 --epochs 2 --gpu 0 --export
 
 ```
-This script will generate `json` and `param` fles that are the standard MXNet model files.
+This script will generate `json` and `param` files that are the standard MXNet model files.
 By default, this model are using `bert_12_768_12` model with extra layers for QA jobs.
 
 After that, to be able to use it in Java, we need to export the dictionary from the script to parse the text
@@ -97,7 +97,7 @@ Once you have these three files, you will be able to run this example without pr
 
 This was based off of the great tutorial for in Gluon-NLP [https://gluon-nlp.mxnet.io/examples/sentence_embedding/bert.html](https://gluon-nlp.mxnet.io/examples/sentence_embedding/bert.html).
 
-We use the pre-trained BERT model that was exported from GluonNLP via the scripts/bert/staticbert/static_export_base.py. For convience, the model has been downloaded for you by running the get_bert_data.sh file in the root directory of this example.
+We use the pre-trained BERT model that was exported from GluonNLP via the `scripts/bert/staticbert/static_export_base.py` running `python static_export_base.py --seq_length 128`. For convenience, the model has been downloaded for you by running the get_bert_data.sh file in the root directory of this example.
 
 It will fine tune the base bert model for use in a classification task for 3 epochs.
 
@@ -116,7 +116,7 @@ From the example directory:
 
 ### To run the notebook walkthrough
 
-There is a Jupyter notebook that uses the `lein juptyer` plugin to be able to execute Clojure code in project setting. The first time that you run it you will need to install the kernal with `lein jupyter install-kernel`. After that you can open the notebook in the project directory with `lein jupyter notebook`.
+There is a Jupyter notebook that uses the `lein jupyter` plugin to be able to execute Clojure code in project setting. The first time that you run it you will need to install the kernel with `lein jupyter install-kernel`. After that you can open the notebook in the project directory with `lein jupyter notebook`.
 
 There is also an exported copy of the walkthrough to markdown `fine-tune-bert.md`.
 

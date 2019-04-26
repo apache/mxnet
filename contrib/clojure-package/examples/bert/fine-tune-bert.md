@@ -16,6 +16,7 @@
 <!--- under the License. -->
 
 
+
 # Fine-tuning Sentence Pair Classification with BERT
 
 **This tutorial is based off of the Gluon NLP one here https://gluon-nlp.mxnet.io/examples/sentence_embedding/bert.html**
@@ -39,7 +40,7 @@ fine-tune BERT model for sentence classification.
 To run this tutorial locally, in the example directory:
 
 1. Get the model and supporting data by running `get_bert_data.sh`. 
-2. This Jupyter Notebook uses the lein-jupyter plugin to be able to execute Clojure code in project setting. The first time that you run it you will need to install the kernal with`lein jupyter install-kernel`. After that you can open the notebook in the project directory with `lein jupyter notebook`.
+2. This Jupyter Notebook uses the lein-jupyter plugin to be able to execute Clojure code in project setting. The first time that you run it you will need to install the kernel with`lein jupyter install-kernel`. After that you can open the notebook in the project directory with `lein jupyter notebook`.
 
 ## Load requirements
 
@@ -67,7 +68,7 @@ We need to load up all the namespace requires
 
 # Use the Pre-trained BERT Model
 
-In this tutorial we will use the pre-trained BERT model that was exported from GluonNLP via the `scripts/bert/staticbert/static_export_base.py`. For convience, the model has been downloaded for you by running  the `get_bert_data.sh` file in the root directory of this example.
+In this tutorial we will use the pre-trained BERT model that was exported from GluonNLP via the `scripts/bert/staticbert/static_export_base.py`. For convenience, the model has been downloaded for you by running  the `get_bert_data.sh` file in the root directory of this example.
 
 ## Get BERT
 
