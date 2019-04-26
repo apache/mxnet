@@ -315,6 +315,7 @@ def test_sampler():
     assert list(interval_sampler) == [0, 3, 6, 9]
 
 
+<<<<<<< 0a8b223442ef47b8cb66c94f7e611c3c8ecf2584
 class TestRNNLayer(gluon.HybridBlock):
     def __init__(self, cell_type, hidden_size, layout, prefix=None, params=None):
         super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
@@ -404,6 +405,24 @@ def test_contrib_unroll():
     for cell_type, num_states in cell_types:
         check_unroll(cell_type, num_states, 'TNC')
         check_unroll(cell_type, num_states, 'NTC')
+=======
+def test_deformable_convolution():
+    net = nn.HybridSequential()
+    net.add(
+        Deformable_Convolution(10, kernel_size=(3, 3), strides=1, padding=0),
+        Deformable_Convolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                               offset_use_bisa=False, use_bias=False)
+    )
+
+    ctx = mx.gpu()
+    net.initialize(force_reinit=True, ctx=ctx)
+    net.hybridize()
+
+    x = mx.nd.random.uniform(shape=(8, 5, 10, 11), ctx=ctx)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
+>>>>>>> fixed typos and added a test function
 
 
 if __name__ == '__main__':

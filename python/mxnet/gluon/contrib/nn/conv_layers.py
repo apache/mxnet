@@ -102,7 +102,7 @@ class Deformable_Convolution(HybridBlock):
     def __init__(self, channels, kernel_size=(1, 1), strides=(1, 1), padding=(0, 0), dilation=(1, 1), groups=1,
                  num_deformable_group=1, layout='NCHW', use_bias=True, in_channels=0, activation=None,
                  weight_initializer=None, bias_initializer='zeros',
-                 offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bisa=True,
+                 offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bias=True,
                  op_name='DeformableConvolution', adj=None, prefix=None, params=None, **kwargs):
         super(Deformable_Convolution, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
@@ -124,7 +124,7 @@ class Deformable_Convolution(HybridBlock):
             self._kwargs_offset = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
-                'no_bias': not offset_use_bisa, 'layout': layout}
+                'no_bias': not offset_use_bias, 'layout': layout}
 
             self._kwargs_deformable_conv = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
@@ -149,7 +149,7 @@ class Deformable_Convolution(HybridBlock):
                                                  init=offset_weight_initializer,
                                                  allow_deferred_init=True)
 
-            if offset_use_bisa:
+            if offset_use_bias:
                 self.offset_bias = self.params.get('offset_bias', shape=offsetshapes[2],
                                                    init=offset_bias_initializer,
                                                    allow_deferred_init=True)
@@ -158,8 +158,8 @@ class Deformable_Convolution(HybridBlock):
 
             deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
             deformable_conv_weight_shape[0] = channels
-            deformable_conv_weight_shape[2] = kernel_size[1]
-            deformable_conv_weight_shape[3] = kernel_size[0]
+            deformable_conv_weight_shape[2] = kernel_size[0]
+            deformable_conv_weight_shape[3] = kernel_size[1]
 
             self.deformable_conv_weight = self.params.get('deformable_conv_weight',
                                                           shape=deformable_conv_weight_shape,
@@ -178,7 +178,7 @@ class Deformable_Convolution(HybridBlock):
             else:
                 self.act = None
 
-    def hybrid_forward(self, F, x, offset_weight, offset_bias, deformable_conv_weight, deformable_conv_bias=None):
+    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias =None, deformable_conv_bias=None):
         if offset_bias is None:
             offset = F.Convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
         else:
