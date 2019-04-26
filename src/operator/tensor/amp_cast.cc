@@ -94,7 +94,7 @@ It casts only between FP16/FP32 and does not do anything for other types.
     int num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     std::vector<std::pair<int, int>> ret;
     for (int i = 0; i < num_args; ++i) {
-      ret.push_back(std::make_pair(i, i));
+      ret.emplace_back(i, i);
     }
     return ret;
   })
@@ -133,7 +133,7 @@ NNVM_REGISTER_OP(_backward_amp_multicast)
     int num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     std::vector<std::pair<int, int>> ret;
     for (int i = 0; i < num_args; ++i) {
-      ret.push_back(std::make_pair(i, i));
+      ret.emplace_back(i, i);
     }
     return ret;
   })

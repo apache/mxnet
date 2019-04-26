@@ -118,7 +118,7 @@ NNVM_REGISTER_OP(all_finite)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     std::vector<std::string> ret;
-    ret.push_back(std::string("data"));
+    ret.emplace_back("data");
     return ret;
   })
 .add_argument("data", "NDArray", "Array")
