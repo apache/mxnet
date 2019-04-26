@@ -1,5 +1,5 @@
 (ns bert.bert-sentence-classification-test
-  (:require [bert.bert-sentence-classification :as bert-classifier]
+  (:require [bert.bert-sentence-classification :refer :all]
             [clojure-csv.core :as csv]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
@@ -24,12 +24,12 @@
   (take 32 (csv/parse-csv (slurp "data/dev.tsv") :delimiter \tab)))
 
 (deftest train-test
-  (with-redefs [bert-classifier/get-raw-data get-slim-raw-data]
+  (with-redefs [get-raw-data get-slim-raw-data]
     (let [dev (context/default-context)
           num-epoch 1
           bert-base (m/load-checkpoint {:prefix model-path-prefix :epoch 0})
-          model-sym (bert-classifier/fine-tune-model (m/symbol bert-base) {:num-classes 2 :dropout 0.1})
-          {:keys [data0s data1s data2s labels train-num]} (bert-classifier/prepare-data dev)
+          model-sym (fine-tune-model (m/symbol bert-base) {:num-classes 2 :dropout 0.1})
+          {:keys [data0s data1s data2s labels train-num]} (prepare-data dev)
           batch-size 32
           data-desc0 (mx-io/data-desc {:name "data0"
                                        :shape [train-num seq-length]
