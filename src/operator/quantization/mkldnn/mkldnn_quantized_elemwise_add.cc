@@ -119,14 +119,14 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
       // x*dataA_absmax/dataA_range = y*(dataA_absmax+dataB_absmax)/output_range
       if (is_dataA_int8 == true) {
         u8_reorder_scale = dataB_absmax * output_data_range
-                           / ((dataA_absmax + dataB_absmax)*kUint8Range);
-        scales[0] = dataA_absmax*output_data_range
-                         / ((dataA_absmax + dataB_absmax)*dataA_range);
+                           / ((dataA_absmax + dataB_absmax) * kUint8Range);
+        scales[0] = dataA_absmax * output_data_range
+                         / ((dataA_absmax + dataB_absmax) * dataA_range);
       } else {
         u8_reorder_scale = dataA_absmax * output_data_range
-                           / ((dataA_absmax + dataB_absmax)*dataA_range);
+                           / ((dataA_absmax + dataB_absmax) * dataA_range);
         scales[1] = dataB_absmax * output_data_range
-                         / ((dataA_absmax + dataB_absmax)*kInt8Range);
+                         / ((dataA_absmax + dataB_absmax) * kInt8Range);
       }
     }
     std::vector<float> reorder_scale = {u8_reorder_scale};
