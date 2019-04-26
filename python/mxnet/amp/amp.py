@@ -71,7 +71,6 @@ def _wrap_symbol_functions(module, fp16_list=None, conditional_fp32_list=None, f
                         kwargs[cond_arg[0]] not in cond_arg[1]):
                     return f(*args, **kwargs)
             sym = f(*args, **kwargs)
-            attr = sym.list_attr()
             inputs = sym.get_children()
             aux = sym.list_auxiliary_states()
             inputs = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype)
