@@ -4190,6 +4190,8 @@ def from_numpy(ndarray, zero_copy=True):
         return void_p
 
     def _make_dl_tensor(array):
+        if str(array.dtype) not in DLDataType.TYPE_MAP:
+            raise ValueError(str(array.dtype) + " is not supported.")
         dl_tensor = DLTensor()
         dl_tensor.data = array.ctypes.data_as(ctypes.c_void_p)
         dl_tensor.ctx = DLContext(1, 0)

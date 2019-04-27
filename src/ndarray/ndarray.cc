@@ -339,8 +339,8 @@ NDArray NDArray::data_ndarray() const {
 }
 
 struct NDArrayDLManager {
-    NDArray handle;  // ref NDArray
-    DLManagedTensor tensor;
+  NDArray handle;  // ref NDArray
+  DLManagedTensor tensor;
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {
