@@ -185,7 +185,7 @@ MXNet executes computation graphs in 'bulk mode' which reduces kernel launch gap
 
 ### Viewing profiler output
 
-There are two ways to view the information collected by the profiler. You can either view it in the console or you can view a more graphical version in a browser.
+There are a few ways to view the information collected by the profiler. You can view it in the console, you can view a more graphical version in a browser, or you can use a vendor tool such as Intel VTune or Nvidia NVProf to view output. For most scenarios the information you need can be obtained with MXNet's built in profiler support, but if you want to investigate the performance of operators along side extra context about your hardware (e.g. cache hit rates, or CUDA kernel timings) then profiling jointly with vendor tools is recommended.
 
 #### 1. View in console
 
@@ -214,6 +214,29 @@ Let's zoom in to check the time taken by operators
 ![Operator profiling](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profile_operators.png)
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
+
+#### 3. View in NVProf
+
+You can view all MXNet profiler information alongside CUDA kernel information by using the MXNet profiler along with NVProf.  Use the MXNet profiler as in the samples above, but invoke your python script with the following wrapper process available on most systems that support CUDA:
+
+```bash
+nvprof -o my_profile.nvvp python my_profiler_script.py
+==11588== NVPROF is profiling process 11588, command: python my_profiler_script.py
+==11588== Generated result file: /home/kellen/Development/incubator-mxnet/ci/my_profile.nvvp
+```
+Your my_profile.nvvp file will automatically be annotated with NVTX ranges displayed alongside your standard NVProf timeline.  This can be very useful when you're trying to find patterns between operators run by MXNet, and their associated CUDA kernel calls.
+
+![Operator profiling](profiler_nvprof.png)
+
+In this picture we see a rough overlay of a few types of information plotted on a horizontal timeline.  At the top of the plot we have CPU tasks such as driver operations, memory copy calls, MXNet engine operator invocations, and imperative MXNet API calls.  Below we see the kernels active on the GPU during the same time period.
+
+![Operator profiling](profiler_nvprof_zoomed.png)
+
+Zooming in on a backwards convolution operator we can see that it is in fact made up of a number of different GPU kernel calls, including a cuDNN winograd convolution call, and a fast-fourier transform call.
+
+![Operator profiling](profiler_winograd.png)
+
+Selecting any of these kernel calls (the winograd convolution call shown here) will get you some interesting GPU performance information such as occupancy rates (vs theoretical), shared memory usage and execution duration.
 
 ### Further reading
 
