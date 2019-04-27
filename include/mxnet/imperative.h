@@ -177,6 +177,10 @@ class Imperative {
    */
   static std::vector<nnvm::NodeEntry> CreateHeadGradients(const std::vector<NDArray *>& outputs,
                                                           const std::vector<NDArray *>& ograds);
+
+  class GradientGraph;
+  GradientGraph CreateGradientGraph(const std::vector<NDArray*>& variables,
+                                    const std::vector<nnvm::NodeEntry>& outputs);
   Imperative() {
     if (PreferBulkExecTrain())
       backward_bulk_size_ = BulkExecMaxNodeTrainBwd();

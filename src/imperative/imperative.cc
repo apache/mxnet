@@ -146,6 +146,9 @@ void Imperative::MarkVariables(
 }
 
 
+
+
+
 void Imperative::GetBackwardDependency(
     const nnvm::NodePtr& node,
     size_t num_inputs, size_t num_outputs,
@@ -294,8 +297,8 @@ std::vector<nnvm::NodeEntry> Imperative::CreateForwardGraph(const std::vector<ND
 }
 
 std::vector<nnvm::NodeEntry> Imperative::CreateHeadGradients(
-    const std::vector<NDArray *>& outputs,
-    const std::vector<NDArray *>& ograds) {
+    const std::vector<NDArray*>& outputs,
+    const std::vector<NDArray*>& ograds) {
   using nnvm::NodeEntry;
   using nnvm::Node;
   std::vector<NodeEntry> ograd_entries;
@@ -314,6 +317,49 @@ std::vector<nnvm::NodeEntry> Imperative::CreateHeadGradients(
   }
   return ograd_entries;
 }
+
+struct Imperative::GradientGraph {
+  std::vector<nnvm::NodeEntry> variable_nodes;
+  std::vector<NDArray*> gradients;
+  std::vector<OpReqType> op_req_types;
+};
+
+Imperative::GradientGraph Imperative::CreateGradientGraph(const std::vector<NDArray*>& variables,
+                                  const std::vector<nnvm::NodeEntry>& outputs) {
+  GradientGraph gg;
+  if (!variables.empty()) {
+    gg.variable_nodes.reserve(variables.size());
+    gg.gradients.reserve(variables.size());
+    gg.op_req_types.reserve(variables.size());
+    for (size_t i = 0; i < variables.size(); ++i) {
+      CHECK(!AGInfo::IsNone(*variables[i]) &&
+            AGInfo::IsVariable(variables[i]->entry_.node))
+          << "Cannot differentiate with respect to the " << i+1 << "-th variable"
+          << " because it does not require gradient.";
+      gg.variable_nodes.emplace_back(variables[i]->entry_);
+      gg.gradients.push_back(new NDArray());
+      gg.op_req_types.push_back(kWriteTo);
+    }
+  } else {
+    std::vector<nnvm::NodePtr> ro_nodes = nnvm::Symbol::ListInputs(Symbol::kReadOnlyArgs, outputs);
+    gg.variable_nodes.reserve(ro_nodes.size());
+    gg.gradients.reserve(ro_nodes.size());
+    gg.op_req_types.reserve(ro_nodes.size());
+    for (const auto& i : ro_nodes) {
+      AGInfo& info = AGInfo::Get(i);
+      if (info.grad_req != kNullOp) {
+        gg.variable_nodes.emplace_back(nnvm::NodeEntry{i, 0, 0});
+        gg.gradients.push_back(&info.out_grads[0]);
+        gg.op_req_types.push_back(info.grad_req);
+        info.fresh_out_grad = true;
+      }
+    }
+    CHECK_GT(gg.variable_nodes.size(), 0)
+        << "There are no inputs in computation graph that require gradients.";
+  }
+}
+
+
 
 std::vector<NDArray*> Imperative::Backward(
     const std::vector<NDArray*>& outputs,
@@ -335,46 +381,14 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<NodeEntry> ograd_entries = CreateHeadGradients(outputs, ograds);
 
   // Get gradient graph
-  Symbol sym;
-  sym.outputs = graph.outputs;
-  std::vector<NodeEntry> xs;
-  std::vector<NDArray*> x_grads;
-  std::vector<OpReqType> x_reqs;
-  if (!variables.empty()) {
-    xs.reserve(variables.size());
-    x_grads.reserve(variables.size());
-    x_reqs.reserve(variables.size());
-    for (size_t i = 0; i < variables.size(); ++i) {
-      CHECK(!AGInfo::IsNone(*variables[i]) &&
-            AGInfo::IsVariable(variables[i]->entry_.node))
-          << "Cannot differentiate with respect to the " << i+1 << "-th variable"
-          << " because it does not require gradient.";
-      xs.emplace_back(variables[i]->entry_);
-      x_grads.push_back(new NDArray());
-      x_reqs.push_back(kWriteTo);
-    }
-  } else {
-    std::vector<NodePtr> args = sym.ListInputs(Symbol::kReadOnlyArgs);
-    xs.reserve(args.size());
-    x_grads.reserve(args.size());
-    x_reqs.reserve(args.size());
-    for (const auto& i : args) {
-      AGInfo& info = AGInfo::Get(i);
-      if (info.grad_req == kNullOp) continue;
-      xs.emplace_back(NodeEntry{i, 0, 0});
-      x_grads.push_back(&info.out_grads[0]);
-      x_reqs.push_back(info.grad_req);
-      info.fresh_out_grad = true;
-    }
-    CHECK_GT(xs.size(), 0)
-        << "There are no inputs in computation graph that require gradients.";
-  }
+  GradientGraph gg = CreateGradientGraph(variables, graph.outputs);
 
+  // Run backward on the graph
   Graph g_graph = pass::MXGradient(
-      graph, graph.outputs, xs, ograd_entries,
+      graph, graph.outputs, gg.variable_nodes, ograd_entries,
       exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
-  CHECK_EQ(g_graph.outputs.size(), xs.size());
+  CHECK_EQ(g_graph.outputs.size(), gg.variable_nodes.size());
   for (const auto& e : g_graph.outputs) {
     if (e.node->op() == nullptr) {
       auto node = Node::Create();
@@ -407,7 +421,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
   if (create_graph) {
     states.resize(num_forward_nodes);
-    nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
+    nnvm::DFSVisit(graph.outputs, [&](const nnvm::NodePtr& n) {
       AGInfo& info = AGInfo::Get(n);
       states[idx.node_id(n.get())] = info.state;
       for (uint32_t i = 0; i < info.outputs.size(); ++i) {
@@ -446,7 +460,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
   for (size_t i = num_forward_outputs; i < graph.outputs.size(); ++i) {
     size_t eid = idx.entry_id(graph.outputs[i]);
-    arrays[eid] = x_grads[i - num_forward_outputs];
+    arrays[eid] = gg.gradients[i - num_forward_outputs];
     ref_count[eid] = 1;
   }
 
@@ -496,7 +510,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
   for (size_t i = num_forward_outputs; i < idx.outputs().size(); ++i) {
     size_t eid = idx.entry_id(idx.outputs()[i]);
-    array_reqs[eid] = x_reqs[i - num_forward_outputs];
+    array_reqs[eid] = gg.op_req_types[i - num_forward_outputs];
   }
 
   const auto& shapes = graph.GetAttr<mxnet::ShapeVector>("shape");
@@ -541,14 +555,14 @@ std::vector<NDArray*> Imperative::Backward(
 
   // Clear history
   if (!retain_graph) {
-    nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
+    nnvm::DFSVisit(graph.outputs, [&](const nnvm::NodePtr& n) {
       AGInfo::Clear(n);
       n->inputs.clear();
     });
   }
 
   if (variables.size()) {
-    return x_grads;
+    return gg.gradients;
   }
   return {};
 }
