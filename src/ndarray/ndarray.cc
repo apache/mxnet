@@ -151,8 +151,8 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
 }
 
 NDArray NDArray::grad() const {
-  if (Imperative::AGInfo::IsNone(*this)) return NDArray();
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  if (AGInfo::IsNone(*this)) return NDArray();
+  AGInfo& info = AGInfo::Get(entry_.node);
   if (info.out_grads.size()) {
     CHECK_EQ(info.out_grads.size(), 1);
     return info.out_grads[0];
@@ -161,7 +161,7 @@ NDArray NDArray::grad() const {
 }
 
 nnvm::Symbol NDArray::get_autograd_symbol() const {
-  CHECK(!Imperative::AGInfo::IsNone(*this))
+  CHECK(!AGInfo::IsNone(*this))
     << "NDArray is not part of a computation graph. Did you forget to turn on recording?";
   nnvm::Symbol ret;
   ret.outputs.emplace_back(entry_);
@@ -366,16 +366,16 @@ NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
 }
 
 bool NDArray::fresh_out_grad() const {
-  if (Imperative::AGInfo::IsNone(*this)) return false;
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  if (AGInfo::IsNone(*this)) return false;
+  AGInfo& info = AGInfo::Get(entry_.node);
   return info.fresh_out_grad;
 }
 
 
 void NDArray::set_fresh_out_grad(bool state) const {
-  CHECK(!Imperative::AGInfo::IsNone(*this))
+  CHECK(!AGInfo::IsNone(*this))
     << "NDArray has not been marked as a variable and does not have gradient state";
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  AGInfo& info = AGInfo::Get(entry_.node);
   info.fresh_out_grad = state;
 }
 

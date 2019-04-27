@@ -355,7 +355,7 @@ int MXAutogradBackwardEx(mx_uint num_output,
   }
 
   auto grads = Imperative::Get()->Backward(outputs, ograds, variables, is_train,
-                                                  retain_graph, create_graph);
+                                           retain_graph, create_graph);
   if (num_variables != 0) {
     ret->ret_handles.clear();
     ret->out_types.clear();

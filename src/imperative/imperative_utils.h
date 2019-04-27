@@ -732,7 +732,7 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
   // forward pass
   for (size_t i = 0; i < idx.num_nodes(); ++i) {
     if (!idx[i].source->info.empty()) {
-      vctx[i] = dmlc::get<Imperative::AGInfo>(idx[i].source->info).ctx;
+      vctx[i] = dmlc::get<AGInfo>(idx[i].source->info).ctx;
     } else if (idx[i].source->op() == _copyto) {
       CHECK_GT(idx[i].source->control_deps.size(), 0);
       auto fwd_nid = idx.node_id(idx[i].source->control_deps[0].get());

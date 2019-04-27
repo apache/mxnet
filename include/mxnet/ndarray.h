@@ -80,6 +80,8 @@ class MKLDNNMemory;
  * \brief ndarray interface
  */
 class NDArray {
+  friend class AGInfo;
+  friend class Imperative;
  public:
   /*! \brief default constructor */
   NDArray()
@@ -816,7 +818,6 @@ class NDArray {
                    std::vector<std::string>* keys);
 
  private:
-  friend class Imperative;
   /*! \brief the real data chunk that backs NDArray */
   // shandle is used to store the actual values in the NDArray
   // aux_handles store the aux data(such as indices) if it's needed by non-default storage.

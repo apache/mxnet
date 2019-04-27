@@ -126,20 +126,22 @@ void Imperative::MarkVariables(
     const std::vector<NDArray*>& gradients) {
   for (size_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
-
-    variables[i]->entry_ = nnvm::NodeEntry{
-        nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
-    AGInfo& info = AGInfo::Create(variables[i]->entry_.node);
-    info.outputs.emplace_back(variables[i]->Detach());
-    info.out_grads.emplace_back(gradients[i]->Detach());
-    info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
-    info.ctx = variables[i]->ctx();
-
-    gradients[i]->entry_ = nnvm::NodeEntry{
-        nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
-    AGInfo& grad_info = AGInfo::Create(gradients[i]->entry_.node);
-    grad_info.outputs.emplace_back(gradients[i]->Detach());
-    grad_info.ctx = gradients[i]->ctx();
+    {
+      variables[i]->entry_ = nnvm::NodeEntry{
+          nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
+      AGInfo &info = AGInfo::Create(variables[i]->entry_.node);
+      info.outputs.emplace_back(variables[i]->Detach());
+      info.out_grads.emplace_back(gradients[i]->Detach());
+      info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
+      info.ctx = variables[i]->ctx();
+    }
+    {
+      gradients[i]->entry_ = nnvm::NodeEntry{
+          nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
+      AGInfo &grad_info = AGInfo::Create(gradients[i]->entry_.node);
+      grad_info.outputs.emplace_back(gradients[i]->Detach());
+      grad_info.ctx = gradients[i]->ctx();
+    }
   }
 }
 
@@ -277,6 +279,42 @@ void Imperative::RecordOp(
   }
 }
 
+std::vector<nnvm::NodeEntry> Imperative::CreateForwardGraph(const std::vector<NDArray*>& outputs) {
+  std::vector<nnvm::NodeEntry> output_nodes;
+  output_nodes.reserve(outputs.size());
+  for (const auto &i : outputs) {
+    CHECK(!AGInfo::IsNone(*i))
+      << "Cannot differentiate node because it is not in a computational graph. "
+      << "You need to set is_recording to true or use autograd.record() to save "
+      << "computational graphs for backward. If you want to differentiate the same "
+      << "graph twice, you need to pass retain_graph=True to backward.";
+    output_nodes.emplace_back(i->entry_);
+  }
+  return output_nodes;
+}
+
+std::vector<nnvm::NodeEntry> Imperative::CreateHeadGradients(
+    const std::vector<NDArray *>& outputs,
+    const std::vector<NDArray *>& ograds) {
+  using nnvm::NodeEntry;
+  using nnvm::Node;
+  std::vector<NodeEntry> ograd_entries;
+  ograd_entries.reserve(ograds.size());
+  for (size_t i = 0; i < outputs.size(); ++i) {
+    ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
+    AGInfo &info = AGInfo::Create(ograd_entries.back().node);
+    info.ctx = outputs[i]->ctx();
+    if (ograds[i] != nullptr) {
+      info.outputs.emplace_back(*ograds[i]);
+    } else {
+      info.outputs.emplace_back(outputs[i]->shape(), outputs[i]->ctx(),
+                                true, outputs[i]->dtype());
+      info.outputs.back() = static_cast<real_t>(1.0);
+    }
+  }
+  return ograd_entries;
+}
+
 std::vector<NDArray*> Imperative::Backward(
     const std::vector<NDArray*>& outputs,
     const std::vector<NDArray*>& ograds,
@@ -290,32 +328,11 @@ std::vector<NDArray*> Imperative::Backward(
 
   // Construct forward graph
   Graph graph;
-  graph.outputs.reserve(outputs.size());
-  for (const auto& i : outputs) {
-    CHECK(!AGInfo::IsNone(*i))
-      << "Cannot differentiate node because it is not in a computational graph. "
-      << "You need to set is_recording to true or use autograd.record() to save "
-      << "computational graphs for backward. If you want to differentiate the same "
-      << "graph twice, you need to pass retain_graph=True to backward.";
-    graph.outputs.emplace_back(i->entry_);
-  }
-  size_t num_forward_outputs = graph.outputs.size();
+  graph.outputs = CreateForwardGraph(outputs);
+  const size_t num_forward_outputs = graph.outputs.size();
 
   // Prepare head gradients
-  std::vector<NodeEntry> ograd_entries;
-  ograd_entries.reserve(ograds.size());
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
-    AGInfo& info = AGInfo::Create(ograd_entries.back().node);
-    info.ctx = outputs[i]->ctx();
-    if (ograds[i] != nullptr) {
-      info.outputs.emplace_back(*ograds[i]);
-    } else {
-      info.outputs.emplace_back(outputs[i]->shape(), outputs[i]->ctx(),
-                                true, outputs[i]->dtype());
-      info.outputs.back() = static_cast<real_t>(1.0);
-    }
-  }
+  std::vector<NodeEntry> ograd_entries = CreateHeadGradients(outputs, ograds);
 
   // Get gradient graph
   Symbol sym;
@@ -323,7 +340,7 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<NodeEntry> xs;
   std::vector<NDArray*> x_grads;
   std::vector<OpReqType> x_reqs;
-  if (variables.size()) {
+  if (!variables.empty()) {
     xs.reserve(variables.size());
     x_grads.reserve(variables.size());
     x_reqs.reserve(variables.size());

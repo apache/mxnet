@@ -35,48 +35,53 @@
 #include "./ndarray.h"
 
 namespace mxnet {
+/*!
+ * Autograd Info used in class: nnvm::Node::info
+ */
+class AGInfo {
+ public:
+  Context ctx;
+  OpReqType grad_req;
+  OpStatePtr state;
+  std::vector<NDArray> outputs;
+  std::vector<NDArray> out_grads;
+  bool fresh_out_grad;
+
+  AGInfo() :
+    grad_req(kNullOp), fresh_out_grad(false) {}
+
+  static void Clear(const nnvm::NodePtr& node) {
+    if (node == nullptr || node->info.empty()) return;
+    AGInfo& info = Get(node);
+    if (info.grad_req != kNullOp) return;
+    node->info.clear();
+  }
+
+  static AGInfo& Get(const nnvm::NodePtr& node) {
+    return dmlc::get<AGInfo>(node->info);
+  }
+
+  static AGInfo& Create(const nnvm::NodePtr& node) {
+    node->info.construct<AGInfo>();
+    return Get(node);
+  }
+
+  static bool IsNone(const NDArray& arr) {
+    return arr.entry_.node == nullptr || arr.entry_.node->info.empty();
+  }
+
+  static bool IsVariable(const nnvm::NodePtr& node) {
+    AGInfo& info = Get(node);
+    return info.grad_req != kNullOp && info.outputs.size() == 1
+           && info.out_grads.size() == 1;
+  }
+};
+
 /*! \brief runtime functions for NDArray */
 class Imperative {
  public:
   /*! \brief */
-  class AGInfo {
-   public:
-    Context ctx;
-    OpReqType grad_req;
-    OpStatePtr state;
-    std::vector<NDArray> outputs;
-    std::vector<NDArray> out_grads;
-    bool fresh_out_grad;
 
-    AGInfo() :
-      grad_req(kNullOp), fresh_out_grad(false) {}
-
-    static void Clear(const nnvm::NodePtr& node) {
-      if (node == nullptr || node->info.empty()) return;
-      AGInfo& info = Get(node);
-      if (info.grad_req != kNullOp) return;
-      node->info.clear();
-    }
-
-    static AGInfo& Get(const nnvm::NodePtr& node) {
-      return dmlc::get<AGInfo>(node->info);
-    }
-
-    static AGInfo& Create(const nnvm::NodePtr& node) {
-      node->info.construct<AGInfo>();
-      return Get(node);
-    }
-
-    static bool IsNone(const NDArray& arr) {
-      return arr.entry_.node == nullptr || arr.entry_.node->info.empty();
-    }
-
-    static bool IsVariable(const nnvm::NodePtr& node) {
-      AGInfo& info = Get(node);
-      return info.grad_req != kNullOp && info.outputs.size() == 1
-             && info.out_grads.size() == 1;
-    }
-  };
   /*! \brief whether operator recording is on. */
   bool is_training() const {
     return is_train_;
@@ -97,11 +102,11 @@ class Imperative {
       is_recording_ = is_recording;
       return old;
   }
-  /*! brief whether numpy compatibility is on. */
+  /*! \brief whether numpy compatibility is on. */
   bool is_np_comp() const {
     return is_np_comp_;
   }
-  /*! brief turn on or turn off numpy compatibility switch. */
+  /*! \brief turn on or turn off numpy compatibility switch. */
   bool set_is_np_comp(bool is_np_comp) {
     bool old = is_np_comp_;
     is_np_comp_ = is_np_comp;
@@ -160,7 +165,18 @@ class Imperative {
 
  private:
   friend class NDArray;
-  /*! \brief make constructor protected. */
+  /*! Create a forward graph
+   * @param output_nodes graph node vector to add nodes to
+   * @param outputs source ndarrays
+   * @return vector of nodes
+   */
+  static std::vector<nnvm::NodeEntry> CreateForwardGraph(const std::vector<NDArray*>& outputs);
+  /*! Create gradient nodes using output shapes and ctx.
+   * Gradient heads are set to 1 if they are not present (nullptr)
+   * @return vector of nodes
+   */
+  static std::vector<nnvm::NodeEntry> CreateHeadGradients(const std::vector<NDArray *>& outputs,
+                                                          const std::vector<NDArray *>& ograds);
   Imperative() {
     if (PreferBulkExecTrain())
       backward_bulk_size_ = BulkExecMaxNodeTrainBwd();
