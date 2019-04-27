@@ -356,25 +356,13 @@ DLManagedTensor* NDArray::ToDLPack() const {
 }
 
 NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
-  const DLTensor &dl_tensor = tensor->dl_tensor;
-  auto deleter = [tensor](){
-    if (tensor->deleter != nullptr) {
-      tensor->deleter(const_cast<DLManagedTensor*>(tensor));
+  DLManagedTensor tensor_copy = *tensor;
+  auto deleter = [tensor_copy](){
+    if (tensor_copy.deleter != nullptr) {
+      tensor_copy.deleter(const_cast<DLManagedTensor*>(&tensor_copy));
     }
   };
-  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id, deleter);
-}
-
-NDArray NDArray::FromDLManagedTensor(const DLManagedTensor* tensor) {
-  const DLTensor &dl_tensor = tensor->dl_tensor;
-  void (*tensor_deleter)(struct DLManagedTensor * self) = tensor->deleter;
-  void *manager_ctx = tensor->manager_ctx;
-  auto deleter = [manager_ctx, tensor_deleter](){
-    if (tensor_deleter != nullptr) {
-      tensor_deleter(static_cast<DLManagedTensor*>(manager_ctx));
-    }
-  };
-  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id, deleter);
+  return NDArray(TBlob(tensor_copy.dl_tensor), tensor_copy.dl_tensor.ctx.device_id, deleter);
 }
 
 bool NDArray::fresh_out_grad() const {

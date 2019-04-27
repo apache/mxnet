@@ -825,22 +825,6 @@ MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
                                   NDArrayHandle *out_handle);
 
 /*!
-* \brief Create a NDArray backed by a dlpack tensor.
-*
-* This allows us to create a NDArray using the memory
-* allocated by an external deep learning framework
-* that is DLPack compatible.
-*
-* The memory is retained until the NDArray went out of scope.
-*
-* \param dlpack the pointer of the input DLManagedTensor
-* \param out_handle pointer holder to get pointer of NDArray
-* \return 0 when success, -1 when failure happens
-*/
-MXNET_DLL int MXNDArrayFromDLManagedTensor(DLManagedTensorHandle dlpack,
-                                           NDArrayHandle *out_handle);
-
-/*!
  * \brief Delete a dlpack tensor
  * \param dlpack the pointer of the input DLManagedTensor
  * \return 0 when success, -1 when failure happens

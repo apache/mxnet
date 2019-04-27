@@ -4218,5 +4218,5 @@ def from_numpy(ndarray, zero_copy=True):
     address = ctypes.addressof(c_obj)
     address = ctypes.cast(address, ctypes.c_void_p)
     handle = NDArrayHandle()
-    check_call(_LIB.MXNDArrayFromDLManagedTensor(address, ctypes.byref(handle)))
+    check_call(_LIB.MXNDArrayFromDLPack(address, ctypes.byref(handle)))
     return NDArray(handle=handle)
