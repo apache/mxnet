@@ -294,10 +294,12 @@ class BatchNorm(HybridBlock):
         When the next layer is linear (also e.g. `nn.relu`),
         this can be disabled since the scaling
         will be done by the next layer.
-    use_global_stats: bool, default False
+    use_global_stats: bool or 'auto', default False
         If True, use global moving statistics instead of local batch-norm. This will force
         change batch-norm into a scale shift operator.
         If False, use local batch-norm.
+        if 'auto', use_global_stats = False when autograd.is_training() == True; and, 
+        use_global_stats = True, otherwise.
     beta_initializer: str or `Initializer`, default 'zeros'
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
