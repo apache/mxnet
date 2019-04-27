@@ -293,7 +293,7 @@ def test_gradient_multiplier_op():
     b = np.random.random_sample()
     c = np.random.random_sample()
     m = np.random.random_sample() - 0.5
-    
+
     data = mx.symbol.Variable('data')
     quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
     gr_q_sym = mx.sym.contrib.gradientmultiplier(quad_sym, scalar=m)
@@ -320,6 +320,18 @@ def test_gradient_multiplier_op():
                                         [backward_expected],
                                         rtol=1e-2 if dtype is np.float16 else 1e-5,
                                         atol=1e-2 if dtype is np.float16 else 1e-5)
+def test_multibox_prior_op():
+    h = 561
+    w = 728
+    X = mx.nd.random.uniform(shape=(1, 3, h, w))
+    Y = mx.contrib.nd.MultiBoxPrior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
+    assert_array_equal(Y.shape, np.array((1, 2042040, 4)))
+    boxes = Y.reshape((h, w, 5, 4))
+    assert_allclose(boxes.asnumpy()[250, 250, 0, :], np.array([0.055117, 0.071524, 0.63307 , 0.821524]), atol=1e-5, rtol=1e-5)
+    # relax first ratio if user insists
+    Y = mx.contrib.nd.MultiBoxPrior(X, sizes=[0.75, 0.5, 0.25], ratios=[20, 2, 0.5])
+    boxes = Y.reshape((h, w, 5, 4))
+    assert_allclose(boxes.asnumpy()[250, 250, 0, :], np.array([-0.948249,  0.362671,  1.636436,  0.530377]), atol=1e-5, rtol=1e-5)
 
 if __name__ == '__main__':
     import nose

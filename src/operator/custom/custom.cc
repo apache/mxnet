@@ -128,17 +128,21 @@ bool InferShape(const NodeAttrs& attrs,
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
   size_t total = params.num_args + params.num_outs + params.num_auxs;
-  std::vector<uint32_t*> shapes(total);
+  std::vector<int*> shapes(total);
   std::vector<int> ndims(total);
   size_t buff_size = 0;
-  for (const auto& i : *in_shape) buff_size += i.ndim();
-  std::vector<uint32_t> buff(buff_size);
-  uint32_t *ptr = buff.data();
+  for (const auto& i : *in_shape) {
+    if (i.ndim() > 0) {
+      buff_size += i.ndim();
+    }
+  }
+  std::vector<int> buff(buff_size);
+  int *ptr = buff.data();
   for (size_t i = 0; i < in_shape->size(); ++i) {
     shapes[i] = ptr;
     ndims[i] = (*in_shape)[i].ndim();
-    for (size_t j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
-      *ptr = static_cast<uint32_t>((*in_shape)[i][j]);
+    for (int j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
+      *ptr = (*in_shape)[i][j];
     }
   }
 
@@ -263,7 +267,7 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
   for (size_t i = 0; i < in_shape.size(); ++i) {
     shapes[i] = ptr;
     ndims[i] = in_shape[i].ndim();
-    for (size_t j = 0; j < in_shape[i].ndim(); ++j, ++ptr) {
+    for (int j = 0; j < in_shape[i].ndim(); ++j, ++ptr) {
       *ptr = static_cast<uint32_t>(in_shape[i][j]);
     }
   }

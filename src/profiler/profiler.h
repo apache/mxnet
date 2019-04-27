@@ -608,6 +608,12 @@ struct ProfileCounter : public ProfileObject {
       return IncrementValue(static_cast<uint64_t>(v));
     }
   }
+
+  inline bool operator >=(int64_t v) {
+      CHECK_GE(v, 0);
+      return value_ >= static_cast<uint64_t>(v);
+  }
+
   /*! \brief operator: object = v */
   inline ProfileCounter& operator = (uint64_t v) {
     SetValue(v);

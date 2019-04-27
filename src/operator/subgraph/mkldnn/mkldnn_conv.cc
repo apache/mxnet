@@ -175,7 +175,7 @@ class SgMKLDNNConvOperator {
                const std::vector<NDArray> &outputs);
 
  private:
-  bool initalized_{false};
+  bool initialized_{false};
   bool inplace_{false};
   bool post_requantize_{false};
   nnvm::Symbol subgraph_sym_;
@@ -235,7 +235,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
 
   // Copy inputs[in_sum] into outputs[kOut] in case inplace optimization failed.
   if (mkldnn_param.with_sum) {
-    if (!initalized_) {
+    if (!initialized_) {
       // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace option,
       // which make check (req[kOut] == kWriteInplace) useless.
       auto in_mkl_mem = inputs[in_sum].GetMKLDNNData();
@@ -257,23 +257,23 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
 
   // Check input change
   // TODO(zhennan): Only update cached_* changed.
-  if (initalized_) {
+  if (initialized_) {
     if (mkldnn_param.with_bn) {
       if (weight_ver_ != inputs[in_weight].version() ||
           ((!conv_param.no_bias) && bias_ver_ != inputs[in_bias].version())) {
-        initalized_ = false;
+        initialized_ = false;
       }
     }
-    if (initalized_ && mkldnn_param.quantized) {
+    if (initialized_ && mkldnn_param.quantized) {
       if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
           cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
           weight_ver_ != inputs[in_weight].version() ||
           ((!conv_param.no_bias) && bias_ver_ != inputs[in_bias].version())) {
-        initalized_ = false;
+        initialized_ = false;
       }
     }
   }
-  if (!initalized_) {
+  if (!initialized_) {
     cached_data_min_ = data_min;
     cached_data_max_ = data_max;
     cached_sum_min_ = sum_min;
@@ -353,7 +353,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     fwd_->SetNewMem(*data.GetMKLDNNData(), *cached_weight_.GetMKLDNNData(),
                     has_bias ? cached_bias_.GetMKLDNNData() : nullptr,
                     *output.GetMKLDNNData());
-    initalized_ = true;
+    initialized_ = true;
   }
 
   if (mkldnn_param.quantized) {

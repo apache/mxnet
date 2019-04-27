@@ -66,6 +66,10 @@ class ImageClassifier(modelPathPrefix: String,
   protected[infer] val height = inputShape(inputLayout.indexOf('H'))
   protected[infer] val width = inputShape(inputLayout.indexOf('W'))
 
+  /**
+    * Get the names and shapes that would be returns by a classify call
+    * @return a list of (name, shape) tuples
+    */
   def outputShapes: IndexedSeq[(String, Shape)] = predictor.outputShapes
 
   /**
@@ -127,6 +131,19 @@ class ImageClassifier(modelPathPrefix: String,
     result
   }
 
+  /**
+    * Creates a Classifier
+    *
+    * @param modelPathPrefix    Path prefix from where to load the model artifacts.
+    *                           These include the symbol, parameters, and synset.txt.
+    *                           Example: file://model-dir/resnet-152 (containing
+    *                           resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
+    * @param inputDescriptors   Descriptors defining the input node names, shape,
+    *                           layout and type parameters
+    * @param contexts           Device contexts on which you want to run inference; defaults to CPU
+    * @param epoch              Model epoch to load; defaults to 0
+    * @return                   A Classifier to perform inference with
+    */
   private[infer] def getClassifier(modelPathPrefix: String,
                                      inputDescriptors: IndexedSeq[DataDesc],
                     contexts: Array[Context] = Context.cpu(),
@@ -156,19 +173,16 @@ object ImageClassifier {
 
   /**
     * Convert input BufferedImage to NDArray of input shape
-    *
-    * <p>
     * Note: Caller is responsible to dispose the NDArray
     * returned by this method after the use.
-    * </p>
-    * @param resizedImage     BufferedImage to get pixels from
     *
-    * @param inputImageShape  Input shape; for example for resnet it is (3,224,224).
-                              Should be same as inputDescriptor shape.
-    * @param dType            The DataType of the NDArray created from the image
-    *                         that should be returned.
-    *                         Currently it defaults to Dtype.Float32
-    * @return                 NDArray pixels array with shape (3, 224, 224) in CHW format
+    * @param resizedImage BufferedImage to get pixels from
+    * @param inputImageShape Input shape; for example for resnet it is (3,224,224).
+    *                        Should be same as inputDescriptor shape.
+    * @param dType The DataType of the NDArray created from the image
+    *              that should be returned.
+    *              Currently it defaults to Dtype.Float32
+    * @return NDArray pixels array with shape (3, 224, 224) in CHW format
     */
   def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape,
                             dType : DType = DType.Float32): NDArray = {

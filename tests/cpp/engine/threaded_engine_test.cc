@@ -27,6 +27,7 @@
 #include <dmlc/thread_group.h>
 #include <dmlc/omp.h>
 #include <gtest/gtest.h>
+#include <mxnet/c_api.h>
 #include <mxnet/engine.h>
 #include <dmlc/timer.h>
 #include <cstdio>
@@ -41,7 +42,7 @@
  * present the following workload
  *  n = reads.size()
  *  data[write] = (data[reads[0]] + ... data[reads[n]]) / n
- *  std::this_thread::sleep_for(std::chrono::microsecons(time));
+ *  std::this_thread::sleep_for(std::chrono::microseconds(time));
  */
 struct Workload {
   std::vector<int> reads;
@@ -75,7 +76,7 @@ void GenerateWorkload(int num_workloads, int num_var,
 /**
  * evaluate a single workload
  */
-void EvaluateWorload(const Workload& wl, std::vector<double>* data) {
+void EvaluateWorkload(const Workload& wl, std::vector<double>* data) {
   double tmp = 0;
   for (int i : wl.reads) tmp += data->at(i);
   data->at(wl.write) = tmp / (wl.reads.size() + 1);
@@ -87,9 +88,9 @@ void EvaluateWorload(const Workload& wl, std::vector<double>* data) {
 /**
  * evaluate a list of workload, return the time used
  */
-double EvaluateWorloads(const std::vector<Workload>& workloads,
-                      mxnet::Engine* engine,
-                      std::vector<double>* data) {
+double EvaluateWorkloads(const std::vector<Workload>& workloads,
+                         mxnet::Engine* engine,
+                         std::vector<double>* data) {
   using namespace mxnet;
   double t = dmlc::GetTime();
   std::vector<Engine::VarHandle> vars;
@@ -102,10 +103,10 @@ double EvaluateWorloads(const std::vector<Workload>& workloads,
   for (const auto& wl : workloads) {
     if (wl.reads.size() == 0) continue;
     if (engine == NULL) {
-      EvaluateWorload(wl, data);
+      EvaluateWorkload(wl, data);
     } else {
       auto func = [wl, data](RunContext ctx, Engine::CallbackOnComplete cb) {
-        EvaluateWorload(wl, data); cb();
+        EvaluateWorkload(wl, data); cb();
       };
       std::vector<Engine::VarHandle> reads;
       for (auto i : wl.reads) {
@@ -158,7 +159,7 @@ TEST(Engine, RandSumExpr) {
     std::vector<std::vector<double>> data(num_engine);
     for (int i = 0; i < num_engine; ++i) {
       data[i].resize(num_var, 1.0);
-      t[i] += EvaluateWorloads(workloads, engine[i], &data[i]);
+      t[i] += EvaluateWorkloads(workloads, engine[i], &data[i]);
     }
 
     for (int i = 1; i < num_engine; ++i) {
@@ -175,6 +176,83 @@ TEST(Engine, RandSumExpr) {
 }
 
 void Foo(mxnet::RunContext, int i) { printf("The fox says %d\n", i); }
+
+void FooAsyncFunc(void*, void* cb_ptr, void* param) {
+  if (param == nullptr) {
+    LOG(INFO) << "The fox asynchronously says receiving nothing.";
+  } else {
+    auto num = static_cast<int*>(param);
+    EXPECT_EQ(*num, 100);
+    LOG(INFO) << "The fox asynchronously says receiving " << *num;
+  }
+  auto cb = *static_cast<mxnet::engine::CallbackOnComplete*>(cb_ptr);
+  cb();
+}
+
+void FooSyncFunc(void*, void* param) {
+  if (param == nullptr) {
+    LOG(INFO) << "The fox synchronously says receiving nothing.";
+  } else {
+    auto num = static_cast<int*>(param);
+    EXPECT_EQ(*num, 101);
+    LOG(INFO) << "The fox synchronously says receiving " << *num;
+  }
+}
+
+void FooFuncDeleter(void* param) {
+  if (param != nullptr) {
+    auto num = static_cast<int*>(param);
+    LOG(INFO) << "The fox says deleting " << *num;
+    delete num;
+  }
+}
+
+TEST(Engine, PushFunc) {
+  auto var = mxnet::Engine::Get()->NewVariable();
+  auto ctx = mxnet::Context{};
+
+  // Test #1
+  LOG(INFO) << "===== Test #1: PushAsync param and deleter =====";
+  int* a = new int(100);
+  int res = MXEnginePushAsync(FooAsyncFunc, a, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #2
+  LOG(INFO) << "===== Test #2: PushAsync NULL param and NULL deleter =====";
+  res = MXEnginePushAsync(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #3
+  LOG(INFO) << "===== Test #3: PushAsync invalid number of const vars =====";
+  res = MXEnginePushAsync(FooAsyncFunc, nullptr, nullptr, &ctx, &var, -1, nullptr, 0);
+  EXPECT_EQ(res, -1);
+
+  // Test #4
+  LOG(INFO) << "===== Test #4: PushAsync invalid number of mutable vars =====";
+  res = MXEnginePushAsync(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, -1);
+  EXPECT_EQ(res, -1);
+
+  // Test #5
+  LOG(INFO) << "===== Test #5: PushSync param and deleter =====";
+  int* b = new int(101);
+  res = MXEnginePushSync(FooSyncFunc, b, FooFuncDeleter, &ctx, &var, 1, nullptr, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #6
+  LOG(INFO) << "===== Test #6: PushSync NULL param and NULL deleter =====";
+  res = MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, 1);
+  EXPECT_EQ(res, 0);
+
+  // Test #7
+  LOG(INFO) << "===== Test #7: PushSync invalid number of const vars =====";
+  res = MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, &var, -1, nullptr, 0);
+  EXPECT_EQ(res, -1);
+
+  // Test #8
+  LOG(INFO) << "===== Test #8: PushSync invalid number of mutable vars =====";
+  res = MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, -1);
+  EXPECT_EQ(res, -1);
+}
 
 TEST(Engine, basics) {
   auto&& engine = mxnet::Engine::Get();

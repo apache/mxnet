@@ -17,6 +17,8 @@
 
 package org.apache.mxnet
 
+import scala.language.implicitConversions
+
 object MX_PRIMITIVES {
 
   /**
