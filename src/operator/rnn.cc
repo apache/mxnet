@@ -38,12 +38,12 @@ static inline std::vector<std::string> ListArguments(const RNNParam& param_) {
 
   // LSTMs also have an additional state_cell argument
   if (param_.mode == rnn_enum::kLstm) {
-    arguments.push_back("state_cell");
+    arguments.emplace_back("state_cell");
   }
 
   // All RNNs have option of additional sequence_length argument
   if (param_.use_sequence_length) {
-    arguments.push_back("sequence_length");
+    arguments.emplace_back("sequence_length");
   }
 
   return arguments;
