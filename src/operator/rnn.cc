@@ -33,7 +33,6 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(RNNParam);
 static inline std::vector<std::string> ListArguments(const RNNParam& param_) {
-
   // All RNNs start off with same 3 input arguments
   std::vector<std::string> arguments{"data", "parameters", "state"};
 
@@ -59,7 +58,7 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   // Query param_ object to figure out what the expectd input arguments are
   std::vector<std::string> expected_arguments = ListArguments(param_);
 
-  CHECK_EQ(in_shape->size(), expected_arguments.size()) << "Input shape mismatch. Expected " << 
+  CHECK_EQ(in_shape->size(), expected_arguments.size()) << "Input shape mismatch. Expected " <<
     expected_arguments.size() << " input parameters but got " << in_shape->size() << ".";
 
   const TShape &dshape = (*in_shape)[rnn_enum::kData];

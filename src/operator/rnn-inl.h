@@ -612,7 +612,7 @@ class RNNOp {
         //   to do this copy For now however it is required as several places in backend assume that
         //   all data arrays share the same context.
         sequence_length_array_cpu.resize(param_.batch_size_);
-        CUDA_CALL(cudaMemcpy(sequence_length_array_cpu.data(),  sequence_length_ptr_gpu, 
+        CUDA_CALL(cudaMemcpy(sequence_length_array_cpu.data(),  sequence_length_ptr_gpu,
                              sizeof(IType) * param_.batch_size_, cudaMemcpyDeviceToHost));
 #else
         LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN version >= 7.2";
@@ -631,7 +631,7 @@ class RNNOp {
 
 #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
       if (!init_cudnn_) {
-  Init(ctx, s, in_data, out_data);
+        Init(ctx, s, in_data, out_data);
       }
 
 #if USE_CUDNN_LSTM_PROJ
@@ -641,7 +641,7 @@ class RNNOp {
 
       if (param_.use_sequence_length) {
         // sequence_length_ptr_gpu is of type Itype, need to convert to vector<int>
-        seqLengthArray = std::vector<int>(sequence_length_array_cpu.begin(), 
+        seqLengthArray = std::vector<int>(sequence_length_array_cpu.begin(),
                                           sequence_length_array_cpu.end());
         layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED;
       } else {
@@ -656,7 +656,7 @@ class RNNOp {
              param_.batch_size_,
              param_.input_size_,
              seqLengthArray.data(),
-             reinterpret_cast<void*>(&padding_fill_));
+             reinterpret_cast<void*>(&padding_fill_)));
       int out_size =
   (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
       out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
@@ -1551,7 +1551,7 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
           op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
         });
     });
- }
+}
 
 }  // namespace op
 }  // namespace mxnet
