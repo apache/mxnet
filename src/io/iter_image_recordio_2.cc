@@ -25,13 +25,13 @@
 
 #include <dmlc/base.h>
 #include <dmlc/common.h>
-#include <dmlc/input_split_shuffle.h>
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
 #include <dmlc/parameter.h>
 #include <dmlc/recordio.h>
 #include <dmlc/threadediter.h>
 #include <dmlc/timer.h>
+#include <dmlc/input_split_shuffle.h>
 #include <mxnet/io.h>
 #include <condition_variable>
 #include <mutex>
