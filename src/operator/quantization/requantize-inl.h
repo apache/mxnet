@@ -38,9 +38,17 @@ namespace mxnet {
 namespace op {
 
 struct RequantizeParam : public dmlc::Parameter<RequantizeParam> {
+  int out_type;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
   DMLC_DECLARE_PARAMETER(RequantizeParam) {
+    DMLC_DECLARE_FIELD(out_type)
+      .add_enum("auto", QuantizeOutType::kAuto)
+      .add_enum("int8", QuantizeOutType::kInt8)
+      .add_enum("uint8", QuantizeOutType::kUint8)
+      .set_default(QuantizeOutType::kInt8)
+      .describe("Output data type. `auto` can be specified to automatically determine output type "
+                "according to min_calib_range.");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -59,10 +67,18 @@ inline bool RequantizeType(const nnvm::NodeAttrs& attrs,
                            std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
+  const RequantizeParam &param = nnvm::get<RequantizeParam>(attrs.parsed);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kInt32);
   TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*in_attrs, 2, mshadow::kFloat32);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
+  auto out_type = GetQuantizeOutputType(param);
+  if (out_type == mshadow::kUint8) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kUint8);
+  } else if (out_type == mshadow::kInt8) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
+  } else {
+    LOG(FATAL) << "requantize op only supports int8 and uint8 as output type";
+  }
   TYPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_attrs, 2, mshadow::kFloat32);
   return (*in_attrs)[0] != -1;
@@ -100,6 +116,11 @@ void RequantizeForward(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const RequantizeParam& param =
     nnvm::get<RequantizeParam>(attrs.parsed);
+  auto out_type = GetQuantizeOutputType(param);
+  if (out_type == mshadow::kUint8 && std::is_same<xpu, gpu>::value) {
+    LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
+                  "please switch to the context of CPU or int8 data type for GPU.";
+  }
 
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
     Kernel<RequantizeKernel, xpu>::Launch(s, inputs[0].Size(),
