@@ -60,7 +60,7 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   std::vector<std::string> expected_arguments = ListArguments(param_);
 
   CHECK_EQ(in_shape->size(), expected_arguments.size()) << "Input shape mismatch. Expected " << 
-    expected_arguments.size() << " input parameters but got " << in_shape.size() << ".";
+    expected_arguments.size() << " input parameters but got " << in_shape->size() << ".";
 
   const TShape &dshape = (*in_shape)[rnn_enum::kData];
   if (!mxnet::ndim_is_known(dshape)) return false;
@@ -297,7 +297,7 @@ The definition of GRU here is slightly different from paper but compatible with 
               "initial cell state for LSTM networks (only for LSTM)")
 .add_argument("sequence_length", "NDArray-or-Symbol",
               "Vector of valid sequence lengths for each element in batch. (Only used if"
-              + " use_sequence_length kwarg is True)")
+              " use_sequence_length kwarg is True)")
 .add_arguments(RNNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_RNN)
