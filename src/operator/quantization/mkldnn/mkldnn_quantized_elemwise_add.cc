@@ -32,7 +32,7 @@
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(RequantizeElemwiseAddParam);
+DMLC_REGISTER_PARAMETER(QuantizeElemwiseAddParam);
 
 static inline float GetScale(const NDArray& data, float min, float max) {
   auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
@@ -43,7 +43,7 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
                                               const std::vector<NDArray>& in_data,
                                               const std::vector<OpReqType>& req,
                                               const std::vector<NDArray>& out_data) {
-  const RequantizeElemwiseAddParam& params = nnvm::get<RequantizeElemwiseAddParam>(attrs.parsed);
+  const QuantizeElemwiseAddParam& params = nnvm::get<QuantizeElemwiseAddParam>(attrs.parsed);
   // A, B, A_min, A_max, B_min, B_max
   CHECK_EQ(in_data.size(), 6U) << "should be A, B, A_min, A_max, B_min, B_max";
   // C, C_min, C_max
@@ -198,8 +198,8 @@ NNVM_REGISTER_OP(_contrib_quantized_elemwise_add)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedElemwiseAddForward)
 .set_attr<bool>("TIsMKLDNN", true)
-.set_attr_parser(ParamParser<RequantizeElemwiseAddParam>)
-.add_arguments(RequantizeElemwiseAddParam::__FIELDS__());
+.set_attr_parser(ParamParser<QuantizeElemwiseAddParam>)
+.add_arguments(QuantizeElemwiseAddParam::__FIELDS__());
 }  // namespace op
 }  // namespace mxnet
 

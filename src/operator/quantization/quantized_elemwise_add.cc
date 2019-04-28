@@ -68,7 +68,7 @@ static bool ElemwiseAddType(const nnvm::NodeAttrs& attrs,
   }
   // C
   int dtype = mshadow::kInt32;
-  const RequantizeElemwiseAddParam& params = nnvm::get<RequantizeElemwiseAddParam>(attrs.parsed);
+  const QuantizeElemwiseAddParam& params = nnvm::get<QuantizeElemwiseAddParam>(attrs.parsed);
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
     dtype = (in_type->at(0) == in_type->at(1)) ? in_type->at(0) : mshadow::kInt8;
   }

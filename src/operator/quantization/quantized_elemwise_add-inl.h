@@ -29,11 +29,11 @@
 
 namespace mxnet {
 namespace op {
-
-struct RequantizeElemwiseAddParam : public dmlc::Parameter<RequantizeElemwiseAddParam> {
+/* These structure is used for requantization only when fusion */
+struct QuantizeElemwiseAddParam : public dmlc::Parameter<QuantizeElemwiseAddParam> {
   dmlc::optional<float> min_calib_range;
   dmlc::optional<float> max_calib_range;
-  DMLC_DECLARE_PARAMETER(RequantizeElemwiseAddParam) {
+  DMLC_DECLARE_PARAMETER(QuantizeElemwiseAddParam) {
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
