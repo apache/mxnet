@@ -823,6 +823,7 @@ MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
 */
 MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
                                   NDArrayHandle *out_handle);
+
 /*!
  * \brief Delete a dlpack tensor
  * \param dlpack the pointer of the input DLManagedTensor
