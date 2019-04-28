@@ -23,9 +23,7 @@
  * \brief
 */
 #include "../tensor/elemwise_unary_op.h"
-#if MXNET_USE_MKLDNN == 1
-#include "./mkldnn/mkldnn_quantized_elemwise_add-inl.h"
-#endif
+#include "./quantized_elemwise_add-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -70,12 +68,10 @@ static bool ElemwiseAddType(const nnvm::NodeAttrs& attrs,
   }
   // C
   int dtype = mshadow::kInt32;
-#if MXNET_USE_MKLDNN == 1
   const RequantizeElemwiseAddParam& params = nnvm::get<RequantizeElemwiseAddParam>(attrs.parsed);
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
     dtype = (in_type->at(0) == in_type->at(1)) ? in_type->at(0) : mshadow::kInt8;
   }
-#endif
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   // C_min
   TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);

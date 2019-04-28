@@ -17,16 +17,15 @@
  * under the License.
  */
 /*!
- * \file mkldnn_quantized_elemwise_add-inl.h
+ * \file quantized_elemwise_add-inl.h
  * \brief
  * \author Rong Zhang
  */
 
-#ifndef MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_ELEMWISE_ADD_INL_H_
-#define MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_ELEMWISE_ADD_INL_H_
-#if MXNET_USE_MKLDNN == 1
+#ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZED_ELEMWISE_ADD_INL_H_
+#define MXNET_OPERATOR_QUANTIZATION_QUANTIZED_ELEMWISE_ADD_INL_H_
 
-#include "../../tensor/elemwise_unary_op.h"
+#include "../tensor/elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -56,5 +55,4 @@ enum QuantizedElemwiseAddInputs { kDataA, kDataB, kAMin, kAMax, kBMin, kBMax};
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_ELEMWISE_ADD_INL_H_
+#endif  // MXNET_OPERATOR_QUANTIZATION_QUANTIZED_ELEMWISE_ADD_INL_H_

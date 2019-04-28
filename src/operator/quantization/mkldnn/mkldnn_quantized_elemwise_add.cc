@@ -24,7 +24,7 @@
  */
 
 #if MXNET_USE_MKLDNN == 1
-#include "./mkldnn_quantized_elemwise_add-inl.h"
+#include "../quantized_elemwise_add-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../quantization_utils.h"
