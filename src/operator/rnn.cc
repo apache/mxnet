@@ -24,7 +24,6 @@
  * \author Sebastian Bodenstein
 */
 
-//#include <stringstream>
 #include <iterator>
 
 #include "./rnn-inl.h"
@@ -39,12 +38,14 @@ static inline std::vector<std::string> ListArguments(const RNNParam& param_) {
   std::vector<std::string> arguments{"data", "parameters", "state"};
 
   // LSTMs also have an additional state_cell argument
-  if (param_.mode == rnn_enum::kLstm)
+  if (param_.mode == rnn_enum::kLstm) {
     arguments.push_back("state_cell");
+  }
 
   // All RNNs have option of additional sequence_length argument
-  if (param_.use_sequence_length)
+  if (param_.use_sequence_length) {
     arguments.push_back("sequence_length");
+  }
 
   return arguments;
 }
@@ -58,14 +59,8 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   // Query param_ object to figure out what the expectd input arguments are
   std::vector<std::string> expected_arguments = ListArguments(param_);
 
-  /*
-  std::stringstream expected_arguments_string_stream;
-  std::copy(expected_arguments.begin(), expected_arguments.end(), std::ostream_iterator<std::string>(expected_arguments_string_stream, " "));
-
-  CHECK_EQ(in_shape->size(), expected_arguments.size()) << "Needed input:[" << expected_arguments_string_stream.str() << "],"
-							<< " got in_shape->size(): " << in_shape->size();
-  */
-  CHECK_EQ(in_shape->size(), expected_arguments.size()) << "shape mismatch!!";
+  CHECK_EQ(in_shape->size(), expected_arguments.size()) << "Input shape mismatch. Expected " << 
+    expected_arguments.size() << " input parameters but got " << in_shape.size() << ".";
 
   const TShape &dshape = (*in_shape)[rnn_enum::kData];
   if (!mxnet::ndim_is_known(dshape)) return false;
@@ -159,7 +154,7 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
       // If using sequence length argument, it has its own indexing type
       // All other input arguments must match the main data type
       if (!(param_.use_sequence_length && i == seq_len_input_idx)) {
-	UNIFORM_TYPE_CHECK((*in_type)[i], dtype, arguments[i]);
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, arguments[i]);
       }
     }
   }
@@ -301,7 +296,8 @@ The definition of GRU here is slightly different from paper but compatible with 
 .add_argument("state_cell", "NDArray-or-Symbol",
               "initial cell state for LSTM networks (only for LSTM)")
 .add_argument("sequence_length", "NDArray-or-Symbol",
-              "Vector of valid sequence lengths for each element in batch. (Only used if use_sequence_length kwarg is True)")
+              "Vector of valid sequence lengths for each element in batch. (Only used if"
+              + " use_sequence_length kwarg is True)")
 .add_arguments(RNNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_RNN)

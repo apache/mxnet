@@ -28,6 +28,7 @@
 
 #define MXNET_USE_CUDNN_RNN MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 #define USE_CUDNN_LSTM_PROJ MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
+#define USE_VAR_SEQ_LENGTH MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -503,7 +504,6 @@ class RNNOp {
         LOG(FATAL) << "LSTM state clipping is only supported for GPU with CuDNN later than 7.2.1";
       }
     }
-
   }
 
   ~RNNOp() {
@@ -595,35 +595,35 @@ class RNNOp {
       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
 
       if (param_.use_sequence_length) {
-#if MXNET_USE_CUDNN_RNN && CUDNN_VERSION >= 7200
-	if (ctx_.dev_type == kCPU) {
-	  LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN at the moment. Not supported on CPU";
-	}
+#if USE_VAR_SEQ_LENGTH
+        if (ctx_.dev_type == kCPU) {
+          LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN at the moment."
+                     << " Not supported on CPU";
+        }
 
-	// We can assume we are on GPU for now
-	size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-	if  (param_.mode != rnn_enum::kLstm)
-	  seq_len_input_idx -= 1;
-	IType *sequence_length_ptr_gpu = (in_data[seq_len_input_idx].get<xpu, 1, IType>(s)).dptr_;
+        // We can assume we are on GPU for now
+        size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+        if  (param_.mode != rnn_enum::kLstm)
+          seq_len_input_idx -= 1;
+        IType *sequence_length_ptr_gpu = (in_data[seq_len_input_idx].get<xpu, 1, IType>(s)).dptr_;
 
-	// Need to copy from GPU -> CPU, becuase cuDNN API requires this array on CPU memory.
-	// TODO: In future, allow users to pass this array on the CPU so we don't have to do this copy
-	//       For now it is required as several places in backend assume that all data arrays share
-	//       the same context.
-	sequence_length_array_cpu.resize(param_.batch_size_);
-	CUDA_CALL(cudaMemcpy(sequence_length_array_cpu.data(),  sequence_length_ptr_gpu, sizeof(IType) * param_.batch_size_,
-			     cudaMemcpyDeviceToHost));
+        // Need to copy from GPU -> CPU, becuase cuDNN API requires this array on CPU memory.
+        // TODO(stephenrawls): In future, allow users to pass this array on the CPU so we don't have
+        //   to do this copy For now however it is required as several places in backend assume that
+        //   all data arrays share the same context.
+        sequence_length_array_cpu.resize(param_.batch_size_);
+        CUDA_CALL(cudaMemcpy(sequence_length_array_cpu.data(),  sequence_length_ptr_gpu, 
+                             sizeof(IType) * param_.batch_size_, cudaMemcpyDeviceToHost));
 #else
-	LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN version >= 7.2";
+        LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN version >= 7.2";
 #endif
       }
       DType* cx_ptr = NULL;
       DType* cy_ptr = NULL;
       if (param_.mode == rnn_enum::kLstm)
-	cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
+        cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
       if (param_.mode == rnn_enum::kLstm && param_.state_outputs)
-	cy_ptr = (out_data[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
-
+        cy_ptr = (out_data[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
       CHECK_EQ(x.CheckContiguous(), true);
       CHECK_EQ(w.CheckContiguous(), true);
       CHECK_EQ(hx.CheckContiguous(), true);
@@ -631,7 +631,7 @@ class RNNOp {
 
 #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
       if (!init_cudnn_) {
-	Init(ctx, s, in_data, out_data);
+  Init(ctx, s, in_data, out_data);
       }
 
 #if USE_CUDNN_LSTM_PROJ
@@ -640,51 +640,51 @@ class RNNOp {
       cudnnRNNDataLayout_t layout_t;
 
       if (param_.use_sequence_length) {
-	// sequence_length_ptr_gpu is fo type Itype, need to convert to vector<int>
-	seqLengthArray = std::vector<int>(sequence_length_array_cpu.begin(), sequence_length_array_cpu.end());
-	layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED;
-      }
-      else {
-	seqLengthArray = std::vector<int>(param_.batch_size_, param_.seq_length_);
-	layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED;
+        // sequence_length_ptr_gpu is of type Itype, need to convert to vector<int>
+        seqLengthArray = std::vector<int>(sequence_length_array_cpu.begin(), 
+                                          sequence_length_array_cpu.end());
+        layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED;
+      } else {
+        seqLengthArray = std::vector<int>(param_.batch_size_, param_.seq_length_);
+        layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED;
       }
 
       CUDNN_CALL(cudnnSetRNNDataDescriptor(x_data_desc_,
-					   dtype_,
-					   layout_t,
-					   param_.seq_length_,
-					   param_.batch_size_,
-					   param_.input_size_,
-					   seqLengthArray.data(),
-					   (void*)&padding_fill_));
+             dtype_,
+             layout_t,
+             param_.seq_length_,
+             param_.batch_size_,
+             param_.input_size_,
+             seqLengthArray.data(),
+             reinterpret_cast<void*>(&padding_fill_));
       int out_size =
-	(param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
+  (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
       out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
       CUDNN_CALL(cudnnSetRNNDataDescriptor(y_data_desc_,
-					   dtype_,
-					   layout_t,
-					   param_.seq_length_,
-					   param_.batch_size_,
-					   out_size,
-					   seqLengthArray.data(),
-					   (void*)&padding_fill_));
+             dtype_,
+             layout_t,
+             param_.seq_length_,
+             param_.batch_size_,
+             out_size,
+             seqLengthArray.data(),
+             reinterpret_cast<void*>(&padding_fill_)));
       if (ctx.is_train) {
-	CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
-					     dtype_,
-					     layout_t,
-					     param_.seq_length_,
-					     param_.batch_size_,
-					     param_.input_size_,
-					     seqLengthArray.data(),
-					     (void*)&padding_fill_));
-	CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
-					     dtype_,
-					     layout_t,
-					     param_.seq_length_,
-					     param_.batch_size_,
-					     out_size,
-					     seqLengthArray.data(),
-					     (void*)&padding_fill_));
+  CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
+               dtype_,
+               layout_t,
+               param_.seq_length_,
+               param_.batch_size_,
+               param_.input_size_,
+               seqLengthArray.data(),
+               reinterpret_cast<void*>(&padding_fill_)));
+  CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
+               dtype_,
+               layout_t,
+               param_.seq_length_,
+               param_.batch_size_,
+               out_size,
+               seqLengthArray.data(),
+               reinterpret_cast<void*>(&padding_fill_)));
       }
 #endif
 
@@ -692,188 +692,188 @@ class RNNOp {
       bool clip_state = param_.lstm_state_clip_min.has_value();
       bool clip_nan = param_.lstm_state_clip_nan;
       CUDNN_CALL(cudnnRNNSetClip(s->dnn_handle_,
-				 rnn_desc_,
-				 clip_state ? CUDNN_RNN_CLIP_MINMAX : CUDNN_RNN_CLIP_NONE,
-				 clip_nan ? CUDNN_NOT_PROPAGATE_NAN : CUDNN_PROPAGATE_NAN,
-				 clip_state ? param_.lstm_state_clip_min.value() : 0.0,
-				 clip_state ? param_.lstm_state_clip_max.value() : 0.0));
+         rnn_desc_,
+         clip_state ? CUDNN_RNN_CLIP_MINMAX : CUDNN_RNN_CLIP_NONE,
+         clip_nan ? CUDNN_NOT_PROPAGATE_NAN : CUDNN_PROPAGATE_NAN,
+         clip_state ? param_.lstm_state_clip_min.value() : 0.0,
+         clip_state ? param_.lstm_state_clip_max.value() : 0.0));
 #endif
 
       if (ctx.is_train) {
 #if USE_CUDNN_LSTM_PROJ
-	CUDNN_CALL(cudnnRNNForwardTrainingEx(s->dnn_handle_,
-					     rnn_desc_,
-					     x_data_desc_,
-					     x.dptr_,
-					     hx_desc_,
-					     hx.dptr_,
-					     cx_desc_,
-					     cx_ptr,
-					     w_desc_,
-					     w.dptr_,
-					     y_data_desc_,
-					     y.dptr_,
-					     hy_desc_,
-					     hy_ptr,
-					     cy_desc_,
-					     cy_ptr,
-					     nullptr,
-					     nullptr,
-					     nullptr,
-					     nullptr,
-					     nullptr,
-					     nullptr,
-					     nullptr,
-					     nullptr,
-					     temp_space_.dptr,
-					     workspace_byte_,
-					     reserve_space_.dptr,
-					     reserve_space_byte_));
+  CUDNN_CALL(cudnnRNNForwardTrainingEx(s->dnn_handle_,
+               rnn_desc_,
+               x_data_desc_,
+               x.dptr_,
+               hx_desc_,
+               hx.dptr_,
+               cx_desc_,
+               cx_ptr,
+               w_desc_,
+               w.dptr_,
+               y_data_desc_,
+               y.dptr_,
+               hy_desc_,
+               hy_ptr,
+               cy_desc_,
+               cy_ptr,
+               nullptr,
+               nullptr,
+               nullptr,
+               nullptr,
+               nullptr,
+               nullptr,
+               nullptr,
+               nullptr,
+               temp_space_.dptr,
+               workspace_byte_,
+               reserve_space_.dptr,
+               reserve_space_byte_));
 #else
-	CUDNN_CALL(cudnnRNNForwardTraining(s->dnn_handle_,
-					   rnn_desc_,
-					   param_.seq_length_,
-					   x_desc_vec_.data(),
-					   x.dptr_,
-					   hx_desc_,
-					   hx.dptr_,
-					   cx_desc_,
-					   cx_ptr,
-					   w_desc_,
-					   w.dptr_,
-					   y_desc_vec_.data(),
-					   y.dptr_,
-					   hy_desc_,
-					   hy_ptr,
-					   cy_desc_,
-					   cy_ptr,
-					   temp_space_.dptr,
-					   workspace_byte_,
-					   reserve_space_.dptr,
-					   reserve_space_byte_));
+  CUDNN_CALL(cudnnRNNForwardTraining(s->dnn_handle_,
+             rnn_desc_,
+             param_.seq_length_,
+             x_desc_vec_.data(),
+             x.dptr_,
+             hx_desc_,
+             hx.dptr_,
+             cx_desc_,
+             cx_ptr,
+             w_desc_,
+             w.dptr_,
+             y_desc_vec_.data(),
+             y.dptr_,
+             hy_desc_,
+             hy_ptr,
+             cy_desc_,
+             cy_ptr,
+             temp_space_.dptr,
+             workspace_byte_,
+             reserve_space_.dptr,
+             reserve_space_byte_));
 #endif
       } else {
 #if USE_CUDNN_LSTM_PROJ
-	CUDNN_CALL(cudnnRNNForwardInferenceEx(s->dnn_handle_,
-					      rnn_desc_,
-					      x_data_desc_,
-					      x.dptr_,
-					      hx_desc_,
-					      hx.dptr_,
-					      cx_desc_,
-					      cx_ptr,
-					      w_desc_,
-					      w.dptr_,
-					      y_data_desc_,
-					      y.dptr_,
-					      hy_desc_,
-					      hy_ptr,
-					      cy_desc_,
-					      cy_ptr,
-					      nullptr,
-					      nullptr,
-					      nullptr,
-					      nullptr,
-					      nullptr,
-					      nullptr,
-					      nullptr,
-					      nullptr,
-					      temp_space_.dptr,
-					      workspace_byte_));
+  CUDNN_CALL(cudnnRNNForwardInferenceEx(s->dnn_handle_,
+                rnn_desc_,
+                x_data_desc_,
+                x.dptr_,
+                hx_desc_,
+                hx.dptr_,
+                cx_desc_,
+                cx_ptr,
+                w_desc_,
+                w.dptr_,
+                y_data_desc_,
+                y.dptr_,
+                hy_desc_,
+                hy_ptr,
+                cy_desc_,
+                cy_ptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr,
+                temp_space_.dptr,
+                workspace_byte_));
 #else
-	CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
-					    rnn_desc_,
-					    param_.seq_length_,
-					    x_desc_vec_.data(),
-					    x.dptr_,
-					    hx_desc_,
-					    hx.dptr_,
-					    cx_desc_,
-					    cx_ptr,
-					    w_desc_,
-					    w.dptr_,
-					    y_desc_vec_.data(),
-					    y.dptr_,
-					    hy_desc_,
-					    hy_ptr,
-					    cy_desc_,
-					    cy_ptr,
-					    temp_space_.dptr,
-					    workspace_byte_));
+  CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
+              rnn_desc_,
+              param_.seq_length_,
+              x_desc_vec_.data(),
+              x.dptr_,
+              hx_desc_,
+              hx.dptr_,
+              cx_desc_,
+              cx_ptr,
+              w_desc_,
+              w.dptr_,
+              y_desc_vec_.data(),
+              y.dptr_,
+              hy_desc_,
+              hy_ptr,
+              cy_desc_,
+              cy_ptr,
+              temp_space_.dptr,
+              workspace_byte_));
 #endif
       }
 #endif
 
       if (ctx_.dev_type == kCPU) {
-	// allocate temp space
-	const size_t work_cpu_space_size =
+  // allocate temp space
+  const size_t work_cpu_space_size =
           GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                               param_.state_size, direction, param_.mode);
-	if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
+  if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
           Storage::Get()->Free(temp_cpu_space_);
           temp_init_space_ = false;
-	}
-	if (!temp_init_space_) {
-	  temp_cpu_space_ = Storage::Get()->Alloc
+  }
+  if (!temp_init_space_) {
+    temp_cpu_space_ = Storage::Get()->Alloc
             (work_cpu_space_size * sizeof(DType), Context::CPU());
-	  temp_cpu_space_size_ = work_cpu_space_size;
-	  temp_init_space_ = true;
-	}
-	DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
-	if (ctx.is_train) {
-	  const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
-						       param_.seq_length_, param_.batch_size_,
-						       param_.state_size, param_.mode);
-	  if (init_space_ && reserve_cpu_space_size_ < r_size) {
-	    Storage::Get()->Free(reserve_cpu_space_);
-	    init_space_ = false;
-	  }
-	  if (!init_space_) {
-	    reserve_cpu_space_ = Storage::Get()->Alloc(r_size * sizeof(DType), Context::CPU());
-	    reserve_cpu_space_size_ = r_size;
-	    init_space_ = true;
-	  }
+    temp_cpu_space_size_ = work_cpu_space_size;
+    temp_init_space_ = true;
+  }
+  DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
+  if (ctx.is_train) {
+    const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
+                   param_.seq_length_, param_.batch_size_,
+                   param_.state_size, param_.mode);
+    if (init_space_ && reserve_cpu_space_size_ < r_size) {
+      Storage::Get()->Free(reserve_cpu_space_);
+      init_space_ = false;
+    }
+    if (!init_space_) {
+      reserve_cpu_space_ = Storage::Get()->Alloc(r_size * sizeof(DType), Context::CPU());
+      reserve_cpu_space_size_ = r_size;
+      init_space_ = true;
+    }
 
-	  DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.dptr);
+    DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.dptr);
 
-	  RNNForwardTraining<DType>(work_cpu_space,
-				    reserve_space_ptr,
-				    param_.state_outputs,
-				    param_.num_layers,
-				    direction,
-				    param_.seq_length_,
-				    param_.batch_size_,
-				    param_.input_size_,
-				    param_.state_size,
-				    x.dptr_,
-				    hx.dptr_,
-				    cx_ptr,
-				    w.dptr_,
-				    b_ptr,
-				    y.dptr_,
-				    hy_ptr,
-				    cy_ptr,
-				    param_.p,
-				    param_.mode);
-	} else {
-	  RNNForwardInference<DType>(work_cpu_space,
-				     param_.state_outputs,
-				     param_.num_layers,
-				     direction,
-				     param_.seq_length_,
-				     param_.batch_size_,
-				     param_.input_size_,
-				     param_.state_size,
-				     x.dptr_,
-				     hx.dptr_,
-				     cx_ptr,
-				     w.dptr_,
-				     b_ptr,
-				     y.dptr_,
-				     hy_ptr,
-				     cy_ptr,
-				     param_.mode);
-	}
+    RNNForwardTraining<DType>(work_cpu_space,
+            reserve_space_ptr,
+            param_.state_outputs,
+            param_.num_layers,
+            direction,
+            param_.seq_length_,
+            param_.batch_size_,
+            param_.input_size_,
+            param_.state_size,
+            x.dptr_,
+            hx.dptr_,
+            cx_ptr,
+            w.dptr_,
+            b_ptr,
+            y.dptr_,
+            hy_ptr,
+            cy_ptr,
+            param_.p,
+            param_.mode);
+  } else {
+    RNNForwardInference<DType>(work_cpu_space,
+             param_.state_outputs,
+             param_.num_layers,
+             direction,
+             param_.seq_length_,
+             param_.batch_size_,
+             param_.input_size_,
+             param_.state_size,
+             x.dptr_,
+             hx.dptr_,
+             cx_ptr,
+             w.dptr_,
+             b_ptr,
+             y.dptr_,
+             hy_ptr,
+             cy_ptr,
+             param_.mode);
+  }
       }
     }
   }
@@ -1334,8 +1334,12 @@ class RNNOp {
       }
       #endif
       // Get temp space sizes
-      if (param_.use_sequence_length)
-	CUDNN_CALL(cudnnSetRNNPaddingMode(rnn_desc_, CUDNN_RNN_PADDED_IO_ENABLED));
+
+      #if USE_VAR_SEQ_LENGTH
+      if (param_.use_sequence_length) {
+        CUDNN_CALL(cudnnSetRNNPaddingMode(rnn_desc_, CUDNN_RNN_PADDED_IO_ENABLED));
+      }
+      #endif
 
       CUDNN_CALL(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
                                           rnn_desc_,
@@ -1464,12 +1468,12 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       MSHADOW_TYPE_SWITCH(itype, IType, {
-	  if (ctx.dev_type == kGPU) {
-	    state = OpStatePtr::Create<RNNOp<gpu, DType, IType>>(param, ctx);
-	  } else {
-	    state = OpStatePtr::Create<RNNOp<cpu, DType, IType>>(param, ctx);
-	  }
-	});
+    if (ctx.dev_type == kGPU) {
+      state = OpStatePtr::Create<RNNOp<gpu, DType, IType>>(param, ctx);
+    } else {
+      state = OpStatePtr::Create<RNNOp<cpu, DType, IType>>(param, ctx);
+    }
+  });
     });
   return state;
 }
@@ -1489,9 +1493,9 @@ void RNNStatefulCompute(const OpStatePtr& state,
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       MSHADOW_TYPE_SWITCH(itype, IType, {
-	  RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
-	  op.Forward(ctx, inputs, req, outputs);
-	});
+          RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
+          op.Forward(ctx, inputs, req, outputs);
+        });
     });
 }
 
@@ -1528,26 +1532,26 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       MSHADOW_TYPE_SWITCH(itype, IType, {
-	  RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
-	  const RNNParam& param = op.param_;
-	  int index = 5;
-	  if (param.state_outputs) {
-	    out_data.push_back(inputs[index++]);
-	    out_grad.push_back(inputs[index++]);
-	  }
+          RNNOp<xpu, DType, IType>& op = state.get_state<RNNOp<xpu, DType, IType>>();
+          const RNNParam& param = op.param_;
+          int index = 5;
+          if (param.state_outputs) {
+            out_data.push_back(inputs[index++]);
+            out_grad.push_back(inputs[index++]);
+          }
 
-	  if (param.mode == rnn_enum::kLstm) {
-	    in_data.push_back(inputs[index++]);
-	    if (param.state_outputs) {
-	      out_data.push_back(inputs[index++]);
-	      out_grad.push_back(inputs[index]);
-	    }
-	  }
+          if (param.mode == rnn_enum::kLstm) {
+            in_data.push_back(inputs[index++]);
+            if (param.state_outputs) {
+              out_data.push_back(inputs[index++]);
+              out_grad.push_back(inputs[index]);
+            }
+          }
 
-	  op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
-	});
+          op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);
+        });
     });
-}
+ }
 
 }  // namespace op
 }  // namespace mxnet
