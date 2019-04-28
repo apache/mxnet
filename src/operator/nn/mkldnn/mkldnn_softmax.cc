@@ -77,7 +77,6 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs &attrs,
 
   auto data_mem = data.GetMKLDNNData();
   auto pd = GetSoftmaxFwdPd(axis, ctx.is_train, *data_mem);
-  CHECK(data_mem->get_primitive_desc() == pd.src_primitive_desc());
   auto out_mem = CreateMKLDNNMem(out_data, pd.dst_primitive_desc(), req);
   MKLDNNStream *stream = MKLDNNStream::Get();
   stream->RegisterPrim(mkldnn::softmax_forward(pd, *data_mem, *out_mem.second));
