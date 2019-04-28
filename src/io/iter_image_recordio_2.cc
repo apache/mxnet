@@ -23,27 +23,25 @@
  * \brief new version of recordio data iterator
  */
 
+#include <mxnet/io.h>
+#include <dmlc/parameter.h>
+#include <dmlc/threadediter.h>
+#include <dmlc/input_split_shuffle.h>
+#include <dmlc/recordio.h>
 #include <dmlc/base.h>
-#include <dmlc/common.h>
 #include <dmlc/io.h>
 #include <dmlc/omp.h>
-#include <dmlc/parameter.h>
-#include <dmlc/recordio.h>
-#include <dmlc/threadediter.h>
+#include <dmlc/common.h>
 #include <dmlc/timer.h>
-#include <dmlc/input_split_shuffle.h>
-#include <mxnet/io.h>
-#include <condition_variable>
-#include <mutex>
 #include <type_traits>
 #if MXNET_USE_LIBJPEG_TURBO
 #include <turbojpeg.h>
 #endif
-#include "../common/utils.h"
+#include "./image_recordio.h"
 #include "./image_augmenter.h"
 #include "./image_iter_common.h"
-#include "./image_recordio.h"
 #include "./inst_vector.h"
+#include "../common/utils.h"
 
 namespace mxnet {
 
