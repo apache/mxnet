@@ -24,6 +24,7 @@ import multiprocessing as mp
 import unittest
 import random
 import mxnet as mx
+import mxnet.ndarray as nd
 import numpy as np
 import unittest
 import math
