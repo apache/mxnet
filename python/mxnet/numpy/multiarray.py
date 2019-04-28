@@ -86,10 +86,11 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __setitem__(self, key, value):
-        raise NotImplementedError
+        super(ndarray, self).__setitem__(key, value)
 
     @use_np_compat
     def __add__(self, other):
+        """x.__add__(y) <=> x + y"""
         return super(ndarray, self).__add__(other).as_np_ndarray()
 
     @use_np_compat
@@ -98,6 +99,7 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __sub__(self, other):
+        """x.__sub__(y) <=> x - y"""
         return super(ndarray, self).__sub__(other).as_np_ndarray()
 
     @use_np_compat
@@ -106,10 +108,12 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __rsub__(self, other):
-        raise NotImplementedError
+        """x.__rsub__(y) <=> y - x"""
+        return super(ndarray, self).__rsub__(other).as_np_ndarray()
 
     @use_np_compat
     def __mul__(self, other):
+        """x.__mul__(y) <=> x * y"""
         return super(ndarray, self).__mul__(other).as_np_ndarray()
 
     @use_np_compat
@@ -122,15 +126,18 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __rmul__(self, other):
+        """x.__rmul__(y) <=> y * x"""
         return self.__mul__(other)
 
     @use_np_compat
     def __div__(self, other):
+        """x.__div__(y) <=> x / y"""
         return super(ndarray, self).__div__(other).as_np_ndarray()
 
     @use_np_compat
     def __rdiv__(self, other):
-        raise NotImplementedError
+        """x.__rdiv__(y) <=> y / x"""
+        return super(ndarray, self).__rdiv__(other).as_np_ndarray()
 
     @use_np_compat
     def __idiv__(self, other):
@@ -138,11 +145,13 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __truediv__(self, other):
-        raise NotImplementedError
+        """x.__truediv__(y) <=> x / y"""
+        return self.__div__(other)
 
     @use_np_compat
     def __rtruediv__(self, other):
-        raise NotImplementedError
+        """x.__rtruediv__(y) <=> y / x"""
+        return super(ndarray, self).__rtruediv__(other).as_np_ndarray()
 
     @use_np_compat
     def __itruediv__(self, other):
@@ -150,11 +159,13 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __mod__(self, other):
+        """x.__mod__(y) <=> x % y"""
         return super(ndarray, self).__mod__(other).as_np_ndarray()
 
     @use_np_compat
     def __rmod__(self, other):
-        raise NotImplementedError
+        """x.__rmod__(y) <=> y % x"""
+        return super(ndarray, self).__rmod__(other).as_np_ndarray()
 
     @use_np_compat
     def __imod__(self, other):
@@ -162,14 +173,17 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __pow__(self, other):
+        """x.__pow__(y) <=> x ** y"""
         return super(ndarray, self).__pow__(other).as_np_ndarray()
 
     @use_np_compat
     def __rpow__(self, other):
-        raise NotImplementedError
+        """x.__rpow__(y) <=> y ** x"""
+        return super(ndarray, self).__rpow__(other).as_np_ndarray()
 
     @use_np_compat
     def __eq__(self, other):
+        """x.__eq__(y) <=> x == y"""
         return super(ndarray, self).__eq__(other).as_np_ndarray()
 
     @use_np_compat
@@ -178,22 +192,27 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __ne__(self, other):
+        """x.__ne__(y) <=> x != y"""
         return super(ndarray, self).__ne__(other).as_np_ndarray()
 
     @use_np_compat
     def __gt__(self, other):
+        """x.__gt__(y) <=> x > y"""
         return super(ndarray, self).__gt__(other).as_np_ndarray()
 
     @use_np_compat
     def __ge__(self, other):
+        """x.__ge__(y) <=> x >= y"""
         return super(ndarray, self).__ge__(other).as_np_ndarray()
 
     @use_np_compat
     def __lt__(self, other):
+        """x.__lt__(y) <=> x < y"""
         return super(ndarray, self).__lt__(other).as_np_ndarray()
 
     @use_np_compat
     def __le__(self, other):
+        """x.__le__(y) <=> x <= y"""
         return super(ndarray, self).__le__(other).as_np_ndarray()
 
     @use_np_compat
@@ -202,7 +221,7 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __len__(self):
-        """Number of element along the first axis."""
+        """Number of elements along the first axis."""
         return self.shape[0]
 
     def __reduce__(self):
@@ -235,6 +254,12 @@ class ndarray(NDArray):
         """Returns a string representation of the array."""
         return '%s\n<%s shape=%s ctx=%s>' % (str(self.asnumpy()), self.__class__.__name__,
                                              self.shape, self.context)
+
+    @use_np_compat
+    def attach_grad(self, grad_req='write', stype=None):
+        if stype is not None:
+            raise NotImplementedError('mxnet.numpy.ndarray currently does not support stype')
+        super(ndarray, self).attach_grad(grad_req, stype)
 
     @property
     def grad(self):
@@ -1047,7 +1072,7 @@ def array(object, dtype=None, **kwargs):
     Returns
     -------
     out : ndarray
-        Array of uninitialized (arbitrary) data of the given shape, dtype and ctx.
+        An array object satisfying the specified requirements.
     """
     _sanity_check_params('array', ['copy', 'order', 'subok', 'ndim'], kwargs)
     ctx = kwargs.get('ctx', current_context())

@@ -44,7 +44,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __add__(self, other):
-        """x.__add__(y) <=> x+y"""
+        """x.__add__(y) <=> x + y"""
         if isinstance(other, Symbol):
             return _op.broadcast_add(self, other).as_np_ndarray()
         else:
@@ -52,6 +52,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __sub__(self, other):
+        """x.__sub__(y) <=> x - y"""
         if isinstance(other, Symbol):
             return _op.broadcast_sub(self, other).as_np_ndarray()
         else:
@@ -59,10 +60,15 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __rsub__(self, other):
-        raise NotImplementedError
+        """x.__rsub__(y) <=> y - x"""
+        if isinstance(other, Symbol):
+            return _op.broadcast_sub(other, self).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__rsub__(other).as_np_ndarray()
 
     @use_np_compat
     def __mul__(self, other):
+        """x.__mul__(y) <=> x * y"""
         if isinstance(other, Symbol):
             return _op.broadcast_mul(self, other).as_np_ndarray()
         else:
@@ -70,10 +76,12 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __rmul__(self, other):
+        """x.__rmul__(y) <=> y * x"""
         return self.__mul__(other)
 
     @use_np_compat
     def __div__(self, other):
+        """x.__div__(y) <=> x / y"""
         if isinstance(other, Symbol):
             return _op.broadcast_div(self, other).as_np_ndarray()
         else:
@@ -85,6 +93,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __mod__(self, other):
+        """x.__mod__(y) <=> x % y"""
         if isinstance(other, Symbol):
             return _op.broadcast_mod(self, other).as_np_ndarray()
         else:
@@ -100,11 +109,16 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __truediv__(self, other):
-        raise NotImplementedError
+        """x.__truediv__(y) <=> x / y"""
+        return self.__div__(other)
 
     @use_np_compat
     def __rtruediv__(self, other):
-        raise NotImplementedError
+        """x.__rtruediv__(y) <=> y / x"""
+        if isinstance(other, Symbol):
+            return _op.broadcast_div(other, self).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__rtruediv__(other).as_np_ndarray()
 
     @use_np_compat
     def __itruediv__(self, other):
@@ -112,6 +126,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __pow__(self, other):
+        """x.__pow__(y) <=> x ** y"""
         if isinstance(other, Symbol):
             return _op.broadcast_power(self, other).as_np_ndarray()
         else:
@@ -119,10 +134,15 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __rpow__(self, other):
-        raise NotImplementedError
+        """x.__rpow__(y) <=> y ** x"""
+        if isinstance(other, Symbol):
+            return _op.broadcast_power(other, self).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__rpow__(other).as_np_ndarray()
 
     @use_np_compat
     def __neg__(self):
+        """x.__neg__() <=> - x"""
         return super(_NumpySymbol, self).__neg__().as_np_ndarray()
 
     @use_np_compat
@@ -131,6 +151,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __eq__(self, other):
+        """x.__eq__(y) <=> x == y"""
         if isinstance(other, Symbol):
             return _op.broadcast_equal(self, other).as_np_ndarray()
         else:
@@ -138,6 +159,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __ne__(self, other):
+        """x.__ne__(y) <=> x != y"""
         if isinstance(other, Symbol):
             return _op.broadcast_not_equal(self, other).as_np_ndarray()
         else:
@@ -145,6 +167,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __gt__(self, other):
+        """x.__gt__(y) <=> x > y"""
         if isinstance(other, Symbol):
             return _op.broadcast_greater(self, other).as_np_ndarray()
         else:
@@ -152,6 +175,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __ge__(self, other):
+        """x.__ge__(y) <=> x >= y"""
         if isinstance(other, Symbol):
             return _op.broadcast_greater_equal(self, other).as_np_ndarray()
         else:
@@ -159,6 +183,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __lt__(self, other):
+        """x.__lt__(y) <=> x < y"""
         if isinstance(other, Symbol):
             return _op.broadcast_lesser(self, other).as_np_ndarray()
         else:
@@ -166,6 +191,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __le__(self, other):
+        """x.__le__(y) <=> x <= y"""
         if isinstance(other, Symbol):
             return _op.broadcast_lesser_equal(self, other).as_np_ndarray()
         else:

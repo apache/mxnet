@@ -1,0 +1,203 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# pylint: skip-file
+from __future__ import absolute_import
+import numpy as _np
+import mxnet as mx
+from mxnet import numpy as np
+from mxnet.gluon import HybridBlock
+from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, assert_exception
+from common import with_seed
+import random
+
+
+@with_seed()
+def test_array_creation():
+    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
+    objects = [[], (), [[1, 2], [3, 4]],
+               _np.random.uniform(size=rand_shape_nd(3, allow_zero_size=True)),
+               mx.nd.array(_np.random.uniform(size=rand_shape_nd(3, allow_zero_size=True)))]
+    for dtype in dtypes:
+        for src in objects:
+            mx_arr = np.array(src, dtype=dtype)
+            assert mx_arr.context == mx.current_context()
+            if isinstance(src, mx.nd.NDArray):
+                np_arr = _np.array(src.asnumpy(), dtype=dtype)
+            else:
+                np_arr = _np.array(src, dtype=dtype)
+            assert same(mx_arr.asnumpy(), np_arr)
+            assert mx_arr.dtype == np_arr.dtype
+
+
+@with_seed()
+def test_zeros():
+    def check_zero_array_creation(shape, dtype):
+        np_out = _np.zeros(shape=shape, dtype=dtype)
+        mx_out = np.zeros(shape=shape, dtype=dtype)
+        assert same(mx_out.asnumpy(), np_out)
+
+    shapes = [()]
+    shapes += [rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)]
+    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
+    for shape in shapes:
+        for dtype in dtypes:
+            check_zero_array_creation(shape, dtype)
+
+
+@with_seed()
+@mx.use_np_compat
+def test_ndarray_binary_element_wise_ops():
+    np_op_map = {'+': _np.add, '*': _np.multiply, '-': _np.subtract, '/': _np.divide,
+                 'mod': _np.mod, 'pow': _np.power, '>': _np.greater, '>=': _np.greater_equal,
+                 '<': _np.less, '<=': _np.less_equal}
+
+    def get_np_ret(x1, x2, op):
+        return np_op_map[op](x1, x2)
+
+    class TestBinaryElementWiseOp(HybridBlock):
+        def __init__(self, op):
+            super(TestBinaryElementWiseOp, self).__init__()
+            self._op = op
+
+        def hybrid_forward(self, F, x, y):
+            if self._op == '+':
+                return x + y
+            elif self._op == '*':
+                return  x * y
+            elif self._op == '-':
+                return x - y
+            elif self._op == '/':
+                return x / y
+            elif self._op == 'mod':
+                return x % y
+            elif self._op == 'pow':
+                return x ** y
+            elif self._op == '>':
+                return x > y
+            elif self._op == '>=':
+                return x >= y
+            elif self._op == '<':
+                return x < y
+            elif self._op == '<=':
+                return x <= y
+            else:
+                print(self._op)
+                assert False
+
+    def check_binary_op_result(shape1, shape2, op, dtype=None):
+        mx_input1 = rand_ndarray(shape1, dtype=dtype).abs() + 1
+        mx_input2 = rand_ndarray(shape2, dtype=dtype).abs() + 1
+        np_input1 = mx_input1.asnumpy()
+        np_input2 = mx_input2.asnumpy()
+
+        np_out = get_np_ret(np_input1, np_input2, op)
+        for hybridize in [True, False]:
+            get_mx_ret = TestBinaryElementWiseOp(op)
+            if hybridize:
+                get_mx_ret.hybridize()
+            mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
+            assert np_out.shape == mx_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+
+            mx_out = get_mx_ret(mx_input1, mx_input2.as_np_ndarray())
+            assert np_out.shape == mx_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+
+            mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2)
+            assert np_out.shape == mx_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+
+            if not hybridize:
+                # legacy symbol does not support binary elemwise op with broadcast
+                # skip the case
+                mx_out = get_mx_ret(mx_input1, mx_input2)
+                assert np_out.shape == mx_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+
+    dtypes = [_np.float16, _np.float32, _np.float64, None]
+    ops = np_op_map.keys()
+    for dtype in dtypes:
+        for op in ops:
+            check_binary_op_result((3, 4), (3, 4), op, dtype)
+            check_binary_op_result((1, 4), (3, 1), op, dtype)
+            check_binary_op_result((1, 4), (3, 5, 4), op, dtype)
+            check_binary_op_result((), (3, 5, 4), op, dtype)
+            check_binary_op_result((0, 2), (1, 1), op, dtype)
+
+
+def test_np_op_output_type():
+    # test imperative invoke
+    data = np.array([1., 3.], dtype='float32')
+    ret = np.sum(data)
+    assert type(ret) == np.ndarray
+    ret = mx.nd.sin(data)
+    assert type(ret) == mx.nd.NDArray
+
+    # test cached op
+    class TestCachedOpOutputType(HybridBlock):
+        @mx.use_np_compat
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            ret1 = F.sin(x)
+            ret2 = F.np.sum(x)
+            return ret1, ret2
+
+    net = TestCachedOpOutputType()
+    for hybridize in [True, False]:
+        if hybridize:
+            net.hybridize()
+        ret1, ret2 = net(data)
+        assert type(ret1) == mx.nd.NDArray
+        assert type(ret2) == np.ndarray
+
+
+def test_grad_ndarray_type():
+    data = np.array(2, dtype=_np.float32)
+    data.attach_grad()
+    assert type(data.grad) == np.ndarray
+    assert type(data.detach()) == np.ndarray
+
+
+def test_np_ndarray_astype():
+    mx_data = np.array([2, 3, 4, 5], dtype=_np.int32)
+    np_data = mx_data.asnumpy()
+
+    def check_astype_equal(dtype, copy, expect_zero_copy=False):
+        mx_ret = mx_data.astype(dtype=dtype, copy=copy)
+        np_ret = np_data.astype(dtype=dtype, copy=copy)
+        assert mx_ret.dtype == np_ret.dtype
+        assert same(mx_ret.asnumpy(), np_ret)
+        if expect_zero_copy:
+            assert id(mx_ret) == id(mx_data)
+            assert id(np_ret) == id(np_data)
+
+    for dtype in [_np.int8, _np.uint8, _np.int32, _np.float16, _np.float32, _np.float64]:
+        for copy in [True, False]:
+            check_astype_equal(dtype, copy, copy is False and mx_data.dtype == dtype)
+
+
+def test_np_ndarray_copy():
+    mx_data = np.array([2, 3, 4, 5], dtype=_np.int32)
+    assert_exception(mx_data.copy, NotImplementedError, order='F')
+    mx_ret = mx_data.copy()
+    np_ret = mx_data.asnumpy().copy()
+    assert same(mx_ret.asnumpy(), np_ret)
+
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
