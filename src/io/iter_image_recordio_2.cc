@@ -811,60 +811,63 @@ class ImageRecordIter2CPU : public IIterator<DataBatch> {
 
 class ImageRecordIter2Wrapper : public IIterator<DataBatch> {
  public:
-    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
-      PrefetcherParam prefetch_param;
-      prefetch_param.InitAllowUnknown(kwargs);
-      int dtype = mshadow::kFloat32;
-      if (prefetch_param.dtype.has_value()) {
-        dtype = prefetch_param.dtype.value();
+  ~ImageRecordIter2Wrapper(void) override {
+    if (record_iter_) delete record_iter_;
+  }
+  void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) override {
+    PrefetcherParam prefetch_param;
+    prefetch_param.InitAllowUnknown(kwargs);
+    int dtype = mshadow::kFloat32;
+    if (prefetch_param.dtype.has_value()) {
+      dtype = prefetch_param.dtype.value();
+    }
+    if (prefetch_param.ctx == PrefetcherParam::CtxType::kCPU) {
+      LOG(INFO) << "Create ImageRecordIter2 optimized for CPU backend.";
+      switch (dtype) {
+        case mshadow::kFloat32:
+          record_iter_ = new ImageRecordIter2CPU<float>();
+          break;
+        case mshadow::kUint8:
+          record_iter_ = new ImageRecordIter2CPU<uint8_t>();
+          break;
+        case mshadow::kInt8:
+          record_iter_ = new ImageRecordIter2CPU<int8_t>();
+          break;
+        default:
+          LOG(FATAL) << "unknown dtype for ImageRecordIter2.";
       }
-      if (prefetch_param.ctx == PrefetcherParam::CtxType::kCPU) {
-        LOG(INFO) << "Create ImageRecordIter2 optimized for CPU backend.";
-        switch (dtype) {
-          case mshadow::kFloat32:
-            record_iter_ = std::make_shared<ImageRecordIter2CPU<float>>();
-            break;
-          case mshadow::kUint8:
-            record_iter_ = std::make_shared<ImageRecordIter2CPU<uint8_t>>();
-            break;
-          case mshadow::kInt8:
-            record_iter_ = std::make_shared<ImageRecordIter2CPU<int8_t>>();
-            break;
-          default:
-            LOG(FATAL) << "unknown dtype for ImageRecordIter2.";
-        }
-      } else {
-        // For gpu
-        switch (dtype) {
-          case mshadow::kFloat32:
-            record_iter_ = std::make_shared<ImageRecordIter2<float>>();
-            break;
-          case mshadow::kUint8:
-            record_iter_ = std::make_shared<ImageRecordIter2<uint8_t>>();
-            break;
-          case mshadow::kInt8:
-            record_iter_ = std::make_shared<ImageRecordIter2<int8_t>>();
-            break;
-          default:
-            LOG(FATAL) << "unknown dtype for ImageRecordIter2.";
-        }
+    } else {
+      // For gpu
+      switch (dtype) {
+        case mshadow::kFloat32:
+          record_iter_ = new ImageRecordIter2<float>();
+          break;
+        case mshadow::kUint8:
+          record_iter_ = new ImageRecordIter2<uint8_t>();
+          break;
+        case mshadow::kInt8:
+          record_iter_ = new ImageRecordIter2<int8_t>();
+          break;
+        default:
+          LOG(FATAL) << "unknown dtype for ImageRecordIter2.";
       }
-      record_iter_->Init(kwargs);
+    }
+    record_iter_->Init(kwargs);
     }
 
-    virtual void BeforeFirst(void) {
+    void BeforeFirst(void) override {
       record_iter_->BeforeFirst();
     }
 
     // From iter_prefetcher.h
-    virtual bool Next(void) { return record_iter_->Next(); }
+    bool Next(void) override { return record_iter_->Next(); }
 
-    virtual const DataBatch &Value(void) const {
+    const DataBatch &Value(void) const override {
       return record_iter_->Value();
     }
 
  private:
-  std::shared_ptr<IIterator<DataBatch>> record_iter_;
+  IIterator<DataBatch>* record_iter_ = nullptr;
 };
 
 MXNET_REGISTER_IO_ITER(ImageRecordIter)
