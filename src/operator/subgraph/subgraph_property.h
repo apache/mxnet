@@ -343,15 +343,15 @@ class SubgraphProperty {
 using SubgraphPropertyPtr = std::shared_ptr<SubgraphProperty>;
 
 class SubgraphPropertyEntry {
-  public:
-   explicit SubgraphPropertyEntry(std::shared_ptr<SubgraphProperty> entry) : entry_(entry){};
-   SubgraphPropertyEntry set_attr(const std::string& name, const int value) const {
-     entry_->SetAttr<int>(name, value);
-     return *this;
-   }
+ public:
+  explicit SubgraphPropertyEntry(std::shared_ptr<SubgraphProperty> entry) : entry_(entry) {}
+  SubgraphPropertyEntry set_attr(const std::string& name, const int value) const {
+    entry_->SetAttr<int>(name, value);
+    return *this;
+  }
 
-  private:
-   std::shared_ptr<SubgraphProperty> entry_;
+ private:
+  std::shared_ptr<SubgraphProperty> entry_;
 };
 
 class SubgraphPropertyRegistry {

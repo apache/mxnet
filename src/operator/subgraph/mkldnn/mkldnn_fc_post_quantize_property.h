@@ -139,7 +139,6 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
     new_selector.Select(*matched_list[0]);
     *this = new_selector;
   }
-
 };
 
 class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
