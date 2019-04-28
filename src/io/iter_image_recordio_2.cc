@@ -908,8 +908,7 @@ Example::
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter)
 .describe(R"code(Iterating on image RecordIO files
 
-.. note:: ImageRecordUInt8Iter is DEPRECATED.
-Use ImageRecordIter(dtype='uint8') instead.
+.. note:: ImageRecordUInt8Iter is deprecated. Use ImageRecordIter(dtype='uint8') instead.
 
 This iterator is identical to ``ImageRecordIter`` except for using ``uint8`` as
 the data type instead of ``float``.
@@ -927,8 +926,7 @@ the data type instead of ``float``.
 MXNET_REGISTER_IO_ITER(ImageRecordInt8Iter)
 .describe(R"code(Iterating on image RecordIO files
 
-.. note:: ImageRecordInt8Iter is DEPRECATED.
-Use ImageRecordIter(dtype='int8') instead.
+.. note:: ``ImageRecordInt8Iter`` is deprecated. Use ImageRecordIter(dtype='int8') instead.
 
 This iterator is identical to ``ImageRecordIter`` except for using ``int8`` as
 the data type instead of ``float``.
