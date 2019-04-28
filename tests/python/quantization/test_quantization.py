@@ -85,9 +85,9 @@ def test_dequantize_int8_to_float32():
         sym_data = mx.sym.Variable('data')
         sym_min_range = mx.sym.Variable('min_range')
         sym_max_range = mx.sym.Variable('max_range')
-        dequant = mx.sym.contrib.dequantize(sym_data, sym_min_range, 
+        dequant = mx.sym.contrib.dequantize(sym_data, sym_min_range,
                                             sym_max_range, out_type='float32')
-        out = dequant.bind(ctx=mx.current_context(), 
+        out = dequant.bind(ctx=mx.current_context(),
                            args={'data':qdata, 'min_range':min_range, 'max_range':max_range})
         data = out.forward()[0]
         assert data.dtype == np.float32
@@ -141,7 +141,8 @@ def test_requantize_int32_to_int8():
             qdata_int8, min_output, max_output = mx.nd.contrib.requantize(qdata, min_range, max_range)
         else:
             qdata_int8, min_output, max_output = mx.nd.contrib.requantize(qdata, min_range, max_range,
-                                                                          min_calib_range, max_calib_range)
+                                                                          min_calib_range=min_calib_range,
+                                                                          max_calib_range=max_calib_range)
 
         qdata_int8_np, min_output_np, max_output_np = requantize_baseline(qdata.asnumpy(), min_range.asscalar(),
                                                                           max_range.asscalar(),
@@ -150,7 +151,7 @@ def test_requantize_int32_to_int8():
         assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol = 1)
         assert_almost_equal(min_output.asnumpy(), np.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), np.array([max_output_np]))
-    
+
     def check_requantize_with_symbol(shape, min_calib_range=None, max_calib_range=None):
         qdata = mx.nd.random.uniform(low=-1000.0, high=1000.0, shape=shape).astype('int32')
         min_range = mx.nd.array([-1010.0])
@@ -160,17 +161,18 @@ def test_requantize_int32_to_int8():
         sym_max_range = mx.sym.Variable('max_range')
         if min_calib_range is None or max_calib_range is None:
             requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range)
-            out = requant.bind(ctx=mx.current_context(), 
-                               args={'data':qdata, 'min_range':min_range, 
-                               'max_range':max_range}) 
+            out = requant.bind(ctx=mx.current_context(),
+                               args={'data':qdata, 'min_range':min_range,
+                               'max_range':max_range})
             qdata_int8, min_output, max_output = out.forward()
         else:
-            requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range, 
-                                                min_calib_range, max_calib_range)
-            out = requant.bind(ctx=mx.current_context(), args={'data':qdata, 'min_range':min_range, 
-                                                   'max_range':max_range})  
-            qdata_int8, min_output, max_output = out.forward()                                   
-           
+            requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range,
+                                                min_calib_range=min_calib_range,
+                                                max_calib_range=max_calib_range)
+            out = requant.bind(ctx=mx.current_context(), args={'data':qdata, 'min_range':min_range,
+                               'max_range':max_range})
+            qdata_int8, min_output, max_output = out.forward()
+
         qdata_int8_np, min_output_np, max_output_np = requantize_baseline(qdata.asnumpy(), min_range.asscalar(),
                                                                           max_range.asscalar(),
                                                                           min_calib_range=min_calib_range,

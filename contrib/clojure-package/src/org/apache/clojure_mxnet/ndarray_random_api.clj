@@ -14,12 +14,8 @@
 ;; limitations under the License.
 ;;
 
-(ns org.apache.clojure-mxnet.ndarray-api
-  "Experimental NDArray API"
-  (:refer-clojure
-    :exclude [* - + > >= < <= / cast concat flatten identity load max
-              min repeat reverse set sort take to-array empty shuffle
-              ref])
+(ns org.apache.clojure-mxnet.ndarray-random-api
+  "Experimental NDArray Random API"
   (:require [org.apache.clojure-mxnet.base :as base]
             [org.apache.clojure-mxnet.context :as mx-context]
             [org.apache.clojure-mxnet.shape :as mx-shape]
@@ -29,4 +25,4 @@
   (:import (org.apache.mxnet NDArrayAPI)))
 
 ;; loads the generated functions into the namespace
-(do (clojure.core/load "gen/ndarray_api"))
+(do (clojure.core/load "gen/ndarray_random_api"))
