@@ -252,7 +252,7 @@ class _RNNLayer(HybridBlock):
         # out is (output, state)
         return out[0] if self.skip_states else out
 
-    def _forward_kernel(self, F, inputs, sequence_length, states, **kwargs):
+    def _forward_kernel(self, F, inputs, states, sequence_length, **kwargs):
         """ forward using CUDNN or CPU kenrel"""
         if self._layout == 'NTC':
             inputs = F.swapaxes(inputs, dim1=0, dim2=1)
