@@ -223,7 +223,7 @@ class _RNNLayer(HybridBlock):
     def __call__(self, inputs, states=None, sequence_length=None, **kwargs):
         self.skip_states = states is None
         if states is None:
-            if type(inputs) is ndarray.NDArray:
+            if isinstance(inputs, ndarray.NDArray):
                 batch_size = inputs.shape[self._layout.find('N')]
                 states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
             else:
