@@ -126,15 +126,15 @@ class SparsePrefetcherIter : public PrefetcherIter {
   virtual bool Next(void) {
     return PrefetcherIter::Next();
   }
-  virtual const DataBatch &Value(void) const {
+  virtual const DataBatch& Value(void) const {
     return PrefetcherIter::Value();
   }
 
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const {
+  virtual NDArrayStorageType GetStorageType(bool is_data) const {
     return sparse_loader_->GetStorageType(is_data);
   }
 
-  virtual const mxnet::TShape GetShape(bool is_data) const {
+  virtual mxnet::TShape GetShape(bool is_data) const {
     return sparse_loader_->GetShape(is_data);
   }
 

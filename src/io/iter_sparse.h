@@ -36,9 +36,9 @@ template<typename DType>
 class SparseIIterator : public IIterator<DType> {
  public:
   /*! \brief storage type of the data or label */
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const = 0;
+  virtual NDArrayStorageType GetStorageType(bool is_data) const = 0;
   /*! \brief shape of the data or label */
-  virtual const mxnet::TShape GetShape(bool is_data) const = 0;
+  virtual mxnet::TShape GetShape(bool is_data) const = 0;
 };  // class SparseIIterator
 
 }  // namespace mxnet

@@ -102,6 +102,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
 #endif  // MXNET_USE_CUDA
     default:
       LOG(FATAL) << "Not Reached";
+      break;
     }
   }
   return ret;

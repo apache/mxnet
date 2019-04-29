@@ -126,7 +126,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
     }
     return false;
   }
-  virtual const TBlobBatch &Value(void) const {
+  virtual const TBlobBatch& Value(void) const {
     return out_;
   }
 

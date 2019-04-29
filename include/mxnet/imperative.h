@@ -178,8 +178,8 @@ class Imperative {
   static std::vector<nnvm::NodeEntry> CreateHeadGradients(const std::vector<NDArray *>& outputs,
                                                           const std::vector<NDArray *>& ograds);
 
-  class GradientGraph;
-  GradientGraph CreateGradientVariableNodes(const std::vector<NDArray *> &variables,
+  class GradientVariableNodes;
+  GradientVariableNodes CreateGradientVariableNodes(const std::vector<NDArray *> &variables,
                                             const std::vector<nnvm::NodeEntry> &outputs);
   Imperative() {
     if (PreferBulkExecTrain())

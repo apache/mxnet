@@ -318,45 +318,46 @@ std::vector<nnvm::NodeEntry> Imperative::CreateHeadGradients(
   return ograd_entries;
 }
 
-struct Imperative::GradientGraph {
+struct Imperative::GradientVariableNodes {
   std::vector<nnvm::NodeEntry> variable_nodes;
   std::vector<NDArray*> gradients;
   std::vector<OpReqType> op_req_types;
 };
 
-Imperative::GradientGraph Imperative::CreateGradientVariableNodes(const std::vector<NDArray *> &variables,
+Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(const std::vector<NDArray *> &variables,
                                                                   const std::vector<nnvm::NodeEntry> &outputs) {
-  GradientGraph gg;
+  GradientVariableNodes var_nodes;
   if (!variables.empty()) {
-    gg.variable_nodes.reserve(variables.size());
-    gg.gradients.reserve(variables.size());
-    gg.op_req_types.reserve(variables.size());
+    var_nodes.variable_nodes.reserve(variables.size());
+    var_nodes.gradients.reserve(variables.size());
+    var_nodes.op_req_types.reserve(variables.size());
     for (size_t i = 0; i < variables.size(); ++i) {
       CHECK(!AGInfo::IsNone(*variables[i]) &&
             AGInfo::IsVariable(variables[i]->entry_.node))
           << "Cannot differentiate with respect to the " << i+1 << "-th variable"
           << " because it does not require gradient.";
-      gg.variable_nodes.emplace_back(variables[i]->entry_);
-      gg.gradients.push_back(new NDArray());
-      gg.op_req_types.push_back(kWriteTo);
+      var_nodes.variable_nodes.emplace_back(variables[i]->entry_);
+      var_nodes.gradients.push_back(new NDArray());
+      var_nodes.op_req_types.push_back(kWriteTo);
     }
   } else {
     std::vector<nnvm::NodePtr> ro_nodes = nnvm::Symbol::ListInputs(Symbol::kReadOnlyArgs, outputs);
-    gg.variable_nodes.reserve(ro_nodes.size());
-    gg.gradients.reserve(ro_nodes.size());
-    gg.op_req_types.reserve(ro_nodes.size());
+    var_nodes.variable_nodes.reserve(ro_nodes.size());
+    var_nodes.gradients.reserve(ro_nodes.size());
+    var_nodes.op_req_types.reserve(ro_nodes.size());
     for (const auto& node : ro_nodes) {
       AGInfo& info = AGInfo::Get(node);
       if (info.grad_req != kNullOp) {
-        gg.variable_nodes.emplace_back(node);
-        gg.gradients.push_back(&info.out_grads[0]);
-        gg.op_req_types.push_back(info.grad_req);
+        var_nodes.variable_nodes.emplace_back(node);
+        var_nodes.gradients.push_back(&info.out_grads[0]);
+        var_nodes.op_req_types.push_back(info.grad_req);
         info.fresh_out_grad = true;
       }
     }
-    CHECK_GT(gg.variable_nodes.size(), 0)
+    CHECK_GT(var_nodes.variable_nodes.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
   }
+  return var_nodes;
 }
 
 
@@ -381,15 +382,16 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<NodeEntry> ograd_entries = CreateHeadGradients(outputs, ograds);
 
   // Get gradient graph
-  GradientGraph gg = CreateGradientVariableNodes(variables, graph.outputs);
+  GradientVariableNodes gvar = CreateGradientVariableNodes(variables, graph.outputs);
 
   // Run backward on the graph
-  Graph g_graph = pass::MXGradient(
-      graph, graph.outputs, gg.variable_nodes, ograd_entries,
+  Graph gradient_graph = pass::MXGradient(
+      graph, graph.outputs, gvar.variable_nodes, ograd_entries,
       exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
-  CHECK_EQ(g_graph.outputs.size(), gg.variable_nodes.size());
-  for (const auto& e : g_graph.outputs) {
+  CHECK_EQ(gradient_graph.outputs.size(), gvar.variable_nodes.size());
+  // TODO: move inside pass::MXGradient
+  for (const auto& e : gradient_graph.outputs) {
     if (e.node->op() == nullptr) {
       auto node = Node::Create();
       node->attrs.op = copy_op;
@@ -399,19 +401,20 @@ std::vector<NDArray*> Imperative::Backward(
       graph.outputs.push_back(e);
     }
   }
-  const auto& idx = graph.indexed_graph();
+
+  const auto& indexed_graph = graph.indexed_graph();
   // get number of nodes used in forward pass
   size_t num_forward_nodes = 0;
   size_t num_forward_entries = 0;
   for (size_t i = 0; i < num_forward_outputs; ++i) {
     num_forward_nodes = std::max(
-        num_forward_nodes, static_cast<size_t>(idx.outputs()[i].node_id + 1));
+        num_forward_nodes, static_cast<size_t>(indexed_graph.outputs()[i].node_id + 1));
     num_forward_entries = std::max(
-        num_forward_entries, static_cast<size_t>(idx.entry_id(idx.outputs()[i])) + 1);
+        num_forward_entries, static_cast<size_t>(indexed_graph.entry_id(indexed_graph.outputs()[i])) + 1);
   }
 
   // Allocate buffer
-  std::vector<NDArray> buff(idx.num_node_entries());
+  std::vector<NDArray> buff(indexed_graph.num_node_entries());
   std::vector<uint32_t> ref_count(buff.size(), 0);
   std::vector<OpStatePtr> states;
   std::vector<NDArray*> arrays;
@@ -423,11 +426,11 @@ std::vector<NDArray*> Imperative::Backward(
     states.resize(num_forward_nodes);
     nnvm::DFSVisit(graph.outputs, [&](const nnvm::NodePtr& n) {
       AGInfo& info = AGInfo::Get(n);
-      states[idx.node_id(n.get())] = info.state;
+      states[indexed_graph.node_id(n.get())] = info.state;
       for (uint32_t i = 0; i < info.outputs.size(); ++i) {
-        CHECK(idx.exist(n.get()));
-        size_t nid = idx.node_id(n.get());
-        size_t eid = idx.entry_id(nid, i);
+        CHECK(indexed_graph.exist(n.get()));
+        size_t nid = indexed_graph.node_id(n.get());
+        size_t eid = indexed_graph.entry_id(nid, i);
         buff[eid] = info.outputs[i];
         buff[eid].entry_ = NodeEntry{n, i, 0};
         ref_count[eid] = 1;
@@ -435,82 +438,82 @@ std::vector<NDArray*> Imperative::Backward(
     });
     for (auto& ograd_entry : ograd_entries) {
       AGInfo& info = AGInfo::Get(ograd_entry.node);
-      if (!idx.exist(ograd_entry.node.get())) continue;
-      size_t eid = idx.entry_id(ograd_entry);
+      if (!indexed_graph.exist(ograd_entry.node.get())) continue;
+      size_t eid = indexed_graph.entry_id(ograd_entry);
       buff[eid] = info.outputs[0];
       buff[eid].entry_ = ograd_entry;
     }
   } else {
     states.reserve(num_forward_nodes);
     for (size_t i = 0; i < num_forward_nodes; ++i) {
-      const AGInfo& info = dmlc::get<AGInfo>(idx[i].source->info);
+      const AGInfo& info = dmlc::get<AGInfo>(indexed_graph[i].source->info);
       states.emplace_back(info.state);
       for (size_t j = 0; j < info.outputs.size(); ++j) {
-        size_t eid = idx.entry_id(i, j);
+        size_t eid = indexed_graph.entry_id(i, j);
         arrays[eid] = const_cast<NDArray*>(&(info.outputs[j]));
 
         if (retain_graph || info.grad_req != kNullOp) ref_count[eid] = 1;
       }
     }
     for (auto& ograd_entry : ograd_entries) {
-      if (!idx.exist(ograd_entry.node.get())) continue;
+      if (!indexed_graph.exist(ograd_entry.node.get())) continue;
       AGInfo& info = AGInfo::Get(ograd_entry.node);
-      arrays[idx.entry_id(ograd_entry)] = &info.outputs[0];
+      arrays[indexed_graph.entry_id(ograd_entry)] = &info.outputs[0];
     }
   }
   for (size_t i = num_forward_outputs; i < graph.outputs.size(); ++i) {
-    size_t eid = idx.entry_id(graph.outputs[i]);
-    arrays[eid] = gg.gradients[i - num_forward_outputs];
+    size_t eid = indexed_graph.entry_id(graph.outputs[i]);
+    arrays[eid] = gvar.gradients[i - num_forward_outputs];
     ref_count[eid] = 1;
   }
 
   // Assign context
-  auto vctx = PlaceDevice(idx);
+  auto vctx = PlaceDevice(indexed_graph);
 
   // Infer shape type
   {
     std::pair<uint32_t, uint32_t> node_range, entry_range;
-    node_range = {num_forward_nodes, idx.num_nodes()};
-    entry_range = {num_forward_entries, idx.num_node_entries()};
+    node_range = {num_forward_nodes, indexed_graph.num_nodes()};
+    entry_range = {num_forward_entries, indexed_graph.num_node_entries()};
 
     ShapeVector shapes;
-    shapes.reserve(idx.num_node_entries());
+    shapes.reserve(indexed_graph.num_node_entries());
     bool contain_unknown = false;
     for (const auto& i : arrays) shapes.emplace_back(i->shape());
     CheckAndInferShape(&graph, std::move(shapes), false,
                        node_range, entry_range, &contain_unknown);
 
     DTypeVector dtypes;
-    dtypes.reserve(idx.num_node_entries());
+    dtypes.reserve(indexed_graph.num_node_entries());
     for (const auto& i : arrays) dtypes.emplace_back(i->dtype());
     CheckAndInferType(&graph, std::move(dtypes), false,
                       node_range, entry_range);
 
     StorageTypeVector stypes;
-    stypes.reserve(idx.num_node_entries());
+    stypes.reserve(indexed_graph.num_node_entries());
     for (const auto& i : arrays) stypes.emplace_back(i->storage_type());
     exec::DevMaskVector dev_mask;
-    dev_mask.reserve(idx.num_nodes());
+    dev_mask.reserve(indexed_graph.num_nodes());
     for (const auto& i : vctx) dev_mask.emplace_back(i.dev_mask());
     CheckAndInferStorageType(&graph, std::move(dev_mask), std::move(stypes), false,
                              node_range, entry_range);
   }
 
   // Calculate ref count
-  for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
-    for (const auto& j : idx[i].inputs) {
-       ++ref_count[idx.entry_id(j)];
+  for (size_t i = num_forward_nodes; i < indexed_graph.num_nodes(); ++i) {
+    for (const auto& j : indexed_graph[i].inputs) {
+       ++ref_count[indexed_graph.entry_id(j)];
     }
   }
 
   // Assign reqs
   std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
-  for (size_t i = num_forward_entries; i < idx.num_node_entries(); ++i) {
+  for (size_t i = num_forward_entries; i < indexed_graph.num_node_entries(); ++i) {
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
-  for (size_t i = num_forward_outputs; i < idx.outputs().size(); ++i) {
-    size_t eid = idx.entry_id(idx.outputs()[i]);
-    array_reqs[eid] = gg.op_req_types[i - num_forward_outputs];
+  for (size_t i = num_forward_outputs; i < indexed_graph.outputs().size(); ++i) {
+    size_t eid = indexed_graph.entry_id(indexed_graph.outputs()[i]);
+    array_reqs[eid] = gvar.op_req_types[i - num_forward_outputs];
   }
 
   const auto& shapes = graph.GetAttr<mxnet::ShapeVector>("shape");
@@ -518,10 +521,10 @@ std::vector<NDArray*> Imperative::Backward(
   const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
   const auto& dispatch_modes = graph.GetAttr<DispatchModeVector>("dispatch_mode");
 
-  for (size_t i = num_forward_nodes; i < idx.num_nodes(); ++i) {
-    auto num_outputs = idx[i].source->num_outputs();
+  for (size_t i = num_forward_nodes; i < indexed_graph.num_nodes(); ++i) {
+    auto num_outputs = indexed_graph[i].source->num_outputs();
     for (size_t j = 0; j < num_outputs; ++j) {
-      auto eid = idx.entry_id(i, j);
+      auto eid = indexed_graph.entry_id(i, j);
       if (!arrays[eid]->is_none()) continue;
       if (stypes[eid] == kDefaultStorage) {
         *arrays[eid] = NDArray(shapes[eid], vctx[i], true, dtypes[eid]);
@@ -539,7 +542,7 @@ std::vector<NDArray*> Imperative::Backward(
   int prev_bulk_size = Engine::Get()->set_bulk_size(backward_bulk_size_);
 
   try {
-    RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
+    RunGraph(retain_graph, indexed_graph, arrays, num_forward_nodes, indexed_graph.num_nodes(),
             std::move(array_reqs), std::move(ref_count), &states, dispatch_modes,
             is_recording());
   } catch (const dmlc::Error& e) {
@@ -562,7 +565,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
 
   if (variables.size()) {
-    return gg.gradients;
+    return gvar.gradients;
   }
   return {};
 }

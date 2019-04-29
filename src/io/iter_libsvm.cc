@@ -144,16 +144,16 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     return true;
   }
 
-  virtual const DataInst &Value(void) const {
+  virtual const DataInst& Value(void) const {
     return out_;
   }
 
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const {
+  virtual NDArrayStorageType GetStorageType(bool is_data) const {
     if (is_data) return kCSRStorage;
     return param_.label_shape.Size() > 1 ? kCSRStorage : kDefaultStorage;
   }
 
-  virtual const mxnet::TShape GetShape(bool is_data) const {
+  virtual mxnet::TShape GetShape(bool is_data) const {
     if (is_data) return param_.data_shape;
     return param_.label_shape;
   }

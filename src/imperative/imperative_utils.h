@@ -981,7 +981,7 @@ inline void CreateEngineOpSeg(
     if (stop && nid > seg_start) {
       auto& seg = (*opr_segs)[seg_start];
       if (seg_execs.size()) {
-        seg = EngineOprSeg{false, nid};
+        seg = EngineOprSeg{false, nid, nullptr};
         seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
       } else {
         seg = EngineOprSeg{true, nid, nullptr};
@@ -998,7 +998,7 @@ inline void CreateEngineOpSeg(
       seg_execs.clear();
       seg_start = nid + 1;
     } else if (is_async) {
-      seg = EngineOprSeg{false, nid + 1};
+      seg = EngineOprSeg{false, nid + 1, nullptr};
       seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
       seg_execs.clear();
       seg_start = nid + 1;
@@ -1008,7 +1008,7 @@ inline void CreateEngineOpSeg(
   if (end_nid > seg_start) {
     auto& seg = (*opr_segs)[seg_start];
     if (seg_execs.size()) {
-      seg = EngineOprSeg{false, end_nid};
+      seg = EngineOprSeg{false, end_nid, nullptr};
       seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
     } else {
       seg = EngineOprSeg{true, end_nid, nullptr};

@@ -100,15 +100,15 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     return false;
   }
 
-  virtual const TBlobBatch &Value(void) const {
+  virtual const TBlobBatch& Value(void) const {
     return BatchLoader::Value();
   }
 
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const {
+  virtual NDArrayStorageType GetStorageType(bool is_data) const {
     return sparse_base_->GetStorageType(is_data);
   }
 
-  virtual const mxnet::TShape GetShape(bool is_data) const {
+  virtual mxnet::TShape GetShape(bool is_data) const {
     mxnet::TShape inst_shape = sparse_base_->GetShape(is_data);
     std::vector<index_t> shape_vec;
     shape_vec.push_back(param_.batch_size);
