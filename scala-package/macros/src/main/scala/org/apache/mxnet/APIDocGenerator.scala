@@ -152,7 +152,8 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
   def javaClassGen(FILE_PATH : String) : String = {
     val notGenerated = Set("Custom")
     val absClassFunctions = functionsToGenerate(false, false, true)
-    val absFuncs = absClassFunctions.filterNot(ele => notGenerated.contains(ele.name))
+    val (absFuncs, paramClassUncleaned) =
+      absClassFunctions.filterNot(ele => notGenerated.contains(ele.name))
       .groupBy(_.name.toLowerCase).map(ele => {
       /* Pattern matching for not generating deprecated method
        * Group all method name in lowercase
@@ -166,7 +167,8 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
       }
     }).map(absClassFunction => {
         generateJavaAPISignature(absClassFunction)
-      }).toSeq
+      }).toSeq.unzip
+    val paramClass = paramClassUncleaned.filterNot(_.isEmpty)
     val packageName = "NDArrayBase"
     val packageDef = "package org.apache.mxnet.javaapi"
     writeFile(
@@ -174,7 +176,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
       packageDef,
       packageName,
       "import org.apache.mxnet.annotation.Experimental",
-      absFuncs)
+      absFuncs, Some(paramClass))
   }
 
   /**
@@ -248,7 +250,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
     * @param func The function case class
     * @return A formatted string for the function
     */
-  def generateJavaAPISignature(func : Func) : String = {
+  def generateJavaAPISignature(func : Func) : (String, String) = {
     val useParamObject = func.listOfArgs.count(arg => arg.isOptional) >= 2
     var argDef = ListBuffer[String]()
     var classDef = ListBuffer[String]()
@@ -287,22 +289,23 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
            | }
            | def getOut() = this.out
            | """.stripMargin
-      s"""$scalaDocNoParam
+      (s"""$scalaDocNoParam
          | $experimentalTag
          | def ${func.name}(po: ${func.name}Param) : $returnType
-         | /**
+         | """.stripMargin,
+        s"""/**
          | * This Param Object is specifically used for ${func.name}
          | ${requiredParam.mkString("\n")}
          | */
          | class ${func.name}Param(${argDef.mkString(",")}) {
          |  ${classDef.mkString("\n  ")}
-         | }""".stripMargin
+         | }""".stripMargin)
     } else {
       argDef += "out : NDArray"
-      s"""$scalaDoc
+      (s"""$scalaDoc
          |$experimentalTag
          | def ${func.name}(${argDef.mkString(", ")}) : $returnType
-         | """.stripMargin
+         | """.stripMargin, "")
     }
   }
 
@@ -316,7 +319,8 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
     * @return A MD5 string
     */
   def writeFile(FILE_PATH: String, packageDef: String, className: String,
-                imports: String, absFuncs: Seq[String]): String = {
+                imports: String, absFuncs: Seq[String],
+                paramClass: Option[Seq[String]] = None): String = {
 
     val finalStr =
       s"""/*
@@ -343,7 +347,9 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
          |// scalastyle:off
          |abstract class $className {
          |${absFuncs.mkString("\n")}
-         |}""".stripMargin
+         |}
+         |${paramClass.getOrElse(Seq()).mkString("\n")}
+         |""".stripMargin
 
 
     val pw = new PrintWriter(new File(FILE_PATH + s"$className.scala"))
