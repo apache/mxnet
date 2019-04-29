@@ -23,10 +23,12 @@ import numpy as _np
 from . import _op as _np_op
 from .. import op as _op
 from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
+from ...base import numeric_types
 from ...context import current_context
 from .. import _internal
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
+from .. import _internal as _sym_internal
 
 __all__ = ['zeros']
 
@@ -79,17 +81,19 @@ class _NumpySymbol(Symbol):
         """x.__rmul__(y) <=> y * x"""
         return self.__mul__(other)
 
-    @use_np_compat
     def __div__(self, other):
-        """x.__div__(y) <=> x / y"""
-        if isinstance(other, Symbol):
-            return _op.broadcast_div(self, other).as_np_ndarray()
-        else:
-            return super(_NumpySymbol, self).__div__(other).as_np_ndarray()
+        raise AttributeError('_NumpySymbol.__div__ is replaced by __truediv__. If you are using'
+                             ' Python2, please use the statement from __future__ import division'
+                             ' to change the / operator to mean true division throughout the'
+                             ' module. If you are using Python3, this error should not have'
+                             ' been encountered.')
 
-    @use_np_compat
     def __rdiv__(self, other):
-        raise NotImplementedError
+        raise AttributeError('_NumpySymbol.__rdiv__ is replaced by __rtruediv__. If you are using'
+                             ' Python2, please use the statement from __future__ import division'
+                             ' to change the / operator to mean true division throughout the'
+                             ' module. If you are using Python3, this error should not have'
+                             ' been encountered.')
 
     @use_np_compat
     def __mod__(self, other):
@@ -101,7 +105,10 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __rmod__(self, other):
-        raise NotImplementedError
+        if isinstance(other, Symbol):
+            return _op.broadcast_mod(other, self).as_np_ndarray()
+        else:
+            return super(_NumpySymbol, self).__rmod__(other).as_np_ndarray()
 
     @use_np_compat
     def __idiv__(self, other):
@@ -110,15 +117,26 @@ class _NumpySymbol(Symbol):
     @use_np_compat
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
-        return self.__div__(other)
+        if isinstance(other, Symbol):
+            return _sym_internal._true_divide(self, other).as_np_ndarray()
+        elif isinstance(other, numeric_types):
+            return _sym_internal._true_divide_scalar(self, float(other)).as_np_ndarray()
+        else:
+            raise TypeError("_NumpySymbol does not support type {} as divisor"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        if isinstance(other, Symbol):
-            return _op.broadcast_div(other, self).as_np_ndarray()
+        if isinstance(other, _NumpySymbol):
+            return other.__truediv__(self)
+        elif isinstance(other, Symbol):
+            return other.as_np_ndarray().__truediv__(self)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._rtrue_divide_scalar(self, float(other)).as_np_ndarray()
         else:
-            return super(_NumpySymbol, self).__rtruediv__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as dividend"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __itruediv__(self, other):
@@ -152,55 +170,61 @@ class _NumpySymbol(Symbol):
     @use_np_compat
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
-        if isinstance(other, Symbol):
-            return _op.broadcast_equal(self, other).as_np_ndarray()
-        else:
-            return super(_NumpySymbol, self).__eq__(other).as_np_ndarray()
+        # if isinstance(other, Symbol):
+        #     return _op.broadcast_equal(self, other).as_np_ndarray()
+        # else:
+        #     return super(_NumpySymbol, self).__eq__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
-        if isinstance(other, Symbol):
-            return _op.broadcast_not_equal(self, other).as_np_ndarray()
-        else:
-            return super(_NumpySymbol, self).__ne__(other).as_np_ndarray()
+        # if isinstance(other, Symbol):
+        #     return _op.broadcast_not_equal(self, other).as_np_ndarray()
+        # else:
+        #     return super(_NumpySymbol, self).__ne__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
-        if isinstance(other, Symbol):
-            return _op.broadcast_greater(self, other).as_np_ndarray()
-        else:
-            return super(_NumpySymbol, self).__gt__(other).as_np_ndarray()
+        # if isinstance(other, Symbol):
+        #     return _op.broadcast_greater(self, other).as_np_ndarray()
+        # else:
+        #     return super(_NumpySymbol, self).__gt__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
-        if isinstance(other, Symbol):
-            return _op.broadcast_greater_equal(self, other).as_np_ndarray()
-        else:
-            return super(_NumpySymbol, self).__ge__(other).as_np_ndarray()
+        # if isinstance(other, Symbol):
+        #     return _op.broadcast_greater_equal(self, other).as_np_ndarray()
+        # else:
+        #    return super(_NumpySymbol, self).__ge__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
-        if isinstance(other, Symbol):
-            return _op.broadcast_lesser(self, other).as_np_ndarray()
-        else:
-            return super(_NumpySymbol, self).__lt__(other).as_np_ndarray()
+        # if isinstance(other, Symbol):
+        #     return _op.broadcast_lesser(self, other).as_np_ndarray()
+        # else:
+        #     return super(_NumpySymbol, self).__lt__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
-        if isinstance(other, Symbol):
-            return _op.broadcast_lesser_equal(self, other).as_np_ndarray()
-        else:
-            return super(_NumpySymbol, self).__le__(other).as_np_ndarray()
+        # if isinstance(other, Symbol):
+        #     return _op.broadcast_lesser_equal(self, other).as_np_ndarray()
+        # else:
+        #     return super(_NumpySymbol, self).__le__(other).as_np_ndarray()
+        raise NotImplementedError
 
     def __len__(self):
         raise NotImplementedError
 
-    def as_legacy_ndarray(self):
+    def as_classic_ndarray(self):
         """Convert _NumpySymbol to mxnet.symbol.Symbol to use its convenience fluent methods."""
         hdl = SymbolHandle()
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))

@@ -21,6 +21,7 @@
 """numpy ndarray and util functions."""
 
 from __future__ import absolute_import
+from __future__ import division
 from array import array as native_array
 import ctypes
 import numpy as _np
@@ -28,10 +29,10 @@ from ..ndarray import NDArray, _DTYPE_NP_TO_MX
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op
 from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check_params
-from ..base import mx_real_t, c_array_buf, mx_uint
+from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
-
+from ..ndarray import _internal as _nd_internal
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros']
 
@@ -129,15 +130,19 @@ class ndarray(NDArray):
         """x.__rmul__(y) <=> y * x"""
         return self.__mul__(other)
 
-    @use_np_compat
     def __div__(self, other):
-        """x.__div__(y) <=> x / y"""
-        return super(ndarray, self).__div__(other).as_np_ndarray()
+        raise AttributeError('ndarray.__div__ is replaced by __truediv__. If you are using'
+                             ' Python2, please use the statement from __future__ import division'
+                             ' to change the / operator to mean true division throughout the'
+                             ' module. If you are using Python3, this error should not have'
+                             ' been encountered.')
 
-    @use_np_compat
     def __rdiv__(self, other):
-        """x.__rdiv__(y) <=> y / x"""
-        return super(ndarray, self).__rdiv__(other).as_np_ndarray()
+        raise AttributeError('ndarray.__rdiv__ is replaced by __rtruediv__. If you are using'
+                             ' Python2, please use the statement from __future__ import division'
+                             ' to change the / operator to mean true division throughout the'
+                             ' module. If you are using Python3, this error should not have'
+                             ' been encountered.')
 
     @use_np_compat
     def __idiv__(self, other):
@@ -146,12 +151,24 @@ class ndarray(NDArray):
     @use_np_compat
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
-        return self.__div__(other)
+        if isinstance(other, NDArray):
+            return _nd_internal._true_divide(self, other).as_np_ndarray()
+        elif isinstance(other, numeric_types):
+            return _nd_internal._true_divide_scalar(self, float(other)).as_np_ndarray()
+        else:
+            raise TypeError("ndarray does not support type {} as divisor".format(str(type(other))))
 
     @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        return super(ndarray, self).__rtruediv__(other).as_np_ndarray()
+        if isinstance(other, ndarray):
+            return other.__truediv__(self)
+        elif isinstance(other, NDArray):
+            return other.as_np_ndarray().__truediv__(self)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._rtrue_divide_scalar(self, float(other)).as_np_ndarray()
+        else:
+            raise TypeError("ndarray does not support type {} as dividend".format(str(type(other))))
 
     @use_np_compat
     def __itruediv__(self, other):
@@ -184,7 +201,8 @@ class ndarray(NDArray):
     @use_np_compat
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
-        return super(ndarray, self).__eq__(other).as_np_ndarray()
+        #return super(ndarray, self).__eq__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __hash__(self):
@@ -193,27 +211,32 @@ class ndarray(NDArray):
     @use_np_compat
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
-        return super(ndarray, self).__ne__(other).as_np_ndarray()
+        #return super(ndarray, self).__ne__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
-        return super(ndarray, self).__gt__(other).as_np_ndarray()
+        #return super(ndarray, self).__gt__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
-        return super(ndarray, self).__ge__(other).as_np_ndarray()
+        #return super(ndarray, self).__ge__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
-        return super(ndarray, self).__lt__(other).as_np_ndarray()
+        #return super(ndarray, self).__lt__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
-        return super(ndarray, self).__le__(other).as_np_ndarray()
+        #return super(ndarray, self).__le__(other).as_np_ndarray()
+        raise NotImplementedError
 
     @use_np_compat
     def __bool__(self):
@@ -243,7 +266,7 @@ class ndarray(NDArray):
     def any(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
-    def as_legacy_ndarray(self):
+    def as_classic_ndarray(self):
         """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
         hdl = NDArrayHandle()
         check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))

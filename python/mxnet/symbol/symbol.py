@@ -258,7 +258,13 @@ class Symbol(SymbolBase):
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __rpow__(self, other):
-        raise NotImplementedForSymbol(self.__rpow__, 'y**x', other)
+        """x.__rpow__(y) <=> y ** x"""
+        if isinstance(other, Symbol):
+            return other.__pow__(self)
+        elif isinstance(other, Number):
+            return _internal._rpower_scalar(self, scalar=other)
+        else:
+            raise TypeError('type %s not supported' % str(type(other)))
 
     def __neg__(self):
         """x.__neg__() <=> -x

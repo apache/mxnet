@@ -62,82 +62,146 @@ def test_zeros():
 @with_seed()
 @mx.use_np_compat
 def test_ndarray_binary_element_wise_ops():
+    # Cannot test operators like >, because boolean arrays are not supported yet.
     np_op_map = {'+': _np.add, '*': _np.multiply, '-': _np.subtract, '/': _np.divide,
-                 'mod': _np.mod, 'pow': _np.power, '>': _np.greater, '>=': _np.greater_equal,
-                 '<': _np.less, '<=': _np.less_equal}
+                 'mod': _np.mod, 'pow': _np.power,
+                 # '>': _np.greater, '>=': _np.greater_equal,
+                 # '<': _np.less, '<=': _np.less_equal
+                 }
 
     def get_np_ret(x1, x2, op):
         return np_op_map[op](x1, x2)
 
     class TestBinaryElementWiseOp(HybridBlock):
-        def __init__(self, op):
+        def __init__(self, op, scalar=None, reverse=False):
             super(TestBinaryElementWiseOp, self).__init__()
             self._op = op
+            self._scalar = scalar
+            self._reverse = reverse  # if false, scalar is the right operand.
 
-        def hybrid_forward(self, F, x, y):
+        def hybrid_forward(self, F, x, *args):
             if self._op == '+':
-                return x + y
+                if self._scalar is not None:
+                    return x + self._scalar if not self._reverse else self._scalar + x
+                else:
+                    return x + args[0] if not self._reverse else args[0] + x
             elif self._op == '*':
-                return  x * y
+                if self._scalar is not None:
+                    return x * self._scalar if not self._reverse else self._scalar * x
+                else:
+                    return x * args[0] if not self._reverse else args[0] * x
             elif self._op == '-':
-                return x - y
+                if self._scalar is not None:
+                    return x - self._scalar if not self._reverse else self._scalar - x
+                else:
+                    return x - args[0] if not self._reverse else args[0] - x
             elif self._op == '/':
-                return x / y
+                if self._scalar is not None:
+                    return x / self._scalar if not self._reverse else self._scalar / x
+                else:
+                    return x / args[0] if not self._reverse else args[0] / x
             elif self._op == 'mod':
-                return x % y
+                if self._scalar is not None:
+                    return x % self._scalar if not self._reverse else self._scalar % x
+                else:
+                    return x % args[0] if not self._reverse else args[0] % x
             elif self._op == 'pow':
-                return x ** y
+                if self._scalar is not None:
+                    return x ** self._scalar if not self._reverse else self._scalar ** x
+                else:
+                    return x ** args[0] if not self._reverse else args[0] ** x
             elif self._op == '>':
-                return x > y
+                if self._scalar is not None:
+                    return x > self._scalar
+                else:
+                    return x > args[0]
             elif self._op == '>=':
-                return x >= y
+                if self._scalar is not None:
+                    return x >= self._scalar
+                else:
+                    return x >= args[0]
             elif self._op == '<':
-                return x < y
+                if self._scalar is not None:
+                    return x < self._scalar
+                else:
+                    return x < args[0]
             elif self._op == '<=':
-                return x <= y
+                if self._scalar is not None:
+                    return x <= self._scalar
+                else:
+                    return x <= args[0]
             else:
                 print(self._op)
                 assert False
 
     def check_binary_op_result(shape1, shape2, op, dtype=None):
-        mx_input1 = rand_ndarray(shape1, dtype=dtype).abs() + 1
-        mx_input2 = rand_ndarray(shape2, dtype=dtype).abs() + 1
-        np_input1 = mx_input1.asnumpy()
-        np_input2 = mx_input2.asnumpy()
+        if shape1 is None:
+            mx_input1 = abs(_np.random.uniform()) + 1
+            np_input1 = mx_input1
+        else:
+            mx_input1 = rand_ndarray(shape1, dtype=dtype).abs() + 1
+            np_input1 = mx_input1.asnumpy()
+        if shape2 is None:
+            mx_input2 = abs(_np.random.uniform()) + 1
+            np_input2 = mx_input2
+        else:
+            mx_input2 = rand_ndarray(shape2, dtype=dtype).abs() + 1
+            np_input2 = mx_input2.asnumpy()
+
+        scalar = None
+        reverse = False
+        if isinstance(mx_input1, mx.nd.NDArray) and not isinstance(mx_input2, mx.nd.NDArray):
+            scalar = mx_input2
+            reverse = False
+        elif isinstance(mx_input2, mx.nd.NDArray) and not isinstance(mx_input1, mx.nd.NDArray):
+            scalar = mx_input1
+            reverse = True
 
         np_out = get_np_ret(np_input1, np_input2, op)
         for hybridize in [True, False]:
-            get_mx_ret = TestBinaryElementWiseOp(op)
-            if hybridize:
-                get_mx_ret.hybridize()
-            mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
-            assert np_out.shape == mx_out.shape
-            assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
-
-            mx_out = get_mx_ret(mx_input1, mx_input2.as_np_ndarray())
-            assert np_out.shape == mx_out.shape
-            assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
-
-            mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2)
-            assert np_out.shape == mx_out.shape
-            assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
-
-            if not hybridize:
-                # legacy symbol does not support binary elemwise op with broadcast
-                # skip the case
-                mx_out = get_mx_ret(mx_input1, mx_input2)
+            if scalar is None:
+                get_mx_ret = TestBinaryElementWiseOp(op)
+                if hybridize:
+                    get_mx_ret.hybridize()
+                mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
                 assert np_out.shape == mx_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
 
-    dtypes = [_np.float16, _np.float32, _np.float64, None]
+                mx_out = get_mx_ret(mx_input1, mx_input2.as_np_ndarray())
+                assert np_out.shape == mx_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+
+                mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2)
+                assert np_out.shape == mx_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+            else:
+                get_mx_ret = TestBinaryElementWiseOp(op, scalar=scalar, reverse=reverse)
+                if hybridize:
+                    get_mx_ret.hybridize()
+                if reverse:
+                    mx_out = get_mx_ret(mx_input2.as_np_ndarray())
+                else:
+                    mx_out = get_mx_ret(mx_input1.as_np_ndarray())
+                assert np_out.shape == mx_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+
+    dtypes = [_np.float32, _np.float64, None]
     ops = np_op_map.keys()
     for dtype in dtypes:
         for op in ops:
             check_binary_op_result((3, 4), (3, 4), op, dtype)
+            check_binary_op_result(None, (3, 4), op, dtype)
+            check_binary_op_result((3, 4), None, op, dtype)
             check_binary_op_result((1, 4), (3, 1), op, dtype)
+            check_binary_op_result(None, (3, 1), op, dtype)
+            check_binary_op_result((1, 4), None, op, dtype)
             check_binary_op_result((1, 4), (3, 5, 4), op, dtype)
             check_binary_op_result((), (3, 5, 4), op, dtype)
+            check_binary_op_result((), None, op, dtype)
+            check_binary_op_result(None, (), op, dtype)
             check_binary_op_result((0, 2), (1, 1), op, dtype)
+            check_binary_op_result((0, 2), None, op, dtype)
+            check_binary_op_result(None, (0, 2), op, dtype)
 
 
 def test_np_op_output_type():
