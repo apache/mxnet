@@ -324,8 +324,8 @@ struct Imperative::GradientGraph {
   std::vector<OpReqType> op_req_types;
 };
 
-Imperative::GradientGraph Imperative::CreateGradientGraph(const std::vector<NDArray*>& variables,
-                                  const std::vector<nnvm::NodeEntry>& outputs) {
+Imperative::GradientGraph Imperative::CreateGradientVariableNodes(const std::vector<NDArray *> &variables,
+                                                                  const std::vector<nnvm::NodeEntry> &outputs) {
   GradientGraph gg;
   if (!variables.empty()) {
     gg.variable_nodes.reserve(variables.size());
@@ -381,7 +381,7 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<NodeEntry> ograd_entries = CreateHeadGradients(outputs, ograds);
 
   // Get gradient graph
-  GradientGraph gg = CreateGradientGraph(variables, graph.outputs);
+  GradientGraph gg = CreateGradientVariableNodes(variables, graph.outputs);
 
   // Run backward on the graph
   Graph g_graph = pass::MXGradient(
