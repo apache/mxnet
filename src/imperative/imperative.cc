@@ -324,8 +324,9 @@ struct Imperative::GradientVariableNodes {
   std::vector<OpReqType> op_req_types;
 };
 
-Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(const std::vector<NDArray *> &variables,
-                                                                  const std::vector<nnvm::NodeEntry> &outputs) {
+Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(
+    const std::vector<NDArray *> &variables,
+    const std::vector<nnvm::NodeEntry> &outputs) {
   GradientVariableNodes var_nodes;
   if (!variables.empty()) {
     var_nodes.variable_nodes.reserve(variables.size());
@@ -341,7 +342,9 @@ Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(const 
       var_nodes.op_req_types.push_back(kWriteTo);
     }
   } else {
-    std::vector<nnvm::NodePtr> input_ro_nodes = nnvm::Symbol::ListInputs(Symbol::kReadOnlyArgs, outputs);
+    std::vector<nnvm::NodePtr> input_ro_nodes = nnvm::Symbol::ListInputs(
+        Symbol::kReadOnlyArgs,
+        outputs);
     var_nodes.variable_nodes.reserve(input_ro_nodes.size());
     var_nodes.gradients.reserve(input_ro_nodes.size());
     var_nodes.op_req_types.reserve(input_ro_nodes.size());
@@ -427,7 +430,7 @@ std::vector<NDArray*> Imperative::Backward(
     states.resize(num_forward_nodes);
     nnvm::DFSVisit(graph.outputs, [&](const nnvm::NodePtr& n) {
       AGInfo& info = AGInfo::Get(n);
-      states[indexed_graph.node_id(n.get())] = info.state;
+      states.at(indexed_graph.node_id(n.get())) = info.state;
       for (uint32_t i = 0; i < info.outputs.size(); ++i) {
         CHECK(indexed_graph.exist(n.get()));
         size_t nid = indexed_graph.node_id(n.get());
