@@ -28,10 +28,10 @@ from ...nn import Activation
 
 class DeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v_1 (Dai, 2017).
-    Normal Convolution uses sampling points in a regular grid, while the sampling points of Deformable
-    Convolution can be offset. The offset is learned with a separate convolution layer during the training.
-    Both the convolution layer for generating the output features and the offsets are included in this
-    gluon layer.
+    Normal Convolution uses sampling points in a regular grid, while the sampling 
+    points of Deformablem Convolution can be offset. The offset is learned with a 
+    separate convolution layer during the training. Both the convolution layer for 
+    generating the output features and the offsets are included in this gluon layer.
 
     Parameters
     ----------
