@@ -27,12 +27,56 @@
 namespace mxnet {
 namespace op {
 
+inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  const mxnet::TShape& a_shape = in_attrs->at(0);
+  const mxnet::TShape& b_shape = in_attrs->at(1);
+
+  if (!shape_is_known(a_shape) || !shape_is_known(b_shape)) {
+    return false;
+  }
+
+  if (a_shape.ndim() == 1 && b_shape.ndim() == 1) {
+    // Case 1: both 1-D arrays, inner product of vectors
+    CHECK_EQ(a_shape[0], b_shape[0]);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, 0));
+  } else if (a_shape.ndim() == 2 && b_shape.ndim() == 2) {
+    // Case 2: both 2-D arrays, matrix multiplication
+    CHECK_EQ(a_shape[1], b_shape[0]);
+    mxnet::TShape mm_shape(2, 0);
+    mm_shape[0] = a_shape[0];
+    mm_shape[1] = b_shape[1];
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mm_shape);
+  } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
+    // Case 3 + 3.5: either of them is a scalar, just scale by one of them
+    mxnet::TShape oshape = (a_shape.ndim() == 0) ? b_shape : a_shape;
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  } else if (b_shape.ndim() == 1) {
+    // Case 4: a is N-D array and b is 1-D array, sum product over the last axis
+    CHECK_EQ(a_shape[a_shape.ndim() - 1], b_shape[0]);
+    mxnet::TShape out_shape(a_shape.ndim() - 1, 0);
+    for (int i = 0; i < a_shape.ndim() - 1; ++i) {
+      out_shape[i] = a_shape[i];
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
+  } else {
+    // Case 5: a is N-D array and b is M-D array, sum product over the last axis
+    //         of a and the 2nd-to-last axis of b
+    LOG(FATAL) << "Case 5 not implemented yet...";
+  }
+  return true;
+}
+
 NNVM_REGISTER_OP(_numpy_dot)
 .describe(R"doc(Dot product of two arrays. Specifically,
 
-- If both a and b are 1-D arrays, it is inner product of vectors (without complex conjugation).
+- If both a and b are 1-D arrays, it is inner product of vectors.
 
-- If both a and b are 2-D arrays, it is matrix multiplication, but using matmul or a @ b is preferred.
+- If both a and b are 2-D arrays, it is matrix multiplication.
 
 - If either a or b is 0-D (scalar), it is equivalent to multiply and using numpy.multiply(a, b) or a * b is preferred.
 

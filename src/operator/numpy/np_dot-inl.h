@@ -26,57 +26,13 @@
 #define MXNET_OPERATOR_NUMPY_NP_DOT_INL_H_
 
 #include <mxnet/operator_util.h>
+#include <vector>
 #include "../tensor/dot-inl.h"
 #include "../tensor/elemwise_binary_op.h"
-#ifdef __CUDACC__
-#include "./np_dot-inl.cuh"
-#endif
+#include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
-
-inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
-                          mxnet::ShapeVector *in_attrs,
-                          mxnet::ShapeVector *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  const mxnet::TShape& a_shape = in_attrs->at(0);
-  const mxnet::TShape& b_shape = in_attrs->at(1);
-
-  if (a_shape.ndim() == 1 && b_shape.ndim() == 1) {
-    // Case 1: both 1-D arrays, inner product of vectors
-    CHECK_EQ(a_shape[0], b_shape[0]);
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, 0));
-  } else if (a_shape.ndim() == 2 && b_shape.ndim() == 2) {
-    // Case 2: both 2-D arrays, matrix multiplication
-    CHECK_EQ(a_shape[1], b_shape[0]);
-    mxnet::TShape mm_shape(2, 0);
-    mm_shape[0] = a_shape[0];
-    mm_shape[1] = b_shape[1];
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mm_shape);
-  } else if (a_shape.ndim() == 0 && b_shape.ndim() == 0) {
-    // Case 3: both 0-D scalars, equivalent to multiply
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, 0));
-  } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
-    // Case 3.5: either of them is a scalar, just scale by one of them
-    mxnet::TShape oshape = (a_shape.ndim() == 0) ? b_shape : a_shape;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  } else if (b_shape.ndim() == 1) {
-    // Case 4: a is N-D array and b is 1-D array, sum product over the last axis
-    CHECK_EQ(a_shape[a_shape.ndim() - 1], b_shape[0]);
-    mxnet::TShape out_shape(a_shape.ndim() - 1, 0);
-    for (int i = 0; i < a_shape.ndim() - 1; ++i) {
-      out_shape[i] = a_shape[i];
-    }
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
-  } else {
-    // Case 5: a is N-D array and b is M-D array, sum product over the last axis
-    //         of a and the 2nd-to-last axis of b
-    LOG(FATAL) << "Case 5 not implemented yet...";
-  }
-  return true;
-}
 
 template<typename xpu>
 inline void MMImpl(const OpContext& ctx,
@@ -90,24 +46,26 @@ inline void MMImpl(const OpContext& ctx,
   using namespace mshadow_op;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  int ma, na, mb, nb, m, n;
+  index_t ma, na, mb, nb;
   na = a.size(a.ndim() - 1);
   ma = a.Size() / na;
-  m = ma;
   mb = b.size(0);
   nb = b.Size() / mb;
-  n = nb;
   MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
     Tensor<xpu, 2, DType> input0 = a.get_with_shape<xpu, 2, DType>(Shape2(ma, na), s);
     Tensor<xpu, 2, DType> input1 = b.get_with_shape<xpu, 2, DType>(Shape2(mb, nb), s);
-    Tensor<xpu, 2, DType> output0 = out.get_with_shape<xpu, 2, DType>(Shape2(m, n), s);
+    Tensor<xpu, 2, DType> output0;
     if (trans_a && trans_b) {
+      output0 = out.get_with_shape<xpu, 2, DType>(Shape2(na, mb), s);
       ASSIGN_DISPATCH(output0, req, dot(input0.T(), input1.T()));
     } else if (!trans_a && trans_b) {
+      output0 = out.get_with_shape<xpu, 2, DType>(Shape2(ma, mb), s);
       ASSIGN_DISPATCH(output0, req, dot(input0, input1.T()));
-    } else if (trans_a && trans_b) {
+    } else if (trans_a && !trans_b) {
+      output0 = out.get_with_shape<xpu, 2, DType>(Shape2(na, nb), s);
       ASSIGN_DISPATCH(output0, req, dot(input0.T(), input1));
     } else {
+      output0 = out.get_with_shape<xpu, 2, DType>(Shape2(ma, nb), s);
       ASSIGN_DISPATCH(output0, req, dot(input0, input1));
     }
   });
@@ -179,6 +137,7 @@ inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
       // Case 4: a is N-D array and b is 1-D array, sum product over the last axis
       MMImpl<xpu>(ctx, a, b, out, req[0]);
     } else {
+      // TODO(haojin2): To be implemented...
       // Case 5: a is N-D array and b is M-D array, sum product over the last axis
       //         of a and the 2nd-to-last axis of b
       LOG(FATAL) << "Case 5 not implemented yet...";
@@ -210,19 +169,19 @@ inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, DType, {
     if (a_shape.ndim() == 1 && b_shape.ndim() == 1) {
       // Case 1: both 1-D arrays, inner product of vectors
-      Tensor<xpu, 1, DType> out_grad = ograd.get<xpu, 1, DType>(s);
+      Tensor<xpu, 1, DType> out_grad = ograd.get_with_shape<xpu, 1, DType>(Shape1(1), s);
       Tensor<xpu, 1, DType> a_data = a.get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> b_data = b.get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> a_grad = grad_a.get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> b_grad = grad_b.get<xpu, 1, DType>(s);
-      ASSIGN_DISPATCH(a_grad, req[1],
+      ASSIGN_DISPATCH(b_grad, req[1],
                       broadcast_scalar(out_grad, a_data.shape_) * a_data);
-      ASSIGN_DISPATCH(b_grad, req[0],
+      ASSIGN_DISPATCH(a_grad, req[0],
                       broadcast_scalar(out_grad, a_data.shape_) * b_data);
     } else if (a_shape.ndim() == 2 && b_shape.ndim() == 2) {
       // Case 2: both 2-D arrays, matrix multiplication
       MMImpl<xpu>(ctx, a, ograd, grad_b, req[1], true, false);
-      MMImpl<xpu>(ctx, b, ograd, grad_a, req[0], false, true);
+      MMImpl<xpu>(ctx, ograd, b, grad_a, req[0], false, true);
     } else if (a_shape.ndim() == 0 && b_shape.ndim() == 0) {
       // Case 3: both 0-D scalars, equivalent to multiply
       Tensor<xpu, 1, DType> out_grad = ograd.get_with_shape<xpu, 1, DType>(Shape1(1), s);
@@ -245,12 +204,33 @@ inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 1, DType> ograd_ = ograd.FlatTo1D<xpu, DType>(s);
       const OpReqType& tensor_req = (a_shape.ndim() == 0) ? req[1] : req[0];
       const OpReqType& scalar_req = (a_shape.ndim() == 0) ? req[0] : req[1];
-      ASSIGN_DISPATCH(tensor_grad_, tensor_req, broadcast_scalar(scalar_, tensor_grad_.shape_) * ograd_);
+      ASSIGN_DISPATCH(tensor_grad_, tensor_req,
+                      broadcast_scalar(scalar_, tensor_grad_.shape_) * ograd_);
+      // TODO(haojin2): Get rid of temporary space.
+      Tensor<xpu, 1, DType> temp_space =
+        ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(ograd.shape_.Size()), s);
+      ASSIGN_DISPATCH(temp_space, kWriteTo, tensor_ * ograd_);
+
+      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
+        ctx, {TBlob(temp_space)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
     } else if (b_shape.ndim() == 1) {
+      size_t na = a_shape[a_shape.ndim() - 1];
+      size_t ma = a_shape.Size() / na;
+      Tensor<xpu, 2, DType> a_ =
+        a.get_with_shape<xpu, 2, DType>(Shape2(ma, na), s);
+      Tensor<xpu, 2, DType> b_ =
+        b.get_with_shape<xpu, 2, DType>(Shape2(b_shape.Size(), 1), s);
+      Tensor<xpu, 2, DType> grad_a_ =
+        grad_a.get_with_shape<xpu, 2, DType>(Shape2(ma, na), s);
+      Tensor<xpu, 2, DType> grad_b_ =
+        grad_b.get_with_shape<xpu, 2, DType>(Shape2(b_shape.Size(), 1), s);
+      Tensor<xpu, 2, DType> ograd_ =
+        ograd.get_with_shape<xpu, 2, DType>(Shape2(ograd.shape_.Size(), 1), s);
       // Case 4: a is N-D array and b is 1-D array, sum product over the last axis
-      MMImpl<xpu>(ctx, a, ograd, grad_b, req[1], true, false);
-      MMImpl<xpu>(ctx, b, ograd, grad_a, req[0], false, true);
+      MMImpl<xpu>(ctx, TBlob(a_), TBlob(ograd_), TBlob(grad_b_), req[1], true, false);
+      MMImpl<xpu>(ctx, TBlob(ograd_), TBlob(b_), TBlob(grad_a_), req[0], false, true);
     } else {
+      // TODO(haojin2): To be implemented...
       // Case 5: a is N-D array and b is M-D array, sum product over the last axis
       //         of a and the 2nd-to-last axis of b
       LOG(FATAL) << "Case 5 not implemented yet...";
