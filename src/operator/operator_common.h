@@ -397,7 +397,7 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
                     &inputs, &dict, &n);
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+    ret.emplace_back(p, i, 0);
   }
   return ret;
 }
@@ -415,7 +415,7 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
       os << n->attrs.name << "_in" << i << "_backward";
     }
     auto p = MakeNode("zeros_like", os.str(), {n->inputs[i]}, nullptr, &n);
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(p);
   }
   return ret;
 }
