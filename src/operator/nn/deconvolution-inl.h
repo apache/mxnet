@@ -34,6 +34,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <mshadow/tensor.h>
 #include "../operator_common.h"
 #include "../linalg.h"
 #include "./im2col.h"
@@ -263,69 +264,71 @@ class DeconvolutionOp {
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
-    Shape<3> wmat_shape =
+    Shape<3> weight_shape =
         Shape3(param_.num_group,
                data.shape_[1] / param_.num_group,
                param_.num_filter / param_.num_group * kernel_size);
-    // 2D: wmat (G, C/G, OC/G * KH * KW)
-    Tensor<xpu, 3, DType> wmat =
-        in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
+    // 2D case: weight_3d (G, C/G, OC/G * KH * KW)
+    Tensor<xpu, 3, DType> weight_3d =
+        in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(weight_shape, s);
     const index_t nbatch = data.size(0);
 
     // shape_colunit_ : (OC * KH * KW, IH * IW)
-    shape_colunit_ = mshadow::Shape2(out.shape_[1] * kernel_size, data.shape_[2] * data.shape_[3]);
+    shape_colunit_ = Shape2(out.shape_[1] * kernel_size, data.shape_[2] * data.shape_[3]);
     // shape_dstunit_ : (G, C/G, IH * IW)
-    shape_dstunit_ = mshadow::Shape3(
-      param_.num_group,
-      data.shape_[1] / param_.num_group,
-      data.shape_[2] * data.shape_[3]);
+    shape_dstunit_ = Shape3(
+        param_.num_group,
+        data.shape_[1] / param_.num_group,
+        data.shape_[2] * data.shape_[3]);
+
 
     Tensor<xpu, 1, DType> workspace =
-      ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
-        Shape1(shape_colunit_.Size() + shape_dstunit_.Size()), s);
-//    Tensor<xpu, 1, DType> workspace =
-//        ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
-//            Shape1(this->InitTemp(out.shape_, data.shape_)), s);
+        ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
+            Shape1(shape_colunit_.Size() + shape_dstunit_.Size()), s);
+
+    Tensor<xpu, 3, DType> col_buffer_3d = Tensor<xpu, 3, DType>(
+        workspace.dptr_,
+        Shape3(nbatch, shape_colunit_[0], shape_colunit_[1]),
+        s);
+    // temp_col: (N, OC * KH * KW, IH * IW)
+    // Tensor<xpu, 3, DType> temp_col = Tensor<xpu, 3, DType>(
+    //    workspace.dptr_,
+    //    Shape3(nbatch, shape_colunit_[0], shape_colunit_[1]),
+    //    s);
+
     for (index_t i = 0; i < nbatch; ++i) {
-      // temp_col: (OC * KH * KW, IH * IW)
-      Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(
-                                            workspace.dptr_,
-                                            Shape2(shape_colunit_[0],
-                                                   shape_colunit_[1]),
-                                                   s);
       // temp_dst : (G, C/G, IH * IW)
       Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(
-                                           workspace.dptr_ + temp_col.shape_.Size(),
-                                           Shape3(shape_dstunit_[0],
-                                                  shape_dstunit_[1],
-                                                  shape_dstunit_[2]),
-                                                  s);
+                                           workspace.dptr_ + shape_colunit_.Size(),
+                                           shape_dstunit_,
+                                           s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + 1)), temp_dst.shape_);
 
       im2col(
         s,
         (out.Slice(i, i + 1)).dptr_,
         out.shape_,
-        temp_col.shape_,
+        col_buffer_3d.shape_,
         kernel,
         padding,
         stride,
         dilate,
-        temp_col.dptr_);
+        col_buffer_3d.dptr_);
 
-      const index_t gstride = temp_col.size(0) / param_.num_group;
+
+      const index_t gstride = col_buffer_3d.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
-        Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
+        //Tensor<xpu, 2, DType> tmpc = col_buffer_3d.Slice(gstride * gid, gstride * (gid + 1));
         // Legacy approach shown here for comparison:
-        // tmpc = dot(wmat[gid].T(), temp_dst[gid]);
-        linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
+        // tmpc = dot(weight_3d[gid].T(), temp_dst[gid]);
+        linalg_gemm(weight_3d[gid], temp_dst[gid], col_buffer_3d[gid], true, false, s);
       }
 
       col2im(
         s,
-        temp_col.dptr_,
+        col_buffer_3d.dptr_,
         out.Slice(i, i + 1).shape_,
-        temp_col.shape_,
+        col_buffer_3d.shape_,
         kernel,
         padding,
         stride,
@@ -378,14 +381,14 @@ class DeconvolutionOp {
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
-    Shape<3> wmat_shape =
+    Shape<3> weight_shape =
         Shape3(param_.num_group,
                data.shape_[1] / param_.num_group,
                param_.num_filter / param_.num_group * kernel_size);
     Tensor<xpu, 3, DType> wmat =
-        in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
+        in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(weight_shape, s);
     Tensor<xpu, 3, DType> gwmat =
-        in_grad[deconv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
+        in_grad[deconv::kWeight].get_with_shape<xpu, 3, DType>(weight_shape, s);
 
     const index_t nbatch = data.size(0);
     Tensor<xpu, 1, DType> workspace =
