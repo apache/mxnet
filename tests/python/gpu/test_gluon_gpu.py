@@ -265,8 +265,8 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     # TODO: figure out why int32 doesn't work here
     sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("float")
 
-    net_output = net(data, sequence_length).asnumpy()
-    ref_net_output = ref_net(data, sequence_length).asnumpy()
+    net_output = net(data, sequence_length=sequence_length).asnumpy()
+    ref_net_output = ref_net(data, sequence_length=sequence_length).asnumpy()
     sequence_length_np = sequence_length.asnumpy().astype("int32")
 
     # Only compare the valid sections for each batch entry
