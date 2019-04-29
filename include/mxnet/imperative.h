@@ -172,15 +172,22 @@ class Imperative {
    */
   static std::vector<nnvm::NodeEntry> CreateForwardGraph(const std::vector<NDArray*>& outputs);
   /*! Create gradient nodes using output shapes and ctx.
-   * Gradient heads are set to 1 if they are not present (nullptr)
+   * Gradient heads are initialized to 1 if they are not present (nullptr)
    * @return vector of nodes
    */
-  static std::vector<nnvm::NodeEntry> CreateHeadGradients(const std::vector<NDArray *>& outputs,
-                                                          const std::vector<NDArray *>& ograds);
+  static std::vector<nnvm::NodeEntry> CreateHeadGradientNodes(const std::vector<NDArray*>& outputs,
+                                                              const std::vector<NDArray*>& ograds);
 
   class GradientVariableNodes;
-  GradientVariableNodes CreateGradientVariableNodes(const std::vector<NDArray *> &variables,
-                                            const std::vector<nnvm::NodeEntry> &outputs);
+  /*! Create variable nodes.
+   * If variables is provided, gradient nodes are crated for them. Otherwise it uses read only
+   * inputs reachable from the outputs.
+   * @param variables
+   * @param outputs
+   * @return aux data structure with nodes and arrays for gradients
+   */
+  GradientVariableNodes CreateGradientVariableNodes(const std::vector<NDArray*>& variables,
+                                            const std::vector<nnvm::NodeEntry>& outputs);
   Imperative() {
     if (PreferBulkExecTrain())
       backward_bulk_size_ = BulkExecMaxNodeTrainBwd();

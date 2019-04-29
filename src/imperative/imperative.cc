@@ -296,15 +296,15 @@ std::vector<nnvm::NodeEntry> Imperative::CreateForwardGraph(const std::vector<ND
   return output_nodes;
 }
 
-std::vector<nnvm::NodeEntry> Imperative::CreateHeadGradients(
-    const std::vector<NDArray*>& outputs,
-    const std::vector<NDArray*>& ograds) {
+std::vector<nnvm::NodeEntry> Imperative::CreateHeadGradientNodes(
+    const std::vector<NDArray *> &outputs,
+    const std::vector<NDArray *> &ograds) {
   using nnvm::NodeEntry;
   using nnvm::Node;
   std::vector<NodeEntry> ograd_entries;
   ograd_entries.reserve(ograds.size());
   for (size_t i = 0; i < outputs.size(); ++i) {
-    ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
+    ograd_entries.emplace_back(Node::Create());
     AGInfo &info = AGInfo::Create(ograd_entries.back().node);
     info.ctx = outputs[i]->ctx();
     if (ograds[i] != nullptr) {
@@ -341,11 +341,11 @@ Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(const 
       var_nodes.op_req_types.push_back(kWriteTo);
     }
   } else {
-    std::vector<nnvm::NodePtr> ro_nodes = nnvm::Symbol::ListInputs(Symbol::kReadOnlyArgs, outputs);
-    var_nodes.variable_nodes.reserve(ro_nodes.size());
-    var_nodes.gradients.reserve(ro_nodes.size());
-    var_nodes.op_req_types.reserve(ro_nodes.size());
-    for (const auto& node : ro_nodes) {
+    std::vector<nnvm::NodePtr> input_ro_nodes = nnvm::Symbol::ListInputs(Symbol::kReadOnlyArgs, outputs);
+    var_nodes.variable_nodes.reserve(input_ro_nodes.size());
+    var_nodes.gradients.reserve(input_ro_nodes.size());
+    var_nodes.op_req_types.reserve(input_ro_nodes.size());
+    for (const auto& node : input_ro_nodes) {
       AGInfo& info = AGInfo::Get(node);
       if (info.grad_req != kNullOp) {
         var_nodes.variable_nodes.emplace_back(node);
@@ -378,10 +378,10 @@ std::vector<NDArray*> Imperative::Backward(
   graph.outputs = CreateForwardGraph(outputs);
   const size_t num_forward_outputs = graph.outputs.size();
 
-  // Prepare head gradients
-  std::vector<NodeEntry> ograd_entries = CreateHeadGradients(outputs, ograds);
+  // Prepare head gradient nodes
+  std::vector<NodeEntry> ograd_entries = CreateHeadGradientNodes(outputs, ograds);
 
-  // Get gradient graph
+  // Get variable nodes
   GradientVariableNodes gvar = CreateGradientVariableNodes(variables, graph.outputs);
 
   // Run backward on the graph
