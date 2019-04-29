@@ -220,7 +220,7 @@ class _RNNLayer(HybridBlock):
             states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
         return states
 
-    def hybrid_forward(self, F, inputs, states=None, sequence_length=None, **kwargs):
+    def hybrid_forward(self, F, inputs, sequence_length=None, states=None, **kwargs):
         if F is ndarray:
             batch_size = inputs.shape[self._layout.find('N')]
         skip_states = states is None
