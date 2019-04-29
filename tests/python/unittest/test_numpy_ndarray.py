@@ -17,6 +17,7 @@
 
 # pylint: skip-file
 from __future__ import absolute_import
+from __future__ import division
 import numpy as _np
 import mxnet as mx
 from mxnet import numpy as np
