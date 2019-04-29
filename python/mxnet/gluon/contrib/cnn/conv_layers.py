@@ -29,9 +29,9 @@ from ...nn import Activation
 class DeformableConvolution(HybridBlock):
     """2-D Deformable Convolution v_1
 
-    Normal Convolution uses sampling points in a regular grid, while the sampling points of Deformable Convolution[1]
-    can be offset. The offset is learned with a separate convolution layer during the training. Both the convolution
-    layer for generating the output features and the offsets are included in this gluon layer.
+    Normal Convolution uses sampling points in a regular grid, while the sampling points of Deformable Convolution
+    [dai2017deformable] can be offset. The offset is learned with a separate convolution layer during the training.
+    Both the convolution layer for generating the output features and the offsets are included in this gluon layer.
 
     Parameters
     ----------
@@ -99,7 +99,8 @@ class DeformableConvolution(HybridBlock):
               out_width = floor((width+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
 
     Reference:
-        .. [1] Dai, Jifeng, et al. "Deformable convolutional networks." CoRR, abs/1703.06211 1.2 (2017): 3.
+        .. [dai2017deformable] Dai, Jifeng, et al. "Deformable convolutional networks."
+        CoRR, abs/1703.06211 1.2 (2017): 3.
     """
 
     def __init__(self, channels, kernel_size=(1, 1), strides=(1, 1), padding=(0, 0), dilation=(1, 1), groups=1,
