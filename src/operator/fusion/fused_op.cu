@@ -24,6 +24,7 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../../executor/exec_pass.h"
+#include "../../common/cuda_utils.h"
 #include <nnvm/pass_functions.h>
 
 namespace mxnet {
@@ -55,11 +56,132 @@ inline std::string mshadowTypeToString(int type) {
 }  // namespace detail
 
 FusedOp::FusedOp(const FusedOpConfig& config) {
-  this->code_ = config.code;
   this->inputs_ = std::vector<FusedOpEntry>(config.num_inputs);
   this->outputs_ = std::vector<FusedOpEntry>(config.num_outputs);
   this->symbol_ = nnvm::pass::LoadJSON(config.symbol_json);
   this->initialized_ = false;
+  this->cc_major_ = -1;
+  this->cc_minor_ = -1;
+
+  this->GenerateCode();
+}
+
+void FusedOp::GenerateCode() {
+  const auto& g = this->symbol_.indexed_graph();
+  std::string code = "";
+  int temp_name_counter = 0;
+  using NodeEntry = nnvm::IndexedGraph::NodeEntry;
+  std::map<std::pair<int, int>, std::string> variables;
+
+  std::vector<uint32_t> outputs(g.num_nodes());
+
+  for (size_t i = 0; i < g.num_nodes(); ++i) {
+    const auto& node = g[i];
+    if (node.source != nullptr) {
+      outputs[i] = node.source->num_outputs();
+    } else {
+      outputs[i] = 0;
+    }
+  }
+
+  for (size_t i = 0; i < g.num_nodes(); ++i) {
+    const auto& node = g[i];
+    const auto* source = node.source;
+    if (source != nullptr) {
+      std::string var_name = "temp" + std::to_string(temp_name_counter++);
+      if (source->is_variable()) {
+        code += "const auto " + var_name + " = load(" + source->attrs.name + ", i);\n";
+        CHECK_EQ(outputs[i], 1);
+        variables[{i, 0}] = var_name;
+      } else {
+        std::string op_name = source->op()->name;
+        if (detail::fused_op_binary_ops.find(op_name) != detail::fused_op_binary_ops.end()) {
+          std::string op = detail::fused_op_binary_ops.at(op_name);
+          const auto& arg1 = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          const auto& arg2 = variables[{node.inputs[1].node_id, node.inputs[1].index}];
+          code += "const auto " + var_name + " = " + op +
+                  "(" + arg1 + ", " + arg2 + ");\n";
+          CHECK_EQ(outputs[i], 1);
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
+        if (detail::fused_op_unary_ops.find(op_name) != detail::fused_op_unary_ops.end()) {
+          std::string op = detail::fused_op_unary_ops.at(op_name);
+          const auto& arg1 = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          code += "const auto " + var_name + " = " + op +
+                  "(" + arg1 + ");\n";
+          CHECK_EQ(outputs[i], 1);
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
+        if (detail::fused_op_special_ops.find(op_name) != detail::fused_op_special_ops.end()) {
+          const std::vector<std::string>& op_desc = detail::fused_op_special_ops.at(op_name);
+          std::string fmt = op_desc[0];
+          for (size_t j = 1; j < op_desc.size(); ++j) {
+            const std::string& desc = op_desc[j];
+            std::string sub;
+            if (desc[0] == '_') {
+              // Argument
+              int arg_id = std::stoi(desc.substr(1));
+              sub = variables[{node.inputs[arg_id].node_id, node.inputs[arg_id].index}];
+            } else {
+              sub = source->attrs.dict.at(desc);
+            }
+            size_t pos = fmt.find("%");
+            CHECK_NE(pos, std::string::npos);
+            fmt.replace(pos, 1, sub);
+          }
+          code += "const auto " + var_name + " = " + fmt + ";\n";
+          CHECK_EQ(outputs[i], 1);
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
+        if (detail::fused_op_mimo_ops.find(op_name) != detail::fused_op_mimo_ops.end()) {
+          const std::vector<std::vector<std::string>>& op_descs =
+            detail::fused_op_mimo_ops.at(op_name);
+          CHECK_EQ(outputs[i], op_descs.size());
+          size_t count = 0;
+          for (const auto& op_desc : op_descs) {
+            var_name = "temp" + std::to_string(temp_name_counter++);
+            std::string fmt = op_desc[0];
+            for (size_t j = 1; j < op_desc.size(); ++j) {
+              const std::string& desc = op_desc[j];
+              std::string sub;
+              if (desc[0] == '_') {
+                // Argument
+                int arg_id = std::stoi(desc.substr(1));
+                sub = variables[{node.inputs[arg_id].node_id, node.inputs[arg_id].index}];
+              } else {
+                sub = source->attrs.dict.at(desc);
+              }
+              size_t pos = fmt.find("%");
+              CHECK_NE(pos, std::string::npos);
+              fmt.replace(pos, 1, sub);
+            }
+            code += "const auto " + var_name + " = " + fmt + ";\n";
+            variables[{i, count}] = var_name;
+            ++count;
+          }
+          continue;
+        }
+        LOG(FATAL) << "Unrecognized op " + op_name;
+      }
+    } else {
+      LOG(FATAL) << "Encountered node with NULL source.";
+    }
+  }
+
+  int counter = 0;
+  for (const auto& entry : g.outputs()) {
+    const std::string& var = variables[{entry.node_id, entry.index}];
+    code += "store(" + var + ", i, output" + std::to_string(counter) + ");\n";
+    ++counter;
+  }
+
+  this->code_ = code;
 }
 
 template <>
@@ -71,7 +193,108 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_GE(outputs.size(), 1) << "There needs to be at least 1 output.";
 
+  std::vector<int> in_dtypes;
+  std::vector<int> out_dtypes;
+
+  size_t counter = 0;
+  for (const auto& blob : inputs) {
+    in_dtypes.push_back(blob.type_flag_);
+    initialized_ = initialized_ && (blob.type_flag_ == inputs_[counter].dtype);
+    inputs_[counter].dtype = blob.type_flag_;
+    ++counter;
+  }
+
+  counter = 0;
+  for (const auto& blob : outputs) {
+    out_dtypes.push_back(blob.type_flag_);
+    initialized_ = initialized_ && (blob.type_flag_ == outputs_[counter].dtype);
+    outputs_[counter].dtype = blob.type_flag_;
+    ++counter;
+  }
+
+  // Get compute capability of the current GPU
+  int dev_id = ctx.run_ctx.ctx.dev_id;
+  int cc_major = ComputeCapabilityMajor(dev_id);
+  int cc_minor = ComputeCapabilityMinor(dev_id);
+
+  initialized_ = initialized_ && cc_major == this->cc_major_;
+  initialized_ = initialized_ && cc_minor == this->cc_minor_;
+  this->cc_major_ = cc_major;
+  this->cc_minor_ = cc_minor;
+
   if (!initialized_) {
+    LOG(INFO) << code_;
+    std::string aux_code = "";
+    std::string kernel_params = "";
+    size_t num_params = in_dtypes.size() + out_dtypes.size();
+    size_t i = 0;
+    for (const auto &type : in_dtypes) {
+      std::string type_name = detail::mshadowTypeToString(type);
+      aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
+      kernel_params += "DType" + std::to_string(i) + "* input" + std::to_string(i);
+      ++i;
+      if (i < num_params) {
+        kernel_params += ", ";
+      }
+    }
+    for (const auto &type : out_dtypes) {
+      std::string type_name = detail::mshadowTypeToString(type);
+      aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
+      kernel_params += "DType" + std::to_string(i) + "* output" +
+                       std::to_string(i - in_dtypes.size());
+      ++i;
+      if (i < num_params) {
+        kernel_params += ", ";
+      }
+    }
+    code_ = detail::fp16_support_string + "\n" +
+            detail::type_support_string + "\n" +
+            detail::fused_op_function_definitions + "\n" +
+            aux_code + "\n" +
+            "__global__ void FusedKernel_" + attrs.name +
+            "(size_t N, " + kernel_params + ") {\n" +
+            detail::fused_op_kernel_begin + "\n" +
+            code_ + "\n" +
+            detail::fused_op_kernel_end;
+    nvrtcProgram program;
+    NVRTC_CALL(
+        nvrtcCreateProgram(&program,                                 // prog
+                           &code_[0],                                // buffer
+                           (attrs.name + "_kernel.cu").c_str(),      // name
+                           0,                                        // numHeaders
+                           NULL,                                     // headers
+                           NULL));                                   // includeNames
+    std::string gpu_arch = "--gpu-architecture=compute_" +
+                           std::to_string(this->cc_major_) +
+                           std::to_string(this->cc_minor_);
+
+    const char *opts[] = {gpu_arch.c_str(),
+                          "--std=c++11",
+                          "-default-device"};
+    const std::string kernel_name_demangled = "FusedKernel_" + attrs.name;
+    NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
+
+    nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
+                                                    3,        // numOptions
+                                                    opts);    // options
+    // Obtain compilation log from the program.
+    size_t logSize;
+    NVRTC_CALL(nvrtcGetProgramLogSize(program, &logSize));
+    std::string log(logSize, '\0');
+    NVRTC_CALL(nvrtcGetProgramLog(program, &log[0]));
+    CHECK_EQ(compileResult, NVRTC_SUCCESS) << "NVRTC Compilation failed.\n" << log;
+    // Obtain PTX from the program.
+    size_t ptxSize;
+    NVRTC_CALL(nvrtcGetPTXSize(program, &ptxSize));
+    ptx_.reserve(ptxSize);
+    NVRTC_CALL(nvrtcGetPTX(program, &ptx_[0]));
+    const char *name;
+    NVRTC_CALL(nvrtcGetLoweredName(program,
+                                   kernel_name_demangled.c_str(),
+                                   &name));
+    kernel_name_ = name;
+    // Destroy the program.
+    NVRTC_CALL(nvrtcDestroyProgram(&program));
     int device;
     CUdevice cuDevice;
     CUcontext context;
@@ -113,15 +336,6 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
         FusedOp::NTHREADS, 1, 1,   // block dim
         0, stream,                 // shared mem and stream
         &(args[0]), 0));           // arguments
-}
-
-template <>
-void FusedOp::Backward<gpu>(const nnvm::NodeAttrs& attrs,
-                            const OpContext &ctx,
-                            const std::vector<TBlob> &inputs,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<TBlob> &outputs) {
-  std::cout << "Backward!" << std::endl;
 }
 
 template <>
@@ -181,83 +395,8 @@ bool FusedOp::InferType<gpu>(const nnvm::NodeAttrs &attrs,
   for (const auto& attr : *out_attrs) {
     inferred = inferred && !op::type_is_none(attr);
   }
-  const bool types_known = inferred;
-  if (types_known) {
-    LOG(INFO) << "Without types";
-    LOG(INFO) << code_;
-    LOG(INFO) << "Filling type information";
-    std::string aux_code = "";
-    std::string kernel_params = "";
-    size_t num_params = in_attrs->size() + out_attrs->size();
-    size_t i = 0;
-    for (const auto &type : *in_attrs) {
-      std::string type_name = detail::mshadowTypeToString(type);
-      aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      kernel_params += "DType" + std::to_string(i) + "* input" + std::to_string(i);
-      ++i;
-      if (i < num_params) {
-        kernel_params += ", ";
-      }
-    }
-    for (const auto &type : *out_attrs) {
-      std::string type_name = detail::mshadowTypeToString(type);
-      aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      kernel_params += "DType" + std::to_string(i) + "* output" +
-                       std::to_string(i - in_attrs->size());
-      ++i;
-      if (i < num_params) {
-        kernel_params += ", ";
-      }
-    }
-    code_ = detail::fp16_support_string + "\n" +
-            detail::fused_op_function_definitions + "\n" +
-            aux_code + "\n" +
-            "__global__ void FusedKernel_" + attrs.name +
-            "(size_t N, " + kernel_params + ") {\n" +
-            detail::fused_op_kernel_begin + "\n" +
-            code_ + "\n" +
-            detail::fused_op_kernel_end;
-    LOG(INFO) << code_;
-    nvrtcProgram program;
-    NVRTC_CALL(
-        nvrtcCreateProgram(&program,                                 // prog
-                           &code_[0],                                // buffer
-                           (attrs.name + "_kernel.cu").c_str(),      // name
-                           0,                                        // numHeaders
-                           NULL,                                     // headers
-                           NULL));                                   // includeNames
-    const char *opts[] = {"--gpu-architecture=compute_70",
-                          "--std=c++11",
-                          "-default-device"};
-    const std::string kernel_name_demangled = "FusedKernel_" + attrs.name;
-    NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
-
-    nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                    3,        // numOptions
-                                                    opts);    // options
-    // Obtain compilation log from the program.
-    size_t logSize;
-    NVRTC_CALL(nvrtcGetProgramLogSize(program, &logSize));
-    std::string log(logSize, '\0');
-    NVRTC_CALL(nvrtcGetProgramLog(program, &log[0]));
-    CHECK_EQ(compileResult, NVRTC_SUCCESS) << "NVRTC Compilation failed.\n" << log;
-    // Obtain PTX from the program.
-    size_t ptxSize;
-    NVRTC_CALL(nvrtcGetPTXSize(program, &ptxSize));
-    ptx_.reserve(ptxSize);
-    NVRTC_CALL(nvrtcGetPTX(program, &ptx_[0]));
-    const char *name;
-    NVRTC_CALL(nvrtcGetLoweredName(program,
-                                   kernel_name_demangled.c_str(),
-                                   &name));
-    kernel_name_ = name;
-    // Destroy the program.
-    NVRTC_CALL(nvrtcDestroyProgram(&program));
-  }
-  return types_known;
+  return inferred;
 }
-
-
 
 void FusedOpForwardGPU(const nnvm::NodeAttrs& attrs,
                     const OpContext &ctx,
@@ -266,14 +405,6 @@ void FusedOpForwardGPU(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob> &outputs) {
   const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
   op->Forward<gpu>(attrs, ctx, inputs, req, outputs);
-}
-void FusedOpBackwardGPU(const nnvm::NodeAttrs& attrs,
-                     const OpContext &ctx,
-                     const std::vector<TBlob> &inputs,
-                     const std::vector<OpReqType> &req,
-                     const std::vector<TBlob> &outputs) {
-  const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
-  op->Backward<gpu>(attrs, ctx, inputs, req, outputs);
 }
 
 bool FusedOpInferShape(const nnvm::NodeAttrs& attrs,

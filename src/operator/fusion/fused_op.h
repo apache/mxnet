@@ -28,13 +28,10 @@
 namespace mxnet {
 
 struct FusedOpConfig : public dmlc::Parameter<FusedOpConfig> {
-  std::string code;
   std::string symbol_json;
   int num_inputs;
   int num_outputs;
   DMLC_DECLARE_PARAMETER(FusedOpConfig) {
-    DMLC_DECLARE_FIELD(code)
-    .describe("Generated code.");
     DMLC_DECLARE_FIELD(symbol_json)
     .describe("JSON of the replaced symbol.");
     DMLC_DECLARE_FIELD(num_inputs)
@@ -44,7 +41,10 @@ struct FusedOpConfig : public dmlc::Parameter<FusedOpConfig> {
   }
 };
 
-struct FusedOpEntry {};
+struct FusedOpEntry {
+  FusedOpEntry() : dtype(-1) {}
+  int dtype;
+};
 
 class FusedOp {
  public:
@@ -58,22 +58,9 @@ class FusedOp {
   uint32_t num_outputs() const {
     return outputs_.size();
   }
-  uint32_t num_backward_inputs() const {
-    return backward_inputs_.size();
-  }
-  uint32_t num_backward_outputs() const {
-    return backward_outputs_.size();
-  }
 
   template <typename xpu>
   void Forward(const nnvm::NodeAttrs& attrs,
-               const OpContext &ctx,
-               const std::vector<TBlob> &inputs,
-               const std::vector<OpReqType> &req,
-               const std::vector<TBlob> &outputs);
-
-  template <typename xpu>
-  void Backward(const nnvm::NodeAttrs& attrs,
                const OpContext &ctx,
                const std::vector<TBlob> &inputs,
                const std::vector<OpReqType> &req,
@@ -90,10 +77,10 @@ class FusedOp {
                  std::vector<int> *out_attrs);
 
  private:
+  void GenerateCode();
+
   std::vector<FusedOpEntry> inputs_;
   std::vector<FusedOpEntry> outputs_;
-  std::vector<FusedOpEntry> backward_inputs_;
-  std::vector<FusedOpEntry> backward_outputs_;
 
   std::string code_;
   nnvm::Graph symbol_;
@@ -101,6 +88,8 @@ class FusedOp {
   std::string kernel_name_;
   bool initialized_;
   CUfunction kernel_;
+  int cc_major_;
+  int cc_minor_;
 };
 
 using FusedOpPtr = std::shared_ptr<FusedOp>;

@@ -39,9 +39,8 @@ void FusedOpParamParser(nnvm::NodeAttrs* attrs) {
     os << ")";
     throw dmlc::ParamError(os.str());
   }
-  if (!param.code.empty()) {
-    attrs->parsed = FusedOpPtr(new FusedOp(param));
-  }
+  CHECK(!param.symbol_json.empty());
+  attrs->parsed = FusedOpPtr(new FusedOp(param));
 }
 
 NNVM_REGISTER_OP(FusedOp)
