@@ -87,6 +87,35 @@ def test_np_sum():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@mx.use_np_compat
+@with_seed()
+def test_np_sum():
+    shapes = [((3,), (3,)), ((3, 4), (4, 5)), ((3, 4, 5), (5, )), ((), ()),
+              ((3, 4, 5), ()), ((), (3, 4, 5))]
+
+    for shape_a, shape_b in shapes:
+        print(shape_a, shape_b)
+        a = mx.nd.array(random.random()) if len(shape_a) == 0 else rand_ndarray(shape_a)
+        b = mx.nd.array(random.random()) if len(shape_b) == 0 else rand_ndarray(shape_b)
+        np_a = a.asnumpy()
+        np_b = b.asnumpy()
+        np_res = _np.dot(np_a, np_b)
+        mx_res = np.dot(a, b)
+        assert mx_res.shape == np_res.shape
+        assert_almost_equal(np_res, mx_res.asnumpy(), rtol=1e-5, atol=1e-5)
+
+    bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6, ))]
+
+    for shape_a, shape_b in shapes:
+        a = mx.nd.array(random.random()) if len(shape_a) == 0 else rand_ndarray(shape_a)
+        b = mx.nd.array(random.random()) if len(shape_b) == 0 else rand_ndarray(shape_b)
+        try:
+            mx_res = np.dot(a, b)
+        except mx.base.MXNetError:
+            continue
+        assert False
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
