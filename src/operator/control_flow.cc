@@ -594,20 +594,15 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
       break;
     }
     // we create func_outputs for the current step:
-    // func_outputs[0: num_out_data] is a slice of outputs[][step]
-    for (size_t i = 0; i < (size_t) params.num_out_data; ++i) {
-      func_outputs[i] = NDArray(outputs[i].ctx(), outputs[i].dtype());
-    }
-    // func_outputs[num_out_data: ] are new_loop_vars, need to allocate new memory
-    for (size_t i = params.num_out_data; i < outputs.size(); ++i) {
+    for (int i = 0; i < (int) outputs.size(); ++i) {
       func_outputs[i] = NDArray(outputs[i].ctx(), outputs[i].dtype());
     }
     state.Forward(step, func_inputs, req, func_outputs, ctx.need_grad);
     if (step == 0) {
-      for (size_t i = 0; i < (size_t) params.num_out_data; ++i) {
+      for (int i = 0; i < (int) params.num_out_data; ++i) {
         // TODO(@junrushao1994): support 0-d tensors
         func_outputs[i].WaitToRead();
-        if (func_outputs[i].shape().ndim() == 0) {
+        if (!shape_is_known(func_outputs[i].shape())) {
           func_outputs[i].SetShapeFromChunk();
         }
         mxnet::TShape step_shape = func_outputs[i].shape();
@@ -619,14 +614,14 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
         const_cast<NDArray &>(outputs[i]).Init(shape);
       }
     }
-    for (size_t i = 0; i < (size_t) params.num_out_data; ++i) {
+    for (int i = 0; i < (int) params.num_out_data; ++i) {
       NDArray first_slot = outputs[i].At(step);
       mxnet::CopyFromTo(func_outputs[i], &first_slot);
     }
     // func_inputs on the next step:
     // the output (new_loop_vars) will become the new inputs (loop_vars)
-    for (size_t i = params.num_out_data; i < outputs.size(); ++i) {
-      size_t j = params.func_var_locs[i - params.num_out_data];
+    for (int i = params.num_out_data; i < (int) outputs.size(); ++i) {
+      int j = params.func_var_locs[i - params.num_out_data];
       func_inputs[j] = func_outputs[i];
       int k = state.oi_map[i - params.num_out_data];
       if (k != -1) {
@@ -644,7 +639,7 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   // therefore, we copy func_inputs[:] to outputs[num_out_data: ]
   for (size_t i = params.num_out_data; i < outputs.size(); ++i) {
     size_t j = params.func_var_locs[i - params.num_out_data];
-    if (outputs[i].shape().ndim() == 0) {
+    if (!shape_is_known(outputs[i].shape())) {
       const_cast<NDArray &>(outputs[i]).Init(func_inputs[j].shape());
     }
     mxnet::CopyFromTo(func_inputs[j], &outputs[i]);
