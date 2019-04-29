@@ -24,8 +24,8 @@ set -ex
 
 NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
 NOSE_TIMER_ARGUMENTS="--with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error"
-CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
-CI_CMAKE_CUDA_ARCH_BIN="52,70"
+CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode arch=compute_53,code=sm_53 -gencode=arch=compute_70,code=sm_70"
+CI_CMAKE_CUDA_ARCH_BIN="52,53,70"
 
 clean_repo() {
     set -ex
@@ -254,6 +254,27 @@ build_armv8() {
     build_wheel
 }
 
+build_armv8_nano() {
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DUSE_CUDA=ON\
+        -DUSE_CUDA_PATH=/usr/local/cuda\
+        -DUSE_CUDNN=ON\
+        -DCUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DSUPPORT_F16C=OFF\
+        -DUSE_OPENCV=OFF\
+        -DUSE_OPENMP=ON \
+        -DUSE_LAPACK=OFF\
+        -DUSE_SIGNAL_HANDLER=ON\
+        -DCMAKE_BUILD_TYPE=Release\
+        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -G Ninja /work/mxnet
+    ninja -v
+    build_wheel
+}
 
 #
 # ANDROID builds
