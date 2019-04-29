@@ -165,14 +165,14 @@ void Imperative::GetBackwardDependency(
   node->inputs.clear();
   node->inputs.reserve(num_inputs);
   for (size_t i = 0; i < num_inputs; ++i) {
-    node->inputs.emplace_back(nnvm::NodeEntry{nullptr, i, 0});
+    node->inputs.emplace_back(nullptr, i, 0);
   }
 
   if (fgradient.count(node->op())) {
     std::vector<nnvm::NodeEntry> ograd_entries;
     ograd_entries.reserve(num_outputs);
     for (size_t i = 0; i < num_outputs; ++i) {
-      ograd_entries.emplace_back(nnvm::NodeEntry{nullptr, i, 1});
+      ograd_entries.emplace_back(nullptr, i, 1);
     }
     auto igrad_entries = fgradient[node->op()](node, ograd_entries);
     for (const auto& i : igrad_entries) {
@@ -345,10 +345,10 @@ Imperative::GradientGraph Imperative::CreateGradientGraph(const std::vector<NDAr
     gg.variable_nodes.reserve(ro_nodes.size());
     gg.gradients.reserve(ro_nodes.size());
     gg.op_req_types.reserve(ro_nodes.size());
-    for (const auto& i : ro_nodes) {
-      AGInfo& info = AGInfo::Get(i);
+    for (const auto& node : ro_nodes) {
+      AGInfo& info = AGInfo::Get(node);
       if (info.grad_req != kNullOp) {
-        gg.variable_nodes.emplace_back(nnvm::NodeEntry{i, 0, 0});
+        gg.variable_nodes.emplace_back(node);
         gg.gradients.push_back(&info.out_grads[0]);
         gg.op_req_types.push_back(info.grad_req);
         info.fresh_out_grad = true;
