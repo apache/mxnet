@@ -382,23 +382,24 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<NodeEntry> ograd_entries = CreateHeadGradientNodes(outputs, ograds);
 
   // Get variable nodes
-  GradientVariableNodes gvar = CreateGradientVariableNodes(variables, graph.outputs);
+  GradientVariableNodes gvars = CreateGradientVariableNodes(variables, graph.outputs);
 
   // Run backward on the graph
   Graph gradient_graph = pass::MXGradient(
-      graph, graph.outputs, gvar.variable_nodes, ograd_entries,
+      graph, graph.outputs, gvars.variable_nodes, ograd_entries,
       exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
-  CHECK_EQ(gradient_graph.outputs.size(), gvar.variable_nodes.size());
+  CHECK_EQ(gradient_graph.outputs.size(), gvars.variable_nodes.size());
   // TODO: move inside pass::MXGradient
-  for (const auto& e : gradient_graph.outputs) {
-    if (e.node->op() == nullptr) {
+  // Add backward nodes to the graph outputs
+  for (const auto& backward_node : gradient_graph.outputs) {
+    if (backward_node.node->op() == nullptr) {
       auto node = Node::Create();
       node->attrs.op = copy_op;
-      node->inputs.push_back(e);
+      node->inputs.push_back(backward_node);
       graph.outputs.emplace_back(std::move(node));
     } else {
-      graph.outputs.push_back(e);
+      graph.outputs.push_back(backward_node);
     }
   }
 
@@ -463,7 +464,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
   for (size_t i = num_forward_outputs; i < graph.outputs.size(); ++i) {
     size_t eid = indexed_graph.entry_id(graph.outputs[i]);
-    arrays[eid] = gvar.gradients[i - num_forward_outputs];
+    arrays[eid] = gvars.gradients[i - num_forward_outputs];
     ref_count[eid] = 1;
   }
 
@@ -513,7 +514,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
   for (size_t i = num_forward_outputs; i < indexed_graph.outputs().size(); ++i) {
     size_t eid = indexed_graph.entry_id(indexed_graph.outputs()[i]);
-    array_reqs[eid] = gvar.op_req_types[i - num_forward_outputs];
+    array_reqs[eid] = gvars.op_req_types[i - num_forward_outputs];
   }
 
   const auto& shapes = graph.GetAttr<mxnet::ShapeVector>("shape");
@@ -565,7 +566,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
 
   if (variables.size()) {
-    return gvar.gradients;
+    return gvars.gradients;
   }
   return {};
 }
