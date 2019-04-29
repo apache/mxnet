@@ -28,9 +28,9 @@ from ..base import py_str
 from ..ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs, array, multiply)
 from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                        mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
-                       signsgd_update, signum_update, nag_update, nag_mom_update, mp_nag_update,
-                       mp_nag_mom_update, multi_sgd_update, multi_sgd_mom_update,
-                       multi_mp_sgd_update, multi_mp_sgd_mom_update)
+                       signsgd_update, signum_update, nag_mom_update, mp_nag_mom_update,
+                       multi_sgd_update, multi_sgd_mom_update, multi_mp_sgd_update,
+                       multi_mp_sgd_mom_update)
 from ..ndarray import sparse
 from ..random import normal
 
@@ -1086,13 +1086,13 @@ class NAG(Optimizer):
             if state is not None:
                 nag_mom_update(weight, grad, state, out=weight, lr=lr, wd=wd, **kwargs)
             else:
-                nag_update(weight, grad, out=weight, lr=lr, wd=wd, **kwargs)
+                sgd_update(weight, grad, out=weight, lr=lr, wd=wd, **kwargs)
         else:
             if state[0] is not None:
                 mp_nag_mom_update(weight, grad, state[0], state[1], out=weight,
                                   lr=lr, wd=wd, **kwargs)
             else:
-                mp_nag_update(weight, grad, state[1], out=weight,
+                mp_sgd_update(weight, grad, state[1], out=weight,
                               lr=lr, wd=wd, **kwargs)
 
     def update(self, index, weight, grad, state):

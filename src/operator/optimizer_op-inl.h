@@ -1029,48 +1029,6 @@ struct NAGParam : public dmlc::Parameter<NAGParam> {
   }
 };
 
-struct NAGKernel {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
-    const DType* weight_data, const DType* grad_data,
-    const DType param_clip_gradient, const DType param_lr,
-    const DType param_wd, const DType param_rescale_grad,
-    const OpReqType req) {
-    if (param_clip_gradient >= 0.0f) {
-      KERNEL_ASSIGN(out_data[i], req,
-          weight_data[i]
-          - param_lr * (mshadow_op::clip::Map(param_rescale_grad*grad_data[i],
-          param_clip_gradient)
-          + param_wd*weight_data[i]));
-    } else {
-      KERNEL_ASSIGN(out_data[i], req,
-             weight_data[i]
-              - param_lr * (param_rescale_grad*grad_data[i]
-              + (param_wd*weight_data[i])));
-    }
-  }
-};
-
-template<typename xpu>
-inline void NAGUpdate(const nnvm::NodeAttrs& attrs,
-                      const OpContext &ctx,
-                      const std::vector<TBlob> &inputs,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<TBlob> &outputs) {
-  using namespace mxnet_op;
-  const NAGParam& param = nnvm::get<NAGParam>(attrs.parsed);
-  Stream<xpu>* s = ctx.get_stream<xpu>();
-  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    Kernel<NAGKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_,
-      weight.dptr_, grad.dptr_, static_cast<DType>(param.clip_gradient),
-      static_cast<DType>(param.lr), static_cast<DType>(param.wd),
-      static_cast<DType>(param.rescale_grad), req[0]);
-  });
-}
-
 struct NAGMomParam : public dmlc::Parameter<NAGMomParam> {
   float lr;
   float momentum;
@@ -1147,51 +1105,6 @@ inline void NAGMomUpdate(const nnvm::NodeAttrs& attrs,
       static_cast<DType>(param.momentum), static_cast<DType>(param.lr),
       static_cast<DType>(param.wd), static_cast<DType>(param.rescale_grad),
       req[0]);
-  });
-}
-
-struct MP_NAGKernel {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
-    const DType* weight_data, const DType* grad_data,
-    float* weight32, const float param_clip_gradient,
-    const float param_lr, const float param_wd,
-    const float param_rescale_grad,
-    const OpReqType req) {
-    if (param_clip_gradient >= 0.0f) {
-      float w = weight32[i];
-      w = w - param_lr * (mshadow_op::clip::Map(param_rescale_grad
-          *static_cast<float>(grad_data[i]), param_clip_gradient)
-          + param_wd*w);
-      weight32[i] = w;
-      KERNEL_ASSIGN(out_data[i], req, (DType)w);
-    } else {
-      float w = weight32[i];
-      w = w - param_lr * (param_rescale_grad
-          *static_cast<float>(grad_data[i]) + (param_wd*w));
-      weight32[i] = w;
-      KERNEL_ASSIGN(out_data[i], req, (DType)w);
-    }
-  }
-};
-
-template<typename xpu>
-inline void MP_NAGUpdate(const nnvm::NodeAttrs& attrs,
-                      const OpContext &ctx,
-                      const std::vector<TBlob> &inputs,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<TBlob> &outputs) {
-  using namespace mxnet_op;
-  const NAGParam& param = nnvm::get<NAGParam>(attrs.parsed);
-  Stream<xpu>* s = ctx.get_stream<xpu>();
-  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, float> weight32 = inputs[2].FlatTo2D<xpu, float>(s);
-    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-    Kernel<MP_NAGKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_,
-      weight.dptr_, grad.dptr_, weight32.dptr_, param.clip_gradient,
-      param.lr, param.wd, param.rescale_grad, req[0]);
   });
 }
 

@@ -707,24 +707,6 @@ only the row slices whose indices appear in grad.indices are updated (for w, m a
 .add_arguments(AdamParam::__FIELDS__());
 
 
-NNVM_REGISTER_OP(nag_update)
-.describe(R"code(Update function for Nesterov Accelerated Gradient( NAG) optimizer.
-It updates the weights using the following formula, 
-
-weight = weight - (lr * (grad + wd * weight))
-
-)code" ADD_FILELINE)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NAGParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FCompute>("FCompute<cpu>", NAGUpdate<cpu>)
-.add_argument("weight", "NDArray-or-Symbol", "Weight")
-.add_argument("grad", "NDArray-or-Symbol", "Gradient")
-.add_arguments(NAGParam::__FIELDS__());
-
-
 NNVM_REGISTER_OP(nag_mom_update)
 .describe(R"code(Update function for Nesterov Accelerated Gradient( NAG) optimizer.
 It updates the weights using the following formula,
@@ -754,25 +736,6 @@ Where
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("mom", "NDArray-or-Symbol", "Momentum")
 .add_arguments(NAGMomParam::__FIELDS__());
-
-
-NNVM_REGISTER_OP(mp_nag_update)
-.describe(R"code(Update function for multi-precision Nesterov Accelerated Gradient( NAG) optimizer.
-)code" ADD_FILELINE)
-.set_num_inputs(3)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NAGParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
-.set_attr<nnvm::FInferType>("FInferType", MP_InferType<2, 1, 3>)
-.set_attr<FCompute>("FCompute<cpu>", MP_NAGUpdate<cpu>)
-.set_attr<nnvm::FMutateInputs>("FMutateInputs",
-  [](const nnvm::NodeAttrs& attrs) {
-    return std::vector<uint32_t>{2};
-  })
-.add_argument("weight", "NDArray-or-Symbol", "Weight")
-.add_argument("grad", "NDArray-or-Symbol", "gradient")
-.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
-.add_arguments(NAGParam::__FIELDS__());
 
 
 NNVM_REGISTER_OP(mp_nag_mom_update)

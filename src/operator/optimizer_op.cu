@@ -251,14 +251,8 @@ NNVM_REGISTER_OP(multi_mp_sgd_update)
 NNVM_REGISTER_OP(multi_mp_sgd_mom_update)
 .set_attr<FCompute>("FCompute<gpu>", MultiSGDMomUpdate<gpu, single_precision, 4>);
 
-NNVM_REGISTER_OP(nag_update)
-.set_attr<FCompute>("FCompute<gpu>", NAGUpdate<gpu>);
-
 NNVM_REGISTER_OP(nag_mom_update)
 .set_attr<FCompute>("FCompute<gpu>", NAGMomUpdate<gpu>);
-
-NNVM_REGISTER_OP(mp_nag_update)
-.set_attr<FCompute>("FCompute<gpu>", MP_NAGUpdate<gpu>);
 
 NNVM_REGISTER_OP(mp_nag_mom_update)
 .set_attr<FCompute>("FCompute<gpu>", MP_NAGMomUpdate<gpu>);

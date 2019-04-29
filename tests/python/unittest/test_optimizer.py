@@ -425,7 +425,7 @@ def test_nag():
             if (dtype == np.float16 and ('multi_precision' not in kwarg or
                                         not kwarg['multi_precision'])):
                 continue
-            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3, atol=1e-4)
 
 #SGLD
 class PySGLD(mx.optimizer.Optimizer):
