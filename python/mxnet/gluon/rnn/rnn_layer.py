@@ -220,27 +220,37 @@ class _RNNLayer(HybridBlock):
             states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
         return states
 
-    def hybrid_forward(self, F, inputs, sequence_length=None, states=None, **kwargs):
-        if F is ndarray:
-            batch_size = inputs.shape[self._layout.find('N')]
-        skip_states = states is None
-        if skip_states:
-            if F is ndarray:
+    def __call__(self, inputs, states=None, sequence_length=None, **kwargs):
+        self.skip_states = states is None
+        if states is None:
+            if type(inputs) is ndarray.NDArray:
+                batch_size = inputs.shape[self._layout.find('N')]
                 states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
             else:
                 states = self.begin_state(0, func=symbol.zeros)
         if isinstance(states, tensor_types):
             states = [states]
+
+        if self._use_sequence_length:
+            return super(_RNNLayer, self).__call__(inputs, states, sequence_length, **kwargs)
+        else:
+            return super(_RNNLayer, self).__call__(inputs, states, **kwargs)
+
+
+    def hybrid_forward(self, F, inputs, states, sequence_length=None, **kwargs):
+        if F is ndarray:
+            batch_size = inputs.shape[self._layout.find('N')]
+
         if F is ndarray:
             for state, info in zip(states, self.state_info(batch_size)):
                 if state.shape != info['shape']:
                     raise ValueError(
                         "Invalid recurrent state shape. Expecting %s, got %s."%(
                             str(info['shape']), str(state.shape)))
-        out = self._forward_kernel(F, inputs, sequence_length, states, **kwargs)
+        out = self._forward_kernel(F, inputs, states, sequence_length, **kwargs)
 
         # out is (output, state)
-        return out[0] if skip_states else out
+        return out[0] if self.skip_states else out
 
     def _forward_kernel(self, F, inputs, sequence_length, states, **kwargs):
         """ forward using CUDNN or CPU kenrel"""
