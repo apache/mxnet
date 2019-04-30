@@ -26,7 +26,7 @@ import ctypes
 from ..base import _LIB
 from ..base import c_str_array, c_handle_array
 from ..base import NDArrayHandle, CachedOpHandle
-from ..base import check_call, _is_np_op
+from ..base import check_call, _is_np_compat_op
 
 
 class NDArrayBase(object):
@@ -101,16 +101,13 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
 
     if original_output is not None:
         return original_output
-    create_ndarray_fn = _np_ndarray_cls if _is_np_op(handle) else _ndarray_cls
+    create_ndarray_fn = _np_ndarray_cls if _is_np_compat_op(handle) else _ndarray_cls
     if num_output.value == 1:
         return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
                                  stype=out_stypes[0])
     else:
         return [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
                                   stype=out_stypes[i]) for i in range(num_output.value)]
-
-
-
 
 
 class CachedOp(object):
@@ -130,11 +127,11 @@ class CachedOp(object):
     def __del__(self):
         check_call(_LIB.MXFreeCachedOp(self.handle))
 
-    def _is_from_np_op(self, idx):
+    def _is_from_np_compat_op(self, idx):
         """Check if the CachedOp's idx-th output is directly from a numpy op."""
         is_from_np_op = ctypes.c_int(0)
-        check_call(_LIB.MXIsCachedOpOutputFromNumpyOp(self.handle, ctypes.c_int(idx),
-                                                      ctypes.byref(is_from_np_op)))
+        check_call(_LIB.MXIsCachedOpOutputFromNumpyCompatOp(self.handle, ctypes.c_int(idx),
+                                                            ctypes.byref(is_from_np_op)))
         return is_from_np_op.value != 0
 
     def __call__(self, *args, **kwargs):
@@ -171,11 +168,11 @@ class CachedOp(object):
         if original_output is not None:
             return original_output
         if num_output.value == 1:
-            create_ndarray_fn = _np_ndarray_cls if self._is_from_np_op(0) else _ndarray_cls
+            create_ndarray_fn = _np_ndarray_cls if self._is_from_np_compat_op(0) else _ndarray_cls
             return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
                                      stype=out_stypes[0])
         else:
             return [_np_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle), stype=out_stypes[i])
-                    if self._is_from_np_op(i) else
+                    if self._is_from_np_compat_op(i) else
                     _ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle), stype=out_stypes[i])
                     for i in range(num_output.value)]

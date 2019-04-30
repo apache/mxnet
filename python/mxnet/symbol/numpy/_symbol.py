@@ -48,38 +48,56 @@ class _NumpySymbol(Symbol):
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
         if isinstance(other, Symbol):
-            return _op.broadcast_add(self, other).as_np_ndarray()
+            return _sym_internal._np_add(self, other)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_add_scalar(self, float(other))
         else:
-            return super(_NumpySymbol, self).__add__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
         if isinstance(other, Symbol):
-            return _op.broadcast_sub(self, other).as_np_ndarray()
+            return _sym_internal._np_subtract(self, other)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_subtract_scalar(self, float(other))
         else:
-            return super(_NumpySymbol, self).__sub__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
         if isinstance(other, Symbol):
-            return _op.broadcast_sub(other, self).as_np_ndarray()
+            return _sym_internal._np_subtract(other, self)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_rsubtract_scalar(self, float(other))
         else:
-            return super(_NumpySymbol, self).__rsub__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
         if isinstance(other, Symbol):
-            return _op.broadcast_mul(self, other).as_np_ndarray()
+            return _sym_internal._np_multiply(self, other)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_multiply_scalar(self, float(other))
         else:
-            return super(_NumpySymbol, self).__mul__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __rmul__(self, other):
         """x.__rmul__(y) <=> y * x"""
-        return self.__mul__(other)
+        if isinstance(other, Symbol):
+            return _sym_internal._np_multiply(self, other)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_multiply_scalar(self, float(other))
+        else:
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     def __div__(self, other):
         raise AttributeError('_NumpySymbol.__div__ is replaced by __truediv__. If you are using'
@@ -99,16 +117,23 @@ class _NumpySymbol(Symbol):
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
         if isinstance(other, Symbol):
-            return _op.broadcast_mod(self, other).as_np_ndarray()
+            return _sym_internal._np_mod(self, other)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_mod_scalar(self, float(other))
         else:
-            return super(_NumpySymbol, self).__mod__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __rmod__(self, other):
+        """x.__rmod__(y) <=> y % x"""
         if isinstance(other, Symbol):
-            return _op.broadcast_mod(other, self).as_np_ndarray()
+            return _sym_internal._np_mod(other, self)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_rmod_scalar(self, float(other))
         else:
-            return super(_NumpySymbol, self).__rmod__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __idiv__(self, other):
@@ -118,9 +143,9 @@ class _NumpySymbol(Symbol):
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
         if isinstance(other, Symbol):
-            return _sym_internal._true_divide(self, other).as_np_ndarray()
+            return _sym_internal._true_divide(self, other)
         elif isinstance(other, numeric_types):
-            return _sym_internal._true_divide_scalar(self, float(other)).as_np_ndarray()
+            return _sym_internal._true_divide_scalar(self, float(other))
         else:
             raise TypeError("_NumpySymbol does not support type {} as divisor"
                             .format(str(type(other))))
@@ -128,10 +153,8 @@ class _NumpySymbol(Symbol):
     @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        if isinstance(other, _NumpySymbol):
-            return other.__truediv__(self)
-        elif isinstance(other, Symbol):
-            return other.as_np_ndarray().__truediv__(self)
+        if isinstance(other, Symbol):
+            return _sym_internal._true_divide(other, self)
         elif isinstance(other, numeric_types):
             return _sym_internal._rtrue_divide_scalar(self, float(other)).as_np_ndarray()
         else:
@@ -146,22 +169,28 @@ class _NumpySymbol(Symbol):
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
         if isinstance(other, Symbol):
-            return _op.broadcast_power(self, other).as_np_ndarray()
+            return _sym_internal._np_power(self, other)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_power_scalar(self, float(other))
         else:
-            return super(_NumpySymbol, self).__pow__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
         if isinstance(other, Symbol):
-            return _op.broadcast_power(other, self).as_np_ndarray()
+            return _sym_internal._np_power(other, self)
+        elif isinstance(other, numeric_types):
+            return _sym_internal._np_rpower_scalar(self, float(other))
         else:
-            return super(_NumpySymbol, self).__rpow__(other).as_np_ndarray()
+            raise TypeError("_NumpySymbol does not support type {} as operand"
+                            .format(str(type(other))))
 
     @use_np_compat
     def __neg__(self):
         """x.__neg__() <=> - x"""
-        return super(_NumpySymbol, self).__neg__().as_np_ndarray()
+        return self.__mul__(-1.0)
 
     @use_np_compat
     def __deepcopy__(self, _):
@@ -170,55 +199,31 @@ class _NumpySymbol(Symbol):
     @use_np_compat
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
-        # if isinstance(other, Symbol):
-        #     return _op.broadcast_equal(self, other).as_np_ndarray()
-        # else:
-        #     return super(_NumpySymbol, self).__eq__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
-        # if isinstance(other, Symbol):
-        #     return _op.broadcast_not_equal(self, other).as_np_ndarray()
-        # else:
-        #     return super(_NumpySymbol, self).__ne__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
-        # if isinstance(other, Symbol):
-        #     return _op.broadcast_greater(self, other).as_np_ndarray()
-        # else:
-        #     return super(_NumpySymbol, self).__gt__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
-        # if isinstance(other, Symbol):
-        #     return _op.broadcast_greater_equal(self, other).as_np_ndarray()
-        # else:
-        #    return super(_NumpySymbol, self).__ge__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
-        # if isinstance(other, Symbol):
-        #     return _op.broadcast_lesser(self, other).as_np_ndarray()
-        # else:
-        #     return super(_NumpySymbol, self).__lt__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
-        # if isinstance(other, Symbol):
-        #     return _op.broadcast_lesser_equal(self, other).as_np_ndarray()
-        # else:
-        #     return super(_NumpySymbol, self).__le__(other).as_np_ndarray()
         raise NotImplementedError
 
     def __len__(self):
@@ -905,14 +910,15 @@ class _NumpySymbol(Symbol):
 @use_np_compat
 def zeros(shape, dtype=_np.float64, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
-    This function does not support the parameter `order` as in NumPy package.
+    This function currently only supports storing multi-dimensional data
+    in row-major (C-style).
 
     Parameters
     ----------
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`).
+        An optional value type (default is `numpy.float64`).
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -927,6 +933,34 @@ def zeros(shape, dtype=_np.float64, **kwargs):
         ctx = current_context()
     dtype = _np.float64 if dtype is None else dtype
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+
+
+@use_np_compat
+def ones(shape, dtype=None, **kwargs):
+    """Return a new array of given shape and type, filled with zeros.
+    This function currently only supports storing multi-dimensional data
+    in row-major (C-style).
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array.
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `numpy.float64`).
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : ndarray
+        Array of zeros with the given shape, dtype, and ctx.
+    """
+    _sanity_check_params('zeros', ['order'], kwargs)
+    ctx = kwargs.get('ctx', current_context())
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float64 if dtype is None else dtype
+    return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
 
 
 _set_np_symbol_class(_NumpySymbol)

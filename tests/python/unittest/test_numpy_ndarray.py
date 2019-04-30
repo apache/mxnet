@@ -46,7 +46,19 @@ def test_array_creation():
 
 
 @with_seed()
+@mx.use_np_compat
 def test_zeros():
+    # test np.zeros in Gluon
+    class TestZeros(HybridBlock):
+        def __init__(self, shape, dtype=None):
+            super(TestZeros, self).__init__()
+            self._shape = shape
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return x + F.np.zeros(shape, dtype)
+
+    # test np.zeros in imperative
     def check_zero_array_creation(shape, dtype):
         np_out = _np.zeros(shape=shape, dtype=dtype)
         mx_out = np.zeros(shape=shape, dtype=dtype)
@@ -58,6 +70,53 @@ def test_zeros():
     for shape in shapes:
         for dtype in dtypes:
             check_zero_array_creation(shape, dtype)
+            x = mx.nd.array(_np.random.uniform(size=shape), dtype=dtype)
+            if dtype is None:
+                x = x.astype('float64')
+            for hybridize in [False]:
+                test_zeros = TestZeros(shape, dtype)
+                if hybridize:
+                    test_zeros.hybridize()
+                y = test_zeros(x)
+                assert type(y) == np.ndarray
+                assert same(x.asnumpy(), y.asnumpy())
+
+
+@with_seed()
+@mx.use_np_compat
+def test_ones():
+    # test np.ones in Gluon
+    class TestOnes(HybridBlock):
+        def __init__(self, shape, dtype=None):
+            super(TestOnes, self).__init__()
+            self._shape = shape
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return x * F.np.ones(shape, dtype)
+
+    # test np.ones in imperative
+    def check_ones_array_creation(shape, dtype):
+        np_out = _np.ones(shape=shape, dtype=dtype)
+        mx_out = np.ones(shape=shape, dtype=dtype)
+        assert same(mx_out.asnumpy(), np_out)
+
+    shapes = [()]
+    shapes += [rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)]
+    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
+    for shape in shapes:
+        for dtype in dtypes:
+            check_ones_array_creation(shape, dtype)
+            x = mx.nd.array(_np.random.uniform(size=shape), dtype=dtype).as_np_ndarray()
+            if dtype is None:
+                x = x.astype('float64')
+            for hybridize in [False]:
+                test_ones = TestOnes(shape, dtype)
+                if hybridize:
+                    test_ones.hybridize()
+                y = test_ones(x)
+                assert type(y) == np.ndarray
+                assert same(x.asnumpy(), y.asnumpy())
 
 
 @with_seed()
@@ -164,15 +223,24 @@ def test_ndarray_binary_element_wise_ops():
                 get_mx_ret = TestBinaryElementWiseOp(op)
                 if hybridize:
                     get_mx_ret.hybridize()
+                print('====================')
+                print(hybridize)
+                print(shape1)
+                print(shape2)
+                print(dtype)
+                print(op)
                 mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
+                assert type(mx_out) == np.ndarray
                 assert np_out.shape == mx_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
 
                 mx_out = get_mx_ret(mx_input1, mx_input2.as_np_ndarray())
+                assert type(mx_out) == np.ndarray
                 assert np_out.shape == mx_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
 
                 mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2)
+                assert type(mx_out) == np.ndarray
                 assert np_out.shape == mx_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
             else:
@@ -181,8 +249,10 @@ def test_ndarray_binary_element_wise_ops():
                     get_mx_ret.hybridize()
                 if reverse:
                     mx_out = get_mx_ret(mx_input2.as_np_ndarray())
+                    assert type(mx_out) == np.ndarray
                 else:
                     mx_out = get_mx_ret(mx_input1.as_np_ndarray())
+                    assert type(mx_out) == np.ndarray
                 assert np_out.shape == mx_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
 
@@ -205,6 +275,7 @@ def test_ndarray_binary_element_wise_ops():
             check_binary_op_result(None, (0, 2), op, dtype)
 
 
+@with_seed()
 def test_np_op_output_type():
     # test imperative invoke
     data = np.array([1., 3.], dtype='float32')
@@ -230,6 +301,7 @@ def test_np_op_output_type():
         assert type(ret2) == np.ndarray
 
 
+@with_seed()
 def test_grad_ndarray_type():
     data = np.array(2, dtype=_np.float32)
     data.attach_grad()
@@ -237,6 +309,7 @@ def test_grad_ndarray_type():
     assert type(data.detach()) == np.ndarray
 
 
+@with_seed()
 def test_np_ndarray_astype():
     mx_data = np.array([2, 3, 4, 5], dtype=_np.int32)
     np_data = mx_data.asnumpy()
@@ -255,6 +328,7 @@ def test_np_ndarray_astype():
             check_astype_equal(dtype, copy, copy is False and mx_data.dtype == dtype)
 
 
+@with_seed()
 def test_np_ndarray_copy():
     mx_data = np.array([2, 3, 4, 5], dtype=_np.int32)
     assert_exception(mx_data.copy, NotImplementedError, order='F')

@@ -34,7 +34,7 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray import _internal as _nd_internal
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros']
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones']
 
 
 # This function is copied from ndarray.py since pylint
@@ -92,7 +92,12 @@ class ndarray(NDArray):
     @use_np_compat
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
-        return super(ndarray, self).__add__(other).as_np_ndarray()
+        if isinstance(other, NDArray):
+            return _nd_internal._np_add(self, other)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_add_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __iadd__(self, other):
@@ -101,7 +106,12 @@ class ndarray(NDArray):
     @use_np_compat
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
-        return super(ndarray, self).__sub__(other).as_np_ndarray()
+        if isinstance(other, NDArray):
+            return _nd_internal._np_subtract(self, other)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_subtract_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __isub__(self, other):
@@ -110,16 +120,26 @@ class ndarray(NDArray):
     @use_np_compat
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
-        return super(ndarray, self).__rsub__(other).as_np_ndarray()
+        if isinstance(other, NDArray):
+            return _nd_internal._np_subtract(other, self)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_rsubtract_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
-        return super(ndarray, self).__mul__(other).as_np_ndarray()
+        if isinstance(other, NDArray):
+            return _nd_internal._np_multiply(self, other)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_multiply_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __neg__(self):
-        return super(ndarray, self).__neg__().as_np_ndarray()
+        return self.__mul__(-1.0)
 
     @use_np_compat
     def __imul__(self, other):
@@ -152,21 +172,19 @@ class ndarray(NDArray):
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
         if isinstance(other, NDArray):
-            return _nd_internal._true_divide(self, other).as_np_ndarray()
+            return _nd_internal._true_divide(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._true_divide_scalar(self, float(other)).as_np_ndarray()
+            return _nd_internal._true_divide_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as divisor".format(str(type(other))))
 
     @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        if isinstance(other, ndarray):
-            return other.__truediv__(self)
-        elif isinstance(other, NDArray):
-            return other.as_np_ndarray().__truediv__(self)
+        if isinstance(other, NDArray):
+            return _nd_internal._true_divide(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._rtrue_divide_scalar(self, float(other)).as_np_ndarray()
+            return _nd_internal._rtrue_divide_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as dividend".format(str(type(other))))
 
@@ -177,12 +195,22 @@ class ndarray(NDArray):
     @use_np_compat
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
-        return super(ndarray, self).__mod__(other).as_np_ndarray()
+        if isinstance(other, NDArray):
+            return _nd_internal._np_mod(self, other)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_mod_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
-        return super(ndarray, self).__rmod__(other).as_np_ndarray()
+        if isinstance(other, NDArray):
+            return _nd_internal._np_mod(other, self)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_rmod_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __imod__(self, other):
@@ -191,17 +219,26 @@ class ndarray(NDArray):
     @use_np_compat
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
-        return super(ndarray, self).__pow__(other).as_np_ndarray()
+        if isinstance(other, NDArray):
+            return _nd_internal._np_power(self, other)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_power_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
-        return super(ndarray, self).__rpow__(other).as_np_ndarray()
+        if isinstance(other, NDArray):
+            return _nd_internal._np_power(other, self)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_rpower_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
-        #return super(ndarray, self).__eq__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
@@ -211,31 +248,26 @@ class ndarray(NDArray):
     @use_np_compat
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
-        #return super(ndarray, self).__ne__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
-        #return super(ndarray, self).__gt__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
-        #return super(ndarray, self).__ge__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
-        #return super(ndarray, self).__lt__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
-        #return super(ndarray, self).__le__(other).as_np_ndarray()
         raise NotImplementedError
 
     @use_np_compat
@@ -1115,20 +1147,43 @@ def array(object, dtype=None, **kwargs):
 
 def zeros(shape, dtype=_np.float64, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
-    This function does not support the parameter `order` as in NumPy package.
+    This function currently only supports storing multi-dimensional data
+    in row-major (C-style).
 
     Parameters
     ----------
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`).
+        An optional value type (default is `numpy.float64`).
     ctx : Context, optional
         An optional device context (default is the current default context).
 
     Returns
     -------
-    out : NDArray
+    out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
     """
     return _mx_nd_np.zeros(shape, dtype, **kwargs)
+
+
+def ones(shape, dtype=None, **kwargs):
+    """Return a new array of given shape and type, filled with zeros.
+    This function currently only supports storing multi-dimensional data
+    in row-major (C-style).
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array.
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `numpy.float64`).
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : ndarray
+        Array of zeros with the given shape, dtype, and ctx.
+    """
+    return _mx_nd_np.ones(shape, dtype, **kwargs)

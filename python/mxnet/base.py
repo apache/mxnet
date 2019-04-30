@@ -874,9 +874,9 @@ def use_np_compat(func):
     return _with_np_compat
 
 
-def _is_np_op(op_handle):
+def _is_np_compat_op(op_handle):
     is_np_op = ctypes.c_int(0)
-    check_call(_LIB.MXIsNumpyOp(ctypes.c_void_p(op_handle), ctypes.byref(is_np_op)))
+    check_call(_LIB.MXIsNumpyCompatOp(ctypes.c_void_p(op_handle), ctypes.byref(is_np_op)))
     return is_np_op.value != 0
 
 

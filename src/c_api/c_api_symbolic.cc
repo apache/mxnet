@@ -840,10 +840,10 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
   API_END_HANDLE_ERROR(delete s);
 }
 
-int MXIsNumpyOp(AtomicSymbolCreator creator, int* is_np_op) {
+int MXIsNumpyCompatOp(AtomicSymbolCreator creator, int* is_np_op) {
   API_BEGIN();
   const nnvm::Op* op = static_cast<Op*>(creator);
-  *is_np_op = (IsNumpyOp(op->name) ? 1 : 0);
+  *is_np_op = IsNumpyCompatOp(op) ? 1 : 0;
   API_END();
 }
 

@@ -379,9 +379,9 @@ int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out) {
   API_END();
 }
 
-int MXIsCachedOpOutputFromNumpyOp(CachedOpHandle handle,
-                                  int output_idx,
-                                  int* is_from_np_op) {
+int MXIsCachedOpOutputFromNumpyCompatOp(CachedOpHandle handle,
+                                        int output_idx,
+                                        int* is_from_np_op) {
   API_BEGIN();
   CachedOpPtr op = *static_cast<CachedOpPtr*>(handle);
   const auto& output_entries = op->GetForwardSym().outputs;
@@ -390,7 +390,7 @@ int MXIsCachedOpOutputFromNumpyOp(CachedOpHandle handle,
   if (node_ptr->is_variable()) {
     *is_from_np_op = 0;
   } else {
-    *is_from_np_op = (IsNumpyOp(node_ptr->op()->name) ? 1 : 0);
+    *is_from_np_op = (IsNumpyCompatOp(node_ptr->op()) ? 1 : 0);
   }
   API_END();
 }

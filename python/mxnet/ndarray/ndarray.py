@@ -214,6 +214,9 @@ fixed-size items.
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y <=> mx.nd.add(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__add__(self)
         return add(self, other)
 
     def __iadd__(self, other):
@@ -232,6 +235,9 @@ fixed-size items.
 
     def __sub__(self, other):
         """x.__sub__(y) <=> x-y <=> mx.nd.subtract(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__rsub__(self)
         return subtract(self, other)
 
     def __isub__(self, other):
@@ -251,6 +257,9 @@ fixed-size items.
 
     def __mul__(self, other):
         """x.__mul__(y) <=> x*y <=> mx.nd.multiply(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__mul__(self)
         return multiply(self, other)
 
     def __neg__(self):
@@ -273,6 +282,9 @@ fixed-size items.
 
     def __div__(self, other):
         """x.__div__(y) <=> x/y <=> mx.nd.divide(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__rtruediv__(self)
         return divide(self, other)
 
     def __rdiv__(self, other):
@@ -291,9 +303,15 @@ fixed-size items.
             raise TypeError('type %s not supported' % str(type(other)))
 
     def __truediv__(self, other):
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__rtruediv__(self)
         return divide(self, other)
 
     def __rtruediv__(self, other):
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__truediv__(self)
         return divide(other, self)
 
     def __itruediv__(self, other):
@@ -301,6 +319,9 @@ fixed-size items.
 
     def __mod__(self, other):
         """x.__mod__(y) <=> x%y <=> mx.nd.modulo(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__rmod__(self)
         return modulo(self, other)
 
     def __rmod__(self, other):
@@ -320,6 +341,9 @@ fixed-size items.
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x**y <=> mx.nd.power(x,y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__rpow__(self)
         return power(self, other)
 
     def __rpow__(self, other):
@@ -328,6 +352,9 @@ fixed-size items.
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x==y <=> mx.nd.equal(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__eq__(self)
         return equal(self, other)
 
     def __hash__(self):
@@ -340,18 +367,30 @@ fixed-size items.
 
     def __gt__(self, other):
         """x.__gt__(y) <=> x>y <=> mx.nd.greater(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__lt__(self)
         return greater(self, other)
 
     def __ge__(self, other):
         """x.__ge__(y) <=> x>=y <=> mx.nd.greater_equal(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__le__(self)
         return greater_equal(self, other)
 
     def __lt__(self, other):
         """x.__lt__(y) <=> x<y <=> mx.nd.lesser(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__gt__(self)
         return lesser(self, other)
 
     def __le__(self, other):
         """x.__le__(y) <=> x<=y <=> mx.nd.less_equal(x, y) """
+        # other may be the type of mxnet.numpy.ndarray
+        if type(other) != NDArray and not isinstance(other, numeric_types):
+            return other.__ge__(self)
         return lesser_equal(self, other)
 
     def __bool__(self):

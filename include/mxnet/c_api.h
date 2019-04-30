@@ -2794,8 +2794,8 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
   * \param creator Operator handle
   * \param is_np_op Indicator of whether creator is a numpy op handle
   */
-MXNET_DLL int MXIsNumpyOp(AtomicSymbolCreator creator,
-                          int* is_np_op);
+MXNET_DLL int MXIsNumpyCompatOp(AtomicSymbolCreator creator,
+                                int* is_np_op);
 /*!
  * \brief Create an NDArray from source sharing the same data chunk.
  * \param src source NDArray
@@ -2814,9 +2814,9 @@ MXNET_DLL int MXShallowCopySymbol(SymbolHandle src, SymbolHandle * out);
  * \param output_idx index of the output of the CachedOp
  * \param is_from_np_op indicator of whether the output is from a numpy op
  */
-MXNET_DLL int MXIsCachedOpOutputFromNumpyOp(CachedOpHandle handle,
-                                            int output_idx,
-                                            int* is_from_np_op);
+MXNET_DLL int MXIsCachedOpOutputFromNumpyCompatOp(CachedOpHandle handle,
+                                                  int output_idx,
+                                                  int* is_from_np_op);
 
 #ifdef __cplusplus
 }

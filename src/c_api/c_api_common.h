@@ -31,6 +31,7 @@
 #include <mxnet/c_api.h>
 #include <mxnet/c_api_error.h>
 #include <mxnet/base.h>
+#include <mxnet/op_attr_types.h>
 #include <nnvm/graph.h>
 #include <vector>
 #include <string>
@@ -162,9 +163,10 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
 extern const std::vector<std::string> kHiddenKeys;
 }  // namespace mxnet
 
-inline bool IsNumpyOp(const std::string& op_name) {
-  static std::string prefix = "_numpy_";
-  return op_name.find(prefix.c_str(), 0, prefix.size()) != std::string::npos;
+inline bool IsNumpyCompatOp(const nnvm::Op* op) {
+  static const auto& is_np_compat =
+      nnvm::Op::GetAttr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible");
+  return is_np_compat.get(op, false);
 }
 
 #endif  // MXNET_C_API_C_API_COMMON_H_

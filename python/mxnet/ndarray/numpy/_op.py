@@ -23,26 +23,27 @@ from ...base import _sanity_check_params, use_np_compat
 from ...context import current_context
 from .. import _internal
 
-__all__ = ['zeros']
+__all__ = ['zeros', 'ones']
 
 
 @use_np_compat
 def zeros(shape, dtype=_np.float64, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
-    This function does not support the parameter `order` as in NumPy package.
+    This function currently only supports storing multi-dimensional data
+    in row-major (C-style).
 
     Parameters
     ----------
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32`).
+        An optional value type (default is `numpy.float64`).
     ctx : Context, optional
         An optional device context (default is the current default context).
 
     Returns
     -------
-    out : NDArray
+    out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
     """
     _sanity_check_params('zeros', ['order'], kwargs)
@@ -51,3 +52,31 @@ def zeros(shape, dtype=_np.float64, **kwargs):
         ctx = current_context()
     dtype = _np.float64 if dtype is None else dtype
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs).as_np_ndarray()
+
+
+@use_np_compat
+def ones(shape, dtype=None, **kwargs):
+    """Return a new array of given shape and type, filled with ones.
+    This function currently only supports storing multi-dimensional data
+    in row-major (C-style).
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array.
+    dtype : str or numpy.dtype, optional
+        An optional value type (default is `numpy.float64`).
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : ndarray
+        Array of zeros with the given shape, dtype, and ctx.
+    """
+    _sanity_check_params('zeros', ['order'], kwargs)
+    ctx = kwargs.get('ctx', current_context())
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float64 if dtype is None else dtype
+    return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs).as_np_ndarray()
