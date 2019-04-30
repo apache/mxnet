@@ -72,6 +72,20 @@ CMAKE_FLAGS = {
                          '-DUSE_LAPACK=1 '
                          '-DUSE_DIST_KVSTORE=0 '
                          '-DUSE_MKL_IF_AVAILABLE=1 '
+                         '-DUSE_MKLDNN=1 '
+                         '-DCMAKE_BUILD_TYPE=Release')
+    
+        , 'WIN_CPU_MKLDNN_MKL': ('-DUSE_CUDA=0 '
+                         '-DUSE_CUDNN=0 '
+                         '-DUSE_NVRTC=0 '
+                         '-DUSE_OPENCV=1 '
+                         '-DUSE_OPENMP=1 '
+                         '-DUSE_PROFILER=1 '
+                         '-DUSE_BLAS=mkl '
+                         '-DUSE_LAPACK=1 '
+                         '-DUSE_DIST_KVSTORE=0 '
+                         '-DUSE_MKL_IF_AVAILABLE=1 '
+                         '-DUSE_MKLDNN=1 '
                          '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': ('-DUSE_CUDA=1 '
