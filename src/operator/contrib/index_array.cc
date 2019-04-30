@@ -39,7 +39,7 @@ void IndexArrayForward<cpu>(const nnvm::NodeAttrs &attrs,
   const IndexArrayParam& param = nnvm::get<IndexArrayParam>(attrs.parsed);
 
   const TShape inshape = in_data.shape_;
-  const uint32_t ndim = inshape.ndim();
+  const int ndim = inshape.ndim();
 
   Stream<cpu> *stream = ctx.get_stream<cpu>();
 
@@ -47,7 +47,7 @@ void IndexArrayForward<cpu>(const nnvm::NodeAttrs &attrs,
 
   if (param.axes.has_value()) {
     const TShape& axes = param.axes.value();
-    const uint32_t naxes = axes.ndim();
+    const int naxes = axes.ndim();
 
     std::vector<int64_t> index_products = IndexArrayComputeIndexProducts(inshape);
 
@@ -135,9 +135,9 @@ Examples::
   CHECK_EQ(in_shape->size(), 1U);
   CHECK_EQ(out_shape->size(), 1U);
   mxnet::TShape inshape = in_shape->at(index_array_enum::kIn);
-  mxnet::TShape oshape = mxnet::TShape(inshape.ndim() + 1U);
+  mxnet::TShape oshape = mxnet::TShape(inshape.ndim() + 1, 0);
 
-  for (size_t i = 0; i < inshape.ndim(); i++) {
+  for (int i = 0; i < inshape.ndim(); i++) {
     oshape[i] = inshape[i];
   }
   if (param.axes.has_value()) {

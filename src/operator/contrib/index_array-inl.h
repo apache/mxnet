@@ -36,11 +36,11 @@ enum IndexArrayOpResource {kTempSpace};
 
 template<int req>
 struct IndexArrayKernel {
-  MSHADOW_XINLINE static void Map(size_t i,
+  MSHADOW_XINLINE static void Map(int i,
                                   int64_t* out_data,
-                                  const uint32_t n,
+                                  const int n,
                                   const int64_t* workspace) {
-    for (uint32_t j = 0; j < n; j++) {
+    for (int j = 0; j < n; j++) {
       int64_t upper = workspace[2 * j];
       int64_t lower = workspace[2 * j + 1];
       KERNEL_ASSIGN(out_data[i * n + j], req, (i % upper) / lower);
@@ -50,12 +50,12 @@ struct IndexArrayKernel {
 
 template<int req>
 struct IndexArrayDefaultKernel {
-  MSHADOW_XINLINE static void Map(size_t i,
+  MSHADOW_XINLINE static void Map(int i,
                                   int64_t* out_data,
-                                  const uint32_t ndim,
+                                  const int ndim,
                                   const dim_t* shape) {
     int64_t index = i;
-    for (uint32_t j = ndim; j-- > 0;) {
+    for (int j = ndim - 1; j >= 0; j--) {
       KERNEL_ASSIGN(out_data[i * ndim + j], req, index % shape[j]);
       index /= shape[j];
     }
@@ -63,13 +63,13 @@ struct IndexArrayDefaultKernel {
 };
 
 inline std::vector<int64_t> IndexArrayComputeIndexProducts(const TShape &inshape) {
-  const uint32_t ndim = inshape.ndim();
+  const int ndim = inshape.ndim();
 
-  std::vector<int64_t> index_products(ndim + 1);
+  std::vector<int64_t> index_products(static_cast<size_t>(ndim + 1));
 
   index_products[ndim] = 1;
 
-  for (uint32_t i = ndim; i-- > 0;) {
+  for (int i = ndim - 1; i >= 0; i--) {
     index_products[i] = index_products[i + 1] * inshape[i];
   }
 
@@ -79,8 +79,8 @@ inline std::vector<int64_t> IndexArrayComputeIndexProducts(const TShape &inshape
 inline void IndexArrayBuildSelectedAxesWorkspace(const TShape &axes,
                                                  const std::vector<int64_t> &index_products,
                                                  int64_t* workspace,
-                                                 const uint32_t ndim) {
-  for (uint32_t i = 0; i < axes.ndim(); i++) {
+                                                 const int ndim) {
+  for (int i = 0; i < axes.ndim(); i++) {
     // Make sure that the axis is between 0 and ndim.
     const dim_t axis = ((axes[i] % ndim) + ndim) % ndim;
 

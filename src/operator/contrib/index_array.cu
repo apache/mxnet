@@ -40,7 +40,7 @@ void IndexArrayForward<gpu>(const nnvm::NodeAttrs &attrs,
   const IndexArrayParam& param = nnvm::get<IndexArrayParam>(attrs.parsed);
 
   const TShape inshape = in_data.shape_;
-  const uint32_t ndim = inshape.ndim();
+  const int ndim = inshape.ndim();
 
   Stream<gpu> *stream = ctx.get_stream<gpu>();
 
@@ -48,7 +48,7 @@ void IndexArrayForward<gpu>(const nnvm::NodeAttrs &attrs,
 
   if (param.axes.has_value()) {
     const TShape& axes = param.axes.value();
-    const uint32_t naxes = axes.ndim();
+    const int naxes = axes.ndim();
 
     std::vector<int64_t> index_products = IndexArrayComputeIndexProducts(inshape);
 
@@ -69,7 +69,7 @@ void IndexArrayForward<gpu>(const nnvm::NodeAttrs &attrs,
     Tensor<gpu, 1, dim_t> workspace =
         ctx.requested[0].get_space_typed<gpu, 1, dim_t>(Shape1(ndim), stream);
 
-    CUDA_CALL(cudaMemcpy(workspace.dptr_, inshape.data(), sizeof(dim_t) * (ndim),
+    CUDA_CALL(cudaMemcpy(workspace.dptr_, inshape.data(), sizeof(dim_t) * ndim,
         cudaMemcpyHostToDevice));
 
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
