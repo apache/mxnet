@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -44,6 +44,8 @@ KNOWN_VCVARS = {
 class BuildFlavour(Enum):
     WIN_CPU = 'WIN_CPU'
     WIN_CPU_MKLDNN = 'WIN_CPU_MKLDNN'
+    WIN_CPU_MKLDNN_MKL = 'WIN_CPU_MKLDNN_MKL'
+    WIN_CPU_NOMKLDNN_MKL = 'WIN_CPU_NOMKLDNN_MKL'
     WIN_GPU = 'WIN_GPU'
     WIN_GPU_MKLDNN = 'WIN_GPU_MKLDNN'
 
@@ -86,6 +88,19 @@ CMAKE_FLAGS = {
                          '-DUSE_DIST_KVSTORE=0 '
                          '-DUSE_MKL_IF_AVAILABLE=1 '
                          '-DUSE_MKLDNN=1 '
+                         '-DCMAKE_BUILD_TYPE=Release')
+    
+            , 'WIN_CPU_NOMKLDNN_MKL': ('-DUSE_CUDA=0 '
+                         '-DUSE_CUDNN=0 '
+                         '-DUSE_NVRTC=0 '
+                         '-DUSE_OPENCV=1 '
+                         '-DUSE_OPENMP=1 '
+                         '-DUSE_PROFILER=1 '
+                         '-DUSE_BLAS=mkl '
+                         '-DUSE_LAPACK=1 '
+                         '-DUSE_DIST_KVSTORE=0 '
+                         '-DUSE_MKL_IF_AVAILABLE=1 '
+                         '-DUSE_MKLDNN=0 '
                          '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': ('-DUSE_CUDA=1 '
@@ -232,6 +247,8 @@ def main():
             os.environ["OpenCV_DIR"] = "C:\\Program Files\\OpenCV-v3.4.1\\build"
         if 'CUDA_PATH' not in os.environ:
             os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2"
+        if 'MKL_ROOT' not in os.environ:
+            os.environ["MKL_ROOT"] = "C:\\Program Files \(x86\)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
         windows_build(args)
 
     elif system == 'Linux' or system == 'Darwin':
