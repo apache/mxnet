@@ -396,15 +396,15 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<nnvm::NodeEntry> forward_outputs = graph.outputs;
   const size_t num_forward_outputs = graph.outputs.size();
 
-  // TODO: move inside pass::MXGradient
+  // TODO(larroy): move inside pass::MXGradient
   for (const auto& backward_node : gradient_graph.outputs) {
     if (backward_node.node->is_variable()) {
       auto node = Node::Create();
       node->attrs.op = copy_op;
       node->inputs.push_back(backward_node);
       graph.outputs.emplace_back(std::move(node));
-      //AGInfo& info = AGInfo::Create(node);
-      //info.ctx = outputs[0]->ctx();
+      // AGInfo& info = AGInfo::Create(node);
+      // info.ctx = outputs[0]->ctx();
     } else {
       graph.outputs.push_back(backward_node);
     }
@@ -418,7 +418,8 @@ std::vector<NDArray*> Imperative::Backward(
     num_forward_nodes = std::max(
         num_forward_nodes, static_cast<size_t>(indexed_graph.outputs()[i].node_id + 1));
     num_forward_entries = std::max(
-        num_forward_entries, static_cast<size_t>(indexed_graph.entry_id(indexed_graph.outputs()[i])) + 1);
+        num_forward_entries, static_cast<size_t>(indexed_graph.entry_id(
+            indexed_graph.outputs()[i])) + 1);
   }
 
   // Allocate buffer
