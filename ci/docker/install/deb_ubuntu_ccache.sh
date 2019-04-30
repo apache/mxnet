@@ -23,7 +23,7 @@ set -ex
 
 pushd .
 
-apt update || true && apt install -y --force-yes --no-install-recommends \
+apt update && apt install -y --force-yes --no-install-recommends \
     asciidoc \
     autoconf \
     docbook-xsl \
