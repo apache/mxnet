@@ -59,7 +59,7 @@
 
 (defn tokens->idxs [token->idx tokens]
   (let [unk-idx (get token->idx "[UNK]")]
-   (mapv #(get token->idx % unk-idx) tokens)))
+    (mapv #(get token->idx % unk-idx) tokens)))
 
 (defn post-processing [result tokens]
   (let [output1 (ndarray/slice-axis result 2 0 1)
