@@ -169,6 +169,7 @@ class Estimator(object):
                 self.train_metrics = [Accuracy()]
             self.val_metrics = []
             for loss in self.loss:
+                # remove trailing numbers from loss name to avoid confusion
                 self.train_metrics.append(Loss(loss.name.rstrip('1234567890')))
             for metric in self.train_metrics:
                 val_metric = copy.deepcopy(metric)
