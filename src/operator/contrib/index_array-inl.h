@@ -76,13 +76,13 @@ inline std::vector<int64_t> IndexArrayComputeIndexProducts(const TShape &inshape
   return index_products;
 }
 
-inline void IndexArrayBuildSelectedAxesWorkspace(const TShape &axes,
+inline void IndexArrayBuildSelectedAxesWorkspace(const mxnet::Tuple<int> &axes,
                                                  const std::vector<int64_t> &index_products,
                                                  int64_t* workspace,
                                                  const int ndim) {
   for (int i = 0; i < axes.ndim(); i++) {
     // Make sure that the axis is between 0 and ndim.
-    const dim_t axis = ((axes[i] % ndim) + ndim) % ndim;
+    const int axis = ((axes[i] % ndim) + ndim) % ndim;
 
     workspace[2 * i] = index_products[axis];
     workspace[2 * i + 1] = index_products[axis + 1];
@@ -97,9 +97,9 @@ void IndexArrayForward(const nnvm::NodeAttrs &attrs,
                        const std::vector<TBlob> &outputs);
 
 struct IndexArrayParam : public dmlc::Parameter<IndexArrayParam> {
-  dmlc::optional<mxnet::TShape> axes;
+  dmlc::optional<mxnet::Tuple<int>> axes;
   DMLC_DECLARE_PARAMETER(IndexArrayParam) {
-    DMLC_DECLARE_FIELD(axes).set_default(dmlc::optional<mxnet::TShape>())
+    DMLC_DECLARE_FIELD(axes).set_default(dmlc::optional<mxnet::Tuple<int>>())
       .describe("The axes to include in the index array. Supports negative values.");
   }
 };  // struct IndexArrayParam

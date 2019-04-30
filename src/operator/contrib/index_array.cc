@@ -46,7 +46,7 @@ void IndexArrayForward<cpu>(const nnvm::NodeAttrs &attrs,
   using namespace mxnet_op;
 
   if (param.axes.has_value()) {
-    const TShape& axes = param.axes.value();
+    const mxnet::Tuple<int>& axes = param.axes.value();
     const int naxes = axes.ndim();
 
     std::vector<int64_t> index_products = IndexArrayComputeIndexProducts(inshape);
