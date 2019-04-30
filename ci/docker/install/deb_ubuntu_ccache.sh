@@ -23,16 +23,12 @@ set -ex
 
 pushd .
 
-apt update || true
-apt install -y \
-    libxslt1-dev \
-    docbook-xsl \
-    xsltproc \
-    libxml2-utils
-
-apt install -y --force-yes --no-install-recommends \
-    autoconf \
+apt update || true && apt install -y --force-yes --no-install-recommends \
     asciidoc \
+    autoconf \
+    docbook-xsl \
+    libxml2-utils \
+    libxslt1-dev \
     xsltproc
 
 mkdir -p /work/deps
