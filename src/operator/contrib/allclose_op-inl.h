@@ -69,7 +69,7 @@ inline bool AllCloseShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U) << "Input:[array1, array2]";
   CHECK_EQ(out_attrs->size(), 1U);
 
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape());
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, -1));
   return in_attrs->at(0) == in_attrs->at(1);
 }
 
