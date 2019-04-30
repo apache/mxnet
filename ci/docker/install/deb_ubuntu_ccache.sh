@@ -30,7 +30,7 @@ apt install -y \
     xsltproc \
     libxml2-utils
 
-apt install -y --no-install-recommends \
+apt install -y --force-yes --no-install-recommends \
     autoconf \
     asciidoc \
     xsltproc
@@ -56,4 +56,3 @@ make install
 rm -rf /work/deps/ccache
 
 popd
-
