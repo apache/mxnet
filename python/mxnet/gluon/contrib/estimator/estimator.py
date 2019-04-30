@@ -92,7 +92,7 @@ class Estimator(object):
         available_context = [cpu()]
         gpus = num_gpus()
         for i in range(gpus):
-            available_context.append(gpu(0))
+            available_context.append(gpu(i))
 
         if context:
             # check context values, only accept Context or a list of Context
