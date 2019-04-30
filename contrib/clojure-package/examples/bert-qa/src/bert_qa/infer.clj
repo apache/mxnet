@@ -121,22 +121,23 @@
      :tokens tokens
      :qa-map qa-map}))
 
-(defn infer [ctx]
-  (let [ctx (context/default-context)
-        predictor (make-predictor ctx)
-        {:keys [idx->token token->idx]} (get-vocab)
+(defn infer
+  ([] (infer (context/default-context)))
+  ([ctx]
+   (let [predictor (make-predictor ctx)
+         {:keys [idx->token token->idx]} (get-vocab)
         ;;; samples taken from https://rajpurkar.github.io/SQuAD-explorer/explore/v2.0/dev/
-        question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))]
-    (doseq [qa-map question-answers]
-      (let [{:keys [input-batch tokens qa-map]} (pre-processing ctx idx->token token->idx qa-map)
-            result (first (infer/predict-with-ndarray predictor input-batch))
-            answer (post-processing result tokens)]
-        (println "===============================")
-        (println "      Question Answer Data")
-        (pprint/pprint qa-map)
-        (println)
-        (println "  Predicted Answer: " answer)
-        (println "===============================")))))
+         question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))]
+     (doseq [qa-map question-answers]
+       (let [{:keys [input-batch tokens qa-map]} (pre-processing ctx idx->token token->idx qa-map)
+             result (first (infer/predict-with-ndarray predictor input-batch))
+             answer (post-processing result tokens)]
+         (println "===============================")
+         (println "      Question Answer Data")
+         (pprint/pprint qa-map)
+         (println)
+         (println "  Predicted Answer: " answer)
+         (println "==============================="))))))
 
 (defn -main [& args]
   (let [[dev] args]
@@ -146,4 +147,8 @@
 
 (comment
 
-  (infer :cpu))
+  (infer)
+
+  (infer (context/gpu))
+
+  )
