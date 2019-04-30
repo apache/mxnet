@@ -258,6 +258,12 @@ def test_context():
                         metrics=metrics,
                         context='cpu')
 
+    with assert_raises(AssertionError):
+        est = Estimator(net=net,
+                        loss=loss,
+                        metrics=metrics,
+                        context=[mx.gpu(0), mx.gpu(100)])
+
 
 def test_categorize_handlers():
     class CustomHandler1(TrainBegin):
