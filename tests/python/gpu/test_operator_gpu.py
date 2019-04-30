@@ -2136,11 +2136,12 @@ def test_index_array_default():
         data  = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data)
 
+        input_array = np.ones(shape)
         mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
         expected = np.stack(mgrid, axis=-1)
-        
-        check_symbolic_forward(index_array, [np.ones(shape)], [expected])
-        check_symbolic_backward(index_array, [np.ones(shape)], [np.ones(shape)], [np.zeros(shape)])
+
+        check_symbolic_forward(index_array, [input_array], [expected])
+        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
 @with_seed()
 def test_index_array_select_axes():
@@ -2149,11 +2150,12 @@ def test_index_array_select_axes():
         data  = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data, axes=axes)
 
+        input_array = np.ones(shape)
         mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
         expected = np.stack(mgrid, axis=-1)[..., axes]
 
-        check_symbolic_forward(index_array, [np.ones(shape)], [expected])
-        check_symbolic_backward(index_array, [np.ones(shape)], [np.ones(shape)], [np.zeros(shape)])
+        check_symbolic_forward(index_array, [input_array], [expected])
+        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
 # isolated execution bulking test function to be invoked with different env var settings
 def _test_bulking_in_process(seed, time_per_iteration):
