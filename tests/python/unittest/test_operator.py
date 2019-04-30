@@ -6296,6 +6296,51 @@ def test_laop_4():
     #print('float32')
     check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
 
+def test_laop_5():
+    # tests for diagonal and triangular matrix extraction and generation
+    data = mx.symbol.Variable('data')
+    # test complete range of small matrices to cover corner cases
+    for n in range(1, 10):
+        # test batched and non-batched processing
+        for b in range(3):
+            shape = (n, n) if b == 0 else (b, n, n) 
+            data_in = np.random.uniform(1, 10, shape)
+            # test all legal offsets of the diagonal
+            for offs in range(1-n, n): 
+                # test extraction of diagonal 
+                test_diag = mx.sym.linalg.extractdiag(data, offset=offs)
+                res_diag = np.diagonal(data_in, offset=offs) if b==0 else np.diagonal(data_in, axis1=1, axis2=2, offset=offs)
+                check_symbolic_forward(test_diag, [data_in], [res_diag])
+                check_numeric_gradient(test_diag, [data_in])
+                # test generation of diagonal matrix
+                test_diag2 = mx.sym.linalg.makediag(data, offset=offs)
+                res_diag2 = None  
+                if b == 0:
+                    res_diag2 = np.diagflat(res_diag, k=offs)
+                else:
+                    for i in range(b):
+                        res = np.reshape(np.diagflat(res_diag[i], k=offs), (1, n, n))
+                        res_diag2 = res if res_diag2 is None else np.concatenate((res_diag2, res), axis=0)
+                check_symbolic_forward(test_diag2, [res_diag], [res_diag2])
+                check_numeric_gradient(test_diag2, [res_diag])
+                # check both settings for parameter "lower" in case of zero offset
+                lower_vals = [True] if offs != 0 else [True, False]
+                for lower in lower_vals:
+                    # test extraction of triangle by doing a full roundtrip as the intermediate extracted
+                    # triangle has different orderings than numpy.
+                    test_trian = mx.sym.linalg.extracttrian(data, offset=offs, lower=lower)
+                    test_trian = mx.sym.linalg.maketrian(test_trian, offset=offs, lower=lower)
+                    extracts_lower = (offs < 0) or ((offs == 0) and lower)
+                    res_trian = None
+                    if b == 0:
+                        res_trian = np.tril(data_in, offs) if extracts_lower else np.triu(data_in, offs)
+                    else:
+                        for i in range(b):
+                            res = np.tril(data_in[i], offs) if extracts_lower else np.triu(data_in[i], offs)
+                            res = np.reshape(res, (1, n, n))
+                            res_trian = res if res_trian is None else np.concatenate((res_trian, res), axis=0)
+                    check_symbolic_forward(test_trian, [data_in], [res_trian])
+                    check_numeric_gradient(test_trian, [data_in])
 
 @with_seed()
 def test_stack():
