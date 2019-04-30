@@ -88,12 +88,17 @@ class Estimator(object):
         return metrics
 
     def _check_context(self, context):
-        # handle context
-        if isinstance(context, Context):
-            context = [context]
-        elif isinstance(context, list) and all([isinstance(c, Context) for c in context]):
-            context = context
-        elif not context:
+        if context:
+            # check context values, only accept Context or a list of Context
+            if isinstance(context, Context):
+                context = [context]
+            elif isinstance(context, list) and all([isinstance(c, Context) for c in context]):
+                context = context
+            else:
+                raise ValueError("context must be a Context or a list of Context, "
+                                 "refer to mxnet.Context:{}".format(context))
+        else:
+            # provide default context
             if num_gpus() > 0:
                 # only use 1 GPU by default
                 if num_gpus() > 1:
@@ -103,9 +108,6 @@ class Estimator(object):
                 context = [gpu(0)]
             else:
                 context = [cpu()]
-        else:
-            raise ValueError("context must be a Context or a list of Context, "
-                             "refer to mxnet.Context:{}".format(context))
         return context
 
     def _initialize(self, initializer):
@@ -167,7 +169,7 @@ class Estimator(object):
                 self.train_metrics = [Accuracy()]
             self.val_metrics = []
             for loss in self.loss:
-                self.train_metrics.append(Loss(''.join([i for i in loss.name if not i.isdigit()])))
+                self.train_metrics.append(Loss(loss.name.rstrip('1234567890')))
             for metric in self.train_metrics:
                 val_metric = copy.deepcopy(metric)
                 metric.name = "Train " + metric.name
