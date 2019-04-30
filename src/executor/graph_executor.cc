@@ -27,6 +27,7 @@
 #include <nnvm/pass_functions.h>
 #include <vector>
 #include <algorithm>
+#include <sstream>
 
 #include "./exec_pass.h"
 #include "./graph_executor.h"
@@ -1004,7 +1005,11 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   // get maximum bytes in each pool
   for (size_t i = 0; i < vshape.size(); ++i) {
     if (!data_entry_[i].is_none()) continue;
-    size_t bytes = vshape[i].Size() * mshadow::mshadow_sizeof(vdtype[i]);
+    size_t shape_size = 0;
+    if (shape_is_known(vshape[i])) {
+      shape_size = vshape[i].Size();
+    }
+    size_t bytes = shape_size * mshadow::mshadow_sizeof(vdtype[i]);
     int storage_id = vstorage[i];
     // skip pool allocation for kBadStorageID, kExternalStorageID and kDynamicStorageID
     if (storage_id < 0) continue;
@@ -1293,6 +1298,22 @@ void GraphExecutor::ExecuteMonInputCallback(size_t nid) {
   }
 }
 
+std::string Shape2Str(const mxnet::TShape &shape) {
+  if (shape.ndim() == -1) {
+    return "[UNK]";
+  }
+  std::ostringstream os;
+  os << "(";
+  for (int i = 0; i < (int) shape.ndim(); ++i) {
+    if (i > 0) {
+      os << ", ";
+    }
+    os << shape[i];
+  }
+  os << ")";
+  return os.str();
+}
+
 void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
   static const auto& flist_outputs =
       nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
@@ -1369,6 +1390,17 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
         auto finfer = finfer_shape[op];
         try {
           bool success = finfer(inode.source->attrs, &in_shapes, &out_shapes);
+          if (!success) {
+            std::cout << "InferShape failed in operator " << inode.source->attrs.name << std::endl;
+            std::cout << "in_array:" << std::endl;
+            for (NDArray &array : opnode.exec->in_array) {
+              std::cout << "\t" << Shape2Str(array.shape()) << std::endl;
+            }
+            std::cout << "out_array:" << std::endl;
+            for (NDArray &array : opnode.exec->out_array) {
+              std::cout << "\t" <<Shape2Str(array.shape()) << std::endl;
+            }
+          }
           CHECK(success) << "InferShape failed in operator " << inode.source->attrs.name;
         } catch (const std::exception& e) {
           throw dmlc::Error("Error in operator " + inode.source->attrs.name + ": " + e.what());

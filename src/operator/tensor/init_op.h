@@ -68,7 +68,7 @@ struct InitOpWithoutDTypeParam : public dmlc::Parameter<InitOpWithoutDTypeParam>
   int dtype;
   DMLC_DECLARE_PARAMETER(InitOpWithoutDTypeParam) {
     DMLC_DECLARE_FIELD(shape)
-    .set_default(mxnet::TShape())
+    .set_default(mxnet::TShape(0, 0))
     .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")

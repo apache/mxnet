@@ -2170,5 +2170,6 @@ def test_foreach_with_unkown_dim():
     assert_allclose((0, 3, 32, 32), output_shape[0])
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    # import nose
+    # nose.runmodule()
+    test_while_loop_for_foreach()
