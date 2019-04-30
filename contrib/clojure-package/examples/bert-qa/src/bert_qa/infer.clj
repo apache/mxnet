@@ -15,13 +15,10 @@
 ;; limitations under the License.
 ;;
 
-
 (ns bert-qa.infer
   (:require [clojure.string :as string]
-            [clojure.reflect :as r]
             [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.set :as set]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.layout :as layout]
@@ -30,11 +27,7 @@
             [clojure.pprint :as pprint]))
 
 (def model-path-prefix "model/static_bert_qa")
-;; epoch number of the model
-(def epoch 2)
-;; the vocabulary used in the model
-(def model-vocab "model/vocab.json")
-;; the input question
+
 ;; the maximum length of the sequence
 (def seq-length 384)
 
@@ -60,16 +53,13 @@
     (into tokens (repeat (- num (count tokens)) pad-item))))
 
 (defn get-vocab []
-  (let [vocab (json/parse-stream (clojure.java.io/reader "model/vocab.json"))]
+  (let [vocab (json/parse-stream (io/reader "model/vocab.json"))]
     {:idx->token (get vocab "idx_to_token")
      :token->idx (get vocab "token_to_idx")}))
 
 (defn tokens->idxs [token->idx tokens]
   (let [unk-idx (get token->idx "[UNK]")]
    (mapv #(get token->idx % unk-idx) tokens)))
-
-(defn idxs->tokens [idx->token idxs]
-  (mapv #(get idx->token %) idxs))
 
 (defn post-processing [result tokens]
   (let [output1 (ndarray/slice-axis result 2 0 1)
