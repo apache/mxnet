@@ -16,12 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_POST_QUANTIZE_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_POST_QUANTIZE_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
 #include <string>
 #include <vector>
+#include <set>
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../nn/mkldnn/mkldnn_convolution-inl.h"
@@ -31,7 +32,7 @@
 namespace mxnet {
 namespace op {
 
-class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
+class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
@@ -43,14 +44,25 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
  private:
   SelectStatus status;
   std::vector<const nnvm::Node *> matched_list;
+  std::set<std::string> support_requantize_fusion_op_name;
 
  public:
-  SgMKLDNNConvPostQuantizeSelector() {}
+  SgMKLDNNPostQuantizeSelector() {
+    support_requantize_fusion_op_name.insert("_sg_mkldnn_conv");
+    support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
+  }
 
   bool Select(const nnvm::Node &n) override {
-    if (n.op() && n.op()->name == "_sg_mkldnn_conv") {
-      auto const &param = nnvm::get<MKLDNNConvFusionParam>(n.attrs.parsed);
-      if (param.full_conv_param.mkldnn_param.quantized) {
+    if (n.op() && support_requantize_fusion_op_name.count(n.op()->name)) {
+      if (n.op()->name == "_sg_mkldnn_conv") {
+        auto const &param = nnvm::get<MKLDNNConvFusionParam>(n.attrs.parsed);
+        if (param.full_conv_param.mkldnn_param.quantized) {
+          status = kStart;
+          matched_list.clear();
+          matched_list.push_back(&n);
+          return true;
+        }
+      } else if (n.op()->name == "_contrib_quantized_elemwise_add") {
         status = kStart;
         matched_list.clear();
         matched_list.push_back(&n);
@@ -97,47 +109,48 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
   }
 };
 
-class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
+class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
  public:
-  SgMKLDNNConvPostQuantizeProperty() {}
-
+  SgMKLDNNPostQuantizeProperty() {
+    support_requantize_fusion_op_name.insert("_sg_mkldnn_conv");
+    support_requantize_fusion_op_name.insert("_contrib_quantized_elemwise_add");
+  }
   static SubgraphPropertyPtr Create() {
-    static const std::string &name = "MKLDNN Convolution post-quantization optimization pass";
-    auto property = std::make_shared<SgMKLDNNConvPostQuantizeProperty>();
+    static const std::string &name = "MKLDNN post-quantization optimization pass";
+    auto property = std::make_shared<SgMKLDNNPostQuantizeProperty>();
     property->SetAttr<std::string>("property_name", name);
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
-
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
-    nnvm::NodePtr conv_node = nullptr;
+    nnvm::NodePtr fuse_node = nullptr;
     nnvm::NodePtr requantize_node = nullptr;
     DFSVisit(sym.outputs, [&](const nnvm::NodePtr &node) {
       if (node->is_variable()) return;
       auto &op_name = node->op()->name;
-      if (op_name == "_sg_mkldnn_conv") {
-        conv_node = node;
+      if (support_requantize_fusion_op_name.count(op_name)) {
+        fuse_node = node;
       } else if (op_name == "_contrib_requantize") {
         requantize_node = node;
       }
     });
-    CHECK_NOTNULL(conv_node);
+    CHECK_NOTNULL(fuse_node);
     CHECK_NOTNULL(requantize_node);
     auto const &requantize_param =
         nnvm::get<RequantizeParam>(requantize_node->attrs.parsed);
     CHECK(requantize_param.min_calib_range.has_value());
     CHECK(requantize_param.max_calib_range.has_value());
-    conv_node->attrs.dict["min_calib_range"] =
+    fuse_node->attrs.dict["min_calib_range"] =
         std::to_string(requantize_param.min_calib_range.value());
-    conv_node->attrs.dict["max_calib_range"] =
+    fuse_node->attrs.dict["max_calib_range"] =
         std::to_string(requantize_param.max_calib_range.value());
-    conv_node->op()->attr_parser(&(conv_node->attrs));
-    return conv_node;
+    fuse_node->op()->attr_parser(&(fuse_node->attrs));
+    return fuse_node;
   }
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    auto selector = std::make_shared<SgMKLDNNConvPostQuantizeSelector>();
+    auto selector = std::make_shared<SgMKLDNNPostQuantizeSelector>();
     return selector;
   }
 
@@ -149,10 +162,12 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
       *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
     }
   }
-};
 
+ private:
+  std::set<std::string> support_requantize_fusion_op_name;
+};
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_POST_QUANTIZE_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_PROPERTY_H_

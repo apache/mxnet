@@ -46,7 +46,7 @@ mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF
 mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" ON)
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
-mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
+mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." ON)
 mxnet_option(USE_TENSORRT         "Enable infeference optimization with TensorRT." OFF)
 mxnet_option(USE_ASAN             "Enable Clang/GCC ASAN sanitizers." OFF)
 mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric output" OFF)
