@@ -46,8 +46,8 @@ class LibraryInitializer {
     dmlc::InitLogging("mxnet");
 #if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
     struct sigaction sa;
-    sigaction(SIGSEGV, NULL, &sa);
-    if (sa.sa_handler == NULL) {
+    sigaction(SIGSEGV, nullptr, &sa);
+    if (sa.sa_handler == nullptr) {
         signal(SIGSEGV, SegfaultLogger);
     }
 #endif
