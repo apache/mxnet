@@ -245,6 +245,34 @@ def compile_unix_cmake_mkldnn_gpu() {
     }]
 }
 
+def compile_unix_cmake_mkl_mkldnn_gpu() {
+    return ['GPU: CMake MKL MKLDNN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cmake-mkl-mkldnn-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_mkldnn', false)
+            utils.pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib, true)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_cmake_mkl_nomkldnn_gpu() {
+    return ['GPU: CMake MKL NOMKLDNN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cmake-mkl-nomkldnn-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_mkldnn', false)
+            utils.pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib, true)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_cmake_gpu() {
     return ['GPU: CMake': {
       node(NODE_LINUX_CPU) {
