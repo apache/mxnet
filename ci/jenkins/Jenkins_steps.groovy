@@ -245,28 +245,28 @@ def compile_unix_cmake_mkldnn_gpu() {
     }]
 }
 
-def compile_unix_cmake_mkl_mkldnn_gpu() {
+def compile_unix_cmake_mkldnn_mkl_gpu() {
     return ['GPU: CMake MKL MKLDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-mkl-mkldnn-gpu') {
+        ws('workspace/build-cmake-mkldnn-mkl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_mkldnn', false)
-            utils.pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib, true)
+            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_mkldnn_mkl', false)
+            utils.pack_lib('cmake_mkldnn_mkl_gpu', mx_cmake_mkldnn_mkl_lib, true)
           }
         }
       }
     }]
 }
 
-def compile_unix_cmake_mkl_nomkldnn_gpu() {
+def compile_unix_cmake_nomkldnn_mkl_gpu() {
     return ['GPU: CMake MKL NOMKLDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-mkl-nomkldnn-gpu') {
+        ws('workspace/build-cmake-nomkldnn-mkl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_mkldnn', false)
-            utils.pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib, true)
+            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_nomkldnn_mkl', false)
+            utils.pack_lib('cmake_nomkldnn_mkl_gpu', mx_cmake_nomkldnn_mkl_lib, true)
           }
         }
       }
@@ -537,6 +537,48 @@ def compile_windows_cpu() {
             utils.init_git_win()
             powershell 'py -3 ci/build_windows.py -f WIN_CPU'
             stash includes: 'windows_package.7z', name: 'windows_package_cpu'
+          }
+        }
+      }
+    }]
+}
+
+def compile_windows_cpu_mkldnn() {
+    return ['Build CPU MKLDNN windows':{
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/build-cpu-mkldnn') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKLDNN'
+            stash includes: 'windows_package.7z', name: 'windows_package_cpu_mkldnn'
+          }
+        }
+      }
+    }]
+}
+
+def compile_windows_cpu_mkldnn_mkl() {
+    return ['Build CPU MKLDNN MKL windows':{
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/build-cpu-mkldnn-mkl') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKLDNN_MKL'
+            stash includes: 'windows_package.7z', name: 'windows_package_cpu_mkldnn_mkl'
+          }
+        }
+      }
+    }]
+}
+
+def compile_windows_cpu_nomkldnn_mkl() {
+    return ['Build CPU NOMKLDNN MKL windows':{
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/build-cpu-nomkldnn-mkl') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_NOMKLDNN_MKL'
+            stash includes: 'windows_package.7z', name: 'windows_package_cpu_nomkldnn_mkl'
           }
         }
       }
