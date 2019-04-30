@@ -55,7 +55,7 @@ class ReshapeDoc(NDArrayDoc):
     (4L, 3L, 2L)
     """
 
-class ConcatDoc(NDArrayDoc):
+class concatDoc(NDArrayDoc):
     """
     Examples
     --------
