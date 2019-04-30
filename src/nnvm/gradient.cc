@@ -190,7 +190,8 @@ Graph Gradient(Graph src) {
       if (grad_fun_map.contains(ptr->op())) {
         input_grads = grad_fun_map[ptr->op()](fwd_node, out_agg_grads);
         CHECK_EQ((*rit)->inputs.size(), input_grads.size())
-            << "Gradient function not returning enough gradient";
+            << "Gradient function not returning enough gradient, there should be as many gradients"
+               "as inputs returned.";
       } else if (CheckGradAllZero(out_agg_grads, zero_ops)) {
         for (size_t i = 0; i < fwd_node->num_inputs(); ++i) {
           std::ostringstream os;
@@ -249,14 +250,14 @@ Graph Gradient(Graph src) {
         NodePtr copy_node = Node::Create();
         std::ostringstream os;
         os << entry.sum.node->attrs.name << "_" << kv->second.first << "_copy";
-        kv->second.first++;
+        ++kv->second.first;
         copy_node->attrs.op = copy_op;
         copy_node->attrs.name = os.str();
         copy_node->inputs.emplace_back(entry.sum);
         if (copy_node->attrs.op->attr_parser != nullptr) {
             copy_node->attrs.op->attr_parser(&(copy_node->attrs));
         }
-        unique_grads.emplace(NodeEntry{std::move(copy_node), 0, 0}, std::make_pair(1, counter));
+        unique_grads.emplace(NodeEntry(std::move(copy_node)), std::make_pair(1, counter));
       }
     } else {
         ret.outputs[counter] = entry.sum;

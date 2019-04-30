@@ -376,10 +376,9 @@ std::vector<NDArray*> Imperative::Backward(
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const Op* copy_op = Op::Get("_copy");
 
-  // Construct forward graph
   Graph graph;
   graph.outputs = CreateForwardGraph(outputs);
-  const size_t num_forward_outputs = graph.outputs.size();
+
 
   // Prepare head gradient nodes
   std::vector<NodeEntry> ograd_entries = CreateHeadGradientNodes(outputs, ograds);
@@ -392,15 +391,20 @@ std::vector<NDArray*> Imperative::Backward(
       graph, graph.outputs, gvars.variable_nodes, ograd_entries,
       exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
+
   CHECK_EQ(gradient_graph.outputs.size(), gvars.variable_nodes.size());
+  std::vector<nnvm::NodeEntry> forward_outputs = graph.outputs;
+  const size_t num_forward_outputs = graph.outputs.size();
+
   // TODO: move inside pass::MXGradient
-  // Add backward nodes to the graph outputs
   for (const auto& backward_node : gradient_graph.outputs) {
-    if (backward_node.node->op() == nullptr) {
+    if (backward_node.node->is_variable()) {
       auto node = Node::Create();
       node->attrs.op = copy_op;
       node->inputs.push_back(backward_node);
       graph.outputs.emplace_back(std::move(node));
+      //AGInfo& info = AGInfo::Create(node);
+      //info.ctx = outputs[0]->ctx();
     } else {
       graph.outputs.push_back(backward_node);
     }
@@ -423,12 +427,12 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<OpStatePtr> states;
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (auto& buffered_array : buff) {
+  for (auto& buffered_array : buff)
     arrays.push_back(&buffered_array);
-  }
+
   if (create_graph) {
     states.resize(num_forward_nodes);
-    nnvm::DFSVisit(graph.outputs, [&](const nnvm::NodePtr& n) {
+    nnvm::DFSVisit(forward_outputs, [&](const nnvm::NodePtr& n) {
       AGInfo& info = AGInfo::Get(n);
       states.at(indexed_graph.node_id(n.get())) = info.state;
       for (uint32_t i = 0; i < info.outputs.size(); ++i) {
@@ -562,7 +566,7 @@ std::vector<NDArray*> Imperative::Backward(
 
   // Clear history
   if (!retain_graph) {
-    nnvm::DFSVisit(graph.outputs, [&](const nnvm::NodePtr& n) {
+    nnvm::DFSVisit(forward_outputs, [&](const nnvm::NodePtr& n) {
       AGInfo::Clear(n);
       n->inputs.clear();
     });

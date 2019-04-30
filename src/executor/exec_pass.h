@@ -270,6 +270,7 @@ inline Graph MXGradient(
   if (copy_op_str != std::string()) {
       graph.attrs["copy_op"] = std::make_shared<any>(std::move(copy_op_str));
   }
+  /// @sa nnvm::pass::Gradient in gradient.cc
   return ApplyPass(std::move(graph), "MXGradient");
 }
 }  // namespace pass
