@@ -1196,6 +1196,7 @@ def check_contrib_rnn(cell_type, num_states):
         with mx.autograd.record():
             res2 = layer(rnn_data, states)
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
+        print("123")
         res2.backward()
         trainer.step(batch_size)
 
@@ -2172,4 +2173,5 @@ def test_foreach_with_unkown_dim():
 if __name__ == '__main__':
     # import nose
     # nose.runmodule()
-    test_while_loop_for_foreach()
+    # test_while_loop_for_foreach()
+    test_contrib_rnn()

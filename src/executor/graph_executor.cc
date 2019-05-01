@@ -43,6 +43,22 @@ namespace exec {
 
 using namespace mxnet::common;
 
+std::string Shape2Str(const mxnet::TShape &shape) {
+  if (shape.ndim() == -1) {
+    return "[UNK]";
+  }
+  std::ostringstream os;
+  os << "(";
+  for (int i = 0; i < (int) shape.ndim(); ++i) {
+    if (i > 0) {
+      os << ", ";
+    }
+    os << shape[i];
+  }
+  os << ")";
+  return os.str();
+}
+
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
   need_grad_ = false;
@@ -121,11 +137,19 @@ void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback, bool mon
 
 const std::vector<NDArray>& GraphExecutor::outputs() const {
   if (this->is_dynamic_) {
+    std::cout << "output_arrays_:" << std::endl;
+    for (const NDArray &array : output_arrays_) {
+      std::cout << "\t" << Shape2Str(array.shape()) << std::endl;
+    }
     for (const NDArray &array : output_arrays_) {
       array.WaitToRead();
       if (!shape_is_known(array.shape())) {
         const_cast<NDArray &>(array).SetShapeFromChunk();
       }
+    }
+    std::cout << "after output_arrays_:" << std::endl;
+    for (const NDArray &array : output_arrays_) {
+      std::cout << "\t" << Shape2Str(array.shape()) << std::endl;
     }
   }
   return output_arrays_;
@@ -163,6 +187,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
 
   if (v.empty()) {
     nnvm::NodePtr ng = nnvm::Node::Create();
+    std::cout << "Creating one" << std::endl;
     ng->attrs.op = Op::Get("_zeros_without_dtype");
     ng->attrs.name = "zeros_without_dtype";
     ng->attrs.op->attr_parser(&(ng->attrs));
@@ -1028,7 +1053,10 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   std::multimap<size_t, NDArray> free_pool;
   if (shared_pool != nullptr) {
     for (const NDArray& nd : *shared_pool) {
-      size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
+      size_t bytes = 0;
+      if (shape_is_known(nd.shape())) {
+        bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
+      }
       free_pool.insert(std::make_pair(bytes, nd));
     }
   }
@@ -1296,22 +1324,6 @@ void GraphExecutor::ExecuteMonInputCallback(size_t nid) {
     std::string name = inode.source->attrs.name + "_" + input_names[i];
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
   }
-}
-
-std::string Shape2Str(const mxnet::TShape &shape) {
-  if (shape.ndim() == -1) {
-    return "[UNK]";
-  }
-  std::ostringstream os;
-  os << "(";
-  for (int i = 0; i < (int) shape.ndim(); ++i) {
-    if (i > 0) {
-      os << ", ";
-    }
-    os << shape[i];
-  }
-  os << ")";
-  return os.str();
 }
 
 void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
