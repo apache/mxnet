@@ -515,7 +515,7 @@ class GRUCell(BaseRNNCell):
                                     bias=self._hB,
                                     num_hidden=self._num_hidden * 3,
                                     name="%s_h2h" % name)
-
+        # pylint: disable=unbalanced-tuple-unpacking
         i2h_r, i2h_z, i2h = symbol.SliceChannel(i2h, num_outputs=3, name="%s_i2h_slice" % name)
         h2h_r, h2h_z, h2h = symbol.SliceChannel(h2h, num_outputs=3, name="%s_h2h_slice" % name)
 
@@ -1419,7 +1419,7 @@ class ConvGRUCell(BaseConvRNNCell):
         seq_idx = self._counter
         name = '%st%d_' % (self._prefix, seq_idx)
         i2h, h2h = self._conv_forward(inputs, states, name)
-
+        # pylint: disable=unbalanced-tuple-unpacking
         i2h_r, i2h_z, i2h = symbol.SliceChannel(i2h, num_outputs=3, name="%s_i2h_slice" % name)
         h2h_r, h2h_z, h2h = symbol.SliceChannel(h2h, num_outputs=3, name="%s_h2h_slice" % name)
 
