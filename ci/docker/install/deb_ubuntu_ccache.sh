@@ -23,12 +23,16 @@ set -ex
 
 pushd .
 
-apt update && apt install -y --force-yes --no-install-recommends \
-    asciidoc \
-    autoconf \
-    docbook-xsl \
-    libxml2-utils \
+apt update || true
+apt install -y \
     libxslt1-dev \
+    docbook-xsl \
+    xsltproc \
+    libxml2-utils
+
+apt install -y --no-install-recommends \
+    autoconf \
+    asciidoc \
     xsltproc
 
 mkdir -p /work/deps
@@ -52,3 +56,4 @@ make install
 rm -rf /work/deps/ccache
 
 popd
+
