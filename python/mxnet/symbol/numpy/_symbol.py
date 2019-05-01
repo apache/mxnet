@@ -35,6 +35,9 @@ __all__ = ['zeros']
 
 class _NumpySymbol(Symbol):
 
+    def _is_np_compat(self):
+        return True
+
     def __getitem__(self, item):
         raise NotImplementedError
 

@@ -80,6 +80,9 @@ class ndarray(NDArray):
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
 
+    def _is_np_compat(self):
+        return True
+
     @use_np_compat
     def __getitem__(self, item):
         # TODO(junwu): make output shape of integer indexing correct
