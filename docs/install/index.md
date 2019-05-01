@@ -26,6 +26,7 @@
    c_plus_plus.md
    centos_setup.md
    download.md
+   install-jetson.md
    java_setup.md
    osx_setup.md
    raspbian_setup.md
