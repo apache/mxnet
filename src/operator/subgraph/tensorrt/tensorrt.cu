@@ -19,8 +19,8 @@
 
 /*!
  * Copyright (c) 2018 by Contributors
- * \file trt.cu
- * \brief TensorRT GPU operation
+ * \file tensorrt.cu
+ * \brief TensorRT GPU operation registration
  * \author Marek Kolodziej, Clement Fuji Tsang
 */
 
@@ -41,30 +41,26 @@ namespace op {
 } while (0)
 
 void TRTCompute(const OpStatePtr& state, const OpContext& ctx,
-                     const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
+                const std::vector<TBlob>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
-
-  Stream<gpu>* s = ctx.get_stream<gpu>();
-  cudaStream_t cuda_s = Stream<gpu>::GetStream(s);
+  cudaStream_t cuda_s = Stream<gpu>::GetStream(ctx.get_stream<gpu>());
   const auto& param = state.get_state<TRTEngineParam>();
-  std::vector<void*> bindings;
-  bindings.reserve(param.binding_map.size());
-  for (auto& p : param.binding_map) {
-    if (p.second == nnvm_to_onnx::TypeIO::Inputs) {
-      bindings.emplace_back(inputs[p.first].dptr_);
+  for (size_t i = 0; i < param.binding_order->size(); ++i) {
+    auto& p = param.binding_order->at(i);
+    if (p.second == true) {
+      param.bindings->at(i) = inputs[p.first].dptr_;
     } else {
-      bindings.emplace_back(outputs[p.first].dptr_);
+      param.bindings->at(i) = outputs[p.first].dptr_;
     }
   }
-
   const int batch_size = static_cast<int>(inputs[0].shape_[0]);
-  param.trt_executor->enqueue(batch_size, bindings.data(), cuda_s, nullptr);
-  CHECK_CUDART(cudaStreamSynchronize(cuda_s));
+  param.trt_executor->enqueue(batch_size, param.bindings->data(), cuda_s, nullptr);
 }
 
-NNVM_REGISTER_OP(_trt_op)
+NNVM_REGISTER_OP(_TensorRT)
 .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", TRTCompute);
 
 }  // namespace op

@@ -18,7 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file onnx_to_tensorrt.cc
  * \brief TensorRT integration with the MXNet executor
  * \author Marek Kolodziej, Clement Fuji Tsang
@@ -36,6 +36,9 @@
 #include <google/protobuf/text_format.h>
 #include <onnx-tensorrt/NvOnnxParser.h>
 #include <onnx-tensorrt/NvOnnxParserRuntime.h>
+#include <dmlc/logging.h>
+#include <dmlc/parameter.h>
+
 #include <onnx-tensorrt/PluginFactory.hpp>
 #include <onnx-tensorrt/plugin_common.hpp>
 
@@ -80,7 +83,7 @@ void PrintVersion() {
     << NV_TENSORRT_PATCH << endl;
 }
 
-nvinfer1::ICudaEngine* onnxToTrtCtx(
+std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*> onnxToTrtCtx(
         const std::string& onnx_model,
         int32_t max_batch_size,
         size_t max_workspace_size,
@@ -91,14 +94,13 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
   TRT_Logger trt_logger(verbosity);
   auto trt_builder = InferObject(nvinfer1::createInferBuilder(trt_logger));
   auto trt_network = InferObject(trt_builder->createNetwork());
-  auto trt_parser  = InferObject(nvonnxparser::createParser(trt_network.get(), trt_logger));
+  auto trt_parser  = nvonnxparser::createParser(trt_network.get(), trt_logger);
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect
   // of populating parsed_model
   if (!parsed_model.ParseFromString(onnx_model)) {
     throw dmlc::Error("Could not parse ONNX from string");
   }
-
   if ( !trt_parser->parse(onnx_model.c_str(), onnx_model.size()) ) {
       size_t nerror = trt_parser->getNbErrors();
       for ( size_t i=0; i < nerror; ++i ) {
@@ -127,19 +129,18 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
       }
       throw dmlc::Error("Cannot parse ONNX into TensorRT Engine");
   }
-
-  bool fp16 = trt_builder->platformHasFastFp16();
-
+  if (dmlc::GetEnv("MXNET_TENSORRT_USE_FP16", true)) {
+    if (trt_builder->platformHasFastFp16()) {
+      trt_builder->setFp16Mode(true);
+    } else {
+      LOG(WARNING) << "TensorRT can't use fp16 on this platform";
+    }
+  }
   trt_builder->setMaxBatchSize(max_batch_size);
   trt_builder->setMaxWorkspaceSize(max_workspace_size);
-  if ( fp16 && dmlc::GetEnv("MXNET_TENSORRT_USE_FP16_FOR_FP32", false) ) {
-    LOG(INFO) << "WARNING: TensorRT using fp16 given original MXNet graph in fp32 !!!";
-    trt_builder->setHalf2Mode(true);
-  }
-
   trt_builder->setDebugSync(debug_builder);
   nvinfer1::ICudaEngine* trt_engine = trt_builder->buildCudaEngine(*trt_network.get());
-  return trt_engine;
+  return std::make_tuple(trt_engine, trt_parser);
 }
 
 }  // namespace onnx_to_tensorrt
