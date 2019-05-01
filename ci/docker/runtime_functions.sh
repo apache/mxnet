@@ -254,28 +254,6 @@ build_armv8() {
     build_wheel
 }
 
-build_armv8_nano() {
-    build_ccache_wrappers
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=ON\
-        -DUSE_CUDA_PATH=/usr/local/cuda\
-        -DUSE_CUDNN=ON\
-        -DCUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
-        -DSUPPORT_F16C=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=ON \
-        -DUSE_LAPACK=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=Release\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -G Ninja /work/mxnet
-    ninja -v
-    build_wheel
-}
-
 #
 # ANDROID builds
 #

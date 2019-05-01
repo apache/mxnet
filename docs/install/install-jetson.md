@@ -136,6 +136,18 @@ Installing MXNet from source is a two-step process:
 1. Build the shared library from the MXNet C++ source code.
 2. Install the supported language-specific packages for MXNet.
 
+You can use a Docker method or you can build from source manually.
+
+### Docker
+
+You must have installed Docker and be able to run `docker` without `sudo`.
+Follow these setup instructions to get to this point.
+Then run the following to execute cross-compilation via Docker.
+
+ci/build.py -p jetson
+
+### Manual
+
 **Step 1** Build the Shared Library
 
 Clone the MXNet source code repository using the following `git` command in your home directory:
