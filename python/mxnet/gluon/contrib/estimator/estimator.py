@@ -89,10 +89,8 @@ class Estimator(object):
 
     def _check_context(self, context):
         # infer available context
-        available_context = [cpu()]
         gpus = num_gpus()
-        for i in range(gpus):
-            available_context.append(gpu(i))
+        available_gpus = [gpu(i) for i in range(gpus)]
 
         if context:
             # check context values, only accept Context or a list of Context
@@ -105,10 +103,10 @@ class Estimator(object):
                                  "for example mx.cpu() or [mx.gpu(0), mx.gpu(1)], "
                                  "refer to mxnet.Context:{}".format(context))
             for ctx in context:
-                assert ctx in available_context, \
+                assert ctx in available_gpus or str(ctx).startswith('cpu'), \
                     "%s is not available, please make sure " \
-                    "your context is in one of: %s" % \
-                    (ctx, " ,".join([str(ctx) for ctx in available_context]))
+                    "your context is in one of: mx.cpu(), %s" % \
+                    (ctx, ", ".join([str(ctx) for ctx in available_gpus]))
         else:
             # provide default context
             if gpus > 0:
