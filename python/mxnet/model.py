@@ -16,7 +16,7 @@
 # under the License.
 
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
-# pylint: disable=too-many-branches, too-many-statements, no-else-raise
+# pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
 from __future__ import absolute_import, print_function
 
@@ -640,7 +640,7 @@ class FeedForward(BASE_ESTIMATOR):
         """Initialize the iterator given input."""
         if isinstance(X, (np.ndarray, nd.NDArray)):
             if y is None:
-                if is_train:
+                if is_train: # pylint: disable=no-else-raise
                     raise ValueError('y must be specified when X is numpy.ndarray')
                 else:
                     y = np.zeros(X.shape[0])

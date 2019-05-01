@@ -15,9 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=not-callable
-# It's bug from pylint(astroid). See https://github.com/PyCQA/pylint/issues/1699
-
 """Read and write for the RecordIO data format."""
 from __future__ import absolute_import
 from collections import namedtuple
@@ -83,6 +80,8 @@ class MXRecordIO(object):
             self.writable = False
         else:
             raise ValueError("Invalid flag %s"%self.flag)
+        # pylint: disable=not-callable
+        # It's bug from pylint(astroid). See https://github.com/PyCQA/pylint/issues/1699
         self.pid = current_process().pid
         self.is_open = True
 
@@ -117,6 +116,8 @@ class MXRecordIO(object):
 
     def _check_pid(self, allow_reset=False):
         """Check process id to ensure integrity, reset if in new process."""
+        # pylint: disable=not-callable
+        # It's bug from pylint(astroid). See https://github.com/PyCQA/pylint/issues/1699
         if not self.pid == current_process().pid:
             if allow_reset:
                 self.reset()

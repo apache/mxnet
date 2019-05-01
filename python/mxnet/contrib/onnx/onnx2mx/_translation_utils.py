@@ -17,7 +17,7 @@
 
 # coding: utf-8
 """Utilities used for translating operators from Onnx to Mxnet."""
-# pylint: disable=protected-access, no-else-raise
+# pylint: disable=protected-access
 from __future__ import absolute_import as _abs
 from .... import symbol
 from .... import  module
@@ -178,7 +178,7 @@ def _fix_channels(op_name, attrs, inputs, proto_obj):
     these attributes. We check the shape of weights provided to get the number.
     """
     weight_name = inputs[1].name
-    if not weight_name in proto_obj._params:
+    if not weight_name in proto_obj._params: # pylint: disable=no-else-raise
         raise ValueError("Unable to get channels/units attr from onnx graph.")
     else:
         wshape = proto_obj._params[weight_name].shape

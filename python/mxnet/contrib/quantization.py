@@ -14,8 +14,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# pylint: disable=unbalanced-tuple-unpacking
 """Quantization module for generating quantized (INT8) models from FP32 models."""
 
 from __future__ import absolute_import
@@ -63,6 +61,7 @@ def _quantize_params(qsym, params, th_dict):
         if name.endswith(('weight_quantize', 'bias_quantize')):
             original_name = name[:-len('_quantize')]
             param = params[original_name]
+            # pylint: disable=unbalanced-tuple-unpacking
             val, vmin, vmax = ndarray.contrib.quantize(data=param,
                                                        min_range=ndarray.min(param),
                                                        max_range=ndarray.max(param),

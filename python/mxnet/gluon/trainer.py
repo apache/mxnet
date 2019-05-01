@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=line-too-long, no-else-raise
+# pylint: disable=line-too-long
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
@@ -249,7 +249,7 @@ class Trainer(object):
 
     @property
     def learning_rate(self):
-        if not isinstance(self._optimizer, opt.Optimizer):
+        if not isinstance(self._optimizer, opt.Optimizer): # pylint: disable=no-else-raise
             raise UserWarning("Optimizer has to be defined before its learning "
                               "rate can be accessed.")
         else:
@@ -263,7 +263,7 @@ class Trainer(object):
         lr : float
             The new learning rate of the optimizer.
         """
-        if not isinstance(self._optimizer, opt.Optimizer):
+        if not isinstance(self._optimizer, opt.Optimizer): # pylint: disable=no-else-raise
             raise UserWarning("Optimizer has to be defined before its learning "
                               "rate is mutated.")
         else:

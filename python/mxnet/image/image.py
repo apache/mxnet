@@ -17,7 +17,6 @@
 
 # pylint: disable=no-member, too-many-lines, redefined-builtin, protected-access, unused-import, invalid-name
 # pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches, too-many-statements
-# pylint: disable=no-else-raise
 """Read individual image files and perform augmentations."""
 
 from __future__ import absolute_import, print_function
@@ -1375,7 +1374,7 @@ class ImageIter(io.DataIter):
         pad = batch_size - i
         # handle padding for the last batch
         if pad != 0:
-            if self.last_batch_handle == 'discard':
+            if self.last_batch_handle == 'discard': # pylint: disable=no-else-raise
                 raise StopIteration
             # if the option is 'roll_over', throw StopIteration and cache the data
             elif self.last_batch_handle == 'roll_over' and \

@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=no-else-raise
+# pylint: disable=
 """Parallelization utility optimizer."""
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
@@ -340,7 +340,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 break
             except Exception as e:
                 retries -= 1
-                if retries <= 0:
+                if retries <= 0: # pylint: disable=no-else-raise
                     raise e
                 else:
                     print('download failed due to {}, retrying, {} attempt{} left'

@@ -16,7 +16,7 @@
 # under the License.
 
 """Tools for testing."""
-# pylint: disable=too-many-lines, no-else-raise
+# pylint: disable=too-many-lines
 from __future__ import absolute_import, print_function, division
 import time
 import gzip
@@ -206,7 +206,7 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
                 return mx.nd.array(output_arr).tostype("csr")
         col_max = col_max * 2
 
-    if unused_nnz > 0:
+    if unused_nnz > 0: # pylint: disable=no-else-raise
         raise ValueError("not supported for this density: %s"
                          " for this shape (%s,%s)" % (density, num_rows, num_cols))
     else:
@@ -1348,7 +1348,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
-                if raise_on_err:
+                if raise_on_err: # pylint: disable=no-else-raise
                     raise e
                 else:
                     print(str(e))
@@ -1375,7 +1375,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
-                    if raise_on_err:
+                    if raise_on_err: # pylint: disable=no-else-raise
                         raise e
                     else:
                         print(str(e))
@@ -1455,7 +1455,7 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
                 break
         except Exception as e:
             retries -= 1
-            if retries <= 0:
+            if retries <= 0: # pylint: disable=no-else-raise
                 raise e
             else:
                 print("download failed, retrying, {} attempt{} left"

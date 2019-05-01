@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=unused-import, no-else-raise
+# pylint: disable=unused-import
 """Read images and perform augmentations for object detection."""
 
 from __future__ import absolute_import, print_function
@@ -809,7 +809,7 @@ class ImageDetIter(ImageIter):
         pad = batch_size - i
         # handle padding for the last batch
         if pad != 0:
-            if self.last_batch_handle == 'discard':
+            if self.last_batch_handle == 'discard': # pylint: disable=no-else-raise
                 raise StopIteration
             # if the option is 'roll_over', throw StopIteration and cache the data
             elif self.last_batch_handle == 'roll_over' and \
