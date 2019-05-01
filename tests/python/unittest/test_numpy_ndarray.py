@@ -223,12 +223,6 @@ def test_ndarray_binary_element_wise_ops():
                 get_mx_ret = TestBinaryElementWiseOp(op)
                 if hybridize:
                     get_mx_ret.hybridize()
-                print('====================')
-                print(hybridize)
-                print(shape1)
-                print(shape2)
-                print(dtype)
-                print(op)
                 mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
                 assert type(mx_out) == np.ndarray
                 assert np_out.shape == mx_out.shape

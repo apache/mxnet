@@ -23,6 +23,7 @@
  * \brief GPU Implementation of basic functions for elementwise binary broadcast operator.
  */
 #include "../tensor/elemwise_binary_broadcast_op.h"
+#include "../tensor/elemwise_binary_scalar_op.h"
 
 namespace mxnet {
 namespace op {
