@@ -223,7 +223,7 @@ void Imperative::RecordOp(
 
   nnvm::NodePtr node = nnvm::Node::Create();
   node->attrs = std::move(attrs);
-  node->attrs.name = "node_" + std::to_string(node_count_++);
+  node->attrs.name = "node_" + std::to_string(node_count_++) + "_" + node->attrs.op->name;
   AGInfo& info = AGInfo::Create(node);
   info.state = state;
   info.ctx = outputs[0]->ctx();
