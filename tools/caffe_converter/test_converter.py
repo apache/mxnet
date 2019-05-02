@@ -76,8 +76,6 @@ def test_model_weights_and_outputs(model_name, image_url, gpu):
     convert_and_compare_caffe_to_mxnet(image_url, gpu, prototxt, caffemodel, mean,
                                        mean_diff_allowed=1e-03, max_diff_allowed=1e-01)
 
-    return
-
 
 def main():
     """Entrypoint for test_converter"""

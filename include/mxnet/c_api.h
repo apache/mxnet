@@ -2065,7 +2065,6 @@ MXNET_DLL int MXExecutorReshapeEx(int partial_shaping,
  */
 MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
                                            SymbolHandle *out);
-
 /*!
  * \brief set a call back to notify the completion of operation
  */
