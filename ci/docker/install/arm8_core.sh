@@ -23,7 +23,7 @@ apt-get update || true
 # Avoid interactive package installers such as tzdata.
 export DEBIAN_FRONTEND=noninteractive
 
-apt-get -y install \
+apt-get install -y --force-yes --no-install-recommends \
                         build-essential \
                         git \
                         graphviz \
