@@ -58,9 +58,7 @@ NNVM_REGISTER_OP(_true_divide)
 .describe(R"code(
 Returns a true division of the inputs, element-wise.
 
-Instead of the Python traditional ‘floor division’, this returns a true division.
-True division adjusts the output type to present the best answer, regardless of input types.
-It currently only supports float16, float32, and float64.
+It currently only supports dtype float16, float32, and float64.
 
 Example::
 
