@@ -21,7 +21,6 @@ from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from . import _op as _np_op
-from .. import op as _op
 from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
 from ...base import numeric_types
 from ...context import current_context
