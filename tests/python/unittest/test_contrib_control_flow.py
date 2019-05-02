@@ -1195,8 +1195,8 @@ def check_contrib_rnn(cell_type, num_states):
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
             res2 = layer(rnn_data, states)
+        print("res2.shape =", res2.shape)
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
-        print("123")
         res2.backward()
         trainer.step(batch_size)
 

@@ -139,11 +139,15 @@ void RunGraph(
     bool recording,
     mxnet::ShapeVector *shapes) {
   CHECK(shapes == nullptr);
+  std::cout << "RunGraph(node_start = " << node_start
+            << ", node_end = " << node_end
+            << ")" << std::endl;
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
     if (node.source->op() == nullptr) {
       continue;
     }
+    std::cout << "\ti = " << i << std::endl;
     std::vector<NDArray*> ndinputs = NodeInputs(idx, i, arrays);
     std::vector<NDArray*> ndoutputs = NodeOutputs(idx, i, arrays);
     std::vector<OpReqType> req = NodeReq(idx, i, array_reqs);

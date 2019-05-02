@@ -82,7 +82,9 @@ GraphExecutor::~GraphExecutor() {
 }
 
 void GraphExecutor::Forward(bool is_train) {
+  std::cout << "Forward(is_train = " << is_train << ")" << std::endl;
   RunOps(is_train, 0, num_forward_nodes_);
+  std::cout << "Forward done!" << std::endl;
 }
 
 void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
@@ -96,6 +98,7 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 
 void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_train) {
   const auto& idx = graph_.indexed_graph();
+  std::cout << "Backward" << is_train << std::endl;
   if (num_forward_inputs_ != idx.input_nodes().size()) {
     for (size_t i = 0; i < head_grad_array_.size(); ++i) {
       if (!head_grad_array_[i].is_none()) {
@@ -118,6 +121,7 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
     }
   }
   RunOps(is_train, num_forward_nodes_, idx.num_nodes());
+  std::cout << "Backward done!" << std::endl;
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
@@ -1352,6 +1356,10 @@ void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   static auto& finfer_shape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
   static auto& is_backward = Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
+  std::cout << "RunOps(is_train = " << is_train
+            << ", topo_start = " << topo_start
+            << ", topo_end = " << topo_end
+            << ")" << std::endl;
   // Update context
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
@@ -1365,6 +1373,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
 
   // Push Ops
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
+    std::cout << "nid = " << nid << std::endl;
     auto seg_op = cached_seg_opr_[nid];
     // Check segments first
     if (monitor_callback_ == nullptr && seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
