@@ -248,6 +248,7 @@ Graph QuantizeGraph(Graph &&src) {
         NodePtr requantize_node = Node::Create();
         requantize_node->attrs.op = Op::Get("_contrib_requantize");
         requantize_node->attrs.name = "requantize_" + node->attrs.name;
+        requantize_node->attrs.dict["out_type"] = quantized_dtype;
         if (requantize_node->op()->attr_parser != nullptr) {
           requantize_node->op()->attr_parser(&(requantize_node->attrs));
         }
@@ -398,7 +399,7 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
         node->attrs.dict["max_calib_range"] = std::to_string(calib_table_iter->second.second);
         node->op()->attr_parser(&(node->attrs));
         const QuantizeV2Param& param = nnvm::get<QuantizeV2Param>(node->attrs.parsed);
-        if (param.out_type == QuantizeV2Param::OutType::kUint8 &&
+        if (param.out_type == QuantizeOutType::kUint8 &&
             param.min_calib_range.value() < 0.0f) {
           LOG(WARNING) << "Calibration statistics indicates that node `" << node->attrs.name
                        << "` has negative input, consider use `auto` or `int8` as out_type";

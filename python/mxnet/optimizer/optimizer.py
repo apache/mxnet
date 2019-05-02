@@ -298,7 +298,7 @@ class Optimizer(object):
         lr : float
             The new learning rate of the optimizer.
         """
-        if self.lr_scheduler is not None:
+        if self.lr_scheduler is not None: # pylint: disable=no-else-raise
             raise UserWarning("LRScheduler of the optimizer has already been "
                               "defined. Note that set_learning_rate can mutate "
                               "the value of the learning rate of the optimizer "

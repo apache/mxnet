@@ -34,6 +34,7 @@
 namespace mxnet {
 namespace op {
 
+template <typename DstType>
 static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
                                        const OpContext& ctx,
                                        const std::vector<NDArray>& inputs,
@@ -45,7 +46,6 @@ static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
   using red::limits::MaxValue;
   using red::limits::MinValue;
   typedef int32_t SrcDType;
-  typedef int8_t  DstDType;
   // check shapes
   size_t i_dim = inputs[0].shape().ndim();
   size_t o_dim = outputs[0].shape().ndim();
@@ -56,12 +56,21 @@ static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
                                   *inputs[2].data().dptr<float>());
   float first_scale = first_real_range / first_quantized_range;
   float second_real_range = real_range;
-  float second_quantized_range = MinAbs(MaxValue<DstDType>(),
-                                        MinValue<DstDType>());
+  float second_quantized_range = 0.f;
+  if (std::is_same<DstType, int8_t>::value) {
+    second_quantized_range = MinAbs(MaxValue<DstType>(), MinValue<DstType>());
+    *outputs[1].data().dptr<float>() = -second_real_range;
+    *outputs[2].data().dptr<float>() = second_real_range;
+  } else if (std::is_same<DstType, uint8_t>::value) {
+    second_quantized_range = MaxValue<DstType>();
+    *outputs[1].data().dptr<float>() = 0.f;
+    *outputs[2].data().dptr<float>() = second_real_range;
+  } else {
+    LOG(FATAL) << "Unsupported requantize output type";
+  }
   float second_scale = second_quantized_range / second_real_range;
   float scale = first_scale * second_scale;
-  *outputs[1].data().dptr<float>() = -second_real_range;
-  *outputs[2].data().dptr<float>() = second_real_range;
+
   primitive_attr attr;
   const int mask = 0;
   std::vector<float> scales = {scale};
@@ -82,7 +91,7 @@ static void MKLDNNRequantizeForwardKer(const nnvm::NodeAttrs& attrs,
     i_dims[i] = static_cast<int>(in_buffer.shape()[i]);
   }
   auto o_desc = mkldnn::memory::desc(i_dims,
-                                    (mkldnn::memory::data_type)data_type_enum<DstDType>::type,
+                                    (mkldnn::memory::data_type)data_type_enum<DstType>::type,
                                     i_fmt);
   auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
   auto reorder_pd  = reorder::primitive_desc(i_mpd, o_mpd, attr);
@@ -99,55 +108,47 @@ static void MKLDNNRequantizeForward(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
+  using red::limits::MaxValue;
+  using red::limits::MinValue;
   typedef int32_t SrcDType;
   typedef int8_t  DstDType;
-  Stream<cpu> *s = ctx.get_stream<cpu>();
   const RequantizeParam& param = nnvm::get<RequantizeParam>(attrs.parsed);
   float real_range;
   // Model is calibrated
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
     real_range =
           MaxAbs(param.min_calib_range.value(), param.max_calib_range.value());
-    MKLDNNRequantizeForwardKer(attrs, ctx, inputs, req, outputs, real_range);
   // Model is not calibrated
   } else {
-    mxnet::TShape src_shape, dst_shape;
-    const size_t actual_float_size = sizeof(float);
-    const size_t actual_quantized_size = sizeof(SrcDType);
-    const size_t temp_reduce_size = ConfigReduce<cpu, SrcDType>(s,
-                         inputs[0].shape(), mxnet::TShape(1, 1), &src_shape, &dst_shape);
-    Tensor<cpu, 1, char> temp_space =
-      ctx.requested[0].get_space_typed<cpu, 1, char>(
-      Shape1(2*actual_float_size+2*actual_quantized_size+temp_reduce_size), s);
-    Tensor<cpu, 1, float> actual_min_float(
-                 reinterpret_cast<float*>(temp_space.dptr_), Shape1(1), s);
-    Tensor<cpu, 1, float> actual_max_float(
-                 reinterpret_cast<float*>(temp_space.dptr_) + 1, Shape1(1), s);
-    const int dev_id = ctx.run_ctx.ctx.dev_id;
-    TBlob actual_min_quantized(reinterpret_cast<SrcDType*>(
-                       temp_space.dptr_ + 8), Shape1(1), cpu::kDevMask, dev_id);
-    TBlob actual_max_quantized(reinterpret_cast<SrcDType*>(
-                   temp_space.dptr_ + 8) + 1, Shape1(1), cpu::kDevMask, dev_id);
-    Tensor<cpu, 1, char> workspace(
-            temp_space.dptr_+2*actual_float_size+2*actual_quantized_size,
-            Shape1(temp_reduce_size), s);
-    broadcast::Reduce<red::minimum, 2, SrcDType, mshadow::op::identity>(
-        s, actual_min_quantized.reshape(dst_shape), kWriteTo,
-        workspace, inputs[0].Reorder2Default().data().reshape(src_shape));
-    Kernel<QuantizedToFloatStruct, cpu>::Launch(s, 1,
-        actual_min_float.dptr_, actual_min_quantized.dptr<SrcDType>(),
-        inputs[1].Reorder2Default().data().dptr<float>(),
-        inputs[2].Reorder2Default().data().dptr<float>());
-    broadcast::Reduce<red::maximum, 2, SrcDType, mshadow::op::identity>(
-        s, actual_max_quantized.reshape(dst_shape), kWriteTo,
-        workspace, inputs[0].Reorder2Default().data().reshape(src_shape));
-    Kernel<QuantizedToFloatStruct, cpu>::Launch(s, 1,
-        actual_max_float.dptr_, actual_max_quantized.dptr<SrcDType>(),
-        inputs[1].Reorder2Default().data().dptr<float>(),
-        inputs[2].Reorder2Default().data().dptr<float>());
-
-    real_range = MaxAbs(*actual_min_float.dptr_, *actual_max_float.dptr_);
-    MKLDNNRequantizeForwardKer(attrs, ctx, inputs, req, outputs, real_range);
+    NDArray in_buffer = inputs[0].Reorder2Default();
+    auto in_ptr = in_buffer.data().dptr<SrcDType>();
+    auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    SrcDType data_min = MaxValue<SrcDType>();
+    SrcDType data_max = MinValue<SrcDType>();
+    std::vector<SrcDType> data_maxs(nthreads, data_max);
+    std::vector<SrcDType> data_mins(nthreads, data_min);
+#pragma omp parallel for num_threads(nthreads)
+    for (index_t i = 0; i < static_cast<index_t>(in_buffer.shape().Size()); i++) {
+      int tid = omp_get_thread_num();
+      if (in_ptr[i] > data_maxs[tid]) data_maxs[tid] = in_ptr[i];
+      if (in_ptr[i] < data_mins[tid]) data_mins[tid] = in_ptr[i];
+    }
+    for (index_t i = 0; i < nthreads; i++) {
+      if (data_maxs[i] > data_max) data_max = data_maxs[i];
+      if (data_mins[i] < data_min) data_min = data_mins[i];
+    }
+    float src_range = MinAbs(MinValue<SrcDType>(), MaxValue<SrcDType>());
+    SrcDType data_range = MaxAbs(data_min, data_max);
+    float data_scale = MaxAbs(*inputs[1].data().dptr<float>(), *inputs[2].data().dptr<float>());
+    real_range = data_range * data_scale / src_range;
+  }
+  auto out_type = GetQuantizeOutputType(param);
+  if (out_type == mshadow::kUint8) {
+    MKLDNNRequantizeForwardKer<uint8_t>(attrs, ctx, inputs, req, outputs, real_range);
+  } else if (out_type == mshadow::kInt8) {
+    MKLDNNRequantizeForwardKer<int8_t>(attrs, ctx, inputs, req, outputs, real_range);
+  } else {
+    LOG(FATAL) << "mkldnn requantize op only supports int8 and uint8 as output type";
   }
 }
 

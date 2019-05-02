@@ -885,7 +885,7 @@ def test_gelu():
     y = mx.sym.LeakyReLU(data=x, act_type="gelu")
     for dtype in [np.float16, np.float32, np.float64]:
         xa = np.random.uniform(low=-0.1,high=0.1,size=shape).astype(dtype)
-        eps, rtol, atol = (7.5e-4, 1e-1, 1e-2) if dtype is np.float16 else (1e-4, 1e-2, 1e-4)
+        eps, rtol, atol = (7.5e-4, 2e-2, 1e-3) if dtype is np.float16 else (1e-4, 1e-3, 1e-5)
         if dtype is np.float16:
             xa /= 10.0
         xa[abs(xa) < eps] = 0.01
@@ -3414,12 +3414,19 @@ def test_norm():
     in_data_dim = random_sample([4,5,6], 1)[0]
     in_shape = rand_shape_nd(in_data_dim, dim=5)
     epsilon = 1e-3
-    acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64}
+    acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64,
+                np.int32: np.int32, np.int64: np.int64}
+    is_windows = sys.platform.startswith('win')
     for order in [1, 2]:
-        for dtype in [np.float16, np.float32, np.float64]:
+        for dtype in [np.float16, np.float32, np.float64, np.int32, np.int64]:
             for i in range(in_data_dim):
-                for out_dtype in ['float32', 'float64']:
+                for out_dtype in ['float32', 'float64', 'int32', 'int64']:
+                    if (dtype == np.int32 or dtype == np.int64) and ('int' not in out_dtype or is_windows):
+                        continue
+                    if dtype != np.int32 and dtype != np.int64 and 'int' in out_dtype:
+                        continue
                     backward_dtype = np.float32 if out_dtype == 'float32' else np.float64
+                    skip_backward = 'int' in out_dtype
                     print(order, dtype, i, out_dtype, in_shape)
                     in_data = np.random.uniform(-1, 1, in_shape).astype(acc_type[dtype])
                     in_data[abs(in_data) < epsilon] = 2 * epsilon
@@ -3428,13 +3435,14 @@ def test_norm():
                     npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
                     check_symbolic_forward(norm_sym, [in_data.astype(dtype)], [npy_out.astype(out_dtype)],
                                            rtol=1e-3, atol=1e-5, ctx=ctx)
-                    check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
-                                            [np.ones(npy_out.shape).astype(out_dtype)],
-                                            [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
-                                            dtype=backward_dtype)
+                    if not skip_backward:
+                        check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
+                                                [np.ones(npy_out.shape).astype(out_dtype)],
+                                                [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
+                                                dtype=backward_dtype)
                     # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
                     # check gradient
-                    if dtype is not np.float16:
+                    if dtype is not np.float16 and not skip_backward:
                         check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
                                                rtol=1e-1, atol=1e-3, dtype=backward_dtype)
                     if i < in_data_dim-1:
@@ -3444,12 +3452,13 @@ def test_norm():
                         check_symbolic_forward(norm_sym, [in_data], [npy_out.astype(dtype)],
                                                rtol=1e-3 if dtype is np.float16 else 1e-3,
                                                atol=1e-5 if dtype is np.float16 else 1e-5, ctx=ctx)
-                        check_symbolic_backward(norm_sym, [in_data],
-                                                [np.ones(npy_out.shape).astype(out_dtype)],
-                                                [npy_out_backward.astype(out_dtype)],
-                                                rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
+                        if not skip_backward:
+                            check_symbolic_backward(norm_sym, [in_data],
+                                                    [np.ones(npy_out.shape).astype(out_dtype)],
+                                                    [npy_out_backward.astype(out_dtype)],
+                                                    rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
                         # check gradient
-                        if dtype is not np.float16:
+                        if dtype is not np.float16 and not skip_backward:
                             check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
                                                    rtol=1e-1, atol=1e-3, dtype=backward_dtype)
 
@@ -6144,6 +6153,51 @@ def test_laop_4():
     #print('float32')
     check_fw(test_syevd, [a_np], [u_np, l_np], np.float32)
 
+def test_laop_5():
+    # tests for diagonal and triangular matrix extraction and generation
+    data = mx.symbol.Variable('data')
+    # test complete range of small matrices to cover corner cases
+    for n in range(1, 10):
+        # test batched and non-batched processing
+        for b in range(3):
+            shape = (n, n) if b == 0 else (b, n, n) 
+            data_in = np.random.uniform(1, 10, shape)
+            # test all legal offsets of the diagonal
+            for offs in range(1-n, n): 
+                # test extraction of diagonal 
+                test_diag = mx.sym.linalg.extractdiag(data, offset=offs)
+                res_diag = np.diagonal(data_in, offset=offs) if b==0 else np.diagonal(data_in, axis1=1, axis2=2, offset=offs)
+                check_symbolic_forward(test_diag, [data_in], [res_diag])
+                check_numeric_gradient(test_diag, [data_in])
+                # test generation of diagonal matrix
+                test_diag2 = mx.sym.linalg.makediag(data, offset=offs)
+                res_diag2 = None  
+                if b == 0:
+                    res_diag2 = np.diagflat(res_diag, k=offs)
+                else:
+                    for i in range(b):
+                        res = np.reshape(np.diagflat(res_diag[i], k=offs), (1, n, n))
+                        res_diag2 = res if res_diag2 is None else np.concatenate((res_diag2, res), axis=0)
+                check_symbolic_forward(test_diag2, [res_diag], [res_diag2])
+                check_numeric_gradient(test_diag2, [res_diag])
+                # check both settings for parameter "lower" in case of zero offset
+                lower_vals = [True] if offs != 0 else [True, False]
+                for lower in lower_vals:
+                    # test extraction of triangle by doing a full roundtrip as the intermediate extracted
+                    # triangle has different orderings than numpy.
+                    test_trian = mx.sym.linalg.extracttrian(data, offset=offs, lower=lower)
+                    test_trian = mx.sym.linalg.maketrian(test_trian, offset=offs, lower=lower)
+                    extracts_lower = (offs < 0) or ((offs == 0) and lower)
+                    res_trian = None
+                    if b == 0:
+                        res_trian = np.tril(data_in, offs) if extracts_lower else np.triu(data_in, offs)
+                    else:
+                        for i in range(b):
+                            res = np.tril(data_in[i], offs) if extracts_lower else np.triu(data_in[i], offs)
+                            res = np.reshape(res, (1, n, n))
+                            res_trian = res if res_trian is None else np.concatenate((res_trian, res), axis=0)
+                    check_symbolic_forward(test_trian, [data_in], [res_trian])
+                    check_numeric_gradient(test_trian, [data_in])
 
 @with_seed()
 def test_stack():

@@ -99,6 +99,12 @@ class OpExecutor {
 using OpExecVector = std::vector<std::shared_ptr<OpExecutor> >;
 
 /*!
+ * \brief per node vector of operator states.
+ * \note stored under attribute "op_states"
+ */
+using OpStateVector = std::vector<OpStatePtr>;
+
+/*!
  * \brief per node context vector
  * \node stored under "context"
  */
@@ -115,9 +121,10 @@ using DevMaskVector = std::vector<int>;
  *
  * \param g input graph
  * \param p_ret OpExecVector for input and output
+ * \param p_state OpStateVector if it has.
  * \param i the id of the node
  */
-void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i);
+void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, size_t i);
 /*!
  * \brief Attach OpExecutor to the graph attributes.
  *
@@ -201,18 +208,6 @@ Graph InferType(Graph&& graph,
 Graph InferStorageType(Graph&& graph,
                        StorageTypeVector&& storage_type_inputs = StorageTypeVector(),
                        const std::string& storage_type_attr_key = "");
-
-#if MXNET_USE_TENSORRT
-/*!
- * \brief Replace subgraphs by TRT (forward only)
- */
-Graph ReplaceSubgraph(Graph&& g,
-                      const std::unordered_set<nnvm::Node*>& set_subgraph,
-                      std::unordered_map<std::string, NDArray>* const params_map);
-
-std::vector<std::unordered_set<nnvm::Node*>> GetTrtCompatibleSubsets(const Graph& g,
-    std::unordered_map<std::string, NDArray>* const params_map);
-#endif
 
 }  // namespace exec
 }  // namespace mxnet
