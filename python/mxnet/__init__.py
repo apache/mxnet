@@ -25,10 +25,10 @@ from .context import Context, current_context, cpu, gpu, cpu_pinned
 from . import engine
 from .base import MXNetError, is_np_compat, set_np_compat, np_compat, use_np_compat
 from . import base
-from . import numpy
 from . import contrib
 from . import ndarray
 from . import ndarray as nd
+from . import numpy
 from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym
