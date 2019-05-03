@@ -18,9 +18,9 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
- * \file trt.cc
- * \brief TensorRT operation registration
+ * Copyright (c) 2019 by Contributors
+ * \file nnvm_to_onnx.cc
+ * \brief Conversion from NNVM to ONNX for TensorRT
  * \author Marek Kolodziej, Clement Fuji Tsang
 */
 
@@ -32,21 +32,17 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
 
-#include <algorithm>
-#include <fstream>
-#include <iostream>
-#include <unordered_map>
-#include <vector>
-
-#include "../../common/serialization.h"
-#include "../../common/utils.h"
-#include "../../ndarray/ndarray_function.h"
-#include "../../operator/nn/activation-inl.h"
-#include "../../operator/nn/batch_norm-inl.h"
-#include "../../operator/nn/convolution-inl.h"
-#include "../../operator/nn/fully_connected-inl.h"
-#include "../../operator/nn/pooling-inl.h"
-#include "../../operator/softmax_output-inl.h"
+#include "../../../common/utils.h"
+#include "../../../ndarray/ndarray_function.h"
+#include "../../pad-inl.h"
+#include "../../nn/activation-inl.h"
+#include "../../nn/batch_norm-inl.h"
+#include "../../nn/convolution-inl.h"
+#include "../../nn/fully_connected-inl.h"
+#include "../../nn/pooling-inl.h"
+#include "../../nn/concat-inl.h"
+#include "../../softmax_output-inl.h"
+#include "../../tensor/matrix_op-inl.h"
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER
 #include <onnx/checker.h>
@@ -54,36 +50,21 @@
 
 namespace mxnet {
 namespace op {
-
-DMLC_REGISTER_PARAMETER(ONNXParam);
-
 namespace nnvm_to_onnx {
 
-op::ONNXParam ConvertNnvmGraphToOnnx(
+std::string ConvertNnvmGraphToOnnx(
     const nnvm::Graph& g,
-    std::unordered_map<std::string, NDArray>* const shared_buffer) {
+    const std::unordered_map<std::string, NDArray>* const params_map) {
 
   static std::atomic_ulong subgraph_count = { 0 };
 
-  op::ONNXParam onnx_param;
-  op::nnvm_to_onnx::NameToIdx_t onnx_input_map;
-  op::nnvm_to_onnx::InferenceMap_t onnx_output_map;
+  std::string serialized_onnx_graph;
 
   const nnvm::IndexedGraph& ig = g.indexed_graph();
-  const auto& storage_types = g.GetAttr<StorageTypeVector>("storage_type");
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shape_inputs = g.GetAttr<mxnet::ShapeVector>("shape_inputs");
-
-  // TODO(kellens): At the moment this check always passes no matter the weight dtypes used in your
-  // graph.  We should first iterate over datatypes by name and ensure  they're valid types
-  // (fp16 or fp32) and that they're uniform.  Then ensure later conversions set tensor types
-  // correctly in ONNX.
-  for (auto& e : storage_types) {
-    if (e != mshadow::kFloat32) {
-      LOG(FATAL) << "ONNX converter does not support types other than float32 "
-                    "right now.";
-    }
-  }
+  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& dtype_inputs = g.GetAttr<DTypeVector>("dtype_inputs");
+  const auto& shape_inputs = g.GetAttr<ShapeVector>("shape_inputs");
 
   ModelProto model_proto;
 
@@ -104,9 +85,9 @@ op::ONNXParam ConvertNnvmGraphToOnnx(
   auto subgraph_name_id = subgraph_count.fetch_add(1);
   graph_proto->set_name("MXNetTRTSubgraph" + std::to_string(subgraph_name_id));
 
-  std::unordered_map<std::string, mxnet::TShape> placeholder_shapes =
-      GetPlaceholderShapes(shape_inputs, ig);
-  std::unordered_map<std::string, uint32_t> output_lookup = GetOutputLookup(ig);
+  auto placeholder_shapes = GetPlaceholderShapes(shape_inputs, ig);
+  auto placeholder_dtypes = GetPlaceholderDTypes(dtype_inputs, ig);
+  auto output_lookup = GetOutputLookup(ig);
   uint32_t current_input = 0;
 
   // Can't do a foreach over IndexedGraph since it doesn't implement begin(), etc.
@@ -121,18 +102,17 @@ op::ONNXParam ConvertNnvmGraphToOnnx(
     // placeholder
     if (source->is_variable()) {
       // Is this a placeholder?
-      if (shared_buffer->count(node_name) == 0) {
+      if (params_map->count(node_name) == 0) {
         // This fixes the problem with a SoftmaxOutput node during inference, but it's hacky.
         // Need to figure out how to properly fix it.
         if (node_name.find("label") != std::string::npos) {
           current_input++;
           continue;
         }
-        onnx_input_map.emplace(node_name, current_input++);
-        ConvertPlaceholder(node_name, placeholder_shapes, graph_proto);
+        ConvertPlaceholder(node_name, placeholder_shapes, placeholder_dtypes, graph_proto);
       } else {
         // If it's not a placeholder, then by exclusion it's a constant.
-        ConvertConstant(graph_proto, node_name, shared_buffer);
+        ConvertConstant(graph_proto, node_name, params_map);
       }  // is_placeholder
     } else {
       // It's an op, rather than a "variable" (constant or placeholder)
@@ -163,23 +143,18 @@ op::ONNXParam ConvertNnvmGraphToOnnx(
       auto out_iter = output_lookup.find(node_name);
       // We found an output
       if (out_iter != output_lookup.end()) {
-        ConvertOutput(&onnx_output_map, graph_proto, out_iter, node_name, g,
-                      storage_types, dtypes);
+        ConvertOutput(graph_proto, out_iter, node_name, shapes, dtypes, ig);
       }  // output found
     }    // conversion function exists
   }      // loop over i from 0 to num_nodes
 
-  model_proto.SerializeToString(&onnx_param.serialized_onnx_graph);
-  common::Serialize<op::nnvm_to_onnx::NameToIdx_t>(onnx_input_map,
-                                          &onnx_param.serialized_input_map);
-  common::Serialize<op::nnvm_to_onnx::InferenceMap_t>(onnx_output_map,
-                                             &onnx_param.serialized_output_map);
+  model_proto.SerializeToString(&serialized_onnx_graph);
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER
   onnx::checker::check_model(model_proto);
 #endif  // MXNET_USE_TENSORRT_ONNX_CHECKER
 
-  return onnx_param;
+  return serialized_onnx_graph;
 }
 
 void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
@@ -225,9 +200,10 @@ void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
   pads->set_name("pads");
   pads->set_type(AttributeProto::INTS);
 
-  for (const dim_t kval : pad) {
-    pads->add_ints(static_cast<int64>(kval));
-    pads->add_ints(static_cast<int64>(kval));
+  for (int i =0; i < 2; i++) {
+    for (dim_t kval : pad) {
+      pads->add_ints(static_cast<int64>(kval));
+    }
   }
 
   // strides
@@ -294,6 +270,12 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
   }  // average pooling
   // not global pooling
 }  // end ConvertPooling
+
+void ConvertRelu(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
+                 const nnvm::IndexedGraph& /*ig*/,
+                 const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Relu");
+}
 
 void ConvertActivation(NodeProto* node_proto, const NodeAttrs& attrs,
                        const nnvm::IndexedGraph& /*ig*/,
@@ -411,7 +393,41 @@ void ConvertElementwiseAdd(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
   node_proto->set_op_type("Add");
 }
 
-std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(
+void ConvertConcatenate(NodeProto* node_proto, const NodeAttrs& attrs,
+                        const nnvm::IndexedGraph& /*ig*/,
+                        const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  const auto& _param = nnvm::get<ConcatParam>(attrs.parsed);
+  node_proto->set_op_type("Concat");
+  node_proto->set_name(attrs.name);
+  // axis
+  AttributeProto* const axis = node_proto->add_attribute();
+  axis->set_name("axis");
+  axis->set_type(AttributeProto::INT);
+  axis->set_i(static_cast<int64_t>(_param.dim));
+}
+
+inline TensorProto_DataType ConvertDType(int dtype) {
+  switch (dtype) {
+    case mshadow::kFloat64:
+      return TensorProto_DataType_DOUBLE;
+    case mshadow::kFloat32:
+      return TensorProto_DataType_FLOAT;
+    case mshadow::kFloat16:
+      return TensorProto_DataType_FLOAT16;
+    case mshadow::kUint8:
+      return TensorProto_DataType_UINT8;
+    case mshadow::kInt32:
+      return TensorProto_DataType_INT32;
+    case mshadow::kInt8:
+      return TensorProto_DataType_INT8;
+    case mshadow::kInt64:
+      return TensorProto_DataType_INT64;
+    default:
+      return TensorProto_DataType_UNDEFINED;
+  }
+}
+
+std::unordered_map<std::string, TShape> GetPlaceholderShapes(
     const ShapeVector& shape_inputs, const nnvm::IndexedGraph& ig) {
   std::unordered_map<std::string, mxnet::TShape> placeholder_shapes;
   for (uint32_t i = 0; i < shape_inputs.size(); ++i) {
@@ -423,6 +439,17 @@ std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(
     }
   }
   return placeholder_shapes;
+}
+
+std::unordered_map<std::string, int> GetPlaceholderDTypes(
+    const DTypeVector& dtype_inputs, const nnvm::IndexedGraph& ig) {
+  std::unordered_map<std::string, int> placeholder_dtypes;
+  for (uint32_t i = 0; i < dtype_inputs.size(); ++i) {
+    std::string name = ig[ig.input_nodes()[i]].source->attrs.name;
+    int dtype = dtype_inputs[i];
+    placeholder_dtypes.emplace(name, dtype);
+  }
+  return placeholder_dtypes;
 }
 
 std::unordered_map<std::string, uint32_t> GetOutputLookup(
@@ -442,17 +469,17 @@ std::unordered_map<std::string, uint32_t> GetOutputLookup(
 
 void ConvertPlaceholder(
     const std::string& node_name,
-    const std::unordered_map<std::string, mxnet::TShape>& placeholder_shapes,
+    const std::unordered_map<std::string, TShape>& placeholder_shapes,
+    const std::unordered_map<std::string, int>& placeholder_dtypes,
     GraphProto* const graph_proto) {
   auto val_info_proto = graph_proto->add_input();
   auto type_proto = val_info_proto->mutable_type()->mutable_tensor_type();
   auto shape_proto = type_proto->mutable_shape();
 
   val_info_proto->set_name(node_name);
-  // Will support fp16, etc. in the near future
-  type_proto->set_elem_type(TensorProto_DataType_FLOAT);
   auto entry_shape = placeholder_shapes.find(node_name)->second;
-
+  auto entry_dtype = placeholder_dtypes.find(node_name)->second;
+  type_proto->set_elem_type(ConvertDType(entry_dtype));
   for (const auto& elem : entry_shape) {
     TensorShapeProto_Dimension* const tsp_dim = shape_proto->add_dim();
     tsp_dim->set_dim_value(static_cast<int64>(elem));
@@ -461,38 +488,49 @@ void ConvertPlaceholder(
 
 void ConvertConstant(
     GraphProto* const graph_proto, const std::string& node_name,
-    std::unordered_map<std::string, NDArray>* const shared_buffer) {
-  TensorProto* const initializer_proto = graph_proto->add_initializer();
+    const std::unordered_map<std::string, NDArray>* const params_map) {
+    TensorProto* const initializer_proto = graph_proto->add_initializer();
 
   // Create initializer for constants
   initializer_proto->set_name(node_name);
-  // TODO(kellens): convert to fp16 if needed.
-  initializer_proto->set_data_type(TensorProto_DataType_FLOAT);
 
-  const NDArray nd = shared_buffer->find(node_name)->second;
+  const NDArray nd = params_map->find(node_name)->second;
   const TBlob& blob = nd.data();
-  const mxnet::TShape shape = blob.shape_;
+  const TShape shape = blob.shape_;
+  const auto dtype = ConvertDType(nd.dtype());
+  initializer_proto->set_data_type(dtype);
 
   for (auto& dim : shape) {
     initializer_proto->add_dims(static_cast<int64>(dim));
   }
 
   auto size = shape.Size();
-  // TODO(kellens): Note hard coded float32 size assumed.
-  std::shared_ptr<float> shared_data_ptr(new float[size]);
-  float* const data_ptr = shared_data_ptr.get();
-  nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
 
-  for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
-    initializer_proto->add_float_data(data_ptr[blob_idx]);
+  if (dtype == TensorProto_DataType_FLOAT) {
+    std::shared_ptr<float> shared_data_ptr(new float[size]);
+    float* const data_ptr = shared_data_ptr.get();
+    nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
+
+    for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
+      initializer_proto->add_float_data(data_ptr[blob_idx]);
+    }
+  } else if (dtype == TensorProto_DataType_FLOAT16) {
+    std::shared_ptr<uint16_t> shared_data_ptr(new uint16_t[size]);
+    uint16_t* const data_ptr = shared_data_ptr.get();
+    nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
+    for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
+      initializer_proto->add_int32_data(
+          reinterpret_cast<int32_t*>(data_ptr)[blob_idx]);
+    }
+  } else {
+    LOG(FATAL) << "dtype not supported for variables: " << node_name;
   }
 
   // Create inputs for constants.
   ValueInfoProto* const input_proto = graph_proto->add_input();
   input_proto->set_name(node_name);
 
-  // TODO(kellens): (fp16 support)
-  input_proto->mutable_type()->mutable_tensor_type()->set_elem_type(TensorProto_DataType_FLOAT);
+  input_proto->mutable_type()->mutable_tensor_type()->set_elem_type(dtype);
   for (auto& dim : shape) {
     auto new_dim = input_proto->mutable_type()->mutable_tensor_type()->mutable_shape()->add_dim();
     new_dim->set_dim_value(static_cast<int64>(dim));
@@ -500,35 +538,96 @@ void ConvertConstant(
 }
 
 void ConvertOutput(
-    op::nnvm_to_onnx::InferenceMap_t* const output_map,
     GraphProto* const graph_proto,
     const std::unordered_map<std::string, uint32_t>::iterator& out_iter,
-    const std::string& node_name, const nnvm::Graph& g,
-    const StorageTypeVector& storage_types, const DTypeVector& dtypes) {
-  const nnvm::IndexedGraph& ig = g.indexed_graph();
+    const std::string& node_name, const ShapeVector& shapes,
+    const DTypeVector& dtypes, const nnvm::IndexedGraph &ig) {
   uint32_t out_idx = ig.entry_id(ig.outputs()[out_iter->second]);
-  mxnet::TShape out_shape = g.GetAttr<mxnet::ShapeVector>("shape")[out_idx];
-  int storage_type = storage_types[out_idx];
   int dtype = dtypes[out_idx];
-
-  // This should work with fp16 as well
-  op::nnvm_to_onnx::InferenceTuple_t out_tuple{out_iter->second, out_shape, storage_type,
-                                      dtype};
-
-  output_map->emplace(node_name, out_tuple);
-
   auto graph_out = graph_proto->add_output();
   auto tensor_type = graph_out->mutable_type()->mutable_tensor_type();
   auto tensor_shape_proto = tensor_type->mutable_shape();
   graph_out->set_name(node_name);
 
   // Also support fp16.
-  tensor_type->set_elem_type(TensorProto_DataType_FLOAT);
+  tensor_type->set_elem_type(ConvertDType(dtype));
 
-  for (int64_t dim_shp : out_shape) {
+  for (int64_t dim_shp : shapes[out_idx]) {
     TensorShapeProto_Dimension* const tsp_dim = tensor_shape_proto->add_dim();
     tsp_dim->set_dim_value(static_cast<int64>(dim_shp));
   }
+}
+
+void ConvertClip(NodeProto* node_proto, const NodeAttrs& attrs,
+                 const nnvm::IndexedGraph& /*ig*/,
+                 const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  const auto param = nnvm::get<ClipParam>(attrs.parsed);
+
+  node_proto->set_op_type("Clip");
+
+  // max
+  AttributeProto* const a_max = node_proto->add_attribute();
+  a_max->set_name("max");
+  a_max->set_type(AttributeProto::FLOAT);
+  a_max->set_f(static_cast<float>(param.a_max));
+
+  // min
+  AttributeProto* const a_min = node_proto->add_attribute();
+  a_min->set_name("min");
+  a_min->set_type(AttributeProto::FLOAT);
+  a_min->set_f(static_cast<float>(param.a_min));
+}
+
+void ConvertPad(NodeProto* node_proto, const NodeAttrs& attrs,
+                const nnvm::IndexedGraph& /*ig*/,
+                const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  const auto param = nnvm::get<PadParam>(attrs.parsed);
+
+  node_proto->set_op_type("Pad");
+
+  // mode
+  AttributeProto* const mode = node_proto->add_attribute();
+  mode->set_name("mode");
+  mode->set_type(AttributeProto::STRING);
+  switch (param.mode) {
+    case op::pad_enum::kConstant:
+      mode->set_s("constant");
+      break;
+    case op::pad_enum::kEdge:
+      mode->set_s("edge");
+      break;
+    case op::pad_enum::kReflect:
+      mode->set_s("reflect");
+      break;
+    default:
+      throw dmlc::Error("Such mode of padding doesn't exist doesn't exist");
+  }
+
+  // pads
+  AttributeProto* const pads = node_proto->add_attribute();
+  pads->set_name("pads");
+  pads->set_type(AttributeProto::INTS);
+
+  std::vector<int64> pad_begin;
+  std::vector<int64> pad_end;
+  for (int st = 0; st < 2; ++st) {
+    for (auto it = param.pad_width.begin() + st;
+         it != param.pad_width.end(); it += 2) {
+      pads->add_ints(static_cast<int64>(*it));
+    }
+  }
+
+  // value
+  AttributeProto* const value = node_proto->add_attribute();
+  value->set_name("value");
+  value->set_type(AttributeProto::FLOAT);
+  value->set_f(param.constant_value);
+}
+
+void ConvertDropout(NodeProto* node_proto, const NodeAttrs& attrs,
+                    const nnvm::IndexedGraph& /*ig*/,
+                    const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Dropout");
 }
 
 }  // namespace nnvm_to_onnx

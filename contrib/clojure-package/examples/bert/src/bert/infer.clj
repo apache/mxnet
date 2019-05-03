@@ -16,6 +16,7 @@
 ;;
 
 
+
 (ns bert.infer
   (:require [bert.util :as bert-util]
             [clojure.pprint :as pprint]
@@ -24,19 +25,16 @@
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.infer :as infer]
             [org.apache.clojure-mxnet.layout :as layout]
-            [org.apache.clojure-mxnet.ndarray :as ndarray]))
+            [org.apache.clojure-mxnet.ndarray :as ndarray]
+            [org.apache.clojure-mxnet.util :as util]))
 
 (def model-path-prefix "data/static_bert_qa")
 ;; epoch number of the model
 (def epoch 2)
-;; the vocabulary used in the model
-(def model-vocab "data/vocab.json")
-;; the input question
 ;; the maximum length of the sequence
 (def seq-length 384)
 
 ;;; data helpers
-
 
 (defn post-processing [result tokens]
   (let [output1 (ndarray/slice-axis result 2 0 1)
@@ -73,7 +71,7 @@
     (infer/create-predictor
      factory
      {:contexts [ctx]
-      :epoch 2})))
+      :epoch epoch})))
 
 (defn pre-processing [ctx idx->token token->idx qa-map]
   (let [{:keys [input-question input-answer ground-truth-answers]} qa-map
@@ -98,22 +96,23 @@
      :tokens tokens
      :qa-map qa-map}))
 
-(defn infer [ctx]
-  (let [ctx (context/default-context)
-        predictor (make-predictor ctx)
-        {:keys [idx->token token->idx]} (bert-util/get-vocab)
+(defn infer
+  ([] (infer (context/default-context)))
+  ([ctx]
+   (let [predictor (make-predictor ctx)
+         {:keys [idx->token token->idx]} (bert-util/get-vocab)
         ;;; samples taken from https://rajpurkar.github.io/SQuAD-explorer/explore/v2.0/dev/
-        question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))]
-    (doseq [qa-map question-answers]
-      (let [{:keys [input-batch tokens qa-map]} (pre-processing ctx idx->token token->idx qa-map)
-            result (first (infer/predict-with-ndarray predictor input-batch))
-            answer (post-processing result tokens)]
-        (println "===============================")
-        (println "      Question Answer Data")
-        (pprint/pprint qa-map)
-        (println)
-        (println "  Predicted Answer: " answer)
-        (println "===============================")))))
+         question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))]
+     (doseq [qa-map question-answers]
+       (let [{:keys [input-batch tokens qa-map]} (pre-processing ctx idx->token token->idx qa-map)
+             result (first (infer/predict-with-ndarray predictor input-batch))
+             answer (post-processing result tokens)]
+         (println "===============================")
+         (println "      Question Answer Data")
+         (pprint/pprint qa-map)
+         (println)
+         (println "  Predicted Answer: " answer)
+         (println "==============================="))))))
 
 (defn -main [& args]
   (let [[dev] args]
@@ -123,4 +122,8 @@
 
 (comment
 
-  (infer :cpu))
+  (infer)
+
+  (infer (context/gpu))
+
+  )

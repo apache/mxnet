@@ -229,6 +229,100 @@ struct sumlogdiag {
   }
 };
 
+template<bool forward>
+struct CopyDiag {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int k, int n, DType* A, DType* B) {
+    // Index of the matrix from which the diagonal should be extracted.
+    const int matrix(i / (n-abs(k)));
+    // Index of the diagonal element that should be extracted.
+    const int index(i % (n-abs(k)));
+    // row/col that must be looked up.
+    const int row(index-(k < 0 ? k : 0)), col(index+(k > 0 ? k :0));
+    if (forward) {
+      B[i] = A[(matrix*n+row)*n+col];
+    } else {
+      B[(matrix*n+row)*n+col] = A[i];
+    }
+  }
+};
+
+struct copydiag {
+  // Extracts diagonal from matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 2, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaDiagParam& param = nnvm::get<LaDiagParam>(attrs.parsed);
+    Kernel<CopyDiag<true>, xpu>::Launch(s, B.MSize(), param.offset, A.size(1), A.dptr_, B.dptr_);
+  }
+  // Sets diagonal in matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaDiagParam& param = nnvm::get<LaDiagParam>(attrs.parsed);
+    Kernel<set_zero, xpu>::Launch(s, B.MSize(), B.dptr_);
+    Kernel<CopyDiag<false>, xpu>::Launch(s, A.MSize(), param.offset, B.size(1), A.dptr_, B.dptr_);
+  }
+};
+
+template<bool forward>
+struct CopyTrian {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, bool lower, int k, int n, DType* A, DType* B) {
+    // Matrix that this index belongs to.
+    const int matrix(i/(n*n));
+    // Row/Col that this index represents.
+    int row((i/n)%n), col(i%n);
+    if ((k > 0) || ((k == 0) && !lower)) {
+       // When working on upper triangle we switch to transposed coordinates for indexing.
+       int tmp(row);
+       row = col;
+       col = tmp;
+    }
+    // Actual row inside the lower triangular matrix after offset adjustment.
+    row -= abs(k);
+    if (row >= col) {
+      // Index in the 1-dimensional array that holds the values of the triangle.
+      const int index((row*(row+1))/2+col);
+      // Total number of entries in the triangle.
+      const int m(((n-abs(k))*(n-abs(k)+1))/2);
+      if (forward) {
+        B[m*matrix+index] = A[i];
+      } else {
+        B[i] = A[m*matrix+index];
+      }
+    }
+  }
+};
+
+struct copytrian {
+  // Extracts triangle from matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 2, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaTrianParam& param = nnvm::get<LaTrianParam>(attrs.parsed);
+    Kernel<CopyTrian<true>, xpu>::Launch(s, A.MSize(), param.lower, param.offset,
+                                         A.size(1), A.dptr_, B.dptr_);
+  }
+  // Sets triangle in matrix.
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 3, DType>& B,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mxnet_op;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const LaTrianParam& param = nnvm::get<LaTrianParam>(attrs.parsed);
+    Kernel<set_zero, xpu>::Launch(s, B.MSize(), B.dptr_);
+    Kernel<CopyTrian<false>, xpu>::Launch(s, B.MSize(), param.lower, param.offset,
+                                          B.size(1), A.dptr_, B.dptr_);
+  }
+};
+
 // B = syrk(A)
 struct syrk {
   template<typename xpu, typename DType>
