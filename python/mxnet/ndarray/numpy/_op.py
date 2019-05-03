@@ -27,7 +27,7 @@ __all__ = ['zeros', 'ones']
 
 
 @use_np_compat
-def zeros(shape, dtype=_np.float64, **kwargs):
+def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -37,7 +37,10 @@ def zeros(shape, dtype=_np.float64, **kwargs):
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `numpy.float64`).
+        An optional value type. Default is `numpy.float32`. Note that this
+        behavior is different from NumPy's `ones` function where `float64`
+        is the default value, because `float32` is considered as the default
+        data type in deep learning.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -50,8 +53,8 @@ def zeros(shape, dtype=_np.float64, **kwargs):
     ctx = kwargs.get('ctx', current_context())
     if ctx is None:
         ctx = current_context()
-    dtype = _np.float64 if dtype is None else dtype
-    return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs).as_np_ndarray()
+    dtype = _np.float32 if dtype is None else dtype
+    return _internal._np_zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
 
 
 @use_np_compat
@@ -65,7 +68,10 @@ def ones(shape, dtype=None, **kwargs):
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `numpy.float64`).
+        An optional value type. Default is `numpy.float32`. Note that this
+        behavior is different from NumPy's `ones` function where `float64`
+        is the default value, because `float32` is considered as the default
+        data type in deep learning.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -78,5 +84,5 @@ def ones(shape, dtype=None, **kwargs):
     ctx = kwargs.get('ctx', current_context())
     if ctx is None:
         ctx = current_context()
-    dtype = _np.float64 if dtype is None else dtype
-    return _internal._ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs).as_np_ndarray()
+    dtype = _np.float32 if dtype is None else dtype
+    return _internal._np_ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)

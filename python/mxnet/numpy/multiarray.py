@@ -1087,7 +1087,9 @@ def empty(shape, dtype=None, **kwargs):
     shape : int or tuple of int Shape of the empty array, e.g., ``(2, 3)`` or ``2``.
     dtype : data-type, optional
         Desired output data-type for the array, e.g, `numpy.int8`. Default is
-        `numpy.float64`.
+        `numpy.float32`. Note that this behavior is different from NumPy's `empty`
+        function where `float64` is the default value, because `float32` is
+        considered as the default data type in deep learning.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -1102,7 +1104,7 @@ def empty(shape, dtype=None, **kwargs):
     if ctx is None:
         ctx = current_context()
     if dtype is None:
-        dtype = _np.float64
+        dtype = _np.float32
     if isinstance(shape, int):
         shape = (shape,)
     return ndarray(handle=_new_alloc_handle(shape, ctx, False, dtype))
@@ -1148,7 +1150,7 @@ def array(object, dtype=None, **kwargs):
     return ret
 
 
-def zeros(shape, dtype=_np.float64, **kwargs):
+def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -1158,9 +1160,12 @@ def zeros(shape, dtype=_np.float64, **kwargs):
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `numpy.float64`).
+        An optional value type (default is `numpy.float32`). Note that this
+        behavior is different from NumPy's `ones` function where `float64`
+        is the default value, because `float32` is considered as the default
+        data type in deep learning.
     ctx : Context, optional
-        An optional device context (default is the current default context).
+        An optional value type (default is the current default context).
 
     Returns
     -------
@@ -1180,7 +1185,10 @@ def ones(shape, dtype=None, **kwargs):
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `numpy.float64`).
+        An optional value type. Default is `numpy.float32`. Note that this
+        behavior is different from NumPy's `ones` function where `float64`
+        is the default value, because `float32` is considered as the default
+        data type in deep learning.
     ctx : Context, optional
         An optional device context (default is the current default context).
 

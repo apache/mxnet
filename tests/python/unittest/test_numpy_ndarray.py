@@ -58,13 +58,20 @@ def test_zeros():
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x + F.np.zeros(shape, dtype)
 
+    class TestZerosOutputType(HybridBlock):
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return x, F.np.zeros(shape=())
+
     # test np.zeros in imperative
     def check_zero_array_creation(shape, dtype):
         np_out = _np.zeros(shape=shape, dtype=dtype)
         mx_out = np.zeros(shape=shape, dtype=dtype)
         assert same(mx_out.asnumpy(), np_out)
+        if dtype is None:
+            assert mx_out.dtype == _np.float32
+            assert np_out.dtype == _np.float64
 
-    shapes = [()]
+    shapes = [(0,), (2, 0, 2), (0, 0, 0, 0), ()]
     shapes += [rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)]
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     for shape in shapes:
@@ -72,14 +79,18 @@ def test_zeros():
             check_zero_array_creation(shape, dtype)
             x = mx.nd.array(_np.random.uniform(size=shape), dtype=dtype)
             if dtype is None:
-                x = x.astype('float64')
-            for hybridize in [False]:
+                x = x.astype('float32')
+            for hybridize in [True, False]:
                 test_zeros = TestZeros(shape, dtype)
+                test_zeros_output_type = TestZerosOutputType()
                 if hybridize:
                     test_zeros.hybridize()
+                    test_zeros_output_type.hybridize()
                 y = test_zeros(x)
                 assert type(y) == np.ndarray
                 assert same(x.asnumpy(), y.asnumpy())
+                y = test_zeros_output_type(x)
+                assert type(y[1]) == np.ndarray
 
 
 @with_seed()
@@ -95,13 +106,20 @@ def test_ones():
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x * F.np.ones(shape, dtype)
 
+    class TestOnesOutputType(HybridBlock):
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return x, F.np.ones(shape=())
+
     # test np.ones in imperative
     def check_ones_array_creation(shape, dtype):
         np_out = _np.ones(shape=shape, dtype=dtype)
         mx_out = np.ones(shape=shape, dtype=dtype)
         assert same(mx_out.asnumpy(), np_out)
+        if dtype is None:
+            assert mx_out.dtype == _np.float32
+            assert np_out.dtype == _np.float64
 
-    shapes = [()]
+    shapes = [(0,), (2, 0, 2), (0, 0, 0, 0), ()]
     shapes += [rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)]
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     for shape in shapes:
@@ -109,14 +127,18 @@ def test_ones():
             check_ones_array_creation(shape, dtype)
             x = mx.nd.array(_np.random.uniform(size=shape), dtype=dtype).as_np_ndarray()
             if dtype is None:
-                x = x.astype('float64')
-            for hybridize in [False]:
+                x = x.astype('float32')
+            for hybridize in [True, False]:
                 test_ones = TestOnes(shape, dtype)
+                test_ones_output_type = TestOnesOutputType()
                 if hybridize:
                     test_ones.hybridize()
+                    test_ones_output_type.hybridize()
                 y = test_ones(x)
                 assert type(y) == np.ndarray
                 assert same(x.asnumpy(), y.asnumpy())
+                y = test_ones_output_type(x)
+                assert type(y[1]) == np.ndarray
 
 
 @with_seed()
