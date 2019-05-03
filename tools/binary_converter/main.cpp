@@ -28,6 +28,7 @@
 #include <fstream>
 #include <dmlc/logging.h>
 #include <mxnet/ndarray.h>
+#include <stdlib.h>
 
 #include "../../src/operator/contrib/binary_inference/xnor.h"
 
@@ -412,6 +413,19 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
         retainCurrentNode = true;
       }
 
+      if ((*itr)["op"].IsString() && string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN) {
+        cout << "Info: reduce channel dimensions for " << nodeName << endl;
+        string shape = string((*itr)["attrs"]["__shape__"].GetString());
+        string delim = ", ";
+        auto firstDelim = shape.find(delim) + 1;
+        auto secondDelim = shape.find(delim, firstDelim);
+        auto length = secondDelim - firstDelim;
+        auto outChannels = std::stoi(shape.substr(firstDelim, length));
+        outChannels /= BITS_PER_BINARY_WORD;
+        shape.replace(firstDelim, secondDelim - firstDelim, std::to_string(outChannels));
+        (*itr)["attrs"]["__shape__"].SetString(shape.c_str(), allocator);
+      }
+
       // replace convolution and dense operators with binary inference layer
       if ((*itr)["op"].IsString() && 
           string((*itr)["op"].GetString()) == PREFIX_CONVOLUTION) {
@@ -444,7 +458,7 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
     for (uint i = 0; i < arr_size; ++i) {
       uint input = (*itr)["inputs"][i][0].GetUint();
       if (inputChanges.count(input) > 0) {
-        cout << "set input: " << input << "=" << inputChanges[input] << endl;
+        cout << "Info: set input: " << input << " to " << inputChanges[input] << endl;
         input = inputChanges[input];
       }
       uint inputNewId = input;
@@ -466,8 +480,6 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
     if ( string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN) {
       arg_nodes.PushBack(Value().SetInt(currentNewId), allocator);
     }
-
-    //cout << (*itr)["name"].GetString() << endl;
   }
 
 
