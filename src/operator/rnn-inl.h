@@ -593,10 +593,12 @@ class RNNOp {
 
 
 #if USE_CUDNN_LSTM_PROJ
-    int host_workspace_bytes = param_.batch_size_ * sizeof(IType) + param_.batch_size_ * sizeof(int);
+    int host_workspace_bytes = 
+      param_.batch_size_ * sizeof(IType) + param_.batch_size_ * sizeof(int);
 
     Tensor<cpu, 1, char> host_workspace = 
-      ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1, char>(Shape1(host_workspace_bytes));
+      ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1,char>(
+           Shape1(host_workspace_bytes));
 
     int *sequence_length_cpu_int = reinterpret_cast<int*>(host_workspace.dptr_);
 #endif
@@ -652,7 +654,7 @@ class RNNOp {
     cudnnRNNDataLayout_t layout_t;
 
     if (param_.use_sequence_length) {
-      // Note: sequence_length_ptr_cpu is of type Itype, not nescesarily int. So can't do a memcpy here
+      // Note: Can't mempcy, sequence_length_ptr_cpu is of type Itype, not nescesarily int
       for (int i = 0; i < param_.batch_size_; ++i) {
         sequence_length_cpu_int[i] = sequence_length_cpu_itype[i];
       }
