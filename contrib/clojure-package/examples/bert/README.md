@@ -44,6 +44,8 @@ The prediction in this case would be `solar power`
 
 ### Setup Guide
 
+Note: If you have trouble with your REPL and cider, please comment out the `lein-jupyter` plugin. There are some conflicts with cider.
+
 #### Step 1: Download the model
 
 For this tutorial, you can get the model and vocabulary by running following bash file. This script will use `wget` to download these artifacts from AWS S3.
