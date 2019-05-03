@@ -89,7 +89,8 @@ def get_etol(etol=None):
 
 def random_arrays(*shapes):
     """Generate some random numpy arrays."""
-    arrays = [np.random.randn(*s).astype(default_dtype())
+    arrays = [np.array(np.random.randn(), dtype=default_dtype())
+              if len(s) == 0 else np.random.randn(*s).astype(default_dtype())
               for s in shapes]
     if len(arrays) == 1:
         return arrays[0]
@@ -408,16 +409,20 @@ def create_sparse_array_zd(shape, stype, density, data_init=None,
                                density=density,
                                shuffle_csr_indices=shuffle_csr_indices)
 
-def rand_shape_2d(dim0=10, dim1=10):
-    return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1)
+
+def rand_shape_2d(dim0=10, dim1=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return rnd.randint(low, dim0 + 1), rnd.randint(low, dim1 + 1)
 
 
-def rand_shape_3d(dim0=10, dim1=10, dim2=10):
-    return rnd.randint(1, dim0 + 1), rnd.randint(1, dim1 + 1), rnd.randint(1, dim2 + 1)
+def rand_shape_3d(dim0=10, dim1=10, dim2=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return rnd.randint(low, dim0 + 1), rnd.randint(low, dim1 + 1), rnd.randint(low, dim2 + 1)
 
 
-def rand_shape_nd(num_dim, dim=10):
-    return tuple(rnd.randint(1, dim+1, size=num_dim))
+def rand_shape_nd(num_dim, dim=10, allow_zero_size=False):
+    low = 0 if allow_zero_size else 1
+    return tuple(rnd.randint(low, dim+1, size=num_dim))
 
 
 def rand_coord_2d(x_low, x_high, y_low, y_high):

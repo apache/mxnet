@@ -34,6 +34,7 @@ from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle
+from .. import numpy as _mx_np
 
 
 class _BlockScope(object):
@@ -739,9 +740,13 @@ class HybridBlock(Block):
         if not self._cached_graph:
             args, self._in_format = _flatten(args, "input")
             if len(args) > 1:
-                inputs = [symbol.var('data%d'%i) for i in range(len(args))]
+                inputs = [symbol.var('data%d' % i).as_np_ndarray()
+                          if isinstance(args[i], _mx_np.ndarray)
+                          else symbol.var('data%d' % i) for i in range(len(args))]
             else:
-                inputs = [symbol.var('data')]
+                inputs = [symbol.var('data').as_np_ndarray()
+                          if isinstance(args[0], _mx_np.ndarray)
+                          else symbol.var('data')]
             grouped_inputs = _regroup(inputs, self._in_format)[0]
 
             params = {i: j.var() for i, j in self._reg_params.items()}
