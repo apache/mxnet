@@ -319,6 +319,15 @@ using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
 using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
                                                 size_t index)>;
 
+/*!
+ * \brief Indicates whether this operator is NumPy compatible.
+ * It is for distinguishing the operator from classic MXNet operators
+ * which do not support zero-dim and zero-size tensors.
+ * In Python, it is used to determine whether to output numpy ndarrays
+ * or symbols that are NumPy compatible.
+ */
+using TIsNumpyCompatible = bool;
+
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

@@ -856,7 +856,6 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     }
     CHECK_EQ(stypes[i], kDefaultStorage);
     if (mem_plan[i].root == i) {
-      CHECK_GT(mem_plan[i].size, 0);
       auto iter = pool.lower_bound(mem_plan[i].size);
       if (iter != pool.end()) {
         *arrays[i] = iter->second.AsArray(shapes[i], dtypes[i]);
