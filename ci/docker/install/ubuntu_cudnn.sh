@@ -20,15 +20,10 @@
 # build and install are separated so changes to build don't invalidate
 # the whole docker cache for the image
 
+# Assumes base image is from nvidia/cuda
+
 set -ex
-# install libraries for mxnet's python package on ubuntu
+
 apt-get update || true
-apt-get install -y python-dev python3-dev virtualenv wget
+apt-get install -y libcudnn7=7.3.1.20-1+cuda10.0 libcudnn7-dev=7.3.1.20-1+cuda10.0
 
-# the version of the pip shipped with ubuntu may be too lower, install a recent version here
-wget -nv https://bootstrap.pypa.io/get-pip.py
-python3 get-pip.py
-python2 get-pip.py
-
-pip2 install nose cpplint==1.3.0 'numpy<=1.15.2,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
-pip3 install nose cpplint==1.3.0 pylint==2.3.1 'numpy<=1.15.2,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3

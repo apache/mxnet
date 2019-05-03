@@ -102,6 +102,16 @@ void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
   os << "Total " << 11 << " TempSpace resource requested\n";
 }
 
+/*!
+ * \brief Return the "optimized" symbol contained in the executor graph.
+ */
+nnvm::Symbol GraphExecutor::GetOptimizedSymbol() {
+  Symbol ret;
+  ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
+      graph_.outputs.begin() + num_forward_outputs_);
+  return ret.Copy();
+}
+
 void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback, bool monitor_all) {
   CHECK(callback) << "invalid callback";
   monitor_callback_ = callback;

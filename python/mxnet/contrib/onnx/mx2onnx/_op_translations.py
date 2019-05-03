@@ -762,7 +762,7 @@ def convert_leakyrelu(node, **kwargs):
     act_name = {"elu": "Elu", "leaky": "LeakyRelu", "prelu": "PRelu",
                 "selu": "Selu"}
 
-    if act_type == "prelu" or act_type == "selu":
+    if act_type in ("prelu", "selu"):
         node = onnx.helper.make_node(
             act_name[act_type],
             inputs=input_nodes,

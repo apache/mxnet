@@ -39,8 +39,10 @@ examples/visualization/test-vis.pdf
 src/.DS_Store
 src/org/.DS_Store
 test/test-ndarray.clj
+test/test-ndarray-random.clj
 test/test-ndarray-api.clj
 test/test-symbol.clj
+test/test-symbol-random.clj
 test/test-symbol-api.clj
 src/org/apache/clojure_mxnet/gen/*
 

@@ -16,95 +16,50 @@
 # under the License.
 
 """ Module to enable the use of TensorRT optimized graphs."""
-
-import ctypes
-import logging
 import os
 
-from .. import symbol as sym
-
-from ..base import _LIB, SymbolHandle, MXNetError
-from ..base import check_call
-
-
-def set_use_tensorrt(status):
+def set_use_fp16(status):
     """
-    Set an environment variable which will enable or disable the use of TensorRT in the backend.
-    Note: this is useful for A/B testing purposes.
-    :param status: Boolean, true if TensorRT optimization should be applied, False for legacy
-    behaviour.
+    Set an environment variable which will enable or disable the use of FP16 precision in
+    TensorRT
+    Note: The mode FP16 force the whole TRT node to be executed in FP16
+    :param status: Boolean, True if TensorRT should run in FP16, False for FP32
     """
-    os.environ["MXNET_USE_TENSORRT"] = str(int(status))
+    os.environ["MXNET_TENSORRT_USE_FP16"] = str(int(status))
 
-
-def get_use_tensorrt():
+def get_use_fp16():
     """
-    Get an environment variable which describes if TensorRT is currently enabled in the backend.
-    Note: this is useful for A/B testing purposes.
-    :return: Boolean, true if TensorRT optimization should be applied, False for legacy
-    behaviour.
+    Get an environment variable which describes if TensorRT is currently running in FP16
+    :return: Boolean, true if TensorRT is running in FP16, False for FP32
     """
-    return bool(int(os.environ.get("MXNET_USE_TENSORRT", 0)) == 1)
+    return bool(int(os.environ.get("MXNET_TENSORRT_USE_FP16", 1)) == 1)
 
-
-def get_optimized_symbol(executor):
+def init_tensorrt_params(sym, arg_params, aux_params):
     """
-    Take an executor's underlying symbol graph and return its generated optimized version.
-
-    Parameters
-    ----------
-    executor :
-        An executor for which you want to see an optimized symbol. Getting an optimized symbol
-        is useful to compare and verify the work TensorRT has done against a legacy behaviour.
-
-    Returns
-    -------
-    symbol : nnvm::Symbol
-        The nnvm symbol optimized.
+    Set weights in attributes of TensorRT nodes
+    :param sym: Symbol, the symbol graph should contains some TensorRT nodes
+    :param arg_params: arg_params
+    :param aux_params: aux_params
+    :return arg_params, aux_params: remaining params that are not in TensorRT nodes
     """
-    handle = SymbolHandle()
-    try:
-        check_call(_LIB.MXExecutorGetOptimizedSymbol(executor.handle, ctypes.byref(handle)))
-        result = sym.Symbol(handle=handle)
-        return result
-    except MXNetError:
-        logging.error('Error while trying to fetch TRT optimized symbol for graph. Please ensure '
-                      'build was compiled with MXNET_USE_TENSORRT enabled.')
-        raise
-
-
-def tensorrt_bind(symbol, ctx, all_params, type_dict=None, stype_dict=None, group2ctx=None,
-                  **kwargs):
-    """Bind current symbol to get an optimized trt executor.
-
-    Parameters
-    ----------
-    symbol : Symbol
-        The symbol you wish to bind, and optimize with TensorRT.
-
-    ctx : Context
-        The device context the generated executor to run on.
-
-    all_params : Dict of str->ndarray
-        A dictionary of mappings from parameter names to parameter NDArrays.
-
-    type_dict  : Dict of str->numpy.dtype
-        Input type dictionary, name->dtype
-
-    stype_dict  : Dict of str->str
-        Input storage type dictionary, name->storage_type
-
-    group2ctx : Dict of string to mx.Context
-        The dict mapping the `ctx_group` attribute to the context assignment.
-
-    kwargs : Dict of str->shape
-        Input shape dictionary, name->shape
-
-    Returns
-    -------
-    executor : mxnet.Executor
-        An optimized TensorRT executor.
-    """
-    kwargs['shared_buffer'] = all_params
-    return symbol.simple_bind(ctx, type_dict=type_dict, stype_dict=stype_dict,
-                              group2ctx=group2ctx, **kwargs)
+    for s in sym.get_internals():
+        new_params_names = ""
+        tensorrt_params = {}
+        if 'subgraph_params_names' in s.list_attr():
+            keys = s.list_attr()['subgraph_params_names'].split(';')
+            for k in keys:
+                if k in arg_params:
+                    new_params_names += k + ";"
+                    tensorrt_params['subgraph_param_' + k] = arg_params[k]
+                    arg_params.pop(k)
+                elif k in aux_params:
+                    new_params_names += k + ";"
+                    tensorrt_params['subgraph_param_' + k] = aux_params[k]
+                    aux_params.pop(k)
+            new_attrs = {}
+            for k, v in tensorrt_params.items():
+                new_attrs[k] = str(v.handle.value)
+            if len(new_attrs) > 0:
+                s._set_attr(**new_attrs)
+                s._set_attr(subgraph_params_names=new_params_names[:-1])
+    return arg_params, aux_params

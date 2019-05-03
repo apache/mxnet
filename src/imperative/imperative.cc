@@ -403,8 +403,6 @@ std::vector<NDArray*> Imperative::Backward(
       node->attrs.op = copy_op;
       node->inputs.push_back(backward_node);
       graph.outputs.emplace_back(std::move(node));
-      // AGInfo& info = AGInfo::Create(node);
-      // info.ctx = outputs[0]->ctx();
     } else {
       graph.outputs.push_back(backward_node);
     }

@@ -40,11 +40,21 @@
    vision/index.md
 ```
 
-MXNet tutorials can be found in this section. A variety of language bindings are available for MXNet (including Python, Scala, C++ and R) and we have a different tutorial section for each language.
+MXNet tutorials can be found in this section. A variety of language bindings are available for MXNet (including Python, Scala, Java, Clojure, C++ and R) and we have a different tutorial section for each language.
 
 Are you new to MXNet, and don't have a preference on language? We currently recommend starting with Python, and specifically the Gluon APIs (versus Module APIs) as they're more flexible and easier to debug.
 
 Another great resource for learning MXNet is our [examples section](https://github.com/apache/incubator-mxnet/tree/master/example) which includes a wide variety of models (from basic to state-of-the-art) for a wide variety of tasks including: object detection, style transfer, reinforcement learning, and many others.
+
+**Contents:**
+  * [Python Tutorials](#python-tutorials)
+  * [Scala Tutorials](#scala-tutorials)
+  * [Java Tutorials](#java-tutorials)
+  * [Clojure Tutorials](#clojure-tutorials)
+  * [C++ Tutorials](#c---tutorials)
+  * [R Tutorials](#r-tutorials)
+  * [Perl Tutorials](#perl-tutorials)
+  * [Contributing Tutorials](#contributing-tutorials)
 
 <hr>
 
@@ -57,8 +67,8 @@ A comprehensive introduction to Gluon can be found at [Dive into Deep Learning](
 Use the tutorial selector below to filter to the relevant tutorials. You might see a download link in the top right corner of some tutorials. Use this to download a Jupyter Notebook version of the tutorial, and re-run and adjust the code as you wish.
 
 <script type="text/javascript" src='../_static/js/options.js'></script>
-
 <!-- Gluon vs Module -->
+
 Select API:&nbsp;
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active" style="font-size:22px">Gluon</button>
@@ -184,6 +194,13 @@ Select API:&nbsp;
     * [Developer Environment Setup on IntelliJ IDE](/tutorials/java/mxnet_java_on_intellij.html)
 * [Multi Object Detection using pre-trained Single Shot Detector (SSD) Model](/tutorials/java/ssd_inference.html)
 * [MXNet-Java  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
+<hr>
+
+## Clojure Tutorials
+* [How to use the NDArray API to perform vector/matrix/tensor operations](../api/clojure/ndarray.html)
+* [Multi-GPU and multi-host distributed training with the KVStore API](../api/clojure/kvstore.html)
+* [How to use the Symbol API to assemble neural networks from layers](../api/clojure/symbol.html)
+* [How to use the Module API](../api/clojure/module.html) (deprecated)
 <hr>
 
 ## C++ Tutorials
