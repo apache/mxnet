@@ -494,7 +494,11 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                                 params = input_node["attrs"]
                                 if "num_outputs" in params:
                                     key += str(int(params["num_outputs"]) - 1)
-                            shape = shape_dict[key][1:]
+                            if key not in shape_dict:
+                                print("Warning: Key '{}' not found in shape_dict. Printing 0x0x0 instead.".format(key))
+                                shape = (0, 0, 0)
+                            else:
+                                shape = shape_dict[key][1:]
                             label = "x".join([str(x) for x in shape])
                             attr["label"] = label
                         else:
