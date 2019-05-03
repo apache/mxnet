@@ -275,10 +275,11 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr<FResourceRequestEx>("FResourceRequestEx",
   [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
     std::vector<ResourceRequest> request;
-    const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
     if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN_RNN
       request.emplace_back(ResourceRequest::kTempSpace);
+
+      const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
       if (param.p != 0 && 1.0f - param.p > 0) {
         request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
       }
