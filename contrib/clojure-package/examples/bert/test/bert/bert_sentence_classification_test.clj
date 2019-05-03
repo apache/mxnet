@@ -47,7 +47,7 @@
           num-epoch 1
           bert-base (m/load-checkpoint {:prefix model-path-prefix :epoch 0})
           model-sym (fine-tune-model (m/symbol bert-base) {:num-classes 2 :dropout 0.1})
-          {:keys [data0s data1s data2s labels train-num]} (prepare-data dev)
+          {:keys [data0s data1s data2s labels train-num]} (prepare-data)
           batch-size 32
           data-desc0 (mx-io/data-desc {:name "data0"
                                        :shape [train-num seq-length]
