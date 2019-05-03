@@ -839,3 +839,19 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
+
+int MXIsNumpyCompatOp(AtomicSymbolCreator creator, int* is_np_op) {
+  API_BEGIN();
+  const nnvm::Op* op = static_cast<Op*>(creator);
+  *is_np_op = IsNumpyCompatOp(op) ? 1 : 0;
+  API_END();
+}
+
+int MXShallowCopySymbol(SymbolHandle src, SymbolHandle* out) {
+  nnvm::Symbol* out_sym = new nnvm::Symbol;
+  API_BEGIN();
+  nnvm::Symbol* src_sym = static_cast<nnvm::Symbol*>(src);
+  *out_sym = *src_sym;
+  *out = out_sym;
+  API_END_HANDLE_ERROR(delete out_sym);
+}
