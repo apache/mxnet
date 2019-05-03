@@ -236,7 +236,7 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape &dshape = (*in_attrs)[0];
-  if (!shape_is_known(dshape)) return false;
+  if (!ndim_is_known(dshape)) return false;
   int target_dim = 1;
   for (int i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
@@ -344,7 +344,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 6U) << "Transpose support at most 6 dimensions";
+  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   mxnet::TShape ret(shp.ndim(), -1);
   if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {
@@ -1032,7 +1032,7 @@ inline bool SliceAssignScalarOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (!shape_is_known(dshape)) return false;
+  if (!ndim_is_known(dshape)) return false;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
   return true;
 }
@@ -2074,7 +2074,7 @@ inline bool StackOpShape(const nnvm::NodeAttrs& attrs,
   for (const mxnet::TShape& i : (*in_attrs)) {
     shape_assign(&dshape, i);
   }
-  if (!shape_is_known(dshape)) return false;
+  if (!ndim_is_known(dshape)) return false;
 
   mxnet::TShape oshape(dshape.ndim() + 1, -1);
   int axis = CheckAxis(param.axis, oshape.ndim());
@@ -2194,7 +2194,7 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = in_attrs->at(0);
   const int dndim = dshape.ndim();
-  if (!shape_is_known(dshape)) return false;
+  if (!ndim_is_known(dshape)) return false;
   mxnet::TShape oshape = dshape;
   if (param.axis.has_value()) {
     // preprocess axis

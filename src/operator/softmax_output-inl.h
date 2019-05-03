@@ -337,7 +337,7 @@ class SoftmaxOutputProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
     const mxnet::TShape &dshape = in_shape->at(0);
-    if (!shape_is_known(dshape)) return false;
+    if (!ndim_is_known(dshape)) return false;
 
     // label.shape == data.shape: use probability as label
     if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {

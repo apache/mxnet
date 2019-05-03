@@ -1207,6 +1207,7 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& lshape = (*in_attrs)[0];
   mxnet::TShape& rshape = (*in_attrs)[1];
+  if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
     CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
@@ -1479,6 +1480,7 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   mxnet::TShape& lshape = (*in_attrs)[0];
   mxnet::TShape& rshape = (*in_attrs)[1];
+  if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
   if (lshape.ndim() == 3 && rshape.ndim() == 3) {
     CHECK(lshape[0] == rshape[0])
       << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape

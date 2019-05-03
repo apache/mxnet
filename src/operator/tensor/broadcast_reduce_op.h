@@ -222,7 +222,7 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!shape_is_known(ishape)) return false;
+  if (!ndim_is_known(ishape)) return false;
 
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
@@ -304,7 +304,7 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!shape_is_known((*in_attrs)[0])) return false;
+  if (!ndim_is_known((*in_attrs)[0])) return false;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
@@ -317,7 +317,7 @@ inline bool ReduceMinMaxAxesShape(const nnvm::NodeAttrs& attrs,
                                   mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!shape_is_known((*in_attrs)[0])) return false;
+  if (!ndim_is_known((*in_attrs)[0])) return false;
   CHECK_GT((*in_attrs)[0].Size(), 0U)
     << "Reduction input's size should > 0 "
     << (*in_attrs)[0];
@@ -351,7 +351,7 @@ inline bool NormShape(const nnvm::NodeAttrs& attrs,
                       mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!shape_is_known((*in_attrs)[0])) return false;
+  if (!ndim_is_known((*in_attrs)[0])) return false;
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
@@ -364,7 +364,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
                                mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!shape_is_known((*in_attrs)[0])) return false;
+  if (!ndim_is_known((*in_attrs)[0])) return false;
   const BroadcastAxesParam& param = nnvm::get<BroadcastAxesParam>(attrs.parsed);
   CHECK_EQ(param.axis.ndim() , param.size.ndim());
   mxnet::TShape &ishape = (*in_attrs)[0];

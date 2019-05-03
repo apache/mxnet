@@ -100,17 +100,17 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   }
   const mxnet::TShape &dshape = (*in_shape)[0];
   if (param.pooling_convention == pool_enum::kSame) {
-    CHECK_EQ(dshape.ndim(), 3U)
+    CHECK_EQ(dshape.ndim(), 3)
       << "Pooling: Input data should be 3D in (batch, channel, x)"
       << ". Currently 'same' supports Max Pooling 1-D";
     CHECK(param.pad[0] == 0 && param.pad[1] == 0 && param.pad[2] == 0)
       << "Same pooling convention disables the use of pad parameter.";
   }
-  CHECK_GE(dshape.ndim(), 3U)
+  CHECK_GE(dshape.ndim(), 3)
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
-  CHECK_LE(dshape.ndim(), 5U)
+  CHECK_LE(dshape.ndim(), 5)
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";

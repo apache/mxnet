@@ -145,7 +145,7 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector *out_attrs) {
   using namespace mshadow;
   const mxnet::TShape &dshape = (*in_attrs)[embedding::kData];
-  if (!shape_is_known(dshape)) return false;
+  if (!ndim_is_known(dshape)) return false;
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight, Shape2(param.input_dim,
                                                            param.output_dim));
@@ -682,7 +682,7 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   const mxnet::TShape &arrshape = (*in_attrs)[take_::kArr];
   const mxnet::TShape &idxshape = (*in_attrs)[take_::kIdx];
-  if (!shape_is_known(idxshape)) return false;
+  if (!ndim_is_known(idxshape)) return false;
   const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
   if (param.mode == take_::kRaise) {
     LOG(FATAL) << "Raise is not supported for the time being...";
@@ -1075,7 +1075,7 @@ inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, (*out_attrs)[0]);
   }
   if ((*in_attrs)[0].ndim() == 0) return false;
-  CHECK_GE((*in_attrs)[0].ndim(), 2U) << "Data array must have at least 2 dimensional";
+  CHECK_GE((*in_attrs)[0].ndim(), 2) << "Data array must have at least 2 dimensional";
   if ((*out_attrs)[0].ndim() == 0) return false;
   CHECK_EQ((*in_attrs)[0].Size()/(*in_attrs)[0][(*in_attrs)[0].ndim()-1],
            (*out_attrs)[0].Size())
@@ -1170,7 +1170,7 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   // The shape of indices
   const mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!shape_is_known(ishape)) return false;
+  if (!ndim_is_known(ishape)) return false;
 
   int depth = 0;
   double on_value = 1.0;
