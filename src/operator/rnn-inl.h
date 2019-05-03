@@ -593,15 +593,15 @@ class RNNOp {
 
 
 #if USE_CUDNN_LSTM_PROJ
-    int host_workspace_bytes = 
+    int host_workspace_bytes =
       param_.batch_size_ * sizeof(IType) + param_.batch_size_ * sizeof(int);
 
-    Tensor<cpu, 1, char> host_workspace = 
-      ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1,char>(
+    Tensor<cpu, 1, char> host_workspace =
+      ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1, char>(
            Shape1(host_workspace_bytes));
 
     int *sequence_length_cpu_int = reinterpret_cast<int*>(host_workspace.dptr_);
-    IType *sequence_length_cpu_itype = 
+    IType *sequence_length_cpu_itype =
       reinterpret_cast<IType*>(host_workspace.dptr_ + sizeof(int) * param_.batch_size_);
 
     (void)sequence_length_cpu_int;
