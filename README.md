@@ -1,4 +1,4 @@
-# BMXNet v2 // Hasso Plattner Institute
+# BMXNet 2 // Hasso Plattner Institute
 
 A fork of the deep learning framework [mxnet](http://mxnet.io) to study and implement quantization and binarization in neural networks.
 
@@ -111,9 +111,9 @@ The rest of our code resides in the following folders/files:
 
 For more details see the [Changelog](CHANGELOG.md).
 
-### Citing BMXNet-v2
+### Citing BMXNet 2
 
-Please cite [our paper](https://arxiv.org/abs/1812.01965) about BMXNet-v2 in your publications if it helps your research work:
+Please cite [our paper](https://arxiv.org/abs/1812.01965) about BMXNet 2 in your publications if it helps your research work:
 
 ```text
 @article{bmxnetv2,
