@@ -22,7 +22,7 @@ from __future__ import absolute_import as _abs
 
 import ctypes
 from ..base import _LIB
-from ..base import c_str_array, c_handle_array, c_str, mx_uint
+from ..base import c_str_array, c_handle_array, c_str, mx_uint, _is_np_compat_op
 from ..base import SymbolHandle
 from ..base import check_call
 

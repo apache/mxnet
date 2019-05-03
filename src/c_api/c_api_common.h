@@ -163,4 +163,10 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
 extern const std::vector<std::string> kHiddenKeys;
 }  // namespace mxnet
 
+inline bool IsNumpyCompatOp(const nnvm::Op* op) {
+  static const auto& is_np_compat =
+      nnvm::Op::GetAttr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible");
+  return is_np_compat.get(op, false);
+}
+
 #endif  // MXNET_C_API_C_API_COMMON_H_
