@@ -53,7 +53,7 @@ namespace rnn_enum {
   enum RNNOpInputs {kData, kParams, kState, kStateCell, kSequenceLength};
   enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
   enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
-  enum RNNOpResource {kCuDNNDropoutDescSpace};
+  enum RNNOpResource {kTempSpace, kCuDNNDropoutDescSpace};
 }
 
 inline int GetRnnParamSize(int num_layer,
@@ -228,8 +228,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
 
 inline size_t GetNumInputArguments(RNNParam param_) {
   size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4U : 3U;
-  if (param_.use_sequence_length)
-    num_inputs += 1U;
+  if (param_.use_sequence_length) num_inputs += 1U;
   return num_inputs;
 }
 
@@ -588,8 +587,18 @@ class RNNOp {
     DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
 
     DType* hy_ptr = NULL;
-    if (param_.state_outputs)
+    if (param_.state_outputs) {
       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
+    }
+
+    int host_workspace_bytes = 
+      param_.batch_size_ * sizeof(IType) + 
+      param_.batch_size_ * sizeof(int);
+
+    Tensor<cpu, 1, char> host_workspace = ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1, char>(Shape1(host_workspace_bytes));
+
+    IType *sequence_length_cpu_itype = reinterpret_cast<IType*>(host_workspace.dptr_);
+    int *sequence_length_cpu_int = reinterpret_cast<int*>(host_workspace.dptr_ + sizeof(IType) * param_.batch_size_);
 
     if (param_.use_sequence_length) {
 #if USE_VAR_SEQ_LENGTH
@@ -600,16 +609,16 @@ class RNNOp {
 
       // We can assume we are on GPU for now
       size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-      if  (param_.mode != rnn_enum::kLstm)
+      if  (param_.mode != rnn_enum::kLstm) {
         seq_len_input_idx -= 1;
+      }
       IType *sequence_length_ptr_gpu = (in_data[seq_len_input_idx].get<xpu, 1, IType>(s)).dptr_;
 
       // Need to copy from GPU -> CPU, becuase cuDNN API requires this array on CPU memory.
       // TODO(stephenrawls): In future, allow users to pass this array on the CPU so we don't have
       //   to do this copy For now however it is required as several places in backend assume that
       //   all data arrays share the same context.
-      sequence_length_array_cpu.resize(param_.batch_size_);
-      CUDA_CALL(cudaMemcpy(sequence_length_array_cpu.data(),  sequence_length_ptr_gpu,
+      CUDA_CALL(cudaMemcpy(sequence_length_cpu_itype,  sequence_length_ptr_gpu,
                            sizeof(IType) * param_.batch_size_, cudaMemcpyDeviceToHost));
 #else
       LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN version >= 7.2";
@@ -617,10 +626,12 @@ class RNNOp {
     }
     DType* cx_ptr = NULL;
     DType* cy_ptr = NULL;
-    if (param_.mode == rnn_enum::kLstm)
+    if (param_.mode == rnn_enum::kLstm) {
       cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
-    if (param_.mode == rnn_enum::kLstm && param_.state_outputs)
+    }
+    if (param_.mode == rnn_enum::kLstm && param_.state_outputs) {
       cy_ptr = (out_data[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
+    }
     CHECK_EQ(x.CheckContiguous(), true);
     CHECK_EQ(w.CheckContiguous(), true);
     CHECK_EQ(hx.CheckContiguous(), true);
@@ -632,17 +643,19 @@ class RNNOp {
     }
 
 #if USE_CUDNN_LSTM_PROJ
-    std::vector<int> seqLengthArray;
 
     cudnnRNNDataLayout_t layout_t;
 
     if (param_.use_sequence_length) {
-      // sequence_length_ptr_gpu is of type Itype, need to convert to vector<int>
-      seqLengthArray = std::vector<int>(sequence_length_array_cpu.begin(),
-                                        sequence_length_array_cpu.end());
+      // Note: sequence_length_ptr_cpu is of type Itype, not nescesarily int. So can't do a memcpy here
+      for (int i = 0; i < param_.batch_size_; ++i) {
+        sequence_length_cpu_int[i] = sequence_length_cpu_itype[i];
+      }
       layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED;
     } else {
-      seqLengthArray = std::vector<int>(param_.batch_size_, param_.seq_length_);
+      for (int i = 0; i < param_.batch_size_; ++i) {
+        sequence_length_cpu_int[i] = param_.seq_length_;
+      }
       layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED;
     }
 
@@ -652,7 +665,7 @@ class RNNOp {
                                          param_.seq_length_,
                                          param_.batch_size_,
                                          param_.input_size_,
-                                         seqLengthArray.data(),
+                                         sequence_length_cpu_int,
                                          reinterpret_cast<void*>(&padding_fill_)));
     int out_size =
       (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
@@ -663,7 +676,7 @@ class RNNOp {
                                          param_.seq_length_,
                                          param_.batch_size_,
                                          out_size,
-                                         seqLengthArray.data(),
+                                         sequence_length_cpu_int,
                                          reinterpret_cast<void*>(&padding_fill_)));
     if (ctx.is_train) {
       CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
@@ -672,7 +685,7 @@ class RNNOp {
                                            param_.seq_length_,
                                            param_.batch_size_,
                                            param_.input_size_,
-                                           seqLengthArray.data(),
+                                           sequence_length_cpu_int,
                                            reinterpret_cast<void*>(&padding_fill_)));
       CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
                                            dtype_,
@@ -680,7 +693,7 @@ class RNNOp {
                                            param_.seq_length_,
                                            param_.batch_size_,
                                            out_size,
-                                           seqLengthArray.data(),
+                                           sequence_length_cpu_int,
                                            reinterpret_cast<void*>(&padding_fill_)));
     }
 #endif
@@ -948,8 +961,9 @@ class RNNOp {
       cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
       dcx_ptr = (in_grad[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
     }
-    if ((param_.mode == rnn_enum::kLstm) && param_.state_outputs)
+    if ((param_.mode == rnn_enum::kLstm) && param_.state_outputs) {
         dcy_ptr = (out_grad[rnn_enum::kStateCellOut].get<xpu, 3, DType>(s)).dptr_;
+    }
 
     #if MXNET_USE_CUDNN_RNN && defined(__CUDACC__)
     if (!init_cudnn_) {
@@ -1316,8 +1330,9 @@ class RNNOp {
         }
       #if CUDNN_VERSION >= 7200
             if (GetEnvAllowTensorCore() && GetEnvAllowTensorCoreConversion() &&
-                (DataType<DType>::kFlag != kFloat16))
+                (DataType<DType>::kFlag != kFloat16)) {
               math_type = CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION;
+            }
       #endif
         CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
       #endif
@@ -1429,7 +1444,6 @@ class RNNOp {
   cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
   DType padding_fill_ = 0;
   #endif
-  std::vector<IType> sequence_length_array_cpu;
   cudnnTensorDescriptor_t hx_desc_, cx_desc_;
   cudnnTensorDescriptor_t hy_desc_, cy_desc_;
   cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;
@@ -1458,8 +1472,7 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
   int itype = dtype;
   if (param.use_sequence_length) {
     itype = in_types[rnn_enum::kSequenceLength];
-    if (param.mode == rnn_enum::kLstm)
-      itype -= 1;
+    if (param.mode == rnn_enum::kLstm) itype -= 1;
   }
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {

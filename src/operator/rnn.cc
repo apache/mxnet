@@ -93,8 +93,7 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   // Check on sequence_length shape if using
   if (param_.use_sequence_length) {
     size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-    if (param_.mode != rnn_enum::kLstm)
-      --seq_len_input_idx;
+    if (param_.mode != rnn_enum::kLstm) --seq_len_input_idx;
 
     SHAPE_ASSIGN_CHECK(*in_shape, seq_len_input_idx, Shape1(batch_size));
   }
@@ -140,8 +139,7 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), GetNumInputArguments(param_));
 
   size_t seq_len_input_idx = rnn_enum::kSequenceLength;
-  if (param_.mode != rnn_enum::kLstm)
-    --seq_len_input_idx;
+  if (param_.mode != rnn_enum::kLstm)  --seq_len_input_idx;
 
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
@@ -162,8 +160,9 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
   if (param_.state_outputs) {
     out_type->push_back(dtype);
     // Deal with lstm cell state
-    if (param_.mode == rnn_enum::kLstm)
+    if (param_.mode == rnn_enum::kLstm) {
       out_type->push_back(dtype);
+    }
   }
   return true;
 }
@@ -277,12 +276,11 @@ The definition of GRU here is slightly different from paper but compatible with 
   [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
     std::vector<ResourceRequest> request;
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-    if (param.p == 0) return request;
     if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN_RNN
-      if (1.0f - param.p > 0) {
+      request.emplace_back(ResourceRequest::kTempSpace);
+      if (param.p != 0 && 1.0f - param.p > 0) {
         request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
-        return request;
       }
 #endif
     }
