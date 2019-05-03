@@ -46,7 +46,6 @@ std::string Shape2Str2(const mxnet::TShape &shape) {
   return os.str();
 }
 
-
 DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
@@ -481,7 +480,7 @@ bool CachedOp::SetBackwardGraph(
   exec::DevMaskVector dev_mask(idx.num_nodes(), default_ctx.dev_mask());
   match &= CheckAndInferStorageType(&g, std::move(dev_mask), std::move(stypes),
                                     false, node_range, entry_range);
-  std::cout << "match = " << match << std::endl;
+  // std::cout << "match = " << match << std::endl;
   if (!match) {
     g.attrs.erase("backward_mem_plan");
   } else if (g.attrs.count("backward_mem_plan")) {
@@ -915,6 +914,14 @@ OpStatePtr CachedOp::Forward(
   static std::atomic<int> cnt{0};
   int tmp = ++cnt;
   std::cout << "CachedOp::Forward(cnt = " << tmp << ")" << std::endl;
+  std::cout << "\tinputs = " << std::endl;
+  for (const NDArray *array_ptr : inputs) {
+    std::cout << "\t\t" << Shape2Str2(array_ptr->shape()) << std::endl;
+  }
+  std::cout << "\toutputs = " << std::endl;
+  for (const NDArray *array_ptr : outputs) {
+    std::cout << "\t\t" <<Shape2Str2(array_ptr->shape()) << std::endl;
+  }
 
   CHECK_EQ(inputs.size(), num_inputs());
 
@@ -937,13 +944,13 @@ OpStatePtr CachedOp::Forward(
     if (config_.is_dynamic || CheckDynamicShapeExists(default_ctx, inputs, true)) {
       config_.is_dynamic = true;
       config_.static_alloc = false;
-      std::cout << "Doing NaiveForward" << std::endl;
+      // std::cout << "Doing NaiveForward" << std::endl;
       op_state = DynamicForward(default_ctx, inputs, outputs, true);
     } else if (config_.static_alloc) {
-      std::cout << "Doing StaticForward" << std::endl;
+      // std::cout << "Doing StaticForward" << std::endl;
       op_state = StaticForward(default_ctx, inputs, outputs);
     } else {
-      std::cout << "Doing DynamicForward" << std::endl;
+      // std::cout << "Doing DynamicForward" << std::endl;
       op_state = DynamicForward(default_ctx, inputs, outputs, false);
     }
   } catch (const dmlc::Error& e) {
@@ -963,6 +970,10 @@ OpStatePtr CachedOp::Forward(
         &save_inputs(), &save_outputs());
   }
   std::cout << "Done CachedOp::Forward(cnt = " << tmp << ")" << std::endl;
+  std::cout << "\toutputs = " << std::endl;
+  for (const NDArray *array_ptr : outputs) {
+    std::cout << "\t\t" <<Shape2Str2(array_ptr->shape()) << std::endl;
+  }
   return op_state;
 }
 
@@ -1147,10 +1158,14 @@ void CachedOp::Backward(
   static std::atomic<int> cnt{0};
   int tmp = ++cnt;
   std::cout << "CachedOp::Backward(cnt = " << tmp << ")" << std::endl;
+  std::cout << "\tinputs = " << std::endl;
   for (const NDArray *array_ptr : inputs) {
-    std::cout << Shape2Str2(array_ptr->shape()) << std::endl;
+    std::cout << "\t\t" << Shape2Str2(array_ptr->shape()) << std::endl;
   }
-
+  std::cout << "\toutputs = " << std::endl;
+  for (const NDArray *array_ptr : outputs) {
+    std::cout << "\t\t" <<Shape2Str2(array_ptr->shape()) << std::endl;
+  }
   CHECK(!Imperative::Get()->is_recording())
       << "CachedOp does not support higher order gradients. "
       << "If you want to do backward with create_graph=True please "
@@ -1170,7 +1185,7 @@ void CachedOp::Backward(
   }
 
   Engine::Get()->set_bulk_size(prev_bulk_size);
-  std::cout << "Done CachedOp::Backward(cnt = " << tmp << ")" << std::endl;
+  // std::cout << "Done CachedOp::Backward(cnt = " << tmp << ")" << std::endl;
 }
 
 /*

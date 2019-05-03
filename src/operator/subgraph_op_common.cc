@@ -24,6 +24,22 @@
 namespace mxnet {
 namespace op {
 
+static std::string Shape2Str(const mxnet::TShape &shape) {
+  if (shape.ndim() == -1) {
+    return "[UNK]";
+  }
+  std::ostringstream os;
+  os << "(";
+  for (int i = 0; i < (int) shape.ndim(); ++i) {
+    if (i > 0) {
+      os << ", ";
+    }
+    os << shape[i];
+  }
+  os << ")";
+  return os.str();
+}
+
 bool InferSubgraphDataType(const nnvm::Symbol &subgraph,
                            std::vector<int> *in_types,
                            std::vector<int> *out_types) {
@@ -245,6 +261,16 @@ void LoopState::Backward(int iter_no,
                          const std::vector<NDArray> &igrads) {
   using namespace nnvm;
   using namespace imperative;
+  std::cout << "==============" << std::endl;
+  std::cout << "ograds:" << std::endl;
+  for (const NDArray &array : ograds) {
+    std::cout << "\t" << Shape2Str(array.shape()) << std::endl;
+  }
+  std::cout << "igrads:" << std::endl;
+  for (const NDArray &array : igrads) {
+    std::cout << "\t" << Shape2Str(array.shape()) << std::endl;
+  }
+  std::cout << "==============" << std::endl;
 
   CHECK_GT(all_states.size(), iter_no)
       << "We didn't record the computation for iteration " << iter_no;

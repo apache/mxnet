@@ -1178,11 +1178,13 @@ def check_contrib_rnn(cell_type, num_states):
     res1.backward()
     trainer.step(batch_size)
 
-    configs = [
-            {},
-            {'inline_limit': 0},
-            {'static_alloc': True},
-            {'static_alloc': True, 'static_shape': True} ]
+    # configs = [
+    #         {},
+    #         {'inline_limit': 0},
+    #         {'static_alloc': True},
+    #         {'static_alloc': True, 'static_shape': True} ]
+
+    configs = [{}]
     for config in configs:
         layer = TestRNNLayer(cell_type, hidden_size)
         layer.initialize(ctx=default_context())
@@ -1191,10 +1193,11 @@ def check_contrib_rnn(cell_type, num_states):
         params2 = layer.collect_params()
         for key, val in orig_params1.items():
             params2[key].set_data(copy.deepcopy(val.data()))
-
+        print("################################################")
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
             res2 = layer(rnn_data, states)
+        print("################################################")
         print("res2.shape =", res2.shape)
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
         res2.backward()

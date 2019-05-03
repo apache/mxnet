@@ -23,6 +23,22 @@
 
 namespace {
 
+static std::string Shape2Str(const mxnet::TShape &shape) {
+  if (shape.ndim() == -1) {
+    return "[UNK]";
+  }
+  std::ostringstream os;
+  os << "(";
+  for (int i = 0; i < (int) shape.ndim(); ++i) {
+    if (i > 0) {
+      os << ", ";
+    }
+    os << shape[i];
+  }
+  os << ")";
+  return os.str();
+}
+
 std::vector<NDArray*> NodeInputs(const nnvm::IndexedGraph& idx,
                                  const int node_idx,
                                  const std::vector<NDArray*>& arrays) {
@@ -147,9 +163,17 @@ void RunGraph(
     if (node.source->op() == nullptr) {
       continue;
     }
-    std::cout << "\ti = " << i << std::endl;
+    std::cout << "RunGraph::i = " << i << ". Op name = " << node.source->attrs.name << std::endl;
     std::vector<NDArray*> ndinputs = NodeInputs(idx, i, arrays);
     std::vector<NDArray*> ndoutputs = NodeOutputs(idx, i, arrays);
+    std::cout << "\tinputs:" << std::endl;
+    for (const NDArray *array : ndinputs) {
+      std::cout << "\t\t" << Shape2Str(array->shape()) << std::endl;
+    }
+    std::cout << "\toutputs:" << std::endl;
+    for (const NDArray *array : ndoutputs) {
+      std::cout << "\t\t" << Shape2Str(array->shape()) << std::endl;
+    }
     std::vector<OpReqType> req = NodeReq(idx, i, array_reqs);
     Context ctx = ndoutputs[0]->ctx();
     auto invoke = [&](const OpStatePtr &state) {
