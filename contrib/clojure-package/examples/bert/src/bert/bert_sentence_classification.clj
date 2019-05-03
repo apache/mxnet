@@ -31,16 +31,12 @@
 
 (def model-path-prefix "data/static_bert_base_net")
 ;; epoch number of the model
-(def epoch 0)
-;; the vocabulary used in the model
-(def model-vocab "data/vocab.json")
-;; the input question
 ;; the maximum length of the sequence
 (def seq-length 128)
 
 (defn pre-processing
   "Preprocesses the sentences in the format that BERT is expecting"
-  [ctx idx->token token->idx train-item]
+  [idx->token token->idx train-item]
   (let [[sentence-a sentence-b label] train-item
        ;;; pre-processing tokenize sentence
         token-1 (bert-util/tokenize (string/lower-case sentence-a))
@@ -92,7 +88,7 @@
 
 (defn prepare-data
   "This prepares the senetence pairs into NDArrays for use in NDArrayIterator"
-  [dev]
+  []
   (let [raw-file (get-raw-data)
         vocab (bert-util/get-vocab)
         idx->token (:idx->token vocab)
@@ -101,7 +97,7 @@
                             (mapv #(vals (select-keys % [3 4 0])))
                             (rest) ;;drop header
                             (into []))
-        processed-datas (mapv #(pre-processing dev idx->token token->idx %) data-train-raw)]
+        processed-datas (mapv #(pre-processing idx->token token->idx %) data-train-raw)]
     {:data0s (slice-inputs-data processed-datas 0)
      :data1s (slice-inputs-data processed-datas 1)
      :data2s (slice-inputs-data processed-datas 2)
@@ -152,10 +148,10 @@
                                              :batch-end-callback (callback/speedometer batch-size 1)})})))
 
 (defn -main [& args]
-  (let [[dev] args]
+  (let [[dev num-epoch] args]
     (if (= dev ":gpu")
-      (train (context/gpu) 3)
-      (train (context/cpu) 3))))
+      (train (context/gpu) (or num-epoch 3))
+      (train (context/cpu) (or num-epoch 3)))))
 
 (comment
 
