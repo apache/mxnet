@@ -121,7 +121,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
   const NDArray &out = outputs[0];
   CHECK_EQ(axis, 0) << "Not supported yet";
   CHECK_EQ(data.shape()[axis], idx.shape()[0]);
-  CHECK_EQ(idx.shape().ndim(), 1U);
+  CHECK_EQ(idx.shape().ndim(), 1U);  // idx is required to be 1-d.
   // count the number of 1s in `idx`, so that we could know the output dimension
   size_t idx_size = idx.shape()[0];
   std::vector<int32_t> prefix_sum(idx_size, 0);

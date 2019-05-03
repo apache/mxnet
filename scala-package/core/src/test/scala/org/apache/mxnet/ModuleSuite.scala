@@ -23,6 +23,34 @@ import org.apache.mxnet.optimizer._
 import org.apache.mxnet.io._
 
 class ModuleSuite extends FunSuite with BeforeAndAfterAll {
+
+  class myModule(symbol : Symbol) extends Module (symbol) {
+    override def predictEveryBatch(evalData: DataIter,
+                                   numBatch: Int = 1, reset: Boolean = true):
+    IndexedSeq[IndexedSeq[NDArray]] = {
+      val data = IndexedSeq(
+        NDArray.ones(Shape(1, 10, 1)),
+        NDArray.ones(Shape(1, 10, 1)),
+        NDArray.ones(Shape(1, 10, 4))
+      )
+      List.fill(numBatch)(data).toIndexedSeq
+    }
+  }
+
+  test("predict") {
+    val sym = Symbol.Variable("data")
+    val mod = new myModule(sym)
+    val dummyIter = new NDArrayIter(IndexedSeq(NDArray.ones(1)))
+    var output = mod.predict(dummyIter, 1)
+    require(output(0).shape == Shape(1, 10, 1))
+    require(output(1).shape == Shape(1, 10, 1))
+    require(output(2).shape == Shape(1, 10, 4))
+    output = mod.predict(dummyIter, 2)
+    require(output(0).shape == Shape(2, 10, 1))
+    require(output(1).shape == Shape(2, 10, 1))
+    require(output(2).shape == Shape(2, 10, 4))
+  }
+
   test ("model dtype") {
     val dType = DType.Float32
     val dShape = Shape(3, 8, 7)
@@ -253,8 +281,8 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
 
     // create module
     val mod = new Module(x, contexts = Array(Context.cpu()))
-    mod.bind(dataShapes = trainData.provideData,
-      Option(trainData.provideLabel))
+    mod.bind(dataShapes = trainData.provideDataDesc,
+      Option(trainData.provideLabelDesc))
     mod.installMonitor(mon)
     val argParams = Map(
       "fc_0_weight" -> NDArray.array(Array(0.15f, 0.2f, 0.25f, 0.3f), Shape(2, 2)),

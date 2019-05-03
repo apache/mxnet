@@ -69,11 +69,11 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (w,), (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, 0))
     .describe("Convolution stride: (w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0, 0))
     .describe("Convolution dilate: (w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, 0))
     .describe("Zero pad for convolution: (w,), (h, w) or (d, h, w). Defaults to no padding.");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("Convolution filter(channel) number");
@@ -209,9 +209,9 @@ class ConvolutionOp {
       Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
         .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
       // calculate the shape of col_buffer
-      mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1);
+      mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1, 1);
       col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
-      for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
+      for (int i = 1; i < col_buffer_shape.ndim(); ++i) {
         col_buffer_shape[i] = out_data[0].shape_[i+1];
       }
       // create a column buffer using workspace and col_buffer_shape
@@ -295,9 +295,9 @@ class ConvolutionOp {
       Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
         .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
       // calculate the shape of col_buffer
-      mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1);
+      mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1, 1);
       col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
-      for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
+      for (int i = 1; i < col_buffer_shape.ndim(); ++i) {
         col_buffer_shape[i] = out_grad[conv::kData].shape_[i+1];
       }
       // create a column buffer using workspace and col_buffer_shape
@@ -342,10 +342,10 @@ class ConvolutionOp {
   void LayerSetUp(const mxnet::TShape& ishape, const mxnet::TShape& oshape) {
     channel_axis_ = 1;  // hard code channel axis
     const index_t first_spatial_axis = channel_axis_ + 1;
-    const index_t num_axes = param_.kernel.ndim() + 2;
+    const int num_axes = param_.kernel.ndim() + 2;
     num_spatial_axes_ = num_axes - first_spatial_axis;
     is_1x1_ = true;
-    for (index_t i = 0; i < param_.kernel.ndim(); ++i) {
+    for (int i = 0; i < param_.kernel.ndim(); ++i) {
       is_1x1_ &= param_.kernel[i] == 1 && param_.stride[i] == 1 && param_.pad[i] == 0;
       if (!is_1x1_) break;
     }

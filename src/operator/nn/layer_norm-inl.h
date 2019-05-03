@@ -167,7 +167,7 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   int axis = param.axis;
   if (axis < 0) {
-    axis += static_cast<int>(inputs[0].ndim());
+    axis += inputs[0].ndim();
   }
   CHECK(axis >= 0 && axis < inputs[0].ndim()) << "Channel axis out of range: " << param.axis;
   Stream<xpu> *s = ctx.get_stream<xpu>();

@@ -1,5 +1,5 @@
-#ifndef MXNET_EXECUTOR_ONNX_TO_TENSORRT_H_
-#define MXNET_EXECUTOR_ONNX_TO_TENSORRT_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_ONNX_TO_TENSORRT_H_
+#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_ONNX_TO_TENSORRT_H_
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,7 +20,7 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file onnx_to_tensorrt.h
  * \brief TensorRT integration with the MXNet executor
  * \author Marek Kolodziej, Clement Fuji Tsang
@@ -28,13 +28,15 @@
 
 #if MXNET_USE_TENSORRT
 
+#include <onnx-tensorrt/NvOnnxParser.h>
+#include <NvInfer.h>
+
 #include <fstream>
 #include <iostream>
-#include <NvInfer.h>
 #include <sstream>
 #include <string>
-
-#include "../operator/contrib/tensorrt-inl.h"
+#include <ctime>
+#include <tuple>
 
 namespace onnx_to_tensorrt {
 
@@ -64,7 +66,7 @@ class TRT_Logger : public nvinfer1::ILogger {
         }
 };
 
-nvinfer1::ICudaEngine* onnxToTrtCtx(
+std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*> onnxToTrtCtx(
         const std::string& onnx_model,
         int32_t max_batch_size = 32,
         size_t max_workspace_size = 1L << 30,
@@ -74,4 +76,4 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
 
 #endif  // MXNET_USE_TENSORRT
 
-#endif  // MXNET_EXECUTOR_ONNX_TO_TENSORRT_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_TENSORRT_ONNX_TO_TENSORRT_H_

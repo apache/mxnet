@@ -63,6 +63,30 @@ NNVM_REGISTER_OP(_linalg_sumlogdiag)
 NNVM_REGISTER_OP(_backward_linalg_sumlogdiag)
 .set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 2, 1, sumlogdiag_backward>);
 
+NNVM_REGISTER_OP(_linalg_extractdiag)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 1, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_backward_linalg_extractdiag)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 1, 2, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_linalg_makediag)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 1, 2, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_backward_linalg_makediag)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 1, 1, 1, copydiag>);
+
+NNVM_REGISTER_OP(_linalg_extracttrian)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 1, 1, 1, copytrian>);
+
+NNVM_REGISTER_OP(_backward_linalg_extracttrian)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 1, 2, 1, 1, copytrian>);
+
+NNVM_REGISTER_OP(_linalg_maketrian)
+.set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 1, 2, 1, 1, copytrian>);
+
+NNVM_REGISTER_OP(_backward_linalg_maketrian)
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 1, 1, 1, copytrian>);
+
 NNVM_REGISTER_OP(_linalg_potri)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, potri>);
 

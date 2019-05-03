@@ -1015,9 +1015,9 @@ class CuDNNConvolutionOp {
   // e.g. {shape[0], shape[1], shape[2]} -> {shape[1]*shape[2], shape[2], 1}
   template <int dim>
   inline Shape<dim> Strides(const mxnet::TShape &s) {
-    uint32_t ndim = s.ndim();
-    mxnet::TShape strides(ndim);
-    for (uint32_t i = 0; i != ndim; ++i)
+    int ndim = s.ndim();
+    mxnet::TShape strides(ndim, -1);
+    for (int i = 0; i != ndim; ++i)
       strides[i] = s.ProdShape(i+1, ndim);
     return strides.get<dim>();
   }

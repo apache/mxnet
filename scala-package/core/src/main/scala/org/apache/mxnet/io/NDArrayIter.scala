@@ -161,8 +161,7 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
   override def next(): DataBatch = {
     if (hasNext) {
       cursor += dataBatchSize
-      new DataBatch(getData(), getLabel(), getIndex(), getPad(),
-        null, null, null)
+      new DataBatch(getData(), getLabel(), getIndex(), getPad())
     } else {
       throw new NoSuchElementException
     }

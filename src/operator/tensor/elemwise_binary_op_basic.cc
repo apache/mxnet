@@ -85,6 +85,9 @@ MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
                             return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};})
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_add)
 .add_alias("_add").add_alias("_plus").add_alias("_Plus")
+.set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"output"};
+})
 .describe(R"code(Adds arguments element-wise.
 
 The storage type of ``elemwise_add`` output depends on storage types of inputs

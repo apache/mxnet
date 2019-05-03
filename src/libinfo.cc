@@ -86,7 +86,9 @@ class FeatureSet {
     // Misc
     feature_bits.set(CAFFE, MXNET_USE_CAFFE);
     feature_bits.set(DIST_KVSTORE, MXNET_USE_DIST_KVSTORE);
+    feature_bits.set(INT64_TENSOR_SIZE, MXNET_USE_INT64_TENSOR_SIZE);
     feature_bits.set(SIGNAL_HANDLER, MXNET_USE_SIGNAL_HANDLER);
+
 #ifndef NDEBUG
     feature_bits.set(DEBUG);
 #endif
@@ -154,6 +156,7 @@ const std::vector<std::string> EnumNames::names = {
   "PROFILER",
   "DIST_KVSTORE",
   "CXX14",
+  "INT64_TENSOR_SIZE",
   "SIGNAL_HANDLER",
   "DEBUG",
 };

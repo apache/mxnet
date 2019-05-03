@@ -144,7 +144,6 @@ ifeq ($(USE_MKLDNN), 1)
 	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
 
-
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1
@@ -189,6 +188,11 @@ ifeq ($(USE_OPERATOR_TUNING), 1)
 	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
 
+ifeq ($(USE_INT64_TENSOR_SIZE), 1)
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=1
+else
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=0
+endif
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this
@@ -411,14 +415,6 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-#sparse-matrix
-ifeq ($(USE_BLAS), mkl)
-	SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
-	LIB_DEP += $(SPARSE_MATRIX_DIR)/libsparse_matrix.so
-	CFLAGS += -I$(SPARSE_MATRIX_DIR)
-	LDFLAGS += -L$(SPARSE_MATRIX_DIR) -lsparse_matrix -Wl,-rpath,'$${ORIGIN}'
-endif
-
 .PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
@@ -556,29 +552,10 @@ ifeq ($(UNAME_S), Darwin)
 endif
 endif
 
-ifeq ($(USE_BLAS), mkl)
-ifeq ($(UNAME_S), Darwin)
-	install_name_tool -change '@rpath/libsparse_matrix.dylib' '@loader_path/libsparse_matrix.dylib' $@
-endif
-endif
-
 $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
 	$(MAKE) CXX="$(CXX)" DEPS_PATH="$(DEPS_PATH)" -C $(PS_PATH) ps
-
-ifeq ($(USE_BLAS), mkl)
-$(SPARSE_MATRIX_DIR)/libsparse_matrix.so: SPARSE_MATRIX
-
-SPARSE_MATRIX:
-ifeq ($(USE_INTEL_PATH), NONE)
-	$(MAKE) -C $(SPARSE_MATRIX_DIR)
-else
-	$(MAKE) -C $(SPARSE_MATRIX_DIR) USE_INTEL_PATH=$(USE_INTEL_PATH)
-endif
-	mkdir -p $(ROOTDIR)/lib
-	cp $(SPARSE_MATRIX_DIR)/libsparse_matrix.so $(ROOTDIR)/lib/
-endif
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
@@ -615,7 +592,7 @@ cpplint:
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
-	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 doc: docs
 
@@ -654,10 +631,6 @@ rpkg:
 		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
 		cp -rf lib/libiomp5.so R-package/inst/libs; \
 		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
-	fi
-
-	if [ -e "lib/libsparse_matrix.so" ]; then \
-		cp -rf lib/libsparse_matrix.so R-package/inst/libs; \
 	fi
 
 	mkdir -p R-package/inst/include
@@ -705,7 +678,6 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
-	cd $(SPARSE_MATRIX_DIR); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
@@ -716,7 +688,6 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
-	cd $(SPARSE_MATRIX_DIR); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif

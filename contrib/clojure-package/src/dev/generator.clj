@@ -29,6 +29,7 @@
 
 
 (defn clojure-case
+  "Transforms a scala string (function name) to clojure case"
   [string]
   (-> string
       (clojure.string/replace #"(\s+)([A-Z][a-z]+)" "$1-$2")
@@ -57,10 +58,9 @@
        count
        pos?))
 
-
 (defn increment-param-name [pname]
   (if-let [num-str (re-find #"-\d" pname)]
-    (str 
+    (str
      (first (clojure.string/split pname #"-"))
      "-"
      (inc (Integer/parseInt (last (clojure.string/split num-str #"-")))))
@@ -123,18 +123,40 @@
     (.write w "\n\n")
     (.write w "\n\n")
   (doseq [f functions]
-    (clojure.pprint/pprint f w)
+    (let [fstr (-> f
+                   clojure.pprint/pprint
+                   with-out-str
+                   (clojure.string/replace #"\\n\\n" "\n"))]
+      (.write w fstr))
     (.write w "\n"))))
+
+(defn remove-prefix
+  [prefix s]
+  (let [regex (re-pattern (str prefix "(.*)"))
+        replacement "$1"]
+  (clojure.string/replace s regex replacement)))
+
+(defn in-namespace-random? [op-name]
+  (or (clojure.string/includes? op-name "random_")
+      (clojure.string/includes? op-name "sample_")))
+
+(defn op-name->namespace-type [op-name]
+  (cond
+    (#{"uniform" "normal"} op-name)              :deprecated
+    (clojure.string/includes? op-name "random_") :random
+    (clojure.string/includes? op-name "sample_") :random
+    :else                                        :core))
 
 ;;;;;;; Common operations
 
 (def libinfo (Base/_LIB))
+
 (def op-names
   (let [l ($ ListBuffer/empty)]
-    (do (.mxListAllOpNames libinfo l)
-        (remove #(or (= "Custom" %)
-                     (re-matches #"^_.*" %))
-                (util/buffer->vec l)))))
+    (.mxListAllOpNames libinfo l)
+    (->> l
+         (util/buffer->vec)
+         (remove #(or (= "Custom" %) (re-matches #"^_.*" %))))))
 
 (defn- parse-arg-type [s]
   (let [[_ var-arg-type _ set-arg-type arg-spec _ type-req _ default-val] (re-find #"(([\w-\[\]\s]+)|\{([^}]+)\})\s*(\([^)]+\))?(,\s*(optional|required)(,\s*default=(.*))?)?" s)]
@@ -284,8 +306,6 @@
      `(~'defn ~function-name
        ~@(remove nil? (gen-symbol-function-arity op-name op-values function-name))))))
 
-
-
 (def symbol-gen-ns "(ns org.apache.clojure-mxnet.symbol
   (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
                             min repeat reverse set sort take to-array empty sin
@@ -296,7 +316,9 @@
 
 (defn generate-symbol-file []
   (println "Generating symbol file")
-  (write-to-file all-symbol-functions symbol-gen-ns "src/org/apache/clojure_mxnet/gen/symbol.clj"))
+  (write-to-file all-symbol-functions
+                 symbol-gen-ns
+                 "src/org/apache/clojure_mxnet/gen/symbol.clj"))
 
 ;;;;;;; NDArray
 
@@ -318,20 +340,16 @@
        count
        pos?))
 
-
 (def ndarray-public-to-hand-gen
   (filter is-ndarray-hand-gen? ndarray-public-no-default))
 (def ndarray-public-to-gen
   (get-public-to-gen-methods ndarray-public-to-hand-gen
                              ndarray-public-no-default))
 
-
 (count ndarray-public-to-hand-gen) ;=> 15
 (count ndarray-public-to-gen) ;=> 486
 
 (->> ndarray-public-to-hand-gen (map :name) (into #{}))
-
-
 
 (defn gen-ndarray-function-arity [op-name op-values]
   (for [[param-count info] op-values]
@@ -376,7 +394,8 @@
 (def all-ndarray-functions
   (gen-ndarray-functions ndarray-public-to-gen))
 
-(def ndarray-gen-ns "(ns org.apache.clojure-mxnet.ndarray
+(def ndarray-gen-ns
+  "(ns org.apache.clojure-mxnet.ndarray
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
                             min repeat reverse set sort take to-array empty shuffle
                             ref])
@@ -390,6 +409,17 @@
                  "src/org/apache/clojure_mxnet/gen/ndarray.clj"))
 
 ;;;;;;; SymbolAPI
+
+(defn fn-name->random-fn-name
+  [fn-name]
+  (cond
+    (clojure.string/starts-with? fn-name "-random-")
+    (remove-prefix "-random-" fn-name)
+
+    (clojure.string/starts-with? fn-name "-sample-")
+    (str (remove-prefix "-sample-" fn-name) "-like")
+
+    :else fn-name))
 
 (defn symbol-api-coerce-param
   [{:keys [name sym type optional?]}]
@@ -431,44 +461,80 @@
        (~(symbol (str "SymbolAPI/" op-name))
         ~@coerced-params)))))
 
-(defn gen-symbol-api-function [op-name]
-  (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
-        params (mapv (fn [{:keys [name type optional?] :as opts}]
-                       (assoc opts
-                              :sym (symbol name)
-                              :optional? (or optional?
-                                             (= "NDArray-or-Symbol" type))))
-                     (conj args
-                           {:name "name"
-                            :type "String"
-                            :optional? true
-                            :description "Name of the symbol"}
-                           {:name "attr"
-                            :type "Map[String, String]"
-                            :optional? true
-                            :description "Attributes of the symbol"}))
-        doc (gen-symbol-api-doc fn-description params)
-        default-call (gen-symbol-api-default-arity op-name params)]
-    `(~'defn ~(symbol fn-name)
-      ~doc
-      ~@default-call)))
+(defn symbol-api-gen-ns
+  [random-namespace?]
+  (str
+    "(ns\n"
+    "  ^{:doc \"Experimental\"}\n"
+    (if random-namespace?
+      "  org.apache.clojure-mxnet.symbol-random-api\n"
+      "  org.apache.clojure-mxnet.symbol-api\n")
+    "  (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max\n"
+    "                            min repeat reverse set sort take to-array empty sin\n"
+    "                            get apply shuffle ref])\n"
+    "  (:require [org.apache.clojure-mxnet.util :as util]\n"
+    "            [org.apache.clojure-mxnet.shape :as mx-shape])\n"
+    "  (:import (org.apache.mxnet SymbolAPI)))"))
 
-(def all-symbol-api-functions
-  (mapv gen-symbol-api-function op-names))
+(defn make-gen-symbol-api-function
+  [{:keys [fn-name->fn-name] :or {fn-name->fn-name identity}}]
+  (fn [op-name]
+    (let [{:keys [fn-name fn-description args]}
+          (-> op-name (gen-op-info) (update :fn-name fn-name->fn-name))
+          params (mapv (fn [{:keys [name type optional?] :as opts}]
+                         (assoc opts
+                                :sym (symbol name)
+                                :optional? (or optional?
+                                               (= "NDArray-or-Symbol" type))))
+                       (conj args
+                             {:name "name"
+                              :type "String"
+                              :optional? true
+                              :description "Name of the symbol"}
+                             {:name "attr"
+                              :type "Map[String, String]"
+                              :optional? true
+                              :description "Attributes of the symbol"}))
+          doc (clojure.string/join
+                "\n\n  "
+                (-> (gen-symbol-api-doc fn-description params)
+                    (clojure.string/split #"\n")))
+          default-call (gen-symbol-api-default-arity op-name params)]
+      `(~'defn ~(symbol fn-name)
+         ~doc
+         ~@default-call))))
 
-(def symbol-api-gen-ns "(ns
-  ^{:doc \"Experimental\"}
-  org.apache.clojure-mxnet.symbol-api
-  (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
-                            min repeat reverse set sort take to-array empty sin
-                            get apply shuffle ref])
-  (:require [org.apache.clojure-mxnet.util :as util]
-            [org.apache.clojure-mxnet.shape :as mx-shape])
-  (:import (org.apache.mxnet SymbolAPI)))")
+(def gen-symbol-api-function
+  (make-gen-symbol-api-function {}))
 
-(defn generate-symbol-api-file []
+(def gen-symbol-random-api-function
+  (make-gen-symbol-api-function {:fn-name->fn-name fn-name->random-fn-name}))
+
+(defn all-symbol-api-functions [op-names]
+  (->> op-names
+       (filter #(= :core (op-name->namespace-type %)))
+       (mapv gen-symbol-api-function)))
+
+(count (all-symbol-api-functions op-names)) ;215
+
+(defn all-symbol-random-api-functions [op-names]
+  (->> op-names
+       (filter #(= :random (op-name->namespace-type %)))
+       (mapv gen-symbol-random-api-function)))
+
+(count (all-symbol-random-api-functions op-names)) ;16
+
+(defn generate-symbol-api-file [op-names]
   (println "Generating symbol-api file")
-  (write-to-file all-symbol-api-functions symbol-api-gen-ns "src/org/apache/clojure_mxnet/gen/symbol_api.clj"))
+  (write-to-file (all-symbol-api-functions op-names)
+                 (symbol-api-gen-ns false)
+                 "src/org/apache/clojure_mxnet/gen/symbol_api.clj"))
+
+(defn generate-symbol-random-api-file [op-names]
+  (println "Generating symbol-random-api file")
+  (write-to-file (all-symbol-random-api-functions op-names)
+                 (symbol-api-gen-ns true)
+                 "src/org/apache/clojure_mxnet/gen/symbol_random_api.clj"))
 
 ;;;;;;; NDArrayAPI
 
@@ -512,54 +578,94 @@
     `(~(mapv :sym req-params)
       (~(symbol fn-name) ~req-args))))
 
-(defn gen-ndarray-api-function [op-name]
-  (let [{:keys [fn-name fn-description args]} (gen-op-info op-name)
-        params (mapv (fn [{:keys [name] :as opts}]
-                       (assoc opts :sym (symbol name)))
-                     (conj args {:name "out"
-                                 :type "NDArray-or-Symbol"
-                                 :optional? true
-                                 :description "Output array."}))
-        doc (gen-ndarray-api-doc fn-description params)
-        opt-params (filter :optional? params)
-        req-params (remove :optional? params)
-        req-call (gen-ndarray-api-required-arity fn-name req-params)
-        default-call (gen-ndarray-api-default-arity op-name params)]
-    (if (= 1 (count req-params))
-      `(~'defn ~(symbol fn-name)
-        ~doc
-        ~@default-call)
-      `(~'defn ~(symbol fn-name)
-        ~doc
-        ~req-call
-        ~default-call))))
+(defn make-gen-ndarray-api-function
+  [{:keys [fn-name->fn-name] :or {fn-name->fn-name identity}}]
+  (fn [op-name]
+    (let [{:keys [fn-name fn-description args]}
+          (-> op-name (gen-op-info) (update :fn-name fn-name->fn-name))
+          params (mapv (fn [{:keys [name] :as opts}]
+                         (assoc opts :sym (symbol name)))
+                       (conj args {:name "out"
+                                   :type "NDArray-or-Symbol"
+                                   :optional? true
+                                   :description "Output array."}))
+          doc (clojure.string/join
+                "\n\n  "
+                (-> (gen-ndarray-api-doc fn-description params)
+                    (clojure.string/split #"\n")))
+          opt-params (filter :optional? params)
+          req-params (remove :optional? params)
+          req-call (gen-ndarray-api-required-arity fn-name req-params)
+          default-call (gen-ndarray-api-default-arity op-name params)]
+      (if (= 1 (count req-params))
+        `(~'defn ~(symbol fn-name)
+           ~doc
+           ~@default-call)
+        `(~'defn ~(symbol fn-name)
+           ~doc
+           ~req-call
+           ~default-call)))))
 
-(def all-ndarray-api-functions
-  (mapv gen-ndarray-api-function op-names))
+(def gen-ndarray-api-function
+  (make-gen-ndarray-api-function {}))
 
-(def ndarray-api-gen-ns "(ns
-  ^{:doc \"Experimental\"}
-  org.apache.clojure-mxnet.ndarray-api
-  (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
-                            min repeat reverse set sort take to-array empty shuffle
-                            ref])
-  (:require [org.apache.clojure-mxnet.shape :as mx-shape]
-            [org.apache.clojure-mxnet.util :as util])
-  (:import (org.apache.mxnet NDArrayAPI)))")
+(def gen-ndarray-random-api-function
+  (make-gen-ndarray-api-function {:fn-name->fn-name fn-name->random-fn-name}))
 
+(defn all-ndarray-api-functions [op-names]
+  (->> op-names
+       (filter #(= :core (op-name->namespace-type %)))
+       (mapv gen-ndarray-api-function)))
 
-(defn generate-ndarray-api-file []
+(count (all-ndarray-api-functions op-names)) ; 213
+
+(defn all-ndarray-random-api-functions [op-names]
+  (->> op-names
+       (filter #(= :random (op-name->namespace-type %)))
+       (mapv gen-ndarray-random-api-function)))
+
+(count (all-ndarray-random-api-functions op-names)) ;16
+
+(defn ndarray-api-gen-ns [random-namespace?]
+  (str
+    "(ns\n"
+    "  ^{:doc \"Experimental\"}\n"
+    (if random-namespace?
+      "  org.apache.clojure-mxnet.ndarray-random-api\n"
+      "  org.apache.clojure-mxnet.ndarray-api\n")
+    "  (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max\n"
+    "                            min repeat reverse set sort take to-array empty shuffle\n"
+    "                            ref])\n"
+    "  (:require [org.apache.clojure-mxnet.shape :as mx-shape]\n"
+    "            [org.apache.clojure-mxnet.util :as util])\n"
+    "  (:import (org.apache.mxnet NDArrayAPI)))"))
+
+(defn generate-ndarray-api-file [op-names]
   (println "Generating ndarray-api file")
-  (write-to-file all-ndarray-api-functions
-                 ndarray-api-gen-ns
+  (write-to-file (all-ndarray-api-functions op-names)
+                 (ndarray-api-gen-ns false)
                  "src/org/apache/clojure_mxnet/gen/ndarray_api.clj"))
+
+(defn generate-ndarray-random-api-file [op-names]
+  (println "Generating ndarray-random-api file")
+  (write-to-file (all-ndarray-random-api-functions op-names)
+                 (ndarray-api-gen-ns true)
+                 "src/org/apache/clojure_mxnet/gen/ndarray_random_api.clj"))
+
 
 ;;; autogen the files
 (do
   (generate-ndarray-file)
-  (generate-ndarray-api-file)
+
+  ;; NDArrayAPI
+  (generate-ndarray-api-file op-names)
+  (generate-ndarray-random-api-file op-names)
+
   (generate-symbol-file)
-  (generate-symbol-api-file))
+
+  ;; SymbolAPI
+  (generate-symbol-api-file op-names)
+  (generate-symbol-random-api-file op-names))
 
 
 (comment
@@ -570,8 +676,14 @@
 
   (gen-symbol-api-function "Activation")
 
+  (gen-ndarray-random-api-function "random_randint")
+
+  (gen-ndarray-random-api-function "sample_normal")
+
+  (gen-symbol-random-api-function "random_poisson")
+
   ;; This generates a file with the bulk of the nd-array functions
   (generate-ndarray-file)
 
   ;; This generates a file with the bulk of the symbol functions
-  (generate-symbol-file)  )
+  (generate-symbol-file))

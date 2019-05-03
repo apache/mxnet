@@ -41,7 +41,9 @@ static void DivSqrtDimForward_(const nnvm::NodeAttrs& attrs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  double sqrt_dim = std::sqrt(static_cast<double>(inputs[0].shape_[inputs[0].ndim() - 1]));
+  CHECK_GE(inputs[0].ndim(), 1);
+  int last_idx = inputs[0].ndim() - 1;
+  double sqrt_dim = std::sqrt(static_cast<double>(inputs[0].shape_[last_idx]));
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::div, Req>, xpu>::Launch(
