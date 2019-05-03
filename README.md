@@ -17,7 +17,7 @@ This aim was to have only minimal changes to C++ code to get better maintainabil
 # Setup
 
 We use [CMake](https://cmake.org/download/) to build the project.
-Make sure to install all the dependencies described [here](docs/install/build_from_source.md#prerequisites).
+Make sure to [install all the dependencies described here](docs/install/build_from_source.md#prerequisites).
 If you install CUDA 10, you will need CMake >=3.12.2
 
 Adjust settings in cmake (build-type ``Release`` or ``Debug``, configure CUDA, OpenBLAS or Atlas, OpenCV, OpenMP etc.).
@@ -68,6 +68,14 @@ git pull
 
 Examples for hyperparameters are documented in the [Wiki](https://github.com/hpi-xnor/BMXNet-v2-wiki/blob/master/hyperparameters.md).
 
+## Inference
+
+To speed up inference and compress your model, you need to save it as a symbol (not with gluon) and afterwards convert it with the model-converter.
+Please check the corresponding [test case](tests/binary/test_converter.py).
+```bash
+build/tools/binary_converter/model-converter model-0000.params
+```
+
 ## Tests
 
 To run BMXNet specific tests install `pytest`:
@@ -77,7 +85,7 @@ pip install pytest
 
 Then simply run:
 ```bash
-pytest tests/python/unittest/test_binary.py
+pytest tests/binary
 ```
 
 ## Usage
@@ -94,8 +102,9 @@ We added three functions `det_sign` ([ada4ea1d](https://github.com/hpi-xnor/BMXN
 
 The rest of our code resides in the following folders/files:
 - Examples are in a submodule in [example/bmxnet-examples](https://github.com/hpi-xnor/BMXNet-v2-examples)
-- Tests are in [tests/python/unittest/test_binary.py](tests/python/unittest/test_binary.py)
+- Tests are in [tests/binary](tests/binary)
 - Layers are in [python/mxnet/gluon/nn/binary_layers.py](python/mxnet/gluon/nn/binary_layers.py)
+- Converter is in [tools/binary_converter](tools/binary_converter)
 
 For more details see the [Changelog](CHANGELOG.md).
 

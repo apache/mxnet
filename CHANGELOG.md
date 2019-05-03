@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Binary inference on CPU and GPU
     - Model converter, which compresses weights and adapts symbol file
 
+### Changed
+
+- Tests now reside in [tests/binary](tests/binary)
+
 ## [0.2.0] - 2018-12-04
 
 First beta version.
