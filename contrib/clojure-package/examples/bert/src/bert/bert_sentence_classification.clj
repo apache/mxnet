@@ -111,7 +111,7 @@
   [dev num-epoch]
   (let [bert-base (m/load-checkpoint {:prefix model-path-prefix :epoch 0})
         model-sym (fine-tune-model (m/symbol bert-base) {:num-classes 2 :dropout 0.1})
-        {:keys [data0s data1s data2s labels train-num]} (prepare-data dev)
+        {:keys [data0s data1s data2s labels train-num]} (prepare-data)
         batch-size 32
         data-desc0 (mx-io/data-desc {:name "data0"
                                      :shape [train-num seq-length]
@@ -148,10 +148,11 @@
                                              :batch-end-callback (callback/speedometer batch-size 1)})})))
 
 (defn -main [& args]
-  (let [[dev num-epoch] args]
-    (if (= dev ":gpu")
-      (train (context/gpu) (or num-epoch 3))
-      (train (context/cpu) (or num-epoch 3)))))
+  (let [[dev-arg num-epoch-arg] args
+        dev (if (= dev-arg ":gpu") (context/gpu) (context/cpu))
+        num-epoch (if num-epoch-arg (Integer/parseInt num-epoch-arg) 3)]
+    (println "Running example with " dev " and " num-epoch " epochs ")
+    (train dev num-epoch)))
 
 (comment
 

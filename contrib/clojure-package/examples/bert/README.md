@@ -130,6 +130,10 @@ There is also an exported copy of the walkthrough to markdown `fine-tune-bert.md
 `lein run -m bert.bert-sentence-classification :cpu` - to run with cpu
 `lein run -m bert.bert-sentence-classification :gpu` - to run with gpu
 
+By default it will run 3 epochs, you can control the number of epochs with:
+
+`lein run -m bert.bert-sentence-classification :cpu 1` to run just 1 epoch
+
 
 Sample results from cpu run on OSX
 ```

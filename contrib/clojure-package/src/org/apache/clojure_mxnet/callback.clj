@@ -27,7 +27,8 @@
      (invoke [epoch batch-count eval-metric]
        (proxy-super invoke epoch batch-count eval-metric)
        ;;; so that it prints to repl as well
-       (when (zero? (mod batch-count frequent))
+       (when (and (zero? (mod batch-count frequent))
+                  (pos? batch-count))
         (println "Speedometer: epoch " epoch " count " batch-count " metric " (em/get eval-metric ))))))
   ([batch-size]
    (speedometer batch-size 50)))
