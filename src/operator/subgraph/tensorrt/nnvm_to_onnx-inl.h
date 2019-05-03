@@ -1,5 +1,5 @@
-#ifndef MXNET_OPERATOR_CONTRIB_NNVM_TO_ONNX_INL_H_
-#define MXNET_OPERATOR_CONTRIB_NNVM_TO_ONNX_INL_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_TENSORRT_NNVM_TO_ONNX_INL_H_
+#define MXNET_OPERATOR_SUBGRAPH_TENSORRT_NNVM_TO_ONNX_INL_H_
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,76 +20,23 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
- * \file tensorrt-inl.h
- * \brief TensorRT Operator
+ * Copyright (c) 2019 by Contributors
+ * \file nnvm_to_onnx-inl.h
+ * \brief Conversion from NNVM to ONNX for TensorRT
  * \author Marek Kolodziej, Clement Fuji Tsang
 */
 
 #if MXNET_USE_TENSORRT
 
-#include <dmlc/logging.h>
-#include <dmlc/memory_io.h>
-#include <dmlc/serializer.h>
-#include <dmlc/parameter.h>
-#include <mxnet/base.h>
 #include <mxnet/operator.h>
-#include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
 
 #include <onnx/onnx_pb.h>
 
-#include <algorithm>
-#include <iostream>
-#include <map>
-#include <vector>
-#include <tuple>
-#include <unordered_map>
-#include <utility>
 #include <string>
-
-#include "../operator_common.h"
-#include "../../common/utils.h"
-#include "../../common/serialization.h"
 
 namespace mxnet {
 namespace op {
-
-namespace nnvm_to_onnx {
-    enum class TypeIO { Inputs = 0, Outputs = 1 };
-    using NameToIdx_t = std::map<std::string, int32_t>;
-    using InferenceTuple_t = std::tuple<uint32_t, mxnet::TShape, int, int>;
-    using InferenceMap_t = std::map<std::string, InferenceTuple_t>;
-}  // namespace nnvm_to_onnx
-
-struct ONNXParam : public dmlc::Parameter<ONNXParam> {
-  std::string serialized_onnx_graph;
-  std::string serialized_input_map;
-  std::string serialized_output_map;
-  nnvm_to_onnx::NameToIdx_t input_map;
-  nnvm_to_onnx::InferenceMap_t output_map;
-  ::onnx::ModelProto onnx_pb_graph;
-
-  ONNXParam() = default;
-
-  ONNXParam(const ::onnx::ModelProto& onnx_graph,
-           const nnvm_to_onnx::InferenceMap_t& input_map,
-           const nnvm_to_onnx::NameToIdx_t& output_map) {
-    common::Serialize(input_map, &serialized_input_map);
-    common::Serialize(output_map, &serialized_output_map);
-    onnx_graph.SerializeToString(&serialized_onnx_graph);
-  }
-
-DMLC_DECLARE_PARAMETER(ONNXParam) {
-    DMLC_DECLARE_FIELD(serialized_onnx_graph)
-    .describe("Serialized ONNX graph");
-    DMLC_DECLARE_FIELD(serialized_input_map)
-    .describe("Map from inputs to topological order as input.");
-    DMLC_DECLARE_FIELD(serialized_output_map)
-    .describe("Map from outputs to order in g.outputs.");
-  }
-};
-
 namespace nnvm_to_onnx {
 
 using namespace nnvm;
@@ -99,24 +46,26 @@ using int64 = ::google::protobuf::int64;
 std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
     const nnvm::IndexedGraph& ig);
 
+std::unordered_map<std::string, int> GetPlaceholderDTypes(const DTypeVector&
+dtype_inputs,
+    const nnvm::IndexedGraph& ig);
+
 std::unordered_map<std::string, uint32_t> GetOutputLookup(const nnvm::IndexedGraph& ig);
 
 void ConvertPlaceholder(
   const std::string& node_name,
-  const std::unordered_map<std::string, mxnet::TShape>& placeholder_shapes,
+  const std::unordered_map<std::string, TShape>& placeholder_shapes,
+  const std::unordered_map<std::string, int>& placeholder_dtypes,
   GraphProto* graph_proto);
 
 void ConvertConstant(GraphProto* graph_proto,
   const std::string& node_name,
-  std::unordered_map<std::string, NDArray>* shared_buffer);
+  const std::unordered_map<std::string, NDArray>* const params_map);
 
-void ConvertOutput(op::nnvm_to_onnx::InferenceMap_t* trt_output_map,
-                   GraphProto* graph_proto,
+void ConvertOutput(GraphProto* graph_proto,
                    const std::unordered_map<std::string, uint32_t>::iterator& out_iter,
-                   const std::string& node_name,
-                   const nnvm::Graph& g,
-                   const StorageTypeVector& storage_types,
-                   const DTypeVector& dtypes);
+                   const std::string& node_name, const ShapeVector& shapes,
+                   const DTypeVector& dtypes, const nnvm::IndexedGraph &ig);
 
 typedef void (*ConverterFunction)(NodeProto *node_proto,
                                   const NodeAttrs &attrs,
@@ -136,6 +85,11 @@ void ConvertPooling(NodeProto *node_proto,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
+
+void ConvertRelu(NodeProto *node_proto,
+                 const NodeAttrs &attrs,
+                 const nnvm::IndexedGraph &ig,
+                 const array_view<IndexedGraph::NodeEntry> &inputs);
 
 void ConvertActivation(NodeProto *node_proto,
                        const NodeAttrs &attrs,
@@ -157,6 +111,11 @@ void ConvertFlatten(NodeProto *node_proto,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
+void ConvertDropout(NodeProto *node_proto,
+                    const NodeAttrs &attrs,
+                    const nnvm::IndexedGraph &ig,
+                    const array_view<IndexedGraph::NodeEntry> &inputs);
+
 void ConvertBatchNorm(NodeProto *node_proto,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
@@ -167,19 +126,39 @@ void ConvertElementwiseAdd(NodeProto *node_proto,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-ONNXParam ConvertNnvmGraphToOnnx(
-    const nnvm::Graph &g,
-    std::unordered_map<std::string, NDArray>* shared_buffer);
+void ConvertConcatenate(NodeProto *node_proto,
+                    const NodeAttrs &attrs,
+                    const nnvm::IndexedGraph &ig,
+                    const array_view<IndexedGraph::NodeEntry> &inputs);
+
+void ConvertClip(NodeProto *node_proto,
+                 const NodeAttrs &attrs,
+                 const nnvm::IndexedGraph &ig,
+                 const array_view<IndexedGraph::NodeEntry> &inputs);
+
+void ConvertPad(NodeProto* node_proto,
+                const NodeAttrs & attrs,
+                const nnvm::IndexedGraph &ig,
+                const array_view<IndexedGraph::NodeEntry> &inputs);
+
+std::string ConvertNnvmGraphToOnnx(const nnvm::Graph &g,
+    const std::unordered_map<std::string, NDArray>* const params_map);
 
 static const std::unordered_map<std::string, ConverterFunction> converter_map = {
-  {"Convolution", ConvertConvolution},
-  {"Pooling", ConvertPooling},
   {"Activation", ConvertActivation},
-  {"FullyConnected", ConvertFullyConnected},
-  {"SoftmaxOutput", ConvertSoftmaxOutput},
-  {"Flatten", ConvertFlatten},
   {"BatchNorm", ConvertBatchNorm},
-  {"elemwise_add", ConvertElementwiseAdd}};
+  {"clip", ConvertClip},
+  {"Convolution", ConvertConvolution},
+  {"Concat", ConvertConcatenate},
+  {"Dropout", ConvertDropout},
+  {"elemwise_add", ConvertElementwiseAdd},
+  {"Flatten", ConvertFlatten},
+  {"FullyConnected", ConvertFullyConnected},
+  {"Pad", ConvertPad},
+  {"Pooling", ConvertPooling},
+  {"relu", ConvertRelu},
+  {"SoftmaxOutput", ConvertSoftmaxOutput}
+};
 
 }  // namespace nnvm_to_onnx
 }  // namespace op
@@ -187,4 +166,4 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
 
 #endif  // MXNET_USE_TENSORRT
 
-#endif  // MXNET_OPERATOR_CONTRIB_NNVM_TO_ONNX_INL_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_TENSORRT_NNVM_TO_ONNX_INL_H_
