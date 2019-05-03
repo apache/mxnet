@@ -10,12 +10,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- Model converter, which compresses weights and adapts symbol file:
+    - Code is under [tools/binary_converter](tools/binary_converter)
+    - Executable can be found here after the build: `build/tools/binary_converter/model-converter`
+    - Test/example: [tests/binary/test_converter.py](tests/binary/test_converter.py)
 - Binary inference on CPU and GPU
-    - Model converter, which compresses weights and adapts symbol file
+- Support for dilation with binary layers
 
 ### Changed
 
 - Tests now reside in [tests/binary](tests/binary)
+- Code in [python/mxnet/visualization.py](python/mxnet/visualization.py) changed:
+    - `print_summary` now estimates amount of operations (accounts for theoretical speedup)
 
 ## [0.2.0] - 2018-12-04
 
