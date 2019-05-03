@@ -44,7 +44,7 @@ build_and_test_cmake:
     - cmake -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
     - cd ..
     - cmake --build build
-    - pytest tests/python/unittest/test_binary.py
+    - pytest tests/binary
 
 tag_image:
   stage: tag
