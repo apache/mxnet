@@ -86,7 +86,9 @@
        (into [])))
 
 (defn get-raw-data []
-  (csv/parse-csv (slurp "data/dev.tsv") :delimiter \tab))
+  (csv/parse-csv (string/replace (slurp "data/dev.tsv") "\"" "")
+               :delimiter \tab
+               :strict true))
 
 (defn prepare-data
   "This prepares the senetence pairs into NDArrays for use in NDArrayIterator"
