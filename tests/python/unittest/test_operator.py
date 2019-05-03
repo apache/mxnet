@@ -3377,6 +3377,24 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
               np.reshape(beta, broadcast_shape)
         return out
 
+    def npy_layer_norm_grad(data, gamma, out_grad, axis, eps):
+        if axis < 0:
+            axis += data.ndim
+        exclude_axis = tuple([ele for ele in range(data.ndim) if ele != axis])
+        data_mean = data.mean(axis=axis, keepdims=True)
+        data_var = data.var(axis=axis, keepdims=True)
+        data_std = np.sqrt(data_var + eps)
+        centered_data = (data - data_mean) / data_std
+        gamma_grad = (centered_data * out_grad).sum(axis=exclude_axis, keepdims=True)
+        beta_grad = out_grad.sum(axis=exclude_axis, keepdims=True)
+        w = out_grad * gamma.reshape([1 if i != axis else data.shape[axis] for i in range(data.ndim)])\
+            / data_std
+        data_grad = w - w.mean(axis=axis, keepdims=True)\
+                    - centered_data * (w * centered_data).mean(axis=axis, keepdims=True)
+        gamma_grad = gamma_grad.reshape((-1,))
+        beta_grad = beta_grad.reshape((-1,))
+        return data_grad, gamma_grad, beta_grad
+
     ctx = default_context()
     data = np.random.normal(0, 1, in_shape).astype(dtype)
     gamma = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
@@ -3392,10 +3410,44 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
     out_nd = exe.forward()[0]
     out = npy_layer_norm(data, gamma, beta, axis, eps)
     assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps, forward_check_eps)
-    for req in ['write', 'add']:
-        check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
-                               grad_nodes={'data': req, 'gamma': req, 'beta': req},
-                               numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
+
+    # Test for grad_req = write
+    out_grad = np.random.normal(0, 1, in_shape).astype(dtype)
+    exe = out_s.simple_bind(ctx, data=in_shape, grad_req='write')
+    exe.arg_dict['data'][:] = data
+    exe.arg_dict['gamma'][:] = gamma
+    exe.arg_dict['beta'][:] = beta
+    exe.forward()
+    exe.backward([mx.nd.array(out_grad, ctx=ctx)])
+    gt_data_grad, gt_gamma_grad, gt_beta_grad =\
+        npy_layer_norm_grad(data, gamma, out_grad, axis, eps)
+    assert_almost_equal(exe.grad_dict['data'].asnumpy(), gt_data_grad, 1E-4, 1E-4)
+    assert_almost_equal(exe.grad_dict['gamma'].asnumpy(), gt_gamma_grad, 1E-4, 1E-4)
+    assert_almost_equal(exe.grad_dict['beta'].asnumpy(), gt_beta_grad, 1E-4, 1E-4)
+
+    # Test for grad_req = add
+    out_grad = np.random.normal(0, 1, in_shape).astype(dtype)
+    init_data_grad = np.random.normal(0, 1, in_shape).astype(dtype)
+    init_gamma_grad = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+    init_beta_grad = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+    exe = out_s.simple_bind(ctx, data=in_shape, grad_req='add')
+    exe.arg_dict['data'][:] = data
+    exe.arg_dict['gamma'][:] = gamma
+    exe.arg_dict['beta'][:] = beta
+    exe.grad_dict['data'][:] = init_data_grad
+    exe.grad_dict['gamma'][:] = init_gamma_grad
+    exe.grad_dict['beta'][:] = init_beta_grad
+    exe.forward()
+    exe.backward([mx.nd.array(out_grad, ctx=ctx)])
+    gt_data_grad, gt_gamma_grad, gt_beta_grad = \
+        npy_layer_norm_grad(data, gamma, out_grad, axis, eps)
+    assert_almost_equal(exe.grad_dict['data'].asnumpy(),
+                        gt_data_grad + init_data_grad, 1E-4, 1E-4)
+    assert_almost_equal(exe.grad_dict['gamma'].asnumpy(),
+                        gt_gamma_grad + init_gamma_grad, 1E-4, 1E-4)
+    assert_almost_equal(exe.grad_dict['beta'].asnumpy(),
+                        gt_beta_grad + init_beta_grad, 1E-4, 1E-4)
+
 
 @with_seed()
 def test_norm():
@@ -3471,7 +3523,7 @@ def test_norm():
 def test_layer_norm():
     for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
                                         [1E-2, 1E-3, 1E-4]):
-        for in_shape in [(10, 6, 5), (10, 10)]:
+        for in_shape in [(10, 6, 5), (10, 10), (128 * 32, 512)]:
             for axis in range(-len(in_shape), len(in_shape)):
                 for eps in [1E-2, 1E-3]:
                     check_layer_normalization(in_shape, axis, eps, dtype=dtype,
