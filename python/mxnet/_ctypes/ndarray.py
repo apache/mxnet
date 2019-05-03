@@ -26,7 +26,7 @@ import ctypes
 from ..base import _LIB
 from ..base import c_str_array, c_handle_array
 from ..base import NDArrayHandle, CachedOpHandle
-from ..base import check_call
+from ..base import check_call, _is_np_compat_op
 
 
 class NDArrayBase(object):
@@ -55,11 +55,19 @@ class NDArrayBase(object):
 
 
 _ndarray_cls = None
+_np_ndarray_cls = None
+
 
 def _set_ndarray_class(cls):
     """Set the symbolic class to be cls"""
     global _ndarray_cls
     _ndarray_cls = cls
+
+
+def _set_np_ndarray_class(cls):
+    """Set the symbolic class to be cls"""
+    global _np_ndarray_cls
+    _np_ndarray_cls = cls
 
 
 def _imperative_invoke(handle, ndargs, keys, vals, out):
@@ -93,18 +101,19 @@ def _imperative_invoke(handle, ndargs, keys, vals, out):
 
     if original_output is not None:
         return original_output
+    create_ndarray_fn = _np_ndarray_cls if _is_np_compat_op(handle) else _ndarray_cls
     if num_output.value == 1:
-        return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
-                            stype=out_stypes[0])
+        return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
+                                 stype=out_stypes[0])
     else:
-        return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
-                             stype=out_stypes[i])
-                for i in range(num_output.value)]
+        return [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
+                                  stype=out_stypes[i]) for i in range(num_output.value)]
 
 
 class CachedOp(object):
     """Cached operator handle."""
     __slots__ = ["handle"]
+
     def __init__(self, sym, flags=()):
         self.handle = CachedOpHandle()
 
@@ -117,6 +126,13 @@ class CachedOp(object):
 
     def __del__(self):
         check_call(_LIB.MXFreeCachedOp(self.handle))
+
+    def _is_from_np_compat_op(self, idx):
+        """Check if the CachedOp's idx-th output is directly from a numpy op."""
+        is_from_np_op = ctypes.c_int(0)
+        check_call(_LIB.MXIsCachedOpOutputFromNumpyCompatOp(self.handle, ctypes.c_int(idx),
+                                                            ctypes.byref(is_from_np_op)))
+        return is_from_np_op.value != 0
 
     def __call__(self, *args, **kwargs):
         """ctypes implementation of imperative invoke wrapper"""
@@ -152,9 +168,11 @@ class CachedOp(object):
         if original_output is not None:
             return original_output
         if num_output.value == 1:
-            return _ndarray_cls(ctypes.cast(output_vars[0], NDArrayHandle),
-                                stype=out_stypes[0])
+            create_ndarray_fn = _np_ndarray_cls if self._is_from_np_compat_op(0) else _ndarray_cls
+            return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
+                                     stype=out_stypes[0])
         else:
-            return [_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle),
-                                 stype=out_stypes[i])
+            return [_np_ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle), stype=out_stypes[i])
+                    if self._is_from_np_compat_op(i) else
+                    _ndarray_cls(ctypes.cast(output_vars[i], NDArrayHandle), stype=out_stypes[i])
                     for i in range(num_output.value)]

@@ -65,7 +65,8 @@ NNVM_REGISTER_OP(_numpy_sum)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_numpy_sum"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_numpy_sum"})
+.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true);
 
 NNVM_REGISTER_OP(_backward_numpy_sum)
 .set_num_outputs(1)

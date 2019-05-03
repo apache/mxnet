@@ -561,7 +561,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_', '_numpy_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_']
 
 
 def _get_op_name_prefix(op_name):
@@ -607,15 +607,6 @@ def _init_op_module(root_namespace, module_name, make_op_func):
     # use mx.nd.contrib or mx.sym.contrib from now on
     contrib_module_name_old = "%s.contrib.%s" % (root_namespace, module_name)
     contrib_module_old = sys.modules[contrib_module_name_old]
-    # special handling of registering numpy ops
-    # only expose mxnet.numpy.op_name to users for imperative mode.
-    # Symbolic mode should be used in Gluon.
-    if module_name == 'ndarray':
-        numpy_module_name = "%s.numpy" % root_namespace
-        numpy_module = sys.modules[numpy_module_name]
-    else:
-        numpy_module_name = None
-        numpy_module = None
     submodule_dict = {}
     for op_name_prefix in _OP_NAME_PREFIX_LIST:
         submodule_dict[op_name_prefix] =\
@@ -654,16 +645,6 @@ def _init_op_module(root_namespace, module_name, make_op_func):
             function.__module__ = contrib_module_name_old
             setattr(contrib_module_old, function.__name__, function)
             contrib_module_old.__all__.append(function.__name__)
-        elif op_name_prefix == '_numpy_' and numpy_module_name is not None:
-            # only register numpy ops under mxnet.numpy in imperative mode
-            hdl = OpHandle()
-            check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-            # TODO(reminisce): Didn't consider third level module here, e.g. mxnet.numpy.random.
-            func_name = name[len(op_name_prefix):]
-            function = make_op_func(hdl, name, func_name)
-            function.__module__ = numpy_module_name
-            setattr(numpy_module, function.__name__, function)
-            numpy_module.__all__.append(function.__name__)
 
 
 def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func):
@@ -754,7 +735,88 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
+
 from .runtime import Features
 if Features().is_enabled("TVM_OP"):
     _LIB_TVM_OP = libinfo.find_lib_path("libtvmop")
     check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
+
+
+def _sanity_check_params(func_name, unsupported_params, param_dict):
+    for param_name in unsupported_params:
+        if param_name in param_dict:
+            raise NotImplementedError("function {} does not support parameter {}"
+                                      .format(func_name, param_name))
+
+
+_NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
+_NP_OP_PREFIX = '_numpy_'
+
+
+def _get_np_op_submodule_name(op_name):
+    assert op_name.startswith(_NP_OP_PREFIX)
+    for name in _NP_OP_SUBMODULE_LIST:
+        if op_name[len(_NP_OP_PREFIX):].startswith(name):
+            return name
+    return ""
+
+
+def _init_np_op_module(root_namespace, module_name, make_op_func):
+    """
+    Register numpy operators in namespaces `mxnet.numpy`, `mxnet.ndarray.numpy`
+    and `mxnet.symbol.numpy`. They are used in imperative mode, Gluon APIs w/o hybridization,
+    and Gluon APIs w/ hybridization, respectively. Essentially, operators with the same name
+    registered in three namespaces, respectively share the same functionality in C++ backend.
+    Different namespaces are needed for dispatching operator calls in Gluon's `HybridBlock` by `F`.
+
+    Parameters
+    ----------
+    root_namespace : str
+        Top level module name, `mxnet` in the current cases.
+    module_name : str
+        Second level module name, `ndarray` or `symbol` in the current case.
+    make_op_func : function
+        Function for creating op functions.
+    """
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size), ctypes.byref(plist)))
+    op_names = []
+    for i in range(size.value):
+        name = py_str(plist[i])
+        if name.startswith(_NP_OP_PREFIX):
+            op_names.append(name)
+
+    if module_name == 'numpy':
+        # register ops for mxnet.numpy
+        module_pattern = "%s.%s._op"
+        submodule_pattern = "%s.%s.%s"
+    else:
+        # register ops for mxnet.ndarray.numpy or mxnet.symbol.numpy
+        module_pattern = "%s.%s.numpy._op"
+        submodule_pattern = "%s.%s.numpy.%s"
+    module_np_op = sys.modules[module_pattern % (root_namespace, module_name)]
+    submodule_dict = {}
+    # TODO(junwu): uncomment the following lines when adding numpy ops in submodules, e.g. np.random
+    # for submodule_name in _NP_OP_SUBMODULE_LIST:
+    #     submodule_dict[submodule_name] = \
+    #         sys.modules[submodule_pattern % (root_namespace, module_name, submodule_name[1:-1])]
+    for name in op_names:
+        hdl = OpHandle()
+        check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+        submodule_name = _get_np_op_submodule_name(name)
+        module_name_local = module_name
+        if len(submodule_name) > 0:
+            func_name = name[(len(_NP_OP_PREFIX) + len(submodule_name)):]
+            cur_module = submodule_dict[submodule_name]
+            module_name_local = submodule_pattern % (root_namespace,
+                                                     module_name, submodule_name[1:-1])
+        else:
+            func_name = name[len(_NP_OP_PREFIX):]
+            cur_module = module_np_op
+
+        function = make_op_func(hdl, name, func_name)
+        function.__module__ = module_name_local
+        setattr(cur_module, function.__name__, function)
+        cur_module.__all__.append(function.__name__)
