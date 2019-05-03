@@ -22,11 +22,12 @@ from __future__ import absolute_import as _abs
 
 import ctypes
 from ..base import _LIB
-from ..base import c_str_array, c_handle_array, c_str, mx_uint
+from ..base import c_str_array, c_handle_array, c_str, mx_uint, _is_np_compat_op
 from ..base import SymbolHandle
 from ..base import check_call
 
 _symbol_cls = None
+_np_symbol_cls = None
 
 class SymbolBase(object):
     """Symbol is symbolic graph."""
@@ -115,6 +116,12 @@ def _set_symbol_class(cls):
     _symbol_cls = cls
 
 
+def _set_np_symbol_class(cls):
+    """Set the symbolic class to be cls"""
+    global _np_symbol_cls
+    _np_symbol_cls = cls
+
+
 def _symbol_creator(handle, args, kwargs, keys, vals, name):
     sym_handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateAtomicSymbol(
@@ -128,7 +135,10 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name):
         raise TypeError(
             'Operators with variable length input can only accept input'
             'Symbols either as positional or keyword arguments, not both')
-    s = _symbol_cls(sym_handle)
+    if _is_np_compat_op(handle):
+        s = _np_symbol_cls(sym_handle)
+    else:
+        s = _symbol_cls(sym_handle)
     if args:
         s._compose(*args, name=name)
     elif kwargs:

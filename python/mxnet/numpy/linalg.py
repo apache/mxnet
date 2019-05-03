@@ -15,4 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""namespace for registering numpy ops of linear algebra."""
+
 __all__ = []
