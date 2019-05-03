@@ -26,10 +26,10 @@ from . import engine
 from .base import MXNetError
 from .util import is_np_shape, set_np_shape, np_shape, use_np_shape
 from . import base
-from . import numpy
 from . import contrib
 from . import ndarray
 from . import ndarray as nd
+from . import numpy
 from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym

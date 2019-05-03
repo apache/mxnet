@@ -15,4 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-__all__ = []
+"""module for registering numpy ops under mxnet.symbol.numpy."""
+
+from ...base import _init_np_op_module
+from ..register import _make_symbol_function
+
+_init_np_op_module('mxnet', 'symbol', _make_symbol_function)
