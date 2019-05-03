@@ -188,7 +188,7 @@ object CNNTextClassification {
       // decay learning rate
       if (iter % 50 == 0 && iter > 0) {
         factor *= 0.5f
-        opt.setLrScale(paramBlocks.map(_._1 -> factor).toMap)
+        opt.setLrMult(paramBlocks.map(paramBlock => (Left(paramBlock._1), factor)).toMap)
         logger.info(s"reset learning to ${opt.learningRate * factor}")
       }
       // end of training loop

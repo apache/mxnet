@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=unused-argument, too-many-arguments
+# pylint: disable=unused-argument, too-many-arguments, unnecessary-pass
 """Extra symbol documents"""
 from __future__ import absolute_import as _abs
 import re as _re

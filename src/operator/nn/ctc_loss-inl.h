@@ -239,7 +239,7 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
                                       "the maximum sequence length of the "
                                       "data.";
 
-    mxnet::TShape oshape(1);
+    mxnet::TShape oshape(1, -1);
     oshape[0] = dshape[1];  // batch size
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);  // forward output
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, dshape);  // grad output

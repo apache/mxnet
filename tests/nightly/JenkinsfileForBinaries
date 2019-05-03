@@ -19,6 +19,7 @@
 //This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
 
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -39,6 +40,24 @@ core_logic: {
           utils.pack_lib('gpu', mx_lib)
         }
       }
+    },
+    'CPU: USE_INT64_TENSOR_SIZE': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-int64') {
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'build_ubuntu_cpu_large_tensor', false)
+          utils.pack_lib('cpu_int64', mx_cmake_lib, true)
+        }
+      }
+    },
+    'GPU: USE_INT64_TENSOR_SIZE': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/build-gpu-int64') {
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_gpu', 'build_ubuntu_gpu_large_tensor', true)
+          utils.pack_lib('gpu_int64', mx_cmake_lib, true)
+        }
+      }
     }
   }
 
@@ -56,6 +75,22 @@ core_logic: {
         ws('workspace/nt-KVStoreTest') {
           utils.unpack_and_init('gpu', mx_lib)
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true) 
+        }
+      }
+    },
+    'Test Large Tensor Size: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/large_tensor-cpu') {
+            utils.unpack_and_init('cpu_int64', mx_cmake_lib)
+            utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_large_tensor', false)
+        }
+      }
+    },
+    'Test Large Tensor Size: GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/large_tensor-gpu') {
+            utils.unpack_and_init('gpu_int64', mx_cmake_lib)
+            utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_tensor', true)
         }
       }
     },

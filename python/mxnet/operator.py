@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except, too-many-lines
+# pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except, too-many-lines, unnecessary-pass
 """numpy interface for operators."""
 from __future__ import absolute_import
 
@@ -28,7 +28,7 @@ from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
-from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf
+from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf, mx_int
 from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
@@ -164,7 +164,7 @@ class NumpyOp(PythonOp):
         fb_functype = CFUNCTYPE(None, c_int, POINTER(POINTER(mx_float)), POINTER(c_int),
                                 POINTER(POINTER(mx_uint)), POINTER(c_int), c_void_p)
         infer_functype = CFUNCTYPE(None, c_int, POINTER(c_int),
-                                   POINTER(POINTER(mx_uint)), c_void_p)
+                                   POINTER(POINTER(mx_int)), c_void_p)
         list_functype = CFUNCTYPE(None, POINTER(POINTER(POINTER(c_char))), c_void_p)
         class NumpyOpInfo(Structure):
             """Structure that holds Callback information. Passed to NumpyOpProp"""
@@ -214,9 +214,9 @@ class NumpyOp(PythonOp):
             assert len(ishape) == n_in
             rshape = list(ishape) + list(oshape)
             for i in range(n_in+n_out):
-                tensor_shapes[i] = cast(c_array_buf(mx_uint,
-                                                    array('I', rshape[i])),
-                                        POINTER(mx_uint))
+                tensor_shapes[i] = cast(c_array_buf(mx_int,
+                                                    array('i', rshape[i])),
+                                        POINTER(mx_int))
                 tensor_dims[i] = len(rshape[i])
 
         def list_outputs_entry(out, _):
@@ -266,7 +266,7 @@ class NDArrayOp(PythonOp):
     def get_symbol(self, *args, **kwargs):
         fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int), c_void_p)
         infer_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_int),
-                                   POINTER(POINTER(mx_uint)), c_void_p)
+                                   POINTER(POINTER(mx_int)), c_void_p)
         list_functype = CFUNCTYPE(c_bool, POINTER(POINTER(POINTER(c_char))), c_void_p)
         deps_functype = CFUNCTYPE(c_bool, c_int_p, c_int_p, c_int_p,
                                   c_int_p, POINTER(c_int_p), c_void_p)
@@ -335,9 +335,9 @@ class NDArrayOp(PythonOp):
                 assert len(ishape) == n_in
                 rshape = list(ishape) + list(oshape)
                 for i in range(n_in+n_out):
-                    tensor_shapes[i] = cast(c_array_buf(mx_uint,
-                                                        array('I', rshape[i])),
-                                            POINTER(mx_uint))
+                    tensor_shapes[i] = cast(c_array_buf(mx_int,
+                                                        array('i', rshape[i])),
+                                            POINTER(mx_int))
                     tensor_dims[i] = len(rshape[i])
             except Exception:
                 print('Error in NDArrayOp.infer_shape: %s' % traceback.format_exc())
@@ -698,7 +698,7 @@ def register(reg_name):
         del_functype = CFUNCTYPE(c_int, c_void_p)
 
         infershape_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int),
-                                        POINTER(POINTER(mx_uint)), c_void_p)
+                                        POINTER(POINTER(mx_int)), c_void_p)
         infertype_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
         inferstorage_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
         inferstorage_backward_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), \
@@ -747,9 +747,9 @@ def register(reg_name):
                         "shapes, got %d."%(n_aux, len(ashape))
                     rshape = list(ishape) + list(oshape) + list(ashape)
                     for i in range(n_in+n_out+n_aux):
-                        tensor_shapes[i] = cast(c_array_buf(mx_uint,
-                                                            array('I', rshape[i])),
-                                                POINTER(mx_uint))
+                        tensor_shapes[i] = cast(c_array_buf(mx_int,
+                                                            array('i', rshape[i])),
+                                                POINTER(mx_int))
                         tensor_dims[i] = len(rshape[i])
 
                     infer_shape_entry._ref_holder = [tensor_shapes]

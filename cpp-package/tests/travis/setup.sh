@@ -19,5 +19,5 @@
 
 
 if [ ${TASK} == "lint" ]; then
-    pip install cpplint 'pylint==1.4.4' 'astroid==1.3.6' --user
+    pip3 install cpplint 'pylint==2.3.1' --user
 fi

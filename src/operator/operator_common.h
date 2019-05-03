@@ -103,9 +103,10 @@ struct InferStorageTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
-/*! \brief check if shape is empty or contains unknown (0) dim. */
+/*! \brief check if shape is empty or contains unknown (0) dim.
+ * DEPRECATED. */
 inline bool shape_is_none(const mxnet::TShape& x) {
-  return x.ndim() == 0 || x.Size() == 0;
+  return !mxnet::shape_is_known(x);
 }
 
 /*! \brief check if type is none (-1) */
@@ -120,7 +121,7 @@ inline bool storage_type_is_none(const int& x) {
 
 /*! \brief check if shape is scalar({1}). */
 inline bool shape_is_scalar(const mxnet::TShape& x) {
-  return x.ndim() == 1 && x.Size() == 1;
+  return x.ndim() == 0;
 }
 
 /*! \brief get string representation of shape */
@@ -159,16 +160,16 @@ inline std::string type_string(const int& x) {
  * \return whether x and y are compatible.
  */
 inline bool shape_assign(mxnet::TShape *y, const mxnet::TShape& x) {
-  if (y->ndim() == 0) {
+  if (!mxnet::ndim_is_known(*y)) {
     *y = x;
     return true;
   } else if (y->ndim() != x.ndim()) {
-    return x.ndim() == 0;
+    return !mxnet::ndim_is_known(x);
   } else {
-    for (size_t i = 0; i < y->ndim(); ++i) {
-      if ((*y)[i] == 0) {
+    for (int i = 0; i < y->ndim(); ++i) {
+      if (!mxnet::dim_size_is_known(*y, i)) {
         (*y)[i] = x[i];
-      } else if ((*y)[i] != x[i] && x[i] != 0) {
+      } else if ((*y)[i] != x[i] && x[i] >= 0) {
         return false;
       }
     }
@@ -563,7 +564,7 @@ class OpSignature {
   }
 
   void AddSign(const mxnet::TShape &shape) {
-    for (size_t i = 0; i < shape.ndim(); i++) {
+    for (int i = 0; i < shape.ndim(); i++) {
       hash = hash * 2 + shape[i];
       eles.push_back(shape[i]);
     }

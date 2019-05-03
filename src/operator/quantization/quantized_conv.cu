@@ -174,7 +174,7 @@ class QuantizedCuDNNConvOp {
     // of in_data[0] and in_data[1]. Need to rescale the min/max range of out_data
     // based on the min/max ranges of in_data[0] and in_data[1].
     const size_t num_inputs = param_.no_bias ? 2 : 3;
-    mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, gpu>::Launch(s, 1,
+    mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, gpu>::Launch(s, 1,
       out_data[1].dptr<float>(), out_data[2].dptr<float>(),
        in_data[num_inputs].dptr<float>(),  in_data[num_inputs+1].dptr<float>(),
        in_data[num_inputs+2].dptr<float>(),  in_data[num_inputs+3].dptr<float>());

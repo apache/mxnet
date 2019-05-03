@@ -31,6 +31,7 @@
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../operator/operator_common.h"
 
 #ifndef MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
 #define MXNET_IMPERATIVE_IMPERATIVE_UTILS_H_
@@ -121,7 +122,28 @@ inline void SetShapeType(const Context& ctx,
   if (!infershape.count(attrs.op)) {
     is_dynamic_shape_existing = true;
   } else {
-    CHECK(infershape[attrs.op](attrs, &in_shapes, &out_shapes));
+    if (!Imperative::Get()->is_np_comp()) {
+      common::ConvertToNumpyShape(&in_shapes);
+      common::ConvertToNumpyShape(&out_shapes);
+    }
+    const bool success = infershape[attrs.op](attrs, &in_shapes, &out_shapes);
+    if (!success) {
+      std::stringstream os;
+      os << "Operator " << attrs.op->name << " inferring shapes failed.\n";
+      os << "input shapes:\n";
+      for (const auto& s : in_shapes) {
+        os << s << '\n';
+      }
+      os << "output shapes:\n";
+      for (const auto& s : out_shapes) {
+        os << s << '\n';
+      }
+      os << "operator attributes:\n";
+      for (const auto& kv : attrs.dict) {
+        os << kv.first << " : " << kv.second << '\n';
+      }
+      LOG(FATAL) << os.str();
+    }
     CHECK_EQ(out_shapes.size(), outputs.size());
   }
   // infer type
@@ -179,7 +201,7 @@ inline void SetShapeType(const Context& ctx,
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
-    if (outputs[i]->is_none() || outputs[i]->shape().ndim() == 0) {
+    if (outputs[i]->is_none() || mxnet::op::shape_is_none(outputs[i]->shape())) {
       if (is_dynamic_shape_existing) {
         // once there is dynamic shape somewhere, we could not pre-determine the shape.
         *outputs[i] = NDArray(ctx, out_types[i]);
@@ -573,23 +595,21 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, mxnet::ShapeVector&& shapes,
     *contain_unknown = false;
   }
   nnvm::Graph& g = *p_g;
-  if (use_inputs) {
-    if (g.attrs.count("shape_inputs") &&
-        g.GetAttr<mxnet::ShapeVector>("shape_inputs") == shapes) return true;
-  } else if (g.attrs.count("shape")) {
+  if (g.attrs.count("shape")) {
     const auto& prev_shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    CHECK_EQ(prev_shapes.size(), shapes.size());
-    bool match = true;
-    for (size_t i = 0; i < shapes.size(); ++i) {
-      if (i == entry_range.first) {
-        i = entry_range.second;
-        if (i >= shapes.size()) break;
+    if (prev_shapes.size() == shapes.size()) {
+      bool match = true;
+      for (size_t i = 0; i < shapes.size(); ++i) {
+        if (i == entry_range.first) {
+          i = entry_range.second;
+          if (i >= shapes.size()) break;
+        }
+        if (shapes[i] == prev_shapes[i]) continue;
+        match = false;
+        break;
       }
-      if (shapes[i] == prev_shapes[i]) continue;
-      match = false;
-      break;
+      if (match) return true;
     }
-    if (match) return true;
   }
   g.attrs.erase("shape");
   g.attrs.erase("shape_inputs");
@@ -999,7 +1019,7 @@ inline void CreateEngineOpSeg(
 
 void RunGraph(const bool retain_graph,
               const nnvm::IndexedGraph& idx,
-              const std::vector<NDArray*> arrays,
+              const std::vector<NDArray*>& arrays,
               size_t node_start, size_t node_end,
               std::vector<OpReqType>&& array_reqs,
               std::vector<uint32_t>&& ref_count,
@@ -1011,7 +1031,7 @@ void RunGraph(const bool retain_graph,
 void NaiveRunGraph(const bool retain_graph,
                    const Context& default_ctx,
                    const nnvm::IndexedGraph& idx,
-                   const std::vector<NDArray*> arrays,
+                   const std::vector<NDArray*>& arrays,
                    size_t node_start, size_t node_end,
                    std::vector<OpReqType>&& array_reqs,
                    std::vector<uint32_t>&& ref_count,

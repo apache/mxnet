@@ -34,6 +34,7 @@
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "../operator/subgraph/subgraph_property.h"
+#include "../operator/operator_common.h"
 
 namespace mxnet {
 namespace exec {
@@ -99,6 +100,16 @@ void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
   size_t total_bytes = graph_.GetAttr<size_t>("storage_allocated_bytes");
   os << "Total " << (total_bytes >> 20UL) <<" MB allocated\n";
   os << "Total " << 11 << " TempSpace resource requested\n";
+}
+
+/*!
+ * \brief Return the "optimized" symbol contained in the executor graph.
+ */
+nnvm::Symbol GraphExecutor::GetOptimizedSymbol() {
+  Symbol ret;
+  ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
+      graph_.outputs.begin() + num_forward_outputs_);
+  return ret.Copy();
 }
 
 void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback, bool monitor_all) {
@@ -966,7 +977,7 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     uint32_t oid = head_grad_map_.at(idx[nid].source);
     uint32_t eid = idx.entry_id(idx.outputs()[oid]);
     NDArrayStorageType stype = (NDArrayStorageType) vstorage_type[eid];
-    CHECK_NE(vshape[eid].ndim(), 0U);
+    CHECK(mxnet::shape_is_known(vshape[eid]));
     CHECK_NE(vdtype[eid], -1);
     auto data_eid = idx.entry_id(nid, 0);
     // initialize based on storage_type

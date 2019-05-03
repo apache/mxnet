@@ -89,11 +89,12 @@ std::vector<NodeEntry> OfflineParams(std::vector<NodeEntry>&& outputs,
   return outputs;
 }
 
-inline bool NeedQuantize(const NodePtr node,
-                         const std::unordered_set<std::string>& excluded_nodes) {
+inline NodePtr NeedQuantize(NodePtr node, const std::unordered_set<std::string>& excluded_nodes) {
+  std::unordered_map<NodePtr, NodePtr> quantized_node;
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
   const auto& op = node->op();
+
   if (op && quantized_op_map.count(op)) {
     bool need = true;
     if (excluded_nodes.count(node->attrs.name)) {
@@ -112,14 +113,24 @@ inline bool NeedQuantize(const NodePtr node,
         });
       }
     }
-    return need;
+
+    if (need) {
+      auto n_ptr = quantized_op_map[node->op()];
+      auto tmp_node = n_ptr(node->attrs);
+      if (tmp_node->op()) {
+        quantized_node[node] = tmp_node;
+      } else {
+        quantized_node[node] = nullptr;
+      }
+    } else {
+      quantized_node[node] = nullptr;
+    }
   }
-  return false;
+  return quantized_node[node];
 }
 
 Graph QuantizeGraph(Graph &&src) {
   static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
-  static const auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static const auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   static const auto& avoid_quantize_input_map =
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
@@ -136,11 +147,9 @@ Graph QuantizeGraph(Graph &&src) {
     NodePtr new_node = Node::Create();
     // If the currently visited node needs quantization, insert a quantize op node before the
     // current node and replace the current node with the quantized version in the new graph.
-    if (NeedQuantize(node, excluded_nodes)) {
-      auto fquantized_op = quantized_op_map[node->op()];
-      // If the currently visited node's op registered the FQuantizedOp property, new_node is a
-      // quantizated version of a that op, such as quantized_conv2d.
-      new_node = fquantized_op(node->attrs);
+    auto tmp_node = NeedQuantize(node, excluded_nodes);
+    if (tmp_node) {
+      new_node = tmp_node;
 
       // add data into quantized op input
       for (size_t i = 0; i < node->inputs.size(); ++i) {
@@ -239,6 +248,7 @@ Graph QuantizeGraph(Graph &&src) {
         NodePtr requantize_node = Node::Create();
         requantize_node->attrs.op = Op::Get("_contrib_requantize");
         requantize_node->attrs.name = "requantize_" + node->attrs.name;
+        requantize_node->attrs.dict["out_type"] = quantized_dtype;
         if (requantize_node->op()->attr_parser != nullptr) {
           requantize_node->op()->attr_parser(&(requantize_node->attrs));
         }
@@ -389,7 +399,7 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
         node->attrs.dict["max_calib_range"] = std::to_string(calib_table_iter->second.second);
         node->op()->attr_parser(&(node->attrs));
         const QuantizeV2Param& param = nnvm::get<QuantizeV2Param>(node->attrs.parsed);
-        if (param.out_type == QuantizeV2Param::OutType::kUint8 &&
+        if (param.out_type == QuantizeOutType::kUint8 &&
             param.min_calib_range.value() < 0.0f) {
           LOG(WARNING) << "Calibration statistics indicates that node `" << node->attrs.name
                        << "` has negative input, consider use `auto` or `int8` as out_type";
