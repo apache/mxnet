@@ -1165,7 +1165,7 @@ def zeros(shape, dtype=_np.float32, **kwargs):
         is the default value, because `float32` is considered as the default
         data type in deep learning.
     ctx : Context, optional
-        An optional value type (default is the current default context).
+        An optional device context (default is the current default context).
 
     Returns
     -------
