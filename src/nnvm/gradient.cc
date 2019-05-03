@@ -175,8 +175,10 @@ Graph Gradient(Graph src) {
     if (ptr->is_variable()) continue;
     out_agg_grads.clear();
     auto& out_grad_vec = output_grads.at(ptr.get());
+    std::cout << "Calculating gradients" << std::endl;
     for (uint32_t i = 0; i < out_grad_vec.size(); ++i) {
       GradEntry& e = out_grad_vec[i];
+      std::cout << "i = " << i << ", name = " << ptr->attrs.name << std::endl;
       e.sum = agg_fun(std::move(e.grads));
       if (e.need_attr_hint && attr_hint_fun != nullptr) {
         e.sum = attr_hint_fun(e.sum, NodeEntry{ptr, 0, i});

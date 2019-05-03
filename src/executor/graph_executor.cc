@@ -98,7 +98,7 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 
 void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_train) {
   const auto& idx = graph_.indexed_graph();
-  std::cout << "Backward" << is_train << std::endl;
+  std::cout << "Backward(is_train = " << is_train << ")" << std::endl;
   if (num_forward_inputs_ != idx.input_nodes().size()) {
     for (size_t i = 0; i < head_grad_array_.size(); ++i) {
       if (!head_grad_array_[i].is_none()) {

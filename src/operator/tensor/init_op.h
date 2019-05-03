@@ -68,7 +68,7 @@ struct InitOpWithoutDTypeParam : public dmlc::Parameter<InitOpWithoutDTypeParam>
   int dtype;
   DMLC_DECLARE_PARAMETER(InitOpWithoutDTypeParam) {
     DMLC_DECLARE_FIELD(shape)
-    .set_default(mxnet::TShape(0, 1))
+    .set_default(mxnet::TShape())
     .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -215,9 +215,9 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape param_shape = param.shape;
-  // if (!Imperative::Get()->is_np_comp()) {
-  //   common::ConvertToNumpyShape(&param_shape);
-  // }
+  if (!Imperative::Get()->is_np_comp()) {
+    common::ConvertToNumpyShape(&param_shape);
+  }
   if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param_shape)) return true;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, param_shape);
   return shape_is_known(out_attrs->at(0));
