@@ -1,21 +1,3 @@
-<!--- Licensed to the Apache Software Foundation (ASF) under one -->
-<!--- or more contributor license agreements.  See the NOTICE file -->
-<!--- distributed with this work for additional information -->
-<!--- regarding copyright ownership.  The ASF licenses this file -->
-<!--- to you under the Apache License, Version 2.0 (the -->
-<!--- "License"); you may not use this file except in compliance -->
-<!--- with the License.  You may obtain a copy of the License at -->
-
-<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
-
-<!--- Unless required by applicable law or agreed to in writing, -->
-<!--- software distributed under the License is distributed on an -->
-<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
-<!--- KIND, either express or implied.  See the License for the -->
-<!--- specific language governing permissions and limitations -->
-<!--- under the License. -->
-
-
 
 # Fine-tuning Sentence Pair Classification with BERT
 
@@ -83,8 +65,6 @@ Let's load the pre-trained BERT using the module API in MXNet.
 
 ```clojure
 (def model-path-prefix "data/static_bert_base_net")
-;; epoch number of the model
-(def epoch 0)
 ;; the vocabulary used in the model
 (def vocab (bert-util/get-vocab))
 ;; the input question
@@ -157,12 +137,16 @@ For our task, we are interested in the 0th, 3rd and 4th columns.
 
 
 ```clojure
-(def raw-file (csv/parse-csv (slurp "data/dev.tsv") :delimiter \tab))
+(def raw-file 
+    (csv/parse-csv (string/replace (slurp "data/dev.tsv") "\"" "")
+                   :delimiter \tab
+                   :strict true))
+
 (def data-train-raw (->> raw-file
-                            (mapv #(vals (select-keys % [3 4 0])))
-                            (rest) ;;drop header
-                            (into [])
-                            ))
+                         (mapv #(vals (select-keys % [3 4 0])))
+                         (rest) ; drop header
+                         (into [])))
+
 (def sample (first data-train-raw))
 (println (nth sample 0)) ;;;sentence a
 (println (nth sample 1)) ;; sentence b
@@ -170,7 +154,7 @@ For our task, we are interested in the 0th, 3rd and 4th columns.
 ```
 
     He said the foodservice pie business doesn 't fit the company 's long-term growth strategy .
-     100 percent behind George Bush " and looked forward to using his years of training in the war .
+     The foodservice pie business does not fit our long-term growth strategy .
     1
 
 
@@ -230,16 +214,16 @@ We will do pre-processing on the inputs to get them in the right format and to p
 
 ```
 
-    Train Count is =  389
+    Train Count is =  408
     [PAD] token id =  1
     [CLS] token id =  2
     [SEP] token id =  3
     token ids = 
-     [2 2002 2056 1996 0 11345 2449 2987 0 4906 1996 2194 0 0 3930 5656 0 1012 3 0 2531 3867 2369 2577 5747 1000 1998 2246 2830 2000 2478 2010 2086 1997 2731 1999 1996 2162 0 1012 3 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
+     [2 2002 2056 1996 0 11345 2449 2987 0 4906 1996 2194 0 0 3930 5656 0 1012 3 0 1996 0 11345 2449 2515 2025 4906 2256 0 3930 5656 0 1012 3 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]
     segment ids = 
-     [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+     [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
     valid length = 
-     [38]
+     [31]
     label = 
      [0]
 
@@ -269,7 +253,6 @@ Now that we have all the input-batches for each row, we are going to slice them 
 
 (def train-data
   (let [{:keys [data0s data1s data2s labels train-num]} prepared-data
-        batch-size 32
         data-desc0 (mx-io/data-desc {:name "data0"
                                      :shape [train-num seq-length]
                                      :dtype dtype/FLOAT32
@@ -301,7 +284,7 @@ train-data
 
 
 
-    #object[org.apache.mxnet.io.NDArrayIter 0x34050a17 "non-empty iterator"]
+    #object[org.apache.mxnet.io.NDArrayIter 0x2583097d "non-empty iterator"]
 
 
 
@@ -325,50 +308,47 @@ Putting everything together, now we can fine-tune the model with a few epochs. F
 
 ```
 
-    Speedometer: epoch  0  count  0  metric  [accuracy 0.6875]
-    Speedometer: epoch  0  count  1  metric  [accuracy 0.5625]
-    Speedometer: epoch  0  count  2  metric  [accuracy 0.5729167]
-    Speedometer: epoch  0  count  3  metric  [accuracy 0.5390625]
-    Speedometer: epoch  0  count  4  metric  [accuracy 0.5]
-    Speedometer: epoch  0  count  5  metric  [accuracy 0.5364583]
-    Speedometer: epoch  0  count  6  metric  [accuracy 0.54910713]
-    Speedometer: epoch  0  count  7  metric  [accuracy 0.56640625]
-    Speedometer: epoch  0  count  8  metric  [accuracy 0.5763889]
-    Speedometer: epoch  0  count  9  metric  [accuracy 0.565625]
-    Speedometer: epoch  0  count  10  metric  [accuracy 0.56534094]
-    Speedometer: epoch  0  count  11  metric  [accuracy 0.5729167]
-    Speedometer: epoch  0  count  12  metric  [accuracy 0.5769231]
-    Speedometer: epoch  1  count  0  metric  [accuracy 0.625]
-    Speedometer: epoch  1  count  1  metric  [accuracy 0.65625]
-    Speedometer: epoch  1  count  2  metric  [accuracy 0.6354167]
-    Speedometer: epoch  1  count  3  metric  [accuracy 0.6484375]
-    Speedometer: epoch  1  count  4  metric  [accuracy 0.6375]
-    Speedometer: epoch  1  count  5  metric  [accuracy 0.625]
-    Speedometer: epoch  1  count  6  metric  [accuracy 0.63839287]
-    Speedometer: epoch  1  count  7  metric  [accuracy 0.65234375]
-    Speedometer: epoch  1  count  8  metric  [accuracy 0.6666667]
+    Speedometer: epoch  0  count  1  metric  [accuracy 0.609375]
+    Speedometer: epoch  0  count  2  metric  [accuracy 0.6041667]
+    Speedometer: epoch  0  count  3  metric  [accuracy 0.5703125]
+    Speedometer: epoch  0  count  4  metric  [accuracy 0.55625]
+    Speedometer: epoch  0  count  5  metric  [accuracy 0.5625]
+    Speedometer: epoch  0  count  6  metric  [accuracy 0.55803573]
+    Speedometer: epoch  0  count  7  metric  [accuracy 0.5625]
+    Speedometer: epoch  0  count  8  metric  [accuracy 0.5798611]
+    Speedometer: epoch  0  count  9  metric  [accuracy 0.584375]
+    Speedometer: epoch  0  count  10  metric  [accuracy 0.57670456]
+    Speedometer: epoch  0  count  11  metric  [accuracy 0.5807292]
+    Speedometer: epoch  0  count  12  metric  [accuracy 0.5793269]
+    Speedometer: epoch  1  count  1  metric  [accuracy 0.5625]
+    Speedometer: epoch  1  count  2  metric  [accuracy 0.5520833]
+    Speedometer: epoch  1  count  3  metric  [accuracy 0.5859375]
+    Speedometer: epoch  1  count  4  metric  [accuracy 0.59375]
+    Speedometer: epoch  1  count  5  metric  [accuracy 0.6145833]
+    Speedometer: epoch  1  count  6  metric  [accuracy 0.625]
+    Speedometer: epoch  1  count  7  metric  [accuracy 0.640625]
+    Speedometer: epoch  1  count  8  metric  [accuracy 0.6527778]
     Speedometer: epoch  1  count  9  metric  [accuracy 0.653125]
-    Speedometer: epoch  1  count  10  metric  [accuracy 0.64772725]
-    Speedometer: epoch  1  count  11  metric  [accuracy 0.6536458]
-    Speedometer: epoch  1  count  12  metric  [accuracy 0.65384614]
-    Speedometer: epoch  2  count  0  metric  [accuracy 0.78125]
-    Speedometer: epoch  2  count  1  metric  [accuracy 0.65625]
-    Speedometer: epoch  2  count  2  metric  [accuracy 0.65625]
-    Speedometer: epoch  2  count  3  metric  [accuracy 0.6875]
-    Speedometer: epoch  2  count  4  metric  [accuracy 0.69375]
-    Speedometer: epoch  2  count  5  metric  [accuracy 0.703125]
-    Speedometer: epoch  2  count  6  metric  [accuracy 0.6964286]
-    Speedometer: epoch  2  count  7  metric  [accuracy 0.69921875]
-    Speedometer: epoch  2  count  8  metric  [accuracy 0.7013889]
-    Speedometer: epoch  2  count  9  metric  [accuracy 0.690625]
-    Speedometer: epoch  2  count  10  metric  [accuracy 0.69034094]
-    Speedometer: epoch  2  count  11  metric  [accuracy 0.6953125]
+    Speedometer: epoch  1  count  10  metric  [accuracy 0.6448864]
+    Speedometer: epoch  1  count  11  metric  [accuracy 0.640625]
+    Speedometer: epoch  1  count  12  metric  [accuracy 0.6418269]
+    Speedometer: epoch  2  count  1  metric  [accuracy 0.671875]
+    Speedometer: epoch  2  count  2  metric  [accuracy 0.7083333]
+    Speedometer: epoch  2  count  3  metric  [accuracy 0.7109375]
+    Speedometer: epoch  2  count  4  metric  [accuracy 0.725]
+    Speedometer: epoch  2  count  5  metric  [accuracy 0.7239583]
+    Speedometer: epoch  2  count  6  metric  [accuracy 0.71875]
+    Speedometer: epoch  2  count  7  metric  [accuracy 0.734375]
+    Speedometer: epoch  2  count  8  metric  [accuracy 0.7361111]
+    Speedometer: epoch  2  count  9  metric  [accuracy 0.721875]
+    Speedometer: epoch  2  count  10  metric  [accuracy 0.71022725]
+    Speedometer: epoch  2  count  11  metric  [accuracy 0.6979167]
     Speedometer: epoch  2  count  12  metric  [accuracy 0.7019231]
 
 
 
 
 
-    #object[org.apache.mxnet.module.Module 0x35e65d46 "org.apache.mxnet.module.Module@35e65d46"]
+    #object[org.apache.mxnet.module.Module 0x73c42ae5 "org.apache.mxnet.module.Module@73c42ae5"]
 
 
