@@ -7,6 +7,9 @@ This aim was to have only minimal changes to C++ code to get better maintainabil
 
 ## News
 
+- **May 03, 2019** - Upgraded to MXNet v1.4.0
+    - Model converter released
+    - All changes: [Changelog](CHANGELOG.md)
 - **Sep 01, 2018** - MXNet v1.3.0
     - We are currently rebuilding BMXNet to utilize the new Gluon API for better maintainability
     - To build binary neural networks, you can use drop in replacements of convolution and dense layers (see [Usage](#usage)):
