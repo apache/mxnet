@@ -1589,3 +1589,12 @@ int MXStorageEmptyCache(int dev_type, int dev_id) {
   Storage::Get()->ReleaseAll(ctx);
   API_END();
 }
+
+int MXShallowCopyNDArray(NDArrayHandle src_handle, NDArrayHandle* out) {
+  NDArray* ret = nullptr;
+  API_BEGIN();
+  NDArray* src_array = static_cast<NDArray*>(src_handle);
+  ret = new NDArray(*src_array);
+  *out = ret;
+  API_END_HANDLE_ERROR(delete ret);
+}

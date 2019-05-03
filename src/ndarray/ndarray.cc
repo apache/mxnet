@@ -1205,7 +1205,10 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
   CHECK(!mxnet::op::shape_is_none(from.shape()))
       << "source operands have undefined shape";
-  if (from.shape().Size() == 0U) return;
+  // zero-size array, no need to copy
+  if (from.shape().Size() == 0U) {
+    return;
+  }
   // important: callback must always capture by value
   const Context from_ctx = from.ctx();
   const int a = from_ctx.dev_mask();
@@ -1865,6 +1868,10 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
+  // zero-size array, no need to copy
+  if (size == 0U) {
+    return;
+  }
   TBlob src((void*)data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
@@ -1996,6 +2003,10 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   mxnet::TShape dshape = this->shape();
   CHECK_EQ(dshape.Size(), size)
       << "Memory size do not match";
+  // zero-size array, no need to copy
+  if (size == 0U) {
+    return;
+  }
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {

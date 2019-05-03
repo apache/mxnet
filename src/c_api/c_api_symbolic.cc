@@ -1059,11 +1059,20 @@ int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_h
   API_BEGIN();
   nnvm::Symbol *source = static_cast<nnvm::Symbol *>(sym_handle);
   CHECK_EQ(source->outputs.size(), 1U)
-    << "Generating atomic symbol from other symbol only works for nongrouped symbol.";
-  const auto& node = source->outputs[0];
+      << "Generating atomic symbol from other symbol only works for nongrouped symbol.";
+  const auto &node = source->outputs[0];
   const auto *op = node.node->op();
   const auto attrs = source->ListAttrs(nnvm::Symbol::ListAttrOption::kShallow);
   *s = nnvm::Symbol::CreateFunctor(op, attrs);
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
+}
+
+int MXShallowCopySymbol(SymbolHandle src, SymbolHandle* out) {
+  nnvm::Symbol* out_sym = new nnvm::Symbol;
+  API_BEGIN();
+  nnvm::Symbol* src_sym = static_cast<nnvm::Symbol*>(src);
+  *out_sym = *src_sym;
+  *out = out_sym;
+  API_END_HANDLE_ERROR(delete out_sym);
 }
