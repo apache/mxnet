@@ -860,7 +860,7 @@ class MCC(EvalMetric):
 
     .. note::
 
-        This version of MCC only supports binary classification.  See PCC.
+        This version of MCC only supports binary classification.  See MMCC.
 
     Parameters
     ----------
@@ -1477,18 +1477,18 @@ class PearsonCorrelation(EvalMetric):
 
 
 @register
-class PCC(EvalMetric):
-    """PCC is a multiclass equivalent for the Matthews correlation coefficient derived
+class MMCC(EvalMetric):
+    """MMCC is a multiclass equivalent for the Matthews correlation coefficient derived
     from a discrete solution to the Pearson correlation coefficient.
 
     .. math::
-        \\text{PCC} = \\frac {\\sum _{k}\\sum _{l}\\sum _{m}C_{kk}C_{lm}-C_{kl}C_{mk}}
+        \\text{MMCC} = \\frac {\\sum _{k}\\sum _{l}\\sum _{m}C_{kk}C_{lm}-C_{kl}C_{mk}}
         {{\\sqrt {\\sum _{k}(\\sum _{l}C_{kl})(\\sum _{k'|k'\\neq k}\\sum _{l'}C_{k'l'})}}
          {\\sqrt {\\sum _{k}(\\sum _{l}C_{lk})(\\sum _{k'|k'\\neq k}\\sum _{l'}C_{l'k'})}}}
 
     defined in terms of a K x K confusion matrix C.
 
-    When there are more than two labels the PCC will no longer range between -1 and +1.
+    When there are more than two labels the MMCC will no longer range between -1 and +1.
     Instead the minimum value will be between -1 and 0 depending on the true distribution.
     The maximum value is always +1.
 
@@ -1522,18 +1522,18 @@ class PCC(EvalMetric):
     )]
     >>> f1 = mx.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
-    >>> pcc = mx.metric.PCC()
-    >>> pcc.update(preds = predicts, labels = labels)
+    >>> mmcc = mx.metric.MMCC()
+    >>> mmcc.update(preds = predicts, labels = labels)
     >>> print f1.get()
     ('f1', 0.95233560306652054)
-    >>> print pcc.get()
-    ('pcc', 0.01917751877733392)
+    >>> print mmcc.get()
+    ('mmcc', 0.01917751877733392)
     """
-    def __init__(self, name='pcc',
+    def __init__(self, name='mmcc',
                  output_names=None, label_names=None,
                  has_global_stats=True):
         self.k = 2
-        super(PCC, self).__init__(
+        super(MMCC, self).__init__(
             name=name, output_names=output_names, label_names=label_names,
             has_global_stats=has_global_stats)
 
@@ -1572,7 +1572,11 @@ class PCC(EvalMetric):
         # update the confusion matrix
         for label, pred in zip(labels, preds):
             label = label.astype('int32', copy=False).asnumpy()
-            pred = pred.asnumpy().argmax(axis=1)
+            pred = pred.asnumpy()
+            if pred.shape != label.shape:
+                pred = pred.argmax(axis=1)
+            else:
+                pred = pred.astype('int32', copy=False)
             n = max(pred.max(), label.max())
             if n >= self.k:
                 self._grow(n + 1 - self.k)
