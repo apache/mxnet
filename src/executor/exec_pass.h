@@ -99,12 +99,6 @@ class OpExecutor {
 using OpExecVector = std::vector<std::shared_ptr<OpExecutor> >;
 
 /*!
- * \brief per node vector of operator states.
- * \note stored under attribute "op_states"
- */
-using OpStateVector = std::vector<OpStatePtr>;
-
-/*!
  * \brief per node context vector
  * \node stored under "context"
  */
@@ -121,10 +115,9 @@ using DevMaskVector = std::vector<int>;
  *
  * \param g input graph
  * \param p_ret OpExecVector for input and output
- * \param p_state OpStateVector if it has.
  * \param i the id of the node
  */
-void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, size_t i);
+void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i);
 /*!
  * \brief Attach OpExecutor to the graph attributes.
  *
