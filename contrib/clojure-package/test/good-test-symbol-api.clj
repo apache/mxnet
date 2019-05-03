@@ -119,7 +119,7 @@
   
   
   
-  Defined in src/operator/nn/batch_norm.cc:L574
+  Defined in src/operator/nn/batch_norm.cc:L572
   
   `data`: Input data to batch normalization (optional)
   `gamma`: gamma array (optional)
