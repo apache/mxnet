@@ -624,7 +624,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
 
   std::cout << "Doing InferShape:" << std::endl;
   for (size_t j = entry_start; j < entry_end; ++j) {
-    std::cout << "\t" << Shape2Str(rshape[j]) << std::endl;
+    std::cout << "\t" << j << " : " << Shape2Str(rshape[j]) << std::endl;
   }
 
   int i = 0;
@@ -655,6 +655,12 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
     ++i;
     std::cout << "num_unknown = " << num_unknown << std::endl;
   } while (num_unknown > 0 && last_num_unknown > num_unknown);
+
+  std::cout << "Done InferShape:" << std::endl;
+  for (size_t j = entry_start; j < entry_end; ++j) {
+    std::cout << "\t" << j << " : " << Shape2Str(rshape[j]) << std::endl;
+  }
+
   // set the shapes
   ret.attrs[attr_name] = std::make_shared<any>(std::move(rshape));
   // set the shapes

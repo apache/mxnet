@@ -124,9 +124,8 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
   }
   if (this->is_dynamic_) {
     graph_ = InferShape(std::move(graph_), {}, "");
-  }
-  {
     std::cout << "Shapes after run" << std::endl;
+    mxnet::ShapeVector rshape = graph_.MoveCopyAttr<mxnet::ShapeVector>("shape");
     const auto& idx = graph_.indexed_graph();
     for (size_t nid = 0; nid < idx.num_nodes(); ++nid) {
       const auto& inode = idx[nid];
@@ -143,14 +142,38 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
         std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
       }
       std::cout << "\toutputs:" << std::endl;
+      int i = 0;
+      for (NDArray &array : opnode.exec->in_array) {
+        array.WaitToRead();
+        if (!shape_is_known(array.shape())) {
+          array.SetShapeFromChunk();
+        }
+        if (!shape_is_known(array.shape())) {
+          mxnet::TShape shape = rshape[idx.entry_id(inode.inputs[i])];
+          if (shape_is_known(shape)) {
+            array.ReshapeAndAlloc(shape);
+          }
+        }
+        std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
+        ++i;
+      }
+      i = 0;
       for (NDArray &array : opnode.exec->out_array) {
         array.WaitToRead();
         if (!shape_is_known(array.shape())) {
           array.SetShapeFromChunk();
         }
+        if (!shape_is_known(array.shape())) {
+          mxnet::TShape shape = rshape[idx.entry_id(nid, i)];
+          if (shape_is_known(shape)) {
+            array.ReshapeAndAlloc(shape);
+          }
+        }
         std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
+        ++i;
       }
     }
+    graph_.attrs["shape"] = std::make_shared<dmlc::any>(rshape);
   }
   const auto& idx = graph_.indexed_graph();
   RunOps(is_train, num_forward_nodes_, idx.num_nodes());

@@ -292,24 +292,24 @@ def test_while_loop_for_foreach():
         # There is 1 state: s
         step_funcs = [
             lambda a, b, s: s,
-            lambda a, b, s: a * 1.5 + b * 2.5 - s * 3.5,
-            lambda a, b, s: a * 1.5 - s * 3.5 + b * 2.5,
-            lambda a, b, s: b * 2.5 + a * 1.5 - s * 3.5,
-            lambda a, b, s: b * 2.5 - s * 3.5 + a * 1.5,
-            lambda a, b, s: s * -3.5 + a * 1.5 + b * 2.5,
-            lambda a, b, s: s * -3.5 + b * 2.5 + a * 1.5,
-            lambda a, b, s: a * 2.5 * b + s * 0.3,
-            lambda a, b, s: b * 2.5 * a + s * 0.3,
-            lambda a, b, s: 2.5 * a * b + s * 0.3,
-            lambda a, b, s: b * a * 2.5 + s * 0.3,
-            lambda a, b, s: 2.5 * b * a + s * 0.3,
-            lambda a, b, s: b * a * 2.5 + s * 0.3,
-            lambda a, b, s: s * 0.3 + a * 2.5 * b,
-            lambda a, b, s: s * 0.3 + b * 2.5 * a,
-            lambda a, b, s: s * 0.3 + 2.5 * a * b,
-            lambda a, b, s: s * 0.3 + b * a * 2.5,
-            lambda a, b, s: s * 0.3 + 2.5 * b * a,
-            lambda a, b, s: s * 0.3 + b * a * 2.5,
+            # lambda a, b, s: a * 1.5 + b * 2.5 - s * 3.5,
+            # lambda a, b, s: a * 1.5 - s * 3.5 + b * 2.5,
+            # lambda a, b, s: b * 2.5 + a * 1.5 - s * 3.5,
+            # lambda a, b, s: b * 2.5 - s * 3.5 + a * 1.5,
+            # lambda a, b, s: s * -3.5 + a * 1.5 + b * 2.5,
+            # lambda a, b, s: s * -3.5 + b * 2.5 + a * 1.5,
+            # lambda a, b, s: a * 2.5 * b + s * 0.3,
+            # lambda a, b, s: b * 2.5 * a + s * 0.3,
+            # lambda a, b, s: 2.5 * a * b + s * 0.3,
+            # lambda a, b, s: b * a * 2.5 + s * 0.3,
+            # lambda a, b, s: 2.5 * b * a + s * 0.3,
+            # lambda a, b, s: b * a * 2.5 + s * 0.3,
+            # lambda a, b, s: s * 0.3 + a * 2.5 * b,
+            # lambda a, b, s: s * 0.3 + b * 2.5 * a,
+            # lambda a, b, s: s * 0.3 + 2.5 * a * b,
+            # lambda a, b, s: s * 0.3 + b * a * 2.5,
+            # lambda a, b, s: s * 0.3 + 2.5 * b * a,
+            # lambda a, b, s: s * 0.3 + b * a * 2.5,
         ]
         def make_func(step_func):
             def step(loop, free):
@@ -609,33 +609,33 @@ def test_while_loop_for_foreach():
                 )
 
     # Case 0: the simpest case
-    case_0()
+    # case_0()
     # Case 1.1.*
-    case_1(
-        cond=make_true_cond(),
-        loop_var_shapes=[
-            (1, ),          # s
-        ],
-        free_var_shapes=[
-            (1, ),          # a
-            (1, ),          # b
-        ],
-        max_iterations=5,
-        n_steps=5,
-    )
+    # case_1(
+    #     cond=make_true_cond(),
+    #     loop_var_shapes=[
+    #         (1, ),          # s
+    #     ],
+    #     free_var_shapes=[
+    #         (1, ),          # a
+    #         (1, ),          # b
+    #     ],
+    #     max_iterations=5,
+    #     n_steps=5,
+    # )
     # Case 1.2.*
-    case_1(
-        cond=make_true_cond(),
-        loop_var_shapes=[
-            (2, 3, 4),      # s
-        ],
-        free_var_shapes=[
-            (2, 3, 4),      # a
-            (2, 3, 4),      # b
-        ],
-        max_iterations=3,
-        n_steps=3,
-    )
+    # case_1(
+    #     cond=make_true_cond(),
+    #     loop_var_shapes=[
+    #         (2, 3, 4),      # s
+    #     ],
+    #     free_var_shapes=[
+    #         (2, 3, 4),      # a
+    #         (2, 3, 4),      # b
+    #     ],
+    #     max_iterations=3,
+    #     n_steps=3,
+    # )
     # Case 1.3.*
     case_1(
         cond=make_false_cond(),
@@ -649,6 +649,7 @@ def test_while_loop_for_foreach():
         max_iterations=20,
         n_steps=0,
     )
+    return
     # Case 2.1.*
     case_2(
         cond=make_for_cond(length=5),
@@ -2176,4 +2177,5 @@ def test_foreach_with_unkown_dim():
 if __name__ == '__main__':
     # import nose
     # nose.runmodule()
-    test_while_loop_rnn()
+    # test_while_loop_rnn()
+    test_while_loop_for_foreach()
