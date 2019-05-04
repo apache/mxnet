@@ -32,6 +32,22 @@
 namespace mxnet {
 namespace exec {
 
+static std::string Shape2Str(const mxnet::TShape &shape) {
+  if (shape.ndim() == -1) {
+    return "[UNK]";
+  }
+  std::ostringstream os;
+  os << "(";
+  for (int i = 0; i < (int) shape.ndim(); ++i) {
+    if (i > 0) {
+      os << ", ";
+    }
+    os << shape[i];
+  }
+  os << ")";
+  return os.str();
+}
+
 template<typename AttrType, typename FInfer>
 bool ApplyOpInferAttr(const nnvm::Graph& g,
                       const FInfer& finfer,
@@ -606,6 +622,11 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   size_t last_num_unknown;
   size_t num_unknown = static_cast<size_t>(-1);  // Infinity
 
+  std::cout << "Doing InferShape:" << std::endl;
+  for (size_t j = entry_start; j < entry_end; ++j) {
+    std::cout << "\t" << Shape2Str(rshape[j]) << std::endl;
+  }
+
   int i = 0;
   do {
     if (i % 2 == 0) {
@@ -632,6 +653,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       }
     }
     ++i;
+    std::cout << "num_unknown = " << num_unknown << std::endl;
   } while (num_unknown > 0 && last_num_unknown > num_unknown);
   // set the shapes
   ret.attrs[attr_name] = std::make_shared<any>(std::move(rshape));

@@ -97,29 +97,62 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 }
 
 void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_train) {
-  const auto& idx = graph_.indexed_graph();
   std::cout << "Backward(is_train = " << is_train << ")" << std::endl;
-  if (num_forward_inputs_ != idx.input_nodes().size()) {
-    for (size_t i = 0; i < head_grad_array_.size(); ++i) {
-      if (!head_grad_array_[i].is_none()) {
-        CHECK(i < head_grads.size() && !head_grads[i].is_none())
-            << "Because the last operator is not Loss function, "
-            << "head_gradient is required when calling backward. "
-            << "If you are attempting to minimize the output as "
-            << "an objective, please modify your network and "
-            << "pass it through the make_loss symbol.";
-        const NDArray &from = head_grads[i];
-        NDArray &to = head_grad_array_[i];
-        if (this->is_dynamic_) {
-          to.WaitToRead();
-          if (!shape_is_known(to.shape())) {
-            to.Init(from.shape());
+  {
+    const auto& idx = graph_.indexed_graph();
+    if (num_forward_inputs_ != idx.input_nodes().size()) {
+      for (size_t i = 0; i < head_grad_array_.size(); ++i) {
+        if (!head_grad_array_[i].is_none()) {
+          CHECK(i < head_grads.size() && !head_grads[i].is_none())
+              << "Because the last operator is not Loss function, "
+              << "head_gradient is required when calling backward. "
+              << "If you are attempting to minimize the output as "
+              << "an objective, please modify your network and "
+              << "pass it through the make_loss symbol.";
+          const NDArray &from = head_grads[i];
+          NDArray &to = head_grad_array_[i];
+          if (this->is_dynamic_) {
+            to.WaitToRead();
+            if (!shape_is_known(to.shape())) {
+              to.Init(from.shape());
+            }
           }
+          CopyFromTo(from, &to);
         }
-        CopyFromTo(from, &to);
       }
     }
   }
+  if (this->is_dynamic_) {
+    graph_ = InferShape(std::move(graph_), {}, "");
+  }
+  {
+    std::cout << "Shapes after run" << std::endl;
+    const auto& idx = graph_.indexed_graph();
+    for (size_t nid = 0; nid < idx.num_nodes(); ++nid) {
+      const auto& inode = idx[nid];
+      std::cout << "nid = " << nid << ", " << inode.source->attrs.name << std::endl;
+      if (inode.source->is_variable()) continue;
+      OpNode& opnode = op_nodes_[nid];
+      if (opnode.skip_exec_node) continue;
+      std::cout << "\tinputs:" << std::endl;
+      for (NDArray &array : opnode.exec->in_array) {
+        array.WaitToRead();
+        if (!shape_is_known(array.shape())) {
+          array.SetShapeFromChunk();
+        }
+        std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
+      }
+      std::cout << "\toutputs:" << std::endl;
+      for (NDArray &array : opnode.exec->out_array) {
+        array.WaitToRead();
+        if (!shape_is_known(array.shape())) {
+          array.SetShapeFromChunk();
+        }
+        std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
+      }
+    }
+  }
+  const auto& idx = graph_.indexed_graph();
   RunOps(is_train, num_forward_nodes_, idx.num_nodes());
   std::cout << "Backward done!" << std::endl;
 }
@@ -1371,6 +1404,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     opnode.exec->op_ctx.need_grad = need_grad_;
   }
 
+  mxnet::ShapeVector rshape = graph_.MoveCopyAttr<mxnet::ShapeVector>("shape");
   // Push Ops
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     std::cout << "nid = " << nid << std::endl;
@@ -1384,6 +1418,8 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     }
     // Normal mode
     const auto& inode = idx[nid];
+    const uint32_t num_inputs = inode.inputs.size();
+    const uint32_t num_outputs = inode.source->num_outputs();
     if (inode.source->is_variable()) continue;
     OpNode& opnode = op_nodes_[nid];
     if (op_nodes_[nid].skip_exec_node) continue;
@@ -1393,10 +1429,26 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     }
     if (this->is_dynamic_) {
       const auto &op = inode.source->op();
-      for (NDArray &array : opnode.exec->in_array) {
-        array.WaitToRead();
-        if (!shape_is_known(array.shape())) {
-          array.SetShapeFromChunk();
+      {
+        for (NDArray &array : opnode.exec->in_array) {
+          array.WaitToRead();
+          if (!shape_is_known(array.shape())) {
+            array.SetShapeFromChunk();
+          }
+        }
+        int i = 0;
+        for (NDArray &array : opnode.exec->out_array) {
+          array.WaitToRead();
+          if (!shape_is_known(array.shape())) {
+            array.SetShapeFromChunk();
+          }
+          if (!shape_is_known(array.shape())) {
+            mxnet::TShape shape = rshape[idx.entry_id(nid, i)];
+            if (shape_is_known(shape)) {
+              array.ReshapeAndAlloc(shape);
+            }
+          }
+          ++i;
         }
       }
       if (finfer_shape.count(op)) {
@@ -1473,11 +1525,26 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     } else {
       LOG(FATAL) << "Not accessed";
     }
+    for (uint32_t i = 0; i < num_inputs; ++i) {
+      int eid = idx.entry_id(inode.inputs[i]);
+      if (!shape_is_known(rshape[eid])) {
+        std::cout << "Setting rshape[" << eid << "] = " << opnode.exec->in_array[i].shape() << std::endl;
+        rshape[eid] = opnode.exec->in_array[i].shape();
+      }
+    }
+    for (uint32_t i = 0; i < num_outputs; ++i) {
+      int eid = idx.entry_id(nid, i);
+      if (!shape_is_known(rshape[eid])) {
+        std::cout << "Setting rshape[" << eid << "] = " << opnode.exec->out_array[i].shape() << std::endl;
+        rshape[eid] = opnode.exec->out_array[i].shape();
+      }
+    }
     // Monitor callbacks
     if (monitor_callback_) {
       ExecuteMonOutputCallback(nid);
     }
   }
+  graph_.attrs["shape"] = std::make_shared<dmlc::any>(rshape);
 }
 
 GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {
