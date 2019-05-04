@@ -411,8 +411,6 @@ class DeformableConvolutionProp : public OperatorProperty {
       oshape[3] = (dshape[3] + 2 * param_.pad[1] -
         (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1] + 1;
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
-      CHECK_EQ(oshape[1] % param_.num_deformable_group, 0U) \
-        << "output num_filter must divide deformable group size";
       CHECK_EQ(oshape[2], offsetshape[2]) \
         << "output height must equal to offset map height";
       CHECK_EQ(oshape[3], offsetshape[3]) \
