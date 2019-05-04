@@ -142,9 +142,10 @@ def test_ndarray_setitem():
     assert same(x.asnumpy(), x_np)
 
     # Scalar array, no assignment allowed
-    x = mx.nd.zeros(())
-    with assert_raises(IndexError):
-        x[:] = 1
+    with mx.np_compat():
+        x = mx.nd.zeros(())
+        with assert_raises(IndexError):
+            x[:] = 1
 
     # Assignments for empty axes
     for trivial_shape in [(1,), (1, 1), (1, 1, 1)]:
