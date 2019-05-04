@@ -602,7 +602,8 @@ class RNNOp {
         param_.batch_size_ * sizeof(IType) + param_.batch_size_ * sizeof(int);
 
       host_workspace =
-        ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1, char>(Shape1(host_workspace_bytes));
+        ctx.requested[rnn_enum::kTempSpace].get_host_space_typed<1, char>(
+            Shape1(host_workspace_bytes));
 
       sequence_length_cpu_int = reinterpret_cast<int*>(host_workspace.dptr_);
       sequence_length_cpu_itype =
