@@ -95,7 +95,7 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);
-  for (const auto& out_shape : *out_attrs){
+  for (const auto& out_shape : *out_attrs) {
     if (!shape_is_known(out_shape)) return false;
   }
   return true;
