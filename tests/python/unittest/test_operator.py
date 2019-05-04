@@ -3364,7 +3364,8 @@ def test_l2_normalization():
             check_l2_normalization((nbatch, nchannel, height, width), mode, dtype)
 
 
-def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_check_eps=1E-3):
+def check_layer_normalization(in_shape, axis, eps, dtype=np.float32,
+                              forward_check_eps=1E-3, backward_check_eps=1E-3):
     def npy_layer_norm(data, gamma, beta, axis=1, eps=1E-5):
         if axis < 0:
             axis += data.ndim
@@ -3421,9 +3422,9 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
     exe.backward([mx.nd.array(out_grad, ctx=ctx)])
     gt_data_grad, gt_gamma_grad, gt_beta_grad =\
         npy_layer_norm_grad(data, gamma, out_grad, axis, eps)
-    assert_almost_equal(exe.grad_dict['data'].asnumpy(), gt_data_grad, 1E-4, 1E-4)
-    assert_almost_equal(exe.grad_dict['gamma'].asnumpy(), gt_gamma_grad, 1E-4, 1E-4)
-    assert_almost_equal(exe.grad_dict['beta'].asnumpy(), gt_beta_grad, 1E-4, 1E-4)
+    assert_almost_equal(exe.grad_dict['data'].asnumpy(), gt_data_grad, backward_check_eps, backward_check_eps)
+    assert_almost_equal(exe.grad_dict['gamma'].asnumpy(), gt_gamma_grad, backward_check_eps, backward_check_eps)
+    assert_almost_equal(exe.grad_dict['beta'].asnumpy(), gt_beta_grad, backward_check_eps, backward_check_eps)
 
     # Test for grad_req = add
     out_grad = np.random.normal(0, 1, in_shape).astype(dtype)
@@ -3442,11 +3443,11 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
     gt_data_grad, gt_gamma_grad, gt_beta_grad = \
         npy_layer_norm_grad(data, gamma, out_grad, axis, eps)
     assert_almost_equal(exe.grad_dict['data'].asnumpy(),
-                        gt_data_grad + init_data_grad, 1E-4, 1E-4)
+                        gt_data_grad + init_data_grad, backward_check_eps, backward_check_eps)
     assert_almost_equal(exe.grad_dict['gamma'].asnumpy(),
-                        gt_gamma_grad + init_gamma_grad, 1E-4, 1E-4)
+                        gt_gamma_grad + init_gamma_grad, backward_check_eps, backward_check_eps)
     assert_almost_equal(exe.grad_dict['beta'].asnumpy(),
-                        gt_beta_grad + init_beta_grad, 1E-4, 1E-4)
+                        gt_beta_grad + init_beta_grad, backward_check_eps, backward_check_eps)
 
 
 @with_seed()
@@ -3521,13 +3522,15 @@ def test_norm():
 
 
 def test_layer_norm():
-    for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
-                                        [1E-2, 1E-3, 1E-4]):
+    for dtype, forward_check_eps, backward_check_eps in zip([np.float16, np.float32, np.float64],
+                                                            [1E-2, 1E-3, 1E-4],
+                                                            [1E-3, 1E-3, 1E-4]):
         for in_shape in [(10, 6, 5), (10, 10), (128 * 32, 512)]:
             for axis in range(-len(in_shape), len(in_shape)):
                 for eps in [1E-2, 1E-3]:
                     check_layer_normalization(in_shape, axis, eps, dtype=dtype,
-                                              forward_check_eps=forward_check_eps)
+                                              forward_check_eps=forward_check_eps,
+                                              backward_check_eps=backward_check_eps)
 
 
 # Numpy Implementation of Sequence Ops
