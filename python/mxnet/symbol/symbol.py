@@ -90,7 +90,7 @@ class Symbol(SymbolBase):
         <Symbol d>
         <Symbol _plus0>
         """
-        return (self[i] for i in self.list_outputs())
+        return (self[i] for i in range(len(self)))
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y
@@ -1013,7 +1013,6 @@ class Symbol(SymbolBase):
             return (arg_types, out_types, aux_types)
         else:
             return (None, None, None)
-            # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
         """Infers the shapes of all arguments and all outputs given the known shapes of
@@ -1071,6 +1070,7 @@ class Symbol(SymbolBase):
             List of auxiliary state shapes.
             The order is same as the order of list_auxiliary_states().
         """
+        # pylint: disable=too-many-locals
         try:
             res = self._infer_shape_impl(False, *args, **kwargs)
             if res[1] is None:

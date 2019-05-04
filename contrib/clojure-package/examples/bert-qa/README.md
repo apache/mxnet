@@ -57,9 +57,8 @@ Some sample questions and answers are provide in the `squad-sample.edn` file. So
 
 * `lein install` in the root of the main project directory
 * cd into this project directory and do `lein run`. This will execute the cpu version.
-
-`lein run :cpu` - to run with cpu
-`lein run :gpu` - to run with gpu
+  * `lein run` or `lein run :cpu` to run with cpu
+  * `lein run :gpu` to run with gpu
 
 ## Background
 

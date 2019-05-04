@@ -21,14 +21,12 @@
 # the whole docker cache for the image
 
 set -ex
-# install libraries for mxnet's python package on ubuntu
-apt-get update || true
-apt-get install -y python-dev python3-dev virtualenv wget
 
-# the version of the pip shipped with ubuntu may be too lower, install a recent version here
-wget -nv https://bootstrap.pypa.io/get-pip.py
-python3 get-pip.py
-python2 get-pip.py
+# Multipackage installation does not fail in yum
+CUDNN_DOWNLOAD_SUM=4e15a323f2edffa928b4574f696fc0e449a32e6bc35c9ccb03a47af26c2de3fa
+curl -fsSL http://developer.download.nvidia.com/compute/redist/cudnn/v7.3.1/cudnn-10.0-linux-x64-v7.3.1.20.tgz -O
+echo "$CUDNN_DOWNLOAD_SUM cudnn-10.0-linux-x64-v7.3.1.20.tgz" | sha256sum -c -
+tar --no-same-owner -xzf cudnn-10.0-linux-x64-v7.3.1.20.tgz -C /usr/local
+rm cudnn-10.0-linux-x64-v7.3.1.20.tgz
+ldconfig
 
-pip2 install nose cpplint==1.3.0 'numpy<=1.15.2,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
-pip3 install nose cpplint==1.3.0 pylint==2.3.1 'numpy<=1.15.2,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
