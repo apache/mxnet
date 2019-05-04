@@ -70,6 +70,88 @@
 namespace mxnet {
 namespace op {
 
+template <typename DType>
+inline DType deformable_im2col_bilinear_cpu(const DType* data,
+    const int height, const int width, DType h, DType w) {
+  int h_low = floor(h);
+  int w_low = floor(w);
+  int h_high;
+  int w_high;
+
+  if (h_low >= height - 1) {
+    h_high = height - 1;
+    h = (DType)h_low;
+  } else {
+    h_high = h_low + 1;
+  }
+
+  if (w_low >= width - 1) {
+    w_high = width - 1;
+    w = (DType)w_low;
+  } else {
+    w_high = w_low + 1;
+  }
+
+  DType lh = h - h_low;
+  DType lw = w - w_low;
+  DType hh = 1 - lh, hw = 1 - lw;
+
+  DType v1 = data[h_low * width + w_low];
+  DType v2 = data[h_low * width + w_high];
+  DType v3 = data[h_high * width + w_low];
+  DType v4 = data[h_high * width + w_high];
+  DType w1 = hh * hw, w2 = hh * lw, w3 = lh * hw, w4 = lh * lw;
+
+  return w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4;
+}
+
+/*!
+ * \brief deformable_im2col 2D cpu version.
+ * DO NOT call this function directly.
+ * Use the wrapper function im2col() instead.
+ */
+template <typename DType>
+inline void deformable_im2col_cpu(const DType* data_im, const DType* data_offset,
+    const int channels, const int height, const int width,
+    const int output_h, const int output_w,
+    const int kernel_h, const int kernel_w,
+    const int pad_h, const int pad_w,
+    const int stride_h, const int stride_w,
+    const int dilation_h, const int dilation_w,
+    const uint32_t deformable_group,
+    DType* data_col) {
+  const int channel_size = height * width;
+  const int offset_size = 2 * kernel_h * kernel_w * output_h * output_w;
+  const int channel_per_deformable_group = channels / deformable_group;
+  for (int channel = 0; channel < channels; channel++, data_im += channel_size) {
+    if (channel % channel_per_deformable_group == 0 && channel != 0) {
+      data_offset += offset_size;
+    }
+    for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
+      for (int kernel_col = 0; kernel_col < kernel_w; kernel_col++) {
+        int input_row = -pad_h + kernel_row * dilation_h;
+        for (int output_row = 0; output_row < output_h; output_row++) {
+          int input_col = -pad_w + kernel_col * dilation_w;
+          for (int output_col = 0; output_col < output_w; output_col++) {
+            int offset_h_ptr = ((2 * (kernel_row * kernel_w + kernel_col)) *
+              output_h + output_row) * output_w + output_col;
+            int offset_w_ptr = offset_h_ptr + output_h * output_w;
+            DType im_row = input_row + data_offset[offset_h_ptr];
+            DType im_col = input_col + data_offset[offset_w_ptr];
+            if (im_row >= 0 && im_col >= 0 && im_row < height && im_col < width) {
+              *(data_col++) = deformable_im2col_bilinear_cpu(data_im, height, width, im_row, im_col);
+            } else {
+              *(data_col++) = 0;
+            }
+            input_col += stride_w;
+          }
+          input_row += stride_h;
+        }
+      }
+    }
+  }
+}
+
 /*!\brief
  * cpu function of deformable_im2col algorithm
  * \param s device stream
@@ -91,7 +173,14 @@ inline void deformable_im2col(mshadow::Stream<cpu>* s,
   const mxnet::TShape& pad, const mxnet::TShape& stride, const mxnet::TShape& dilation,
   const uint32_t deformable_group, DType* data_col) {
   if (2 == kernel_shape.ndim()) {
-    LOG(FATAL) << "only implemented in GPU";
+    deformable_im2col_cpu(data_im, data_offset,
+        im_shape[1], im_shape[2], im_shape[3],
+        col_shape[1], col_shape[2],
+        kernel_shape[0], kernel_shape[1],
+        pad[0], pad[1],
+        stride[0], stride[1],
+        dilation[0], dilation[1],
+        deformable_group, data_col);
   } else {
     LOG(FATAL) << "not implemented";
   }
