@@ -381,7 +381,7 @@ class ThreadedEngine : public Engine {
           } else {
             callback();
           }
-        } catch (dmlc::Error& e) {
+        } catch (const std::exception& e) {
           threaded_opr->opr_exception =
               std::make_shared<std::exception_ptr>(std::current_exception());
           callback();
