@@ -75,7 +75,6 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
            this->shape == other.shape &&
            this->reverse == other.reverse;
   }
-
 };
 
 template<typename IType>

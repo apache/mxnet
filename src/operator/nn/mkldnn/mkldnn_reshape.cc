@@ -72,7 +72,7 @@ class MKLDNNReshapeForward {
     auto temp_fmt = static_cast<mkldnn::memory::format>(GetDefaultFormat(in_pd.desc()));
     auto temp_desc = mkldnn::memory::desc(temp_dims, temp_type, temp_fmt);
     auto temp_pd = mkldnn::memory::primitive_desc(temp_desc, engine);
-    temp_ = std::make_shared<mkldnn::memory>(temp_pd); // allocate memory?
+    temp_ = std::make_shared<mkldnn::memory>(temp_pd, nullptr);
 
     // destination
     out_ = std::make_shared<mkldnn::memory>(temp_pd, nullptr);
@@ -89,7 +89,7 @@ class MKLDNNReshapeForward {
         // reorder to default
         prims_.push_back(mkldnn::reorder(*data_, *temp_));
         prims_.push_back(mkldnn::reorder(*temp_, *out_));
-        needInvalidateInput = false; 
+        needInvalidateInput = false;
       } else {
         prims_.push_back(mkldnn::reorder(*data_, *out_));
         needInvalidateInput = false;
@@ -101,7 +101,11 @@ class MKLDNNReshapeForward {
     }
   }
 
-  void SetNewMem(const NDArray &input, const NDArray &output) {
+  int GetWorkspaceSize() {
+    return temp_ ? temp_->get_primitive_desc().get_size() : 0;
+  }
+
+  void SetNewMem(const NDArray &input, const NDArray &output, void* workspace = nullptr) {
     if (input.IsMKLDNNData()) {
       this->data_->set_data_handle(input.GetMKLDNNData()->get_data_handle());
     } else {
@@ -117,12 +121,17 @@ class MKLDNNReshapeForward {
         this->out_->set_data_handle(output.data().dptr<DTYPE>());
       })
     }
+
+    if (workspace) {
+      this->temp_->set_data_handle(workspace);
+    }
   }
 
   void Execute(const NDArray &input,
-               const NDArray &output) {
+               const NDArray &output,
+               void* workspace = nullptr) {
     // set memory handles
-    SetNewMem(input, output);
+    SetNewMem(input, output, workspace);
     // register primitives
     auto stream = MKLDNNStream::Get();
     for (auto &v : this->prims_) {
@@ -169,7 +178,16 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
   if (req == kNullOp) return;
 
   auto fwd = GetReshapeForward(param, req, input, output);
-  fwd.Execute(input, output);
+  auto ws_size = fwd.GetWorkspaceSize();
+  void* ws_ptr = nullptr;
+  if (ws_size) {
+    mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+    mshadow::Tensor<cpu, 1, char> ws = ctx.requested[0]
+      .get_space_typed<cpu, 1, char>(mshadow::Shape1(ws_size), s);
+    ws_ptr = reinterpret_cast<void*>(ws.dptr_);
+  }
+
+  fwd.Execute(input, output, ws_ptr);
 }
 }  // namespace op
 }  // namespace mxnet
