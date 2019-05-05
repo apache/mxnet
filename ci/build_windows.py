@@ -247,7 +247,7 @@ def main():
         if 'CUDA_PATH' not in os.environ:
             os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2"
         if 'MKL_ROOT' not in os.environ:
-            os.environ["MKL_ROOT"] = "C:\\Program Files \(x86\)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
+            os.environ["MKL_ROOT"] = "C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl"
         windows_build(args)
 
     elif system == 'Linux' or system == 'Darwin':
