@@ -226,7 +226,8 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     LOG(INFO) << code_;
     std::string aux_code = "";
     std::string kernel_params = "";
-    const nnvm::Symbol& sym = *attrs.subgraphs[0];
+    nnvm::Symbol sym;
+    sym.outputs = this->symbol_.outputs;
     const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
     size_t num_params = in_dtypes.size() + out_dtypes.size();
     size_t i = 0;
@@ -342,17 +343,17 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
 
 template <>
 bool FusedOp::InferShape<gpu>(const nnvm::NodeAttrs &attrs,
-                              std::vector<TShape> *in_attrs,
-                              std::vector<TShape> *out_attrs) {
-  std::vector<TShape> input_shapes(*in_attrs);
+                              std::vector<mxnet::TShape> *in_attrs,
+                              std::vector<mxnet::TShape> *out_attrs) {
+  std::vector<mxnet::TShape> input_shapes(*in_attrs);
   this->symbol_ = mxnet::exec::InferShape(std::move(this->symbol_),
                                           std::move(input_shapes),
                                           "__shape__");
 
   const auto& g = this->symbol_.indexed_graph();
 
-  std::vector<TShape> out_shapes;
-  const std::vector<TShape> shapes = this->symbol_.GetAttr<nnvm::ShapeVector>("shape");
+  std::vector<mxnet::TShape> out_shapes;
+  const std::vector<mxnet::TShape> shapes = this->symbol_.GetAttr<mxnet::ShapeVector>("shape");
   for (auto& e : g.outputs()) {
     out_shapes.push_back(shapes[g.entry_id(e)]);
   }
@@ -410,8 +411,8 @@ void FusedOpForwardGPU(const nnvm::NodeAttrs& attrs,
 }
 
 bool FusedOpInferShape(const nnvm::NodeAttrs& attrs,
-                       std::vector<TShape> *in_attrs,
-                       std::vector<TShape> *out_attrs) {
+                       std::vector<mxnet::TShape> *in_attrs,
+                       std::vector<mxnet::TShape> *out_attrs) {
   const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
   return op->InferShape<gpu>(attrs, in_attrs, out_attrs);
 }
@@ -424,7 +425,7 @@ bool FusedOpInferType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(FusedOp)
-.set_attr<nnvm::FInferShape>("FInferShape", FusedOpInferShape)
+.set_attr<mxnet::FInferShape>("FInferShape", FusedOpInferShape)
 .set_attr<nnvm::FInferType>("FInferType", FusedOpInferType)
 .set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);
 

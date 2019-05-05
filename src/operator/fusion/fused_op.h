@@ -68,8 +68,8 @@ class FusedOp {
 
   template <typename xpu>
   bool InferShape(const nnvm::NodeAttrs &attrs,
-                  std::vector<TShape> *in_attrs,
-                  std::vector<TShape> *out_attrs);
+                  std::vector<mxnet::TShape> *in_attrs,
+                  std::vector<mxnet::TShape> *out_attrs);
 
   template <typename xpu>
   bool InferType(const nnvm::NodeAttrs &attrs,

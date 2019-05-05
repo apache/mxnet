@@ -656,6 +656,10 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
   if (shape_attr_key.length() != 0) {
     graph.attrs["shape_attr_key"] = std::make_shared<any>(shape_attr_key);
   }
+  std::cout << "Graph attributes before infershape" << std::endl;
+  for (const auto& kv : graph.attrs) {
+    std::cout << kv.first << std::endl;
+  }
   return InferShapeAttr(
       std::move(graph), mxnet::TShape(),
       "FInferShape", "shape_inputs", "shape_attr_key",
@@ -685,6 +689,10 @@ nnvm::Graph InferType(nnvm::Graph&& graph,
   }
   if (dtype_attr_key.length() != 0) {
     graph.attrs["dtype_attr_key"] = std::make_shared<any>(dtype_attr_key);
+  }
+  std::cout << "Graph attributes before infertype" << std::endl;
+  for (const auto& kv : graph.attrs) {
+    std::cout << kv.first << std::endl;
   }
   return InferAttr<int, nnvm::FInferType>(
       std::move(graph), -1,

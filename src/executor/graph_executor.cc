@@ -365,6 +365,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   for (const auto &e : g_grad.outputs) {
     g.outputs.push_back(e);
   }
+
   return g;
 }
 
@@ -983,7 +984,9 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
 
   g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
-  g = FusePointwise(std::move(g));
+  if (dmlc::GetEnv("MXNET_USE_FUSION", true)) {
+    g = FusePointwise(std::move(g));
+  }
   // create "device" and "context" attrs for the graph
   g = AssignContext(g, default_ctx, ctx_map,
                     in_arg_ctxes,
