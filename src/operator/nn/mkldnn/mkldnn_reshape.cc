@@ -31,7 +31,7 @@
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNReshape(const ReshapeParam& param,
+bool SupportMKLDNNReshape(const ReshapeParam &param,
                           const NDArray &data) {
   auto data_ndim = data.shape().ndim();
 
@@ -167,14 +167,6 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const NDArray &output) {
   const ReshapeParam& param = nnvm::get<ReshapeParam>(attrs.parsed);
   if (req == kNullOp) return;
-
-  // if (req == kWriteInplace) printf("reshape req kWriteInplace \n");
-  // else if (req == kWriteTo) printf("reshape req kWriteTo \n");
-  // else printf("reshape req %d \n", req);
-
-  // if (input.IsMKLDNNData()) {
-  //   printf("input is internal, format %d \n", input.GetMKLDNNData()->get_primitive_desc().desc().data.format);
-  // }
 
   auto fwd = GetReshapeForward(param, req, input, output);
   fwd.Execute(input, output);

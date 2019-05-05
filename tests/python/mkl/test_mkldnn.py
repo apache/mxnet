@@ -127,7 +127,6 @@ def test_mkldnn_reshape():
     # Test mkldnn reshape (Using shape)
     test_cases = [(256), (16, 16), (4, 4, 16), (4, 4, 4, 4)]
     for test_case in test_cases:
-        print(test_case)
         test_reshape_after_conv(test_case)
 
 
