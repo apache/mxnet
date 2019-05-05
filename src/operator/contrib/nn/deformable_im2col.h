@@ -71,7 +71,7 @@ namespace mxnet {
 namespace op {
 
 template <typename DType>
-inline DType deformable_im2col_bilinear_cpu(const DType* data,
+inline DType im2col_bilinear_cpu(const DType* data,
     const int height, const int width, DType h, DType w) {
   int h_low = floor(h);
   int w_low = floor(w);
@@ -139,7 +139,7 @@ inline void deformable_im2col_cpu(const DType* data_im, const DType* data_offset
             DType im_row = input_row + data_offset[offset_h_ptr];
             DType im_col = input_col + data_offset[offset_w_ptr];
             if (im_row >= 0 && im_col >= 0 && im_row < height && im_col < width) {
-              *(data_col++) = deformable_im2col_bilinear_cpu(data_im, height, width, im_row, im_col);
+              *(data_col++) = im2col_bilinear_cpu(data_im, height, width, im_row, im_col);
             } else {
               *(data_col++) = 0;
             }
