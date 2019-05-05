@@ -47,7 +47,7 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), num_inputs * 3);
   CHECK_EQ(out_shape->size(), 3U);
 
-  CHECK(!shape_is_none(in_shape->at(0)))
+  CHECK(shape_is_known(in_shape->at(0)))
     << "QuantizedFullyConnectedOp input data shape must be given";
   const mxnet::TShape& dshape = in_shape->at(0);
   index_t num_input;
@@ -75,8 +75,8 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   } else {
     SHAPE_ASSIGN_CHECK(*out_shape, 0, Shape2(dshape[0], param.num_hidden));
   }
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));
-  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
+  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
   return true;
 }
 
@@ -233,7 +233,7 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
   Tensor<cpu, 1, float> max_weight =
     in_data[num_inputs + quantized_fullc::kWeightMax].get<cpu, 1, float>(s);
 
-  Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1, min_output.dptr_,
+  Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(s, 1, min_output.dptr_,
       max_output.dptr_, min_data.dptr_, max_data.dptr_, min_weight.dptr_, max_weight.dptr_);
   if (!param.no_bias) {
     Tensor<cpu, 1, int8_t> bias = in_data[fullc::kBias].get_with_shape<cpu, 1, int8_t>(

@@ -142,7 +142,7 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     val result: IndexedSeq[(String, Double)] = testClassifier.
       classify(IndexedSeq(inputData), topK = Some(10))
 
-    assert((result(0)_2).getClass == 1d.getClass)
+    assert((result(0)._2).getClass == 1d.getClass)
 
     assertResult(predictResult(0).sortBy(-_)) {
       result.map(_._2).toArray
@@ -185,7 +185,7 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
     val result: IndexedSeq[(String, Double)] = testClassifier.
       classify(IndexedSeq(inputData))
 
-    assert((result(0)_2).getClass == 1d.getClass)
+    assert((result(0)._2).getClass == 1d.getClass)
 
     assertResult(predictResult(0)) {
       result.map(_._2).toArray

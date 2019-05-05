@@ -122,7 +122,11 @@ def test_ndarray_setitem():
 
     # numpy assignment for empty axis
     for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
-        x = mx.nd.zeros(trivial_shape)
+        if trivial_shape == tuple():
+            with mx.np_compat():
+                x = mx.nd.zeros(trivial_shape)
+        else:
+            x = mx.nd.zeros(trivial_shape)
         x[:] = np.ones(trivial_shape)
         x_np = np.ones(trivial_shape, dtype=x.dtype)
         assert x.shape == trivial_shape
@@ -1648,6 +1652,37 @@ def test_ndarray_nan_comparison():
     data1_grad = data1.grad.asnumpy()
     for i in (np.isnan(data1_grad))[1][0].flatten():
         assert i == True
+
+
+def test_zero_from_numpy():
+    # Test zero_copy
+    arrays = [
+        # ordinary numpy array
+        np.array([[1, 2], [3, 4], [5, 6]], dtype="float32"),
+        # 0-dim
+        np.array((1, )).reshape(()),
+        # 0-size
+        np.array(()).reshape((1, 0, 2)),
+    ]
+    for zero_copy in [False, True]:
+        for np_array in arrays:
+            mx_array = mx.nd.from_numpy(np_array, zero_copy=zero_copy)
+            mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    np_array = arrays[0]
+    mx_array = mx.nd.from_numpy(np_array)
+    np_array[2, 1] = 0
+    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    mx_array[2, 1] = 100
+    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    np_array = np.array([[1, 2], [3, 4], [5, 6]]).transpose()
+    assert not np_array.flags["C_CONTIGUOUS"]
+    try:
+        mx_array = mx.nd.from_numpy(np_array)
+    except ValueError:
+        pass
+    else:
+        assert False
+
 
 if __name__ == '__main__':
     import nose

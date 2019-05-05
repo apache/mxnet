@@ -119,6 +119,34 @@ def compile_unix_openblas_debug_cpu() {
     }]
 }
 
+def compile_unix_int64_cpu() {
+    return ['CPU: USE_INT64_TENSOR_SIZE': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-int64') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_large_tensor', false)
+            utils.pack_lib('ubuntu_cpu_int64', mx_cmake_lib, true)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_int64_gpu() {
+    return ['GPU: USE_INT64_TENSOR_SIZE': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/build-gpu-int64') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_large_tensor', false)
+            utils.pack_lib('ubuntu_gpu_int64', mx_cmake_lib, true)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_mkl_cpu() {
     return ['CPU: MKL': {
       node(NODE_LINUX_CPU) {
@@ -190,12 +218,12 @@ def compile_unix_mkldnn_nocudnn_gpu() {
 }
 
 def compile_unix_full_gpu() {
-    return ['GPU: CUDA9.1+cuDNN7': {
+    return ['GPU: CUDA10.0+cuDNN7': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda100_cudnn7', false)
             utils.pack_lib('gpu', mx_lib_cpp_examples, true)
           }
         }
@@ -521,7 +549,7 @@ def test_static_scala_cpu() {
         ws('workspace/ut-publish-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run("publish.ubuntu1404_cpu", 'build_scala_static_mkl', false)
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_static_scala_mkl', false)
           }
         }
     }
@@ -535,6 +563,19 @@ def test_static_python_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run("publish.ubuntu1404_cpu", 'build_static_python_mkl', false)
+          }
+        }
+    }
+  }]
+}
+
+def test_static_python_gpu() {
+  return ['Static build GPU 14.04 Python' : {
+    node(NODE_LINUX_GPU) {
+        ws('workspace/ut-publish-python-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run("publish.ubuntu1404_gpu", 'build_static_python_cu100mkl', true)
           }
         }
     }

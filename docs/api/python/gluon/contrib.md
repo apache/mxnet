@@ -59,6 +59,17 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     PixelShuffle3D
 ```
 
+### Convolutional neural network
+
+```eval_rst
+.. currentmodule:: mxnet.gluon.contrib.cnn
+
+.. autosummary::
+    :nosignatures:
+    
+    DeformableConvolution
+```
+
 ### Recurrent neural network
 
 ```eval_rst
@@ -114,6 +125,10 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     :imported-members:
 
 .. automodule:: mxnet.gluon.contrib.nn
+    :members:
+    :imported-members:
+    
+.. automodule:: mxnet.gluon.contrib.cnn
     :members:
     :imported-members:
 

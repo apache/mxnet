@@ -23,20 +23,19 @@
 /julia/                           @iblis17
 
 # C++ base
-/src/kvstore/     @rahul003 @anirudh2290
-/include/         @anirudh2290 @pllarroy
-/src/c_api/       @anirudh2290
+/src/kvstore/     @rahul003 @anirudh2290 @eric-haibin-lin
+/include/         @anirudh2290 @pllarroy @eric-haibin-lin
+/src/c_api/       @anirudh2290 @eric-haibin-lin
 /src/common/      @anirudh2290
-/src/engine/      @anirudh2290
-/src/executor/    @anirudh2290
-/src/imperative/  @anirudh2290
-/src/io/          @anirudh2290
-/src/ndarray/     @anirudh2290
-/src/nnvm/        @anirudh2290
-/src/operator/    @anirudh2290
-/src/profiler/    @anirudh2290
-/src/kvstore/     @eric-haibin-lin
-/src/storage/     @anirudh2290
+/src/engine/      @anirudh2290 @eric-haibin-lin
+/src/executor/    @anirudh2290 @eric-haibin-lin
+/src/imperative/  @anirudh2290 @eric-haibin-lin
+/src/io/          @anirudh2290 @eric-haibin-lin
+/src/ndarray/     @anirudh2290 @eric-haibin-lin
+/src/nnvm/        @anirudh2290 @eric-haibin-lin
+/src/operator/    @anirudh2290 @eric-haibin-lin
+/src/profiler/    @anirudh2290 @eric-haibin-lin
+/src/storage/     @anirudh2290 @eric-haibin-lin
 /tests/cpp/       @anirudh2290
 /cpp-package/     @nswamy @pllarroy
 /src/             @pllarroy
