@@ -83,8 +83,8 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
 };
 
 struct MultiSGDParam : public dmlc::Parameter<MultiSGDParam> {
-  nnvm::Tuple<float> lrs;
-  nnvm::Tuple<float> wds;
+  mxnet::Tuple<float> lrs;
+  mxnet::Tuple<float> wds;
   float rescale_grad;
   float clip_gradient;
   int num_weights;
@@ -110,8 +110,8 @@ struct MultiSGDParam : public dmlc::Parameter<MultiSGDParam> {
 };
 
 struct MultiSGDMomParam : public dmlc::Parameter<MultiSGDMomParam> {
-  nnvm::Tuple<float> lrs;
-  nnvm::Tuple<float> wds;
+  mxnet::Tuple<float> lrs;
+  mxnet::Tuple<float> wds;
   float momentum;
   float rescale_grad;
   float clip_gradient;

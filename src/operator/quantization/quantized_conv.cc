@@ -78,8 +78,8 @@ bool QuantizedConvShape(const nnvm::NodeAttrs& attrs,
   oshape[W] = (AddPad(dshape[W], param.pad[1]) - wshape[W]) / param.stride[1] + 1;
 
   SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));
-  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
+  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
   return true;
 }
 

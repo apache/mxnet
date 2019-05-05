@@ -36,6 +36,11 @@ import scala.util.Try
   */
 @AddNDArrayFunctions(false)
 object NDArray extends NDArrayBase {
+  /**
+    * method to convert NDArrayFunctionReturn to NDArray
+    * @param ret the returned NDArray list
+    * @return NDArray result
+    */
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
 
@@ -950,8 +955,19 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return a reshaped NDArray that shares memory with current one.
    */
   def reshape(dims: Array[Int]): NDArray = {
+    reshape(dims.map(_.toLong))
+  }
+
+  /**
+    * Return a reshaped NDArray that shares memory with current one.
+    * @param dims New shape.
+    * @param reverse whether to inplace reshape
+    * @return a reshaped NDArray that shares memory with current one.
+    */
+  def reshape(dims: Array[Long], reverse: Option[Boolean] = None): NDArray = {
     val reshapeHandle = new NDArrayHandleRef
-    checkCall(_LIB.mxNDArrayReshape(handle, dims.length, dims, reshapeHandle))
+    checkCall(_LIB.mxNDArrayReshape64(handle,
+      dims.length, dims, reverse.getOrElse(false), reshapeHandle))
     new NDArray(handle = reshapeHandle.value, writable = this.writable)
   }
 
@@ -1263,11 +1279,15 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return an array representing shape of current ndarray
    */
   def shape: Shape = {
-    val ndim = new MXUintRef
+    val ndim = new RefInt
     val data = ArrayBuffer[Int]()
     checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
-    require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
-    Shape(data)
+    if (ndim.value == -1) {
+      null
+    } else {
+      require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
+      Shape(data)
+    }
   }
 
   // Get size of current NDArray.

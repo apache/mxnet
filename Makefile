@@ -188,6 +188,11 @@ ifeq ($(USE_OPERATOR_TUNING), 1)
 	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
 
+ifeq ($(USE_INT64_TENSOR_SIZE), 1)
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=1
+else
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=0
+endif
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this
@@ -453,7 +458,7 @@ LIB_DEP += $(DMLC_CORE)/libdmlc.a $(NNVM_PATH)/lib/libnnvm.a
 ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 
 ifeq ($(USE_CUDA), 1)
-	CFLAGS += -I$(ROOTDIR)/3rdparty/cub
+	CFLAGS += -I$(ROOTDIR)/3rdparty/nvidia_cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
 	LDFLAGS += -lcufft
 	ifeq ($(ENABLE_CUDA_RTC), 1)
@@ -587,7 +592,7 @@ cpplint:
 	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
-	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 doc: docs
 

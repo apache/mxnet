@@ -16,9 +16,10 @@
 # under the License.
 
 """Register backend ops in mxnet.ndarray namespace"""
+from __future__ import absolute_import
 import os as _os
 import ctypes
-import numpy as np  # pylint: disable=unused-import
+import numpy as _np  # pylint: disable=unused-import
 
 from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-import
 from ..ndarray_doc import _build_doc
@@ -103,7 +104,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
+        kwargs['%s'] = _np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
             code.append("""
     _ = kwargs.pop('name', None)
@@ -136,7 +137,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                 code.append("""
     if %s is not _Null:
         keys.append('%s')
-        vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
     if not signature_only:
         code.append("""

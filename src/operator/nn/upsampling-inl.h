@@ -59,7 +59,9 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .set_range(1, 1000)
     .describe("Up sampling scale");
     DMLC_DECLARE_FIELD(num_filter)
-    .describe("Input filter. Only used by bilinear sample_type.")
+    .describe("Input filter. Only used by bilinear sample_type."
+              "Since bilinear upsampling uses deconvolution, num_filters "
+              "is set to the number of channels.")
     .set_default(0);
     DMLC_DECLARE_FIELD(sample_type)
     .add_enum("nearest", up_enum::kNearest)
