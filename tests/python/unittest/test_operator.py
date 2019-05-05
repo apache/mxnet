@@ -3524,7 +3524,7 @@ def test_norm():
 def test_layer_norm():
     for dtype, forward_check_eps, backward_check_eps in zip([np.float16, np.float32, np.float64],
                                                             [1E-2, 1E-3, 1E-4],
-                                                            [1E-3, 1E-3, 1E-4]):
+                                                            [1E-2, 1E-3, 1E-4]):
         for in_shape in [(10, 6, 5), (10, 10), (128 * 32, 512)]:
             for axis in range(-len(in_shape), len(in_shape)):
                 for eps in [1E-2, 1E-3]:
