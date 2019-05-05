@@ -981,32 +981,9 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                const std::vector<OpReqType>& grad_req_types) {
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
-  DFSVisit(g.outputs, [](const nnvm::NodePtr n) {
-    if (n->op() == nullptr) {
-      LOG(INFO) << n->attrs.name;
-    } else {
-      LOG(INFO) << n->attrs.name << ": " << n->op()->name;
-    }
-    for (auto e : n->inputs) {
-      LOG(INFO) << "  - " << e.node->attrs.name;
-    }
-  });
 
   g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
   g = FusePointwise(std::move(g));
-  LOG(INFO) << "\n\n";
-  LOG(INFO) << "AFTER:";
-  DFSVisit(g.outputs, [](const nnvm::NodePtr n) {
-    if (n->op() == nullptr) {
-      LOG(INFO) << n->attrs.name;
-    } else {
-      LOG(INFO) << n->attrs.name << ": " << n->op()->name;
-    }
-    for (auto e : n->inputs) {
-      LOG(INFO) << "  - " << e.node->attrs.name;
-    }
-  });
-
   // create "device" and "context" attrs for the graph
   g = AssignContext(g, default_ctx, ctx_map,
                     in_arg_ctxes,
@@ -1923,7 +1900,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                  arg_stype_map, default_ctx, group2ctx, &tmp_in_arg_ctxes,
                                  &tmp_arg_grad_ctxes, &tmp_grad_req_types, &tmp_aux_state_ctxes);
   }
-  exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
+  exec->Init(symbol.Copy(), default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
              tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map, tmp_grad_req_types,
              shared_arg_names, in_args, arg_grads, aux_states, shared_buffer, shared_exec);
   return exec;
@@ -1948,8 +1925,8 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
         exec::BuildSubgraph(symbol, exec->subgraph_property(), default_ctx, group2ctx, &tmp_in_args,
                             &tmp_arg_grad_store, &tmp_grad_req_type, &tmp_aux_states);
   }
-  exec->Init(symbol, default_ctx, group2ctx, tmp_in_args, tmp_arg_grad_store, tmp_grad_req_type,
-             tmp_aux_states, reinterpret_cast<Executor*>(shared_exec));
+  exec->Init(symbol.Copy(), default_ctx, group2ctx, tmp_in_args, tmp_arg_grad_store,
+             tmp_grad_req_type, tmp_aux_states, reinterpret_cast<Executor*>(shared_exec));
   return exec;
 }
 }  // namespace mxnet

@@ -226,12 +226,14 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     LOG(INFO) << code_;
     std::string aux_code = "";
     std::string kernel_params = "";
+    const nnvm::Symbol& sym = *attrs.subgraphs[0];
+    const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
     size_t num_params = in_dtypes.size() + out_dtypes.size();
     size_t i = 0;
     for (const auto &type : in_dtypes) {
       std::string type_name = detail::mshadowTypeToString(type);
       aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      kernel_params += "DType" + std::to_string(i) + "* input" + std::to_string(i);
+      kernel_params += "DType" + std::to_string(i) + "* " +input_names[i];
       ++i;
       if (i < num_params) {
         kernel_params += ", ";

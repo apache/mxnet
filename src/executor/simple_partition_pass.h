@@ -82,7 +82,6 @@ class BidirectionalGraph {
     std::unordered_set<Node*> incomp_set;
     std::unordered_set<Node*> all_set(nodes.size());
     std::vector<PairSet> separation_sets;
-    LOG(INFO) << "1";
     for (Node& node : nodes) {
       if (!is_compatible(node.nnvmptr)) {
         incomp_set.insert(&node);
@@ -101,14 +100,12 @@ class BidirectionalGraph {
       }
       all_set.emplace(&node);
     }
-    LOG(INFO) << "2";
     IncompMap incomp_map;
     std::unordered_set<Node*> comp_set;
     comp_set.insert(all_set.begin(), all_set.end());
     for (Node* n : incomp_set) {
       comp_set.erase(n);
     }
-    LOG(INFO) << "3";
     for (Node* n : comp_set) {
       for (PairSet p : separation_sets) {
         if (p.first.count(n)) {
@@ -127,7 +124,6 @@ class BidirectionalGraph {
     for (auto& n : comp_set) {
       unused_set.insert(n);
     }
-    LOG(INFO) << "4";
     std::unordered_set<Node*> visited;
     std::deque<Node*> stack(outputs.begin(), outputs.end());
     while (!stack.empty()) {
@@ -143,7 +139,6 @@ class BidirectionalGraph {
         }
       }
     }
-    LOG(INFO) << "5";
     return subgraphs;
   }
 
@@ -259,7 +254,7 @@ std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_s
             auto new_node = nnvm::Node::Create();
             new_node->attrs.name = e.node->attrs.name + std::to_string(e.index);
             entry_map.insert({e, nnvm::NodeEntry{new_node, 0, 0}});
-            inputs.push_back(entry_map.at(e));
+            inputs.push_back(e);
             e.node = new_node;
             e.index = 0;
           }
