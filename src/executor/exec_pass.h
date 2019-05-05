@@ -170,6 +170,15 @@ void AttachOpResources(const Graph& g,
  */
 Graph DetectInplaceAddTo(Graph g);
 
+using NodeEntryMapCounter =
+  std::unordered_map<nnvm::NodeEntry, uint32_t, nnvm::NodeEntryHash, nnvm::NodeEntryEqual>;
+/*!\brief
+ * This is to count how many time each output is used by another node (or the output of the graph)
+ */
+NodeEntryMapCounter GetNodeEntryCount(const Graph& g);
+
+Graph FusePointwise(Graph&& g);
+
 /*!
  * \brief Infer shapes in the graph given the information.
  * \param graph The input graph.

@@ -784,6 +784,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const nnvm::NodeEntryMap<NDArray>& feed_dict) {
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
                             aux_state_ctxes, grad_req_types);
+
   // The following code of shape and dtype inferences and argument
   // initialization is for simple_bind only. Regular bind operation
   // should do this differently.
@@ -980,6 +981,31 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                const std::vector<OpReqType>& grad_req_types) {
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
+  DFSVisit(g.outputs, [](const nnvm::NodePtr n) {
+    if (n->op() == nullptr) {
+      LOG(INFO) << n->attrs.name;
+    } else {
+      LOG(INFO) << n->attrs.name << ": " << n->op()->name;
+    }
+    for (auto e : n->inputs) {
+      LOG(INFO) << "  - " << e.node->attrs.name;
+    }
+  });
+
+  g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
+  g = FusePointwise(std::move(g));
+  LOG(INFO) << "\n\n";
+  LOG(INFO) << "AFTER:";
+  DFSVisit(g.outputs, [](const nnvm::NodePtr n) {
+    if (n->op() == nullptr) {
+      LOG(INFO) << n->attrs.name;
+    } else {
+      LOG(INFO) << n->attrs.name << ": " << n->op()->name;
+    }
+    for (auto e : n->inputs) {
+      LOG(INFO) << "  - " << e.node->attrs.name;
+    }
+  });
 
   // create "device" and "context" attrs for the graph
   g = AssignContext(g, default_ctx, ctx_map,
