@@ -284,22 +284,22 @@ class DeconvolutionOp {
 
     // shape_dstunit_ : (G, C/G, IH * IW)
     shape_dstunit_ = Shape3(
-        param_.num_group,
-        data.shape_[1] / param_.num_group,
-        data.shape_[2] * data.shape_[3]);
+      param_.num_group,
+      data.shape_[1] / param_.num_group,
+      data.shape_[2] * data.shape_[3]);
 
-    Tensor<xpu, 1, DType> workspace =
-        ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
-            Shape1(col_buffer_size + data.shape_.Size()), s);
+    Tensor<xpu, 1, DType> workspace = ctx.requested[deconv::kTempSpace]
+      .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size + data.shape_.Size()), s);
 
     // col_buffer_3d : (G, KH * KW, IH * IW)
     Tensor<xpu, 3, DType> col_buffer_3d = Tensor<xpu, 3, DType>(
-        workspace.dptr_, Shape3(param_.num_group, kernel_size, data_spatial_size), s);
+      workspace.dptr_, Shape3(param_.num_group, kernel_size, data_spatial_size), s);
 
     for (index_t i = 0; i < nbatch; ++i) {
+      // Tensor<xpu, 3, DType> data_3d = data[i];
       Tensor<xpu, 3, DType> data_3d = Tensor<xpu, 3, DType>(
-          workspace.dptr_ + col_buffer_size,
-          Shape3(param_.num_group, data.shape_[1] / param_.num_group, data_spatial_size), s);
+        workspace.dptr_ + col_buffer_size,
+        Shape3(param_.num_group, data.shape_[1] / param_.num_group, data_spatial_size), s);
 
       // data_3d : (G, C/G, IH * IW)
       data_3d = reshape(swapaxis<1, 0>(data.Slice(i, i + 1)), data_3d.shape_);
@@ -309,10 +309,17 @@ class DeconvolutionOp {
 
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         // Legacy approach shown here for comparison:
-        // tmpc = dot(weight_3d[gid].T(), data_3d[gid]);
+        // col_buffer_3d[gid] = dot(weight_3d[gid].T(), data_3d[gid]);
         linalg_gemm(weight_3d[gid], data_3d[gid], col_buffer_3d[gid], true, false, s);
       }
 
+      std::cout << "col buffer: " << std::endl;
+      for (auto j = 0; j < kernel_size; ++j) {
+        for (auto k = 0; k < data_spatial_size; ++k) {
+          std::cout << *(static_cast<DType *>(col_buffer_3d[0].dptr_ + j * kernel_size + k)) << " ";
+        }
+        std::cout << std::endl;
+      }
 
       col2im(
         s,
