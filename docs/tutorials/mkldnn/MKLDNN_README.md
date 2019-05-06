@@ -20,6 +20,8 @@
 A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
 In the following sections, you will find build instructions for MXNet with Intel MKL-DNN on Linux, MacOS and Windows.
 
+Please find MKL-DNN optimized operators and other features in [MKL-DNN operator list](http://mxnet.incubator.apache.org/tutorials/mkldnn/operator_list.html)
+
 The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel MKL-DNN can be found [here](https://mxnet.incubator.apache.org/faq/perf.html#intel-cpu).
 
 
@@ -313,7 +315,6 @@ When `MKLDNN` backend is enabled, advanced control options are avaliable:
 export MXNET_DISABLE_MKLDNN_CONV_OPT=1 # disable MKLDNN convolution optimization pass
 export MXNET_DISABLE_MKLDNN_FC_OPT=1 # disable MKLDNN FullyConnected optimization pass
 ```
-
 
 This limitations of this experimental feature are:
 

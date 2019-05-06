@@ -187,7 +187,12 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware. Try the following command line to install it and find performance numbers and tuning guide in [performance on Intel CPU](https://mxnet.incubator.apache.org/versions/master/faq/perf.html#intel-cpu).
+
+```
+$ pip install mxnet-mkl --pre
+```
+
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.4.0.png" alt="pip packages"/>
