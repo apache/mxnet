@@ -50,16 +50,28 @@ MXNet MKL-DNN backend provides optimized implementations for various opertors co
 
 Besides direct operator optimizations, we also provide graph fusion passes listed in the table below. Users can choose to enable or disable these fusion patterns through environmental variables.
 
+For example, you can enable all fusion passes by:
+
+```
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+```
+
+And disable `Convolution + Activation(ReLU)` fusion by:
+
+```
+export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
+```
+
 | Fusion pattern | Enable | Disable |
 | :--: | :--: | :--: |
-| Convolution + Activation(ReLU) |   | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
-| Convolution + elemwise_add |   | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM |
-| Convolution + BatchNorm |   | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN |
-| Convolution + Activation(ReLu) + elemwise_add |   |   |
-| Convolution + BatchNorm + Activation(ReLu) + elemwise_add |   |   |
-| FullyConnected + Activation(ReLU) |   | MXNET_DISABLE_MKLDNN_FUSE_FC_RELU |
-| Convolution (INT8) + re-quantization |   |   |
-| FullyConnected (INT8) + re-quantization |   |   |
+| Convolution + Activation(ReLU) | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
+| Convolution + elemwise_add | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM |
+| Convolution + BatchNorm | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN |
+| Convolution + Activation(ReLu) + elemwise_add | MXNET_SUBGRAPH_BACKEND  |   |
+| Convolution + BatchNorm + Activation(ReLu) + elemwise_add | MXNET_SUBGRAPH_BACKEND  |   |
+| FullyConnected + Activation(ReLU) | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_FC_RELU |
+| Convolution (INT8) + re-quantization | MXNET_SUBGRAPH_BACKEND  |   |
+| FullyConnected (INT8) + re-quantization | MXNET_SUBGRAPH_BACKEND  |   |
 
 
 To try these features out, you can install MXNet MKL-DNN backend through pip:
