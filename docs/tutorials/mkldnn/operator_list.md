@@ -19,34 +19,32 @@
 
 MXNet MKL-DNN backend provides optimized implementations for various opertors covering a broad range of applications including image classification, object detection, natural language processing. We also provide the lower precision version for part of these operators on CPU leveraging the DL Boost technology from Intel. On computation graph level, a set of graph fusion pass and quantization pass is implemneted based on the sugraph feature of MXNet. To help users understanding MKL-DNN backend better, the tables below summarize the list of supported operators, data types and functionalities. As the community keeps working on more new features for MKL-DNN backend, the tables will be updated continuously.
 
-
-| Operator | Function | FP32 Training (backward) | FP32 Inference | INT8 Inference |
-| :--: | :--: | :--: | :--: | :--: |
-| **Convolution** | 1D Convolution | Y | Y | N |
-|  | 2D Convolution | Y | Y | Y |
-|  | 3D Convolution | Y | Y | N |
-| **Deconvolution** | 2D Deconvolution | Y | Y | N |
-|  | 3D Deconvolution | Y | Y | N |
-| **FullyConnected** | 1D-4D input,   flatten=Ture | N | Y | Y |
-|  | 1D-4D input,   flatten=False | N | Y | Y |
-| **Pooling** | 2D max Pooling | Y | Y | Y |
-|  | 2D avg pooling | Y | Y | Y |
-| **BatchNorm** | 2D BatchNorm | Y | Y | N |
-| **LRN** | 2D LRN | Y | Y | N |
-| **Activation** | ReLU | Y | Y | Y |
-|  | Tanh | Y | Y | N |
-|  | SoftReLU | Y | Y | N |
-|  | Sigmoid | Y | Y | N |
-| **softmax** | 1D-4D input | Y | Y | N |
-| **Softmax_output** | 1D-4D input | N | Y | N |
-| **Transpose** | 1D-4D input | N | Y | N |
-| **elemwise_add** | 1D-4D input | Y | Y | Y |
-| **Concat** | 1D-4D input | Y | Y | Y |
-| **slice** | 1D-4D input | N | Y | N |
-| **Quantization** | 1D-4D input | N | N | Y |
-| **Dequantization** | 1D-4D input | N | N | Y |
-| **Requantization** | 1D-4D input | N | N | Y |
-
+| Operator           | Function                   | FP32 Training (backward) | FP32 Inference | INT8 Inference |
+| :--:               | :--:                       | :--:                     | :--:           | :--:           |
+| **Convolution**    | 1D Convolution             | Y                        | Y              | N              |
+|                    | 2D Convolution             | Y                        | Y              | Y              |
+|                    | 3D Convolution             | Y                        | Y              | N              |
+| **Deconvolution**  | 2D Deconvolution           | Y                        | Y              | N              |
+|                    | 3D Deconvolution           | Y                        | Y              | N              |
+| **FullyConnected** | 1D-4D input, flatten=True  | N                        | Y              | Y              |
+|                    | 1D-4D input, flatten=False | N                        | Y              | Y              |
+| **Pooling**        | 2D max Pooling             | Y                        | Y              | Y              |
+|                    | 2D avg pooling             | Y                        | Y              | Y              |
+| **BatchNorm**      | 2D BatchNorm               | Y                        | Y              | N              |
+| **LRN**            | 2D LRN                     | Y                        | Y              | N              |
+| **Activation**     | ReLU                       | Y                        | Y              | Y              |
+|                    | Tanh                       | Y                        | Y              | N              |
+|                    | SoftReLU                   | Y                        | Y              | N              |
+|                    | Sigmoid                    | Y                        | Y              | N              |
+| **softmax**        | 1D-4D input                | Y                        | Y              | N              |
+| **Softmax_output** | 1D-4D input                | N                        | Y              | N              |
+| **Transpose**      | 1D-4D input                | N                        | Y              | N              |
+| **elemwise_add**   | 1D-4D input                | Y                        | Y              | Y              |
+| **Concat**         | 1D-4D input                | Y                        | Y              | Y              |
+| **slice**          | 1D-4D input                | N                        | Y              | N              |
+| **Quantization**   | 1D-4D input                | N                        | N              | Y              |
+| **Dequantization** | 1D-4D input                | N                        | N              | Y              |
+| **Requantization** | 1D-4D input                | N                        | N              | Y              |
 
 Besides direct operator optimizations, we also provide graph fusion passes listed in the table below. Users can choose to enable or disable these fusion patterns through environmental variables.
 
@@ -62,22 +60,22 @@ And disable `Convolution + Activation(ReLU)` fusion by:
 export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
 ```
 
-| Fusion pattern | Enable | Disable |
-| :--: | :--: | :--: |
-| Convolution + Activation(ReLU) | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
-| Convolution + elemwise_add | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM |
-| Convolution + BatchNorm | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN |
-| Convolution + Activation(ReLu) + elemwise_add | MXNET_SUBGRAPH_BACKEND  |   |
-| Convolution + BatchNorm + Activation(ReLu) + elemwise_add | MXNET_SUBGRAPH_BACKEND  |   |
-| FullyConnected + Activation(ReLU) | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_FC_RELU |
-| Convolution (INT8) + re-quantization | MXNET_SUBGRAPH_BACKEND  |   |
-| FullyConnected (INT8) + re-quantization | MXNET_SUBGRAPH_BACKEND  |   |
+| Fusion pattern                                            | Enable                  | Disable                             |
+| :--:                                                      | :--:                    | :--:                                |
+| Convolution + Activation(ReLU)                            | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
+| Convolution + elemwise_add                                | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM  |
+| Convolution + BatchNorm                                   | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN   |
+| Convolution + Activation(ReLu) + elemwise_add             | MXNET_SUBGRAPH_BACKEND  |                                     |
+| Convolution + BatchNorm + Activation(ReLu) + elemwise_add | MXNET_SUBGRAPH_BACKEND  |                                     |
+| FullyConnected + Activation(ReLU)                         | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_FC_RELU   |
+| Convolution (INT8) + re-quantization                      | MXNET_SUBGRAPH_BACKEND  |                                     |
+| FullyConnected (INT8) + re-quantization                   | MXNET_SUBGRAPH_BACKEND  |                                     |
 
 
 To try these features out, you can install MXNet MKL-DNN backend through pip:
 
 ```
-pip install mxnet-mkl
+pip install mxnet-mkl [--pre]
 ```
 
 To build MXNet MKL-DNN backend from source code, please refer to [MKL-DNN backend readme](http://mxnet.incubator.apache.org/tutorials/mkldnn/MKLDNN_README.html)
