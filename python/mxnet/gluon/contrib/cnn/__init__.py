@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,9 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -ex
+# coding: utf-8
+# pylint: disable=wildcard-import
+"""Contrib convolutional neural network module."""
 
-# Retrieve ppa:graphics-drivers and install nvidia-drivers.
-# Note: DEBIAN_FRONTEND required to skip the interactive setup steps
-apt update
-DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-10-0
+from . import conv_layers
+from .conv_layers import *
+
+__all__ = conv_layers.__all__

@@ -17,9 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
+
+# Assumes base image is from nvidia/cuda
+
 set -ex
 
-# Retrieve ppa:graphics-drivers and install nvidia-drivers.
-# Note: DEBIAN_FRONTEND required to skip the interactive setup steps
-apt update
-DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-10-0
+apt-get update || true
+apt-get install -y libcudnn7=7.3.1.20-1+cuda10.0 libcudnn7-dev=7.3.1.20-1+cuda10.0
+
