@@ -492,7 +492,7 @@ class DropoutOp {
 #endif  // MXNET_USE_CUDNN_DROPOUT
 };  // class DropoutOp
 
-static OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
+inline OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
                                      const Context ctx,
                                      const mxnet::ShapeVector &in_shapes,
                                      const std::vector<int> &in_types) {
