@@ -47,7 +47,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
            "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
-           "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
+           "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack", "from_numpy"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -4114,4 +4114,109 @@ def from_dlpack(dlpack):
     ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
     # delete the deleter of the old dlpack
     ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
+    return NDArray(handle=handle)
+
+class DLContext(ctypes.Structure):
+    _fields_ = [("device_type", ctypes.c_int),
+                ("device_id", ctypes.c_int)]
+
+
+class DLDataType(ctypes.Structure):
+    _fields_ = [("type_code", ctypes.c_uint8),
+                ("bits", ctypes.c_uint8),
+                ("lanes", ctypes.c_uint16)]
+    TYPE_MAP = {
+        "int32": (0, 32, 1),
+        "int64": (0, 64, 1),
+        "bool": (1, 1, 1),
+        "uint32": (1, 32, 1),
+        "uint64": (1, 64, 1),
+        "float32": (2, 32, 1),
+        "float64": (2, 64, 1),
+    }
+
+
+class DLTensor(ctypes.Structure):
+    _fields_ = [("data", ctypes.c_void_p),
+                ("ctx", DLContext),
+                ("ndim", ctypes.c_int),
+                ("dtype", DLDataType),
+                ("shape", ctypes.POINTER(ctypes.c_int64)),
+                ("strides", ctypes.POINTER(ctypes.c_int64)),
+                ("byte_offset", ctypes.c_uint64)]
+
+class DLManagedTensor(ctypes.Structure):
+    pass
+
+
+DeleterFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(DLManagedTensor))
+
+
+DLManagedTensor._fields_ = [("dl_tensor", DLTensor),           # pylint: disable=protected-access
+                            ("manager_ctx", ctypes.c_void_p),
+                            ("deleter", DeleterFunc)]
+
+
+@DeleterFunc
+def dl_managed_tensor_deleter(dl_managed_tensor_handle):
+    void_p = dl_managed_tensor_handle.contents.manager_ctx
+    pyobj = ctypes.cast(void_p, ctypes.py_object)
+    ctypes.pythonapi.Py_DecRef(pyobj)
+
+
+def from_numpy(ndarray, zero_copy=True):
+    """Returns an MXNet's NDArray backed by Numpy's ndarray.
+
+    Parameters
+    ----------
+    ndarray: numpy.ndarray
+        input data
+
+    zero_copy: bool
+        Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
+        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+
+    Returns
+    -------
+    NDArray
+        a NDArray backed by a dlpack tensor
+
+    """
+
+    def _make_manager_ctx(obj):
+        pyobj = ctypes.py_object(obj)
+        void_p = ctypes.c_void_p.from_buffer(pyobj)
+        ctypes.pythonapi.Py_IncRef(pyobj)
+        return void_p
+
+    def _make_dl_tensor(array):
+        if str(array.dtype) not in DLDataType.TYPE_MAP:
+            raise ValueError(str(array.dtype) + " is not supported.")
+        dl_tensor = DLTensor()
+        dl_tensor.data = array.ctypes.data_as(ctypes.c_void_p)
+        dl_tensor.ctx = DLContext(1, 0)
+        dl_tensor.ndim = array.ndim
+        dl_tensor.dtype = DLDataType.TYPE_MAP[str(array.dtype)]
+        dl_tensor.shape = array.ctypes.shape_as(ctypes.c_int64)
+        dl_tensor.strides = None
+        dl_tensor.byte_offset = 0
+        return dl_tensor
+
+    def _make_dl_managed_tensor(array):
+        c_obj = DLManagedTensor()
+        c_obj.dl_tensor = _make_dl_tensor(array)
+        c_obj.manager_ctx = _make_manager_ctx(array)
+        c_obj.deleter = dl_managed_tensor_deleter
+        return c_obj
+
+    if not zero_copy:
+        return array(ndarray, dtype=ndarray.dtype)
+
+    if not ndarray.flags['C_CONTIGUOUS']:
+        raise ValueError("Only c-contiguous arrays are supported for zero-copy")
+    c_obj = _make_dl_managed_tensor(ndarray)
+    address = ctypes.addressof(c_obj)
+    address = ctypes.cast(address, ctypes.c_void_p)
+    handle = NDArrayHandle()
+    check_call(_LIB.MXNDArrayFromDLPack(address, ctypes.byref(handle)))
     return NDArray(handle=handle)
