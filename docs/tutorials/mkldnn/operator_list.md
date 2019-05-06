@@ -60,24 +60,18 @@ And disable `Convolution + Activation(ReLU)` fusion by:
 export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
 ```
 
-| Fusion pattern                                            | Enable                  | Disable                             |
-| :--:                                                      | :--:                    | :--:                                |
-| Convolution + Activation(ReLU)                            | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
-| Convolution + elemwise_add                                | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM  |
-| Convolution + BatchNorm                                   | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN   |
-| Convolution + Activation(ReLu) + elemwise_add             | MXNET_SUBGRAPH_BACKEND  |                                     |
-| Convolution + BatchNorm + Activation(ReLu) + elemwise_add | MXNET_SUBGRAPH_BACKEND  |                                     |
-| FullyConnected + Activation(ReLU)                         | MXNET_SUBGRAPH_BACKEND  | MXNET_DISABLE_MKLDNN_FUSE_FC_RELU   |
-| Convolution (INT8) + re-quantization                      | MXNET_SUBGRAPH_BACKEND  |                                     |
-| FullyConnected (INT8) + re-quantization                   | MXNET_SUBGRAPH_BACKEND  |                                     |
+| Fusion pattern                                            | Disable                             |
+| :--:                                                      | :--:                                |
+| Convolution + Activation(ReLU)                            | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
+| Convolution + elemwise_add                                | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM  |
+| Convolution + BatchNorm                                   | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN   |
+| Convolution + Activation(ReLu) + elemwise_add             |                                     |
+| Convolution + BatchNorm + Activation(ReLu) + elemwise_add |                                     |
+| FullyConnected + Activation(ReLU)                         | MXNET_DISABLE_MKLDNN_FUSE_FC_RELU   |
+| Convolution (INT8) + re-quantization                      |                                     |
+| FullyConnected (INT8) + re-quantization                   |                                     |
 
 
-To try these features out, you can install MXNet MKL-DNN backend through pip:
-
-```
-pip install mxnet-mkl [--pre]
-```
-
-To build MXNet MKL-DNN backend from source code, please refer to [MKL-DNN backend readme](http://mxnet.incubator.apache.org/tutorials/mkldnn/MKLDNN_README.html)
+To install MXNet MKL-DNN backend, please refer to [MKL-DNN backend readme](http://mxnet.incubator.apache.org/tutorials/mkldnn/MKLDNN_README.html)
 
 For performance numbers, please refer to [performance on Intel CPU](https://mxnet.incubator.apache.org/versions/master/faq/perf.html#intel-cpu)
