@@ -83,7 +83,7 @@ void PrintVersion() {
     << NV_TENSORRT_PATCH << endl;
 }
 
-std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*> onnxToTrtCtx(
+std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*, TRT_Logger*> onnxToTrtCtx(
         const std::string& onnx_model,
         int32_t max_batch_size,
         size_t max_workspace_size,
@@ -91,10 +91,10 @@ std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*> onnxToTrtCtx(
         bool debug_builder) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  TRT_Logger trt_logger(verbosity);
-  auto trt_builder = InferObject(nvinfer1::createInferBuilder(trt_logger));
+  TRT_Logger* trt_logger = new TRT_Logger(verbosity);
+  auto trt_builder = InferObject(nvinfer1::createInferBuilder(*trt_logger));
   auto trt_network = InferObject(trt_builder->createNetwork());
-  auto trt_parser  = nvonnxparser::createParser(trt_network.get(), trt_logger);
+  auto trt_parser  = nvonnxparser::createParser(trt_network.get(), *trt_logger);
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect
   // of populating parsed_model
@@ -140,7 +140,7 @@ std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*> onnxToTrtCtx(
   trt_builder->setMaxWorkspaceSize(max_workspace_size);
   trt_builder->setDebugSync(debug_builder);
   nvinfer1::ICudaEngine* trt_engine = trt_builder->buildCudaEngine(*trt_network.get());
-  return std::make_tuple(trt_engine, trt_parser);
+  return std::make_tuple(trt_engine, trt_parser, trt_logger);
 }
 
 }  // namespace onnx_to_tensorrt

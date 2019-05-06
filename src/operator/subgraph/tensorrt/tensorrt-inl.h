@@ -53,6 +53,7 @@ struct TRTParam {
 struct TRTEngineParam {
   TRTEngineParam(nvinfer1::ICudaEngine* trt_engine,
                  nvonnxparser::IParser* _parser,
+                 onnx_to_tensorrt::TRT_Logger* _logger,
                  const std::unordered_map<std::string, uint32_t> input_map,
                  const std::unordered_map<std::string, uint32_t> output_map) {
     binding_order = std::make_shared<std::vector<std::pair<uint32_t, bool> > >();
@@ -67,6 +68,7 @@ struct TRTEngineParam {
         binding_order->emplace_back(output_map.at(binding_name), false);
       }
     }
+    trt_logger = _logger;
     trt_executor = trt_engine->createExecutionContext();
     trt_parser = _parser;
   }
@@ -74,9 +76,11 @@ struct TRTEngineParam {
   ~TRTEngineParam() {
     trt_parser->destroy();
     trt_executor->destroy();
+    delete trt_logger;
   }
   nvinfer1::IExecutionContext* trt_executor;
   nvonnxparser::IParser* trt_parser;
+  onnx_to_tensorrt::TRT_Logger* trt_logger;
   std::shared_ptr<std::vector<std::pair<uint32_t, bool> > > binding_order;
   std::shared_ptr<std::vector<void*> > bindings;
 };

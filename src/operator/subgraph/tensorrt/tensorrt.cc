@@ -312,7 +312,9 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
   graph.attrs["shape"]        = std::make_shared<nnvm::any>(std::move(shapes));
   auto onnx_graph = op::nnvm_to_onnx::ConvertNnvmGraphToOnnx(graph, &params_map);
   auto trt_tuple = ::onnx_to_tensorrt::onnxToTrtCtx(onnx_graph, max_batch_size, 1 << 30);
-  return OpStatePtr::Create<TRTEngineParam>(std::get<0>(trt_tuple), std::get<1>(trt_tuple),
+  return OpStatePtr::Create<TRTEngineParam>(std::get<0>(trt_tuple),
+                                            std::get<1>(trt_tuple),
+                                            std::get<2>(trt_tuple),
                                             inputs_to_idx, outputs_to_idx);
 }
 
