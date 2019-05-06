@@ -94,10 +94,10 @@ fi
 if [[ $VARIANT == cu101* ]]; then
     cuda_files=( \
       "cuda-core-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-cublas-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cublas-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cudart-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
-      "cuda-cudart-dev-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
+      "libcublas10_${CUDA_PATCH_VERSION}_amd64.deb" \
+      "libcublas-dev_${CUDA_PATCH_VERSION}_amd64.deb" \
+      "cuda-cudart-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
+      "cuda-cudart-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "cuda-curand-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "cuda-curand-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "cuda-cufft-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
@@ -107,7 +107,7 @@ if [[ $VARIANT == cu101* ]]; then
       "cuda-cusolver-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "cuda-cusolver-dev-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "cuda-misc-headers-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
-      "cuda-nvcc-${CUDA_MAJOR_DASH}_${CUDA_PATCH_VERSION}_amd64.deb" \
+      "cuda-nvcc-${CUDA_MAJOR_DASH}_${CUDA_VERSION}_amd64.deb" \
       "libcuda1-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
       "nvidia-${LIBCUDA_MAJOR}_${LIBCUDA_VERSION}_amd64.deb" \
     )
