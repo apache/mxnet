@@ -16,15 +16,16 @@
 ;;
 
 
-(ns bert-qa.infer-test
-  (:require [bert-qa.infer :refer :all]
+(ns bert.infer-test
+  (:require [bert.infer :refer :all]
+            [bert.util :as util]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [clojure.test :refer :all]
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.infer :as infer]))
 
-(def model-dir "model/")
+(def model-dir "data/")
 
 (when-not (.exists (io/file (str model-dir "static_bert_qa-0002.params")))
   (println "Downloading bert qa data")
@@ -33,7 +34,7 @@
 (deftest infer-test
   (let [ctx (context/default-context)
         predictor (make-predictor ctx)
-        {:keys [idx->token token->idx]} (get-vocab)
+        {:keys [idx->token token->idx]} (util/get-vocab)
         ;;; samples taken from https://rajpurkar.github.io/SQuAD-explorer/explore/v2.0/dev/
         question-answers (clojure.edn/read-string (slurp "squad-samples.edn"))]
     (let [qa-map (last question-answers)

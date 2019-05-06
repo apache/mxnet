@@ -16,12 +16,10 @@
 # under the License.
 
 # coding: utf-8
-"""Contrib neural network module."""
+# pylint: disable=wildcard-import
+"""Contrib convolutional neural network module."""
 
-from . import nn
+from . import conv_layers
+from .conv_layers import *
 
-from . import rnn
-
-from . import cnn
-
-from . import data
+__all__ = conv_layers.__all__
