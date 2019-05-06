@@ -81,12 +81,13 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     const Dtype bin_size_w = static_cast<Dtype>(roi_width)
                              / static_cast<Dtype>(pooled_width_);
 
-    const Dtype* batch_data = bottom_data + data_size * roi_batch_ind;
+    int offset_batch_data = data_size * roi_batch_ind;
 
     #pragma omp parallel for
     for (int c = 0; c < channels_; ++c) {
       // Increment all data pointers
-      const Dtype* batch_data_c = batch_data + c * data_size_c;
+      int offset_batch_data_c = offset_batch_data + c * data_size_c;
+      const Dtype* batch_data_c = bottom_data + offset_batch_data_c;
       Dtype* top_data_c = top_data_n + c * out_size_c;
       Dtype* argmax_data_c = argmax_data_n + c * max_idx_size_c;
 
@@ -122,7 +123,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
               const int index = h * width_ + w;
               if (batch_data_c[index] > top_data_c[pool_index]) {
                 top_data_c[pool_index] = batch_data_c[index];
-                argmax_data_c[pool_index] = index;
+                argmax_data_c[pool_index] = offset_batch_data_c + index;
               }
             }
           }
@@ -140,20 +141,15 @@ inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
                                const Tensor<cpu, 4, Dtype> &max_idx,
                                const float spatial_scale_) {
   const Dtype *top_diff = out_grad.dptr_;
-  const Dtype *bottom_rois = bbox.dptr_;
   Dtype *bottom_diff = in_grad.dptr_;
   Dtype *argmax_data = max_idx.dptr_;
 
   const int channels_ = in_grad.size(1);
-  const int height_ = in_grad.size(2);
-  const int width_ = in_grad.size(3);
   const int pooled_height_ = out_grad.size(2);
   const int pooled_width_ = out_grad.size(3);
-
   const int num_rois = bbox.size(0);
 
   for (int r = 0; r < num_rois; ++r) {
-    int b = static_cast<int>(bottom_rois[r * 5]);
     for (int c = 0; c < channels_; ++c) {
       for (int h = 0; h < pooled_height_; ++h) {
         for (int w = 0; w < pooled_width_; ++w) {
@@ -161,8 +157,7 @@ inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
           offset_top += h * pooled_width_ + w;
           int max_idx = static_cast<int>(argmax_data[offset_top]);
           if (max_idx >= 0) {
-            int offset_bottom_diff = (b * channels_ + c) * height_ * width_ + max_idx;
-            bottom_diff[offset_bottom_diff] += top_diff[offset_top];
+            bottom_diff[max_idx] += top_diff[offset_top];
           }
         }
       }
