@@ -144,7 +144,6 @@ inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
   Dtype *bottom_diff = in_grad.dptr_;
   Dtype *argmax_data = max_idx.dptr_;
 
-  const int batch_size_ = in_grad.size(0);
   const int channels_ = in_grad.size(1);
   const int height_ = in_grad.size(2);
   const int width_ = in_grad.size(3);
@@ -153,73 +152,18 @@ inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
 
   const int num_rois = bbox.size(0);
 
-  for (int b = 0; b < batch_size_; ++b) {
+  for (int r = 0; r < num_rois; ++r) {
+    int b = static_cast<int>(bottom_rois[r * 5]);
     for (int c = 0; c < channels_; ++c) {
-      for (int h = 0; h < height_; ++h) {
-        for (int w = 0; w < width_; ++w) {
-          int offset_bottom_diff = (b * channels_ + c) * height_ * width_;
-          offset_bottom_diff += h * width_ + w;
-
-          Dtype gradient = 0;
-          // Accumulate gradient over all ROIs that pooled this element
-          for (int roi_n = 0; roi_n < num_rois; ++roi_n) {
-            const Dtype* offset_bottom_rois = bottom_rois + roi_n * 5;
-            int roi_batch_ind = offset_bottom_rois[0];
-            assert(roi_batch_ind >= 0);
-            assert(roi_batch_ind < batch_size_);
-            if (b != roi_batch_ind) {
-              continue;
-            }
-
-            int roi_start_w = std::round(offset_bottom_rois[1] * spatial_scale_);
-            int roi_start_h = std::round(offset_bottom_rois[2] * spatial_scale_);
-            int roi_end_w = std::round(offset_bottom_rois[3] * spatial_scale_);
-            int roi_end_h = std::round(offset_bottom_rois[4] * spatial_scale_);
-
-            bool in_roi = (w >= roi_start_w && w <= roi_end_w &&
-                           h >= roi_start_h && h <= roi_end_h);
-            if (!in_roi) {
-              continue;
-            }
-
-            // force malformed ROIs to be 1 * 1
-            int roi_height = max(roi_end_h - roi_start_h + 1, 1);
-            int roi_width = max(roi_end_w - roi_start_w + 1, 1);
-            const Dtype bin_size_h = static_cast<Dtype>(roi_height)
-                                     / static_cast<Dtype>(pooled_height_);
-            const Dtype bin_size_w = static_cast<Dtype>(roi_width)
-                                     / static_cast<Dtype>(pooled_width_);
-
-            // compute pooled regions correspond to original (h, w) point
-            int phstart = static_cast<int>(floor(static_cast<Dtype>(h - roi_start_h)
-                                                 / bin_size_h));
-            int pwstart = static_cast<int>(floor(static_cast<Dtype>(w - roi_start_w)
-                                                 / bin_size_w));
-            int phend = static_cast<int>(ceil(static_cast<Dtype>(h - roi_start_h + 1)
-                                              / bin_size_h));
-            int pwend = static_cast<int>(ceil(static_cast<Dtype>(w - roi_start_w + 1)
-                                              / bin_size_w));
-
-            // clip to boundaries of pooled region
-            phstart = min(max(phstart, 0), pooled_height_);
-            phend = min(max(phend, 0), pooled_height_);
-            pwstart = min(max(pwstart, 0), pooled_width_);
-            pwend = min(max(pwend, 0), pooled_width_);
-
-            // accumulate over gradients in pooled regions
-            int offset = (roi_n * channels_ + c) * pooled_height_ * pooled_width_;
-            const Dtype* offset_top_diff = top_diff + offset;
-            const Dtype* offset_argmax_data = argmax_data + offset;
-            for (int ph = phstart; ph < phend; ++ph) {
-              for (int pw = pwstart; pw < pwend; ++pw) {
-                const int pooled_index = ph * pooled_width_ + pw;
-                if (static_cast<int>(offset_argmax_data[pooled_index]) == h * width_ + w) {
-                  gradient += offset_top_diff[pooled_index];
-                }
-              }
-            }
+      for (int h = 0; h < pooled_height_; ++h) {
+        for (int w = 0; w < pooled_width_; ++w) {
+          int offset_top = (r * channels_ + c) * pooled_height_ * pooled_width_;
+          offset_top += h * pooled_width_ + w;
+          int max_idx = static_cast<int>(argmax_data[offset_top]);
+          if (max_idx >= 0) {
+            int offset_bottom_diff = (b * channels_ + c) * height_ * width_ + max_idx;
+            bottom_diff[offset_bottom_diff] += top_diff[offset_top];
           }
-          bottom_diff[offset_bottom_diff] += gradient;
         }
       }
     }
