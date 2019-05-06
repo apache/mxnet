@@ -40,12 +40,12 @@ template<typename Dtype>
 inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
                            const Tensor<cpu, 4, Dtype> &data,
                            const Tensor<cpu, 2, Dtype> &bbox,
-                           const Tensor<cpu, 4, Dtype> &max_idx,
+                           const Tensor<cpu, 4, int> &max_idx,
                            const float spatial_scale_) {
   const Dtype *bottom_data = data.dptr_;
   const Dtype *bottom_rois = bbox.dptr_;
   Dtype *top_data = out.dptr_;
-  Dtype *argmax_data = max_idx.dptr_;
+  int *argmax_data = max_idx.dptr_;
   const int channels_ = data.size(1);
   const int height_ = data.size(2);
   const int width_ = data.size(3);
@@ -64,7 +64,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     // Increment ROI data pointer
     const Dtype *bottom_rois_n = bottom_rois + n * bbox.size(1);
     Dtype *top_data_n = top_data + n * out_size;
-    Dtype *argmax_data_n = argmax_data + n * max_idx_size;
+    int *argmax_data_n = argmax_data + n * max_idx_size;
     int roi_batch_ind = bottom_rois_n[0];
     int roi_start_w = std::round(bottom_rois_n[1] * spatial_scale_);
     int roi_start_h = std::round(bottom_rois_n[2] * spatial_scale_);
@@ -89,7 +89,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
       int offset_batch_data_c = offset_batch_data + c * data_size_c;
       const Dtype* batch_data_c = bottom_data + offset_batch_data_c;
       Dtype* top_data_c = top_data_n + c * out_size_c;
-      Dtype* argmax_data_c = argmax_data_n + c * max_idx_size_c;
+      int* argmax_data_c = argmax_data_n + c * max_idx_size_c;
 
       for (int ph = 0; ph < pooled_height_; ++ph) {
         for (int pw = 0; pw < pooled_width_; ++pw) {
@@ -138,16 +138,16 @@ template<typename Dtype>
 inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
                                const Tensor<cpu, 4, Dtype> &out_grad,
                                const Tensor<cpu, 2, Dtype> &bbox,
-                               const Tensor<cpu, 4, Dtype> &max_idx,
+                               const Tensor<cpu, 4, int> &max_idx,
                                const float spatial_scale_) {
   const Dtype *top_diff = out_grad.dptr_;
   Dtype *bottom_diff = in_grad.dptr_;
-  Dtype *argmax_data = max_idx.dptr_;
+  int *argmax_data = max_idx.dptr_;
 
   const int count = out_grad.shape_.Size();
 
   for (int index = 0; index < count; ++index) {
-    int max_idx = static_cast<int>(argmax_data[index]);
+    int max_idx = argmax_data[index];
     if (max_idx >= 0) {
       bottom_diff[max_idx] += top_diff[index];
     }

@@ -83,7 +83,7 @@ class ROIPoolingOp : public Operator {
     Tensor<xpu, 4, DType> data = in_data[roipool::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> bbox = in_data[roipool::kBox].get<xpu, 2, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[roipool::kOut].get<xpu, 4, DType>(s);
-    Tensor<xpu, 4, DType> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, int> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, int>(s);
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(bbox.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
@@ -114,7 +114,7 @@ class ROIPoolingOp : public Operator {
 
     Tensor<xpu, 4, DType> grad_out = out_grad[roipool::kOut].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> bbox = in_data[roipool::kBox].get<xpu, 2, DType>(s);
-    Tensor<xpu, 4, DType> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, DType>(s);
+    Tensor<xpu, 4, int> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, int>(s);
     Tensor<xpu, 4, DType> grad_in = in_grad[roipool::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> grad_roi = in_grad[roipool::kBox].get<xpu, 2, DType>(s);
     CHECK_EQ(grad_out.CheckContiguous(), true);
@@ -202,7 +202,7 @@ class ROIPoolingProp : public OperatorProperty {
 
     out_type->clear();
     out_type->push_back(dtype);
-    out_type->push_back(dtype);
+    out_type->push_back(mshadow::kInt32);
     return true;
   }
 
