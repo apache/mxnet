@@ -233,7 +233,7 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
   Tensor<cpu, 1, float> max_weight =
     in_data[num_inputs + quantized_fullc::kWeightMax].get<cpu, 1, float>(s);
 
-  Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1, min_output.dptr_,
+  Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(s, 1, min_output.dptr_,
       max_output.dptr_, min_data.dptr_, max_data.dptr_, min_weight.dptr_, max_weight.dptr_);
   if (!param.no_bias) {
     Tensor<cpu, 1, int8_t> bias = in_data[fullc::kBias].get_with_shape<cpu, 1, int8_t>(

@@ -44,6 +44,12 @@
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 
+namespace bilinear_resize {
+enum BilinearResizeOpMode{simple, odd_scale, like, to_even_down, to_even_up, to_odd_down,
+  to_odd_up};
+}  // namespace bilinear_resize
+
+
 namespace mxnet {
 namespace op {
 
@@ -52,15 +58,45 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
   int width;
   dmlc::optional<float> scale_height;
   dmlc::optional<float> scale_width;
+  int mode;
   DMLC_DECLARE_PARAMETER(BilinearSampleParam) {
     DMLC_DECLARE_FIELD(height).set_default(1).set_range(1, 10000)
-    .describe("output height (required, but ignored if scale_height is defined)");
+    .describe("output height (required, but ignored if scale_height is defined or mode is not "
+              "\"size\")");
     DMLC_DECLARE_FIELD(width).set_default(1).set_range(1, 10000)
-    .describe("output width (required, but ignored if scale_width is defined)");
+    .describe("output width (required, but ignored if scale_width is defined or mode is not "
+              "\"size\")");
     DMLC_DECLARE_FIELD(scale_height).set_default(dmlc::optional<float>())
-    .describe("sampling scale of the height (optional, ignores height if defined)");
+    .describe("sampling scale of the height (optional, used in modes \"scale\" and \"odd_scale\")");
     DMLC_DECLARE_FIELD(scale_width).set_default(dmlc::optional<float>())
-    .describe("sampling scale of the scale_width (optional, ignores width if defined)");
+    .describe("sampling scale of the width (optional, used in modes \"scale\" and \"odd_scale\")");
+    DMLC_DECLARE_FIELD(mode)
+    .add_enum("size", bilinear_resize::simple)
+    .add_enum("odd_scale", bilinear_resize::odd_scale)
+    .add_enum("like", bilinear_resize::like)
+    .add_enum("to_even_down", bilinear_resize::to_even_down)
+    .add_enum("to_even_up", bilinear_resize::to_even_up)
+    .add_enum("to_odd_down", bilinear_resize::to_odd_down)
+    .add_enum("to_odd_up", bilinear_resize::to_odd_up)
+    .set_default(bilinear_resize::simple)
+    .describe("resizing mode. \"simple\" - output height equals parameter \"height\" if "
+              "\"scale_height\" parameter is not defined or input height multiplied by "
+              "\"scale_height\" otherwise. Same for width;"
+              "\"odd_scale\" - if original height or width is odd, then result height is "
+              "calculated like result_h = (original_h - 1) * scale + 1; "
+              "for scale > 1 the result shape would be like if we did deconvolution with kernel "
+              "= (1, 1) and stride = (height_scale, width_scale); and for scale < 1 shape "
+              "would be like we did convolution with kernel = (1, 1) and "
+              "stride = (int(1 / height_scale), int( 1/ width_scale);"
+              "\"like\" - resize first input to the height and width of second input; "
+              "\"to_even_down\" - resize input to nearest lower even height and width "
+              "(if original height is odd then result height = original height - 1);"
+              "\"to_even_up\" - resize input to nearest bigger even height and width "
+              "(if original height is odd then result height = original height + 1);"
+              "\"to_odd_down\" - resize input to nearest odd height and width "
+              "(if original height is odd then result height = original height - 1);"
+              "\"to_odd_up\" - resize input to nearest odd height and width "
+              "(if original height is odd then result height = original height + 1);");
   }
 };
 
@@ -76,7 +112,8 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
                                               const std::vector<TBlob> &input,
-                                              const std::vector<TBlob> &output);
+                                              const std::vector<TBlob> &output,
+                                              bool modeLike);
 
 #if MXNET_USE_CUDA
 template<typename xpu, typename DType, typename AccReal>
@@ -87,7 +124,8 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
                                               const std::vector<TBlob> &input,
-                                              const std::vector<TBlob> &output);
+                                              const std::vector<TBlob> &output,
+                                              bool modeLike);
 #endif  // MXNET_USE_CUDA
 
 template <typename xpu>
@@ -96,7 +134,9 @@ inline void BilinearSampleOpForward(const nnvm::NodeAttrs& attrs,
                                     const std::vector<TBlob> &inputs,
                                     const std::vector<OpReqType> &req,
                                     const std::vector<TBlob> &outputs) {
-  CHECK_EQ(inputs.size(), 1U);
+  const BilinearSampleParam& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
+  size_t expected = param.mode == bilinear_resize::like ? 2 : 1;
+  CHECK_EQ(inputs.size(), expected);
   CHECK_EQ(outputs.size(), 1U);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
@@ -111,8 +151,11 @@ inline void BilinearSampleOpBackward(const nnvm::NodeAttrs& attrs,
                                      const std::vector<TBlob> &inputs,
                                      const std::vector<OpReqType> &req,
                                      const std::vector<TBlob> &outputs) {
+  const BilinearSampleParam& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
+  bool modeLike = param.mode == bilinear_resize::like;
+  size_t expected = modeLike ? 2 : 1;
+  CHECK_EQ(outputs.size(), expected);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   if (IsWriting(req[0])) {
     // zero grad before backwarding
@@ -121,7 +164,7 @@ inline void BilinearSampleOpBackward(const nnvm::NodeAttrs& attrs,
     })
   }
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
-    SpatialUpSamplingBilinearUpdateGradInput<xpu, DType, AccReal>(s, inputs, outputs);
+    SpatialUpSamplingBilinearUpdateGradInput<xpu, DType, AccReal>(s, inputs, outputs, modeLike);
   });
 }
 
@@ -130,26 +173,118 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
                                        mxnet::ShapeVector *in_shape,
                                        mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
-  CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
   CHECK_EQ(out_shape->size(), 1U) << "Output:[data]";
   const BilinearSampleParam& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
+  size_t expected = param.mode == bilinear_resize::like ? 2 : 1;
+  CHECK_EQ(in_shape->size(), expected);
   mxnet::TShape dshape(in_shape->at(0));
   if (mxnet::op::shape_is_none(dshape)) return false;
-  if (param.scale_height.has_value()) {
-    dshape[2] = static_cast<int>(param.scale_height.value() * in_shape->at(0)[2]);
-  } else {
-    dshape[2] = param.height;
+  int16_t new_height = -1;
+  int16_t new_width = -1;
+  switch (param.mode) {
+    case bilinear_resize::simple:
+    {
+      if (param.scale_height.has_value()) {
+        new_height = static_cast<int>(param.scale_height.value() * in_shape->at(0)[2]);
+      } else {
+        new_height = param.height;
+      }
+      if (param.scale_height.has_value()) {
+        new_width = static_cast<int>(param.scale_width.value() * in_shape->at(0)[3]);
+      } else {
+        new_width = param.width;
+      }
+      break;
+    }
+    case bilinear_resize::odd_scale:
+    {
+      new_height = ((dshape[2] % 2) == 0) ? (int16_t) (dshape[2] * param.scale_height.value()) :
+                   (int16_t) ((dshape[2] - 1) * param.scale_height.value()) + 1;
+      new_width = ((dshape[3] % 2) == 0) ? (int16_t) (dshape[3] * param.scale_width.value()) :
+                  (int16_t) ((dshape[3] - 1) * param.scale_width.value()) + 1;
+      break;
+    }
+    case bilinear_resize::like:
+    {
+      TShape like_shape(in_shape->at(1));
+      if (dshape.ndim() == 0) return false;
+      new_height = like_shape[2];
+      new_width = like_shape[3];
+      break;
+    }
+    case bilinear_resize::to_even_down:
+    {
+      new_height = ((dshape[2] % 2) == 0) ? dshape[2] : dshape[2] - 1;
+      new_width = ((dshape[3] % 2) == 0) ? dshape[3] : dshape[3] - 1;
+      break;
+    }
+    case bilinear_resize::to_even_up:
+    {
+      new_height = ((dshape[2] % 2) == 0) ? dshape[2] : dshape[2] + 1;
+      new_width = ((dshape[3] % 2) == 0) ? dshape[3] : dshape[3] + 1;
+      break;
+    }
+    case bilinear_resize::to_odd_down:
+    {
+      new_height = ((dshape[2] % 2) == 1) ? dshape[2] : dshape[2] - 1;
+      new_width = ((dshape[3] % 2) == 1) ? dshape[3] : dshape[3] - 1;
+      break;
+    }
+    case bilinear_resize::to_odd_up:
+    {
+      new_height = ((dshape[2] % 2) == 1) ? dshape[2] : dshape[2] + 1;
+      new_width = ((dshape[3] % 2) == 1) ? dshape[3] : dshape[3] + 1;
+      break;
+    }
+    default:
+    {
+      LOG(FATAL) << "Invalid mode " << param.mode;
+    }
   }
 
-  if (param.scale_height.has_value()) {
-    dshape[3] = static_cast<int>(param.scale_width.value() * in_shape->at(0)[3]);
-  } else {
-    dshape[3] = param.width;
-  }
+  dshape[2] = new_height;
+  dshape[3] = new_width;
 
   out_shape->clear();
   out_shape->push_back(dshape);
   return true;
+}
+
+
+inline uint16_t BilinearSampleOpNumInputs(const NodeAttrs& attrs) {
+  auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
+  if (param.mode == bilinear_resize::like) {
+      return 2;
+  } else {
+    return 1;
+  }
+}
+
+inline uint16_t BilinearSampleOpNumBackwardInputs(const NodeAttrs& attrs) {
+  auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
+  if (param.mode == bilinear_resize::like) {
+    return 3;
+  } else {
+    return 1;
+  }
+}
+
+inline uint16_t BilinearSampleOpNumBackwardOutputs(const NodeAttrs& attrs) {
+  auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
+  if (param.mode == bilinear_resize::like) {
+    return 2;
+  } else {
+    return 1;
+  }
+}
+
+inline std::vector<std::string> BilinearSampleOpInputNames(const NodeAttrs& attrs) {
+  auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
+  if (param.mode == bilinear_resize::like) {
+    return std::vector<std::string>{"data", "like"};
+  } else {
+    return std::vector<std::string>{"data"};
+  }
 }
 
 }  // namespace op

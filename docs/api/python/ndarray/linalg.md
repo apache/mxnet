@@ -51,10 +51,14 @@ In the rest of this document, we list routines provided by the `ndarray.linalg` 
     potri
     trmm
     trsm
-    sumlogdiag
     syrk
     gelqf
     syevd
+    sumlogdiag
+    extractdiag
+    makediag
+    extracttrian
+    maketrian
 ```
 
 ## API Reference

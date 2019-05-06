@@ -392,6 +392,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_gOhwi8o:
       case mkldnn_gOhwi16o:
       case mkldnn_gOhIw16o4i:
+      case mkldnn_Goihw16g_s8s8:
         return mkldnn_goihw;
       default:
         LOG(FATAL) << "Unknown MKLDNN format for 5 dimensions: " << desc.data.format;

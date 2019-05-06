@@ -38,9 +38,7 @@
 #ifdef __CUDACC__
 #include "./dot-inl.cuh"
 #endif  // __CUDACC__
-#if (MSHADOW_USE_MKL == 1)
-#include "sparse_matrix.h"
-#endif
+
 namespace mxnet {
 namespace op {
 
@@ -777,34 +775,12 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
   }
 
   using nnvm::dim_t;
-#if (MSHADOW_USE_MKL == 1)
-  TShape lhs_shape = lhs.shape();
-  TShape rhs_shape = rhs.shape_;
-#endif
+
   const TBlob data_l = lhs.data();
   const TBlob indptr_l = lhs.aux_data(csr::kIndPtr);
   const TBlob col_idx_l = lhs.aux_data(csr::kIdx);
   const TBlob& data_r = rhs;
   const TBlob data_out = *ret;
-
-#if (MSHADOW_USE_MKL == 1)
-  if (data_l.type_flag_ == mshadow::kFloat32
-    && indptr_l.type_flag_ == mshadow::kInt64
-    && col_idx_l.type_flag_ == mshadow::kInt64
-    && !trans_lhs) {
-    bool ret = mkl_DotCsrDnsDns(static_cast<SP_INT64*>(indptr_l.dptr_),
-                                static_cast<SP_INT64*>(col_idx_l.dptr_),
-                                data_l.dptr<float>(),
-                                data_r.dptr<float>(),
-                                data_out.dptr<float>(),
-                                lhs_shape[0],
-                                lhs_shape[1],
-                                rhs_shape[1]);
-    if (ret) {
-      return;
-    }
-  }
-#endif
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(data_l.type_flag_, DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(indptr_l.type_flag_, IType, {  // indptr type

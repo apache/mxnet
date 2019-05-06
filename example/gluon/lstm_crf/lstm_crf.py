@@ -118,7 +118,7 @@ class BiLSTM_CRF(Block):
                     self.transitions.data()[to_scalar(tags_array[idx+1]),
                                             to_scalar(tags_array[idx])] + feat[to_scalar(tags_array[idx+1])]
         score = score + self.transitions.data()[self.tag2idx[STOP_TAG],
-                                                to_scalar(tags.array[int(tags_array.shape[0]-1)])]
+                                                to_scalar(tags_array[int(tags_array.shape[0]-1)])]
         return score
 
     def _viterbi_decode(self, feats):

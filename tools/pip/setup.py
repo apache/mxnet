@@ -66,12 +66,8 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/dmlc-core/tracke
 shutil.copy(LIB_PATH[0], os.path.join(CURRENT_DIR, 'mxnet'))
 
 # copy license and notice
-shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/LICENSE'),
-            os.path.join(CURRENT_DIR, 'mxnet/LICENSE'))
-shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/DISCLAIMER'),
-            os.path.join(CURRENT_DIR, 'mxnet/DISCLAIMER'))
-shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/NOTICE'),
-            os.path.join(CURRENT_DIR, 'mxnet/NOTICE'))
+shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/licenses'),
+            os.path.join(CURRENT_DIR, 'mxnet/licenses'))
 
 # copy tools to mxnet package
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet/tools'), ignore_errors=True)
@@ -154,20 +150,17 @@ if variant.endswith('MKL'):
         package_data['mxnet'].append('mxnet/libmklml_intel.so')
         package_data['mxnet'].append('mxnet/libiomp5.so')
         package_data['mxnet'].append('mxnet/libmkldnn.so.0')
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), '../MKLML_LICENSE'), os.path.join(CURRENT_DIR, 'mxnet'))
     shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
-    package_data['mxnet'].append('mxnet/MKLML_LICENSE')
 if platform.system() == 'Linux':
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))
     package_data['mxnet'].append('mxnet/libgfortran.so.3')
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libquadmath.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
     package_data['mxnet'].append('mxnet/libquadmath.so.0')
 
-# copy licenses
-if variant.startswith('CU'):
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), '../CUB_LICENSE'), os.path.join(CURRENT_DIR, 'mxnet'))
-    package_data['mxnet'].append('mxnet/CUB_LICENSE')
+# Copy licenses and notice
+for f in os.listdir('mxnet/licenses'):
+  package_data['mxnet'].append('mxnet/licenses/{}'.format(f))
 
 from mxnet.base import _generate_op_module_signature
 from mxnet.ndarray.register import _generate_ndarray_function_code
