@@ -172,7 +172,7 @@ namespace mshadow {
     // LOG(INFO) << "DeformablePSROIPoolForward";
     const DType *bottom_data = data.dptr_;
     const DType *bottom_rois = bbox.dptr_;
-    const DType *bottom_trans = no_trans ? NULL : trans.dptr_;
+    const DType *bottom_trans = no_trans ? nullptr : trans.dptr_;
     DType *top_data = out.dptr_;
     DType *top_count_data = top_count.dptr_;
     const int count = out.shape_.Size();
@@ -339,9 +339,9 @@ namespace mshadow {
     const DType *top_diff = out_grad.dptr_;
     const DType *bottom_data = data.dptr_;
     const DType *bottom_rois = bbox.dptr_;
-    const DType *bottom_trans = no_trans ? NULL : trans.dptr_;
+    const DType *bottom_trans = no_trans ? nullptr : trans.dptr_;
     DType *bottom_data_diff = in_grad.dptr_;
-    DType *bottom_trans_diff = no_trans ? NULL : trans_grad.dptr_;
+    DType *bottom_trans_diff = no_trans ? nullptr : trans_grad.dptr_;
     const DType *top_count_data = top_count.dptr_;
     const int count = out_grad.shape_.Size();
     const int num_rois = bbox.size(0);
