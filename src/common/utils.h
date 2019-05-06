@@ -690,15 +690,27 @@ MSHADOW_XINLINE int ilog2ui(unsigned int a) {
  * \brief Return an NDArray of all zeros.
  */
 inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
-                         const Context &ctx, const int dtype) {
+                         const Context &ctx, const int dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+                       , const std::string& name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                         ) {  // NOLINT(*)
   // NDArray with default storage
   if (stype == kDefaultStorage) {
-    NDArray ret(shape, ctx, false, dtype);
+    NDArray ret(shape, ctx, false, dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+      , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+        );  // NOLINT(*)
     ret = 0;
     return ret;
   }
   // NDArray with non-default storage. Storage allocation is always delayed.
-  return NDArray(stype, shape, ctx, true, dtype);
+  return NDArray(stype, shape, ctx, true, dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , {}, {}, TShape(mshadow::Shape1(0)), name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      );  // NOLINT(*)
 }
 
 /*!
@@ -706,14 +718,27 @@ inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &sh
  */
 inline void EmplaceBackZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
                              const Context &ctx, const int dtype,
-                             std::vector<NDArray> *vec) {
+                             std::vector<NDArray> *vec
+#if MXNET_ENABLE_STORAGE_TAGGING
+                           , const std::string& name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                             ) {  // NOLINT(*)
   // NDArray with default storage
   if (stype == kDefaultStorage) {
-    vec->emplace_back(shape, ctx, false, dtype);
+    vec->emplace_back(shape, ctx, false, dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+      , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+        );  // NOLINT(*)
     vec->back() = 0;
   } else {
     // NDArray with non-default storage. Storage allocation is always delayed.
-    vec->emplace_back(stype, shape, ctx, true, dtype);
+    vec->emplace_back(stype, shape, ctx, true, dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+      , std::vector<int>(), mxnet::ShapeVector()
+      , mxnet::TShape(mshadow::Shape1(0)), name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+        );  // NOLINT(*)
   }
 }
 

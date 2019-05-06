@@ -978,7 +978,11 @@ class CuDNNDeconvolutionOp {
   void ReserveElements(const std::vector<size_t> &elements) {
     std::vector<Storage::Handle> handles;
     for (size_t alloc_element : elements)
-        handles.push_back(Storage::Get()->Alloc(alloc_element * sizeof(DType), Context::GPU()));
+        handles.push_back(Storage::Get()->Alloc(alloc_element * sizeof(DType), Context::GPU()
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , "skip me"
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            ));  // NOLINT(*)
     for (auto &handle : handles)
         Storage::Get()->DirectFree(handle);
   }

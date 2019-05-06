@@ -25,8 +25,10 @@
 #ifndef MXNET_STORAGE_H_
 #define MXNET_STORAGE_H_
 
+#include <string>
 #include <memory>
 #include "./base.h"
+#include "./storage_tag.h"
 
 namespace mxnet {
 
@@ -56,6 +58,12 @@ class Storage {
      */
     int shared_pid{-1};
     int shared_id{-1};
+#if MXNET_ENABLE_STORAGE_TAGGING
+    /*!
+     * \brief Name tag for tracking purpose.
+     */
+    std::string tag{"unknown"};
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
   };
   /*!
    * \brief Allocate a new contiguous memory for a given size.
@@ -63,10 +71,19 @@ class Storage {
    * \param ctx Context information about the device and ID.
    * \return Handle struct.
    */
-  Handle Alloc(size_t size, Context ctx) {
+
+  Handle Alloc(size_t size, Context ctx
+#if MXNET_ENABLE_STORAGE_TAGGING
+  , const std::string& tag =
+      MXNET_DEFAULT_STORAGE_TAG("unknown")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      ) {  // NOLINT(*)
     Handle hd;
     hd.size = size;
     hd.ctx = ctx;
+#if MXNET_ENABLE_STORAGE_TAGGING
+    hd.tag = tag;
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
     this->Alloc(&hd);
     return hd;
   }

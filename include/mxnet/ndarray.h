@@ -90,10 +90,20 @@ class NDArray {
    * \param ctx context of NDArray
    * \param delay_alloc whether delay the allocation
    * \param dtype data type of this ndarray
+   * \param name name of this ndarray
    */
   NDArray(const mxnet::TShape &shape, Context ctx,
-          bool delay_alloc = false, int dtype = mshadow::default_type_flag)
-      : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype)),
+          bool delay_alloc = false,
+          int dtype = mshadow::default_type_flag
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& name = MXNET_DEFAULT_STORAGE_TAG("unknown")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
+      : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+                                   , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+             )),  // NOLINT(*)
         shape_(shape), dtype_(dtype), storage_type_(kDefaultStorage),
         entry_({nullptr, 0, 0}) {
   }
@@ -102,15 +112,29 @@ class NDArray {
   NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
           std::vector<int> aux_types = {}, mxnet::ShapeVector aux_shapes = {},
-          mxnet::TShape storage_shape = mxnet::TShape(mshadow::Shape1(0)));
+          mxnet::TShape storage_shape = mxnet::TShape(mshadow::Shape1(0))
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& name = MXNET_DEFAULT_STORAGE_TAG("unknown")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
   /*!
    * \brief constructs a new dynamic NDArray whose shape is unknown,
    *        hence the NDArray is inherently lazily created
    * \param ctx context of NDArray
    * \param dtype data type of this ndarray
+   * \param name name of this ndarray
    */
-  explicit NDArray(Context ctx, int dtype = mshadow::default_type_flag) {
-    ptr_ = std::make_shared<Chunk>(mxnet::TShape(mshadow::Shape1(0)), ctx, true, dtype);
+  explicit NDArray(Context ctx, int dtype = mshadow::default_type_flag
+#if MXNET_ENABLE_STORAGE_TAGGING
+                 , const std::string& name = MXNET_DEFAULT_STORAGE_TAG("unknown")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                   ) {  // NOLINT(*)
+    ptr_ = std::make_shared<Chunk>(mxnet::TShape(mshadow::Shape1(0)),
+                                   ctx, true, dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+                                 , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                                   );  // NOLINT(*)
     dtype_ = dtype;
     storage_type_ = kDefaultStorage;
     entry_ = {nullptr, 0, 0};
@@ -121,11 +145,20 @@ class NDArray {
    *  make sure the memory region is available through out the life of NDArray
    * \param data the memory content of static data
    * \param dev_id the device id this tensor sits at
+   * \param name name of this ndarray
    */
-  NDArray(const TBlob &data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_),
-        dtype_(data.type_flag_), storage_type_(kDefaultStorage),
-        entry_({nullptr, 0, 0}) {
+  NDArray(const TBlob &data, int dev_id
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& name = MXNET_DEFAULT_STORAGE_TAG("unknown")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
+      : ptr_(std::make_shared<Chunk>(data, dev_id
+#if MXNET_ENABLE_STORAGE_TAGGING
+                                   , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+             )),  // NOLINT(*)
+        shape_(data.shape_), dtype_(data.type_flag_),
+        storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
   }
 
   /*!
@@ -135,9 +168,18 @@ class NDArray {
    * \param data the memory content of static data
    * \param dev_id the device id this tensor sits at
    * \param deleter the function pointer of custom deleter
+   * \param name the name of NDArray
    */
-  NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter)
-      : ptr_(new Chunk(data, dev_id),
+  NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& name = MXNET_DEFAULT_STORAGE_TAG("unknown")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
+      : ptr_(new Chunk(data, dev_id
+#if MXNET_ENABLE_STORAGE_TAGGING
+                     , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+             ),  // NOLINT(*)
         [deleter](Chunk *p) {
           deleter();    // call custom deleter
           delete p;     // delete Chunk object
@@ -148,9 +190,18 @@ class NDArray {
   }
 
   /*! \brief create ndarray from shared memory */
-  NDArray(int shared_pid, int shared_id, const mxnet::TShape& shape, int dtype)
-      : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)), shape_(shape),
-        dtype_(dtype), storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
+  NDArray(int shared_pid, int shared_id, const mxnet::TShape& shape, int dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& name = MXNET_DEFAULT_STORAGE_TAG("unknown")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
+      : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+           , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+             )),  // NOLINT(*)
+        shape_(shape), dtype_(dtype),
+        storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
   }
 
   /*!
@@ -162,11 +213,21 @@ class NDArray {
    * \param data the memory content of static data
    * \param aux_data the memory content of static aux data
    * \param dev_id the device id this tensor sits at
+   * \param name the name of NDArray
    */
-  NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape,
-          const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
-        dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
+  NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, const TBlob &data,
+          const std::vector<TBlob> &aux_data, int dev_id
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& name = MXNET_DEFAULT_STORAGE_TAG("unknown")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
+      : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id
+#if MXNET_ENABLE_STORAGE_TAGGING
+           , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+             )),  // NOLINT(*)
+        shape_(shape), dtype_(data.type_flag_),
+        storage_type_(stype), entry_({nullptr, 0, 0}) {
   }
   /*!
    * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
@@ -354,6 +415,12 @@ class NDArray {
     CheckAndAlloc();
     return ptr_->shandle;
   }
+#if MXNET_ENABLE_STORAGE_TAGGING
+  /*! \brief set storage handle name tag */
+  inline void SetStorageHandleTag(const std::string& tag) {
+    ptr_->shandle.tag = tag;
+  }
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
   /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
@@ -859,10 +926,19 @@ class NDArray {
     /*! \brief default constructor */
     Chunk() : static_data(true), delay_alloc(false),
               storage_ref_(Storage::_GetSharedRef()),
-              engine_ref_(Engine::_GetSharedRef()) {}
+              engine_ref_(Engine::_GetSharedRef()) {
+#if MXNET_ENABLE_STORAGE_TAGGING
+      shandle.tag = "unknown:ndarray_chunk";
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+    }
 
     /*! \brief construct a new chunk */
-    Chunk(mxnet::TShape shape, Context ctx_, bool delay_alloc_, int dtype)
+    Chunk(mxnet::TShape shape, Context ctx_, bool delay_alloc_,
+          int dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
         : static_data(false), delay_alloc(true), ctx(ctx_),
           storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
@@ -872,12 +948,19 @@ class NDArray {
       }
       var = Engine::Get()->NewVariable();
       shandle.ctx = ctx_;
+#if MXNET_ENABLE_STORAGE_TAGGING
+      shandle.tag = tag;
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
       if (!delay_alloc_) {
         this->CheckAndAlloc();
       }
     }
 
-    Chunk(const TBlob &data, int dev_id)
+    Chunk(const TBlob &data, int dev_id
+#if MXNET_ENABLE_STORAGE_TAGGING
+      , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+        )  // NOLINT(*)
         : static_data(true), delay_alloc(false),
           storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
@@ -891,12 +974,20 @@ class NDArray {
       }
       // init shandle
       shandle.ctx = ctx;
+#if MXNET_ENABLE_STORAGE_TAGGING
+      shandle.tag = tag;
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
       shandle.dptr = data.dptr_;
       shandle.size = data.shape_.Size() * mshadow::mshadow_sizeof(data.type_flag_);
       storage_shape = data.shape_;
     }
 
-    Chunk(int shared_pid, int shared_id, const mxnet::TShape& shape, int dtype)
+    Chunk(int shared_pid, int shared_id, const mxnet::TShape& shape,
+          int dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
         : static_data(false), delay_alloc(false),
           storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
@@ -904,6 +995,9 @@ class NDArray {
       ctx = Context::CPUShared(0);
       shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
       shandle.ctx = ctx;
+#if MXNET_ENABLE_STORAGE_TAGGING
+      shandle.tag = tag;
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
       shandle.shared_pid = shared_pid;
       shandle.shared_id = shared_id;
       Storage::Get()->Alloc(&shandle);
@@ -912,12 +1006,19 @@ class NDArray {
     // Constructor for a non-default storage chunk
     Chunk(NDArrayStorageType storage_type_, const mxnet::TShape &storage_shape_, Context ctx_,
           bool delay_alloc_, int dtype, const std::vector<int> &aux_types_,
-          const mxnet::ShapeVector &aux_shapes_)
+          const mxnet::ShapeVector &aux_shapes_
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
         : static_data(false), delay_alloc(delay_alloc_), storage_type(storage_type_),
           aux_types(aux_types_), ctx(ctx_), storage_shape(storage_shape_),
           aux_shapes(aux_shapes_), storage_ref_(Storage::_GetSharedRef()),
           engine_ref_(Engine::_GetSharedRef()) {
       shandle.ctx = ctx;
+#if MXNET_ENABLE_STORAGE_TAGGING
+      shandle.tag = tag;
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
       var = Engine::Get()->NewVariable();
       // aux_handles always reflect the correct number of aux data
       for (size_t i = 0; i < aux_shapes.size(); i++) {
@@ -932,7 +1033,11 @@ class NDArray {
     }
 
     Chunk(const NDArrayStorageType storage_type_, const TBlob &data,
-          const std::vector<TBlob> &aux_data, int dev_id)
+          const std::vector<TBlob> &aux_data, int dev_id
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          )  // NOLINT(*)
         : static_data(true), delay_alloc(false), storage_type(storage_type_),
           storage_ref_(Storage::_GetSharedRef()), engine_ref_(Engine::_GetSharedRef()) {
       using namespace mshadow;
@@ -948,6 +1053,9 @@ class NDArray {
       }
       // init shandle
       shandle.ctx = ctx;
+#if MXNET_ENABLE_STORAGE_TAGGING
+      shandle.tag = tag;
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
       shandle.dptr = data.dptr_;
       shandle.size = data.shape_.Size() * mshadow_sizeof(data.type_flag_);
       storage_shape = data.shape_;
@@ -978,7 +1086,11 @@ class NDArray {
     /*! \brief check if delay alloc is on, do alloc if not yet done */
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(shandle.size, shandle.ctx);
+        shandle = Storage::Get()->Alloc(shandle.size, shandle.ctx
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , shandle.tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            );  // NOLINT(*)
 #if MXNET_USE_MKLDNN == 1
         mkl_mem_ = nullptr;
 #endif
@@ -993,7 +1105,11 @@ class NDArray {
           << "CheckAndAlloc(dbytes) is only intended for kDefaultStorage";
       dbytes = std::max(dbytes, static_cast<uint64_t>(shandle.size));
       if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , shandle.tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            );  // NOLINT(*)
 #if MXNET_USE_MKLDNN == 1
         mkl_mem_ = nullptr;
 #endif
@@ -1002,7 +1118,11 @@ class NDArray {
         // free storage
         Storage::Get()->Free(shandle);
         // init storage
-        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , shandle.tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            );  // NOLINT(*)
 #if MXNET_USE_MKLDNN == 1
         mkl_mem_ = nullptr;
 #endif
@@ -1052,6 +1172,42 @@ class NDArray {
     bool IsDefault() const;
 #endif
 
+#if MXNET_ENABLE_STORAGE_TAGGING
+    inline std::string STypeToString() const {
+      if (storage_type == kUndefinedStorage) {
+        return "undef";
+      } else if (storage_type == kRowSparseStorage) {
+        return "row_sparse";
+      } else if (storage_type == kCSRStorage) {
+        return "csr";
+      } else {
+        return "unknown";
+      }
+    }
+
+    inline std::string AuxIdxToString(size_t aux_idx) const {
+      if (storage_type == kUndefinedStorage) {
+        return "undef";
+      } else if (storage_type == kRowSparseStorage) {
+        if (aux_idx == rowsparse::kIdx) {
+          return "row_sparse:idx";
+        } else {
+          return "row_sparse:unknown";
+        }
+      } else if (storage_type == kCSRStorage) {
+        if (aux_idx == csr::kIndPtr) {
+          return "csr:ind_ptr";
+        } else if (aux_idx == csr::kIdx) {
+          return "csr:idx";
+        } else {
+          return "csr:unknown";
+        }
+      } else {
+        return "unknown";
+      }
+    }
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+
     // create storage handle for aux data based on shape
     // this function assumes ctx, aux shapes and aux types are set
     // aux shape is also updated
@@ -1071,7 +1227,11 @@ class NDArray {
         // free storage
         Storage::Get()->Free(aux_handles[i]);
         // init aux storage
-        aux_handles[i] = Storage::Get()->Alloc(aux_bytes, ctx);
+        aux_handles[i] = Storage::Get()->Alloc(aux_bytes, ctx
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , shandle.tag + ":" + AuxIdxToString(i)
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            );  // NOLINT(*)
       }
       // init shape
       set_aux_shape(i, shape);

@@ -1378,9 +1378,17 @@ class RNNOp {
                                                 &reserve_space_byte_));
       workspace_size_ = workspace_byte_ / sizeof(DType);
       // Allocate the reserve space
-      reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU(s->dev_id));
+      reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU(s->dev_id)
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , "reserve_space:cudnn_rnn"
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
       // Allocate the temp space
-      temp_space_ = Storage::Get()->Alloc(workspace_byte_, Context::GPU(s->dev_id));
+      temp_space_ = Storage::Get()->Alloc(workspace_byte_, Context::GPU(s->dev_id)
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , "workspace:cudnn_rnn"
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
       // Check that number of params are correct
       size_t cudnn_param_size;
       CUDNN_CALL(cudnnGetRNNParamsSize(s->dnn_handle_,

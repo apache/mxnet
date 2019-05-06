@@ -457,6 +457,17 @@ inline NDArray ReshapeOrCreate(const std::string& name,
                                const Context& ctx,
                                std::unordered_map<std::string, NDArray>* shared_buffer,
                                bool enable_row_sparse_sharing) {
+#if MXNET_ENABLE_STORAGE_TAGGING
+  std::string ndarray_name;
+  // check whether or not the name starts with "grad of "
+  if (name.substr(0, 8) == "grad of ") {
+    // if yes, replace it with "arg_grad:"
+    ndarray_name = "arg_grad:" + name.substr(8);
+  } else {
+    // if no, append "in_arg:" at the front
+    ndarray_name = "in_arg:" + name;
+  }
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
   bool stype_shareable = dest_arg_stype == kDefaultStorage;
   if (enable_row_sparse_sharing) {
     stype_shareable = stype_shareable || dest_arg_stype == kRowSparseStorage;
@@ -478,14 +489,26 @@ inline NDArray ReshapeOrCreate(const std::string& name,
                    << "the bucket taking the largest input for better memory sharing.";
       // size is not large enough, creating a larger one for sharing
       // the NDArrays in shared_buffer are guaranteed to be of shareable storages
-      it->second = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+      it->second = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , ndarray_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
       return it->second;
     } else {
       // not shareable storage
-      return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+      return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , ndarray_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
     }
   } else {
-    auto ret = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+    auto ret = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+      , ndarray_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+        );  // NOLINT(*)
     if (stype_shareable) {
       shared_buffer->emplace(name, ret);
     }

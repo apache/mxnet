@@ -522,6 +522,26 @@ MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
                               NDArrayHandle *out);
 
 /*!
+ * \brief create a NDArray with specified shape and name tag
+ * \param shape the pointer to the shape
+ * \param ndim the dimension of the shape
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ * \param delay_alloc whether to delay allocation until
+ *    the narray is first mutated
+ * \param name the name tag assigned
+ * \param out the returning handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayCreateWName(const mx_uint *shape,
+                                   mx_uint ndim,
+                                   int dev_type,
+                                   int dev_id,
+                                   int delay_alloc,
+                                   const char *name,
+                                   NDArrayHandle *out);
+
+/*!
  * \brief create a NDArray with specified shape and data type
  * \param shape the pointer to the shape
  * \param ndim the dimension of the shape
@@ -534,13 +554,34 @@ MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
-                              mx_uint ndim,
-                              int dev_type,
-                              int dev_id,
-                              int delay_alloc,
-                              int dtype,
-                              NDArrayHandle *out);
+                                mx_uint ndim,
+                                int dev_type,
+                                int dev_id,
+                                int delay_alloc,
+                                int dtype,
+                                NDArrayHandle *out);
 
+/*!
+ * \brief create a NDArray with specified shape and data type
+ * \param shape the pointer to the shape
+ * \param ndim the dimension of the shape
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ * \param delay_alloc whether to delay allocation until
+ *    the narray is first mutated
+ * \param dtype data type of created array
+ * \param name the name tag assigned
+ * \param out the returning handle
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayCreateExWName(const mx_uint *shape,
+                                     mx_uint ndim,
+                                     int dev_type,
+                                     int dev_id,
+                                     int delay_alloc,
+                                     int dtype,
+                                     const char *name,
+                                     NDArrayHandle *out);
 
 /*!
  * \brief create an empty sparse NDArray with specified shape and data type
@@ -1012,6 +1053,30 @@ MXNET_DLL int MXImperativeInvoke(AtomicSymbolCreator creator,
                                  int num_params,
                                  const char **param_keys,
                                  const char **param_vals);
+
+/*!
+ * \brief invoke a nnvm op and imperative function with name tag
+ * \param creator the op
+ * \param num_inputs number of input NDArrays
+ * \param inputs input NDArrays
+ * \param num_outputs number of output NDArrays
+ * \param outputs output NDArrays
+ * \param num_params number of keyword parameters
+ * \param param_keys keys for keyword parameters
+ * \param param_vals values for keyword parameters
+ * \param attrs_name attribute name assigned
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXImperativeInvokeWAttrsName(AtomicSymbolCreator create,
+                                           int num_inputs,
+                                           NDArrayHandle *inputs,
+                                           int *num_outputs,
+                                           NDArrayHandle **outputs,
+                                           int num_params,
+                                           const char **param_keys,
+                                           const char **param_vals,
+                                           const char *attrs_name);
+
 /*!
  * \brief invoke a nnvm op and imperative function
  * \param creator the op
@@ -1034,6 +1099,33 @@ MXNET_DLL int MXImperativeInvokeEx(AtomicSymbolCreator creator,
                                    const char **param_keys,
                                    const char **param_vals,
                                    const int **out_stypes);
+
+/*!
+ * \brief invoke a nnvm op and imperative function
+ * \param creator the op
+ * \param num_inputs number of input NDArrays
+ * \param inputs input NDArrays
+ * \param num_outputs number of output NDArrays
+ * \param outputs output NDArrays
+ * \param num_params number of keyword parameters
+ * \param param_keys keys for keyword parameters
+ * \param param_vals values for keyword parameters
+ * \param out_stypes output ndarrays' stypes
+ * \param attrs_name attribute name assigned
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXImperativeInvokeExWAttrsName(AtomicSymbolCreator creator,
+                                             int num_inputs,
+                                             NDArrayHandle *inputs,
+                                             int *num_outputs,
+                                             NDArrayHandle **outputs,
+                                             int num_params,
+                                             const char **param_keys,
+                                             const char **param_vals,
+                                             const int **out_stypes,
+                                             const char *attrs_name);
+
+
 /*!
  * \brief set whether to record operator for autograd
  * \param is_recording 1 when recording, 0 when not recording.

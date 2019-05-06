@@ -38,6 +38,14 @@ inline void linalg_check_batch_size(int A, int B, int C) {
   CHECK_GT(A, 0) << "Zero batch size for arguments to linear algebra operator";
 }
 
+#if MXNET_ENABLE_STORAGE_TAGGING
+#define TEMPORARY_GPU_STORAGE_ALLOC(name, dtype, size) \
+  Storage::Handle name = Storage::Get()->Alloc(sizeof(dtype)*size, Context::GPU(), "skip me")
+#else  // !MXNET_ENABLE_STORAGE_TAGGING
+#define TEMPORARY_GPU_STORAGE_ALLOC(name, dtype, size) \
+  Storage::Handle name = Storage::Get()->Alloc(sizeof(dtype)*size, Context::GPU())
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+
 //////////////////////////////// GEMM ////////////////////////////////////////////
 
 // CPU/GPU-versions of BLAS3 function "gemm". Please refer to the BLAS3-documentation
@@ -724,8 +732,8 @@ void linalg_potrf<gpu, DType>(const Tensor<gpu, 2, DType>& A, bool lower, Stream
   CHECK_NOTNULL(s); \
   check_potrf(A, lower); \
   int buffsize(linalg_potrf_buffsize(A, lower, s)); \
-  Storage::Handle buffer = Storage::Get()->Alloc(sizeof(DType)*buffsize, Context::GPU()); \
-  Storage::Handle info = Storage::Get()->Alloc(sizeof(int), Context::GPU()); \
+  TEMPORARY_GPU_STORAGE_ALLOC(buffer, DType, buffsize); \
+  TEMPORARY_GPU_STORAGE_ALLOC(info, int, 1); \
   CUSOLVER_CALL(cusolver##fname(Stream<gpu>::GetSolverHandle(s), \
                 (lower ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER), \
                 A.size(0), A.dptr_, A.stride_, static_cast<DType *>(buffer.dptr), buffsize, \
@@ -745,8 +753,8 @@ void linalg_batch_potrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, bool lower, 
   CHECK_GT(A.size(0), 0); \
   check_potrf(A[0], lower); \
   int buffsize(linalg_potrf_buffsize(A[0], lower, s)); \
-  Storage::Handle buffer = Storage::Get()->Alloc(sizeof(DType)*buffsize, Context::GPU()); \
-  Storage::Handle info = Storage::Get()->Alloc(sizeof(int), Context::GPU()); \
+  TEMPORARY_GPU_STORAGE_ALLOC(buffer, DType, buffsize); \
+  TEMPORARY_GPU_STORAGE_ALLOC(info, int, 1); \
   for (mshadow::index_t i = 0; i < A.size(0); ++i) { \
     CUSOLVER_CALL(cusolver##fname(Stream<gpu>::GetSolverHandle(s), \
                  (lower ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER), \
@@ -817,7 +825,7 @@ void linalg_potri<gpu, DType>(const Tensor<gpu, 2, DType>& A, bool lower, Stream
   using namespace mxnet; \
   CHECK_NOTNULL(s); \
   check_potri(A, lower); \
-  Storage::Handle buffer = Storage::Get()->Alloc(sizeof(DType)*A.MSize(), Context::GPU()); \
+  TEMPORARY_GPU_STORAGE_ALLOC(buffer, DType, A.MSize()); \
   using namespace mshadow::cuda; \
   int ngrid = std::min(kMaxGridNum, \
                        static_cast<int>((A.MSize() + kBaseThreadNum - 1) / kBaseThreadNum)); \
@@ -841,7 +849,7 @@ void linalg_batch_potri<gpu, DType>(const Tensor<gpu, 3, DType>& A, bool lower, 
   CHECK_NOTNULL(s); \
   CHECK_GT(A.size(0), 0); \
   check_potri(A[0], lower); \
-  Storage::Handle buffer = Storage::Get()->Alloc(sizeof(DType)*A.MSize(), Context::GPU()); \
+  TEMPORARY_GPU_STORAGE_ALLOC(buffer, DType, A.MSize()); \
   using namespace mshadow::cuda; \
   int ngrid = std::min(kMaxGridNum, \
                        static_cast<int>((A.MSize() + kBaseThreadNum - 1) / kBaseThreadNum)); \
@@ -1023,7 +1031,7 @@ void linalg_gelqf<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
   check_gelqf(A, work); \
   int m(A.size(0)); \
   int lwork(work.size(0) - m); \
-  Storage::Handle info = Storage::Get()->Alloc(sizeof(int), Context::GPU()); \
+  TEMPORARY_GPU_STORAGE_ALLOC(info, int, 1); \
   CUSOLVER_CALL(cusolver##fname(Stream<gpu>::GetSolverHandle(s), \
                 A.size(1), m, A.dptr_ , A.stride_, work.dptr_, \
                 work.dptr_ + m, lwork, static_cast<int *>(info.dptr))); \
@@ -1047,7 +1055,7 @@ void linalg_orglq<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
   check_gelqf(A, work); \
   int m(A.size(0)); \
   int lwork(work.size(0) - m); \
-  Storage::Handle info = Storage::Get()->Alloc(sizeof(int), Context::GPU()); \
+  TEMPORARY_GPU_STORAGE_ALLOC(info, int, 1); \
   CUSOLVER_CALL(cusolver##fname(Stream<gpu>::GetSolverHandle(s), \
                 A.size(1), m, m, A.dptr_ , A.stride_, work.dptr_, \
                 work.dptr_ + m, lwork, static_cast<int *>(info.dptr))); \
@@ -1083,7 +1091,7 @@ int linalg_gelqf_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
   CUSOLVER_CALL(cusolverDn##prefix##geqrf_bufferSize(Stream<gpu>::GetSolverHandle(s), \
                 A.size(1), m, A.dptr_ , A.stride_, &work1)); \
   int work2(0);  \
-  Storage::Handle tau = Storage::Get()->Alloc(sizeof(DType), Context::GPU()); \
+  TEMPORARY_GPU_STORAGE_ALLOC(tau, DType, 1); \
   CUSOLVER_CALL(cusolverDn##prefix##orgqr_bufferSize(Stream<gpu>::GetSolverHandle(s), \
                 A.size(1), m, m, A.dptr_ , A.stride_, static_cast<DType *>(tau.dptr), &work2)); \
   Storage::Get()->Free(tau); \
@@ -1181,7 +1189,7 @@ void linalg_syevd<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
   using mshadow::gpu; \
   CHECK_NOTNULL(s); \
   check_syevd(A, L); \
-  Storage::Handle info = Storage::Get()->Alloc(sizeof(int), Context::GPU()); \
+  TEMPORARY_GPU_STORAGE_ALLOC(info, int, 1); \
   CUSOLVER_CALL(cusolver##fname(Stream<gpu>::GetSolverHandle(s), \
                 CUSOLVER_EIG_MODE_VECTOR, CUBLAS_FILL_MODE_UPPER, \
                 A.size(0), A.dptr_ , A.stride_, L.dptr_, work.dptr_, \

@@ -179,13 +179,33 @@ int MXNDArrayCreate(const mx_uint *shape,
   API_END();
 }
 
+int MXNDArrayCreateWName(const mx_uint *shape,
+                         mx_uint ndim,
+                         int dev_type,
+                         int dev_id,
+                         int delay_alloc,
+                         const char *name,
+                         NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(
+      mxnet::TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , mshadow::default_type_flag, name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      );  // NOLINT(*)
+  API_END();
+}
+
+
 int MXNDArrayCreateEx(const mx_uint *shape,
-                    mx_uint ndim,
-                    int dev_type,
-                    int dev_id,
-                    int delay_alloc,
-                    int dtype,
-                    NDArrayHandle *out) {
+                      mx_uint ndim,
+                      int dev_type,
+                      int dev_id,
+                      int delay_alloc,
+                      int dtype,
+                      NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(
       mxnet::TShape(shape, shape + ndim),
@@ -194,6 +214,28 @@ int MXNDArrayCreateEx(const mx_uint *shape,
       dtype);
   API_END();
 }
+
+int MXNDArrayCreateExWName(const mx_uint *shape,
+                           mx_uint ndim,
+                           int dev_type,
+                           int dev_id,
+                           int delay_alloc,
+                           int dtype,
+                           const char *name,
+                           NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(
+      mxnet::TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0,
+      dtype
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      );  // NOLINT(*)
+  API_END();
+}
+
 
 int MXNDArrayCreateSparseEx(int storage_type,
                     const mx_uint *shape,

@@ -204,11 +204,24 @@ inline void SetShapeType(const Context& ctx,
     if (outputs[i]->is_none() || mxnet::op::shape_is_none(outputs[i]->shape())) {
       if (is_dynamic_shape_existing) {
         // once there is dynamic shape somewhere, we could not pre-determine the shape.
-        *outputs[i] = NDArray(ctx, out_types[i]);
+        *outputs[i] = NDArray(ctx, out_types[i]
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , attrs.name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            );  // NOLINT(*)
       } else if (storage_type == kDefaultStorage) {
-        *outputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+        *outputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , attrs.name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            );  // NOLINT(*)
       } else {
-        *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
+        *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , {}, {}, TShape(mshadow::Shape1(0))
+          , attrs.name + "_oedge" + std::to_string(i)
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            );  // NOLINT(*)
       }
     } else {
       CHECK_EQ(outputs[i]->shape(), out_shapes[i])
@@ -843,12 +856,27 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
 
   std::multimap<size_t, NDArray> new_pool;
 
+#if MXNET_ENABLE_STORAGE_TAGGING
+  std::vector<std::string> data_storage_tag(idx.num_node_entries());
+  for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
+    for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
+      auto eid = idx.entry_id(nid, i);
+      data_storage_tag[eid] = "data_entry:" + idx[nid].source->attrs.name +
+          "_oedge" + std::to_string(i);
+    }
+  }
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+
   for (uint32_t i = entry_start; i < entry_end; ++i) {
     if (mem_plan[i].storage_id == exec::kExternalStorageID) continue;
     CHECK(arrays[i]->is_none());
     if (mem_plan[i].storage_id == exec::kDynamicStorageID) {
       *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
-                           shapes[i], default_ctx, true, dtypes[i]);
+                           shapes[i], default_ctx, true, dtypes[i]
+#if MXNET_ENABLE_STORAGE_TAGGING
+                         , {}, {}, TShape(mshadow::Shape1(0)), data_storage_tag[i]
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                           );  // NOLINT(*)
       continue;
     }
     CHECK_EQ(stypes[i], kDefaultStorage);
@@ -861,7 +889,11 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
         pool.erase(iter);
       } else {
         NDArray buff(mxnet::TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
-                     default_ctx, true, mshadow::kUint8);
+                     default_ctx, true, mshadow::kUint8
+#if MXNET_ENABLE_STORAGE_TAGGING
+                   , data_storage_tag[i]
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                     );  // NOLINT(*)
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
         new_pool.insert({mem_plan[i].size, buff});
       }

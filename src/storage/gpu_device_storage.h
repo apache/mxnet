@@ -28,6 +28,7 @@
 #include "mxnet/base.h"
 #include "mxnet/storage.h"
 #include "../common/cuda_utils.h"
+#include "../profiler/gpu_memory_profiler.h"
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
 #endif  // MXNET_USE_CUDA
@@ -58,6 +59,9 @@ inline void GPUDeviceStorage::Alloc(Storage::Handle* handle) {
   const size_t size = handle->size;
   if (size == 0) return;
 
+#if MXNET_USE_GPU_MEMORY_PROFILER
+  profiler::GpuMemoryProfiler::Get()->addEntry(size, handle->tag);
+#endif  // MXNET_USE_GPU_MEMORY_PROFILER
 #if MXNET_USE_CUDA
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL

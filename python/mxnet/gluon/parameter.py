@@ -294,6 +294,8 @@ class Parameter(object):
                 dev_list.append(None)
             dev_list[ctx.device_id] = i
 
+        # @MXNET_USE_GPU_MEMORY_PROFILER
+        data.name = 'in_arg:%s' % self.name  # propagate the parameter name to ndarray
         self._data = [data.copyto(ctx) for ctx in self._ctx_list]
         self._init_grad()
 
@@ -304,7 +306,9 @@ class Parameter(object):
             return
 
         self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
-                                    stype=self._grad_stype) for i in self._data]
+                                    stype=self._grad_stype,
+                                    name='arg_grad:%s'%self.name) for i in self._data]
+        # @MXNET_USE_GPU_MEMORY_PROFILER
 
         autograd.mark_variables(self._check_and_get(self._data, list),
                                 self._grad, self.grad_req)

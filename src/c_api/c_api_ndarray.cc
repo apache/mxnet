@@ -85,12 +85,14 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
                             NDArrayHandle **outputs,
                             int num_params,
                             const char **param_keys,
-                            const char **param_vals) {
+                            const char **param_vals,
+                            const char *attrs_name) {
   const nnvm::Op* op = static_cast<nnvm::Op*>(creator);
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
 
   nnvm::NodeAttrs attrs = imperative::ParseAttrs(op, num_inputs, num_params,
                                                  param_keys, param_vals);
+  attrs.name = attrs_name;
 
   int infered_num_outputs;
   int num_visible_outputs;
@@ -123,9 +125,28 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
                        int num_params,
                        const char **param_keys,
                        const char **param_vals) {
+  return MXImperativeInvokeWAttrsName(creator,
+                                      num_inputs,
+                                      inputs,
+                                      num_outputs,
+                                      outputs,
+                                      num_params,
+                                      param_keys,
+                                      param_vals,
+                                      "unknown_attrs");
+}
+int MXImperativeInvokeWAttrsName(AtomicSymbolCreator creator,
+                                 int num_inputs,
+                                 NDArrayHandle *inputs,
+                                 int *num_outputs,
+                                 NDArrayHandle **outputs,
+                                 int num_params,
+                                 const char **param_keys,
+                                 const char **param_vals,
+                                 const char *attrs_name) {
   API_BEGIN();
   MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
-                         num_params, param_keys, param_vals);
+                         num_params, param_keys, param_vals, attrs_name);
   API_END();
 }
 
@@ -138,10 +159,31 @@ int MXImperativeInvokeEx(AtomicSymbolCreator creator,
                          const char **param_keys,
                          const char **param_vals,
                          const int **out_stypes) {  // outputs storage types
+  return MXImperativeInvokeExWAttrsName(creator,
+                                        num_inputs,
+                                        inputs,
+                                        num_outputs,
+                                        outputs,
+                                        num_params,
+                                        param_keys,
+                                        param_vals,
+                                        out_stypes,
+                                        "unknown_attrs");
+}
+int MXImperativeInvokeExWAttrsName(AtomicSymbolCreator creator,
+                                   int num_inputs,
+                                   NDArrayHandle *inputs,
+                                   int *num_outputs,
+                                   NDArrayHandle **outputs,
+                                   int num_params,
+                                   const char **param_keys,
+                                   const char **param_vals,
+                                   const int **out_stypes,
+                                   const char *attrs_name) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
-                         num_params, param_keys, param_vals);
+                         num_params, param_keys, param_vals, attrs_name);
   NDArray** out_array = *reinterpret_cast<NDArray***>(outputs);
   ret->out_types.clear();
   ret->out_types.reserve(*num_outputs);

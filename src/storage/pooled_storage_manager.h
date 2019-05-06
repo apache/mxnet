@@ -39,6 +39,7 @@
 #include "./storage_manager.h"
 #include "../common/cuda_utils.h"
 #include "../common/utils.h"
+#include "../profiler/gpu_memory_profiler.h"
 
 
 namespace mxnet {
@@ -150,6 +151,9 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
     if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
       ReleaseAll();
 
+#if MXNET_USE_GPU_MEMORY_PROFILER
+    profiler::GpuMemoryProfiler::Get()->addEntry(size, handle->tag);
+#endif  // MXNET_USE_GPU_MEMORY_PROFILER
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
     if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
@@ -324,6 +328,9 @@ void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
     if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
       ReleaseAll();
 
+#if MXNET_USE_GPU_MEMORY_PROFILER
+    profiler::GpuMemoryProfiler::Get()->addEntry(size, handle->tag);
+#endif  // MXNET_USE_GPU_MEMORY_PROFILER
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
     if (e != cudaSuccess && e != cudaErrorCudartUnloading) {

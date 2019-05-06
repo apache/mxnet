@@ -140,12 +140,12 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
     def _norm(array):
         if array.stype == 'default':
             x = array.reshape((-1,))
-            return ndarray.dot(x, x)
+            return ndarray.dot(x, x, name="clip_global_norm_dot")
         return array.norm().square()
     assert len(arrays) > 0
     ctx = arrays[0].context
     total_norm = ndarray.add_n(*[_norm(arr).as_in_context(ctx) for arr in arrays])
-    total_norm = ndarray.sqrt(total_norm)
+    total_norm = ndarray.sqrt(total_norm, name="clip_global_norm_sqrt")
     if check_isfinite:
         if not np.isfinite(total_norm.asscalar()):
             warnings.warn(

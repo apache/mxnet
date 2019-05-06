@@ -26,8 +26,10 @@
 #define MXNET_RESOURCE_H_
 
 #include <dmlc/logging.h>
+#include <string>
 #include "./base.h"
 #include "./engine.h"
+#include "./storage_tag.h"
 #include "./random_generator.h"
 
 namespace mxnet {
@@ -120,16 +122,26 @@ struct Resource {
    *  when running on device, so the launched kernels that depend on the temp space
    *  can finish correctly.
    *
-   * \param shape the Shape of returning tensor.
-   * \param stream the stream of retruning tensor.
+   * \param shape  the Shape  of returning tensor.
+   * \param stream the Stream of returning tensor.
+   * \param tag    the Tag    of returning tensor.
    * \return the mshadow tensor requested.
    * \tparam xpu the device type of random number generator.
    * \tparam ndim the number of dimension of the tensor requested.
    */
   template<typename xpu, int ndim>
   inline mshadow::Tensor<xpu, ndim, real_t> get_space(
-      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
-    return get_space_typed<xpu, ndim, real_t>(shape, stream);
+      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , const std::string& tag =
+        MXNET_DEFAULT_STORAGE_TAG("workspace")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      ) const {  // NOLINT(*)
+    return get_space_typed<xpu, ndim, real_t>(shape, stream
+#if MXNET_ENABLE_STORAGE_TAGGING
+      , tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+        );  // NOLINT(*)
   }
   /*!
    * \brief Get cpu space requested as mshadow Tensor.
@@ -148,18 +160,28 @@ struct Resource {
    * \brief Get space requested as mshadow Tensor in specified type.
    *  The caller can request arbitrary size.
    *
-   * \param shape the Shape of returning tensor.
-   * \param stream the stream of retruning tensor.
+   * \param shape  the Shape  of returning tensor.
+   * \param stream the Stream of returning tensor.
+   * \param tag    the Tag    of returning tensor.
    * \return the mshadow tensor requested.
    * \tparam xpu the device type of random number generator.
    * \tparam ndim the number of dimension of the tensor requested.
    */
   template<typename xpu, int ndim, typename DType>
   inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(
-      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
+      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , const std::string& tag =
+        MXNET_DEFAULT_STORAGE_TAG("workspace")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      ) const {  // NOLINT(*)
     CHECK_EQ(req.type, ResourceRequest::kTempSpace);
     return mshadow::Tensor<xpu, ndim, DType>(
-        reinterpret_cast<DType*>(get_space_internal(shape.Size() * sizeof(DType))),
+        reinterpret_cast<DType*>(get_space_internal(shape.Size() * sizeof(DType)
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+            )),  // NOLINT(*)
         shape, shape[ndim - 1], stream);
   }
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
@@ -174,7 +196,12 @@ struct Resource {
       cudnnDropoutDescriptor_t* dropout_desc,
       mshadow::Stream<gpu> *stream,
       const float dropout,
-      uint64_t seed) const;
+      uint64_t seed
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , const std::string& tag =
+          MXNET_DEFAULT_STORAGE_TAG("dropout")
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      ) const;  // NOLINT(*)
 #endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
 
   /*!
@@ -196,9 +223,14 @@ struct Resource {
   /*!
    * \brief internal function to get space from resources.
    * \param size The size of the space.
+   * \param tag  The tag  of the space.
    * \return The allocated space.
    */
-  void* get_space_internal(size_t size) const;
+  void* get_space_internal(size_t size
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      ) const;  // NOLINT(*)
   /*!
    * \brief internal function to get cpu space from resources.
    * \param size The size of space.

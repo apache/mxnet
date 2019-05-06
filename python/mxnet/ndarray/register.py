@@ -139,10 +139,19 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         keys.append('%s')
         vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
+    # @MXNET_USE_GPU_MEMORY_PROFILER
+    # Assign the name of the imperative function call.
+    code.append("""
+    try:
+        if name is None:
+            name = 'unknown:{func_name}'
+    except NameError:
+        name = 'unknown:{func_name}'""".format(func_name=func_name))
+
     if not signature_only:
         code.append("""
-    return _imperative_invoke(%d, ndargs, keys, vals, out)"""%(
-        handle.value))
+    return _imperative_invoke(%d, ndargs, keys, vals, out, name)"""%(
+        handle.value))  # @MXNET_GPU_MEMORY_PROFILER
     else:
         code.append("""
     return (0,)""")

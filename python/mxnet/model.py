@@ -159,6 +159,22 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
         # pull back the weights
         kvstore.pull(name, arg_list, priority=-index)
 
+
+def _init_param_names(param_arrays, grad_arrays, param_names):
+    """
+    @MXNET_USE_GPU_MEMORY_PROFILER
+    Added the initialization of parameter and gradient name tags.
+    """
+    for i, pair in enumerate(zip(param_arrays, grad_arrays)):
+        arg_list, grad_list = pair
+        if grad_list[0] is None:
+            continue
+        for _, p in enumerate(zip(arg_list, grad_list)):
+            w, g = p
+            w.name = "in_arg:%s" % param_names[i]
+            g.name = "arg_grad:%s" % param_names[i]
+
+
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
     """Perform update of param_arrays from grad_arrays not on kvstore."""
@@ -280,6 +296,11 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         executor_manager.install_monitor(monitor)
 
     executor_manager.set_params(arg_params, aux_params)
+
+    # @MXNET_USE_GPU_MEMORY_PROFILER
+    _init_param_names(executor_manager.param_arrays,
+                      executor_manager.grad_arrays,
+                      executor_manager.param_names)
 
     if not update_on_kvstore:
         updater = get_updater(optimizer)

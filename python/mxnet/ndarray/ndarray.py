@@ -120,7 +120,8 @@ def _new_empty_handle():
     return hdl
 
 
-def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
+def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t,
+                      name="unknown_ndarray:_new_alloc_handle"):
     """Return a new handle with specified shape and context.
 
     Empty handle is only used to hold results.
@@ -131,13 +132,15 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateEx(
+    # @MXNET_USE_GPU_MEMORY_PROFILER
+    check_call(_LIB.MXNDArrayCreateExWName(
         c_array_buf(mx_uint, native_array('I', shape)),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
         ctypes.c_int(int(delay_alloc)),
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+        ctypes.create_string_buffer(str.encode(name)),
         ctypes.byref(hdl)))
     return hdl
 
@@ -2089,7 +2092,8 @@ fixed-size items.
                 return False
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
-            hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype))
+            # @MXNET_USE_GPU_MEMORY_PROFILER
+            hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype, self.name))
             return _internal._copyto(self, out=hret)
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))

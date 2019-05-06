@@ -501,7 +501,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const std::string& arg_name = idx[nid].source->attrs.name;
     if (mutable_nodes.count(nid)) {  // aux_states
       EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
-                       inferred_dtype, aux_state_vec);
+                       inferred_dtype, aux_state_vec
+#if MXNET_ENABLE_STORAGE_TAGGING
+                     , "aux_state:" + arg_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                       );  // NOLINT(*)
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
       ++aux_top;
@@ -511,7 +515,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
       }
     } else {  // in_args
       EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
-                       inferred_dtype, in_arg_vec);
+                       inferred_dtype, in_arg_vec
+#if MXNET_ENABLE_STORAGE_TAGGING
+                     , "in_arg:" + arg_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                       );  // NOLINT(*)
       data_entry_[eid] = in_arg_vec->back();
       if (log_verbose_) {
         LOG(INFO) << "\tassign data entry\t" << eid << "\tas "
@@ -526,7 +534,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         auto grad_eid = idx.entry_id(idx.outputs()[grad_oid]);
         auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
         EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
-                         inferred_dtype, arg_grad_vec);
+                         inferred_dtype, arg_grad_vec
+#if MXNET_ENABLE_STORAGE_TAGGING
+                       , "arg_grad:" + arg_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                         );  // NOLINT(*)
         if (log_verbose_) {
           LOG(INFO) << "\tassign grad entry\t" << grad_eid << "\tas "
                     << common::stype_string(grad_stype);
@@ -592,7 +604,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         aux_state_vec->emplace_back(aux_nd);
       } else {
         EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
-                         inferred_dtype, aux_state_vec);
+                         inferred_dtype, aux_state_vec
+#if MXNET_ENABLE_STORAGE_TAGGING
+                       , "aux_state:" + arg_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                         );  // NOLINT(*)
       }  // if (has_shared_exec)
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
@@ -629,7 +645,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         } else {
           // doesn't have shared_exec, or non-default storage
           EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
-                           inferred_dtype, in_arg_vec);
+                           inferred_dtype, in_arg_vec
+#if MXNET_ENABLE_STORAGE_TAGGING
+                         , "in_arg:" + arg_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                           );  // NOLINT(*)
         }
         // gradient for model parameter
         if (kNullOp == grad_req_types[arg_top]) {
@@ -645,7 +665,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           } else {
             // no need to reuse memory from shared_exec for gradient of non-default storage
             EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
-                             inferred_dtype, arg_grad_vec);
+                             inferred_dtype, arg_grad_vec
+#if MXNET_ENABLE_STORAGE_TAGGING
+                           , "arg_grad:" + arg_name
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                             );  // NOLINT(*)
           }
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }
@@ -1018,12 +1042,19 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   CHECK_EQ(data_entry_.size(), vshape.size());
   std::vector<Context> data_context(idx.num_node_entries());
   std::vector<NDArrayStorageType> data_storage_type(idx.num_node_entries(), kUndefinedStorage);
+#if MXNET_ENABLE_STORAGE_TAGGING
+  std::vector<std::string> data_storage_tag(idx.num_node_entries(), "unknown");
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
       auto eid = idx.entry_id(nid, i);
       data_context[eid] = vctx[nid];
       CHECK_NE(vstorage_type[nid], kUndefinedStorage);
       data_storage_type[eid] = (NDArrayStorageType) vstorage_type[nid];
+#if MXNET_ENABLE_STORAGE_TAGGING
+      data_storage_tag[eid] = "data_entry:" + idx[nid].source->attrs.name +
+          "_oedge" + std::to_string(i);
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
     }
   }
 
@@ -1032,6 +1063,7 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     Context ctx;
     size_t bytes;
     NDArrayStorageType stype;
+    std::string tag;
   };
   std::vector<PoolEntry> pool_info;
 
@@ -1046,11 +1078,24 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     auto data_eid = idx.entry_id(nid, 0);
     // initialize based on storage_type
     if (stype != kDefaultStorage) {
-      data_entry_[data_eid] = NDArray(stype, vshape[eid], data_context[eid], true, vdtype[eid]);
+      data_entry_[data_eid] = NDArray(stype, vshape[eid], data_context[eid], true, vdtype[eid]
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , {}, {}, TShape(mshadow::Shape1(0))
+        , "head_grad:" + data_storage_tag[eid]
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
     } else if (!unknown_shape) {
-      data_entry_[data_eid] = NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
+      data_entry_[data_eid] = NDArray(vshape[eid], data_context[eid], false, vdtype[eid]
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , "head_grad:" + data_storage_tag[eid]
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
     } else {
-      data_entry_[data_eid] = NDArray(data_context[eid], vdtype[eid]);
+      data_entry_[data_eid] = NDArray(data_context[eid], vdtype[eid]
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , "head_grad:" + data_storage_tag[eid]
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
     }
     if (log_verbose_) {
       LOG(INFO) << "\tinit head_grad entry\t" << data_eid << "\tas "
@@ -1066,15 +1111,26 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     }
     size_t bytes = shape_size * mshadow::mshadow_sizeof(vdtype[i]);
     int storage_id = vstorage[i];
+#if MXNET_ENABLE_STORAGE_TAGGING
+    std::string storage_tag = data_storage_tag[i];
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
     // skip pool allocation for kBadStorageID, kExternalStorageID and kDynamicStorageID
     if (storage_id < 0) continue;
     size_t sid = static_cast<size_t>(storage_id);
     if (sid >= pool_info.size()) {
-      pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0), kUndefinedStorage});
+      pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0), kUndefinedStorage
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , storage_tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          });  // NOLINT(*)
     }
     PoolEntry& info = pool_info[sid];
     if (info.bytes == 0) {
-      info = PoolEntry{data_context[i], bytes, data_storage_type[i]};
+      info = PoolEntry{data_context[i], bytes, data_storage_type[i]
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , storage_tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          };  // NOLINT(*)
     } else {
       info.bytes = std::max(info.bytes, bytes);
     }
@@ -1107,6 +1163,9 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   for (size_t i : sorted_pool_index) {
     const Context& ctx = pool_info[i].ctx;
     size_t bytes = pool_info[i].bytes;
+#if MXNET_ENABLE_STORAGE_TAGGING
+    std::string tag = pool_info[i].tag;
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
     bool allocated = false;
     for (auto it = free_pool.lower_bound(bytes); it != free_pool.end(); ++it) {
       if (it->second.ctx() == ctx && it->first >= bytes) {
@@ -1123,7 +1182,11 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       mxnet::TShape shape{static_cast<nnvm::dim_t>(nword)};
       // TODO(junwu): adding delay_alloc=true to create nd
       // is a temporary solution.
-      NDArray nd(shape, ctx, true);
+      NDArray nd(shape, ctx, true
+#if MXNET_ENABLE_STORAGE_TAGGING
+        , mshadow::default_type_flag, tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          );  // NOLINT(*)
       data_pool_[i] = nd;
       // put the new allocated arrays to shared pool
       if (shared_pool != nullptr)  {
@@ -1149,7 +1212,11 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       }
     } else {
       data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i],
-                               true, vdtype[i]);
+                               true, vdtype[i]
+#if MXNET_ENABLE_STORAGE_TAGGING
+                             , {}, {}, TShape(mshadow::Shape1(0)), data_storage_tag[i]
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                               );  // NOLINT(*)
     }
     if (log_verbose_) {
       LOG(INFO) << "\tinit data entry\t" << i << "\tas " << common::stype_string(storage_type);

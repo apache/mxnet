@@ -784,13 +784,22 @@ OpStatePtr CachedOp::StaticForward(
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     auto eid = idx.entry_id(idx.outputs()[i]);
+#if MXNET_ENABLE_STORAGE_TAGGING
+    auto nid = idx.outputs()[i].node_id;
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
     // An input and an output may share the same array.
     if (!arrays[eid]->is_none())
       *outputs[i] = arrays[eid]->Detach();
     arrays[eid] = outputs[i];
     if (!outputs[i]->is_none()) continue;
     *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                          shapes[eid], default_ctx, true, dtypes[eid]);
+                          shapes[eid], default_ctx, true, dtypes[eid]
+#if MXNET_ENABLE_STORAGE_TAGGING
+                        , {}, {}, TShape(mshadow::Shape1(0))
+                        , "data_entry:" + idx[nid].source->attrs.name +
+                              "_oedge" + std::to_string(i)
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+                          );  // NOLINT(*)
   }
 
   StaticRunOps(default_ctx, g, state_ptr, arrays, 0, idx.num_nodes());

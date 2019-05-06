@@ -65,11 +65,20 @@ struct SpaceAllocator {
     host_handle.size = 0;
   }
 
-  inline void* GetSpace(size_t size) {
-    if (handle.size >= size) return handle.dptr;
+  inline void* GetSpace(size_t size
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      ) {  // NOLINT(*)
+    if (handle.size >= size)
+      return handle.dptr;
 
     Storage::Get()->DirectFree(handle);
-    handle = Storage::Get()->Alloc(size, ctx);
+    handle = Storage::Get()->Alloc(size, ctx
+#if MXNET_ENABLE_STORAGE_TAGGING
+      , tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+        );  // NOLINT(*)
     return handle.dptr;
   }
 
@@ -410,8 +419,16 @@ class ResourceManagerImpl : public ResourceManager {
 };
 }  // namespace resource
 
-void* Resource::get_space_internal(size_t size) const {
-  return static_cast<resource::SpaceAllocator*>(ptr_)->GetSpace(size);
+void* Resource::get_space_internal(size_t size
+#if MXNET_ENABLE_STORAGE_TAGGING
+  , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+    ) const {  // NOLINT(*)
+  return static_cast<resource::SpaceAllocator*>(ptr_)->GetSpace(size
+#if MXNET_ENABLE_STORAGE_TAGGING
+    , tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+      );  // NOLINT(*)
 }
 
 void* Resource::get_host_space_internal(size_t size) const {
@@ -423,8 +440,11 @@ void Resource::get_cudnn_dropout_desc(
     cudnnDropoutDescriptor_t* dropout_desc,
     mshadow::Stream<gpu> *stream,
     const float dropout,
-    uint64_t seed) const {
-
+    uint64_t seed
+#if MXNET_ENABLE_STORAGE_TAGGING
+  , const std::string& tag
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+    ) const {  // NOLINT(*)
   CHECK_EQ(req.type, ResourceRequest::kCuDNNDropoutDesc);
   auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
   CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
@@ -435,12 +455,25 @@ void Resource::get_cudnn_dropout_desc(
     CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));
     // reserve GPU space
     Storage::Get()->DirectFree(
-      Storage::Get()->Alloc(dropout_state_size, state_space->ctx));
+      Storage::Get()->Alloc(dropout_state_size, state_space->ctx
+#if MXNET_ENABLE_STORAGE_TAGGING
+          , "skip me"
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
+          ));  // NOLINT(*)
+#if MXNET_ENABLE_STORAGE_TAGGING
+    CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
+                                         dropout,
+                                         state_space->GetSpace(dropout_state_size,
+                                           tag + ":dropout_state"),
+                                         dropout_state_size,
+                                         seed));
+#else  // !MXNET_ENABLE_STORAGE_TAGGING
     CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
                                          dropout,
                                          state_space->GetSpace(dropout_state_size),
                                          dropout_state_size,
                                          seed));
+#endif  // MXNET_ENABLE_STORAGE_TAGGING
   } else {
     CUDNN_CALL(cudnnRestoreDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
                                              dropout,
