@@ -163,10 +163,25 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
 extern const std::vector<std::string> kHiddenKeys;
 }  // namespace mxnet
 
+/*!
+ * An operator is considered as numpy compatible if it satisfies either one
+ * of the following conditions.
+ * 1. The op has the attribute mxnet::TIsNumpyCompatible> registered as True.
+ * 2. The op's name starts with the prefix _numpy_.
+ * The first condition is usually for the ops registered as internal ops, such
+ * as _np_add, _true_divide, etc. They are wrapped by some user-facing op
+ * APIs in the Python end.
+ * The second condition is for the ops registered in the backend while exposed
+ * directly to users as is, such as _numpy_sum etc.
+ */
 inline bool IsNumpyCompatOp(const nnvm::Op* op) {
   static const auto& is_np_compat =
       nnvm::Op::GetAttr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible");
-  return is_np_compat.get(op, false);
+  if (is_np_compat.get(op, false)) {
+    return true;
+  }
+  static const std::string prefix = "_numpy_";
+  return op->name.find(prefix.c_str(), 0, prefix.size()) != std::string::npos;
 }
 
 #endif  // MXNET_C_API_C_API_COMMON_H_
