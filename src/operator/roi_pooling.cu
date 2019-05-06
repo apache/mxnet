@@ -136,11 +136,7 @@ inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
 
 template<typename Dtype>
 __global__ void ROIPoolBackwardAccKernel(const int count, const Dtype* top_diff,
-                                         const int* argmax_data, const int num_rois,
-                                         const float spatial_scale, const int channels,
-                                         const int height, const int width,
-                                         const int pooled_height, const int pooled_width,
-                                         Dtype* bottom_diff, const Dtype* bottom_rois) {
+                                         const int* argmax_data, Dtype* bottom_diff) {
   for (int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
        index < count;
        index += blockDim.x * gridDim.x * gridDim.y) {
@@ -158,24 +154,16 @@ inline void ROIPoolBackwardAcc(const Tensor<gpu, 4, Dtype> &in_grad,
                                const Tensor<gpu, 4, int> &max_idx,
                                const float spatial_scale) {
   const Dtype *top_diff = out_grad.dptr_;
-  const Dtype *bottom_rois = bbox.dptr_;
   Dtype *bottom_diff = in_grad.dptr_;
   int *argmax_data = max_idx.dptr_;
   const int count = out_grad.shape_.Size();
-  const int num_rois = bbox.size(0);
-  const int channels = in_grad.size(1);
-  const int height = in_grad.size(2);
-  const int width = in_grad.size(3);
-  const int pooled_height = out_grad.size(2);
-  const int pooled_width = out_grad.size(3);
   const int gridSize = (count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
   dim3 dimGrid(kMaxGridDim, (gridSize + kMaxGridDim - 1) / kMaxGridDim);
   dim3 dimBlock(kMaxThreadsPerBlock);
   CheckLaunchParam(dimGrid, dimBlock, "ROIPooling Backward");
   cudaStream_t stream = Stream<gpu>::GetStream(in_grad.stream_);
   ROIPoolBackwardAccKernel<Dtype><<<dimGrid, dimBlock, 0, stream>>>(
-      count, top_diff, argmax_data, num_rois, spatial_scale, channels, height, width,
-      pooled_height, pooled_width, bottom_diff, bottom_rois);
+      count, top_diff, argmax_data, bottom_diff);
   MSHADOW_CUDA_POST_KERNEL_CHECK(ROIPoolBackwardAccKernel);
 }
 
