@@ -144,23 +144,12 @@ inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
   Dtype *bottom_diff = in_grad.dptr_;
   Dtype *argmax_data = max_idx.dptr_;
 
-  const int channels_ = in_grad.size(1);
-  const int pooled_height_ = out_grad.size(2);
-  const int pooled_width_ = out_grad.size(3);
-  const int num_rois = bbox.size(0);
+  const int count = out_grad.shape_.Size();
 
-  for (int r = 0; r < num_rois; ++r) {
-    for (int c = 0; c < channels_; ++c) {
-      for (int h = 0; h < pooled_height_; ++h) {
-        for (int w = 0; w < pooled_width_; ++w) {
-          int offset_top = (r * channels_ + c) * pooled_height_ * pooled_width_;
-          offset_top += h * pooled_width_ + w;
-          int max_idx = static_cast<int>(argmax_data[offset_top]);
-          if (max_idx >= 0) {
-            bottom_diff[max_idx] += top_diff[offset_top];
-          }
-        }
-      }
+  for (int index = 0; index < count; ++index) {
+    int max_idx = static_cast<int>(argmax_data[index]);
+    if (max_idx >= 0) {
+      bottom_diff[max_idx] += top_diff[index];
     }
   }
 
