@@ -139,7 +139,13 @@ def test_initializer():
                         initializer=mx.init.MSRAPrelu(),
                         trainer=trainer,
                         context=ctx)
-        assert 'Network already initialized' in str(w[-1].message)
+        assert 'Network already fully initialized' in str(w[-1].message)
+    # net partially initialized, fine tuning use case
+    net = gluon.model_zoo.vision.resnet18_v1(pretrained=True, ctx=ctx)
+    net.output = gluon.nn.Dense(10) #last layer not initialized
+    est = Estimator(net, loss=loss, metrics=acc, context=ctx)
+    dataset =  gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
+    train_data = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     est.fit(train_data=train_data,
             epochs=num_epochs)
 

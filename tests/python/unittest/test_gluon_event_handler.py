@@ -45,7 +45,7 @@ def test_checkpoint_handler():
     file_path = os.path.join(tmpdir, "model.params")
     test_data = _get_test_data()
 
-    save_best_only = False
+    save_best_only = True
     mode = 'auto'
 
     net = _get_test_network()
@@ -60,6 +60,17 @@ def test_checkpoint_handler():
     est.fit(test_data, event_handlers=checkpoint_handler, epochs=1)
     assert os.path.isfile(file_path)
     os.remove(file_path)
+
+    checkpoint_handler = [event_handler.CheckpointHandler(file_path,
+                                                          monitor=acc,
+                                                          save_best_only=save_best_only,
+                                                          mode=mode,
+                                                          epoch_period=None,
+                                                          batch_period=1)]
+    est.fit(test_data, event_handlers=checkpoint_handler, epochs=2)
+    assert os.path.isfile(file_path)
+    os.remove(file_path)
+
 
 
 def test_early_stopping():

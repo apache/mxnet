@@ -161,6 +161,8 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         file name to save the logs
     file_location : str
         file location to save the logs
+    filemode : str, default 'a'
+        logging file mode, default using append mode
     verbose : int, default LOG_VERBOSITY_PER_EPOCH
         Limit the granularity of metrics displayed during training process
         verbose=LOG_VERBOSITY_PER_EPOCH: display metrics every epoch
@@ -176,6 +178,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
 
     def __init__(self, file_name=None,
                  file_location=None,
+                 filemode='a',
                  verbose=LOG_VERBOSITY_PER_EPOCH,
                  train_metrics=None,
                  val_metrics=None):
@@ -194,7 +197,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         if file_name or file_location:
             file_name = file_name or 'estimator_log'
             file_location = file_location or './'
-            file_handler = logging.FileHandler(os.path.join(file_location, file_name))
+            file_handler = logging.FileHandler(os.path.join(file_location, file_name), mode=filemode)
             self.logger.addHandler(file_handler)
         self.train_metrics = train_metrics or []
         self.val_metrics = val_metrics or []
@@ -249,6 +252,8 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     def epoch_begin(self, estimator, *args, **kwargs):
         if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
             self.epoch_start = time.time()
+            self.logger.info("[Epoch %d] begin, current learning rate: %.4f",
+                             self.current_epoch, estimator.trainer.learning_rate)
 
     def epoch_end(self, estimator, *args, **kwargs):
         if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
@@ -280,9 +285,13 @@ class CheckpointHandler(BatchEnd, EpochEnd):
         if True, only save the parameters if monitored value improved
     mode: str, default 'auto'
         one of {auto, min, max}, if `save_best_only=True`, the comparison to make
-        and determine if the monitored value has improved
-    period: int, default 1
-        intervals between saving the network
+        and determine if the monitored value has improved. if 'auto' mode, checkpoint
+        handler will try to use min or max based on the monitored metric name
+    epoch period: int, default 1
+        epoch intervals between saving the network
+    batch period: int, default None
+        batch intervals between saving the network,
+        by default don't save any checkpoint based on number of batches
     """
 
     def __init__(self,
@@ -308,7 +317,9 @@ class CheckpointHandler(BatchEnd, EpochEnd):
 
         if mode not in ['auto', 'min', 'max']:
             warnings.warn('ModelCheckpoint mode %s is unknown, '
-                          'fallback to auto mode.' % (mode),
+                          'fallback to auto mode. CheckpointHandler will use'
+                          'max mode for f1 and accuracy metric comparison and '
+                          'use min mode other wise' % (mode),
                           RuntimeWarning)
             mode = 'auto'
 
@@ -319,27 +330,38 @@ class CheckpointHandler(BatchEnd, EpochEnd):
             self.monitor_op = np.greater
             self.best = -np.Inf
         else:
-            # use greater for accuracy and less otherwise
-            if 'acc' in self.monitor.get()[0].lower():
+            # use greater for accuracy and f1 and less otherwise
+            if 'acc' or 'f1' in self.monitor.get()[0].lower():
+                self.logger.info("`greater` operator will be used to determine "
+                                 "if %s has improved, please use `min` for mode "
+                                 "if you want otherwise", self.monitor.get()[0])
                 self.monitor_op = np.greater
                 self.best = -np.Inf
             else:
+                self.logger.info("`less` operator will be used to determine "
+                                 "if %s has improved, please use `max` for mode "
+                                 "if you want otherwise", self.monitor.get()[0])
                 self.monitor_op = np.less
                 self.best = np.Inf
 
     def batch_end(self, estimator, *args, **kwargs):
-        self._save_checkpoint(estimator.net, "Batch", self.num_batches)
-        self.num_batches += 1
+        if self.batch_period:
+            self._save_checkpoint(estimator.net, "Batch", self.batch_period, self.num_batches)
+            self.num_batches += 1
 
     def epoch_end(self, estimator, *args, **kwargs):
-        self._save_checkpoint(estimator.net, "Epoch", self.num_epochs)
-        self.num_epochs += 1
+        if self.epoch_period:
+            self._save_checkpoint(estimator.net, "Epoch", self.epoch_period, self.num_epochs)
+            self.num_epochs += 1
 
-    def _save_checkpoint(self, net, period_name, period_value):
+    def _save_checkpoint(self, net, period_name, period_value, num_of_periods):
+        # period name can be batch or epoch
+        # period value determine how often a checkpoint is saved
+        # num_of_periods records the number of batch or epoch
         # add extension for weights
         if '.params' not in self.filepath:
             self.filepath += '.params'
-        if self.num_epochs % self.epoch_period == 0:
+        if num_of_periods % period_value == 0:
             if self.save_best_only:
                 monitor_name, monitor_value = self.monitor.get()
                 # check if monitor exists in train stats
@@ -381,8 +403,9 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
     patience: int, default 0
         number of epochs to wait for improvement before terminate training
     mode: str, default 'auto'
-        one of {auto, min, max}, the comparison to make
-        and determine if the monitored value has improved
+        one of {auto, min, max}, if `save_best_only=True`, the comparison to make
+        and determine if the monitored value has improved. if 'auto' mode, checkpoint
+        handler will try to use min or max based on the monitored metric name
     baseline: float
         baseline value to compare the monitored value with
     """
@@ -409,8 +432,11 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         self.logger = logging.getLogger(__name__)
 
         if mode not in ['auto', 'min', 'max']:
-            warnings.warn(RuntimeWarning('EarlyStopping mode %s is unknown, '
-                                         'fallback to auto mode.', mode))
+            warnings.warn('EarlyStopping mode %s is unknown, '
+                          'fallback to auto mode. CheckpointHandler will use'
+                          'max mode for f1 and accuracy metric comparison and '
+                          'use min mode other wise' % (mode),
+                          RuntimeWarning)
             mode = 'auto'
 
         if mode == 'min':
@@ -418,9 +444,15 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         elif mode == 'max':
             self.monitor_op = np.greater
         else:
-            if 'acc' in self.monitor.get()[0].lower():
+            if 'acc' or 'f1' in self.monitor.get()[0].lower():
+                self.logger.info("`greater` operator is used to determine "
+                                 "if %s has improved, please use `min` for mode "
+                                 "if you want otherwise", self.monitor.get()[0])
                 self.monitor_op = np.greater
             else:
+                self.logger.info("`less` operator is used to determine "
+                                 "if %s has improved, please use `max` for mode "
+                                 "if you want otherwise", self.monitor.get()[0])
                 self.monitor_op = np.less
 
         if self.monitor_op == np.greater:
