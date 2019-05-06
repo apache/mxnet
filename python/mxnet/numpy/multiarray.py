@@ -34,7 +34,7 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray import _internal as _nd_internal
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones']
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1198,3 +1198,35 @@ def ones(shape, dtype=None, **kwargs):
         Array of zeros with the given shape, dtype, and ctx.
     """
     return _mx_nd_np.ones(shape, dtype, **kwargs)
+
+
+def maximum(x1, x2, out=None):
+    """Returns element-wise maximum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _mx_nd_np.maximum(x1, x2, out=out)
+
+
+def minimum(x1, x2, out=None):
+    """Returns element-wise minimum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _mx_nd_np.minimum(x1, x2, out=out)

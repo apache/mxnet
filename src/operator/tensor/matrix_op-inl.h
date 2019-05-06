@@ -261,8 +261,12 @@ void TransposeImpl(RunContext ctx,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
     switch (axes.ndim()) {
-     case 0:
+     case 0: {
+      Tensor<xpu, 1, DType> in = src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
+      Tensor<xpu, 1, DType> out = ret.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
+      Copy(out, in, s);
       break;
+     }
      case 1: {
       Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> out = ret.get<xpu, 1, DType>(s);
@@ -337,7 +341,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 6U) << "Transpose support at most 6 dimensions";
+  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   mxnet::TShape ret(shp.ndim(), -1);
   if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {

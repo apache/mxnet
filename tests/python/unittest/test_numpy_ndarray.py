@@ -24,7 +24,6 @@ from mxnet import numpy as np
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, assert_exception
 from common import with_seed
-import random
 
 
 @with_seed()

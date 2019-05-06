@@ -17,6 +17,9 @@
 
 """numpy module for numpy ops under mxnet.ndarray."""
 
+from . import ext
+from . import random
+from . import linalg
 from . import _op
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import

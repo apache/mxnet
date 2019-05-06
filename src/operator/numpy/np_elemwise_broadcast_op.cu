@@ -42,6 +42,12 @@ NNVM_REGISTER_OP(_np_mod)
 NNVM_REGISTER_OP(_np_power)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::power>);
 
+NNVM_REGISTER_OP(_np_maximum)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::maximum>);
+
+NNVM_REGISTER_OP(_np_minimum)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::minimum>);
+
 NNVM_REGISTER_OP(_np_add_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::plus>);
 
@@ -52,8 +58,7 @@ NNVM_REGISTER_OP(_np_rsubtract_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rminus>);
 
 NNVM_REGISTER_OP(_np_multiply_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::mul>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<gpu, op::mshadow_op::mul>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::mul>);
 
 NNVM_REGISTER_OP(_np_mod_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::mod>);
@@ -66,6 +71,12 @@ NNVM_REGISTER_OP(_np_power_scalar)
 
 NNVM_REGISTER_OP(_np_rpower_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rpower>);
+
+NNVM_REGISTER_OP(_np_maximum_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::maximum>);
+
+NNVM_REGISTER_OP(_np_minimum_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::minimum>);
 
 }  // namespace op
 }  // namespace mxnet
