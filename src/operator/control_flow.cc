@@ -593,12 +593,12 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
       break;
     }
     // we create func_outputs for the current step:
-    for (int i = 0; i < (int) outputs.size(); ++i) {
+    for (size_t i = 0; i < outputs.size(); ++i) {
       func_outputs[i] = NDArray(outputs[i].ctx(), outputs[i].dtype());
     }
     state.Forward(step, func_inputs, req, func_outputs, ctx.need_grad);
     if (step == 0) {
-      for (int i = 0; i < (int) params.num_out_data; ++i) {
+      for (size_t i = 0; i < params.num_out_data; ++i) {
         func_outputs[i].WaitToRead();
         if (!shape_is_known(func_outputs[i].shape())) {
           func_outputs[i].SetShapeFromChunk();
@@ -612,13 +612,13 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
         const_cast<NDArray &>(outputs[i]).Init(shape);
       }
     }
-    for (int i = 0; i < (int) params.num_out_data; ++i) {
+    for (size_t i = 0; i < params.num_out_data; ++i) {
       NDArray first_slot = outputs[i].At(step);
       mxnet::CopyFromTo(func_outputs[i], &first_slot);
     }
     // func_inputs on the next step:
     // the output (new_loop_vars) will become the new inputs (loop_vars)
-    for (int i = params.num_out_data; i < (int) outputs.size(); ++i) {
+    for (size_t i = params.num_out_data; i < outputs.size(); ++i) {
       int j = params.func_var_locs[i - params.num_out_data];
       func_inputs[j] = func_outputs[i];
       int k = state.oi_map[i - params.num_out_data];
