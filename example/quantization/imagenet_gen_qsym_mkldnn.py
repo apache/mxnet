@@ -92,11 +92,13 @@ def save_params(fname, arg_params, aux_params, logger=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with Intel MKL-DNN support')
-    parser.add_argument('--model', type=str, choices=['resnet50_v1',
+    parser.add_argument('--model', type=str, choices=['resnet18_v1',
+                                                      'resnet50_v1',
                                                       'resnet101_v1',
                                                       'inceptionv3',
                                                       'squeezenet1.0',
                                                       'mobilenet1.0',
+                                                      'mobilenetv2_1.0',
                                                       'imagenet1k-resnet-152',
                                                       'imagenet1k-inception-bn',
                                                       'custom'],
@@ -163,7 +165,13 @@ if __name__ == '__main__':
         download_calib_dataset('http://data.mxnet.io/data/val_256_q90.rec', args.calib_dataset)
 
     # download model
-    if args.model in ['resnet50_v1', 'resnet101_v1', 'squeezenet1.0', 'mobilenet1.0', 'inceptionv3']:
+    if args.model in ['resnet18_v1',
+                      'resnet50_v1',
+                      'resnet101_v1',
+                      'squeezenet1.0',
+                      'mobilenet1.0',
+                      'mobilenetv2_1.0',
+                      'inceptionv3']:
         logger.info('model %s is converted from GluonCV' % args.model)
         args.use_gluon_model = True
     if args.use_gluon_model == True:
@@ -216,7 +224,7 @@ if __name__ == '__main__':
         excluded_sym_names += ['flatten']
         if exclude_first_conv:
             excluded_sym_names += ['conv_1']
-    elif args.model in ['resnet50_v1', 'resnet101_v1']:
+    elif args.model in ['resnet18_v1', 'resnet50_v1', 'resnet101_v1']:
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
         if exclude_first_conv:
@@ -234,6 +242,12 @@ if __name__ == '__main__':
                                'mobilenet0_pool0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['mobilenet0_conv0_fwd']
+    elif args.model == 'mobilenetv2_1.0':
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '58.393, 57.12, 57.375'
+        excluded_sym_names += ['mobilenetv20_output_flatten0_flatten0']
+        if exclude_first_conv:
+            excluded_sym_names += ['mobilenetv20_conv0_fwd']
     elif args.model == 'inceptionv3':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'

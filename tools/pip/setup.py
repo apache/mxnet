@@ -150,7 +150,7 @@ if variant.endswith('MKL'):
         package_data['mxnet'].append('mxnet/libmklml_intel.so')
         package_data['mxnet'].append('mxnet/libiomp5.so')
         package_data['mxnet'].append('mxnet/libmkldnn.so.0')
-    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
+    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))

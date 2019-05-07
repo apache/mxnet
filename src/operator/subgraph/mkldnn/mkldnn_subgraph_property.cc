@@ -21,7 +21,7 @@
 
 #include "mkldnn_conv_property.h"
 #include "mkldnn_fc_property.h"
-#include "mkldnn_conv_post_quantize_property.h"
+#include "mkldnn_post_quantize_property.h"
 #include "mkldnn_fc_post_quantize_property.h"
 #include "mkldnn_post_quantize_align_scale_property.h"
 
@@ -38,7 +38,7 @@ MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNConvProperty)
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCProperty)
 .set_attr("quantize", true);
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNConvPostQuantizeProperty);
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeProperty);
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCPostQuantizeProperty);
 
