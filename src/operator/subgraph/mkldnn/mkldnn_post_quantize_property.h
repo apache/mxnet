@@ -110,7 +110,7 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
 
   void Reset() override {
     CHECK_GE(matched_list.size(), 1);
-    auto new_selector = SgMKLDNNConvPostQuantizeSelector();
+    auto new_selector = SgMKLDNNPostQuantizeSelector();
     new_selector.Select(*matched_list[0]);
     *this = new_selector;
   }
