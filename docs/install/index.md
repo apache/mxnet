@@ -124,6 +124,12 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 $ pip install mxnet
 ```
 
+MXNet offers pip packages with MKL-DNN enabled which will be much faster when running on Intel hardware. Try the following command line to install it and find performance numbers and tuning guide in <a href="https://mxnet.incubator.apache.org/versions/master/faq/perf.html#intel-cpu">performance on Intel CPU</a>.
+
+```
+$ pip install mxnet-mkl==1.4.0
+```
+
 </div> <!-- End of v1-4-0 -->
 <div class="v1-3-1">
 
@@ -131,11 +137,23 @@ $ pip install mxnet
 $ pip install mxnet==1.3.1
 ```
 
+MXNet offers pip packages with MKL-DNN enabled which will be much faster when running on Intel hardware. Try the following command line to install it and find performance numbers and tuning guide in <a href="https://mxnet.incubator.apache.org/versions/master/faq/perf.html#intel-cpu">performance on Intel CPU</a>.
+
+```
+$ pip install mxnet-mkl==1.3.1
+```
+
 </div> <!-- End of v1-3-1 -->
 <div class="v1-2-1">
 
 ```
 $ pip install mxnet==1.2.1
+```
+
+MXNet offers pip packages with MKL-DNN enabled which will be much faster when running on Intel hardware. Try the following command line to install it and find performance numbers and tuning guide in <a href="https://mxnet.incubator.apache.org/versions/master/faq/perf.html#intel-cpu">performance on Intel CPU</a>.
+
+```
+$ pip install mxnet-mkl==1.2.1
 ```
 
 </div> <!-- End of v1-2-1 -->
@@ -185,13 +203,14 @@ $ pip install mxnet==0.11.0
 $ pip install mxnet --pre
 ```
 
-</div> <!-- End of master-->
-<hr> <!-- pip footer -->
 MXNet offers pip packages with MKL-DNN enabled which will be much faster when running on Intel hardware. Try the following command line to install it and find performance numbers and tuning guide in <a href="https://mxnet.incubator.apache.org/versions/master/faq/perf.html#intel-cpu">performance on Intel CPU</a>.
 
 ```
 $ pip install mxnet-mkl --pre
 ```
+
+</div> <!-- End of master-->
+<hr> <!-- pip footer -->
 
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
