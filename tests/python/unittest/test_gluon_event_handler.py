@@ -25,8 +25,7 @@ from mxnet.gluon import nn, loss
 from mxnet.gluon.contrib.estimator import estimator, event_handler
 
 
-def _get_test_network():
-    net = nn.Sequential()
+def _get_test_network(net=nn.Sequential()):
     net.add(nn.Dense(128, activation='relu', in_units=100, flatten=False),
             nn.Dense(64, activation='relu', in_units=128),
             nn.Dense(10, activation='relu', in_units=64))
@@ -62,6 +61,9 @@ def test_checkpoint_handler():
 
         model_prefix = 'test_batch'
         file_path = os.path.join(tmpdir, model_prefix)
+        net = _get_test_network(nn.HybridSequential())
+        net.hybridize()
+        est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
         checkpoint_handler = [event_handler.CheckpointHandler(model_dir=tmpdir,
                                                               model_prefix=model_prefix,
                                                               epoch_period=None,
@@ -72,6 +74,7 @@ def test_checkpoint_handler():
         assert not os.path.isfile(file_path + 'best.states')
         assert not os.path.isfile(file_path + '-batch0.params')
         assert not os.path.isfile(file_path + '-batch0.states')
+        assert os.path.isfile(file_path + '-symbol.json')
         assert os.path.isfile(file_path + '-batch1.params')
         assert os.path.isfile(file_path + '-batch1.states')
         assert os.path.isfile(file_path + '-batch2.params')
