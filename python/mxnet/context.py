@@ -148,13 +148,13 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
     def empty_cache(self):
         """Empties the memory cache for the current contexts device.
 
-		MXNet utilizes a memory pool to avoid excessive allocations.
-		Calling empty_cache will empty the memory pool of the contexts
-		device. This will only free the memory of unreferenced data.
+        MXNet utilizes a memory pool to avoid excessive allocations.
+        Calling empty_cache will empty the memory pool of the contexts
+        device. This will only free the memory of unreferenced data.
 
         Examples
         -------
-		>>> ctx = mx.gpu(0)
+        >>> ctx = mx.gpu(0)
         >>> arr = mx.nd.ones((200,200), ctx=ctx)
         >>> del arr
         >>> ctx.empty_cache() # forces release of memory allocated for arr
