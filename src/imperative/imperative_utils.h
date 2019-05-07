@@ -67,7 +67,6 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
   Context ctx;
   if (inputs.size()) {
     ctx = inputs[0]->ctx();
-
     for (size_t i = 1; i < inputs.size(); ++i) {
       CHECK_EQ(inputs[i]->ctx().dev_mask(), ctx.dev_mask())
           << "Operator " << attrs.op->name
