@@ -269,6 +269,7 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     ref_net_output = ref_net(data, sequence_length).asnumpy()
     sequence_length_np = sequence_length.asnumpy().astype("int32")
 
+    # TODO: test state return value as well output
     # Only compare the valid sections for each batch entry
     for b in range(batch_size):
         assert_allclose(net_output[:sequence_length_np[b], b], ref_net_output[:sequence_length_np[b], b])
