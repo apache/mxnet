@@ -15,12 +15,11 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-MXNet Python Package
-====================
-MXNet is a deep learning framework designed for both *efficiency* and *flexibility*.
+Apache MXNet (Incubating) Python Package
+========================================
+[Apache MXNet](http://beta.mxnet.io) is a deep learning framework designed for both *efficiency* and *flexibility*.
 It allows you to mix the flavours of deep learning programs together to maximize the efficiency and your productivity.
 
+For feature requests on the PyPI package, suggestions, and issue reports, create an issue by clicking [here](https://github.com/apache/incubator-mxnet/issues/new).
 
-Installation
-------------
-To install, check [Build Instruction](http://mxnet.io/get_started/setup.html)
+
