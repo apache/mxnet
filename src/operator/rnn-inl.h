@@ -27,8 +27,7 @@
 #define MXNET_OPERATOR_RNN_INL_H_
 
 #define MXNET_USE_CUDNN_RNN MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-#define USE_CUDNN_LSTM_PROJ MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
-#define USE_VAR_SEQ_LENGTH MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
+#define MXNET_USE_CUDNN_GE_7200 MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -432,7 +431,7 @@ class RNNOp {
       default:
         LOG(FATAL) << "Not implmented";
     }
-#if USE_CUDNN_LSTM_PROJ
+#if MXNET_USE_CUDNN_GE_7200
     if (param_.projection_size.has_value()) {
       CHECK_EQ(param_.mode, rnn_enum::kLstm)
         << "Projection is only supported for LSTM.";
@@ -443,7 +442,7 @@ class RNNOp {
     CHECK(!param_.projection_size.has_value())
       << "Projection is only supported for LSTM with CuDNN version later than 7.1.1.";
 #endif
-#if USE_CUDNN_LSTM_PROJ
+#if MXNET_USE_CUDNN_GE_7200
     if (param_.lstm_state_clip_min.has_value()
         || param_.lstm_state_clip_max.has_value()) {
       CHECK_EQ(param_.mode, rnn_enum::kLstm)
@@ -476,7 +475,7 @@ class RNNOp {
     CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
 
-    #if USE_CUDNN_LSTM_PROJ
+    #if MXNET_USE_CUDNN_GE_7200
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
     CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
@@ -532,7 +531,7 @@ class RNNOp {
       Storage::Get()->Free(temp_space_);
       Storage::Get()->Free(reserve_space_);
     }
-    #if USE_CUDNN_LSTM_PROJ
+    #if MXNET_USE_CUDNN_GE_7200
     CUDNN_CALL(cudnnDestroyRNNDataDescriptor(x_data_desc_));
     CUDNN_CALL(cudnnDestroyRNNDataDescriptor(y_data_desc_));
     CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dx_data_desc_));
@@ -592,7 +591,7 @@ class RNNOp {
     }
 
 
-#if USE_CUDNN_LSTM_PROJ
+#if MXNET_USE_CUDNN_GE_7200
     Tensor<cpu, 1, char> host_workspace;
     int *sequence_length_cpu_int = NULL;
     IType *sequence_length_cpu_itype = NULL;
@@ -616,7 +615,7 @@ class RNNOp {
 
 
     if (param_.use_sequence_length) {
-#if USE_VAR_SEQ_LENGTH
+#if MXNET_USE_CUDNN_GE_7200
       if (ctx_.dev_type == kCPU) {
         LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN at the moment."
                    << " Not supported on CPU";
@@ -657,7 +656,7 @@ class RNNOp {
       Init(ctx, s, in_data, out_data);
     }
 
-#if USE_CUDNN_LSTM_PROJ
+#if MXNET_USE_CUDNN_GE_7200
 
     cudnnRNNDataLayout_t layout_t;
 
@@ -713,7 +712,7 @@ class RNNOp {
     }
 #endif
 
-#if USE_CUDNN_LSTM_PROJ
+#if MXNET_USE_CUDNN_GE_7200
     bool clip_state = param_.lstm_state_clip_min.has_value();
     bool clip_nan = param_.lstm_state_clip_nan;
     CUDNN_CALL(cudnnRNNSetClip(s->dnn_handle_,
@@ -725,7 +724,7 @@ class RNNOp {
 #endif
 
     if (ctx.is_train) {
-#if USE_CUDNN_LSTM_PROJ
+#if MXNET_USE_CUDNN_GE_7200
       CUDNN_CALL(cudnnRNNForwardTrainingEx(s->dnn_handle_,
                                            rnn_desc_,
                                            x_data_desc_,
@@ -778,7 +777,7 @@ class RNNOp {
                                          reserve_space_byte_));
 #endif
     } else {
-#if USE_CUDNN_LSTM_PROJ
+#if MXNET_USE_CUDNN_GE_7200
       CUDNN_CALL(cudnnRNNForwardInferenceEx(s->dnn_handle_,
                                             rnn_desc_,
                                             x_data_desc_,
@@ -985,7 +984,7 @@ class RNNOp {
       Init(ctx, s, in_data, out_data);
     }
 
-    #if USE_CUDNN_LSTM_PROJ
+    #if MXNET_USE_CUDNN_GE_7200
     CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
                                       rnn_desc_,
                                       y_data_desc_,
@@ -1217,7 +1216,7 @@ class RNNOp {
       strideA[0] = dimA[2] * dimA[1];
       strideA[1] = dimA[2];
       strideA[2] = 1;
-      #if USE_CUDNN_LSTM_PROJ
+      #if MXNET_USE_CUDNN_GE_7200
       int dimB[3];
       int strideB[3];
       dimB[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
@@ -1228,7 +1227,7 @@ class RNNOp {
       strideB[1] = dimB[2];
       strideB[2] = 1;
       #endif
-      #if USE_CUDNN_LSTM_PROJ
+      #if MXNET_USE_CUDNN_GE_7200
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
                                             dtype_,
                                             3,
@@ -1246,7 +1245,7 @@ class RNNOp {
                                             3,
                                             dimA,
                                             strideA));
-      #if USE_CUDNN_LSTM_PROJ
+      #if MXNET_USE_CUDNN_GE_7200
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
                                             dtype_,
                                             3,
@@ -1264,7 +1263,7 @@ class RNNOp {
                                             3,
                                             dimA,
                                             strideA));
-      #if USE_CUDNN_LSTM_PROJ
+      #if MXNET_USE_CUDNN_GE_7200
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
                                             dtype_,
                                             3,
@@ -1282,7 +1281,7 @@ class RNNOp {
                                             3,
                                             dimA,
                                             strideA));
-      #if USE_CUDNN_LSTM_PROJ
+      #if MXNET_USE_CUDNN_GE_7200
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
                                             dtype_,
                                             3,
@@ -1351,7 +1350,7 @@ class RNNOp {
       #endif
         CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
       #endif
-      #if USE_CUDNN_LSTM_PROJ
+      #if MXNET_USE_CUDNN_GE_7200
       if (param_.projection_size.has_value()) {
         CUDNN_CALL(cudnnSetRNNProjectionLayers(s->dnn_handle_,
                                                rnn_desc_,
@@ -1361,7 +1360,7 @@ class RNNOp {
       #endif
       // Get temp space sizes
 
-      #if USE_VAR_SEQ_LENGTH
+      #if MXNET_USE_CUDNN_GE_7200
       if (param_.use_sequence_length) {
         CUDNN_CALL(cudnnSetRNNPaddingMode(rnn_desc_, CUDNN_RNN_PADDED_IO_ENABLED));
       }
@@ -1455,7 +1454,7 @@ class RNNOp {
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
-  #if USE_CUDNN_LSTM_PROJ
+  #if MXNET_USE_CUDNN_GE_7200
   cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
   DType padding_fill_ = 0;
   #endif
