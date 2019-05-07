@@ -331,9 +331,7 @@ void Predictor::PredictImage(const std::string& image_file) {
 
 
 Predictor::~Predictor() {
-  if (executor) {
-    delete executor;
-  }
+  delete executor;
   MXNotifyShutdown();
 }
 
