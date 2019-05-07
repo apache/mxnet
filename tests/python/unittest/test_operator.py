@@ -8285,14 +8285,14 @@ def test_np_compat_decorator():
 
 
 @with_seed()
-def test_elemwise_sum_add_n():
+def test_add_n():
     data_shape = (2, 2)
     input_num = 5
     data = [mx.nd.random.uniform(shape=data_shape) for i in range(input_num)]
     rslt = mx.nd.zeros(shape=data_shape)
     for i in range(input_num):
         rslt += data[i]
-    add_n_rslt = mx.nd.add_n(*data,out=data[0])
+    add_n_rslt = mx.nd.add_n(*data, out=data[0])
     assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
 
 
