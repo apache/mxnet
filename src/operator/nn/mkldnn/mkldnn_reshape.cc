@@ -58,7 +58,6 @@ class MKLDNNReshapeForward {
                        const OpReqType &req,
                        const NDArray &input,
                        const NDArray &output) {
-    CHECK_NE(req, kNullOp);
     auto engine = CpuEngine::Get()->get_engine();
 
     // data_
@@ -94,8 +93,6 @@ class MKLDNNReshapeForward {
         prims_.push_back(mkldnn::reorder(*data_, *out_));
         needInvalidateInput = false;
       }
-    } else if (req == kAddTo) {
-      LOG(FATAL) << "kAddTo is not supported yet";
     } else {
       LOG(FATAL) << "not supported req type: " << req;
     }
@@ -176,6 +173,7 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const NDArray &output) {
   const ReshapeParam& param = nnvm::get<ReshapeParam>(attrs.parsed);
   if (req == kNullOp) return;
+  CHECK_NE(req, kAddTo) << "kAddTo is not supported yet";
 
   auto fwd = GetReshapeForward(param, req, input, output);
   auto ws_size = fwd.GetWorkspaceSize();
