@@ -41,35 +41,41 @@ def _get_test_data():
 
 
 def test_checkpoint_handler():
-    tmpdir = tempfile.mkdtemp()
-    file_path = os.path.join(tmpdir, "model.params")
-    test_data = _get_test_data()
+    with TemporaryDirectory() as tmpdir:
+        model_prefix = 'test_net'
+        file_path = os.path.join(tmpdir, model_prefix)
+        test_data = _get_test_data()
 
-    save_best_only = True
-    mode = 'auto'
+        net = _get_test_network()
+        ce_loss = loss.SoftmaxCrossEntropyLoss()
+        acc = mx.metric.Accuracy()
+        est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+        checkpoint_handler = [event_handler.CheckpointHandler(model_dir=tmpdir,
+                                                              model_prefix=model_prefix,
+                                                              monitor=acc,
+                                                              save_best=True)]
+        est.fit(test_data, event_handlers=checkpoint_handler, epochs=1)
+        assert os.path.isfile(file_path + '-best.params')
+        assert os.path.isfile(file_path + '-best.states')
+        assert os.path.isfile(file_path + '-epoch0.params')
+        assert os.path.isfile(file_path + '-epoch0.states')
 
-    net = _get_test_network()
-    ce_loss = loss.SoftmaxCrossEntropyLoss()
-    ce_loss_metric = mx.metric.Loss(ce_loss.name)
-    acc = mx.metric.Accuracy()
-    est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-    checkpoint_handler = [event_handler.CheckpointHandler(file_path,
-                                                          monitor=acc,
-                                                          save_best_only=save_best_only,
-                                                          mode=mode)]
-    est.fit(test_data, event_handlers=checkpoint_handler, epochs=1)
-    assert os.path.isfile(file_path)
-    os.remove(file_path)
-
-    checkpoint_handler = [event_handler.CheckpointHandler(file_path,
-                                                          monitor=acc,
-                                                          save_best_only=save_best_only,
-                                                          mode=mode,
-                                                          epoch_period=None,
-                                                          batch_period=1)]
-    est.fit(test_data, event_handlers=checkpoint_handler, epochs=2)
-    assert os.path.isfile(file_path)
-    os.remove(file_path)
+        model_prefix = 'test_batch'
+        file_path = os.path.join(tmpdir, model_prefix)
+        checkpoint_handler = [event_handler.CheckpointHandler(model_dir=tmpdir,
+                                                              model_prefix=model_prefix,
+                                                              epoch_period=None,
+                                                              batch_period=1,
+                                                              max_checkpoints=2)]
+        est.fit(test_data, event_handlers=checkpoint_handler, epochs=3)
+        assert not os.path.isfile(file_path + 'best.params')
+        assert not os.path.isfile(file_path + 'best.states')
+        assert not os.path.isfile(file_path + '-batch0.params')
+        assert not os.path.isfile(file_path + '-batch0.states')
+        assert os.path.isfile(file_path + '-batch1.params')
+        assert os.path.isfile(file_path + '-batch1.states')
+        assert os.path.isfile(file_path + '-batch2.params')
+        assert os.path.isfile(file_path + '-batch2.states')
 
 
 
