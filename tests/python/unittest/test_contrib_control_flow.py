@@ -2179,5 +2179,3 @@ def test_foreach_with_unkown_dim():
 if __name__ == '__main__':
     import nose
     nose.runmodule()
-    # test_while_loop_rnn()
-    # test_while_loop_for_foreach()
