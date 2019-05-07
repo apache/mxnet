@@ -238,9 +238,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
     if is_for:
         assert loop_var_shapes[0] == (1, )
         args["LoopVar0"] = mx.nd.array([0])
-    print("################## Getting imperative results: ##################")
     imp_outs, imp_grads, out_grads = _get_imperative_result(n_steps)
-    print("################## Getting symbolic results: ##################")
     sym_outs, sym_grads = _get_symbolic_result(out_grads, n_steps)
     for imp_out, sym_out in zip(imp_outs, sym_outs):
         if imp_out is None or sym_out is None:
@@ -651,7 +649,6 @@ def test_while_loop_for_foreach():
         max_iterations=20,
         n_steps=0,
     )
-    return
     # Case 2.1.*
     case_2(
         cond=make_for_cond(length=5),
@@ -1181,13 +1178,11 @@ def check_contrib_rnn(cell_type, num_states):
     res1.backward()
     trainer.step(batch_size)
 
-    # configs = [
-    #         {},
-    #         {'inline_limit': 0},
-    #         {'static_alloc': True},
-    #         {'static_alloc': True, 'static_shape': True} ]
-
-    configs = [{}]
+    configs = [
+            {},
+            {'inline_limit': 0},
+            {'static_alloc': True},
+            {'static_alloc': True, 'static_shape': True} ]
     for config in configs:
         layer = TestRNNLayer(cell_type, hidden_size)
         layer.initialize(ctx=default_context())
@@ -1196,12 +1191,9 @@ def check_contrib_rnn(cell_type, num_states):
         params2 = layer.collect_params()
         for key, val in orig_params1.items():
             params2[key].set_data(copy.deepcopy(val.data()))
-        print("################################################")
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
             res2 = layer(rnn_data, states)
-        print("################################################")
-        print("res2.shape =", res2.shape)
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=1e-3, atol=1e-3)
         res2.backward()
         trainer.step(batch_size)

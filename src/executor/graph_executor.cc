@@ -27,7 +27,6 @@
 #include <nnvm/pass_functions.h>
 #include <vector>
 #include <algorithm>
-#include <sstream>
 
 #include "./exec_pass.h"
 #include "./graph_executor.h"
@@ -36,28 +35,11 @@
 #include "../common/exec_utils.h"
 #include "../operator/subgraph/subgraph_property.h"
 #include "../operator/operator_common.h"
-#include "../imperative/imperative_utils.h"
 
 namespace mxnet {
 namespace exec {
 
 using namespace mxnet::common;
-
-std::string Shape2Str(const mxnet::TShape &shape) {
-  if (shape.ndim() == -1) {
-    return "[UNK]";
-  }
-  std::ostringstream os;
-  os << "(";
-  for (int i = 0; i < (int) shape.ndim(); ++i) {
-    if (i > 0) {
-      os << ", ";
-    }
-    os << shape[i];
-  }
-  os << ")";
-  return os.str();
-}
 
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
@@ -82,9 +64,7 @@ GraphExecutor::~GraphExecutor() {
 }
 
 void GraphExecutor::Forward(bool is_train) {
-  std::cout << "Forward(is_train = " << is_train << ", is_dynamic = " << this->is_dynamic_ << ")" << std::endl;
   RunOps(is_train, 0, num_forward_nodes_);
-  std::cout << "Forward done!" << std::endl;
 }
 
 void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
@@ -97,7 +77,6 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 }
 
 void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_train) {
-  std::cout << "Backward(is_train = " << is_train << ")" << std::endl;
   {
     const auto& idx = graph_.indexed_graph();
     if (num_forward_inputs_ != idx.input_nodes().size()) {
@@ -124,24 +103,19 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
   }
   if (this->is_dynamic_) {
     graph_ = InferShape(std::move(graph_), {}, "");
-    std::cout << "Shapes after run" << std::endl;
     mxnet::ShapeVector rshape = graph_.MoveCopyAttr<mxnet::ShapeVector>("shape");
     const auto& idx = graph_.indexed_graph();
     for (size_t nid = 0; nid < idx.num_nodes(); ++nid) {
       const auto& inode = idx[nid];
-      std::cout << "nid = " << nid << ", " << inode.source->attrs.name << std::endl;
       if (inode.source->is_variable()) continue;
       OpNode& opnode = op_nodes_[nid];
       if (opnode.skip_exec_node) continue;
-      std::cout << "\tinputs:" << std::endl;
       for (NDArray &array : opnode.exec->in_array) {
         array.WaitToRead();
         if (!shape_is_known(array.shape())) {
           array.SetShapeFromChunk();
         }
-        std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
       }
-      std::cout << "\toutputs:" << std::endl;
       int i = 0;
       for (NDArray &array : opnode.exec->in_array) {
         array.WaitToRead();
@@ -154,7 +128,6 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
             array.ReshapeAndAlloc(shape);
           }
         }
-        std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
         ++i;
       }
       i = 0;
@@ -169,7 +142,6 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
             array.ReshapeAndAlloc(shape);
           }
         }
-        std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
         ++i;
       }
     }
@@ -177,7 +149,6 @@ void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_tra
   }
   const auto& idx = graph_.indexed_graph();
   RunOps(is_train, num_forward_nodes_, idx.num_nodes());
-  std::cout << "Backward done!" << std::endl;
 }
 
 void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
@@ -197,19 +168,11 @@ void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback, bool mon
 
 const std::vector<NDArray>& GraphExecutor::outputs() const {
   if (this->is_dynamic_) {
-    std::cout << "output_arrays_:" << std::endl;
-    for (const NDArray &array : output_arrays_) {
-      std::cout << "\t" << Shape2Str(array.shape()) << std::endl;
-    }
     for (const NDArray &array : output_arrays_) {
       array.WaitToRead();
       if (!shape_is_known(array.shape())) {
         const_cast<NDArray &>(array).SetShapeFromChunk();
       }
-    }
-    std::cout << "after output_arrays_:" << std::endl;
-    for (const NDArray &array : output_arrays_) {
-      std::cout << "\t" << Shape2Str(array.shape()) << std::endl;
     }
   }
   return output_arrays_;
@@ -247,7 +210,6 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
 
   if (v.empty()) {
     nnvm::NodePtr ng = nnvm::Node::Create();
-    std::cout << "Creating one" << std::endl;
     ng->attrs.op = Op::Get("_zeros_without_dtype");
     ng->attrs.name = "zeros_without_dtype";
     ng->attrs.op->attr_parser(&(ng->attrs));
@@ -1412,10 +1374,6 @@ void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   static auto& finfer_shape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
   static auto& is_backward = Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
-  std::cout << "RunOps(is_train = " << is_train
-            << ", topo_start = " << topo_start
-            << ", topo_end = " << topo_end
-            << ")" << std::endl;
   // Update context
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
@@ -1430,7 +1388,6 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
   mxnet::ShapeVector rshape = graph_.MoveCopyAttr<mxnet::ShapeVector>("shape");
   // Push Ops
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
-    std::cout << "nid = " << nid << std::endl;
     auto seg_op = cached_seg_opr_[nid];
     // Check segments first
     if (monitor_callback_ == nullptr && seg_op.opr != nullptr && seg_op.topo_end <= topo_end) {
@@ -1486,17 +1443,6 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
         auto finfer = finfer_shape[op];
         try {
           bool success = finfer(inode.source->attrs, &in_shapes, &out_shapes);
-          if (!success) {
-            std::cout << "InferShape failed in operator " << inode.source->attrs.name << std::endl;
-            std::cout << "in_array:" << std::endl;
-            for (NDArray &array : opnode.exec->in_array) {
-              std::cout << "\t" << Shape2Str(array.shape()) << std::endl;
-            }
-            std::cout << "out_array:" << std::endl;
-            for (NDArray &array : opnode.exec->out_array) {
-              std::cout << "\t" <<Shape2Str(array.shape()) << std::endl;
-            }
-          }
           CHECK(success) << "InferShape failed in operator " << inode.source->attrs.name;
         } catch (const std::exception& e) {
           throw dmlc::Error("Error in operator " + inode.source->attrs.name + ": " + e.what());
@@ -1551,14 +1497,12 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     for (uint32_t i = 0; i < num_inputs; ++i) {
       int eid = idx.entry_id(inode.inputs[i]);
       if (!shape_is_known(rshape[eid])) {
-        std::cout << "Setting rshape[" << eid << "] = " << Shape2Str(opnode.exec->in_array[i].shape()) << std::endl;
         rshape[eid] = opnode.exec->in_array[i].shape();
       }
     }
     for (uint32_t i = 0; i < num_outputs; ++i) {
       int eid = idx.entry_id(nid, i);
       if (!shape_is_known(rshape[eid])) {
-        std::cout << "Setting rshape[" << eid << "] = " << Shape2Str(opnode.exec->out_array[i].shape()) << std::endl;
         rshape[eid] = opnode.exec->out_array[i].shape();
       }
     }
