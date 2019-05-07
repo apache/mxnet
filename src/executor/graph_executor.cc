@@ -82,7 +82,7 @@ GraphExecutor::~GraphExecutor() {
 }
 
 void GraphExecutor::Forward(bool is_train) {
-  std::cout << "Forward(is_train = " << is_train << ")" << std::endl;
+  std::cout << "Forward(is_train = " << is_train << ", is_dynamic = " << this->is_dynamic_ << ")" << std::endl;
   RunOps(is_train, 0, num_forward_nodes_);
   std::cout << "Forward done!" << std::endl;
 }
@@ -1551,14 +1551,14 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     for (uint32_t i = 0; i < num_inputs; ++i) {
       int eid = idx.entry_id(inode.inputs[i]);
       if (!shape_is_known(rshape[eid])) {
-        std::cout << "Setting rshape[" << eid << "] = " << opnode.exec->in_array[i].shape() << std::endl;
+        std::cout << "Setting rshape[" << eid << "] = " << Shape2Str(opnode.exec->in_array[i].shape()) << std::endl;
         rshape[eid] = opnode.exec->in_array[i].shape();
       }
     }
     for (uint32_t i = 0; i < num_outputs; ++i) {
       int eid = idx.entry_id(nid, i);
       if (!shape_is_known(rshape[eid])) {
-        std::cout << "Setting rshape[" << eid << "] = " << opnode.exec->out_array[i].shape() << std::endl;
+        std::cout << "Setting rshape[" << eid << "] = " << Shape2Str(opnode.exec->out_array[i].shape()) << std::endl;
         rshape[eid] = opnode.exec->out_array[i].shape();
       }
     }

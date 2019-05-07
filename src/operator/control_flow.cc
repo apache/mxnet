@@ -690,6 +690,13 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   for (size_t i = 0; i < (size_t) params.num_out_data; ++i) {
     const_cast<NDArray &>(outputs[i]).SetShapeFromChunk();
   }
+  if (state.n_iterations == 0) {
+    for (size_t i = 0; i < outputs.size(); ++i) {
+      if (!shape_is_known(outputs[i].shape())) {
+        const_cast<NDArray &>(outputs[i]).ReshapeAndAlloc({1});
+      }
+    }
+  }
 }
 
 static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
