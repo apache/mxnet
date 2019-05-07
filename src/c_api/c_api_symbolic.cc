@@ -444,9 +444,11 @@ int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out) {
 int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
   API_BEGIN();
+  nnvm::Graph g = Symbol2Graph(*s);
+  g = nnvm::ApplyPass(g, "RemoveAmpCast");
   std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(fname, "w"));
   dmlc::ostream os(fo.get());
-  os << nnvm::pass::SaveJSON(Symbol2Graph(*s));
+  os << nnvm::pass::SaveJSON(g);
   // reset file pointer, force flush
   os.set_stream(nullptr);
   API_END();
