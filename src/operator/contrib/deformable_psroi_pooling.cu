@@ -190,19 +190,28 @@ namespace cuda {
 
 
   template <typename DType>
-  __global__ void DeformablePSROIPoolBackwardAccKernel(const int count, const DType* top_diff,
-                                                       const DType* top_count, const int num_rois,
-                                                       const DType spatial_scale, const int channels,
-                                                       const int height, const int width,
-                                                       const int pooled_height, const int pooled_width,
+  __global__ void DeformablePSROIPoolBackwardAccKernel(const int count,
+                                                       const DType* top_diff,
+                                                       const DType* top_count,
+                                                       const int num_rois,
+                                                       const DType spatial_scale,
+                                                       const int channels,
+                                                       const int height,
+                                                       const int width,
+                                                       const int pooled_height,
+                                                       const int pooled_width,
                                                        const int output_dim,
-                                                       DType* bottom_data_diff, DType* bottom_trans_diff,
+                                                       DType* bottom_data_diff,
+                                                       DType* bottom_trans_diff,
                                                        const DType* bottom_data,
                                                        const DType* bottom_rois,
                                                        const DType* bottom_trans,
-                                                       const bool no_trans, const DType trans_std,
-                                                       const int sample_per_part, const int group_size,
-                                                       const int part_size, const int num_classes,
+                                                       const bool no_trans,
+                                                       const DType trans_std,
+                                                       const int sample_per_part,
+                                                       const int group_size,
+                                                       const int part_size,
+                                                       const int num_classes,
                                                        const int channels_each_class) {
     CUDA_KERNEL_LOOP(index, count) {
       // The output is in order (n, ctop, ph, pw)
