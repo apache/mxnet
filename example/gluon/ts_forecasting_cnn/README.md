@@ -27,7 +27,7 @@ of the x trajectory, an average of 0.003 is achieved, with some variance.
 - arguments
   - trajectory : Which Lorenz map trajectory to forecast one step ahead  (default=x)
   - model : Unconditional (only use x history to forecast x) or conditional (use historical x, y, z to forecast x)
-  - in_channels: for unconditional = 1, for conditional = 3.
+  - in_channels: for unconditional = 1, for conditional = 3
   - batch_size : Define batch size (default=32)
   - epoches : Define total epoches (default=200)
   - dilation_depth : Define dilation depth (default=4)
