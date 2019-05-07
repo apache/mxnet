@@ -598,7 +598,7 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
     }
     state.Forward(step, func_inputs, req, func_outputs, ctx.need_grad);
     if (step == 0) {
-      for (size_t i = 0; i < params.num_out_data; ++i) {
+      for (int i = 0; i < params.num_out_data; ++i) {
         func_outputs[i].WaitToRead();
         if (!shape_is_known(func_outputs[i].shape())) {
           func_outputs[i].SetShapeFromChunk();
@@ -612,7 +612,7 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
         const_cast<NDArray &>(outputs[i]).Init(shape);
       }
     }
-    for (size_t i = 0; i < params.num_out_data; ++i) {
+    for (int i = 0; i < params.num_out_data; ++i) {
       NDArray first_slot = outputs[i].At(step);
       mxnet::CopyFromTo(func_outputs[i], &first_slot);
     }
@@ -642,7 +642,7 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
     }
     mxnet::CopyFromTo(func_inputs[j], &outputs[i]);
   }
-  for (size_t i = 0; i < (size_t) params.num_out_data; ++i) {
+  for (int i = 0; i < params.num_out_data; ++i) {
     const_cast<NDArray &>(outputs[i]).SetShapeFromChunk();
   }
   if (state.n_iterations == 0) {
