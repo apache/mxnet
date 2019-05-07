@@ -72,7 +72,9 @@ namespace op {
 
 template <typename DType>
 inline DType im2col_bilinear_cpu(const DType* data,
-    const int height, const int width, DType h, DType w) {
+                                 const int height,
+                                 const int width,
+                                 DType h, DType w) {
   int h_low = floor(h);
   int w_low = floor(w);
   int h_high;
@@ -111,20 +113,22 @@ inline DType im2col_bilinear_cpu(const DType* data,
  * Use the wrapper function im2col() instead.
  */
 template <typename DType>
-inline void deformable_im2col_cpu(const DType* data_im, const DType* data_offset,
-    const int channels, const int height, const int width,
-    const int output_h, const int output_w,
-    const int kernel_h, const int kernel_w,
-    const int pad_h, const int pad_w,
-    const int stride_h, const int stride_w,
-    const int dilation_h, const int dilation_w,
-    const uint32_t deformable_group,
-    DType* data_col) {
+inline void deformable_im2col_cpu(const DType* data_im,
+                                  const DType* data_offset,
+                                  const int channels,
+                                  const int height, const int width,
+                                  const int output_h, const int output_w,
+                                  const int kernel_h, const int kernel_w,
+                                  const int pad_h, const int pad_w,
+                                  const int stride_h, const int stride_w,
+                                  const int dilation_h, const int dilation_w,
+                                  const uint32_t deformable_group,
+                                  DType* data_col) {
   const int channel_size = height * width;
   const int offset_size = 2 * kernel_h * kernel_w * output_h * output_w;
-  const int channel_per_deformable_group = channels / deformable_group;
+  const int channel_per_group = channels / deformable_group;
   for (int channel = 0; channel < channels; channel++, data_im += channel_size) {
-    if (channel % channel_per_deformable_group == 0 && channel != 0) {
+    if (channel % channel_per_group == 0 && channel != 0) {
       data_offset += offset_size;
     }
     for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
@@ -168,19 +172,24 @@ inline void deformable_im2col_cpu(const DType* data_im, const DType* data_offset
  */
 template <typename DType>
 inline void deformable_im2col(mshadow::Stream<cpu>* s,
-  const DType* data_im, const DType* data_offset,
-  const mxnet::TShape& im_shape, const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
-  const mxnet::TShape& pad, const mxnet::TShape& stride, const mxnet::TShape& dilation,
-  const uint32_t deformable_group, DType* data_col) {
+                              const DType* data_im, const DType* data_offset,
+                              const mxnet::TShape& im_shape,
+                              const mxnet::TShape& col_shape,
+                              const mxnet::TShape& kernel_shape,
+                              const mxnet::TShape& pad,
+                              const mxnet::TShape& stride,
+                              const mxnet::TShape& dilation,
+                              const uint32_t deformable_group,
+                              DType* data_col) {
   if (2 == kernel_shape.ndim()) {
     deformable_im2col_cpu(data_im, data_offset,
-        im_shape[1], im_shape[2], im_shape[3],
-        col_shape[1], col_shape[2],
-        kernel_shape[0], kernel_shape[1],
-        pad[0], pad[1],
-        stride[0], stride[1],
-        dilation[0], dilation[1],
-        deformable_group, data_col);
+                          im_shape[1], im_shape[2], im_shape[3],
+                          col_shape[1], col_shape[2],
+                          kernel_shape[0], kernel_shape[1],
+                          pad[0], pad[1],
+                          stride[0], stride[1],
+                          dilation[0], dilation[1],
+                          deformable_group, data_col);
   } else {
     LOG(FATAL) << "not implemented";
   }
@@ -203,11 +212,16 @@ inline void deformable_im2col(mshadow::Stream<cpu>* s,
  */
 template <typename DType>
 inline void deformable_col2im(mshadow::Stream<cpu>* s,
-  const DType* data_col, const DType* data_offset,
-  const mxnet::TShape& im_shape, const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
-  const mxnet::TShape& pad, const mxnet::TShape& stride,
-  const mxnet::TShape& dilation, const uint32_t deformable_group,
-  DType* grad_im, OpReqType req) {
+                              const DType* data_col,
+                              const DType* data_offset,
+                              const mxnet::TShape& im_shape,
+                              const mxnet::TShape& col_shape,
+                              const mxnet::TShape& kernel_shape,
+                              const mxnet::TShape& pad,
+                              const mxnet::TShape& stride,
+                              const mxnet::TShape& dilation,
+                              const uint32_t deformable_group,
+                              DType* grad_im, OpReqType req) {
   LOG(FATAL) << "only implemented in GPU";
 }
 
@@ -227,15 +241,19 @@ inline void deformable_col2im(mshadow::Stream<cpu>* s,
  * \param deformable_group #offset group that deformable convolution use
  * \param grad_offset pointer of the offset (C, H, W,...) in the offset batch
  */
-
 template <typename DType>
 inline void deformable_col2im_coord(mshadow::Stream<cpu>* s,
-  const DType* data_col, const DType* data_im,
-  const DType* data_offset, const mxnet::TShape& im_shape,
-  const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
-  const mxnet::TShape& pad, const mxnet::TShape& stride,
-  const mxnet::TShape& dilation, const uint32_t deformable_group,
-  DType* grad_offset, OpReqType req) {
+                                    const DType* data_col,
+                                    const DType* data_im,
+                                    const DType* data_offset,
+                                    const mxnet::TShape& im_shape,
+                                    const mxnet::TShape& col_shape,
+                                    const mxnet::TShape& kernel_shape,
+                                    const mxnet::TShape& pad,
+                                    const mxnet::TShape& stride,
+                                    const mxnet::TShape& dilation,
+                                    const uint32_t deformable_group,
+                                    DType* grad_offset, OpReqType req) {
   LOG(FATAL) << "only implemented in GPU";
 }
 
