@@ -32,22 +32,6 @@
 namespace mxnet {
 namespace op {
 
-static std::string Shape2Str(const mxnet::TShape &shape) {
-  if (shape.ndim() == -1) {
-    return "[UNK]";
-  }
-  std::ostringstream os;
-  os << "(";
-  for (int i = 0; i < (int) shape.ndim(); ++i) {
-    if (i > 0) {
-      os << ", ";
-    }
-    os << shape[i];
-  }
-  os << ")";
-  return os.str();
-}
-
 struct ForeachParam : public dmlc::Parameter<ForeachParam> {
   int num_args;
   int num_outputs;
@@ -185,15 +169,6 @@ static void ForeachComputeExCPU(const OpStatePtr& state_ptr,
 
     state.Forward(i, subg_inputs, req, *subg_out_curr, ctx.need_grad);
   }
-  std::cout << "Foreach forward:" << std::endl;
-  std::cout << "\tinputs:" << std::endl;
-  for (const NDArray &array : outputs) {
-    std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
-  }
-  std::cout << "\toutputs:" << std::endl;
-  for (const NDArray &array : outputs) {
-    std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
-  }
 }
 
 static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
@@ -201,16 +176,6 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  std::cout << "Foreach backward:" << std::endl;
-  std::cout << "\tinputs:" << std::endl;
-  for (const NDArray &array : inputs) {
-    std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
-  }
-  std::cout << "\toutputs:" << std::endl;
-  for (const NDArray &array : outputs) {
-    std::cout << "\t\t" << Shape2Str(array.shape()) << std::endl;
-  }
-
   ForeachState &state = state_ptr.get_state<ForeachState>();
   const ForeachParam& params = state.params;
   CHECK_EQ(outputs.size(), (size_t) params.num_args - 1);
@@ -278,7 +243,6 @@ static void ForeachGradComputeExCPU(const OpStatePtr& state_ptr,
       // the user to write state gradients to the outputs.
       subg_req[loc] = iter_num != 0 ? kWriteTo : req[i + params.in_data_locs.ndim()];
     }
-    std::cout << "LoopState " << iter_num << " backward" << std::endl;
     state.Backward(iter_num, subg_ograds, subg_req, subg_igrads);
 
     size_t num_states = subg_ograds.size() - num_output_data;
@@ -408,15 +372,6 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     }
   }
   // Check if we have inferred the shapes correctly.
-  std::cout << "Foreach InferShape" << std::endl;
-  std::cout << "\tin_shape:" << std::endl;
-  for (const mxnet::TShape &shape : *in_shape) {
-    std::cout << "\t\t" << Shape2Str(shape) << std::endl;
-  }
-  std::cout << "\tout_shape:" << std::endl;
-  for (const mxnet::TShape &shape : *out_shape) {
-    std::cout << "\t\t" << Shape2Str(shape) << std::endl;
-  }
   return infer_success;
 }
 
