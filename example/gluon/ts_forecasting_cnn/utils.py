@@ -16,7 +16,6 @@
 # under the License.
 
 
-import math
 # import matplotlib
 # matplotlib.use('TkAgg')
 # import matplotlib.pyplot as plt
@@ -63,9 +62,9 @@ def generate_synthetic_lorenz(stepCnt, dt = 0.01, initx = 0., inity = 1., initz 
 def rmse(preds, labels):
     '''RMSE metric reported in literature
     '''
-    mse = mx.metric.MSE()
-    mse.update(labels=nd.array(labels), preds=nd.array(preds))
-    return math.sqrt(mse.get()[1])
+    rmse = mx.metric.RMSE()
+    rmse.update(labels=nd.array(labels), preds=nd.array(preds))
+    return rmse.get()[1]
 
 # plot utils
 def plot_losses(losses, label):
