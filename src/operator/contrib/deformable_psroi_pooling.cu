@@ -180,11 +180,13 @@ namespace cuda {
     const int channels_each_class = no_trans ? output_dim : output_dim / num_classes;
 
     cudaStream_t stream = Stream<gpu>::GetStream(out.stream_);
-    DeformablePSROIPoolForwardKernel<DType> << <mxnet::op::mxnet_op::cuda_get_num_blocks(count),
-      kBaseThreadNum, 0, stream >> >(
-      count, bottom_data, spatial_scale, channels, height, width, pooled_height, pooled_width,
-      bottom_rois, bottom_trans, no_trans, trans_std, sample_per_part, output_dim,
-      group_size, part_size, num_classes, channels_each_class, top_data, top_count_data);
+    DeformablePSROIPoolForwardKernel<DType><<<
+      mxnet::op::mxnet_op::cuda_get_num_blocks(count), kBaseThreadNum,
+      0, stream>>>(count, bottom_data, spatial_scale, channels, height, width,
+                   pooled_height, pooled_width, bottom_rois, bottom_trans,
+                   no_trans, trans_std, sample_per_part, output_dim,
+                   group_size, part_size, num_classes,
+                   channels_each_class, top_data, top_count_data);
     DeformablePSROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
   }
 
@@ -348,12 +350,14 @@ namespace cuda {
     const int channels_each_class = no_trans ? output_dim : output_dim / num_classes;
 
     cudaStream_t stream = Stream<gpu>::GetStream(in_grad.stream_);
-    DeformablePSROIPoolBackwardAccKernel<DType> << <mxnet::op::mxnet_op::cuda_get_num_blocks(count),
-      kBaseThreadNum, 0, stream >> >(
-      count, top_diff, top_count_data, num_rois, spatial_scale, channels, height, width,
-      pooled_height, pooled_width, output_dim, bottom_data_diff, bottom_trans_diff,
-      bottom_data, bottom_rois, bottom_trans, no_trans, trans_std, sample_per_part,
-      group_size, part_size, num_classes, channels_each_class);
+    DeformablePSROIPoolBackwardAccKernel<DType><<<
+      mxnet::op::mxnet_op::cuda_get_num_blocks(count), kBaseThreadNum,
+      0, stream >>>(count, top_diff, top_count_data, num_rois, spatial_scale,
+                    channels, height, width, pooled_height, pooled_width,
+                    output_dim, bottom_data_diff, bottom_trans_diff,
+                    bottom_data, bottom_rois, bottom_trans,
+                    no_trans, trans_std, sample_per_part, group_size,
+                    part_size, num_classes, channels_each_class);
     DeformablePSROIPOOLING_CUDA_CHECK(cudaPeekAtLastError());
   }
 
@@ -369,8 +373,10 @@ namespace cuda {
                                          const int output_dim, const int group_size,
                                          const int pooled_size, const int part_size,
                                          const int sample_per_part, const float trans_std) {
-    cuda::DeformablePSROIPoolForward(out, data, bbox, trans, top_count, no_trans, spatial_scale,
-      output_dim, group_size, pooled_size, part_size, sample_per_part, trans_std);
+    cuda::DeformablePSROIPoolForward(out, data, bbox, trans, top_count,
+                                     no_trans, spatial_scale, output_dim,
+                                     group_size, pooled_size, part_size,
+                                     sample_per_part, trans_std);
   }
 
   template<typename DType>
@@ -385,9 +391,10 @@ namespace cuda {
                                              const int output_dim, const int group_size,
                                              const int pooled_size, const int part_size,
                                              const int sample_per_part, const float trans_std) {
-    cuda::DeformablePSROIPoolBackwardAcc(in_grad, trans_grad, out_grad, data, bbox, trans,
-      top_count, no_trans, spatial_scale, output_dim, group_size, pooled_size, part_size,
-      sample_per_part, trans_std);
+    cuda::DeformablePSROIPoolBackwardAcc(in_grad, trans_grad, out_grad, data, bbox,
+                                         trans, top_count, no_trans, spatial_scale,
+                                         output_dim, group_size, pooled_size,
+                                         part_size, sample_per_part, trans_std);
   }
 
 }  // namespace mshadow

@@ -291,8 +291,9 @@ class DeformablePSROIPoolingProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-    std::vector<int> *in_type) const override;
+  Operator* CreateOperatorEx(Context ctx,
+                             mxnet::ShapeVector *in_shape,
+                             std::vector<int> *in_type) const override;
 
 
  private:

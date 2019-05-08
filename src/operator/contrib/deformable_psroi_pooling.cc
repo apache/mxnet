@@ -167,10 +167,13 @@ namespace mshadow {
     const int pooled_width = pooled_size;
     const int num_classes = no_trans ? 1 : trans.size(1) / 2;
     const int channels_each_class = no_trans ? output_dim : output_dim / num_classes;
-    DeformablePSROIPoolForwardCPU <DType> (
-        count, bottom_data, spatial_scale, channels, height, width, pooled_height, pooled_width,
-        bottom_rois, bottom_trans, no_trans, trans_std, sample_per_part, output_dim,
-        group_size, part_size, num_classes, channels_each_class, top_data, top_count_data);
+    DeformablePSROIPoolForwardCPU<DType>(count, bottom_data, spatial_scale,
+                                         channels, height, width,
+                                         pooled_height, pooled_width,
+                                         bottom_rois, bottom_trans,
+                                         no_trans, trans_std, sample_per_part,
+                                         output_dim, group_size, part_size, num_classes,
+                                         channels_each_class, top_data, top_count_data);
 
     return;
   }
@@ -325,11 +328,14 @@ namespace mshadow {
     const int pooled_width = pooled_size;
     const int num_classes = no_trans ? 1 : trans_grad.size(1) / 2;
     const int channels_each_class = no_trans ? output_dim : output_dim / num_classes;
-    DeformablePSROIPoolBackwardAccCPU<DType> (
-      count, top_diff, top_count_data, num_rois, spatial_scale, channels, height, width,
-      pooled_height, pooled_width, output_dim, bottom_data_diff, bottom_trans_diff,
-      bottom_data, bottom_rois, bottom_trans, no_trans, trans_std, sample_per_part,
-      group_size, part_size, num_classes, channels_each_class);
+    DeformablePSROIPoolBackwardAccCPU<DType>(count, top_diff, top_count_data, num_rois,
+                                             spatial_scale, channels, height, width,
+                                             pooled_height, pooled_width, output_dim,
+                                             bottom_data_diff, bottom_trans_diff,
+                                             bottom_data, bottom_rois, bottom_trans,
+                                             no_trans, trans_std, sample_per_part,
+                                             group_size, part_size, num_classes,
+                                             channels_each_class);
 
     return;
   }
