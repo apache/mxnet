@@ -87,6 +87,49 @@ def test_np_sum():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@mx.use_np_compat
+@with_seed()
+def test_np_dot():
+    shapes = [
+        ((3,), (3,)),        # Case 1
+        ((3, 4), (4, 5)),    # Case 2
+        ((), ()),            # Case 3
+        ((3, 4, 5), ()),     # Case 3.5.1
+        ((), (3, 4, 5)),     # Case 3.5.2
+        ((3, 4, 5), (5, )),  # Case 4
+    ]
+
+    eps = 1e-3
+
+    for shape_a, shape_b in shapes:
+        print(shape_a, shape_b)
+        np_a = _np.random.uniform(-1.0, 1.0, shape_a)
+        np_a[abs(np_a) < eps] = 2 * eps;
+        np_b = _np.random.uniform(-1.0, 1.0, shape_b)
+        np_b[abs(np_b) < eps] = 2 * eps;
+        a = mx.nd.array(np_a)
+        b = mx.nd.array(np_b)
+        np_res = _np.dot(np_a, np_b)
+        mx_res = np.dot(a, b)
+        assert mx_res.shape == np_res.shape
+        assert_almost_equal(np_res, mx_res.asnumpy(), rtol=1e-5, atol=1e-5)
+        mx_a = mx.sym.Variable("a")
+        mx_b = mx.sym.Variable("b")
+        mx_sym = mx.sym.numpy.dot(mx_a, mx_b)
+        check_numeric_gradient(mx_sym, {"a": a, "b": b}, numeric_eps=eps, rtol=1e-2, atol=1e-3)
+
+    bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6, ))]
+
+    for shape_a, shape_b in bad_shapes:
+        a = mx.nd.array(random.random()) if len(shape_a) == 0 else rand_ndarray(shape_a)
+        b = mx.nd.array(random.random()) if len(shape_b) == 0 else rand_ndarray(shape_b)
+        try:
+            mx_res = np.dot(a, b)
+        except mx.base.MXNetError:
+            continue
+        assert False
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
