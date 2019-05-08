@@ -31,9 +31,9 @@ DMLC_REGISTER_PARAMETER(AMPCastParam);
 DMLC_REGISTER_PARAMETER(AMPMultiCastParam);
 
 NNVM_REGISTER_OP(amp_cast)
-.describe(R"code(Cast function between FP16/FP32 used by AMP.
+.describe(R"code(Cast function between low precision float/FP32 used by AMP.
 
-It casts only between FP16/FP32 and does not do anything for other types.
+It casts only between low precision float/FP32 and does not do anything for other types.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<AMPCastParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
@@ -66,7 +66,7 @@ NNVM_REGISTER_OP(_backward_amp_cast)
 NNVM_REGISTER_OP(amp_multicast)
 .describe(R"code(Cast function used by AMP, that casts its inputs to the common widest type.
 
-It casts only between FP16/FP32 and does not do anything for other types.
+It casts only between low precision float/FP32 and does not do anything for other types.
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {

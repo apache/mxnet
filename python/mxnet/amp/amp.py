@@ -36,11 +36,12 @@ from .. import optimizer as opt
 from .loss_scaler import LossScaler
 
 def _cast_symbol_NDArray(s, dtype):
+    float_types = (np.float16, np.float32)
     if isinstance(s, Symbol):
         return symbol.amp_cast(s, dtype=dtype)
     elif isinstance(s, NDArray):
         if (s.dtype != dtype and
-                (s.dtype == np.float16 or s.dtype == np.float32) and
+                s.dtype in float_types and
                 s.context.device_type != 'cpu'):
             return ndarray.amp_cast(s, dtype=dtype)
         else:
@@ -48,7 +49,8 @@ def _cast_symbol_NDArray(s, dtype):
     else:
         return s
 
-def _wrap_symbol_functions(module, fp16_list=None, conditional_fp32_list=None, fp32_list=None):
+def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
+                           conditional_fp32_ops=None, fp32_ops=None):
     def _ndarray_wrapper(f, target_dtype, cond_arg=None):
         def _new_fun(*args, **kwargs):
             if cond_arg is not None:
@@ -99,13 +101,13 @@ def _wrap_symbol_functions(module, fp16_list=None, conditional_fp32_list=None, f
                     is_symbol = is_symbol or isinstance(arg, Symbol)
             if not is_symbol:
                 # NDArray case
-                widest_type = np.float16
+                widest_type = target_dtype
                 for _, _, arg in symbols:
                     if isinstance(arg, NDArray):
                         if arg.dtype == np.float32:
                             widest_type = np.float32
                 for arr, index, arg in symbols:
-                    if arg.dtype != widest_type and arg.dtype == np.float16:
+                    if arg.dtype != widest_type and arg.dtype == target_dtype:
                         arr[index] = ndarray.amp_cast(arg, dtype=widest_type)
             else:
                 # Symbol case
@@ -124,15 +126,16 @@ def _wrap_symbol_functions(module, fp16_list=None, conditional_fp32_list=None, f
 
     _wrapper = _symbol_wrapper if module in (symbol, Symbol, symbol_contrib) else _ndarray_wrapper
 
-    wrap_list = fp16_list if fp16_list is not None else lists.symbol.FP16_FUNCS
+    wrap_list = target_precision_ops if target_precision_ops is not None \
+                    else lists.symbol.FP16_FUNCS
     for fun_name in wrap_list:
         try:
             f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, _wrapper(f_to_wrap, np.float16))
+            setattr(module, fun_name, _wrapper(f_to_wrap, target_dtype))
         except AttributeError:
             pass
 
-    wrap_list = fp32_list if fp32_list is not None else lists.symbol.FP32_FUNCS
+    wrap_list = fp32_ops if fp32_ops is not None else lists.symbol.FP32_FUNCS
     for fun_name in wrap_list:
         try:
             f_to_wrap = getattr(module, fun_name)
@@ -140,7 +143,7 @@ def _wrap_symbol_functions(module, fp16_list=None, conditional_fp32_list=None, f
         except AttributeError:
             pass
 
-    wrap_list = conditional_fp32_list if conditional_fp32_list is not None \
+    wrap_list = conditional_fp32_ops if conditional_fp32_ops is not None \
                     else lists.symbol.CONDITIONAL_FP32_FUNCS
     for fun_name, arg, arg_values in wrap_list:
         try:
@@ -201,21 +204,24 @@ def scale_loss(loss, optimizer_or_trainer):
     else:
         yield optimizer_or_trainer._amp_loss_scaler.loss_scale * loss
 
-def init(fp16_list=None, conditional_fp32_list=None, fp32_list=None):
+def init(target_dtype='float16', target_precision_ops=None,
+         conditional_fp32_ops=None, fp32_ops=None):
     """Initialize AMP (automatic mixed precision).
 
     This needs to be done before model creation.
 
     Parameters
     ----------
-    fp16_list : list of string
+    target_dtype : {'float16'}
+        Target low precision type for AMP. Currently only float16 is supported.
+    target_precision_ops : list of string
         Override the list of functions casted to FP16. Entries in this list
         are names of the functions casted to FP16.
-    conditional_fp32_list : list of (string, string, list of string)
+    conditional_fp32_ops : list of (string, string, list of string)
         Override the list of functions conditionally casted to FP32. The format
         of the list is (name of the function, name of the parameter, list of
         values of the parameter that make the function be casted to FP32).
-    fp32_list : list of string
+    fp32_ops : list of string
         Override the list of functions casted to FP32. Entries in this list
         are names of the functions casted to FP32.
     """
@@ -224,14 +230,23 @@ def init(fp16_list=None, conditional_fp32_list=None, fp32_list=None):
     if not _amp_initialized:
         _amp_initialized = True
         logging.info("Using AMP")
-        _wrap_symbol_functions(symbol, fp16_list, conditional_fp32_list, fp32_list)
-        _wrap_symbol_functions(symbol._internal, fp16_list, conditional_fp32_list, fp32_list)
-        _wrap_symbol_functions(Symbol, fp16_list, conditional_fp32_list, fp32_list)
-        _wrap_symbol_functions(symbol_contrib, fp16_list, conditional_fp32_list, fp32_list)
-        _wrap_symbol_functions(ndarray, fp16_list, conditional_fp32_list, fp32_list)
-        _wrap_symbol_functions(ndarray._internal, fp16_list, conditional_fp32_list, fp32_list)
-        _wrap_symbol_functions(NDArray, fp16_list, conditional_fp32_list, fp32_list)
-        _wrap_symbol_functions(ndarray_contrib, fp16_list, conditional_fp32_list, fp32_list)
+        target_dtype = np.dtype(target_dtype)
+        _wrap_symbol_functions(symbol, target_dtype, target_precision_ops,
+                               conditional_fp32_ops, fp32_ops)
+        _wrap_symbol_functions(symbol._internal, target_dtype, target_precision_ops,
+                               conditional_fp32_ops, fp32_ops)
+        _wrap_symbol_functions(Symbol, target_dtype, target_precision_ops,
+                               conditional_fp32_ops, fp32_ops)
+        _wrap_symbol_functions(symbol_contrib, target_dtype, target_precision_ops,
+                               conditional_fp32_ops, fp32_ops)
+        _wrap_symbol_functions(ndarray, target_dtype, target_precision_ops,
+                               conditional_fp32_ops, fp32_ops)
+        _wrap_symbol_functions(ndarray._internal, target_dtype, target_precision_ops,
+                               conditional_fp32_ops, fp32_ops)
+        _wrap_symbol_functions(NDArray, target_dtype, target_precision_ops,
+                               conditional_fp32_ops, fp32_ops)
+        _wrap_symbol_functions(ndarray_contrib, target_dtype, target_precision_ops,
+                               conditional_fp32_ops, fp32_ops)
         _loss_scaler = LossScaler()
         _wrap_loss_output_functions(ndarray, _loss_scaler)
         _wrap_loss_output_functions(symbol, _loss_scaler)
