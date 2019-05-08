@@ -22,8 +22,7 @@ import copy
 from numpy.testing import assert_allclose
 import unittest
 from mxnet.test_utils import almost_equal, assert_almost_equal
-from common import assert_raises_cudnn_not_satisfied
-
+from common import assert_raises_cudnn_not_satisfied, with_seed
 
 def test_rnn():
     cell = gluon.rnn.RNNCell(100, prefix='rnn_')
@@ -244,6 +243,7 @@ def test_bidirectional():
 
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@with_seed()
 def test_layer_bidirectional():
     class RefBiLSTM(gluon.Block):
         def __init__(self, size, **kwargs):
@@ -279,7 +279,7 @@ def test_layer_bidirectional():
         ref_net_params[k.replace('l0', 'l0l0').replace('r0', 'r0l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
-    assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy())
+    assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy(), rtol=1e-04, atol=1e-02)
 
 
 
