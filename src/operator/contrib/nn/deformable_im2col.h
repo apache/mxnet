@@ -216,29 +216,29 @@ inline void deformable_im2col_cpu(const DType* data_im,
                                   const DType* data_offset,
                                   const int channels,
                                   const int height, const int width,
-                                  const int output_h, const int output_w,
                                   const int kernel_h, const int kernel_w,
                                   const int pad_h, const int pad_w,
                                   const int stride_h, const int stride_w,
                                   const int dilation_h, const int dilation_w,
-                                  const uint32_t deformable_group,
+                                  const int deformable_group,
+                                  const int height_col, const int width_col,
                                   DType* data_col) {
   const int channel_size = height * width;
-  const int offset_size = 2 * kernel_h * kernel_w * output_h * output_w;
+  const int offset_size = 2 * kernel_h * kernel_w * height_col * width_col;
   const int channel_per_group = channels / deformable_group;
   for (int channel = 0; channel < channels; channel++, data_im += channel_size) {
     if (channel % channel_per_group == 0 && channel != 0) {
       data_offset += offset_size;
     }
-    for (int kernel_row = 0; kernel_row < kernel_h; kernel_row++) {
-      for (int kernel_col = 0; kernel_col < kernel_w; kernel_col++) {
-        int input_row = -pad_h + kernel_row * dilation_h;
-        for (int output_row = 0; output_row < output_h; output_row++) {
-          int input_col = -pad_w + kernel_col * dilation_w;
-          for (int output_col = 0; output_col < output_w; output_col++) {
-            int offset_h_ptr = ((2 * (kernel_row * kernel_w + kernel_col)) *
-              output_h + output_row) * output_w + output_col;
-            int offset_w_ptr = offset_h_ptr + output_h * output_w;
+    for (int i = 0; i < kernel_h; i++) {
+      for (int j = 0; j < kernel_w; j++) {
+        int input_row = -pad_h + i * dilation_h;
+        for (int h_col = 0; h_col < height_col; h_col++) {
+          int input_col = -pad_w + j * dilation_w;
+          for (int w_col = 0; w_col < width_col; w_col++) {
+            int offset_h_ptr = ((2 * (i * kernel_w + j)) *
+              height_col + h_col) * width_col + w_col;
+            int offset_w_ptr = offset_h_ptr + height_col * width_col;
             DType im_row = input_row + data_offset[offset_h_ptr];
             DType im_col = input_col + data_offset[offset_w_ptr];
             if (im_row >= 0 && im_col >= 0 && im_row < height && im_col < width) {
@@ -284,12 +284,12 @@ inline void deformable_im2col(mshadow::Stream<cpu>* s,
   if (2 == kernel_shape.ndim()) {
     deformable_im2col_cpu(data_im, data_offset,
                           im_shape[1], im_shape[2], im_shape[3],
-                          col_shape[1], col_shape[2],
                           kernel_shape[0], kernel_shape[1],
                           pad[0], pad[1],
                           stride[0], stride[1],
                           dilation[0], dilation[1],
-                          deformable_group, data_col);
+                          deformable_group,
+                          col_shape[1], col_shape[2], data_col);
   } else {
     LOG(FATAL) << "not implemented";
   }
