@@ -1656,10 +1656,14 @@ def test_deformable_convolution_with_type():
                  'deformable_conv_data': (2, 2, 10, 10),
                  'deformable_conv_offset': (2, 18, 8, 8),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 10, 10),
-                #  'deformable_conv_offset': (2, 18, 8, 8),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_conv_offset': np.float16}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 10, 10),
+                 'deformable_conv_offset': (2, 18, 8, 8),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 10, 10),
+                 'deformable_conv_offset': (2, 18, 8, 8),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
 
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
@@ -1670,16 +1674,6 @@ def test_deformable_convolution_with_type():
                                 'deformable_conv_weight': 'write',
                                 'deformable_conv_bias': 'null'})
 
-    # for cpu mode, only support forward pass now
-    ctx_list.extend([{'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 10, 10),
-                      'deformable_conv_offset': (2, 18, 8, 8),
-                      'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
-                     {'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 10, 10),
-                      'deformable_conv_offset': (2, 18, 8, 8),
-                      'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}}])
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol, grad_req='null')
 
 @with_seed()
 def test_deformable_convolution_options():
@@ -1687,7 +1681,6 @@ def test_deformable_convolution_options():
            np.dtype(np.float64): 1e-3}
     # 2D convolution
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
-    # for cpu mode, only support forward pass now
 
     # Pad > 0
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1698,19 +1691,17 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 7, 7),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 7, 7),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 7, 7),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
-
-    ctx_list.extend([{'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 7, 7),
-                      'deformable_conv_offset': (2, 18, 7, 7),
-                      'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
-                     {'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 7, 7),
-                      'deformable_conv_offset': (2, 18, 7, 7),
-                      'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}}])
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol, grad_req='null')
 
     # Stride > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1721,19 +1712,17 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
-
-    ctx_list.extend([{'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 7, 7),
-                      'deformable_conv_offset': (2, 18, 3, 3),
-                      'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
-                     {'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 7, 7),
-                      'deformable_conv_offset': (2, 18, 3, 3),
-                      'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}}])
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol, grad_req='null')
 
     # Dilate > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1744,19 +1733,17 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
-
-    ctx_list.extend([{'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 7, 7),
-                      'deformable_conv_offset': (2, 18, 3, 3),
-                      'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
-                     {'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 7, 7),
-                      'deformable_conv_offset': (2, 18, 3, 3),
-                      'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}}])
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol, grad_req='null')
 
     # Deformable group > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1767,19 +1754,18 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 36, 5, 5),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 36, 5, 5),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 36, 5, 5),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
-    ctx_list.extend([{'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 7, 7),
-                      'deformable_conv_offset': (2, 36, 5, 5),
-                      'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
-                     {'ctx': mx.cpu(0),
-                      'deformable_conv_data': (2, 2, 7, 7),
-                      'deformable_conv_offset': (2, 36, 5, 5),
-                      'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}}])
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol, grad_req='null')
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
