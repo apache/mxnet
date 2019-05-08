@@ -27,7 +27,7 @@ import ctypes
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX
 from ..ndarray._internal import _set_np_ndarray_class
-from . import _op
+from . import _op as _mx_np_op
 from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check_params
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types
 from ..context import current_context
@@ -104,7 +104,16 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __iadd__(self, other):
-        raise NotImplementedError
+        def __isub__(self, other):
+            """x.__iadd__(y) <=> x += y"""
+            if not self.writable:
+                raise ValueError('trying to add to a readonly ndarray')
+            if isinstance(other, NDArray):
+                return _nd_internal._np_add(self, other, out=self)
+            elif isinstance(other, numeric_types):
+                return _nd_internal._np_add_scalar(self, float(other), out=self)
+            else:
+                raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __sub__(self, other):
@@ -118,7 +127,15 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __isub__(self, other):
-        raise NotImplementedError
+        """x.__isub__(y) <=> x -= y"""
+        if not self.writable:
+            raise ValueError('trying to subtract from a readonly ndarray')
+        if isinstance(other, NDArray):
+            return _nd_internal._np_subtract(self, other, out=self)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_subtract_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __rsub__(self, other):
@@ -285,6 +302,13 @@ class ndarray(NDArray):
     def __reduce__(self):
         return ndarray, (None,), self.__getstate__()
 
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def T(self):
+        """Same as self.transpose(). This always returns a copy of self."""
+        return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
     @use_np_compat
     def _slice(self, start, stop):
         raise NotImplementedError
@@ -380,9 +404,16 @@ class ndarray(NDArray):
         return super(ndarray, self).copy().as_np_ndarray()
 
     @use_np_compat
-    def reshape(self, *shape, **kwargs):
+    def dot(self, b, out=None):
+        return _mx_np_op.dot(self, b, out=out)
+
+    @use_np_compat
+    def reshape(self, shape, order='C'):
         """Returns an array containing the same data with a new shape."""
-        raise NotImplementedError
+        if order != 'C':
+            raise NotImplementedError('reshape only supports C-order,'
+                                      ' while received {}'.format(order))
+        return _mx_np_op.reshape(self, shape=shape, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -626,13 +657,13 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tile')
 
     @use_np_compat
-    def transpose(self, *args, **kwargs):
+    def transpose(self, *axes):
         """Convenience fluent method for :py:func:`transpose`.
 
         The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -667,13 +698,13 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute diag')
 
     @use_np_compat
-    def sum(self, *args, **kwargs):
+    def sum(self, axis=None, dtype=None, out=None, keepdims=False):
         """Convenience fluent method for :py:func:`sum`.
 
         The arguments are the same as for :py:func:`sum`, with
         this array as data.
         """
-        return _op.sum(self, *args, **kwargs)
+        return _mx_np_op.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -1068,11 +1099,6 @@ class ndarray(NDArray):
     @use_np_compat
     def stype(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute stype')
-
-    @property
-    @use_np_compat
-    def T(self):
-        raise NotImplementedError
 
     def tostype(self, stype):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tostype')

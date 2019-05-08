@@ -20,7 +20,7 @@
 from __future__ import absolute_import
 import ctypes
 import numpy as _np
-from . import _op as _np_op
+from . import _op as _mx_np_op
 from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
 from ...base import numeric_types
 from ...context import current_context
@@ -237,13 +237,27 @@ class _NumpySymbol(Symbol):
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
         return Symbol(handle=hdl)
 
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def T(self):
+        """Same as self.transpose()."""
+        return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
     @use_np_compat
     def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ
         raise NotImplementedError
 
     @use_np_compat
-    def reshape(self, *shape, **kwargs):
-        raise NotImplementedError
+    def dot(self, b, out=None):
+        return _mx_np_op.dot(self, b, out=out)
+
+    @use_np_compat
+    def reshape(self, shape, order='C'):
+        if order != 'C':
+            raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
+                                      'received {}'.format(str(order)))
+        return _mx_np_op.reshape(self, shape=shape, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -487,13 +501,13 @@ class _NumpySymbol(Symbol):
         raise AttributeError('_NumpySymbol object has no attribute tile')
 
     @use_np_compat
-    def transpose(self, *args, **kwargs):
+    def transpose(self, *axes):
         """Convenience fluent method for :py:func:`transpose`.
 
         The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -528,13 +542,13 @@ class _NumpySymbol(Symbol):
         raise AttributeError('_NumpySymbol object has no attribute diag')
 
     @use_np_compat
-    def sum(self, *args, **kwargs):
+    def sum(self, axis=None, dtype=None, out=None, keepdims=False):
         """Convenience fluent method for :py:func:`sum`.
 
         The arguments are the same as for :py:func:`sum`, with
         this array as data.
         """
-        return _np_op.sum(self, *args, **kwargs)
+        return _mx_np_op.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
