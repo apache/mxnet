@@ -278,7 +278,7 @@ class UnaryOp : public OpBase {
     if ((req[0] == kWriteTo || req[0] == kWriteInplace) &&
         mkl_func::check_size(input_size) &&
         mkl_func::check_type(type_flag)) {
-      // set DType as float or double according to type_flag 
+      // set DType as float or double according to type_flag
       MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
         MKL_OP::Vectorize(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
       });
