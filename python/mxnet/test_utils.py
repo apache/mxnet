@@ -834,7 +834,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
             continue
         stype = executor.arg_dict[k].stype
         old_value = v.copy()
-        for i in range(np.prod(v.shape)):
+        for i in range(int(np.prod(v.shape))):
             # inplace update
             v.ravel()[i] += eps/2.0
             executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
