@@ -76,4 +76,4 @@ export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
 
 To install MXNet MKL-DNN backend, please refer to [MKL-DNN backend readme](http://mxnet.incubator.apache.org/tutorials/mkldnn/MKLDNN_README.html)
 
-For performance numbers, please refer to [performance on Intel CPU](https://mxnet.incubator.apache.org/versions/master/faq/perf.html#intel-cpu)
+For performance numbers, please refer to [performance on Intel CPU](../../faq/perf.md#intel-cpu)
