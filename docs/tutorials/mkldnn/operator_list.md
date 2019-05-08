@@ -17,7 +17,9 @@
 
 # MKL-DNN Operator list
 
-MXNet MKL-DNN backend provides optimized implementations for various opertors covering a broad range of applications including image classification, object detection, natural language processing. We also provide the lower precision version for part of these operators on CPU leveraging the DL Boost technology from Intel. On computation graph level, a set of graph fusion pass and quantization pass is implemneted based on the sugraph feature of MXNet. To help users understanding MKL-DNN backend better, the tables below summarize the list of supported operators, data types and functionalities. As the community keeps working on more new features for MKL-DNN backend, the tables will be updated continuously.
+MXNet MKL-DNN backend provides optimized implementations for various operators covering a broad range of applications including image classification, object detection, natural language processing. 
+
+To help users understanding MKL-DNN backend better, the following table summarizes the list of supported operators, data types and functionalities.  A subset of operators support faster training and inference by using a lower precision version. Refer to the following table's `INT8 Inference` column to see which operators are supported.
 
 | Operator           | Function                   | FP32 Training (backward) | FP32 Inference | INT8 Inference |
 | :--:               | :--:                       | :--:                     | :--:           | :--:           |
