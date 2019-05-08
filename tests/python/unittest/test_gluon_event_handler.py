@@ -16,7 +16,6 @@
 # under the License.
 
 import os
-import tempfile
 
 import mxnet as mx
 from common import TemporaryDirectory
@@ -26,17 +25,17 @@ from mxnet.gluon.contrib.estimator import estimator, event_handler
 
 
 def _get_test_network(net=nn.Sequential()):
-    net.add(nn.Dense(128, activation='relu', in_units=100, flatten=False),
-            nn.Dense(64, activation='relu', in_units=128),
-            nn.Dense(10, activation='relu', in_units=64))
+    net.add(nn.Dense(128, activation='relu', flatten=False),
+            nn.Dense(64, activation='relu'),
+            nn.Dense(10, activation='relu'))
     return net
 
 
 def _get_test_data():
     data = nd.ones((32, 100))
-    label = nd.random.randint(0, 10, (32, 1))
+    label = nd.zeros((32, 1))
     data_arr = mx.gluon.data.dataset.ArrayDataset(data, label)
-    return mx.gluon.data.DataLoader(data_arr, batch_size=32)
+    return mx.gluon.data.DataLoader(data_arr, batch_size=8)
 
 
 def test_checkpoint_handler():
@@ -49,11 +48,13 @@ def test_checkpoint_handler():
         ce_loss = loss.SoftmaxCrossEntropyLoss()
         acc = mx.metric.Accuracy()
         est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-        checkpoint_handler = [event_handler.CheckpointHandler(model_dir=tmpdir,
-                                                              model_prefix=model_prefix,
-                                                              monitor=acc,
-                                                              save_best=True)]
-        est.fit(test_data, event_handlers=checkpoint_handler, epochs=1)
+        checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
+                                                             model_prefix=model_prefix,
+                                                             monitor=acc,
+                                                             save_best=True)
+        est.fit(test_data, event_handlers=[checkpoint_handler], epochs=1)
+        assert checkpoint_handler.num_epochs == 1
+        assert checkpoint_handler.num_batches == 4
         assert os.path.isfile(file_path + '-best.params')
         assert os.path.isfile(file_path + '-best.states')
         assert os.path.isfile(file_path + '-epoch0.params')
@@ -64,45 +65,44 @@ def test_checkpoint_handler():
         net = _get_test_network(nn.HybridSequential())
         net.hybridize()
         est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-        checkpoint_handler = [event_handler.CheckpointHandler(model_dir=tmpdir,
-                                                              model_prefix=model_prefix,
-                                                              epoch_period=None,
-                                                              batch_period=1,
-                                                              max_checkpoints=2)]
-        est.fit(test_data, event_handlers=checkpoint_handler, epochs=3)
+        checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
+                                                             model_prefix=model_prefix,
+                                                             epoch_period=None,
+                                                             batch_period=1,
+                                                             max_checkpoints=2)
+        est.fit(test_data, event_handlers=[checkpoint_handler], epochs=2)
+        assert checkpoint_handler.num_epochs == 2
+        assert checkpoint_handler.num_batches == 8
         assert not os.path.isfile(file_path + 'best.params')
         assert not os.path.isfile(file_path + 'best.states')
         assert not os.path.isfile(file_path + '-batch0.params')
         assert not os.path.isfile(file_path + '-batch0.states')
         assert os.path.isfile(file_path + '-symbol.json')
-        assert os.path.isfile(file_path + '-batch1.params')
-        assert os.path.isfile(file_path + '-batch1.states')
-        assert os.path.isfile(file_path + '-batch2.params')
-        assert os.path.isfile(file_path + '-batch2.states')
-
+        assert os.path.isfile(file_path + '-batch6.params')
+        assert os.path.isfile(file_path + '-batch6.states')
+        assert os.path.isfile(file_path + '-batch7.params')
+        assert os.path.isfile(file_path + '-batch7.states')
 
 
 def test_early_stopping():
     test_data = _get_test_data()
 
-    mode = 'max'
-    patience = 0
-
     net = _get_test_network()
     ce_loss = loss.SoftmaxCrossEntropyLoss()
     acc = mx.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
-    early_stopping = [event_handler.EarlyStoppingHandler(monitor=acc,
-                                                         patience=patience,
-                                                         mode=mode)]
-    est.fit(test_data, event_handlers=early_stopping, epochs=3)
+    early_stopping = event_handler.EarlyStoppingHandler(monitor=acc,
+                                                        patience=0,
+                                                        mode='min')
+    est.fit(test_data, event_handlers=[early_stopping], epochs=5)
+    assert early_stopping.current_epoch == 2
+    assert early_stopping.stopped_epoch == 1
 
-    mode = 'auto'
-    patience = 2
-    early_stopping = [event_handler.EarlyStoppingHandler(monitor=acc,
-                                                         patience=patience,
-                                                         mode=mode)]
-    est.fit(test_data, event_handlers=early_stopping, epochs=1)
+    early_stopping = event_handler.EarlyStoppingHandler(monitor=acc,
+                                                        patience=2,
+                                                        mode='auto')
+    est.fit(test_data, event_handlers=[early_stopping], epochs=1)
+    assert early_stopping.current_epoch == 1
 
 
 def test_logging():
@@ -116,9 +116,55 @@ def test_logging():
         acc = mx.metric.Accuracy()
         est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
         train_metrics, val_metrics = est.prepare_loss_and_metrics()
-        logging_handler = [event_handler.LoggingHandler(file_name=file_name,
-                                                        file_location=tmpdir,
-                                                        train_metrics=train_metrics,
-                                                        val_metrics=val_metrics)]
-        est.fit(test_data, event_handlers=logging_handler, epochs=1)
+        logging_handler = event_handler.LoggingHandler(file_name=file_name,
+                                                       file_location=tmpdir,
+                                                       train_metrics=train_metrics,
+                                                       val_metrics=val_metrics)
+        est.fit(test_data, event_handlers=[logging_handler], epochs=3)
+        assert logging_handler.batch_index == 0
+        assert logging_handler.current_epoch == 3
         assert os.path.isfile(output_dir)
+
+
+def test_custom_handler():
+    class CustomStopHandler(event_handler.TrainBegin,
+                            event_handler.BatchEnd,
+                            event_handler.EpochEnd):
+        def __init__(self, batch_stop=None, epoch_stop=None):
+            self.batch_stop = batch_stop
+            self.epoch_stop = epoch_stop
+            self.num_batch = 0
+            self.num_epoch = 0
+            self.stop_training = False
+
+        def train_begin(self, estimator, *args, **kwargs):
+            self.num_batch = 0
+            self.num_epoch = 0
+
+        def batch_end(self, estimator, *args, **kwargs):
+            self.num_batch += 1
+            if self.num_batch == self.batch_stop:
+                self.stop_training = True
+            return self.stop_training
+
+        def epoch_end(self, estimator, *args, **kwargs):
+            self.num_epoch += 1
+            if self.num_epoch == self.epoch_stop:
+                self.stop_training = True
+            return self.stop_training
+
+    # total data size is 32, batch size is 8
+    # 4 batch per epoch
+    test_data = _get_test_data()
+    net = _get_test_network()
+    ce_loss = loss.SoftmaxCrossEntropyLoss()
+    acc = mx.metric.Accuracy()
+    est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+    custom_handler = CustomStopHandler(3, 2)
+    est.fit(test_data, event_handlers=[custom_handler], epochs=3)
+    assert custom_handler.num_batch == 3
+    assert custom_handler.num_epoch == 1
+    custom_handler = CustomStopHandler(100, 5)
+    est.fit(test_data, event_handlers=[custom_handler], epochs=10)
+    assert custom_handler.num_batch == 5 * 4
+    assert custom_handler.num_epoch == 5

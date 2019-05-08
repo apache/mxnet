@@ -203,10 +203,10 @@ class Estimator(object):
          ----------
          val_data : DataLoader
              validation data loader with data and labels
-         batch_axis : int, default 0
-             batch axis to split the validation data into devices
          val_metrics : EvalMetric or list of EvalMetrics
              metrics to update validation result
+         batch_axis : int, default 0
+             batch axis to split the validation data into devices
          """
         if not isinstance(val_data, gluon.data.DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
@@ -291,15 +291,22 @@ class Estimator(object):
 
                 self.trainer.step(batch_size)
                 # batch end
+
+                batch_end_result = []
                 for handler in batch_end:
-                    if handler.batch_end(estimator_ref, batch=batch,
-                                         pred=pred, label=label, loss=loss):
-                        break
+                    batch_end_result.append(handler.batch_end(estimator_ref, batch=batch,
+                                                              pred=pred, label=label, loss=loss))
+                # if any handler signaled to stop
+                if any(batch_end_result):
+                    break
 
             # epoch end
+            epoch_end_result = []
             for handler in epoch_end:
-                if handler.epoch_end(estimator_ref):
-                    break
+                epoch_end_result.append(handler.epoch_end(estimator_ref))
+            # if any handler signaled to stop
+            if any(epoch_end_result):
+                break
 
         # train end
         for handler in train_end:

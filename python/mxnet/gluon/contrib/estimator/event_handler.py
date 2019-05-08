@@ -94,7 +94,7 @@ class MetricHandler(EpochBegin, BatchEnd):
                 metric.update(label, pred)
 
 
-class ValidationHandler(BatchEnd, EpochEnd):
+class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
     """"Validation Handler that evaluate model on validation dataset
 
     :py:class:`ValidationHandler` takes validation dataset, an evaluation function,
@@ -135,18 +135,23 @@ class ValidationHandler(BatchEnd, EpochEnd):
         # validation metrics need to be calculated before other callbacks can access them
         self.priority = -np.Inf
 
+    def train_begin(self, estimator, *args, **kwargs):
+        # reset epoch and batch counter
+        self.num_batches = 0
+        self.num_epochs = 0
+
     def batch_end(self, estimator, *args, **kwargs):
+        self.num_batches += 1
         if self.batch_period and self.num_batches % self.batch_period == 0:
             self.eval_fn(val_data=self.val_data,
                          val_metrics=self.val_metrics)
-        self.num_batches += 1
 
     def epoch_end(self, estimator, *args, **kwargs):
+        self.num_epochs += 1
         if self.num_epochs % self.epoch_period == 0:
             self.eval_fn(val_data=self.val_data,
                          val_metrics=self.val_metrics)
 
-        self.num_epochs += 1
 
 
 class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, BatchEnd):
@@ -217,6 +222,10 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
                          "with current learning rate %.4f ",
                          optimizer, lr)
         self.logger.info("Train for %d epochs.", estimator.max_epochs)
+        # reset all counters
+        self.current_epoch = 0
+        self.batch_index = 0
+        self.processed_samples = 0
 
     def train_end(self, estimator, *args, **kwargs):
         train_time = time.time() - self.train_start
@@ -247,7 +256,7 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
                 name, value = metric.get()
                 msg += '%s : %.4f ' % (name, value)
             self.logger.info(msg)
-            self.batch_index += 1
+        self.batch_index += 1
 
     def epoch_begin(self, estimator, *args, **kwargs):
         if self.verbose >= self.LOG_VERBOSITY_PER_EPOCH:
@@ -263,15 +272,15 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
                 name, value = monitor.get()
                 msg += '%s : %.4f ' % (name, value)
             self.logger.info(msg)
-            self.current_epoch += 1
-            self.batch_index = 0
+        self.current_epoch += 1
+        self.batch_index = 0
 
 
-class CheckpointHandler(BatchEnd, EpochEnd):
+class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
     """Save the model after user define period
 
     :py:class:`CheckpointHandler` saves the network architecture after first batch if the model
-    can be hybridized(), saves model parameters and trainer states after user defined period,
+    can be fully hybridized, saves model parameters and trainer states after user defined period,
     default saves every epoch.
 
     Parameters
@@ -295,7 +304,7 @@ class CheckpointHandler(BatchEnd, EpochEnd):
         epoch intervals between saving the network
     batch_period: int, default None
         batch intervals between saving the network,
-        by default don't save any checkpoint based on number of batches
+        by default, checkpoints are not saved based on the number of batches
     max_checkpoints : int, default 5
         maximum number of checkpoint files to keep in the model_dir, older checkpoints
         will be removed
@@ -350,13 +359,19 @@ class CheckpointHandler(BatchEnd, EpochEnd):
                                      "if %s has improved, please use `min` for mode "
                                      "if you want otherwise", self.monitor.get()[0])
                     self.monitor_op = np.greater
-                    self.best = -np.Inf
                 else:
                     self.logger.info("`less` operator will be used to determine "
                                      "if %s has improved, please use `max` for mode "
                                      "if you want otherwise", self.monitor.get()[0])
                     self.monitor_op = np.less
-                    self.best = np.Inf
+
+    def train_begin(self, estimator, *args, **kwargs):
+        # reset all counters
+        self.num_epochs = 0
+        self.num_batches = 0
+        if self.save_best:
+            self.best = np.Inf if self.monitor_op == np.less else -np.Inf
+
 
     def batch_end(self, estimator, *args, **kwargs):
         # only save symbol once after first batch
@@ -386,7 +401,7 @@ class CheckpointHandler(BatchEnd, EpochEnd):
                 monitor_name, monitor_value = self.monitor.get()
                 # check if monitor exists in train stats
                 if np.isnan(monitor_value):
-                    warnings.warn(RuntimeWarning('SKipping save best because %s is not updated, make sure you '
+                    warnings.warn(RuntimeWarning('Skipping save best because %s is not updated, make sure you '
                                                  'pass one of the metric objects as monitor, '
                                                  'you can use estimator.prepare_loss_and_metrics to'
                                                  'create all metric objects', monitor_name))
@@ -440,8 +455,6 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
 
     Parameters
     ----------
-    estimator : Estimator
-        The :py:class:`Estimator` to get training statistics
     monitor: EvalMetric
         the metrics to monitor
     min_delta: float, default 0
@@ -473,7 +486,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         self.min_delta = min_delta
         self.wait = 0
         self.stopped_epoch = 0
-        self.num_epochs = 0
+        self.current_epoch = 0
         self.stop_training = False
         self.logger = logging.getLogger(__name__)
 
@@ -509,6 +522,8 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
     def train_begin(self, estimator, *args, **kwargs):
         self.wait = 0
         self.stopped_epoch = 0
+        self.current_epoch = 0
+        self.stop_training = False
         if self.baseline is not None:
             self.best = self.baseline
         else:
@@ -527,8 +542,9 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
             else:
                 self.wait += 1
                 if self.wait >= self.patience:
-                    self.stopped_epoch = self.num_epochs
+                    self.stopped_epoch = self.current_epoch
                     self.stop_training = True
+        self.current_epoch += 1
         return self.stop_training
 
     def train_end(self, estimator, *args, **kwargs):
