@@ -34,7 +34,7 @@ Performance is mainly affected by the following 4 factors:
 
 ## Intel CPU
 
-For using Intel Xeon CPUs for training and inference, we suggest to install mxnet-mkl package by:
+When using Intel Xeon CPUs for training and inference, the `mxnet-mkl` package is recommended. Adding `--pre` installs a nightly build from master. Without it you will install the latest patched release of MXNet:
 
 ```
 $ pip install mxnet-mkl [--pre]
