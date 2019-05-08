@@ -153,7 +153,6 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
                          val_metrics=self.val_metrics)
 
 
-
 class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, BatchEnd):
     """Basic Logging Handler that applies to every Gluon estimator by default.
 
@@ -308,6 +307,8 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
     max_checkpoints : int, default 5
         maximum number of checkpoint files to keep in the model_dir, older checkpoints
         will be removed
+    resume_from : str, default None
+        one of {batch, epoch}, select which type of checkpoints to resume from
     """
 
     def __init__(self,
@@ -319,7 +320,8 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                  mode='auto',
                  epoch_period=1,
                  batch_period=None,
-                 max_checkpoints=5):
+                 max_checkpoints=5,
+                 resume_type=None):
         self.monitor = monitor
         self.verbose = verbose
         if not os.path.exists(model_dir):
@@ -335,6 +337,9 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         self.num_batches = 0
         self.num_epochs = 0
         self.max_checkpoints = max_checkpoints
+        if resume_type and not resume_type in ['batch', 'epoch']:
+            raise ValueError("Unknown resume type, please specify as `batch` or `epoch`.")
+        self.resume_type = resume_type
         self.saved_checkpoints = []
         self.logger = logging.getLogger(__name__)
         if self.save_best:
@@ -371,7 +376,8 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         self.num_batches = 0
         if self.save_best:
             self.best = np.Inf if self.monitor_op == np.less else -np.Inf
-
+        if self.resume_type:
+            self._resume_from_checkpoint(estimator)
 
     def batch_end(self, estimator, *args, **kwargs):
         # only save symbol once after first batch
@@ -394,7 +400,12 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         if num_of_periods % period_value == 0:
             if self.verbose > 0:
                 self.logger.info('[%s %d] saving model to %s', period_name, num_of_periods, self.model_dir)
-            prefix = "%s-%s%d" % (self.model_prefix, period_name.lower(), num_of_periods)
+            # if resumed from checkpoint, increment checkpoint number
+            if self.resume_type == period_name.lower():
+                saved_period = num_of_periods + self.trained_period + 1
+            else:
+                saved_period = num_of_periods
+            prefix = "%s-%s%d" % (self.model_prefix, period_name.lower(), saved_period)
             self._save_params_and_trainer(estimator, prefix)
 
             if self.save_best:
@@ -422,7 +433,6 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                                              period_name, num_of_periods, monitor_name,
                                              self.best)
 
-
     def _save_symbol(self, estimator):
         symbol_file = os.path.join(self.model_dir, self.model_prefix + '-symbol.json')
         if hasattr(estimator.net, '_cached_graph'):
@@ -448,6 +458,44 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
             for fname in os.listdir(self.model_dir):
                 if fname.startswith(prefix):
                     os.remove(os.path.join(self.model_dir, fname))
+
+    def _resume_from_checkpoint(self, estimator):
+        self.trained_period = -1
+        for fname in os.listdir(self.model_dir):
+            if fname.startswith(self.model_prefix):
+                if self.resume_type in fname and '.params' in fname:
+                    self.saved_checkpoints.append(fname[:fname.find('.params')])
+                    try:
+                        # find trained number of batch or epoch
+                        period = int(fname[fname.find(self.resume_type) + 5: fname.find('.params')])
+                        if period > self.trained_period:
+                            self.trained_period = period
+                    except ValueError:
+                        raise ValueError("Error parsing checkpoint files, please check your checkpoints "
+                                         "have the format {model_name}-{%s}{%s_number}.params, "
+                                         "there should also be a .states file for each .params file ",
+                                         self.resume_type, self.resume_type)
+        if self.trained_period != -1:
+            # change maximum number of epoch to train is resumed from epoch checkpoint
+            if self.resume_type == 'epoch':
+                if self.trained_period >= estimator.max_epochs - 1:
+                    raise ValueError("Found checkpoint with maximum number of epoch %d reached, please specify"
+                                     "resume_type=None (default value) if you wan to train from scratch.",
+                                     self.trained_period + 1)
+                estimator.max_epochs = estimator.max_epochs - self.trained_period - 1
+            param_file = "%s-%s%d.params" % (self.model_prefix, self.resume_type, self.trained_period)
+            param_file = os.path.join(self.model_dir, param_file)
+            trainer_file = "%s-%s%d.states" % (self.model_prefix, self.resume_type, self.trained_period)
+            trainer_file = os.path.join(self.model_dir, trainer_file)
+            assert os.path.exists(param_file), "Failed to load checkpoint, %s does not exist" % param_file
+            assert os.path.exists(trainer_file), "Failed to load checkpoint, %s does not exist" % trainer_file
+            estimator.net.load_parameters(param_file, ctx=estimator.context)
+            estimator.trainer.load_states(trainer_file)
+            self.logger.warning("Checkpoint resumed from %s %d, continue training for %d epochs.",
+                                self.resume_type, self.trained_period, estimator.max_epochs)
+        else:
+            self.logger.info("No checkpoint found, training from scratch for %d epochs.",
+                             estimator.max_epochs)
 
 
 class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):

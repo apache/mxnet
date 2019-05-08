@@ -268,7 +268,7 @@ class Estimator(object):
         for handler in train_begin:
             handler.train_begin(estimator_ref)
 
-        for epoch in range(epochs):
+        for epoch in range(self.max_epochs):
             # epoch begin
             for handler in epoch_begin:
                 handler.epoch_begin(estimator_ref)

@@ -83,6 +83,33 @@ def test_checkpoint_handler():
         assert os.path.isfile(file_path + '-batch7.params')
         assert os.path.isfile(file_path + '-batch7.states')
 
+def test_resume_checkpoint():
+    with TemporaryDirectory() as tmpdir:
+        model_prefix = 'test_net'
+        file_path = os.path.join(tmpdir, model_prefix)
+        test_data = _get_test_data()
+
+        net = _get_test_network()
+        ce_loss = loss.SoftmaxCrossEntropyLoss()
+        acc = mx.metric.Accuracy()
+        est = estimator.Estimator(net, loss=ce_loss, metrics=acc)
+        checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
+                                                             model_prefix=model_prefix,
+                                                             monitor=acc,
+                                                             max_checkpoints=1)
+        est.fit(test_data, event_handlers=[checkpoint_handler], epochs=2)
+        assert os.path.isfile(file_path + '-epoch1.params')
+        assert os.path.isfile(file_path + '-epoch1.states')
+        checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
+                                                             model_prefix=model_prefix,
+                                                             monitor=acc,
+                                                             max_checkpoints=1,
+                                                             resume_type='epoch')
+        est.fit(test_data, event_handlers=[checkpoint_handler], epochs=5)
+        # should only continue to train 3 epochs and last checkpoint file is epoch4
+        assert est.max_epochs == 3
+        assert os.path.isfile(file_path + '-epoch4.states')
+
 
 def test_early_stopping():
     test_data = _get_test_data()
