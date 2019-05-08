@@ -85,9 +85,9 @@ def test_dequantize_int8_to_float32():
         sym_data = mx.sym.Variable('data')
         sym_min_range = mx.sym.Variable('min_range')
         sym_max_range = mx.sym.Variable('max_range')
-        dequant = mx.sym.contrib.dequantize(sym_data, sym_min_range, 
+        dequant = mx.sym.contrib.dequantize(sym_data, sym_min_range,
                                             sym_max_range, out_type='float32')
-        out = dequant.bind(ctx=mx.current_context(), 
+        out = dequant.bind(ctx=mx.current_context(),
                            args={'data':qdata, 'min_range':min_range, 'max_range':max_range})
         data = out.forward()[0]
         assert data.dtype == np.float32
@@ -141,7 +141,8 @@ def test_requantize_int32_to_int8():
             qdata_int8, min_output, max_output = mx.nd.contrib.requantize(qdata, min_range, max_range)
         else:
             qdata_int8, min_output, max_output = mx.nd.contrib.requantize(qdata, min_range, max_range,
-                                                                          min_calib_range, max_calib_range)
+                                                                          min_calib_range=min_calib_range,
+                                                                          max_calib_range=max_calib_range)
 
         qdata_int8_np, min_output_np, max_output_np = requantize_baseline(qdata.asnumpy(), min_range.asscalar(),
                                                                           max_range.asscalar(),
@@ -150,7 +151,7 @@ def test_requantize_int32_to_int8():
         assert_almost_equal(qdata_int8.asnumpy(), qdata_int8_np, atol = 1)
         assert_almost_equal(min_output.asnumpy(), np.array([min_output_np]))
         assert_almost_equal(max_output.asnumpy(), np.array([max_output_np]))
-    
+
     def check_requantize_with_symbol(shape, min_calib_range=None, max_calib_range=None):
         qdata = mx.nd.random.uniform(low=-1000.0, high=1000.0, shape=shape).astype('int32')
         min_range = mx.nd.array([-1010.0])
@@ -160,17 +161,18 @@ def test_requantize_int32_to_int8():
         sym_max_range = mx.sym.Variable('max_range')
         if min_calib_range is None or max_calib_range is None:
             requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range)
-            out = requant.bind(ctx=mx.current_context(), 
-                               args={'data':qdata, 'min_range':min_range, 
-                               'max_range':max_range}) 
+            out = requant.bind(ctx=mx.current_context(),
+                               args={'data':qdata, 'min_range':min_range,
+                               'max_range':max_range})
             qdata_int8, min_output, max_output = out.forward()
         else:
-            requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range, 
-                                                min_calib_range, max_calib_range)
-            out = requant.bind(ctx=mx.current_context(), args={'data':qdata, 'min_range':min_range, 
-                                                   'max_range':max_range})  
-            qdata_int8, min_output, max_output = out.forward()                                   
-           
+            requant = mx.sym.contrib.requantize(sym_data, sym_min_range, sym_max_range,
+                                                min_calib_range=min_calib_range,
+                                                max_calib_range=max_calib_range)
+            out = requant.bind(ctx=mx.current_context(), args={'data':qdata, 'min_range':min_range,
+                               'max_range':max_range})
+            qdata_int8, min_output, max_output = out.forward()
+
         qdata_int8_np, min_output_np, max_output_np = requantize_baseline(qdata.asnumpy(), min_range.asscalar(),
                                                                           max_range.asscalar(),
                                                                           min_calib_range=min_calib_range,
@@ -272,6 +274,71 @@ def test_quantized_conv():
     for qdtype in ['int8', 'uint8']:
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), True, qdtype)
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), False, qdtype)
+
+
+@with_seed()
+def test_quantized_elemwise_add():
+    def check_quantized_elemwise_add(data_shape, qtype):
+        if is_test_for_native_cpu():
+            print('skipped testing quantized_elemwise_add for native cpu since it is not supported yet')
+            return
+        elif qtype != 'uint8' and qtype != 'int8':
+            print('skipped testing quantized_elemwise_add for not supported data type')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing quantized_elemwise_add for gpu since it is not supported yet')
+            return
+
+        dataA = mx.sym.Variable(name='dataA', shape=data_shape, dtype='float32')
+        dataB = mx.sym.Variable(name='dataB', shape=data_shape, dtype='float32')
+        elemwise_add_fp32 = mx.sym.elemwise_add(dataA, dataB)
+        arg_names = elemwise_add_fp32.list_arguments()
+        elemwise_add_fp32_exe = elemwise_add_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        if qtype == 'uint8':
+            data_low = 0.0
+            data_high = 255.0
+        else:
+            data_low = -127.0
+            data_high = 127.0
+
+        dataA_val = mx.nd.random.uniform(low=data_low, high=data_high, shape=data_shape).astype('int32')
+        dataB_val = mx.nd.random.uniform(low=data_low, high=data_high, shape=data_shape).astype('int32')
+        elemwise_add_fp32_exe.arg_dict[arg_names[0]][:] = dataA_val
+
+        elemwise_add_fp32_exe.arg_dict[arg_names[1]][:] = dataB_val
+
+        output = elemwise_add_fp32_exe.forward()[0]
+
+        qdataA = mx.sym.Variable(name='qdataA', shape=data_shape, dtype=qtype)
+        qdataB = mx.sym.Variable(name='qdataB', shape=data_shape, dtype=qtype)
+        min_dataA = mx.sym.Variable(name='min_dataA')
+        max_dataA = mx.sym.Variable(name='max_dataA')
+        min_dataB = mx.sym.Variable(name='min_dataB')
+        max_dataB = mx.sym.Variable(name='max_dataB')
+        quantized_elemwise_add = mx.sym.contrib.quantized_elemwise_add(qdataA, qdataB, min_dataA, max_dataA, min_dataB, max_dataB)
+        elemwise_add_int8_exe = quantized_elemwise_add.simple_bind(ctx=mx.current_context(), grad_req='null')
+        qarg_names = quantized_elemwise_add.list_arguments()
+        elemwise_add_int8_exe.arg_dict[qarg_names[0]][:] = elemwise_add_fp32_exe.arg_dict[arg_names[0]].astype(qtype)
+        elemwise_add_int8_exe.arg_dict[qarg_names[1]][:] = elemwise_add_fp32_exe.arg_dict[arg_names[1]].astype(qtype)
+        quantized_range = 127.0
+        elemwise_add_int8_exe.arg_dict[qarg_names[2]][:] = data_low
+        elemwise_add_int8_exe.arg_dict[qarg_names[3]][:] = data_high
+        elemwise_add_int8_exe.arg_dict[qarg_names[4]][:] = data_low
+        elemwise_add_int8_exe.arg_dict[qarg_names[5]][:] = data_high
+        qoutput, min_range, max_range = elemwise_add_int8_exe.forward()
+        min_val = min_range.asnumpy().tolist()[0]
+        max_val = max_range.asnumpy().tolist()[0]
+
+        fp32_rslt = output.asnumpy()
+        int8_rslt = qoutput.asnumpy()*max_val/0x7fffffff
+        assert_almost_equal(int8_rslt, int8_rslt, atol = 1e-4)
+
+    for qtype in ['int8', 'uint8']:
+        check_quantized_elemwise_add((4, 6), qtype)
+        check_quantized_elemwise_add((13, 74, 52), qtype)
+        check_quantized_elemwise_add((3, 4, 56, 56), qtype)
+        check_quantized_elemwise_add((32, 56, 64, 11), qtype)
+
 
 @with_seed()
 def test_quantized_pooling():
@@ -564,7 +631,8 @@ def get_fp32_residual():
     conv0 = mx.sym.Convolution(data=data, num_filter=4, kernel=(1,1), pad=(0,0),
                                no_bias=True, name='conv0')
     bn = mx.sym.BatchNorm(data=conv0, fix_gamma=False, eps=2e-5, momentum=0.9, name='bn')
-    act0 = mx.sym.Activation(data=bn + data, act_type='relu', name='relu0')
+    sum0 = mx.sym.elemwise_add(bn, data, name='sum0')
+    act0 = mx.sym.Activation(data=sum0, act_type='relu', name='relu0')
     pool0 = mx.sym.Pooling(act0, kernel=(4, 4), pool_type='avg', name='pool0')
     conv1 = mx.sym.Convolution(data=pool0, num_filter=4, kernel=(1,1), pad=(0,0),
                                no_bias=False, name='conv1')
@@ -747,7 +815,7 @@ def test_quantize_model_with_forward():
             if mx.current_context() == mx.cpu():
                excluded_names += ['fc', 'conv1']
             if mx.current_context() == mx.gpu():
-               excluded_names += ['relu0', 'relu1']
+               excluded_names += ['sum0', 'relu0', 'relu1']
             excluded_names += ['concat']
 
             optional_names = ['pool0']

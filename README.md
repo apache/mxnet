@@ -95,7 +95,7 @@ Features
 * Mix and match imperative and symbolic programming to maximize flexibility and efficiency
 * Lightweight, memory efficient and portable to smart devices
 * Scales up to multi GPUs and distributed setting with auto parallelism
-* Support for Python, Scala, C++, Java, Clojure, R and Julia
+* Support for [Python](https://github.com/apache/incubator-mxnet/tree/master/python), [Scala](https://github.com/apache/incubator-mxnet/tree/master/scala-package), [C++](https://github.com/apache/incubator-mxnet/tree/master/cpp-package), [Java](https://github.com/apache/incubator-mxnet/tree/master/scala-package), [Clojure](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package), [R](https://github.com/apache/incubator-mxnet/tree/master/R-package), [Go](https://github.com/jdeng/gomxnet/), [Javascript](https://github.com/dmlc/mxnet.js/), [Perl](https://github.com/apache/incubator-mxnet/tree/master/perl-package), [Matlab](https://github.com/apache/incubator-mxnet/tree/master/matlab), and [Julia](https://github.com/apache/incubator-mxnet/tree/master/julia)
 * Cloud-friendly and directly compatible with S3, HDFS, and Azure
 
 License

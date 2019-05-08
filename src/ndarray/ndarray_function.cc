@@ -207,7 +207,11 @@ void ElementwiseSumContainsDnsImpl(mshadow::Stream<cpu>* s,
   using namespace mxnet::op::mxnet_op;
   const TBlob& out_data = out->data();
   MSHADOW_TYPE_SWITCH(out->dtype(), DType, {  // data type
-    Kernel<set_zero, cpu>::Launch(s, out_data.Size(), out_data.dptr<DType>());
+    // Do not set_zero when output mem inplace with input[0] mem
+    // Now for add_n OP, output mem can be in-placed with the first input
+    if (nds[0].data().dptr<DType>() != out_data.dptr<DType>()) {
+      Kernel<set_zero, cpu>::Launch(s, out_data.Size(), out_data.dptr<DType>());
+    }
     for (size_t i = 0; i < nds.size(); ++i) {
       const NDArray& nd = nds[i];
       const TBlob& nd_data = nd.data();
