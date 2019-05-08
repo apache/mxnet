@@ -544,12 +544,12 @@ def compile_windows_cpu_mkldnn_mkl() {
 }
 
 def compile_windows_cpu_mkl() {
-    return ['Build CPU NOMKLDNN MKL windows':{
+    return ['Build CPU MKL windows':{
       node(NODE_WINDOWS_CPU) {
-        ws('workspace/build-cpu-nomkldnn-mkl') {
+        ws('workspace/build-cpu-mkl') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_CPU_NOMKLDNN_MKL'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKL'
             stash includes: 'windows_package.7z', name: 'windows_package_cpu_mkl'
           }
         }
