@@ -769,7 +769,7 @@ parameter values:
     if (!dispatched && param.a_min <= 0.0 && param.a_max >= 0.0) {
       const int this_stype = (*in_attrs)[0];
       if (this_stype != kUndefinedStorage) {
-        dispatched = storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
+        dispatched = storage_type_assign(&(*out_attrs)[0], mxnet::NDArrayStorageType(this_stype),
                                          dispatch_mode, DispatchMode::kFComputeEx);
       }
     }
