@@ -299,10 +299,10 @@ inline void deformable_im2col(mshadow::Stream<gpu>* s,
                               const uint32_t deformable_group,
                               DType* data_col) {
   // num_axes should be smaller than block size
-  index_t num_spatial_axes = kernel_shape.ndim();
+  int num_spatial_axes = kernel_shape.ndim();
   CHECK_LT(num_spatial_axes, mshadow::cuda::kBaseThreadNum);
-  index_t channel_per_group = im_shape[1] / deformable_group;
-  index_t num_kernels = im_shape[1] * col_shape.ProdShape(1, col_shape.ndim());
+  int channel_per_group = im_shape[1] / deformable_group;
+  int num_kernels = im_shape[1] * col_shape.ProdShape(1, col_shape.ndim());
   using namespace mxnet_op;
   switch (num_spatial_axes) {
   case 2:
@@ -338,7 +338,7 @@ __global__ void deformable_col2im_gpu_kernel(const int n, const DType* data_col,
                                              const int dilation_h, const int dilation_w,
                                              const int channel_per_group,
                                              const int height_col, const int width_col,
-                                             DType* grad_im, OpReqType req) {
+                                             DType* grad_im) {
   CUDA_KERNEL_LOOP(index, n) {
     const int j = (index / width_col / height_col) % kernel_w;
     const int i = (index / width_col / height_col / kernel_w) % kernel_h;
@@ -408,11 +408,11 @@ inline void deformable_col2im(mshadow::Stream<gpu>* s,
                               const mxnet::TShape& stride,
                               const mxnet::TShape& dilation,
                               const uint32_t deformable_group,
-                              DType* grad_im, OpReqType req) {
-  index_t num_spatial_axes = kernel_shape.ndim();
-  index_t im_size = im_shape.ProdShape(1, im_shape.ndim());
-  index_t channel_per_group = im_shape[1] / deformable_group;
-  index_t num_kernels = col_shape.ProdShape(0, col_shape.ndim());
+                              DType* grad_im) {
+  int num_spatial_axes = kernel_shape.ndim();
+  int im_size = im_shape.ProdShape(1, im_shape.ndim());
+  int channel_per_group = im_shape[1] / deformable_group;
+  int num_kernels = col_shape.ProdShape(0, col_shape.ndim());
   // num_axes should be smaller than block size
   CHECK_LT(num_spatial_axes, mshadow::cuda::kBaseThreadNum);
   using namespace mxnet_op;
@@ -429,7 +429,7 @@ inline void deformable_col2im(mshadow::Stream<gpu>* s,
                                                pad[0], pad[1], stride[0], stride[1],
                                                dilation[0], dilation[1],
                                                channel_per_group,
-                                               col_shape[1], col_shape[2], grad_im, req);
+                                               col_shape[1], col_shape[2], grad_im);
     MSHADOW_CUDA_POST_KERNEL_CHECK(deformable_col2im_gpu_kernel);
     break;
   default:
@@ -455,7 +455,7 @@ __global__ void deformable_col2im_coord_gpu_kernel(const int n, const DType* dat
                                                    const int dilation_h, const int dilation_w,
                                                    const int channel_per_group,
                                                    const int height_col, const int width_col,
-                                                   DType* grad_offset, OpReqType req) {
+                                                   DType* grad_offset) {
   CUDA_KERNEL_LOOP(index, n) {
     DType val = 0;
     int w = index % width_col;
@@ -473,9 +473,9 @@ __global__ void deformable_col2im_coord_gpu_kernel(const int n, const DType* dat
     const DType* data_offset_ptr = data_offset + group_index * group_offset_step;
 
     int cnt = 0;
-    const int offset_c = c - deformable_group_index * 2 * kernel_h * kernel_w;
+    const int offset_c = c - group_index * 2 * kernel_h * kernel_w;
 
-    for (int col_c = (offset_c / 2); col_c < channel_per_deformable_group; col_c += col_step) {
+    for (int col_c = (offset_c / 2); col_c < channel_per_group; col_c += col_step) {
       const int col_pos = ((col_c * height_col) + h) * width_col + w;
       const int bp_dir = offset_c % 2;
 
@@ -534,11 +534,11 @@ inline void deformable_col2im_coord(mshadow::Stream<gpu>* s,
                                     const mxnet::TShape& stride,
                                     const mxnet::TShape& dilation,
                                     const uint32_t deformable_group,
-                                    DType* grad_offset, OpReqType req) {
-  index_t num_spatial_axes = kernel_shape.ndim();
-  index_t num_kernels = col_shape[1] * col_shape[2] * 2 *
+                                    DType* grad_offset) {
+  int num_spatial_axes = kernel_shape.ndim();
+  int num_kernels = col_shape[1] * col_shape[2] * 2 *
     kernel_shape[0] * kernel_shape[1] * deformable_group;
-  index_t channel_per_group = col_shape[0] / deformable_group;
+  int channel_per_group = col_shape[0] / deformable_group;
   // num_axes should be smaller than block size
   CHECK_LT(num_spatial_axes, mshadow::cuda::kBaseThreadNum);
   using namespace mxnet_op;
@@ -555,7 +555,7 @@ inline void deformable_col2im_coord(mshadow::Stream<gpu>* s,
                                                pad[0], pad[1], stride[0], stride[1],
                                                dilation[0], dilation[1],
                                                channel_per_group,
-                                               col_shape[1], col_shape[2], grad_offset, req);
+                                               col_shape[1], col_shape[2], grad_offset);
     MSHADOW_CUDA_POST_KERNEL_CHECK(deformable_col2im_coord_gpu_kernel);
     break;
   default:

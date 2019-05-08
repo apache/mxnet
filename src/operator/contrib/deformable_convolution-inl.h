@@ -232,8 +232,7 @@ class DeformableConvolutionOp : public Operator {
                               in_grad[conv::kData].shape_, col_buffer.shape_,
                               param_.kernel, param_.pad, param_.stride,
                               param_.dilate, param_.num_deformable_group,
-                              in_grad[conv::kOffset].dptr<DType>() + n*input_offset_dim_,
-                              req[conv::kOffset]);
+                              in_grad[conv::kOffset].dptr<DType>() + n*input_offset_dim_);
 
       // gradient w.r.t. input data
       deformable_col2im(s, col_buffer.dptr<DType>(),
@@ -241,8 +240,7 @@ class DeformableConvolutionOp : public Operator {
                         in_grad[conv::kData].shape_, col_buffer.shape_,
                         param_.kernel, param_.pad, param_.stride,
                         param_.dilate, param_.num_deformable_group,
-                        in_grad[conv::kData].dptr<DType>() + n * input_dim_,
-                        req[conv::kData]);
+                        in_grad[conv::kData].dptr<DType>() + n * input_dim_);
 
       // gradient w.r.t. weight, dWeight should accumulate across the batch and group
       deformable_im2col(s, in_data[conv::kData].dptr<DType>() + n * input_dim_,
