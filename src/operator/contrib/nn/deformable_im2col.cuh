@@ -86,7 +86,7 @@ __device__ DType deformable_im2col_bilinear(const DType* bottom_data,
   int w_high;
   if (h_low >= height - 1) {
     h_high = h_low = height - 1;
-    h = (DType)h_low;
+    h = static_cast<DType>(h_low);
   }
   else {
     h_high = h_low + 1;
@@ -94,7 +94,7 @@ __device__ DType deformable_im2col_bilinear(const DType* bottom_data,
 
   if (w_low >= width - 1) {
     w_high = w_low = width - 1;
-    w = (DType)w_low;
+    w = static_cast<DType>(w_low);
   }
   else {
     w_high = w_low + 1;
@@ -124,23 +124,23 @@ __device__ DType get_gradient_weight(DType argmax_h, DType argmax_w,
     return 0;
   }
 
-  argmax_h = max(argmax_h, (DType)0.0f);
-  argmax_w = max(argmax_w, (DType)0.0f);
+  argmax_h = max(argmax_h, static_cast<DType>(0.0f));
+  argmax_w = max(argmax_w, static_cast<DType>(0.0f));
 
-  int argmax_h_low = (int)argmax_h;
-  int argmax_w_low = (int)argmax_w;
+  int argmax_h_low = static_cast<int>(argmax_h);
+  int argmax_w_low = static_cast<int>(argmax_w);
   int argmax_h_high;
   int argmax_w_high;
   if (argmax_h_low >= height - 1) {
     argmax_h_high = argmax_h_low = height - 1;
-    argmax_h = (DType)argmax_h_low;
+    argmax_h = static_cast<DType>(argmax_h_low);
   } else {
     argmax_h_high = argmax_h_low + 1;
   }
   if (argmax_w_low >= width - 1)
   {
     argmax_w_high = argmax_w_low = width - 1;
-    argmax_w = (DType)argmax_w_low;
+    argmax_w = static_cast<DType>(argmax_w_low);
   } else {
     argmax_w_high = argmax_w_low + 1;
   }
@@ -177,19 +177,19 @@ __device__ DType get_coordinate_weight(DType argmax_h, DType argmax_w,
   if (argmax_h < 0) argmax_h = 0;
   if (argmax_w < 0) argmax_w = 0;
 
-  int argmax_h_low = (int)argmax_h;
-  int argmax_w_low = (int)argmax_w;
+  int argmax_h_low = static_cast<int>(argmax_h);
+  int argmax_w_low = static_cast<int>(argmax_w);
   int argmax_h_high;
   int argmax_w_high;
   if (argmax_h_low >= height - 1) {
     argmax_h_high = argmax_h_low = height - 1;
-    argmax_h = (DType)argmax_h_low;
+    argmax_h = static_cast<DType>(argmax_h_low);
   } else {
     argmax_h_high = argmax_h_low + 1;
   }
   if (argmax_w_low >= width - 1) {
     argmax_w_high = argmax_w_low = width - 1;
-    argmax_w = (DType)argmax_w_low;
+    argmax_w = static_cast<DType>(argmax_w_low);
   } else {
     argmax_w_high = argmax_w_low + 1;
   }

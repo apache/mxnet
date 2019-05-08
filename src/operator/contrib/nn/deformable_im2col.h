@@ -65,6 +65,7 @@
 #include <mxnet/operator.h>
 #include <cstring>
 #include <vector>
+#include <algorithm>
 #include "../../mxnet_op.h"
 
 namespace mxnet {
@@ -82,14 +83,14 @@ inline DType im2col_bilinear_cpu(const DType* data,
 
   if (h_low >= height - 1) {
     h_high = height - 1;
-    h = (DType)h_low;
+    h = static_cast<DType>(h_low);
   } else {
     h_high = h_low + 1;
   }
 
   if (w_low >= width - 1) {
     w_high = width - 1;
-    w = (DType)w_low;
+    w = static_cast<DType>(w_low);
   } else {
     w_high = w_low + 1;
   }
@@ -113,27 +114,26 @@ inline DType get_gradient_weight_cpu(DType argmax_h, DType argmax_w,
                                     const int h, const int w,
                                     const int height, const int width) {
   if (argmax_h < 0 || argmax_h > height || argmax_w < 0 || argmax_w > width) {
-    //empty
+    // empty
     return 0;
   }
 
-  argmax_h = std::max(argmax_h, (DType)0.0f);
-  argmax_w = std::max(argmax_w, (DType)0.0f);
+  argmax_h = std::max(argmax_h, static_cast<DType>(0.0f));
+  argmax_w = std::max(argmax_w, static_cast<DType>(0.0f));
 
-  int argmax_h_low = (int)argmax_h;
-  int argmax_w_low = (int)argmax_w;
+  int argmax_h_low = static_cast<int>(argmax_h);
+  int argmax_w_low = static_cast<int>(argmax_w);
   int argmax_h_high;
   int argmax_w_high;
   if (argmax_h_low >= height - 1) {
     argmax_h_high = argmax_h_low = height - 1;
-    argmax_h = (DType)argmax_h_low;
+    argmax_h = static_cast<DType>(argmax_h_low);
   } else {
     argmax_h_high = argmax_h_low + 1;
   }
-  if (argmax_w_low >= width - 1)
-  {
+  if (argmax_w_low >= width - 1) {
     argmax_w_high = argmax_w_low = width - 1;
-    argmax_w = (DType)argmax_w_low;
+    argmax_w = static_cast<DType>(argmax_w_low);
   } else {
     argmax_w_high = argmax_w_low + 1;
   }
@@ -161,26 +161,26 @@ inline DType get_coordinate_weight_cpu(DType argmax_h, DType argmax_w,
                                        const DType* im_data,
                                        const int data_width, const int bp_dir) {
   if (argmax_h < 0 || argmax_h > height || argmax_w < 0 || argmax_w > width) {
-    //empty
+    // empty
     return 0;
   }
 
   if (argmax_h < 0) argmax_h = 0;
   if (argmax_w < 0) argmax_w = 0;
 
-  int argmax_h_low = (int)argmax_h;
-  int argmax_w_low = (int)argmax_w;
+  int argmax_h_low = static_cast<int>(argmax_h);
+  int argmax_w_low = static_cast<int>(argmax_w);
   int argmax_h_high;
   int argmax_w_high;
   if (argmax_h_low >= height - 1) {
     argmax_h_high = argmax_h_low = height - 1;
-    argmax_h = (DType)argmax_h_low;
+    argmax_h = static_cast<DType>(argmax_h_low);
   } else {
     argmax_h_high = argmax_h_low + 1;
   }
   if (argmax_w_low >= width - 1) {
     argmax_w_high = argmax_w_low = width - 1;
-    argmax_w = (DType)argmax_w_low;
+    argmax_w = static_cast<DType>(argmax_w_low);
   } else {
     argmax_w_high = argmax_w_low + 1;
   }
@@ -338,8 +338,8 @@ inline void deformable_col2im_cpu(const DType* data_col,
     const DType cur_inv_w_data = w_in + j * dilation_w + offset_w;
 
     const DType cur_top_grad = data_col[index];
-    const int cur_h = (int)cur_inv_h_data;
-    const int cur_w = (int)cur_inv_w_data;
+    const int cur_h = static_cast<int>(cur_inv_h_data);
+    const int cur_w = static_cast<int>(cur_inv_w_data);
     for (int dy = -2; dy <= 2; dy++) {
       for (int dx = -2; dx <= 2; dx++) {
         if (cur_h + dy >= 0 && cur_h + dy < height &&
