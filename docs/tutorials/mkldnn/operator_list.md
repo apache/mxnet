@@ -74,6 +74,6 @@ export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
 | FullyConnected (INT8) + re-quantization                   |                                     |
 
 
-To install MXNet MKL-DNN backend, please refer to [MKL-DNN backend readme](http://mxnet.incubator.apache.org/tutorials/mkldnn/MKLDNN_README.html)
+To install MXNet MKL-DNN backend, please refer to [MKL-DNN backend readme](MKLDNN_README.md)
 
 For performance numbers, please refer to [performance on Intel CPU](../../faq/perf.md#intel-cpu)
