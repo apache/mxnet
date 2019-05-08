@@ -22,7 +22,7 @@ MXNet MKL-DNN backend provides optimized implementations for various operators c
 To help users understanding MKL-DNN backend better, the following table summarizes the list of supported operators, data types and functionalities.  A subset of operators support faster training and inference by using a lower precision version. Refer to the following table's `INT8 Inference` column to see which operators are supported.
 
 | Operator           | Function                   | FP32 Training (backward) | FP32 Inference | INT8 Inference |
-| :--:               | :--:                       | :--:                     | :--:           | :--:           |
+| --                 | --                         | --                       | --             | --             |
 | **Convolution**    | 1D Convolution             | Y                        | Y              | N              |
 |                    | 2D Convolution             | Y                        | Y              | Y              |
 |                    | 3D Convolution             | Y                        | Y              | N              |
@@ -63,7 +63,7 @@ export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
 ```
 
 | Fusion pattern                                            | Disable                             |
-| :--:                                                      | :--:                                |
+| --                                                        | --                                  |
 | Convolution + Activation(ReLU)                            | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
 | Convolution + elemwise_add                                | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM  |
 | Convolution + BatchNorm                                   | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN   |
