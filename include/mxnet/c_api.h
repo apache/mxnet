@@ -2737,11 +2737,11 @@ MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const 
                                            mx_uint ndim, int dtype, NDArrayHandle *out);
 
 /*!
- * \brief Release all pooled memory from the devices storage manager
+ * \brief Release all unreferenced memory from the devices storage managers memory pool
  * \param dev_type device type, specify device we want to take
  * \param dev_id the device id of the specific device
  */
-MXNET_DLL int MXStorageReleaseAll(int dev_type, int dev_id);
+MXNET_DLL int MXStorageEmptyCache(int dev_type, int dev_id);
 
 /*!
  * \brief Reconstruct NDArray from shared memory handle
