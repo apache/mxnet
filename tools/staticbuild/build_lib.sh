@@ -44,6 +44,9 @@ if [[ $VARIANT == *mkl ]]; then
         MKLDNN_LIBFILE='libmkldnn.0.dylib'
     fi
     $MAKE DEPS_PATH=$DEPS_PATH mkldnn
+    if [ ! -d lib ]; then
+        mkdir lib
+    fi
     cp 3rdparty/mkldnn/build/install/lib/$IOMP_LIBFILE lib
     cp 3rdparty/mkldnn/build/install/lib/$MKLML_LIBFILE lib
     cp 3rdparty/mkldnn/build/install/lib/$MKLDNN_LIBFILE lib

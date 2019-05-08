@@ -24,6 +24,7 @@ import multiprocessing as mp
 import unittest
 import random
 import mxnet as mx
+import mxnet.ndarray as nd
 import numpy as np
 import unittest
 import math
@@ -225,6 +226,55 @@ def check_layer_bidirectional(size, in_size, proj_size):
     assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy())
 
 
+def check_layer_bidirectional_varseqlen(size, in_size):
+    class RefBiLSTMVarSeqLen(gluon.Block):
+        def __init__(self, size, **kwargs):
+            super(RefBiLSTMVarSeqLen, self).__init__(**kwargs)
+            with self.name_scope():
+                self._lstm_fwd = gluon.rnn.LSTM(size, bidirectional=False, prefix='l0')
+                self._lstm_bwd = gluon.rnn.LSTM(size, bidirectional=False, prefix='r0')
+
+        def forward(self, inpt, sequence_length):
+            fwd = self._lstm_fwd(inpt)
+            bwd_inpt = nd.SequenceReverse(inpt, sequence_length=sequence_length, use_sequence_length=True)
+            bwd = self._lstm_bwd(bwd_inpt)
+            bwd = nd.SequenceReverse(bwd, sequence_length=sequence_length, use_sequence_length=True)
+            return nd.concat(fwd, bwd, dim=2)
+    weights = {}
+    for d in ['l', 'r']:
+        weights['lstm_{}0_i2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, in_size))
+        weights['lstm_{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, size))
+        weights['lstm_{}0_i2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+        weights['lstm_{}0_h2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+
+    net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True, prefix='lstm_')
+    ref_net = RefBiLSTMVarSeqLen(size, prefix='lstm_')
+    net.initialize()
+    ref_net.initialize()
+    net_params = net.collect_params()
+    ref_net_params = ref_net.collect_params()
+    for k in weights:
+        net_params[k].set_data(weights[k])
+        ref_net_params[k.replace('l0', 'l0l0').replace('r0', 'r0l0')].set_data(weights[k])
+
+
+    batch_size = 10
+    num_timesteps = 11
+    data = mx.random.uniform(shape=(num_timesteps, batch_size, in_size))
+
+    # TODO: figure out why int32 doesn't work here
+    sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("float")
+
+    net_output = net(data, sequence_length=sequence_length).asnumpy()
+    ref_net_output = ref_net(data, sequence_length).asnumpy()
+    sequence_length_np = sequence_length.asnumpy().astype("int32")
+
+    # TODO: test state return value as well output
+    # Only compare the valid sections for each batch entry
+    for b in range(batch_size):
+        assert_allclose(net_output[:sequence_length_np[b], b], ref_net_output[:sequence_length_np[b], b])
+
+
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_layer_bidirectional():
@@ -235,6 +285,11 @@ def test_layer_bidirectional():
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_layer_bidirectional_proj():
     check_layer_bidirectional(7, 5, 3)
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+def test_layer_bidirectional_varseqlength():
+    check_layer_bidirectional_varseqlen(7, 5)
 
 
 @with_seed()
