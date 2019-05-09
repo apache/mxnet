@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=too-many-lines
 """numpy namespace for operators used in Gluon APIs dispatched by F=symbol module."""
 
 from __future__ import absolute_import
@@ -253,7 +254,7 @@ class _NumpySymbol(Symbol):
         return _mx_np_op.dot(self, b, out=out)
 
     @use_np_compat
-    def reshape(self, shape, order='C'):
+    def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
         if order != 'C':
             raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
                                       'received {}'.format(str(order)))
@@ -501,7 +502,7 @@ class _NumpySymbol(Symbol):
         raise AttributeError('_NumpySymbol object has no attribute tile')
 
     @use_np_compat
-    def transpose(self, *axes):
+    def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`transpose`.
 
         The arguments are the same as for :py:func:`transpose`, with
@@ -542,7 +543,7 @@ class _NumpySymbol(Symbol):
         raise AttributeError('_NumpySymbol object has no attribute diag')
 
     @use_np_compat
-    def sum(self, axis=None, dtype=None, out=None, keepdims=False):
+    def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sum`.
 
         The arguments are the same as for :py:func:`sum`, with

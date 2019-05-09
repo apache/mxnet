@@ -73,7 +73,7 @@ def _np_ndarray_cls(handle, writable=True, stype=0):
 _set_np_ndarray_class(_np_ndarray_cls)
 
 
-class ndarray(NDArray):
+class ndarray(NDArray):  # pylint: disable=invalid-name
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
@@ -104,16 +104,15 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __iadd__(self, other):
-        def __isub__(self, other):
-            """x.__iadd__(y) <=> x += y"""
-            if not self.writable:
-                raise ValueError('trying to add to a readonly ndarray')
-            if isinstance(other, NDArray):
-                return _nd_internal._np_add(self, other, out=self)
-            elif isinstance(other, numeric_types):
-                return _nd_internal._np_add_scalar(self, float(other), out=self)
-            else:
-                raise TypeError('type {} is not supported'.format(str(type(other))))
+        """x.__iadd__(y) <=> x += y"""
+        if not self.writable:
+            raise ValueError('trying to add to a readonly ndarray')
+        if isinstance(other, NDArray):
+            return _nd_internal._np_add(self, other, out=self)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_add_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __sub__(self, other):
@@ -431,7 +430,7 @@ class ndarray(NDArray):
         return _mx_np_op.dot(self, b, out=out)
 
     @use_np_compat
-    def reshape(self, shape, order='C'):
+    def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape."""
         if order != 'C':
             raise NotImplementedError('reshape only supports C-order,'
@@ -680,7 +679,7 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tile')
 
     @use_np_compat
-    def transpose(self, *axes):
+    def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`transpose`.
 
         The arguments are the same as for :py:func:`transpose`, with
@@ -721,7 +720,7 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute diag')
 
     @use_np_compat
-    def sum(self, axis=None, dtype=None, out=None, keepdims=False):
+    def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sum`.
 
         The arguments are the same as for :py:func:`sum`, with
