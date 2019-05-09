@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+from mxnet.test_utils import rand_ndarray, assert_almost_equal
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 
@@ -185,7 +186,36 @@ def test_pick():
     b = mx.nd.ones(shape=(256*35,))
     res = mx.nd.pick(a,b)
     assert res.shape == b.shape
+    
+def test_depthtospace():
+    def numpy_depth_to_space(x, blocksize):
+        b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
+        tmp = np.reshape(x, [b, blocksize, blocksize, c // (blocksize**2), h, w])
+        tmp = np.transpose(tmp, [0, 3, 4, 1, 5, 2])
+        y = np.reshape(tmp, [b, c // (blocksize**2), h * blocksize, w * blocksize])
+        return y
 
+    shape_inp = (LARGE_X, 8, 4, 2)
+    data = rand_ndarray(shape_inp, 'default')
+    data_np = data.asnumpy()
+    expected = numpy_depth_to_space(data_np, 2)
+    output = mx.nd.depth_to_space(data, 2)
+    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
+
+def test_spacetodepth():
+    def numpy_space_to_depth(x, blocksize):
+        b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
+        tmp = np.reshape(x, [b, c, h // blocksize, blocksize, w // blocksize, blocksize])
+        tmp = np.transpose(tmp, [0, 3, 5, 1, 2, 4])
+        y = np.reshape(tmp, [b, c * (blocksize**2), h // blocksize, w // blocksize])
+        return y
+
+    shape_inp = (LARGE_X, 2, 8, 4)
+    data = rand_ndarray(shape_inp, 'default')
+    data_np = data.asnumpy()
+    expected = numpy_space_to_depth(data_np, 2)
+    output = mx.nd.space_to_depth(data, 2)
+    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
 if __name__ == '__main__':
     import nose
