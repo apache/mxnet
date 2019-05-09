@@ -207,7 +207,6 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
     Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
       Tensor<xpu, 1, IType> igrad = outputs[0].FlatTo1D<xpu, IType>(s);
-      printf("output size: %lu input_size: %lu\n", outputs[0].Size(), inputs[0].Size());
       igrad /= scalar<IType>(outputs[0].Size()/inputs[0].Size());
     });
   }
