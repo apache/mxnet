@@ -123,7 +123,7 @@ DMLC_REGISTER_PARAMETER(UpSamplingParam);
 NNVM_REGISTER_OP(UpSampling)
 .describe(R"code(Upsamples the given input data.
 
-2 algorithms (``sample_type``) are available for upsampling
+Two algorithms (``sample_type``) are available for upsampling:
 
 - Nearest Neighbor
 - Bilinear
