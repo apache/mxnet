@@ -1,3 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+/*!
+ *  Copyright (c) 2019 by Contributors
+ * \file np_elemwise_unary_op.cc
+ * \brief Function definition of unary operators
+ */
+
 #include "../elemwise_op_common.h"
 #include "../tensor/elemwise_unary_op.h"
 
@@ -235,11 +260,150 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_expm1, "x", mshadow_op::expm1)
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_logical_not, "x", mshadow_op::nt)
 .describe(R"code(Compute the truth value of NOT x element-wise.
 
-Example:
+Example::
   logical_not([-2., 0., 1.]) = [0., 1., 0.]
 
 )code")
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+// sin
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_sin, "x", mshadow_op::sin)
+.describe(R"code(Trigonometric sine, element-wise.
+
+.. math::
+   sin([0, \pi/4, \pi/2]) = [0, 0.707, 1]
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sin" });
+
+// cos
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_cos, "x", mshadow_op::cos)
+.describe(R"code(Computes the element-wise cosine of the input array.
+
+.. math::
+   cos([0, \pi/4, \pi/2]) = [1, 0.707, 0]
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_cos"});
+
+// tan
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_tan, "x", mshadow_op::tan)
+.describe(R"code(Computes the element-wise tangent of the input array.
+
+.. math::
+   tan([0, \pi/4, \pi/2]) = [0, 1, -inf]
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tan" });
+
+// arcsin
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_arcsin, "x", mshadow_op::arcsin)
+.describe(R"code(Returns element-wise inverse sine of the input array.
+
+.. math::
+   arcsin([-1, -.707, 0, .707, 1]) = [-\pi/2, -\pi/4, 0, \pi/4, \pi/2]
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsin" });
+
+// arccos
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_arccos, "x", mshadow_op::arccos)
+.describe(R"code(Returns element-wise inverse cosine of the input array.
+
+The input should be in range `[-1, 1]`.
+The output is in the closed interval :math:`[0, \pi]`
+
+.. math::
+   arccos([-1, -.707, 0, .707, 1]) = [\pi, 3\pi/4, \pi/2, \pi/4, 0]
+
+The storage type of ``arccos`` output is always dense
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccos" });
+
+// arctan
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_arctan, "x", mshadow_op::arctan)
+.describe(R"code(Returns element-wise inverse tangent of the input array.
+
+.. math::
+   arctan([-1, 0, 1]) = [-\pi/4, 0, \pi/4]
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctan" });
+
+// degrees
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_degrees, "x", mshadow_op::degrees)
+.describe(R"code(Converts each element of the input array from radians to degrees.
+
+.. math::
+   degrees([0, \pi/2, \pi, 3\pi/2, 2\pi]) = [0, 90, 180, 270, 360]
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_degrees" });
+
+// radians
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_radians, "x", mshadow_op::radians)
+.describe(R"code(Converts each element of the input array from degrees to radians.
+
+.. math::
+   radians([0, 90, 180, 270, 360]) = [0, \pi/2, \pi, 3\pi/2, 2\pi]
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_radians" });
+
+// sinh
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_sinh, "x", mshadow_op::sinh)
+.describe(R"code(Returns the hyperbolic sine of the input array, computed element-wise.
+
+.. math::
+   sinh(x) = 0.5\times(exp(x) - exp(-x))
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sinh" });
+
+// cosh
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_cosh, "x", mshadow_op::cosh)
+.describe(R"code(Returns the hyperbolic cosine  of the input array, computed element-wise.
+
+.. math::
+   cosh(x) = 0.5\times(exp(x) + exp(-x))
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_cosh" });
+
+// tanh
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_tanh, "x", mshadow_op::tanh)
+.describe(R"code(Returns the hyperbolic tangent of the input array, computed element-wise.
+
+.. math::
+   tanh(x) = sinh(x) / cosh(x)
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tanh" });
+
+// arcsinh
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_arcsinh, "x", mshadow_op::arcsinh)
+.describe(R"code(Returns the element-wise inverse hyperbolic sine of the input array, \
+computed element-wise.
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsinh" });
+
+// arccosh
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_arccosh, "x", mshadow_op::arccosh)
+.describe(R"code(Returns the element-wise inverse hyperbolic cosine of the input array, \
+computed element-wise.
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccosh" });
+
+// arctanh
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_numpy_arctanh, "x", mshadow_op::arctanh)
+.describe(R"code(Returns the element-wise inverse hyperbolic tangent of the input array, \
+computed element-wise.
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
 
 }  // namespace op
 }  // namespace mxnet
