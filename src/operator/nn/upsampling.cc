@@ -134,21 +134,16 @@ Input data is expected to be NCHW.
 
 Example::
 
-  >>> x = nd.ones((1,1,3,3))
-  >>> x
-  [[[[1. 1. 1.]
-     [1. 1. 1.]
-     [1. 1. 1.]]]]
-  <NDArray 1x1x3x3 @cpu(0)>
-  >>> upsampled_x = nd.UpSampling(x, scale=2, sample_type='nearest') 
-  >>> upsampled_x
-  [[[[1. 1. 1. 1. 1. 1.]
-     [1. 1. 1. 1. 1. 1.]
-     [1. 1. 1. 1. 1. 1.]
-     [1. 1. 1. 1. 1. 1.]
-     [1. 1. 1. 1. 1. 1.]
-     [1. 1. 1. 1. 1. 1.]]]]
-  <NDArray 1x1x6x6 @cpu(0)>
+  x = [[[[1. 1. 1.]
+         [1. 1. 1.]
+         [1. 1. 1.]]]]
+
+  UpSampling(x, scale=2, sample_type='nearest') = [[[[1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]]]]
 
 **Bilinear Upsampling**
 
@@ -160,27 +155,21 @@ Input data is expected to be NCHW.
 
 Example::
 
-  >>> x = nd.ones((1,1,3,3))
-  >>> x
-  [[[[1. 1. 1.]
-     [1. 1. 1.]
-     [1. 1. 1.]]]]
-  <NDArray 1x1x3x3 @cpu(0)>
-  >>> w = nd.ones((1,1,4,4))
-  >>> w
-  [[[[1. 1. 1. 1.]
-     [1. 1. 1. 1.]
-     [1. 1. 1. 1.]
-     [1. 1. 1. 1.]]]]
-  <NDArray 1x1x4x4 @cpu(0)>
-  >>> nd.UpSampling(x, w, scale=2, sample_type='bilinear', num_filter=1)
-  [[[[1. 2. 2. 2. 2. 1.]
-     [2. 4. 4. 4. 4. 2.]
-     [2. 4. 4. 4. 4. 2.]
-     [2. 4. 4. 4. 4. 2.]
-     [2. 4. 4. 4. 4. 2.]
-     [1. 2. 2. 2. 2. 1.]]]]
-  <NDArray 1x1x6x6 @cpu(0)>
+  x = [[[[1. 1. 1.]
+         [1. 1. 1.]
+         [1. 1. 1.]]]]
+
+  w = [[[[1. 1. 1. 1.]
+         [1. 1. 1. 1.]
+         [1. 1. 1. 1.]
+         [1. 1. 1. 1.]]]]
+  
+  UpSampling(x, w, scale=2, sample_type='bilinear', num_filter=1) = [[[[1. 2. 2. 2. 2. 1.]
+                                                                       [2. 4. 4. 4. 4. 2.]
+                                                                       [2. 4. 4. 4. 4. 2.]
+                                                                       [2. 4. 4. 4. 4. 2.]
+                                                                       [2. 4. 4. 4. 4. 2.]
+                                                                       [1. 2. 2. 2. 2. 1.]]]]
 )code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
   const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
