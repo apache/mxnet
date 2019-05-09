@@ -77,20 +77,22 @@ class MKLDNNReshapeForward {
     out_ = std::make_shared<mkldnn::memory>(temp_pd, nullptr);
 
     if (req == kWriteInplace) {
+      // If the input has MKL-DNN internal layout, we need reorder it to a temporal buffer with
+      // default layout and copy from the temporal buffer back to output buffer which has the same
+      // address with input buffer.
+      // If the input has default layout, then nothing need to do.
       if (input.IsMKLDNNData()) {
-        // reorder to default
-        prims_.push_back(mkldnn::reorder(*data_, *temp_));
-        prims_.push_back(mkldnn::reorder(*temp_, *out_));
+        prims_.push_back(mkldnn::reorder(*data_, *temp_));   // reorder to default
+        prims_.push_back(mkldnn::reorder(*temp_, *out_));    // copy back
         needInvalidateInput = true;
       }
     } else if (req == kWriteTo) {
       if (input.IsMKLDNNData()) {
-        // reorder to default
-        prims_.push_back(mkldnn::reorder(*data_, *temp_));
-        prims_.push_back(mkldnn::reorder(*temp_, *out_));
+        prims_.push_back(mkldnn::reorder(*data_, *temp_));   // reorder to default
+        prims_.push_back(mkldnn::reorder(*temp_, *out_));    // copy to the output buffer
         needInvalidateInput = false;
       } else {
-        prims_.push_back(mkldnn::reorder(*data_, *out_));
+        prims_.push_back(mkldnn::reorder(*data_, *out_));    // copy directly from input to output
         needInvalidateInput = false;
       }
     } else {
