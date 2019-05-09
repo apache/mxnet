@@ -83,5 +83,10 @@ ENV NVCCFLAGS "-m64"
 ENV CUDA_ARCH "-gencode arch=compute_53,code=sm_53 -gencode arch=compute_62,code=sm_62"
 ENV NVCC /usr/local/cuda/bin/nvcc
 
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet

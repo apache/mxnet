@@ -40,4 +40,9 @@ then
     mkdir /work/mxnet
     mkdir /work/build
     chown -R jenkins_slave /work/
+
+    # Later on, we have to override the links because underlying build systems ignore our compiler settings. Thus,
+    # we have to give the process the proper permission to these files. This is hacky, but unfortunately 
+    # there's no better way to do this without patching all our submodules.
+    chown -R jenkins_slave /usr/local/bin
 fi

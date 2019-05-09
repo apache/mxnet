@@ -69,6 +69,46 @@ qemu-system-arm -M virt -m {ram} \
   -nographic
 """
 
+def retry(target_exception, tries=4, delay_s=1, backoff=2):
+    """Retry calling the decorated function using an exponential backoff.
+
+    http://www.saltycrane.com/blog/2009/11/trying-out-retry-decorator-python/
+    original from: http://wiki.python.org/moin/PythonDecoratorLibrary#Retry
+
+    :param target_exception: the exception to check. may be a tuple of
+        exceptions to check
+    :type target_exception: Exception or tuple
+    :param tries: number of times to try (not retry) before giving up
+    :type tries: int
+    :param delay_s: initial delay between retries in seconds
+    :type delay_s: int
+    :param backoff: backoff multiplier e.g. value of 2 will double the delay
+        each retry
+    :type backoff: int
+    """
+    import time
+    from functools import wraps
+
+    def decorated_retry(f):
+        @wraps(f)
+        def f_retry(*args, **kwargs):
+            mtries, mdelay = tries, delay_s
+            while mtries > 1:
+                try:
+                    return f(*args, **kwargs)
+                except target_exception as e:
+                    logging.warning("Exception: %s, Retrying in %d seconds...", str(e), mdelay)
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return f(*args, **kwargs)
+
+        return f_retry  # true decorator
+
+    return decorated_retry
+
+
+
 
 class VMError(RuntimeError):
     pass
@@ -177,6 +217,8 @@ def qemu_rsync(ssh_port, local_path, remote_path):
 def qemu_rsync_to_host(ssh_port, remote_path, local_path):
     check_call(['rsync', '-e', 'ssh -o StrictHostKeyChecking=no -p{}'.format(ssh_port), '-va', 'qemu@localhost:{}'.format(remote_path), local_path])
 
+
+@retry(subprocess.CalledProcessError)
 def qemu_provision(ssh_port=QEMU_SSH_PORT):
     import glob
     logging.info("Provisioning the VM with artifacts and sources")

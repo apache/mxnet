@@ -54,6 +54,9 @@ RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_gcc8.sh /work/
 RUN /work/ubuntu_gcc8.sh
 
+COPY install/ubuntu_mkl.sh /work/
+RUN /work/ubuntu_mkl.sh
+
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
 
