@@ -38,8 +38,8 @@ __global__ void ROIPoolForwardKernel(const int count, const Dtype* bottom_data,
                                      const int channels, const int height, const int width,
                                      const int pooled_height, const int pooled_width,
                                      const Dtype* bottom_rois, Dtype* top_data,
-                                     int* argmax_data) {
-  for (int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
+                                     index_t* argmax_data) {
+  for (index_t index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
        index < count;
        index += blockDim.x * gridDim.x * gridDim.y) {
     // (n, c, ph, pw) is an element in the pooled output
@@ -49,7 +49,7 @@ __global__ void ROIPoolForwardKernel(const int count, const Dtype* bottom_data,
     int n = index / pooled_width / pooled_height / channels;
 
     bottom_rois += n * 5;
-    int roi_batch_ind = bottom_rois[0];
+    int roi_batch_ind = static_cast<int>(bottom_rois[0]);
 
     if (roi_batch_ind < 0 || roi_batch_ind >= batch_size) {
       top_data[index] = 0;
@@ -89,12 +89,12 @@ __global__ void ROIPoolForwardKernel(const int count, const Dtype* bottom_data,
     // Define an empty pooling region to be zero
     Dtype maxval = is_empty ? 0 : -FLT_MAX;
     // If nothing is pooled, argmax = -1 causes nothing to be backprop'd
-    int maxidx = -1;
-    int offset_bottom_data = (roi_batch_ind * channels + c) * height * width;
+    index_t maxidx = -1;
+    index_t offset_bottom_data = (roi_batch_ind * channels + c) * height * width;
     bottom_data += offset_bottom_data;
     for (int h = hstart; h < hend; ++h) {
       for (int w = wstart; w < wend; ++w) {
-        int bottom_index = h * width + w;
+        index_t bottom_index = h * width + w;
         if (bottom_data[bottom_index] > maxval) {
           maxval = bottom_data[bottom_index];
           maxidx = offset_bottom_data + bottom_index;
@@ -110,13 +110,13 @@ template<typename Dtype>
 inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
                            const Tensor<gpu, 4, Dtype> &data,
                            const Tensor<gpu, 2, Dtype> &bbox,
-                           const Tensor<gpu, 4, int> &max_idx,
+                           const Tensor<gpu, 4, index_t> &max_idx,
                            const float spatial_scale) {
   const Dtype *bottom_data = data.dptr_;
   const Dtype *bottom_rois = bbox.dptr_;
   Dtype *top_data = out.dptr_;
-  int *argmax_data = max_idx.dptr_;
-  const int count = out.shape_.Size();
+  index_t *argmax_data = max_idx.dptr_;
+  const index_t count = out.shape_.Size();
   const int batch_size = data.size(0);
   const int channels = data.size(1);
   const int height = data.size(2);
@@ -137,10 +137,10 @@ inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
 template<typename Dtype>
 __global__ void ROIPoolBackwardAccKernel(const int count, const Dtype* top_diff,
                                          const int* argmax_data, Dtype* bottom_diff) {
-  for (int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
+  for (index_t index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
        index < count;
        index += blockDim.x * gridDim.x * gridDim.y) {
-    int max_idx = argmax_data[index];
+    index_t max_idx = argmax_data[index];
     if (max_idx >= 0) {
       atomicAdd(&bottom_diff[max_idx], top_diff[index]);
     }
@@ -151,12 +151,12 @@ template<typename Dtype>
 inline void ROIPoolBackwardAcc(const Tensor<gpu, 4, Dtype> &in_grad,
                                const Tensor<gpu, 4, Dtype> &out_grad,
                                const Tensor<gpu, 2, Dtype> &bbox,
-                               const Tensor<gpu, 4, int> &max_idx,
+                               const Tensor<gpu, 4, index_t> &max_idx,
                                const float spatial_scale) {
   const Dtype *top_diff = out_grad.dptr_;
   Dtype *bottom_diff = in_grad.dptr_;
-  int *argmax_data = max_idx.dptr_;
-  const int count = out_grad.shape_.Size();
+  index_t *argmax_data = max_idx.dptr_;
+  const index_t count = out_grad.shape_.Size();
   const int gridSize = (count + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock;
   dim3 dimGrid(kMaxGridDim, (gridSize + kMaxGridDim - 1) / kMaxGridDim);
   dim3 dimBlock(kMaxThreadsPerBlock);

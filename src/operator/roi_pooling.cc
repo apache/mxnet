@@ -40,12 +40,12 @@ template<typename Dtype>
 inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
                            const Tensor<cpu, 4, Dtype> &data,
                            const Tensor<cpu, 2, Dtype> &bbox,
-                           const Tensor<cpu, 4, int> &max_idx,
+                           const Tensor<cpu, 4, index_t> &max_idx,
                            const float spatial_scale_) {
   const Dtype *bottom_data = data.dptr_;
   const Dtype *bottom_rois = bbox.dptr_;
   Dtype *top_data = out.dptr_;
-  int *argmax_data = max_idx.dptr_;
+  index_t *argmax_data = max_idx.dptr_;
   const int channels_ = data.size(1);
   const int height_ = data.size(2);
   const int width_ = data.size(3);
@@ -53,25 +53,25 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const int pooled_width_ = out.size(3);
 
   const int num_rois = bbox.size(0);
-  const int data_size = data.size(1) * data.size(2) * data.size(3);
-  const int data_size_c = data.size(2) * data.size(3);
-  const int out_size_c = out.size(2) * out.size(3);
-  const int out_size = channels_ * out_size_c;
-  const int max_idx_size_c = max_idx.size(2) * max_idx.size(3);
-  const int max_idx_size = channels_ * max_idx_size_c;
+  const index_t data_size = data.size(1) * data.size(2) * data.size(3);
+  const index_t data_size_c = data.size(2) * data.size(3);
+  const index_t out_size_c = out.size(2) * out.size(3);
+  const index_t out_size = channels_ * out_size_c;
+  const index_t max_idx_size_c = max_idx.size(2) * max_idx.size(3);
+  const index_t max_idx_size = channels_ * max_idx_size_c;
   // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
   for (int n = 0; n < num_rois; ++n) {
     // Increment ROI data pointer
     const Dtype *bottom_rois_n = bottom_rois + n * bbox.size(1);
     Dtype *top_data_n = top_data + n * out_size;
-    int *argmax_data_n = argmax_data + n * max_idx_size;
-    int roi_batch_ind = bottom_rois_n[0];
+    index_t *argmax_data_n = argmax_data + n * max_idx_size;
+    int roi_batch_ind = static_cast<int>(bottom_rois_n[0]);
     int roi_start_w = std::round(bottom_rois_n[1] * spatial_scale_);
     int roi_start_h = std::round(bottom_rois_n[2] * spatial_scale_);
     int roi_end_w = std::round(bottom_rois_n[3] * spatial_scale_);
     int roi_end_h = std::round(bottom_rois_n[4] * spatial_scale_);
     assert(roi_batch_ind >= 0);
-    assert(static_cast<index_t>(roi_batch_ind) < data.size(0) /* batch size */);
+    assert(roi_batch_ind < data.size(0) /* batch size */);
 
     // force malformed ROIs to be 1 * 1
     int roi_height = max(roi_end_h - roi_start_h + 1, 1);
@@ -81,15 +81,15 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     const Dtype bin_size_w = static_cast<Dtype>(roi_width)
                              / static_cast<Dtype>(pooled_width_);
 
-    int offset_batch_data = data_size * roi_batch_ind;
+    index_t offset_batch_data = data_size * roi_batch_ind;
 
     #pragma omp parallel for
     for (int c = 0; c < channels_; ++c) {
       // Increment all data pointers
-      int offset_batch_data_c = offset_batch_data + c * data_size_c;
+      index_t offset_batch_data_c = offset_batch_data + c * data_size_c;
       const Dtype* batch_data_c = bottom_data + offset_batch_data_c;
       Dtype* top_data_c = top_data_n + c * out_size_c;
-      int* argmax_data_c = argmax_data_n + c * max_idx_size_c;
+      index_t* argmax_data_c = argmax_data_n + c * max_idx_size_c;
 
       for (int ph = 0; ph < pooled_height_; ++ph) {
         for (int pw = 0; pw < pooled_width_; ++pw) {
@@ -112,7 +112,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
 
           bool is_empty = (hend <= hstart) || (wend <= wstart);
 
-          const int pool_index = ph * pooled_width_ + pw;
+          const index_t pool_index = ph * pooled_width_ + pw;
           if (is_empty) {
             top_data_c[pool_index] = 0;
             argmax_data_c[pool_index] = -1;
@@ -120,7 +120,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
 
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
-              const int index = h * width_ + w;
+              const index_t index = h * width_ + w;
               if (batch_data_c[index] > top_data_c[pool_index]) {
                 top_data_c[pool_index] = batch_data_c[index];
                 argmax_data_c[pool_index] = offset_batch_data_c + index;
@@ -138,16 +138,16 @@ template<typename Dtype>
 inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
                                const Tensor<cpu, 4, Dtype> &out_grad,
                                const Tensor<cpu, 2, Dtype> &bbox,
-                               const Tensor<cpu, 4, int> &max_idx,
+                               const Tensor<cpu, 4, index_t> &max_idx,
                                const float spatial_scale_) {
   const Dtype *top_diff = out_grad.dptr_;
   Dtype *bottom_diff = in_grad.dptr_;
-  int *argmax_data = max_idx.dptr_;
+  index_t *argmax_data = max_idx.dptr_;
 
-  const int count = out_grad.shape_.Size();
+  const index_t count = out_grad.shape_.Size();
 
   for (int index = 0; index < count; ++index) {
-    int max_idx = argmax_data[index];
+    index_t max_idx = argmax_data[index];
     if (max_idx >= 0) {
       bottom_diff[max_idx] += top_diff[index];
     }
