@@ -256,7 +256,7 @@ def test_sigmoid():
 
 @with_seed()
 @mx.use_np_compat
-def test_reshape():
+def test_np_reshape():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a')
     ret = mx.sym.np.reshape(data, newshape=())
@@ -272,7 +272,7 @@ def test_reshape():
 
 @with_seed()
 @mx.use_np_compat
-def test_maximum():
+def test_np_maximum():
     # TODO(junwu): Add more test cases
     x1, x2 = mx.sym.var('x1'), mx.sym.var('x2')
     ret = mx.sym.np.maximum(x1, x2)
@@ -293,7 +293,7 @@ def test_maximum():
 
 @with_seed()
 @mx.use_np_compat
-def test_minimum():
+def test_np_minimum():
     # TODO(junwu): Add more test cases
     x1, x2 = mx.sym.var('x1'), mx.sym.var('x2')
     ret = mx.sym.np.minimum(x1, x2)
