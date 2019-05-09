@@ -25,6 +25,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_MATRIX_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_MATRIX_OP_INL_H_
 
+#include <vector>
 #include "../tensor/matrix_op-inl.h"
 
 namespace mxnet {

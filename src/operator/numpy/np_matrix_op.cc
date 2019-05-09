@@ -23,7 +23,6 @@
  * \brief CPU Implementation of numpy matrix operations
  */
 
-#include <vector>
 #include "./np_matrix_op-inl.h"
 
 namespace mxnet {
