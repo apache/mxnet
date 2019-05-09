@@ -26,11 +26,19 @@
 
 namespace mxnet {
 namespace op {
+
 NNVM_REGISTER_OP(_numpy_sum)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true>);
 
 NNVM_REGISTER_OP(_backward_numpy_sum)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
+
+NNVM_REGISTER_OP(_numpy_mean)
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true, true>);
+
+NNVM_REGISTER_OP(_backward_numpy_mean)
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu, true>);
+
 
 }  // namespace op
 }  // namespace mxnet
