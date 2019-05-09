@@ -130,7 +130,7 @@ Two algorithms (``sample_type``) are available for upsampling:
 
 **Nearest Neighbor Upsampling**
 
-Input data is expected to be 4D of the form `(batch, channel, height, width)`.
+Input data is expected to be NCHW.
 
 Example::
 
