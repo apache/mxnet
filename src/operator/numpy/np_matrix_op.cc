@@ -23,6 +23,7 @@
  * \brief CPU Implementation of numpy matrix operations
  */
 
+#include <vector>
 #include "./np_matrix_op-inl.h"
 
 namespace mxnet {
@@ -125,7 +126,7 @@ struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
       DMLC_DECLARE_FIELD(order)
       .set_default("C")
       .describe("Read the elements of a using this index order, and place the elements into"
-                " the reshaped array using this index order. ‘C’ means to read / write the elements"
+                " the reshaped array using this index order. 'C' means to read/write the elements"
                 " using C-like index order, with the last axis index changing fastest, back to the"
                 " first axis index changing slowest. Note that currently only C-like order is"
                 " supported");
