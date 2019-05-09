@@ -46,6 +46,7 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
   const Dtype *bottom_rois = bbox.dptr_;
   Dtype *top_data = out.dptr_;
   index_t *argmax_data = max_idx.dptr_;
+  const int batch_size = data.size(0);
   const int channels_ = data.size(1);
   const int height_ = data.size(2);
   const int width_ = data.size(3);
@@ -65,13 +66,13 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     const Dtype *bottom_rois_n = bottom_rois + n * bbox.size(1);
     Dtype *top_data_n = top_data + n * out_size;
     index_t *argmax_data_n = argmax_data + n * max_idx_size;
-    int roi_batch_ind = static_cast<int>(bottom_rois_n[0]);
     int roi_start_w = std::round(bottom_rois_n[1] * spatial_scale_);
     int roi_start_h = std::round(bottom_rois_n[2] * spatial_scale_);
     int roi_end_w = std::round(bottom_rois_n[3] * spatial_scale_);
     int roi_end_h = std::round(bottom_rois_n[4] * spatial_scale_);
-    assert(roi_batch_ind >= 0);
-    assert(roi_batch_ind < data.size(0) /* batch size */);
+
+    int roi_batch_ind = static_cast<int>(bottom_rois_n[0]);
+    bool is_ind_invalid = (roi_batch_ind < 0) || (roi_batch_ind >= batch_size);
 
     // force malformed ROIs to be 1 * 1
     int roi_height = max(roi_end_h - roi_start_h + 1, 1);
@@ -113,9 +114,10 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
           bool is_empty = (hend <= hstart) || (wend <= wstart);
 
           const index_t pool_index = ph * pooled_width_ + pw;
-          if (is_empty) {
+          if (is_empty || is_ind_invalid) {
             top_data_c[pool_index] = 0;
             argmax_data_c[pool_index] = -1;
+            continue;
           }
 
           for (int h = hstart; h < hend; ++h) {
