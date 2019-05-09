@@ -83,7 +83,7 @@ class ROIPoolingOp : public Operator {
     Tensor<xpu, 4, DType> data = in_data[roipool::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> bbox = in_data[roipool::kBox].get<xpu, 2, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[roipool::kOut].get<xpu, 4, DType>(s);
-    Tensor<xpu, 4, int> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, int>(s);
+    Tensor<xpu, 4, index_t> max_idx = out_data[roipool::kMaxIdx].get<xpu, 4, index_t>(s);
     CHECK_EQ(data.CheckContiguous(), true);
     CHECK_EQ(bbox.CheckContiguous(), true);
     CHECK_EQ(out.CheckContiguous(), true);
