@@ -302,6 +302,29 @@ class ndarray(NDArray):
     def __reduce__(self):
         return ndarray, (None,), self.__getstate__()
 
+    def item(self, *args):
+        """Copy an element of an array to a standard Python scalar and return it.
+
+        Parameters
+        ----------
+        *args : Arguments (variable number and type)
+            none: in this case, the method only works for arrays with one element (a.size == 1),
+            which element is copied into a standard Python scalar object and returned.
+
+            int_type: this argument is interpreted as a flat index into the array, specifying which
+            element to copy and return.
+
+            tuple of int_types: functions as does a single int_type argument, except that the
+            argument is interpreted as an nd-index into the array.
+
+        Returns
+        -------
+        z : Standard Python scalar object
+            A copy of the specified element of the array as a suitable Python scalar.
+        """
+        # TODO(junwu): no need to call asnumpy() on the whole array.
+        return self.asnumpy().item(*args)
+
     @property
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
