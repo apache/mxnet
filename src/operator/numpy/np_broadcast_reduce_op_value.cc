@@ -61,6 +61,7 @@ NNVM_REGISTER_OP(_numpy_sum)
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true>)
+.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -73,6 +74,61 @@ NNVM_REGISTER_OP(_backward_numpy_sum)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_num_inputs(1)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBackwardUseNone<cpu>);
+
+inline bool IsIntType(const int dtype) {
+  return (dtype == mshadow::kUint8 ||
+          dtype == mshadow::kInt32 ||
+          dtype == mshadow::kInt8 ||
+          dtype == mshadow::kInt64);
+}
+
+inline bool NumpyMeanType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_attrs,
+                          std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const NumpyReduceAxesParam &param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+
+  if (param.dtype.has_value()) {
+    if (IsIntType(in_attrs->at(0)) && !IsIntType(param.dtype.value())) {
+      LOG(FATAL) << "Output cannot be float type when input is integer type for now";
+    }
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype.value());
+  } else {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  }
+
+  return out_attrs->at(0) != -1 && in_attrs->at(0) != -1;
+}
+
+NNVM_REGISTER_OP(_numpy_mean)
+.describe(R"code()code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyReduceAxesParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyMeanType)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a"};
+  })
+.add_argument("a", "NDArray-or-Symbol", "The input")
+.add_arguments(NumpyReduceAxesParam::__FIELDS__())
+.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true, true>)
+.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_numpy_mean"});
+
+NNVM_REGISTER_OP(_backward_numpy_mean)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyReduceAxesParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_num_inputs(1)
+.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBackwardUseNone<cpu, true>);
 
 }  // namespace op
 }  // namespace mxnet
