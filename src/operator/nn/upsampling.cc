@@ -154,7 +154,7 @@ Example::
 
 Uses `deconvolution` algorithm under the hood. You need provide both input data and the kernel.
 
-Input data is expected to be 4D of the form `(batch, channel, height, width)`.
+Input data is expected to be NCHW.
 
 `num_filter` is expected to be same as the number of channels.
 
