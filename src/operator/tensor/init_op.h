@@ -565,7 +565,7 @@ void LinspaceCompute(const nnvm::NodeAttrs& attrs,
   const LinspaceParam& param = nnvm::get<LinspaceParam>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       int step_num = param.endpoint ? param.num - 1 : param.num;
-      double step = (param.stop - param.start) / step_num;
+      double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
       Kernel<linspace_fwd, xpu>::Launch(s,
                                         outputs[0].Size(),
                                         param.start,
