@@ -2612,6 +2612,7 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dty
 # pylint: enable= no-member, protected-access, too-many-arguments
 
 
+# pylint: disable= no-member, protected-access, too-many-arguments
 def linspace(start, stop, num, endpoint=True, ctx=None, dtype=mx_real_t):
     """Return evenly spaced numbers within a specified interval.
 
@@ -2652,10 +2653,9 @@ def linspace(start, stop, num, endpoint=True, ctx=None, dtype=mx_real_t):
     """
     if ctx is None:
         ctx = current_context()
-    # pylint: disable= no-member, protected-access
     return _internal._linspace(start=start, stop=stop, num=num,
                                endpoint=endpoint, dtype=dtype, ctx=str(ctx))
-    # pylint: disable= no-member, protected-access
+# pylint: disable= no-member, protected-access, too-many-arguments
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
