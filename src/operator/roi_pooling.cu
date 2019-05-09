@@ -136,7 +136,7 @@ inline void ROIPoolForward(const Tensor<gpu, 4, Dtype> &out,
 
 template<typename Dtype>
 __global__ void ROIPoolBackwardAccKernel(const int count, const Dtype* top_diff,
-                                         const int* argmax_data, Dtype* bottom_diff) {
+                                         const index_t* argmax_data, Dtype* bottom_diff) {
   for (index_t index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
        index < count;
        index += blockDim.x * gridDim.x * gridDim.y) {
