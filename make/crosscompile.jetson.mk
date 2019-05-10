@@ -72,7 +72,6 @@ USE_CUDA = 1
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
 USE_CUDA_PATH = /usr/local/cuda
-# USE_CUDA_PATH = /usr/local/cuda-9.0/targets/aarch64-linux
 
 # whether to enable CUDA runtime compilation
 ENABLE_CUDA_RTC = 0
