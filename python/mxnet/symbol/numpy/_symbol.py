@@ -15,12 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: disable=too-many-lines
 """numpy namespace for operators used in Gluon APIs dispatched by F=symbol module."""
 
 from __future__ import absolute_import
 import ctypes
 import numpy as _np
-from . import _op as _np_op
+from . import _op as _mx_np_op
 from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
 from ...base import numeric_types
 from ...context import current_context
@@ -29,7 +30,7 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from .. import _internal as _sym_internal
 
-__all__ = ['zeros', 'ones']
+__all__ = ['zeros', 'ones', 'maximum', 'minimum']
 
 
 class _NumpySymbol(Symbol):
@@ -237,13 +238,27 @@ class _NumpySymbol(Symbol):
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
         return Symbol(handle=hdl)
 
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def T(self):
+        """Same as self.transpose()."""
+        return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
     @use_np_compat
     def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ
         raise NotImplementedError
 
     @use_np_compat
-    def reshape(self, *shape, **kwargs):
-        raise NotImplementedError
+    def dot(self, b, out=None):
+        return _mx_np_op.dot(self, b, out=out)
+
+    @use_np_compat
+    def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
+        if order != 'C':
+            raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
+                                      'received {}'.format(str(order)))
+        return _mx_np_op.reshape(self, shape=shape, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -487,13 +502,13 @@ class _NumpySymbol(Symbol):
         raise AttributeError('_NumpySymbol object has no attribute tile')
 
     @use_np_compat
-    def transpose(self, *args, **kwargs):
+    def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`transpose`.
 
         The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -528,13 +543,13 @@ class _NumpySymbol(Symbol):
         raise AttributeError('_NumpySymbol object has no attribute diag')
 
     @use_np_compat
-    def sum(self, *args, **kwargs):
+    def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sum`.
 
         The arguments are the same as for :py:func:`sum`, with
         this array as data.
         """
-        return _np_op.sum(self, *args, **kwargs)
+        return _mx_np_op.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -969,6 +984,67 @@ def ones(shape, dtype=None, **kwargs):
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _internal._np_ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+
+
+#pylint: disable= too-many-arguments, no-member, protected-access
+def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, out=None):
+    """ Helper function for element-wise operation.
+    The function will perform numpy-like broadcasting if needed and call different functions.
+
+    Parameters
+    --------
+    lhs : Symbol or numeric value
+        Left-hand side operand.
+
+    rhs : Symbol or numeric value
+        Right-hand operand,
+
+    fn_array : function
+        Function to be called if both lhs and rhs are of ``Symbol`` type.
+
+    fn_scalar : function
+        Function to be called if both lhs and rhs are numeric values.
+
+    lfn_scalar : function
+        Function to be called if lhs is ``Symbol`` while rhs is numeric value
+
+    rfn_scalar : function
+        Function to be called if lhs is numeric value while rhs is ``Symbol``;
+        if none is provided, then the function is commutative, so rfn_scalar is equal to lfn_scalar
+
+    Returns
+    --------
+    mxnet.numpy.ndarray
+        result array
+    """
+    if isinstance(lhs, numeric_types):
+        if isinstance(rhs, numeric_types):
+            return fn_scalar(lhs, rhs, out=out)
+        else:
+            if rfn_scalar is None:
+                # commutative function
+                return lfn_scalar(rhs, float(lhs), out=out)
+            else:
+                return rfn_scalar(rhs, float(lhs), out=out)
+    elif isinstance(rhs, numeric_types):
+        return lfn_scalar(lhs, float(rhs), out=out)
+    elif isinstance(rhs, Symbol):
+        return fn_array(lhs, rhs, out=out)
+    else:
+        raise TypeError('type %s not supported' % str(type(rhs)))
+#pylint: enable= too-many-arguments, no-member, protected-access
+
+
+@use_np_compat
+def maximum(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _internal._np_maximum, _np.maximum,
+                         _internal._np_maximum_scalar, None, out)
+
+
+@use_np_compat
+def minimum(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _internal._np_minimum, _np.minimum,
+                         _internal._np_minimum_scalar, None, out)
 
 
 _set_np_symbol_class(_NumpySymbol)
