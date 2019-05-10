@@ -325,6 +325,15 @@ class DeconvolutionOp {
 
 
       std::cout << "col buffer: " << std::endl;
+      DType *tmp_data = new DType[col_buffer_size];
+      if (ctx.run_ctx.get_ctx().dev_mask() == gpu::kDevMask) {
+        std::cout << "running on GPU " << std::endl;
+        NDArray col_data(col_buffer, ctx.run_ctx.get_ctx().dev_id);
+        col_data.SyncCopyToCPU(tmp_data, col_buffer_size);
+      } else {
+        tmp_data = static_cast<DType *>(col_buffer_3d[0].dptr_);
+      }
+
       for (auto j = 0; j < kernel_size; ++j) {
         for (auto k = 0; k < data_spatial_size; ++k) {
           std::cout << *(static_cast<DType *>(col_buffer_3d[0].dptr_ + j * kernel_size + k)) << " ";
