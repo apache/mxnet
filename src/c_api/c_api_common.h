@@ -177,11 +177,7 @@ extern const std::vector<std::string> kHiddenKeys;
 inline bool IsNumpyCompatOp(const nnvm::Op* op) {
   static const auto& is_np_compat =
       nnvm::Op::GetAttr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible");
-  if (is_np_compat.get(op, false)) {
-    return true;
-  }
-  static const std::string prefix = "_numpy_";
-  return op->name.find(prefix.c_str(), 0, prefix.size()) != std::string::npos;
+  return is_np_compat.get(op, false);
 }
 
 #endif  // MXNET_C_API_C_API_COMMON_H_

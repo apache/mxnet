@@ -265,11 +265,17 @@ void TransposeImpl(RunContext ctx,
   using namespace mshadow;
   using namespace mshadow::expr;
   CHECK_EQ(src.type_flag_, ret.type_flag_);
+  // zero-size tensor, no need to compute
+  if (src.shape_.Size() == 0U) return;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
     switch (axes.ndim()) {
-     case 0:
+     case 0: {
+      Tensor<xpu, 1, DType> in = src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
+      Tensor<xpu, 1, DType> out = ret.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
+      Copy(out, in, s);
       break;
+     }
      case 1: {
       Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> out = ret.get<xpu, 1, DType>(s);
