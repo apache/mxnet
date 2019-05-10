@@ -222,7 +222,7 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!ndim_is_known(ishape)) return false;
+  if (!shape_is_known(ishape)) return false;
 
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
