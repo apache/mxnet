@@ -341,6 +341,7 @@ def test_default_handlers():
         assert 'You are training with the' in str(w[-1].message)
 
     # handler with prepared loss and metrics
+    # use mix of default and user defined handlers
     train_metrics, val_metrics = est.prepare_loss_and_metrics()
     logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
     with warnings.catch_warnings(record=True) as w:
@@ -350,15 +351,14 @@ def test_default_handlers():
         assert 'MetricHandler' in str(w[-1].message)
 
     # handler with all user defined metrics
-    val_metrics = [mx.metric.RMSE("val acc")]
+    # use mix of default and user defined handlers
     metric = MetricHandler(train_metrics=[train_acc])
-    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
+    logging = LoggingHandler(train_metrics=[train_acc], val_metrics=[mx.metric.RMSE("val acc")])
     est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[metric, logging])
 
     # handler with mixed metrics, some handler use metrics prepared by estimator
     # some handler use metrics user prepared
-    val_metrics = [mx.metric.RMSE("val acc")]
-    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
+    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=[mx.metric.RMSE("val acc")])
     with assert_raises(ValueError):
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 

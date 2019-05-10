@@ -40,17 +40,17 @@ class Estimator(object):
     Parameters
     ----------
     net : Block
-        The model used for training
+        The model used for training.
     loss : gluon.loss.Loss or list of gluon.loss.Loss
-        Loss(objective functions) to calculate during training
+        Loss(objective functions) to calculate during training.
     metrics : EvalMetric or list of EvalMetric
-        Metrics for evaluating models
+        Metrics for evaluating models.
     initializer : Initializer
-        Initializer to initialize the network
+        Initializer to initialize the network.
     trainer : Trainer
-        Trainer to apply optimizer on network parameters
+        Trainer to apply optimizer on network parameters.
     context : Context or list of Context
-        Device(s) to run the training on
+        Device(s) to run the training on.
     """
 
     def __init__(self, net,
@@ -188,8 +188,8 @@ class Estimator(object):
                 self.train_metrics.append(Loss(loss.name.rstrip('1234567890')))
             for metric in self.train_metrics:
                 val_metric = copy.deepcopy(metric)
-                metric.name = "Train " + metric.name
-                val_metric.name = "Validation " + val_metric.name
+                metric.name = "train " + metric.name
+                val_metric.name = "validation " + val_metric.name
                 self.val_metrics.append(val_metric)
         return self.train_metrics, self.val_metrics
 
@@ -202,11 +202,11 @@ class Estimator(object):
          Parameters
          ----------
          val_data : DataLoader
-             Validation data loader with data and labels
+             Validation data loader with data and labels.
          val_metrics : EvalMetric or list of EvalMetrics
-             Metrics to update validation result
+             Metrics to update validation result.
          batch_axis : int, default 0
-             Batch axis to split the validation data into devices
+             Batch axis to split the validation data into devices.
          """
         if not isinstance(val_data, gluon.data.DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
@@ -233,26 +233,26 @@ class Estimator(object):
             event_handlers=None,
             batches=None,
             batch_axis=0):
-        """Trains the model on a given dataset for a specified
-        number of epochs. Also, the batch size is inferred from the
-        DataLoader's batch_size.
+        """Trains the model with a given :py:class:`DataLoader` for a specified
+        number of epochs or batches. The batch size is inferred from the
+        data loader's batch_size.
 
         Parameters
         ----------
         train_data : DataLoader
-            Training data loader with data and labels
-        val_data : DataLoader
-            Validation data loader with data and labels
+            Training data loader with data and labels.
+        val_data : DataLoader, default None
+            Validation data loader with data and labels.
         epochs : int, default None
             Number of epochs to iterate on the training data.
-            You can only specify one and only one of epochs or batches.
+            You can only specify one and only one type of iteration(epochs or batches).
         event_handlers : EventHandler or list of EventHandler
-            List of EventHandlers to apply during training
+            List of :py:class:`EventHandlers` to apply during training.
         batches : int, default None
             Number of batches to iterate on the training data.
-            You can only specify one and only one of epochs or batches
+            You can only specify one and only one type of iteration(epochs or batches).
         batch_axis : int, default 0
-            Batch axis to split the validation data into devices
+            Batch axis to split the training data into devices.
         """
         if not isinstance(train_data, gluon.data.DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
@@ -355,6 +355,7 @@ class Estimator(object):
                   "Please use the same set of metrics for all your other handlers." % \
                   ", ".join(default_handlers)
             warnings.warn(msg)
+            # check if all handlers has the same set of references to loss and metrics
             references = []
             for handler in event_handlers:
                 for attribute in dir(handler):
@@ -364,8 +365,10 @@ class Estimator(object):
                             references += reference
                         else:
                             references.append(reference)
+            # remove None metric references
+            references = set([ref for ref in references if ref])
             for metric in references:
-                if metric and metric not in train_metrics + val_metrics:
+                if metric not in train_metrics + val_metrics:
                     msg = "We have added following default handlers for you: %s and used " \
                           "estimator.prepare_loss_and_metrics() to pass metrics to " \
                           "those handlers. Please use the same set of metrics " \
