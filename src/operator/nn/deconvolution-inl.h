@@ -337,7 +337,7 @@ class DeconvolutionOp {
 
       for (auto j = 0; j < kernel_size; ++j) {
         for (auto k = 0; k < data_spatial_size; ++k) {
-          std::cout << *(static_cast<DType *>(col_buffer_3d[0].dptr_ + j * kernel_size + k)) << " ";
+          std::cout << *(tmp_data + j * kernel_size + k) << " ";
         }
         std::cout << std::endl;
       }
