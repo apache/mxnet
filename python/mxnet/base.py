@@ -749,7 +749,7 @@ def _sanity_check_params(func_name, unsupported_params, param_dict):
                                       .format(func_name, param_name))
 
 
-_NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
+_NP_OP_SUBMODULE_LIST = ['_ext_', '_random_', '_linalg_']
 _NP_OP_PREFIX = '_numpy_'
 
 
@@ -798,10 +798,9 @@ def _init_np_op_module(root_namespace, module_name, make_op_func):
         submodule_pattern = "%s.%s.numpy.%s"
     module_np_op = sys.modules[module_pattern % (root_namespace, module_name)]
     submodule_dict = {}
-    # TODO(junwu): uncomment the following lines when adding numpy ops in submodules, e.g. np.random
-    # for submodule_name in _NP_OP_SUBMODULE_LIST:
-    #     submodule_dict[submodule_name] = \
-    #         sys.modules[submodule_pattern % (root_namespace, module_name, submodule_name[1:-1])]
+    for submodule_name in _NP_OP_SUBMODULE_LIST:
+        submodule_dict[submodule_name] = \
+            sys.modules[submodule_pattern % (root_namespace, module_name, submodule_name[1:-1])]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
