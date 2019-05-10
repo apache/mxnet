@@ -1032,7 +1032,7 @@ inline bool SliceAssignScalarOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (!ndim_is_known(dshape)) return false;
+  if (!shape_is_known(dshape)) return false;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
   return true;
 }

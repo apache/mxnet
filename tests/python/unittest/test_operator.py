@@ -1097,18 +1097,6 @@ def test_embedding():
     exe_test.backward([grad])
     assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad), rtol=rtol, atol=atol)
 
-@with_seed()
-def test_embedding_partial_shape():
-    # testing embedding with batch size unknown
-    x = mx.sym.Variable("x")
-    w = mx.sym.Variable("w")
-    y = mx.sym.Embedding(data=x, weight=w, input_dim=100, output_dim=10)
-    _, result_shape, _ = y.infer_shape_partial(x=(0, 5), w=(100, 10))
-    assert result_shape  == [(0, 5, 10)]
-
-    with mx.np_compat(True):
-        _, result_shape, _ = y.infer_shape_partial(x=(-1, 5), w=(100, 10))
-        assert result_shape == [(-1, 5, 10)]
 
 # check ops handle duplicate input correctly.
 @with_seed()
@@ -2585,20 +2573,6 @@ def test_transpose():
             y = mx.nd.transpose(x)
             assert_allclose(np.transpose(x.asnumpy()), y.asnumpy())
 
-@with_seed()
-def test_transpose_partial_shape():
-    # test converting tensor shape
-    # from channels first to channels last
-    # with batch size unknown
-    axes = [0, 3, 2, 1]
-    x = mx.sym.Variable("x")
-    y = mx.sym.transpose(x, axes=axes)
-    _, result, _ = y.infer_shape_partial(x=(0, 3, 224, 224))
-    assert result == [(0, 224, 224, 3)]
-
-    with mx.np_compat(True):
-        _, result, _ = y.infer_shape_partial(x=(-1, 3, 224, 224))
-        assert result == [(-1, 224, 224, 3)]
 
 @with_seed()
 def test_expand_dims():
@@ -8532,6 +8506,72 @@ def test_add_n():
         rslt += data[i]
     add_n_rslt = mx.nd.add_n(*data, out=data[0])
     assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
+
+
+def test_ops_partial_shape():
+    # test operators able to run infer shape partial when some dims are unknown
+    x = mx.sym.Variable("x")
+    for op in [mx.sym.max, mx.sym.stack, mx.sym.flatten, mx.sym.take, mx.sym.squeeze]:
+        y = op(x)
+        y.infer_shape_partial(x=(0, 3, 3))
+        with mx.np_compat(True):
+            y.infer_shape_partial(x=(-1, 3, 3))
+
+
+def test_transpose_partial_shape():
+    # test converting tensor shape
+    # from channels first to channels last
+    # with batch size unknown
+    axes = [0, 3, 2, 1]
+    x = mx.sym.Variable("x")
+    y = mx.sym.transpose(x, axes=axes)
+    _, result, _ = y.infer_shape_partial(x=(0, 3, 224, 224))
+    assert result == [(0, 224, 224, 3)]
+
+    with mx.np_compat(True):
+        _, result, _ = y.infer_shape_partial(x=(-1, 3, 224, 224))
+        assert result == [(-1, 224, 224, 3)]
+
+
+def test_embedding_partial_shape():
+    # testing embedding with batch size unknown
+    x = mx.sym.Variable("x")
+    w = mx.sym.Variable("w")
+    y = mx.sym.Embedding(data=x, weight=w, input_dim=100, output_dim=10)
+    _, result_shape, _ = y.infer_shape_partial(x=(0, 5), w=(100, 10))
+    assert result_shape  == [(0, 5, 10)]
+
+    with mx.np_compat(True):
+        _, result_shape, _ = y.infer_shape_partial(x=(-1, 5), w=(100, 10))
+        assert result_shape == [(-1, 5, 10)]
+
+
+def test_pick_partial_shape():
+    x = mx.sym.Variable("x")
+    y = mx.sym.pick(x, axis=0)
+    _, result, _ = y.infer_shape_partial(x=(0, 2, 3))
+    assert result == [(2, 3)]
+    with mx.np_compat(True):
+        _, result, _ = y.infer_shape_partial(x=(-1, 2, 3))
+        assert result == [(2, 3)]
+
+
+def test_where_partial_shape():
+    x = mx.sym.Variable("x")
+    y = mx.sym.Variable("y")
+    cond = mx.sym.Variable("cond")
+    where_op = mx.sym.where(cond, x, y)
+    where_op.infer_shape_partial(cond=(0, 2), x=(0, 2), y =(0, 2))
+    with mx.np_compat(True):
+        where_op.infer_shape_partial(cond=(-1, 2), x=(-1, 2), y =(-1, 2))
+
+
+def test_one_hot_partial_shape():
+    x = mx.sym.Variable("x")
+    y = mx.sym.one_hot(x, 10)
+    y.infer_shape_partial(x=(0, 100, 10))
+    with mx.np_compat(True):
+        y.infer_shape_partial(x=(-1, 100, 10))
 
 
 if __name__ == '__main__':

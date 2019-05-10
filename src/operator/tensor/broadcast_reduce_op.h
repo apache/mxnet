@@ -364,7 +364,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
                                mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!ndim_is_known((*in_attrs)[0])) return false;
+  if (!shape_is_known((*in_attrs)[0])) return false;
   const BroadcastAxesParam& param = nnvm::get<BroadcastAxesParam>(attrs.parsed);
   CHECK_EQ(param.axis.ndim() , param.size.ndim());
   mxnet::TShape &ishape = (*in_attrs)[0];
