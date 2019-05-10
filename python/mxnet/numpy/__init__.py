@@ -20,10 +20,11 @@
 """numpy module for imperative programming."""
 
 from __future__ import absolute_import
-from .multiarray import *  # pylint: disable=wildcard-import
-from . import _op
 from . import random
 from . import linalg
+from . import ext
+from .multiarray import *  # pylint: disable=wildcard-import
+from . import _op
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 
