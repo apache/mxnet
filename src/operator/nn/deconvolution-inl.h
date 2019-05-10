@@ -330,6 +330,7 @@ class DeconvolutionOp {
         std::cout << "running on GPU " << std::endl;
         NDArray col_data(col_buffer, ctx.run_ctx.get_ctx().dev_id);
         col_data.SyncCopyToCPU(tmp_data, col_buffer_size);
+        std::cout << "complete " << std::endl;
       } else {
         tmp_data = static_cast<DType *>(col_buffer_3d[0].dptr_);
       }
