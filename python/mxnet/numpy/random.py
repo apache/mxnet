@@ -15,6 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""namespace for registering numpy random operators."""
+"""namespace for registering numpy.random ops for imperative programming."""
 
 __all__ = []
