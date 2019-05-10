@@ -18,20 +18,50 @@
 # coding: utf-8
 """Lists of functions whitelisted/blacklisted for automatic mixed precision in symbol API."""
 
+# Functions that should be cast to lower precision
 FP16_FUNCS = [
     'Convolution',
     'Deconvolution',
     'FullyConnected',
     'RNN',
+    'NormalizedConvolution',
     ]
 
+# Functions that should not be casted, either because
+# they are irrelevant (not used in the network itself
+# like image transformations or optimizers) or they
+# are dtype neutral (can work in both fp16 and fp32)
+FP16_FP32_FUNCS = [
+    'BNStatsFinalize',
+    'BatchNorm',
+    'BatchNormAddRelu',
+    'BatchNorm_v1',
+    'BilinearSampler',
+    'BlockGrad',
+    'Cast',
+    'Crop',
+    'CuDNNBatchNorm',
+    'Dropout',
+    'Embedding',
+    'Flatten',
+    'FusedOp',
+    'GridGenerator',
+    'Pad',
+
+    ]
+
+# Functions that have to be cast to FP32 due to possible
+# overflows
 FP32_FUNCS = [
+    'Convolution_v1',
+    'IdentityAttachKLSparseReg',
     'arccos',
     'arcsin',
     'cosh',
     'erfinv',
     'sinh',
     'tan',
+    'arctanh',
 
     # Exponents
     'exp',
@@ -100,10 +130,15 @@ FP32_FUNCS = [
     'SyncBatchNorm',
     ]
 
+# Functions that have to be cast to FP32 only for
+# some values of their parameters
 CONDITIONAL_FP32_FUNCS = [
     ('Activation', 'act_type', ['softrelu']),
+    ('LeakyReLU', 'act_type', ['elu', 'selu']),
     ]
 
+# Functions with multiple inputs, that need the same
+# type of all their inputs
 WIDEST_TYPE_CASTS = [
     '__add__',
     '__sub__',
@@ -119,7 +154,6 @@ WIDEST_TYPE_CASTS = [
     '__ge__',
     '__lt__',
     '__le__',
-    'concat',
     'Concat',
     'Correlation',
     'ElementWiseSum',
