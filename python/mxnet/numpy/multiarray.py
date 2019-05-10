@@ -27,14 +27,14 @@ import ctypes
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX
 from ..ndarray._internal import _set_np_ndarray_class
-from . import _op
+from . import _op as _mx_np_op
 from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check_params
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray import _internal as _nd_internal
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones']
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum']
 
 
 # This function is copied from ndarray.py since pylint
@@ -73,7 +73,7 @@ def _np_ndarray_cls(handle, writable=True, stype=0):
 _set_np_ndarray_class(_np_ndarray_cls)
 
 
-class ndarray(NDArray):
+class ndarray(NDArray):  # pylint: disable=invalid-name
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
@@ -104,7 +104,15 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __iadd__(self, other):
-        raise NotImplementedError
+        """x.__iadd__(y) <=> x += y"""
+        if not self.writable:
+            raise ValueError('trying to add to a readonly ndarray')
+        if isinstance(other, NDArray):
+            return _nd_internal._np_add(self, other, out=self)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_add_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __sub__(self, other):
@@ -118,7 +126,15 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __isub__(self, other):
-        raise NotImplementedError
+        """x.__isub__(y) <=> x -= y"""
+        if not self.writable:
+            raise ValueError('trying to subtract from a readonly ndarray')
+        if isinstance(other, NDArray):
+            return _nd_internal._np_subtract(self, other, out=self)
+        elif isinstance(other, numeric_types):
+            return _nd_internal._np_subtract_scalar(self, float(other), out=self)
+        else:
+            raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __rsub__(self, other):
@@ -285,6 +301,36 @@ class ndarray(NDArray):
     def __reduce__(self):
         return ndarray, (None,), self.__getstate__()
 
+    def item(self, *args):
+        """Copy an element of an array to a standard Python scalar and return it.
+
+        Parameters
+        ----------
+        *args : Arguments (variable number and type)
+            none: in this case, the method only works for arrays with one element (a.size == 1),
+            which element is copied into a standard Python scalar object and returned.
+
+            int_type: this argument is interpreted as a flat index into the array, specifying which
+            element to copy and return.
+
+            tuple of int_types: functions as does a single int_type argument, except that the
+            argument is interpreted as an nd-index into the array.
+
+        Returns
+        -------
+        z : Standard Python scalar object
+            A copy of the specified element of the array as a suitable Python scalar.
+        """
+        # TODO(junwu): no need to call asnumpy() on the whole array.
+        return self.asnumpy().item(*args)
+
+    @property
+    # pylint: disable= invalid-name, undefined-variable
+    def T(self):
+        """Same as self.transpose(). This always returns a copy of self."""
+        return self.transpose()
+    # pylint: enable= invalid-name, undefined-variable
+
     @use_np_compat
     def _slice(self, start, stop):
         raise NotImplementedError
@@ -380,9 +426,16 @@ class ndarray(NDArray):
         return super(ndarray, self).copy().as_np_ndarray()
 
     @use_np_compat
-    def reshape(self, *shape, **kwargs):
+    def dot(self, b, out=None):
+        return _mx_np_op.dot(self, b, out=out)
+
+    @use_np_compat
+    def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape."""
-        raise NotImplementedError
+        if order != 'C':
+            raise NotImplementedError('reshape only supports C-order,'
+                                      ' while received {}'.format(order))
+        return _mx_np_op.reshape(self, shape=shape, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -626,13 +679,13 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tile')
 
     @use_np_compat
-    def transpose(self, *args, **kwargs):
+    def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`transpose`.
 
         The arguments are the same as for :py:func:`transpose`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -667,13 +720,13 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute diag')
 
     @use_np_compat
-    def sum(self, *args, **kwargs):
+    def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sum`.
 
         The arguments are the same as for :py:func:`sum`, with
         this array as data.
         """
-        return _op.sum(self, *args, **kwargs)
+        return _mx_np_op.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -1069,11 +1122,6 @@ class ndarray(NDArray):
     def stype(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute stype')
 
-    @property
-    @use_np_compat
-    def T(self):
-        raise NotImplementedError
-
     def tostype(self, stype):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tostype')
 
@@ -1198,3 +1246,35 @@ def ones(shape, dtype=None, **kwargs):
         Array of zeros with the given shape, dtype, and ctx.
     """
     return _mx_nd_np.ones(shape, dtype, **kwargs)
+
+
+def maximum(x1, x2, out=None):
+    """Returns element-wise maximum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _mx_nd_np.maximum(x1, x2, out=out)
+
+
+def minimum(x1, x2, out=None):
+    """Returns element-wise minimum of the input arrays with broadcasting.
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    return _mx_nd_np.minimum(x1, x2, out=out)

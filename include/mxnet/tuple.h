@@ -272,6 +272,14 @@ class Tuple {
       is.get();
       if (ch == '(' || ch == '[') break;
       if (!isspace(ch)) {
+        if (ch == 'N') {
+          std::string tmp_val;
+          is >> tmp_val;
+          if (tmp_val == "one") {  // is stores "None"
+            t.SetDim(-1);
+            return is;
+          }
+        }
         is.setstate(std::ios::failbit);
         return is;
       }
