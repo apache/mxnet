@@ -22,7 +22,7 @@
 import copy
 import warnings
 
-from .event_handler import MetricHandler, ValidationHandler, LoggingHandler
+from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler
 from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
 from .... import gluon, autograd
 from ....context import Context, cpu, gpu, num_gpus
@@ -46,11 +46,11 @@ class Estimator(object):
     metrics : EvalMetric or list of EvalMetric
         Metrics for evaluating models
     initializer : Initializer
-        initializer to initialize the network
+        Initializer to initialize the network
     trainer : Trainer
         Trainer to apply optimizer on network parameters
     context : Context or list of Context
-        device(s) to run the training on
+        Device(s) to run the training on
     """
 
     def __init__(self, net,
@@ -202,11 +202,11 @@ class Estimator(object):
          Parameters
          ----------
          val_data : DataLoader
-             validation data loader with data and labels
+             Validation data loader with data and labels
          val_metrics : EvalMetric or list of EvalMetrics
-             metrics to update validation result
+             Metrics to update validation result
          batch_axis : int, default 0
-             batch axis to split the validation data into devices
+             Batch axis to split the validation data into devices
          """
         if not isinstance(val_data, gluon.data.DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
@@ -229,8 +229,9 @@ class Estimator(object):
 
     def fit(self, train_data,
             val_data=None,
-            epochs=1,
+            epochs=None,
             event_handlers=None,
+            batches=None,
             batch_axis=0):
         """Trains the model on a given dataset for a specified
         number of epochs. Also, the batch size is inferred from the
@@ -239,22 +240,34 @@ class Estimator(object):
         Parameters
         ----------
         train_data : DataLoader
-            training data loader with data and labels
+            Training data loader with data and labels
         val_data : DataLoader
-            validation data loader with data and labels
-        epochs : int, default 1
-            number of epochs to iterate on the training data.
+            Validation data loader with data and labels
+        epochs : int, default None
+            Number of epochs to iterate on the training data.
+            You can only specify one and only one of epochs or batches.
         event_handlers : EventHandler or list of EventHandler
-            list of EventHandlers to apply during training
+            List of EventHandlers to apply during training
+        batches : int, default None
+            Number of batches to iterate on the training data.
+            You can only specify one and only one of epochs or batches
         batch_axis : int, default 0
-             batch axis to split the validation data into devices
+            Batch axis to split the validation data into devices
         """
         if not isinstance(train_data, gluon.data.DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
                              "can transform your DataIter or any NDArray into Gluon DataLoader. "
                              "Refer to gluon.data.dataloader")
 
-        self.max_epochs = epochs
+        # must specify one and only one of epochs or batches
+        if (not epochs) == (not batches):
+            raise ValueError(
+                "Fit only support exactly one type of iteration, "
+                "train by number of epochs or number of batches."
+                "Please specify one and only one of: epochs or batches.")
+
+        self.max_epoch = epochs
+        self.max_batch = batches
 
         # provide default handlers
         event_handlers = self._prepare_default_handlers(val_data, event_handlers)
@@ -268,7 +281,7 @@ class Estimator(object):
         for handler in train_begin:
             handler.train_begin(estimator_ref)
 
-        for epoch in range(self.max_epochs):
+        while True:
             # epoch begin
             for handler in epoch_begin:
                 handler.epoch_begin(estimator_ref)
@@ -317,6 +330,9 @@ class Estimator(object):
         default_handlers = []
         train_metrics, val_metrics = self.prepare_loss_and_metrics()
 
+        # no need to add to default handler check as StoppingHandler does not use metrics
+        event_handlers.append(StoppingHandler(self.max_epoch, self.max_batch))
+
         if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
             event_handlers.append(MetricHandler(train_metrics=train_metrics))
             default_handlers.append("MetricHandler")
@@ -332,7 +348,7 @@ class Estimator(object):
             default_handlers.append("LoggingHandler")
 
         # if there is a mix of user defined event handlers and default event handlers
-        # they should have the save set of loss and metrics
+        # they should have the same set of loss and metrics
         if default_handlers:
             msg = "You are training with the following default event handlers: %s. " \
                   "They use loss and metrics from estimator.prepare_loss_and_metrics(). " \

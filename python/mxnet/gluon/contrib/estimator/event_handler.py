@@ -59,17 +59,56 @@ class BatchEnd(object):
         return False
 
 
+class StoppingHandler(TrainBegin, BatchEnd, EpochEnd):
+    """Stop conditions to stop training
+    Stop training if maximum number of batches or epochs
+    reached.
+
+    Parameters
+    ----------
+    max_batch : int, default None
+        Number of maximum batches to train.
+    max_epoch : int, default None
+        Number of maximum epochs to train
+    """
+
+    def __init__(self, max_epoch=None, max_batch=None):
+        self.max_epoch = max_epoch
+        self.max_batch = max_batch
+        self.current_batch = 0
+        self.current_epoch = 0
+        self.stop_training = False
+
+    def train_begin(self, estimator, *args, **kwargs):
+        self.max_epoch = estimator.max_epoch
+        self.max_batch = estimator.max_batch
+        self.current_batch = 0
+        self.current_epoch = 0
+
+    def batch_end(self, estimator, *args, **kwargs):
+        self.current_batch += 1
+        if self.current_batch == self.max_batch:
+            self.stop_training = True
+        return self.stop_training
+
+    def epoch_end(self, estimator, *args, **kwargs):
+        self.current_epoch += 1
+        if self.current_epoch == self.max_epoch:
+            self.stop_training = True
+        return self.stop_training
+
+
 class MetricHandler(EpochBegin, BatchEnd):
     """Metric Handler that update metric values at batch end
 
     :py:class:`MetricHandler` takes model predictions and true labels
-    and update the metrics, it also update metric wrapper for loss with loss values
+    and update the metrics, it also update metric wrapper for loss with loss values.
     Validation loss and metrics will be handled by :py:class:`ValidationHandler`
 
     Parameters
     ----------
     train_metrics : List of EvalMetrics
-        training metrics to be updated at batch end
+        Training metrics to be updated at batch end
     """
 
     def __init__(self, train_metrics):
@@ -104,18 +143,18 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
     Parameters
     ----------
     val_data : DataLoader
-        validation data set to run evaluation
+        Validation data set to run evaluation
     eval_fn : function
-        a function defines how to run evaluation and
+        A function defines how to run evaluation and
         calculate loss and metrics
     val_metrics : List of EvalMetrics
-        validation metrics to be updated
+        Validation metrics to be updated
     epoch_period : int, default 1
-        how often to run validation at epoch end, by default
-        validate every epoch
+        How often to run validation at epoch end, by default
+        :py:class:`ValidationHandler` validate every epoch
     batch_period : int, default None
-        how often to run validation at batch end, by default
-        does not validate at batch end
+        How often to run validation at batch end, by default
+        :py:class:`ValidationHandler` does not validate at batch end
     """
 
     def __init__(self,
@@ -129,26 +168,26 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         self.epoch_period = epoch_period
         self.batch_period = batch_period
         self.val_metrics = val_metrics
-        self.num_batches = 0
-        self.num_epochs = 0
+        self.current_batch = 0
+        self.current_epoch = 0
         # order to be called among all callbacks
         # validation metrics need to be calculated before other callbacks can access them
         self.priority = -np.Inf
 
     def train_begin(self, estimator, *args, **kwargs):
         # reset epoch and batch counter
-        self.num_batches = 0
-        self.num_epochs = 0
+        self.current_batch = 0
+        self.current_epoch = 0
 
     def batch_end(self, estimator, *args, **kwargs):
-        self.num_batches += 1
-        if self.batch_period and self.num_batches % self.batch_period == 0:
+        self.current_batch += 1
+        if self.batch_period and self.current_batch % self.batch_period == 0:
             self.eval_fn(val_data=self.val_data,
                          val_metrics=self.val_metrics)
 
     def epoch_end(self, estimator, *args, **kwargs):
-        self.num_epochs += 1
-        if self.num_epochs % self.epoch_period == 0:
+        self.current_epoch += 1
+        if self.epoch_period and self.current_epoch % self.epoch_period == 0:
             self.eval_fn(val_data=self.val_data,
                          val_metrics=self.val_metrics)
 
@@ -162,19 +201,19 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
     Parameters
     ----------
     file_name : str
-        file name to save the logs
+        File name to save the logs
     file_location : str
-        file location to save the logs
+        File location to save the logs
     filemode : str, default 'a'
-        logging file mode, default using append mode
+        Logging file mode, default using append mode
     verbose : int, default LOG_VERBOSITY_PER_EPOCH
         Limit the granularity of metrics displayed during training process
         verbose=LOG_VERBOSITY_PER_EPOCH: display metrics every epoch
         verbose=LOG_VERBOSITY_PER_BATCH: display metrics every batch
     train_metrics : list of EvalMetrics
-        training metrics to be logged, logged at batch end, epoch end, train end
+        Training metrics to be logged, logged at batch end, epoch end, train end
     val_metrics : list of EvalMetrics
-        validation metrics to be logged, logged at epoch end, train end
+        Validation metrics to be logged, logged at epoch end, train end
     """
 
     LOG_VERBOSITY_PER_EPOCH = 1
@@ -191,18 +230,18 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         self.logger.setLevel(logging.INFO)
         stream_handler = logging.StreamHandler()
         self.logger.addHandler(stream_handler)
-        if verbose not in [self.LOG_VERBOSITY_PER_EPOCH, self.LOG_VERBOSITY_PER_BATCH]:
-            raise ValueError("verbose level must be either LOG_VERBOSITY_PER_EPOCH or "
-                             "LOG_VERBOSITY_PER_BATCH, received %s. "
-                             "E.g: LoggingHandler(verbose=LoggingHandler.LOG_VERBOSITY_PER_EPOCH)"
-                             % verbose)
-        self.verbose = verbose
         # save logger to file only if file name or location is specified
         if file_name or file_location:
             file_name = file_name or 'estimator_log'
             file_location = file_location or './'
             file_handler = logging.FileHandler(os.path.join(file_location, file_name), mode=filemode)
             self.logger.addHandler(file_handler)
+        if verbose not in [self.LOG_VERBOSITY_PER_EPOCH, self.LOG_VERBOSITY_PER_BATCH]:
+            raise ValueError("verbose level must be either LOG_VERBOSITY_PER_EPOCH or "
+                             "LOG_VERBOSITY_PER_BATCH, received %s. "
+                             "E.g: LoggingHandler(verbose=LoggingHandler.LOG_VERBOSITY_PER_EPOCH)"
+                             % verbose)
+        self.verbose = verbose
         self.train_metrics = train_metrics or []
         self.val_metrics = val_metrics or []
         self.batch_index = 0
@@ -220,7 +259,10 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
         self.logger.info("Training begin: using optimizer %s "
                          "with current learning rate %.4f ",
                          optimizer, lr)
-        self.logger.info("Train for %d epochs.", estimator.max_epochs)
+        if estimator.max_epoch:
+            self.logger.info("Train for %d epochs.", estimator.max_epoch)
+        else:
+            self.logger.info("Train for %d batches.", estimator.max_batch)
         # reset all counters
         self.current_epoch = 0
         self.batch_index = 0
@@ -234,7 +276,9 @@ class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, Bat
             name, value = metric.get()
             msg += '%s : %.4f ' % (name, value)
         self.logger.info(msg)
-        for handler in self.logger.handlers:
+        # make a copy of handler list and remove one by one
+        # as removing handler will edit the handler list
+        for handler in self.logger.handlers[:]:
             handler.close()
             self.logger.removeHandler(handler)
         logging.shutdown()
@@ -285,30 +329,32 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
     Parameters
     ----------
     model_dir : str
-        file directory to save all the model related files including model architecture,
+        File directory to save all the model related files including model architecture,
         model parameters, and trainer states.
     model_prefix : str default 'model'
-        prefix to add for all checkpoint file names
+        Prefix to add for all checkpoint file names
     monitor: EvalMetric
-        the metrics to monitor and determine if model has improved
+        The metrics to monitor and determine if model has improved
     verbose: int, default 0
-        verbosity mode
+        Verbosity mode, 1 means inform user every time a checkpoint is saved
     save_best: bool
-        if True, save the model parameters and trainer states with the best monitored value
+        If True, save the model parameters and trainer states with the best monitored value
     mode: str, default 'auto'
-        one of {auto, min, max}, if `save_best_only=True`, the comparison to make
+        One of {auto, min, max}, if `save_best_only=True`, the comparison to make
         and determine if the monitored value has improved. if 'auto' mode, checkpoint
         handler will try to use min or max based on the monitored metric name
     epoch_period: int, default 1
-        epoch intervals between saving the network
+        Epoch intervals between saving the network
     batch_period: int, default None
-        batch intervals between saving the network,
+        Batch intervals between saving the network,
         by default, checkpoints are not saved based on the number of batches
     max_checkpoints : int, default 5
-        maximum number of checkpoint files to keep in the model_dir, older checkpoints
-        will be removed
-    resume_from : str, default None
-        one of {batch, epoch}, select which type of checkpoints to resume from
+        Maximum number of checkpoint files to keep in the model_dir, older checkpoints
+        will be removed. Does not count best checkpoint
+    resume_from_checkpoint : bool, default False
+        Whether to resume training from checkpoint in model_dir. If True and checkpoints
+        found, :py:class:`CheckpointHandler` will load net parameters and trainer states,
+        and train the remaining of epochs and batches.
     """
 
     def __init__(self,
@@ -321,7 +367,7 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                  epoch_period=1,
                  batch_period=None,
                  max_checkpoints=5,
-                 resume_type=None):
+                 resume_from_checkpoint=False):
         self.monitor = monitor
         self.verbose = verbose
         if not os.path.exists(model_dir):
@@ -334,12 +380,10 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                              "You can get these objects using estimator.prepare_loss_and_metric()")
         self.epoch_period = epoch_period
         self.batch_period = batch_period
-        self.num_batches = 0
-        self.num_epochs = 0
+        self.current_batch = 0
+        self.current_epoch = 0
         self.max_checkpoints = max_checkpoints
-        if resume_type and not resume_type in ['batch', 'epoch']:
-            raise ValueError("Unknown resume type, please specify as `batch` or `epoch`.")
-        self.resume_type = resume_type
+        self.resume_from_checkpoint = resume_from_checkpoint
         self.saved_checkpoints = []
         self.logger = logging.getLogger(__name__)
         if self.save_best:
@@ -372,66 +416,79 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
 
     def train_begin(self, estimator, *args, **kwargs):
         # reset all counters
-        self.num_epochs = 0
-        self.num_batches = 0
+        self.current_epoch = 0
+        self.current_batch = 0
         if self.save_best:
             self.best = np.Inf if self.monitor_op == np.less else -np.Inf
-        if self.resume_type:
+        if self.resume_from_checkpoint:
+            error_msg = "To use resume from checkpoint, you must only specify " \
+                        "the same type of period you used for training." \
+                        "For example, if you are training based on number of epochs," \
+                        "you must save only based on epochs, and set batch_period to None."
+            if estimator.max_batch:
+                assert self.batch_period, error_msg
+                assert not self.epoch_period, error_msg
+            if estimator.max_epoch:
+                assert self.epoch_period, error_msg
+                assert not self.batch_period, error_msg
+
             self._resume_from_checkpoint(estimator)
 
     def batch_end(self, estimator, *args, **kwargs):
         # only save symbol once after first batch
-        if self.num_batches == 0:
+        if self.current_batch == 0:
             self._save_symbol(estimator)
-        if self.batch_period:
-            self._save_checkpoint(estimator, "Batch", self.batch_period, self.num_batches)
-        self.num_batches += 1
+        if self.batch_period and (self.current_batch + 1) % self.batch_period == 0:
+            self._save_checkpoint(estimator)
+        self.current_batch += 1
 
     def epoch_end(self, estimator, *args, **kwargs):
-        if self.epoch_period:
-            self._save_checkpoint(estimator, "Epoch", self.epoch_period, self.num_epochs)
-        self.num_epochs += 1
+        if self.epoch_period and (self.current_epoch + 1) % self.epoch_period == 0:
+            self._save_checkpoint(estimator)
+        self.current_epoch += 1
 
-    def _save_checkpoint(self, estimator, period_name, period_value, num_of_periods):
-        # period name can be batch or epoch
-        # period value determine how often a checkpoint is saved
-        # num_of_periods records the number of batch or epoch
-        # add extension for weights
-        if num_of_periods % period_value == 0:
-            if self.verbose > 0:
-                self.logger.info('[%s %d] saving model to %s', period_name, num_of_periods, self.model_dir)
-            # if resumed from checkpoint, increment checkpoint number
-            if self.resume_type == period_name.lower():
-                saved_period = num_of_periods + self.trained_period + 1
+    def _save_checkpoint(self, estimator):
+        if self.verbose > 0:
+            self.logger.info('[Epoch %d][Batch %d] saving model to %s',
+                             self.current_epoch, self.current_batch, self.model_dir)
+        # if resumed from checkpoint, increment checkpoint number
+        if self.resume_from_checkpoint:
+            save_epoch_number = self.current_epoch + self.trained_epoch + 1
+            if estimator.max_epoch:
+                # checkpoint saved at epoch end, batch number already incremented
+                save_batch_number = self.current_batch + self.trained_batch
             else:
-                saved_period = num_of_periods
-            prefix = "%s-%s%d" % (self.model_prefix, period_name.lower(), saved_period)
-            self._save_params_and_trainer(estimator, prefix)
+                save_batch_number = self.current_batch + self.trained_batch + 1
+        else:
+            save_epoch_number = self.current_epoch
+            save_batch_number = self.current_batch
+        prefix = "%s-epoch%dbatch%d" % (self.model_prefix, save_epoch_number, save_batch_number)
+        self._save_params_and_trainer(estimator, prefix)
 
-            if self.save_best:
-                monitor_name, monitor_value = self.monitor.get()
-                # check if monitor exists in train stats
-                if np.isnan(monitor_value):
-                    warnings.warn(RuntimeWarning('Skipping save best because %s is not updated, make sure you '
-                                                 'pass one of the metric objects as monitor, '
-                                                 'you can use estimator.prepare_loss_and_metrics to'
-                                                 'create all metric objects', monitor_name))
+        if self.save_best:
+            monitor_name, monitor_value = self.monitor.get()
+            # check if monitor exists in train stats
+            if np.isnan(monitor_value):
+                warnings.warn(RuntimeWarning('Skipping save best because %s is not updated, make sure you '
+                                             'pass one of the metric objects as monitor, '
+                                             'you can use estimator.prepare_loss_and_metrics to'
+                                             'create all metric objects', monitor_name))
+            else:
+                if self.monitor_op(monitor_value, self.best):
+                    if self.verbose > 0:
+                        self.logger.info('[Epoch %d][Batch %d] %s improved from %0.5f to %0.5f,'
+                                         ' updating best model to %s',
+                                         self.current_epoch, self.current_batch, monitor_name,
+                                         self.best, monitor_value, self.model_dir)
+                    prefix = self.model_prefix + '-best'
+                    self._save_params_and_trainer(estimator, prefix)
+                    self.best = monitor_value
                 else:
-                    if self.monitor_op(monitor_value, self.best):
-                        if self.verbose > 0:
-                            self.logger.info('[%s %d] %s improved from %0.5f to %0.5f,'
-                                             ' updating best model to %s',
-                                             period_name, num_of_periods, monitor_name,
-                                             self.best, monitor_value, self.model_dir)
-                        prefix = self.model_prefix + '-best'
-                        self._save_params_and_trainer(estimator, prefix)
-                        self.best = monitor_value
-                    else:
-                        if self.verbose > 0:
-                            self.logger.info('[%s %d] %s did not improve from %0.5f, '
-                                             'skipping updating best model',
-                                             period_name, num_of_periods, monitor_name,
-                                             self.best)
+                    if self.verbose > 0:
+                        self.logger.info('[Epoch %d][Batch %d] %s did not improve from %0.5f, '
+                                         'skipping updating best model',
+                                         self.current_epoch, self.current_batch, monitor_name,
+                                         self.best)
 
     def _save_symbol(self, estimator):
         symbol_file = os.path.join(self.model_dir, self.model_prefix + '-symbol.json')
@@ -460,42 +517,75 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
                     os.remove(os.path.join(self.model_dir, fname))
 
     def _resume_from_checkpoint(self, estimator):
-        self.trained_period = -1
-        for fname in os.listdir(self.model_dir):
-            if fname.startswith(self.model_prefix):
-                if self.resume_type in fname and '.params' in fname:
-                    self.saved_checkpoints.append(fname[:fname.find('.params')])
-                    try:
-                        # find trained number of batch or epoch
-                        period = int(fname[fname.find(self.resume_type) + 5: fname.find('.params')])
-                        if period > self.trained_period:
-                            self.trained_period = period
-                    except ValueError:
-                        raise ValueError("Error parsing checkpoint files, please check your checkpoints "
-                                         "have the format {model_name}-{%s}{%s_number}.params, "
-                                         "there should also be a .states file for each .params file ",
-                                         self.resume_type, self.resume_type)
-        if self.trained_period != -1:
-            # change maximum number of epoch to train is resumed from epoch checkpoint
-            if self.resume_type == 'epoch':
-                if self.trained_period >= estimator.max_epochs - 1:
+        prefix = self.model_prefix + '-epoch'
+        self.trained_epoch = self._find_max_iteration(
+            dir=self.model_dir,
+            prefix=prefix,
+            start='epoch',
+            end='batch',
+            saved_checkpoints=self.saved_checkpoints)
+        prefix += str(self.trained_epoch)
+        self.trained_batch = self._find_max_iteration(
+            dir=self.model_dir,
+            prefix=prefix,
+            start='batch',
+            end='.params')
+
+        if self.trained_epoch == -1:
+            msg = "No checkpoint found, training from scratch for "
+            if estimator.max_batch:
+                msg += "%d batches" % estimator.max_batch
+            else:
+                msg += "%d epochs" % estimator.max_epoch
+            self.logger.info(msg)
+        else:
+            msg = "Checkpoint resumed from epoch %d batch %d, continue to train for " % (
+                self.trained_epoch, self.trained_batch)
+            # change maximum number of epoch or batch to train if resumed from epoch checkpoint
+            if estimator.max_epoch:
+                if self.trained_epoch >= estimator.max_epoch - 1:
                     raise ValueError("Found checkpoint with maximum number of epoch %d reached, please specify"
-                                     "resume_type=None (default value) if you wan to train from scratch.",
-                                     self.trained_period + 1)
-                estimator.max_epochs = estimator.max_epochs - self.trained_period - 1
-            param_file = "%s-%s%d.params" % (self.model_prefix, self.resume_type, self.trained_period)
+                                     "resume_from_checkpoint=False (default value) if you wan to train from scratch.",
+                                     estimator.max_epoch)
+                estimator.max_epoch = estimator.max_epoch - self.trained_epoch - 1
+                msg += "%d epochs " % estimator.max_epoch
+            if estimator.max_batch:
+                if self.trained_batch >= estimator.max_batch - 1:
+                    raise ValueError("Found checkpoint with maximum number of batch %d reached, please specify"
+                                     "resume_from_checkpoint=False (default value) if you wan to train from scratch.",
+                                     self.trained_batch)
+                estimator.max_batch = estimator.max_batch - self.trained_batch - 1
+                msg += "%d batches " % estimator.max_batch
+            # load checkpoint
+            param_file = "%s-epoch%dbatch%d.params" % (self.model_prefix, self.trained_epoch, self.trained_batch)
             param_file = os.path.join(self.model_dir, param_file)
-            trainer_file = "%s-%s%d.states" % (self.model_prefix, self.resume_type, self.trained_period)
+            trainer_file = "%s-epoch%dbatch%d.states" % (self.model_prefix, self.trained_epoch, self.trained_batch)
             trainer_file = os.path.join(self.model_dir, trainer_file)
             assert os.path.exists(param_file), "Failed to load checkpoint, %s does not exist" % param_file
             assert os.path.exists(trainer_file), "Failed to load checkpoint, %s does not exist" % trainer_file
             estimator.net.load_parameters(param_file, ctx=estimator.context)
             estimator.trainer.load_states(trainer_file)
-            self.logger.warning("Checkpoint resumed from %s %d, continue training for %d epochs.",
-                                self.resume_type, self.trained_period, estimator.max_epochs)
-        else:
-            self.logger.info("No checkpoint found, training from scratch for %d epochs.",
-                             estimator.max_epochs)
+            self.logger.warning(msg)
+
+    def _find_max_iteration(self, dir, prefix, start, end, saved_checkpoints=None):
+        error_msg = "Error parsing checkpoint file, please check your " \
+                    "checkpoints have the format: " \
+                    "{model_name}-epoch{epoch_number}batch{batch_number}.params, " \
+                    "there should also be a .states file for each .params file "
+        max_iter = -1
+        for fname in os.listdir(dir):
+            if fname.startswith(prefix) and '.params' in fname:
+                if saved_checkpoints:
+                    # save prefix of existing checkpoints
+                    saved_checkpoints.append(fname[:fname.find('.params')])
+                try:
+                    # find trained number of epoch
+                    iter = int(fname[fname.find(start) + len(start): fname.find(end)])
+                    if iter > max_iter:
+                        max_iter = iter
+                except ValueError:
+                    raise ValueError(error_msg)
+        return max_iter
 
 
 class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
@@ -504,17 +594,17 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
     Parameters
     ----------
     monitor: EvalMetric
-        the metrics to monitor
+        The metric to monitor, and stop training if this metric does not improve
     min_delta: float, default 0
-        minimal change in monitored value to be considered as an improvement
+        Minimal change in monitored value to be considered as an improvement
     patience: int, default 0
-        number of epochs to wait for improvement before terminate training
+        Number of epochs to wait for improvement before terminate training
     mode: str, default 'auto'
-        one of {auto, min, max}, if `save_best_only=True`, the comparison to make
+        One of {auto, min, max}, if `save_best_only=True`, the comparison to make
         and determine if the monitored value has improved. if 'auto' mode, checkpoint
         handler will try to use min or max based on the monitored metric name
     baseline: float
-        baseline value to compare the monitored value with
+        Baseline value to compare the monitored value with
     """
 
     def __init__(self,

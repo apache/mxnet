@@ -363,8 +363,9 @@ def test_default_handlers():
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # test handler order
+    train_metrics, val_metrics = est.prepare_loss_and_metrics()
     early_stopping = EarlyStoppingHandler(monitor=val_metrics[0])
     handlers = est._prepare_default_handlers(val_data=None, event_handlers=[early_stopping])
-    assert len(handlers) == 3
+    assert len(handlers) == 4
     assert isinstance(handlers[0], MetricHandler)
-    assert isinstance(handlers[2], LoggingHandler)
+    assert isinstance(handlers[3], LoggingHandler)
