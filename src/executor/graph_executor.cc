@@ -877,8 +877,6 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     this->is_dynamic_ = true;
-    HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
-                          g.GetAttr<mxnet::ShapeVector>("shape"));
   }
   const mxnet::ShapeVector& shape_vec = g.GetAttr<mxnet::ShapeVector>("shape");
   std::vector<OpReqType> grad_req_types;
