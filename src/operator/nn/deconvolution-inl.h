@@ -262,11 +262,14 @@ class DeconvolutionOp {
     auto padding = param_.kernel.ndim() == 2 ? TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[0]});
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
 
+    auto conv_in_channels = data.shape_[1];
+    auto conv_out_channels = out.shape_[1];
+
     // C/G * KW * KH
     auto kernel_size = data.shape_[1] / param_.num_group * kernel.Size();
 
     // OC/G
-    auto channel_group = out.shape_[1] / param_.num_group;
+    auto channel_group = conv_out_channels / param_.num_group;
 
     // IH*IW
     auto data_spatial_size = data.shape_.ProdShape(2, in_data[deconv::kData].ndim());
@@ -281,6 +284,11 @@ class DeconvolutionOp {
     const index_t nbatch = data.size(0);
 
     auto col_buffer_size = param_.num_group * kernel_size * data_spatial_size;
+    mxnet::TShape col_buffer_shape(3, 1);
+    col_buffer_shape[0] = conv_in_channels * kernel.Size();
+    for (int i = 1; i < col_buffer_shape.ndim(); ++i) {
+      col_buffer_shape[i] = data.shape_[i+1];
+    }
 
     // shape_dstunit_ : (G, C/G, IH * IW)
     shape_dstunit_ = Shape3(
@@ -291,9 +299,11 @@ class DeconvolutionOp {
     Tensor<xpu, 1, DType> workspace = ctx.requested[deconv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size + data.shape_.Size()), s);
 
+    TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
+
     // col_buffer_3d : (G, KH * KW, IH * IW)
-    Tensor<xpu, 3, DType> col_buffer_3d = Tensor<xpu, 3, DType>(
-      workspace.dptr_, Shape3(param_.num_group, kernel_size, data_spatial_size), s);
+    Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
+      Shape3(param_.num_group, kernel_size, data_spatial_size), s);
 
     for (index_t i = 0; i < nbatch; ++i) {
       // Tensor<xpu, 3, DType> data_3d = data[i];
@@ -312,6 +322,7 @@ class DeconvolutionOp {
         // col_buffer_3d[gid] = dot(weight_3d[gid].T(), data_3d[gid]);
         linalg_gemm(weight_3d[gid], data_3d[gid], col_buffer_3d[gid], true, false, s);
       }
+
 
       std::cout << "col buffer: " << std::endl;
       for (auto j = 0; j < kernel_size; ++j) {
