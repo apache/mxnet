@@ -149,10 +149,10 @@ class BilinearSamplerProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, grid]";
     const mxnet::TShape &dshape = (*in_shape)[bs::kData];
     const mxnet::TShape &lshape = (*in_shape)[bs::kGrid];
-    if (!ndim_is_known(dshape)) return false;
+    if (!shape_is_known(dshape)) return false;
     CHECK_EQ(dshape.ndim(), 4U) \
         << "input data should be 4D in batch-num_filter-y-x";
-    if (!ndim_is_known(lshape)) return false;
+    if (!shape_is_known(lshape)) return false;
     CHECK_EQ(lshape.ndim(), 4U) \
       << "Sampler grid should be 4D in batch-2-y-x";
     CHECK_EQ(dshape[0], lshape[0]);
