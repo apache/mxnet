@@ -192,6 +192,126 @@ def test_np_mean():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@mx.use_np_compat
+def test_np_transpose():
+    # TODO(junwu): Add more test cases
+    data = mx.sym.var('a')
+    ret = mx.sym.np.transpose(data)
+    assert type(ret) == mx.sym.np._NumpySymbol
+
+    dtypes = ['float32', 'int32']
+    for dtype in dtypes:
+        for ndim in [0, 1, 2, 3, 4, 5, 6]:
+            shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
+            np_data = _np.random.uniform(low=-100, high=100, size=shape).astype(dtype)
+            mx_data = np.array(np_data, dtype=dtype)
+            axes = [None]
+            if ndim == 0:
+                axes += [()]
+            else:
+                axis = [i for i in range(ndim)]
+                axes.append(tuple(axis))
+                random.shuffle(axis)
+                axes.append(tuple(axis))
+            for axis in axes:
+                np_out = _np.transpose(np_data, axes=axis)
+                mx_out = np.transpose(mx_data, axes=axis)
+                assert np_out.dtype == mx_out.dtype
+                assert same(mx_out.asnumpy(), np_out)
+    # TODO(junwu): Add numerical gradient test and Gluon API test.
+
+
+@with_seed()
+@mx.use_np_compat
+def test_relu():
+    # TODO(junwu): Add more test cases
+    data = mx.sym.var('data')
+    ret = mx.sym.np.ext.relu(data)
+    assert type(ret) == mx.sym.np._NumpySymbol
+
+    shapes = [(), (0, 2, 0)]
+    shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
+    for shape in shapes:
+        data = np.array(_np.random.uniform(size=shape).astype('float32'))
+        ret = np.ext.relu(data)
+        assert type(ret) == np.ndarray
+
+
+@with_seed()
+@mx.use_np_compat
+def test_sigmoid():
+    # TODO(junwu): Add more test cases
+    data = mx.sym.var('data')
+    ret = mx.sym.np.ext.sigmoid(data)
+    assert type(ret) == mx.sym.np._NumpySymbol
+
+    shapes = [(), (0, 2, 0)]
+    shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
+    for shape in shapes:
+        data = np.array(_np.random.uniform(size=shape).astype('float32'))
+        ret = np.ext.sigmoid(data)
+        assert type(ret) == np.ndarray
+
+
+@with_seed()
+@mx.use_np_compat
+def test_np_reshape():
+    # TODO(junwu): Add more test cases
+    data = mx.sym.var('a')
+    ret = mx.sym.np.reshape(data, newshape=())
+    assert type(ret) == mx.sym.np._NumpySymbol
+
+    data = np.ones((1, 1, 1))
+    ret = np.reshape(data, ())
+    assert ret.shape == ()
+    ret = np.reshape(ret, (1, 1, 1, 1))
+    assert ret.shape == (1, 1, 1, 1)
+    assert type(ret) == np.ndarray
+
+
+@with_seed()
+@mx.use_np_compat
+def test_np_maximum():
+    # TODO(junwu): Add more test cases
+    x1, x2 = mx.sym.var('x1'), mx.sym.var('x2')
+    ret = mx.sym.np.maximum(x1, x2)
+    assert type(ret) == mx.sym.np._NumpySymbol
+
+    def check_maximum(x1, x2):
+        mx_out = np.maximum(x1, x2)
+        if isinstance(x1, np.ndarray) or isinstance(x2, np.ndarray):
+            assert type(mx_out) == np.ndarray
+        np_out = _np.maximum(x1.asnumpy() if isinstance(x1, np.ndarray) else x1,
+                             x2.asnumpy() if isinstance(x2, np.ndarray) else x2)
+        assert same(mx_out.asnumpy() if isinstance(mx_out, np.ndarray) else mx_out, np_out)
+
+    check_maximum(np.zeros((2, 1)), np.ones((5, 1, 4)))
+    check_maximum(np.zeros((2, 0)), np.ones((5, 1, 1)))
+    check_maximum(np.zeros(()), np.ones((5, 1, 4)))
+
+
+@with_seed()
+@mx.use_np_compat
+def test_np_minimum():
+    # TODO(junwu): Add more test cases
+    x1, x2 = mx.sym.var('x1'), mx.sym.var('x2')
+    ret = mx.sym.np.minimum(x1, x2)
+    assert type(ret) == mx.sym.np._NumpySymbol
+
+    def check_minimum(x1, x2):
+        mx_out = np.minimum(x1, x2)
+        if isinstance(x1, np.ndarray) or isinstance(x2, np.ndarray):
+            assert type(mx_out) == np.ndarray
+        np_out = _np.minimum(x1.asnumpy() if isinstance(x1, np.ndarray) else x1,
+                             x2.asnumpy() if isinstance(x2, np.ndarray) else x2)
+        assert same(mx_out.asnumpy() if isinstance(mx_out, np.ndarray) else mx_out, np_out)
+
+    check_minimum(np.zeros((2, 1)), np.ones((5, 1, 4)))
+    check_minimum(np.zeros((2, 0)), np.ones((5, 1, 1)))
+    check_minimum(np.zeros(()), np.ones((5, 1, 4)))
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

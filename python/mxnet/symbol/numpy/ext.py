@@ -15,15 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy module for numpy ops under mxnet.symbol."""
+"""numpy.ext namespace for operators used in Gluon APIs dispatched by F=symbol module."""
 
-from . import random
-from . import linalg
-from . import ext
-from . import _op, _symbol
-from ._symbol import _NumpySymbol
-from . import _register
-from ._op import *  # pylint: disable=wildcard-import
-from ._symbol import *  # pylint: disable=wildcard-import
-
-__all__ = _op.__all__ + _symbol.__all__
+__all__ = []
