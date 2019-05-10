@@ -25,8 +25,7 @@ For the purposes of this install guide we will assume that CUDA is already insta
 
 You have several options for installing MXNet:
 1. Use a Jetson MXNet pip wheel for Python development.
-2. Use a MXNet Java API .jar file. (inference only)
-3. Use precompiled Jetson MXNet binaries.
+2. Use precompiled Jetson MXNet binaries.
 3. Build MXNet from source
    * On a faster Linux computer using cross-compilation
    * On the Jetson itself (very slow and not recommended)
@@ -41,8 +40,8 @@ Cross-compiling will require dependencies installed on that machine as well.
 To use the Python API you need the following dependencies:
 
 ```bash
-sudo apt-get update
-sudo apt-get -y install \
+sudo apt update
+sudo apt -y install \
                         build-essential \
                         git \
                         graphviz \
@@ -55,24 +54,28 @@ sudo pip install --upgrade \
                         setuptools
 
 sudo pip install \
-                        graphviz \
+                        graphviz==0.8.4 \
                         jupyter \
                         numpy==1.15.2
 ```
 
 If you plan to cross-compile you will need to install these dependencies on that computer as well.
 
+<!--
 ### Java API
 
 To use the Java inference API you only need the following dependencies:
 
 ```
-sudo apt-get install openjdk-8-java maven
+sudo apt install \
+                        maven \
+                        openjdk-8-java
 ```
 
 You may try to build the Java API .jar file yourself. If so, you will need these dependencies on that computer as well.
 
 **Note:** The `mvn install` option for building the Java API .jar after compiling the MXNet binary files is only available on MXNet >= v1.5.0.
+-->
 
 ### Configure CUDA
 
@@ -91,6 +94,28 @@ sudo ln -s /usr/local/cuda-10.0 /usr/local/cuda
 
 **Note:** When cross-compiling, change the CUDA version on the host computer you're using to match the version you're running on your Jetson device.
 
+### Download the source & setup some environment variables:
+
+These steps are optional, but some of the following instructions expect MXNet source files and the `MXNET_HOME` environment variable.
+
+Clone the MXNet source code repository using the following `git` command in your home directory:
+
+```bash
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+cd mxnet
+```
+
+Setup your environment variables for MXNet.
+
+```bash
+cd ..
+export MXNET_HOME=$(pwd)
+echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.rc
+source ~/.rc
+```
+
+**Note:** Change the `~/.rc` steps according to how you prefer to use your shell. Otherwise, your environment variables will be gone after you logout.
+
 
 ## Install MXNet for Python
 
@@ -101,15 +126,38 @@ The following wheel was cross-compiled for Jetson using MXNet v1.4.1.
 It should download the required dependencies, but if you have issues,
 install the dependencies in the prerequisites section, then run the pip wheel.
 
+```bash
+sudo pip install mxnet-1.4.1-py3-none-any.whl
+```
 
+<!--
 ## Install MXNet for Java
 
-MXNet-Java can be easily included in your Maven managed project.
+The MXNet Java API for Jetson devices is still experimental. For best results try with the master branch.
+
+### Use a pre-built jar
+
 The package for Jetson is not currently on Maven, but you can download it from S3 instead.
 The following jar was cross-compiled for Jetson using MXNet v1.4.1.
 * https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.1/mxnet-full_2.11-INTERNAL.jar
 
 Place the file on your Jetson where your project can find it.
+
+### Build your own jar
+
+You can build a jar from any pre-compiled MXNet binary.
+Follow the build from source instructions first. Once you have build the `libmxnet.so` file you are ready to build your jar files.
+
+```bash
+cd $MXNET_HOME/scala-package
+mvn package
+```
+
+This will generate a file named similar to `src/lib/mxnet-full_2.11-INTERNAL.jar`.
+
+### Use the MXNet-Java jar in your project
+
+MXNet-Java can be easily included in your Maven managed project.
 The following is an example entry for your project's `.pom` file.
 
 ```
@@ -117,17 +165,29 @@ The following is an example entry for your project's `.pom` file.
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-INTERNAL</artifactId>
   <version>1.4.1</version>
-  <systemPath>${basedir}\src\lib\mxnet-full_2.11-INTERNAL.jar</systemPath>
+  <systemPath>${basedir}/src/lib/mxnet-full_2.11-INTERNAL.jar</systemPath>
 </dependency>
 ```
 
 Refer to the [Java setup](https://mxnet.incubator.apache.org/versions/master/install/java_setup.html) page for further information.
+-->
 
 ## Use a Pre-compiled MXNet Binary
 
 If you want to just use the pre-compiled binary you can download it from S3:
 * https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.1/libmxnet.so
 
+Place this file in `$MXNET_HOME/lib`.
+
+To use this with the MXNet Python binding, you must match the source directory's checked out version with the binary's source version, then install it with pip.
+
+```bash
+cd $MXNET_HOME
+git checkout v1.4.x
+git submodule update --init
+cd python
+sudo pip install -e .
+```
 
 ## Build MXNet from Source
 
@@ -141,26 +201,22 @@ You can use a Docker method or you can build from source manually.
 ### Docker
 
 You must have installed Docker and be able to run `docker` without `sudo`.
-Follow these setup instructions to get to this point.
+Follow these [setup instructions to get to this point](https://docs.docker.com/install/linux/#manage-docker-as-a-non-root-user).
 Then run the following to execute cross-compilation via Docker.
 
-ci/build.py -p jetson
+```bash
+$MXNET_HOME/ci/build.py -p jetson
+```
 
 ### Manual
 
 **Step 1** Build the Shared Library
 
-Clone the MXNet source code repository using the following `git` command in your home directory:
-
-```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet
-```
-
+(Skip this sub-step for compiling on the Jetson device directly.)
 Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
 
 ```bash
-cp make/crosscompile.jetson.mk config.mk
+cp $MXNET_HOME/make/crosscompile.jetson.mk config.mk
 ```
 
 Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing `3rdparty/mshadow/make/mshadow.mk`.
@@ -173,35 +229,24 @@ MSHADOW_CFLAGS += -DMSHADOW_USE_PASCAL=1
 Now you can build the complete MXNet library with the following command:
 
 ```bash
+cd $MXNET_HOME
 make -j $(nproc)
 ```
 
 Executing this command creates a file called `libmxnet.so` in the `mxnet/lib` directory.
 
-**Step 2** Setup some environment variables:
-
-```bash
-cd ..
-export MXNET_HOME=$(pwd)
-echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.rc
-source ~/.rc
-```
-
-**Note:** Change the `~/.rc` steps according to how you prefer to use your shell. Otherwise, your environment variables will be gone after you logout.
-
-**Step 3** Install MXNet Python Bindings (optional)
+**Step 2** Install MXNet Python Bindings (optional)
 
 To install Python bindings run the following commands in the MXNet directory:
 
 ```bash
 cd $MXNET_HOME/python
-pip install --upgrade pip
-pip install -e .
+sudo pip install -e .
 ```
 
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
-**Step 4** Install the MXNet Java & Scala Bindings (optional)
+**Step 3** Install the MXNet Java & Scala Bindings (optional)
 
 Change directories to `scala-package` and run `mvn install`.
 
@@ -215,4 +260,13 @@ This creates the required `.jar` file to use in your Java or Scala projects.
 ## Conclusion and Next Steps
 
 You are now ready to run MXNet on your NVIDIA Jetson TX2 or Nano device.
+You can verify your MXNet Python installation with the following:
+
+```python
+import mxnet
+mxnet.__version__
+```
+
+If everything is working, it will report the version number.
+
 For assistance, head over to the [MXNet Forum](https://discuss.mxnet.io/).
