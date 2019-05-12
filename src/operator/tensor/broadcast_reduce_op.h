@@ -1184,6 +1184,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
 
+  std::cout << "safe_accumulation: " << dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false) << std::endl;
   if (param.ord == 1) {
     if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
       ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
