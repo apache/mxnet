@@ -1292,6 +1292,13 @@ MXNET_DLL int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out);
  */
 MXNET_DLL int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out);
 /*!
+ * \brief Remove the operators amp_cast and amp_multicast
+ * \param sym_handle the input symbol.
+ * \param ret_sym_handle the output symbol.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolRemoveAmpCast(SymbolHandle sym_handle, SymbolHandle* ret_sym_handle);
+/*!
  * \brief Save a symbol into a json file.
  * \param symbol the input symbol.
  * \param fname the file name.
