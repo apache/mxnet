@@ -216,6 +216,8 @@ class GraphExecutor : public Executor {
   void ExecuteMonOutputCallback(size_t nid);
   // peform bulking and segmentation on the region [from_node, up_to_node) of a graph
   void BulkOpSegs(size_t from_node, size_t up_to_node, size_t segment_num_nodes_max);
+  // When infer shape fails, fall back to ensure dynamic-shaped operators executed correctly.
+  bool is_dynamic_;
   // indicate whether there is a backward graph for gradients.
   bool need_grad_;
   // internal graph

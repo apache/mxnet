@@ -149,7 +149,7 @@ class Executor(object):
         check_call(_LIB.MXExecutorForward(
             self.handle,
             ctypes.c_int(int(is_train))))
-
+        self.outputs = self._get_outputs()
         return self.outputs
 
     def backward(self, out_grads=None, is_train=True):
