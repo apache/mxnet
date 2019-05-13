@@ -1274,13 +1274,6 @@ LINALG_GPU_GETRF(DnDgetrf, double)
 
 // CPU/GPU-versions of LAPACK function "getri"
 
-template<typename xpu, typename DType> inline
-void check_getri(const Tensor<xpu, 2, DType>& A) {
-  // Any checking that helps user debug potential problems.
-  CHECK_EQ(A.size(0), A.size(1))
-    << "A must be square symmetric matrix";
-}
-
 // The input of this function should be col-major for performance.
 // Tensor work holds space for ipiv, work in getri
 #define LINALG_CPU_GETRI(fname, DType) \
@@ -1288,7 +1281,6 @@ template<> inline \
 void linalg_getri<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                               const Tensor<cpu, 1, DType>& work, \
                               Stream<cpu> *s) { \
-  check_getri(A); \
   DType wkopt; \
   MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
                        A.stride_, nullptr, &wkopt, -1); \
