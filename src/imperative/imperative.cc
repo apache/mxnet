@@ -237,16 +237,13 @@ void Imperative::RecordOp(
     node->inputs.resize(inputs.size());
   }
 
-  std::vector<bool>& save_inputs = *p_save_inputs;
-  std::vector<bool>& save_outputs = *p_save_outputs;
-
   for (size_t i = 0; i < inputs.size(); ++i) {
     if (AGInfo::IsNone(*(inputs[i]))) {
       nnvm::NodeEntry entry{nnvm::Symbol::CreateVariable(
           "null" + std::to_string(variable_count_++)).outputs[0].node, 0, 0};
       AGInfo& input_info = AGInfo::Create(entry.node);
       input_info.ctx = inputs[i]->ctx();
-      if (save_inputs[i]) {
+      if ((*p_save_inputs)[i]) {
         input_info.outputs.emplace_back(*inputs[i]);
       } else {
         // Put a dummy array here since it will not be used.
@@ -256,7 +253,7 @@ void Imperative::RecordOp(
         input_info.outputs.back().storage_type_ = inputs[i]->storage_type();
       }
       inputs[i]->entry_ = std::move(entry);  // assign last to prevent cyclic reference
-    } else if (save_inputs[i]) {
+    } else if ((*p_save_inputs)[i]) {
       AGInfo::Get(inputs[i]->entry_.node).outputs[inputs[i]->entry_.index] = inputs[i]->Detach();
     }
     node->inputs[i] = inputs[i]->entry_;
@@ -269,7 +266,7 @@ void Imperative::RecordOp(
   }
 
   for (size_t i = 0; i < outputs.size(); ++i) {
-    if (save_outputs[i]) {
+    if ((*p_save_outputs)[i]) {
       info.outputs.emplace_back(outputs[i]->Detach());
     } else {
       // Put a dummy array here since it will not be used.
