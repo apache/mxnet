@@ -191,6 +191,34 @@ int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
                                  const Tensor<xpu, 1, DType>& L,
                                  Stream<xpu> *s = 0);
 
+//////////////////////////////// GETRF ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "getrf". Please refer to the
+// LAPACK documentation for further details.
+// Note that this is A = getrf(A), so A is input and output parameter.
+
+template<typename xpu, typename DType>
+void linalg_getrf(const Tensor<xpu, 2, DType>& A,
+                  const Tensor<xpu, 1, DType>& work,
+                  Stream<xpu> *s = 0);
+
+//////////////////////////////// GETRI ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "getri". Please refer to the
+// LAPACK documentation for further details.
+// Note that this is A = getri(A), so A is input and output parameter.
+
+template<typename xpu, typename DType>
+void linalg_getri(const Tensor<xpu, 2, DType>& A,
+                  const Tensor<xpu, 1, DType>& work,
+                  Stream<xpu> *s = 0);
+
+// This function determines the amount of workspace needed for linalg_getri
+// which is returned as number of elements of type DType.
+template<typename xpu, typename DType>
+int linalg_getri_workspace_query(const Tensor<xpu, 2, DType>& A,
+                                 Stream<xpu> *s = 0);
+
 #include "linalg_impl.h"
 
 #endif  // MXNET_OPERATOR_LINALG_H_

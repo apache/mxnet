@@ -1133,7 +1133,7 @@ void linalg_syevd<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                        A.dptr_, A.stride_, L.dptr_, work.dptr_, -1, &liwork, \
                       -1); \
   int lwork(static_cast<int>(*work.dptr_)); \
-  int *iwork = static_cast<int*>(static_cast<void*>(work.dptr_ + lwork)); \
+  int *iwork = static_cast<int *>(static_cast<void *>(work.dptr_ + lwork)); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
                                A.dptr_, A.stride_, L.dptr_, work.dptr_, \
                                lwork, iwork, liwork)); \
@@ -1230,6 +1230,123 @@ LINALG_GPU_SYEVD(DnDsyevd, double)
 
 LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnSsyevd, float)
 LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnDsyevd, double)
+
+#endif  // __CUDACC__
+
+//////////////////////////////// GETRF ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "getrf"
+
+// The input of this function should be col-major for performance.
+// Tensor work holds space for ipiv in getrf
+#define LINALG_CPU_GETRF(fname, DType) \
+template<> inline \
+void linalg_getrf<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              Stream<cpu> *s) { \
+  int *ipiv = static_cast<int *>(static_cast<void *>(work.dptr_)); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(1), A.size(0), \
+                               A.dptr_, A.stride_, ipiv)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+
+LINALG_CPU_GETRF(sgetrf, float)
+LINALG_CPU_GETRF(dgetrf, double)
+
+#ifdef __CUDACC__
+
+// There is no implementation of getrf in cusolver, so it's left unimplemented
+// util magma is introduced to mxnet.
+#define LINALG_GPU_GETRF(fname, DType) \
+template<> inline \
+void linalg_getrf<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                              const Tensor<gpu, 1, DType>& work, \
+                              Stream<gpu> *s) { \
+  LOG(FATAL) << "no GPU implementation for getrf"; \
+}
+
+LINALG_GPU_GETRF(DnSgetrf, float)
+LINALG_GPU_GETRF(DnDgetrf, double)
+
+#endif  // __CUDACC__
+
+//////////////////////////////// GETRI ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "getri"
+
+template<typename xpu, typename DType> inline
+void check_getri(const Tensor<xpu, 2, DType>& A) {
+  // Any checking that helps user debug potential problems.
+  CHECK_EQ(A.size(0), A.size(1))
+    << "A must be square symmetric matrix";
+}
+
+// The input of this function should be col-major for performance.
+// Tensor work holds space for ipiv, work in getri
+#define LINALG_CPU_GETRI(fname, DType) \
+template<> inline \
+void linalg_getri<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              Stream<cpu> *s) { \
+  check_getri(A); \
+  DType wkopt; \
+  MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
+                       A.stride_, nullptr, &wkopt, -1); \
+  int lwork(static_cast<int>(wkopt)); \
+  int *ipiv = static_cast<int *>(static_cast<void *>(work.dptr_)); \
+  DType *pwork = static_cast<DType *>(static_cast<void *>(ipiv + A.size(0))); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
+                               A.stride_, ipiv, pwork, lwork)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+LINALG_CPU_GETRI(sgetri, float)
+LINALG_CPU_GETRI(dgetri, double)
+
+// Mangle temp storage requirements for DType and int into a single
+// request as we can only allocate one temp space per operator. We
+// partition this temp space into two chunks again when calling getri.
+// Returned is the number of elements of type DType that the temp space
+// needs to accomodate. This also makes this function signature equivalent
+// to the work space query on GPU.
+#define LINALG_CPU_GETRI_WORKSPACE_QUERY(func, DType) \
+template<> inline \
+int linalg_getri_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                                             Stream<cpu> *s) { \
+  DType lwork(0); \
+  MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
+                      A.stride_, nullptr, &lwork, -1); \
+  int ipiv = (sizeof(int) * A.size(0) + sizeof(DType) - 1) / sizeof(DType); \
+  return ipiv + static_cast<int>(lwork); \
+}
+LINALG_CPU_GETRI_WORKSPACE_QUERY(sgetri, float)
+LINALG_CPU_GETRI_WORKSPACE_QUERY(dgetri, double)
+
+#ifdef __CUDACC__
+
+// There is no implementation of getri in cusolver, so it's left unimplemented
+// util magma is introduced to mxnet.
+#define LINALG_GPU_GETRI(fname, DType) \
+template<> inline \
+void linalg_getri<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                              const Tensor<gpu, 1, DType>& work, \
+                              Stream<gpu> *s) { \
+  LOG(FATAL) << "no GPU implementation for getri"; \
+}
+
+
+#define LINALG_GPU_GETRI_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+                                             Stream<gpu> *s) { \
+  LOG(FATAL) << "no GPU implementation for getri"; \
+  return 0; \
+}
+
+LINALG_GPU_GETRI(DnSgetri, float)
+LINALG_GPU_GETRI(DnDgetri, double)
+
+LINALG_GPU_GETRI_WORKSPACE_QUERY(DnSgetri, float)
+LINALG_GPU_GETRI_WORKSPACE_QUERY(DnDgetri, double)
 
 #endif  // __CUDACC__
 

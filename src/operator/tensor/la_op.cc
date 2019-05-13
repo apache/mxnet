@@ -889,5 +889,39 @@ NNVM_REGISTER_OP(_backward_linalg_syevd)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackwSyevd<cpu, syevd_backward>);
 
+NNVM_REGISTER_OP(_linalg_inverse)
+.add_alias("linalg_inverse")
+.describe(R"code(Compute the inverse of a matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, *A* is a square matrix. We compute:
+
+  *out* = *A*\ :sup:`-1`
+
+If *n>2*, *inverse* is performed separately on the trailing two dimensions
+for all inputs (batch mode).
+
+.. note:: The operator supports float32 and float64 data types only.
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; } )
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 2, 1, 1, inverse>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_linalg_inverse"})
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+
+NNVM_REGISTER_OP(_backward_linalg_inverse)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 3, 1, potri_backward>);
+
 }  // namespace op
 }  // namespace mxnet
