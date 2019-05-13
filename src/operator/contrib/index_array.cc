@@ -147,8 +147,8 @@ Examples::
   } else {
     oshape[inshape.ndim()] = inshape.ndim();
   }
-  out_shape->clear();
-  out_shape->push_back(oshape);
+
+  SHAPE_ASSIGN_CHECK(*out_shape, 0, oshape);
   return shape_is_known(oshape);
 })
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs &attrs,
