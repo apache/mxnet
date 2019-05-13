@@ -20,7 +20,7 @@
 # This script builds the static library of libturbojpeg that can be used as dependency of
 # mxnet/opencv.
 set -ex
-TURBO_JPEG_VERSION=1.5.90
+TURBO_JPEG_VERSION=2.0.2
 if [[ $PLATFORM == 'darwin' ]]; then
     JPEG_NASM_OPTION="-D CMAKE_ASM_NASM_COMPILER=/usr/local/bin/nasm"
 fi

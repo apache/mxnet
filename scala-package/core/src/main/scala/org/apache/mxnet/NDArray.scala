@@ -741,10 +741,16 @@ object NDArray extends NDArrayBase {
   * </b>
   */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
-                             val writable: Boolean = true,
-                             addToCollector: Boolean = true) extends NativeResource {
-  if (addToCollector) {
-    NDArrayCollector.collect(this)
+                             val writable: Boolean) extends NativeResource {
+
+  @deprecated("Please use ResourceScope instead", "1.5.0")
+  def this(handle: NDArrayHandle,
+           writable: Boolean = true,
+           addToCollector: Boolean = true) {
+    this(handle, writable)
+    if (addToCollector) {
+      NDArrayCollector.collect(this)
+    }
   }
 
   override def nativeAddress: CPtrAddress = handle
