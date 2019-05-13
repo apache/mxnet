@@ -8508,6 +8508,29 @@ def test_add_n():
     assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
 
 
+def test_dot_partial_shape():
+    x = mx.sym.Variable("x")
+    y = mx.sym.Variable("y")
+    for op in [mx.sym.dot, mx.sym.batch_dot]:
+        z = op(x, y)
+        # both side unknown
+        z.infer_shape_partial(x=(0, 3, 4), y=(0, 4, 5))
+        with mx.np_compat(True):
+            # rhs unknown
+            z.infer_shape_partial(x=(3, 3, 4), y=(-1, 4, 5))
+
+
+def test_embedding_partial_shape():
+    # testing embedding with batch size unknown
+    x = mx.sym.Variable("x")
+    w = mx.sym.Variable("w")
+    y = mx.sym.Embedding(data=x, weight=w, input_dim=100, output_dim=10)
+    _, result_shape, _ = y.infer_shape_partial(x=(0, 5), w=(100, 10))
+    assert result_shape  == [(0, 5, 10)]
+    with mx.np_compat(True):
+        _, result_shape, _ = y.infer_shape_partial(x=(-1, 5), w=(100, 10))
+        assert result_shape == [(-1, 5, 10)]
+
 def test_ops_partial_shape():
     # test operators able to run infer shape partial when some dims are unknown
     x = mx.sym.Variable("x")
@@ -8516,6 +8539,14 @@ def test_ops_partial_shape():
         y.infer_shape_partial(x=(0, 3, 3))
         with mx.np_compat(True):
             y.infer_shape_partial(x=(-1, 3, 3))
+
+def test_max_partial_shape():
+    # test operators able to run infer shape partial when some dims are unknown
+    x = mx.sym.Variable("x")
+    y = mx.sym.max(x)
+    y.infer_shape_partial(x=(0, 3, 3))
+    with mx.np_compat(True):
+        y.infer_shape_partial(x=(-1, 3, 3))
 
 
 def test_transpose_partial_shape():
@@ -8531,19 +8562,6 @@ def test_transpose_partial_shape():
     with mx.np_compat(True):
         _, result, _ = y.infer_shape_partial(x=(-1, 3, 224, 224))
         assert result == [(-1, 224, 224, 3)]
-
-
-def test_embedding_partial_shape():
-    # testing embedding with batch size unknown
-    x = mx.sym.Variable("x")
-    w = mx.sym.Variable("w")
-    y = mx.sym.Embedding(data=x, weight=w, input_dim=100, output_dim=10)
-    _, result_shape, _ = y.infer_shape_partial(x=(0, 5), w=(100, 10))
-    assert result_shape  == [(0, 5, 10)]
-
-    with mx.np_compat(True):
-        _, result_shape, _ = y.infer_shape_partial(x=(-1, 5), w=(100, 10))
-        assert result_shape == [(-1, 5, 10)]
 
 
 def test_pick_partial_shape():
