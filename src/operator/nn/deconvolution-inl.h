@@ -229,10 +229,11 @@ class DeconvolutionOp {
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1U);
+    LayerSetUp(in_data[deconv::kData].shape_, out_data[deconv::kData].shape_);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
-        << "Must init CuBLAS handle in stream";
+        << "Must init cuBLAS handle in stream";
 #endif
     auto in_data_shape = in_data[deconv::kData].shape_;
     // G: num of groups
@@ -246,10 +247,10 @@ class DeconvolutionOp {
     // OW: output height
     // OC: num of output channels
 
-    // data: (N, C, IH, IW)
-    // out: (N, OC, OH, OW)
-    Tensor<xpu, 4, DType> data = TBlobTo4DTensor(in_data[deconv::kData], s);
-    Tensor<xpu, 4, DType> out = TBlobTo4DTensor(out_data[deconv::kOut], s);
+    // input_4d: (N, C, IH, IW)
+    // output_4d: (N, OC, OH, OW)
+    Tensor<xpu, 4, DType> input_4d = TBlobTo4DTensor(in_data[deconv::kData], s);
+    Tensor<xpu, 4, DType> output_4d = TBlobTo4DTensor(out_data[deconv::kOut], s);
     index_t o_pad[2], o_adj[2];
     if (param_.kernel.ndim() == 2) {
       param_.InferPad(mxnet::TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
@@ -262,97 +263,71 @@ class DeconvolutionOp {
     auto padding = param_.kernel.ndim() == 2 ? TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[0]});
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
 
-    auto conv_in_channels = data.shape_[1];
-    auto conv_out_channels = out.shape_[1];
-
-    // C/G * KW * KH
-    auto kernel_size = data.shape_[1] / param_.num_group * kernel.Size();
-
-    // OC/G
-    auto channel_group = conv_out_channels / param_.num_group;
-
-    // IH*IW
-    auto data_spatial_size = data.shape_.ProdShape(2, in_data[deconv::kData].ndim());
-
-    // OH*OW
-    auto out_spatial_size = out.shape_.ProdShape(2, out_data[deconv::kOut].ndim());
-
     // weight_3d: (G, OC/G, KH * KW)
-    Shape<3> weight_shape = Shape3(param_.num_group, channel_group, kernel_size);
-    Tensor<xpu, 3, DType> weight_3d = in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(weight_shape, s);
+    Tensor<xpu, 3, DType> weight_3d = in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(
+      Shape3(param_.num_group, conv_out_channels_ / group_, kernel_dim_), s);
 
-    const index_t nbatch = data.size(0);
-
-    auto col_buffer_size = param_.num_group * kernel_size * data_spatial_size;
-    mxnet::TShape col_buffer_shape(3, 1);
-    col_buffer_shape[0] = conv_in_channels * kernel.Size();
-    for (int i = 1; i < col_buffer_shape.ndim(); ++i) {
-      col_buffer_shape[i] = data.shape_[i+1];
-    }
-
-    // shape_dstunit_ : (G, C/G, IH * IW)
-    shape_dstunit_ = Shape3(
-      param_.num_group,
-      data.shape_[1] / param_.num_group,
-      data.shape_[2] * data.shape_[3]);
 
     Tensor<xpu, 1, DType> workspace = ctx.requested[deconv::kTempSpace]
-      .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size + data.shape_.Size()), s);
+      .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_ + in_data[deconv::kData].shape_.Size()), s);
 
+    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1, 1);
+    col_buffer_shape[0] = conv_in_channels_ * kernel.Size();
+    for (int i = 1; i < col_buffer_shape.ndim(); ++i) {
+      col_buffer_shape[i] = in_data[deconv::kData].shape_[i + 1];
+    }
+
+    // create a colum buffer to hold the matrix product between weight_3d(T) and input_data
     TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
 
     // col_buffer_3d : (G, KH * KW, IH * IW)
     Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
-      Shape3(param_.num_group, kernel_size, data_spatial_size), s);
+      Shape3(group_, kernel_dim_, conv_in_spatial_dim_), s);
 
-    for (index_t i = 0; i < nbatch; ++i) {
-      // Tensor<xpu, 3, DType> data_3d = data[i];
+    for (index_t i = 0; i < num_; ++i) {
+      // Tensor<xpu, 3, DType> data_3d = input_4d[i];
       Tensor<xpu, 3, DType> data_3d = Tensor<xpu, 3, DType>(
-        workspace.dptr_ + col_buffer_size,
-        Shape3(param_.num_group, data.shape_[1] / param_.num_group, data_spatial_size), s);
+        workspace.dptr_ + col_buffer_size_,
+        Shape3(param_.num_group, input_4d.shape_[1] / param_.num_group, conv_in_spatial_dim_), s);
 
       // data_3d : (G, C/G, IH * IW)
-      data_3d = reshape(swapaxis<1, 0>(data.Slice(i, i + 1)), data_3d.shape_);
+      data_3d = reshape(swapaxis<1, 0>(input_4d.Slice(i, i + 1)), data_3d.shape_);
 
-     // im2col(s, (out.Slice(i, i + 1)).dptr_, out.shape_, col_buffer_3d.shape_,
-     //        kernel, padding, stride, dilate, col_buffer_3d.dptr_);
-
-      for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
+      for (int g = 0; g < group_; ++g) {
         // Legacy approach shown here for comparison:
-        // col_buffer_3d[gid] = dot(weight_3d[gid].T(), data_3d[gid]);
-        linalg_gemm(weight_3d[gid], data_3d[gid], col_buffer_3d[gid], true, false, s);
+        // col_buffer_3d[g] = dot(weight_3d[g].T(), data_3d[g]);
+        linalg_gemm(weight_3d[g], data_3d[g], col_buffer_3d[g], true, false, s);
       }
 
 
+      // TODO: (lnyuan) remove debugging code
       std::cout << "col buffer: " << std::endl;
-      DType *tmp_data = new DType[col_buffer_size];
+      DType *tmp_data = new DType[col_buffer_size_];
       if (ctx.run_ctx.get_ctx().dev_mask() == gpu::kDevMask) {
         std::cout << "running on GPU " << std::endl;
         NDArray col_data(col_buffer, ctx.run_ctx.get_ctx().dev_id);
-        col_data.SyncCopyToCPU(tmp_data, col_buffer_size);
+        col_data.SyncCopyToCPU(tmp_data, col_buffer_size_);
         std::cout << "complete " << std::endl;
       } else {
         tmp_data = static_cast<DType *>(col_buffer_3d[0].dptr_);
       }
 
-      for (auto j = 0; j < kernel_size; ++j) {
-        for (auto k = 0; k < data_spatial_size; ++k) {
-          std::cout << *(tmp_data + j * kernel_size + k) << " ";
+      for (auto j = 0; j < kernel_dim_; ++j) {
+        for (auto k = 0; k < conv_in_spatial_dim_; ++k) {
+          std::cout << *(tmp_data + j * kernel_dim_ + k) << " ";
         }
         std::cout << std::endl;
       }
-
-      auto input_dim_ = in_data_shape.ProdShape(1, in_data_shape.ndim());
 
       col2im(s, col_buffer.dptr<DType>(), out_data[deconv::kOut].shape_, col_buffer.shape_,
         kernel, padding, stride, dilate, out_data[deconv::kOut].dptr<DType>() + i * input_dim_, req[deconv::kOut]);
 
     }
 
-    if (!param_.no_bias) {
+    if (bias_term_) {
       // add bias, broadcast bias to dim 1: channel
       Tensor<xpu, 1, DType> bias = in_data[deconv::kBias].get<xpu, 1, DType>(s);
-      out += mshadow::expr::broadcast<1>(bias, out.shape_);
+      output_4d += mshadow::expr::broadcast<1>(bias, output_4d.shape_);
     }
   }
 
@@ -363,21 +338,22 @@ class DeconvolutionOp {
                 const std::vector<TBlob> &in_grad) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    // TODO(bing): check the BLAS Handle, be careful
     CHECK_EQ(out_grad.size(), 1U);
     size_t expected = param_.no_bias == 0 ? 3 : 2;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(in_grad.size(), expected);
     CHECK_EQ(req.size(), expected);
     CHECK_EQ(in_data[deconv::kWeight].CheckContiguous(), true);
-    // get data
+
+    LayerSetUp(out_grad[deconv::kOut].shape_, in_grad[deconv::kData].shape_);
     Stream<xpu> *s = ctx.get_stream<xpu>();
 #if defined(__CUDACC__)
     CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
-        << "Must init CuBLAS handle in stream";
+        << "Must init cuBLAS handle in stream";
 #endif
+
     auto in_data_shape = in_data[deconv::kData].shape_;
-    Tensor<xpu, 4, DType> data = TBlobTo4DTensor(in_data[deconv::kData], s);
+    Tensor<xpu, 4, DType> data_4d = TBlobTo4DTensor(in_data[deconv::kData], s);
     Tensor<xpu, 4, DType> grad = TBlobTo4DTensor(out_grad[deconv::kOut], s);
     Tensor<xpu, 4, DType> gdata = TBlobTo4DTensor(in_grad[deconv::kData], s);
     index_t o_pad[2], o_adj[2];
@@ -388,74 +364,58 @@ class DeconvolutionOp {
     }
     auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
     auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
-    auto padding = param_.kernel.ndim() == 2 ?
-      TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[0]});
+    auto padding = param_.kernel.ndim() == 2 ? TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[0]});
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
-    Shape<3> weight_shape =
-        Shape3(param_.num_group,
-               data.shape_[1] / param_.num_group,
-               param_.num_filter / param_.num_group * kernel_size);
-    Tensor<xpu, 3, DType> wmat =
-        in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(weight_shape, s);
-    Tensor<xpu, 3, DType> gwmat =
-        in_grad[deconv::kWeight].get_with_shape<xpu, 3, DType>(weight_shape, s);
+    Tensor<xpu, 3, DType> weight_3d = in_data[deconv::kWeight]
+      .get_with_shape<xpu, 3, DType>(Shape3(group_, conv_out_channels_ / group_, kernel_dim_), s);
+    Tensor<xpu, 3, DType> dweight_3d = in_grad[deconv::kWeight]
+      .get_with_shape<xpu, 3, DType>(Shape3(group_, conv_out_channels_ / group_, kernel_dim_), s);
 
-    const index_t nbatch = data.size(0);
-    Tensor<xpu, 1, DType> workspace =
-        ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
-            Shape1(this->InitTemp(grad.shape_, data.shape_)), s);
-    for (index_t i = 0; i < nbatch; ++i) {
-      Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(
-                                           workspace.dptr_,
-                                           Shape2(shape_colunit_[0], shape_colunit_[1]),
-                                           s);
-      Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(
-                                           workspace.dptr_ + temp_col.shape_.Size(),
-                                           Shape3(shape_dstunit_[0],
-                                                  shape_dstunit_[1],
-                                                  shape_dstunit_[2]),
-                                           s);
-      temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + 1)), temp_dst.shape_);
+    Tensor<xpu, 1, DType> workspace = ctx.requested[deconv::kTempSpace]
+      .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_ + data_4d.shape_.Size()), s);
+    // calculate shape of col_buffer
+    TShape col_buffer_shape(num_spatial_axes_ + 1, 1);
+    col_buffer_shape[0] = conv_out_channels_ * kernel_size;
+    for (int i = 1; i < col_buffer_shape.ndim(); ++i) {
+      col_buffer_shape[i] = out_grad[deconv::kOut].shape_[i+1];
+    }
+    // create a column buffer to store ograd
+    TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
+    Tensor<xpu, 3, DType> col_buffer_3d = col_buffer.get_with_shape<xpu, 3, DType>(
+      Shape3(group_, kernel_dim_, conv_in_spatial_dim_), s);
 
-      im2col(
-        s,
-        (grad.Slice(i, i + 1)).dptr_,
-        grad.shape_,
-        temp_col.shape_,
-        kernel,
-        padding,
-        stride,
-        dilate,
-        temp_col.dptr_);
+    for (index_t i = 0; i < num_; ++i) {
+      // Tensor<xpu, 3, DType> data_3d = input_4d[i];
+      Tensor<xpu, 3, DType> data_3d = Tensor<xpu, 3, DType>(
+        workspace.dptr_ + col_buffer_size_,
+        Shape3(group_, data_4d.shape_[1] / group_, conv_in_spatial_dim_), s);
 
-      const index_t gstride = temp_col.size(0) / param_.num_group;
-      for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
-        Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
-        if (i == 0) {
-          Tensor<xpu, 2, DType> tmp_gwmat = gwmat[gid];
-          // Legacy approach shown here for comparison:
-          // Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
-          linalg_gemm(temp_dst[gid], tmpc, tmp_gwmat, false, true, s, req[deconv::kWeight]);
-        } else {
-          // Legacy approach shown here for comparison:
-          // gwmat[gid] += dot(temp_dst[gid], tmpc.T());
-          linalg_gemm(temp_dst[gid], tmpc, gwmat[gid], false, true, s, kAddTo);
-        }
+      // data_3d : (G, C/G, IH * IW)
+      data_3d = reshape(swapaxis<1, 0>(data_4d.Slice(i, i + 1)), data_3d.shape_);
+
+      // convert output gradient array to column buffer
+      im2col(s, out_grad[deconv::kOut].dptr<DType>() + i * output_dim_, out_grad[deconv::kOut].shape_,
+        col_buffer.shape_, kernel, padding, stride, dilate, col_buffer.dptr<DType>());
+
+      for (int g = 0; g < group_; ++g) {
+        auto request = (i == 0) ? req[deconv::kWeight] : kAddTo;
+        // Legacy approach shown here for comparison:
+        // dweight_3d[gid] += dot(temp_dst[gid], tmpc.T());
+        linalg_gemm(data_3d[g], col_buffer_3d[g], dweight_3d[g], false, true, s, request);
       }
       if (req[deconv::kData] == kWriteTo ||
           req[deconv::kData] == kWriteInplace ||
           req[deconv::kData] == kAddTo) {
-        for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
-          Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
+        for (int g = 0; g < group_; ++g) {
           // Legacy approach shown here for comparison:
-          // temp_dst[gid] = dot(wmat[gid], tmpc);
-          linalg_gemm(wmat[gid], tmpc, temp_dst[gid], false, false, s);
+          // temp_dst[gid] = dot(weight_3d[gid], tmpc);
+          linalg_gemm(weight_3d[g], col_buffer_3d[g], data_3d[g], false, false, s);
         }
         Assign(gdata.Slice(i, i + 1),
                req[deconv::kData],
-               (swapaxis<1, 0>(reshape(temp_dst,
+               (swapaxis<1, 0>(reshape(data_3d,
                                        Shape4(gdata.shape_[1],
                                               1,
                                               gdata.size(2),
@@ -469,22 +429,6 @@ class DeconvolutionOp {
   }
 
  private:
-  inline index_t InitTemp(const mshadow::Shape<4> &ishape,
-                          const mshadow::Shape<4> &oshape) {
-    const int ksize = param_.kernel.Size();
-    shape_colunit_ = mshadow::Shape2(ishape[1] * ksize,
-                                     oshape[2] * oshape[3]);
-    shape_dstunit_ = mshadow::Shape3(param_.num_group,
-                                     oshape[1] / param_.num_group,
-                                     oshape[2] * oshape[3]);
-    mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
-                                             shape_colunit_[1]);
-    mshadow::Shape<3> sdst = mshadow::Shape3(shape_dstunit_[0],
-                                             shape_dstunit_[1],
-                                             shape_dstunit_[2]);
-    index_t required_size = scol.Size() + sdst.Size();
-    return required_size;
-  }
 
   inline Tensor<xpu, 4, DType> TBlobTo4DTensor(const TBlob &tb, Stream<xpu> *s) {
     using namespace mshadow;
@@ -495,9 +439,56 @@ class DeconvolutionOp {
           Shape4(tb.shape_[0], tb.shape_[1], 1, tb.shape_[2]), s);
   }
 
+  void LayerSetUp(const mxnet::TShape& ishape, const mxnet::TShape& oshape) {
+    channel_axis_ = 1;  // hard code channel axis
+    const index_t first_spatial_axis = channel_axis_ + 1;
+    const int num_axes = param_.kernel.ndim() + 2;
+    num_spatial_axes_ = num_axes - first_spatial_axis;
+
+    // batch size
+    num_ = ishape[0];
+    // number of input channels
+    channels_ = ishape[1];
+    group_ = param_.num_group;
+    conv_out_channels_ = param_.num_filter;
+    conv_in_channels_ = channels_;
+    bias_term_ = !param_.no_bias;
+    kernel_dim_ = conv_in_channels_ / group_ * param_.kernel.Size();
+    weight_offset_ = conv_out_channels_ * kernel_dim_ / group_;
+    conv_out_spatial_dim_ = oshape.ProdShape(2, oshape.ndim());
+    conv_in_spatial_dim_ = ishape.ProdShape(2, ishape.ndim());
+    col_offset_ = kernel_dim_ * conv_out_spatial_dim_;
+    output_offset_ = conv_out_channels_ * conv_out_spatial_dim_ / group_;
+    // size of the column buffer used for storing im2col-ed pixels
+    col_buffer_size_ = kernel_dim_ * group_ * conv_in_spatial_dim_;
+    // input/output image size (#channels * height * width)
+    input_dim_ = ishape.ProdShape(1, ishape.ndim());
+    output_dim_ = oshape.ProdShape(1, oshape.ndim());
+    num_kernels_im2col_ = conv_in_channels_ * conv_out_spatial_dim_;
+    num_kernels_col2im_ = input_dim_;
+  }
+
+private:
   DeconvolutionParam param_;
-  mshadow::Shape<2> shape_colunit_;
-  mshadow::Shape<3> shape_dstunit_;
+  index_t channel_axis_;  // channel axis of the input
+  index_t channels_;  // number of channels of input image
+  index_t num_spatial_axes_;  // number of spatial axes
+  index_t num_;  // batch size
+  index_t group_;  // number of groups
+  index_t conv_out_channels_;  // number of output channels (num_filter)
+  index_t conv_out_spatial_dim_;  // number of pixels of output images per channel
+  index_t conv_in_spatial_dim_; // number of pixels of input images per channel
+  index_t conv_in_channels_;  // number of input channels
+  index_t kernel_dim_;  // number of input channels per group * kernel size
+  index_t weight_offset_;  // number of output channels per group * kernel_dim_
+  index_t col_offset_;
+  index_t output_offset_;
+  index_t col_buffer_size_;
+  index_t input_dim_;
+  index_t output_dim_;
+  index_t num_kernels_im2col_;
+  index_t num_kernels_col2im_;
+  bool bias_term_;  // has bias term?
 };  // class DeconvolutionOp
 
 template<typename xpu>
