@@ -38,16 +38,15 @@ namespace mxnet {
 namespace op {
 
 struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
-  enum OutType { kAuto = 0, kInt8, kUint8 };
   int out_type;
   dmlc::optional<float> min_calib_range;
   dmlc::optional<float> max_calib_range;
   DMLC_DECLARE_PARAMETER(QuantizeV2Param) {
     DMLC_DECLARE_FIELD(out_type)
-      .add_enum("auto", kAuto)
-      .add_enum("int8", kInt8)
-      .add_enum("uint8", kUint8)
-      .set_default(kInt8)
+      .add_enum("auto", QuantizeOutType::kAuto)
+      .add_enum("int8", QuantizeOutType::kInt8)
+      .add_enum("uint8", QuantizeOutType::kUint8)
+      .set_default(QuantizeOutType::kInt8)
       .describe("Output data type. `auto` can be specified to automatically determine output type "
                 "according to min_calib_range.");
     DMLC_DECLARE_FIELD(min_calib_range)
@@ -60,26 +59,6 @@ struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
                 "quantize the fp32 data into int8 or uint8.");
   }
 };
-
-static mshadow::TypeFlag GetOutputType(const QuantizeV2Param &param) {
-  auto out_type = mshadow::kInt8;
-  if (param.out_type == QuantizeV2Param::OutType::kAuto) {
-    if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-      if (param.min_calib_range.value() >= 0.0) {
-        out_type = mshadow::kUint8;
-      } else {
-        out_type = mshadow::kInt8;
-      }
-    }
-  } else if (param.out_type == QuantizeV2Param::OutType::kInt8) {
-    out_type = mshadow::kInt8;
-  } else if (param.out_type == QuantizeV2Param::OutType::kUint8) {
-    out_type = mshadow::kUint8;
-  } else {
-    LOG(FATAL) << "Unsupported out_type in params: " <<param.out_type;
-  }
-  return out_type;
-}
 
 // quantize float to uint8_t
 struct quantize_v2_unsigned {
@@ -143,7 +122,7 @@ static inline bool QuantizeV2Type(const nnvm::NodeAttrs &attrs, std::vector<int>
   const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
   CHECK(in_attrs->at(0) == mshadow::kFloat32 || in_attrs->at(0) == mshadow::kUint8 ||
         in_attrs->at(0) == mshadow::kInt8);
-  auto out_type = GetOutputType(param);
+  auto out_type = GetQuantizeOutputType(param);
   if (out_type == mshadow::kUint8) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kUint8);
   } else if (out_type == mshadow::kInt8) {
@@ -170,7 +149,7 @@ class QuantizeV2Operator {
     using mshadow::red::limits::MinValue;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs_.parsed);
-    auto out_type = GetOutputType(param);
+    auto out_type = GetQuantizeOutputType(param);
     if (out_type == mshadow::kUint8 && std::is_same<xpu, gpu>::value) {
       LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
                     "please switch to the context of CPU or int8 data type for GPU.";

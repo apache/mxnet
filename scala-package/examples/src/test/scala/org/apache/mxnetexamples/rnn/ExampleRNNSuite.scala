@@ -18,7 +18,7 @@
 package org.apache.mxnetexamples.rnn
 
 
-import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory

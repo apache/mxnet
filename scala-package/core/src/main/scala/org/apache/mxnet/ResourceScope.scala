@@ -64,6 +64,14 @@ class ResourceScope extends AutoCloseable {
   }
 
   /**
+    * Check if a NativeResource is in the scope
+    * @param resource
+    */
+  def contains(resource: NativeResource): Boolean = {
+    resourceQ.contains(resource)
+  }
+
+  /**
     * Remove NativeResource from the Scope, this uses
     * object equality to find the resource in the stack.
     * @param resource
@@ -80,8 +88,10 @@ class ResourceScope extends AutoCloseable {
   def moveToOuterScope(resource: NativeResource): Unit = {
     val prevScope: Option[ResourceScope] = ResourceScope.getPrevScope()
     if (prevScope.isDefined) {
-      this.remove(resource)
-      prevScope.get.add(resource)
+      if (contains(resource)) {
+        this.remove(resource)
+        prevScope.get.add(resource)
+      }
     } else this.remove(resource)
   }
 
@@ -109,20 +119,16 @@ object ResourceScope {
 
     val curScope = if (scope != null) scope else new ResourceScope()
 
-    @inline def resourceInGeneric(g: scala.collection.Iterable[_]) = {
-      g.foreach( n =>
-        n match {
-          case nRes: NativeResource => {
-            curScope.moveToOuterScope(nRes)
-          }
-          case kv: scala.Tuple2[_, _] => {
-            if (kv._1.isInstanceOf[NativeResource]) curScope.moveToOuterScope(
-              kv._1.asInstanceOf[NativeResource])
-            if (kv._2.isInstanceOf[NativeResource]) curScope.moveToOuterScope(
-              kv._2.asInstanceOf[NativeResource])
-          }
-        }
-      )
+    def recursiveMoveToOuterScope(resource: Any): Unit = {
+      resource match {
+        case nRes: NativeResource => curScope.moveToOuterScope(nRes)
+        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => curScope.moveToOuterScope(nd) )
+        case resInGeneric: scala.collection.Traversable[_] =>
+          resInGeneric.foreach(recursiveMoveToOuterScope)
+        case resProduct: scala.Product =>
+          resProduct.productIterator.foreach(recursiveMoveToOuterScope)
+        case _ => // do nothing
+      }
     }
 
     @inline def safeAddSuppressed(t: Throwable, suppressed: Throwable): Unit = {
@@ -133,13 +139,7 @@ object ResourceScope {
 
     try {
       val ret = body
-       ret match {
-          // don't de-allocate if returning any collection that contains NativeResource.
-        case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
-        case nRes: NativeResource => curScope.moveToOuterScope(nRes)
-        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => curScope.moveToOuterScope(nd) )
-        case _ => // do nothing
-      }
+      recursiveMoveToOuterScope(ret)
       ret
     } catch {
       case t: Throwable =>
