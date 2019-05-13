@@ -342,17 +342,11 @@ class DeconvolutionOp {
         std::cout << std::endl;
       }
 
-      col2im(
-        s,
-        col_buffer_3d.dptr_,
-        out.Slice(i, i + 1).shape_,
-        col_buffer_3d.shape_,
-        kernel,
-        padding,
-        stride,
-        dilate,
-        out.Slice(i, i + 1).dptr_,
-        req[deconv::kOut]);
+      auto input_dim_ = in_data_shape.ProdShape(1, in_data_shape.ndim());
+
+      col2im(s, col_buffer.dptr<DType>(), out_data[deconv::kOut].shape_, col_buffer.shape_,
+        kernel, padding, stride, dilate, out_data[deconv::kOut].dptr<DType>() + i * input_dim_, req[deconv::kOut]);
+
     }
 
     if (!param_.no_bias) {
