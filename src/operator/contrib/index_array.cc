@@ -134,7 +134,7 @@ Examples::
   const IndexArrayParam &param = nnvm::get<IndexArrayParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 1U);
   CHECK_EQ(out_shape->size(), 1U);
-  mxnet::TShape inshape = in_shape->at(index_array_enum::kIn);
+  const mxnet::TShape &inshape = (*in_shape)[index_array_enum::kIn];
   mxnet::TShape oshape = mxnet::TShape(inshape.ndim() + 1, 0);
 
   for (int i = 0; i < inshape.ndim(); i++) {
