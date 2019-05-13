@@ -391,7 +391,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     # end of all epochs
 
 
-def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
+def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, remove_amp_cast=True):
     """Checkpoint the model data into file.
 
     Parameters
@@ -412,7 +412,7 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
     - ``prefix-epoch.params`` will be saved for parameters.
     """
     if symbol is not None:
-        symbol.save('%s-symbol.json' % prefix)
+        symbol.save('%s-symbol.json' % prefix, remove_amp_cast=remove_amp_cast)
 
     save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
     save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
@@ -905,7 +905,7 @@ class FeedForward(BASE_ESTIMATOR):
                             sym_gen=self.sym_gen)
 
 
-    def save(self, prefix, epoch=None):
+    def save(self, prefix, epoch=None, remove_amp_cast=True):
         """Checkpoint the model checkpoint into file.
         You can also use `pickle` to do the job if you only work on Python.
         The advantage of `load` and `save` (as compared to `pickle`) is that
@@ -925,7 +925,7 @@ class FeedForward(BASE_ESTIMATOR):
         if epoch is None:
             epoch = self.num_epoch
         assert epoch is not None
-        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params)
+        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params, remove_amp_cast=True)
 
     @staticmethod
     def load(prefix, epoch, ctx=None, **kwargs):

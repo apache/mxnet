@@ -1275,7 +1275,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-    def save(self, fname, remove_ampcast=True):
+    def save(self, fname, remove_amp_cast=True):
         """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
@@ -1299,7 +1299,7 @@ class Symbol(SymbolBase):
         """
         if not isinstance(fname, string_types):
             raise TypeError('fname need to be string')
-        if remove_ampcast:
+        if remove_amp_cast:
             handle = SymbolHandle()
             check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
             check_call(_LIB.MXSymbolSaveToFile(handle, c_str(fname)))
