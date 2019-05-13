@@ -135,6 +135,8 @@ Examples::
   CHECK_EQ(in_shape->size(), 1U);
   CHECK_EQ(out_shape->size(), 1U);
   const mxnet::TShape &inshape = (*in_shape)[index_array_enum::kIn];
+  if (!mxnet::ndim_is_known(inshape)) return false;
+
   mxnet::TShape oshape = mxnet::TShape(inshape.ndim() + 1, 0);
 
   for (int i = 0; i < inshape.ndim(); i++) {
@@ -147,7 +149,7 @@ Examples::
   }
   out_shape->clear();
   out_shape->push_back(oshape);
-  return true;
+  return shape_is_known(oshape);
 })
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs &attrs,
                                              std::vector<int> *in_attrs,
