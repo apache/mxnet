@@ -1,6 +1,6 @@
 stages:
   - base
-  - test
+  - build_and_test
   - tag
 
 variables:
@@ -28,20 +28,31 @@ before_script:
   - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - python --version
 
-#build_and_test_make:
-#  stage: test
+#make:
+#  stage: build_and_test
 #  image: $BASE_TEMPORARY_IMAGE
 #  script:
 #    - make DEV=1 USE_CPP_PACKAGE=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 -j$(nproc)
 #    - pytest tests/python/unittest/test_binary.py
 
-build_and_test_cmake:
-  stage: test
+cmake_32bit:
+  stage: build_and_test
   image: $BASE_TEMPORARY_IMAGE
   script:
     - mkdir build
     - cd build
-    - cmake -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
+    - cmake -DBINARY_WORD_TYPE=uint32 -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
+    - cd ..
+    - cmake --build build
+    - pytest tests/binary
+
+cmake_64bit:
+  stage: build_and_test
+  image: $BASE_TEMPORARY_IMAGE
+  script:
+    - mkdir build
+    - cd build
+    - cmake -DBINARY_WORD_TYPE=uint64 -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
     - cd ..
     - cmake --build build
     - pytest tests/binary
