@@ -454,7 +454,8 @@ struct inverse {
   static void op(const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 3, DType>& A,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    // A = transpose(B, Shape3(0, 2, 1));
+    // Since inverse(A) = trans(inverse(trans(A))), so we don't need to transpose
+    // A even if we are using the col-major version of getrf and getri routines.
     Copy(A, B, s);
     // Reserve workspace (size determined by query)
     int lwork(linalg_getri_workspace_query(A[0], s));
