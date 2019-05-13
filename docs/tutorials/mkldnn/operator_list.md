@@ -22,7 +22,7 @@ MXNet MKL-DNN backend provides optimized implementations for various operators c
 To help users understanding MKL-DNN backend better, the following table summarizes the list of supported operators, data types and functionalities.  A subset of operators support faster training and inference by using a lower precision version. Refer to the following table's `INT8 Inference` column to see which operators are supported.
 
 | Operator           | Function                   | FP32 Training (backward) | FP32 Inference | INT8 Inference |
-| --                 | --                         | --                       | --             | --             |
+| ---                | ---                        | ---                      | ---            | ---            |
 | **Convolution**    | 1D Convolution             | Y                        | Y              | N              |
 |                    | 2D Convolution             | Y                        | Y              | Y              |
 |                    | 3D Convolution             | Y                        | Y              | N              |
@@ -50,7 +50,7 @@ To help users understanding MKL-DNN backend better, the following table summariz
 
 Besides direct operator optimizations, we also provide graph fusion passes listed in the table below. Users can choose to enable or disable these fusion patterns through environmental variables.
 
-For example, you can enable all fusion passes by:
+For example, you can enable all FP32 fusion passes in the following table by:
 
 ```
 export MXNET_SUBGRAPH_BACKEND=MKLDNN
@@ -62,8 +62,16 @@ And disable `Convolution + Activation(ReLU)` fusion by:
 export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
 ```
 
+When generating the corresponding INT8 symbol, users can enable INT8 operator fusion passes as following:
+
+```
+# get qsym after model quantization
+qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')
+qsym.save(symbol_name) # fused INT8 operators will be save into the symbol JSON file
+```
+
 | Fusion pattern                                            | Disable                             |
-| --                                                        | --                                  |
+| ---                                                       | ---                                 |
 | Convolution + Activation(ReLU)                            | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
 | Convolution + elemwise_add                                | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM  |
 | Convolution + BatchNorm                                   | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN   |
@@ -72,6 +80,7 @@ export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
 | FullyConnected + Activation(ReLU)                         | MXNET_DISABLE_MKLDNN_FUSE_FC_RELU   |
 | Convolution (INT8) + re-quantization                      |                                     |
 | FullyConnected (INT8) + re-quantization                   |                                     |
+| FullyConnected (INT8) + re-quantization + de-quantization |                                     |
 
 
 To install MXNet MKL-DNN backend, please refer to [MKL-DNN backend readme](MKLDNN_README.md)

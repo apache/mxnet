@@ -280,6 +280,11 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: Int ```(default=4)```
   - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
 
+* MXNET_SUBGRAPH_BACKEND
+  - Values: String ```(default="")```
+  - This variable controls the subgraph partitioning in MXNet.
+  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion pass.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```
