@@ -8428,67 +8428,71 @@ def test_image_normalize():
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
 
 @with_seed()
-def test_index_array_default():
-    for shape in [(10,), (7, 5, 29), (5, 7, 11, 13, 17, 19)]:
-        data  = mx.symbol.Variable("data")
-        index_array = mx.sym.contrib.index_array(data)
+def test_index_array():
+    def test_index_array_default():
+        for shape in [(10,), (7, 5, 29), (5, 7, 11, 13, 17, 19)]:
+            data  = mx.symbol.Variable("data")
+            index_array = mx.sym.contrib.index_array(data)
 
-        input_array = np.ones(shape)
-        mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
-        expected = np.stack(mgrid, axis=-1)
+            input_array = np.ones(shape)
+            mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
+            expected = np.stack(mgrid, axis=-1)
 
-        check_symbolic_forward(index_array, [input_array], [expected])
-        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+            check_symbolic_forward(index_array, [input_array], [expected])
+            check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
-@with_seed()
-def test_index_array_default_zero_dim():
-    with mx.np_compat(active=True):
-        data  = mx.symbol.Variable("data")
-        index_array = mx.sym.contrib.index_array(data)
+    def test_index_array_default_zero_dim():
+        with mx.np_compat(active=True):
+            data  = mx.symbol.Variable("data")
+            index_array = mx.sym.contrib.index_array(data)
 
-        input_array = np.ones(())
-        expected = np.zeros((0,))
+            input_array = np.ones(())
+            expected = np.zeros((0,))
 
-        check_symbolic_forward(index_array, [input_array], [expected])
-        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+            check_symbolic_forward(index_array, [input_array], [expected])
+            check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
-@with_seed()
-def test_index_array_default_zero_size():
-    with mx.np_compat(active=True):
-        data  = mx.symbol.Variable("data")
-        index_array = mx.sym.contrib.index_array(data)
+    def test_index_array_default_zero_size():
+        with mx.np_compat(active=True):
+            data  = mx.symbol.Variable("data")
+            index_array = mx.sym.contrib.index_array(data)
 
-        input_array = np.ones((0, 0, 0))
-        expected = np.zeros((0, 0, 0, 3))
+            input_array = np.ones((0, 0, 0))
+            expected = np.zeros((0, 0, 0, 3))
 
-        check_symbolic_forward(index_array, [input_array], [expected])
-        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+            check_symbolic_forward(index_array, [input_array], [expected])
+            check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
-@with_seed()
-def test_index_array_select_axes():
-    shape = (5, 7, 11, 13, 17, 19)
-    for axes in [(3,), (4, 1), (5, 1, 3), (-1,), (-5, -1, -3)]:
-        data  = mx.symbol.Variable("data")
-        index_array = mx.sym.contrib.index_array(data, axes=axes)
+    def test_index_array_select_axes():
+        shape = (5, 7, 11, 13, 17, 19)
+        for axes in [(3,), (4, 1), (5, 1, 3), (-1,), (-5, -1, -3)]:
+            data  = mx.symbol.Variable("data")
+            index_array = mx.sym.contrib.index_array(data, axes=axes)
 
-        input_array = np.ones(shape)
-        mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
-        expected = np.stack(mgrid, axis=-1)[..., axes]
+            input_array = np.ones(shape)
+            mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
+            expected = np.stack(mgrid, axis=-1)[..., axes]
 
-        check_symbolic_forward(index_array, [input_array], [expected])
-        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+            check_symbolic_forward(index_array, [input_array], [expected])
+            check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
-@with_seed()
-def test_index_array_select_axes_zero_size():
-    with mx.np_compat(active=True):
-        data  = mx.symbol.Variable("data")
-        index_array = mx.sym.contrib.index_array(data, axes=(2, 1))
+    def test_index_array_select_axes_zero_size():
+        with mx.np_compat(active=True):
+            data  = mx.symbol.Variable("data")
+            index_array = mx.sym.contrib.index_array(data, axes=(2, 1))
 
-        input_array = np.ones((0, 0, 0, 0))
-        expected = np.zeros((0, 0, 2))
+            input_array = np.ones((0, 0, 0, 0))
+            expected = np.zeros((0, 0, 2))
 
-        check_symbolic_forward(index_array, [input_array], [expected])
-        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+            check_symbolic_forward(index_array, [input_array], [expected])
+            check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+    
+    test_index_array_default()
+    test_index_array_default_zero_dim()
+    test_index_array_default_zero_size()
+    test_index_array_select_axes()
+    test_index_array_select_axes_zero_size()
+
 
 @with_seed()
 def test_scalar_tensor_creation():
