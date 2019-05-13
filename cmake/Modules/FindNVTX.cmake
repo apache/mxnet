@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,13 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+set(NVTX_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA NVTX")
 
-set -ex
-apt-get update || true
-apt-get install graphviz python-opencv
+find_path(NVTX_INCLUDE_DIRS
+  NAMES nvToolsExt.h
+  PATHS $ENV{NVTOOLSEXT_PATH} ${NVTX_ROOT_DIR}  ${CUDA_TOOLKIT_ROOT_DIR}
+  PATH_SUFFIXES include
+  )
 
-# sckit-learn past version 0.20 does not support python version 2 and 3.4
-pip2 install jupyter matplotlib Pillow opencv-python "scikit-learn<0.21.0" graphviz tqdm mxboard scipy
-pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm mxboard scipy
+find_library(NVTX_LIBRARIES
+  NAMES nvToolsExt64_1.lib nvToolsExt32_1.lib nvToolsExt
+  PATHS $ENV{NVTOOLSEXT_PATH} ${NVTX_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+  PATH_SUFFIXES lib lib64 lib/Win32 lib/x64
+  )
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(NVTX DEFAULT_MSG NVTX_INCLUDE_DIRS NVTX_LIBRARIES)
+
+if(NVTX_FOUND)
+  message(STATUS "Found NVTX (include: ${NVTX_INCLUDE_DIRS}, library: ${NVTX_LIBRARIES})")
+  mark_as_advanced(NVTX_ROOT_DIR NVTX_INCLUDE_DIRS NVTX_LIBRARIES)
+endif()

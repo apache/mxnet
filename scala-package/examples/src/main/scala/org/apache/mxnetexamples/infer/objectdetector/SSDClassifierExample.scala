@@ -51,7 +51,7 @@ object SSDClassifierExample {
   def runObjectDetectionSingle(modelPathPrefix: String, inputImagePath: String,
                                context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val dType = DType.Float32
       val inputShape = Shape(1, 3, 512, 512)
       // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])
@@ -68,7 +68,7 @@ object SSDClassifierExample {
   def runObjectDetectionBatch(modelPathPrefix: String, inputImageDir: String,
                               context: Array[Context]):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val dType = DType.Float32
       val inputShape = Shape(1, 3, 512, 512)
       // ssd detections, numpy.array([[id, score, x1, y1, x2, y2]...])

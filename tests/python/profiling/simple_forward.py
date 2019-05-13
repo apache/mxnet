@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,13 +15,28 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+import mxnet as mx
+from mxnet.gluon import nn
 
-set -ex
-apt-get update || true
-apt-get install graphviz python-opencv
 
-# sckit-learn past version 0.20 does not support python version 2 and 3.4
-pip2 install jupyter matplotlib Pillow opencv-python "scikit-learn<0.21.0" graphviz tqdm mxboard scipy
-pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm mxboard scipy
+def simple_forward():
+    ctx = mx.gpu()
+    mx.profiler.set_config(profile_all=True)
+    mx.profiler.set_state('run')
+
+    # define simple gluon network with random weights
+    net = nn.Sequential()
+    with net.name_scope():
+        net.add(nn.Dense(128, activation='relu'))
+        net.add(nn.Dense(64, activation='relu'))
+        net.add(nn.Dense(10))
+    net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+
+    input = mx.nd.zeros((128,), ctx=ctx)
+    predictions = net(input)
+    print('Ran simple NN forward, results:')
+    print(predictions.asnumpy())
+
+
+if __name__ == '__main__':
+    simple_forward()
