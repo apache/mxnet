@@ -301,6 +301,7 @@ class DeconvolutionOp {
 
 
       // TODO: (lnyuan) remove debugging code
+      /*
       std::cout << "col buffer: " << std::endl;
       DType *tmp_data = new DType[col_buffer_size_];
       if (ctx.run_ctx.get_ctx().dev_mask() == gpu::kDevMask) {
@@ -318,7 +319,7 @@ class DeconvolutionOp {
         }
         std::cout << std::endl;
       }
-
+      */
       col2im(s, col_buffer.dptr<DType>(), out_data[deconv::kOut].shape_, col_buffer.shape_,
         kernel, padding, stride, dilate, out_data[deconv::kOut].dptr<DType>() + i * input_dim_, req[deconv::kOut]);
 
