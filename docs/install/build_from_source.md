@@ -42,14 +42,14 @@ Building from source follows this general two-step flow of building the shared l
             * [non-Intel CPUs](#recommended-for-Systems-with-non-Intel-CPUs)
 2. [Install the language API binding(s)](#installing-mxnet-language-bindings) you would like to use for MXNet.
 MXNet's newest and most popular API is Gluon. Gluon is built into the Python binding. If Python isn't your preference, you still have more options. MXNet supports several other language APIs:
-    - [Python (includes Gluon)](../api/python/index.html)
-    - [C++](../api/c++/index.html)
-    - [Clojure](../api/clojure/index.html)
-    - [Java](../api/java/index.html)
-    - [Julia](../api/julia/index.html)
-    - [Perl](../api/perl/index.html)
-    - [R](../api/r/index.html)
-    - [Scala](../api/scala/index.html)
+    - [Python (includes Gluon)](../api/python/index.md)
+    - [C++](../api/c++/index.md)
+    - [Clojure](../api/clojure/index.md)
+    - [Java](../api/java/index.md)
+    - [Julia](../api/julia/index.md)
+    - [Perl](../api/perl/index.md)
+    - [R](../api/r/index.md)
+    - [Scala](../api/scala/index.md)
 
 <hr>
 
@@ -58,12 +58,12 @@ MXNet's newest and most popular API is Gluon. Gluon is built into the Python bin
 Detailed instructions are provided per operating system. Each of these guides also covers how to install the specific [Language Bindings](#installing-mxnet-language-bindings) you require.
 You may jump to those, but it is recommended that you continue reading to understand more general "build from source" options.
 
-* [Amazon Linux / CentOS / RHEL](centos_setup.html)
-* [macOS](osx_setup.html)
-* [Raspbian](raspian_setup.html)
-* [TX2](tx2_setup.html)
-* [Ubuntu](ubuntu_setup.html)
-* [Windows](windows_setup.html)
+* [Amazon Linux / CentOS / RHEL](centos_setup.md)
+* [macOS](osx_setup.md)
+* [Raspbian](raspian_setup.md)
+* [TX2](tx2_setup.md)
+* [Ubuntu](ubuntu_setup.md)
+* [Windows](windows_setup.md)
 
 
 <hr>
@@ -307,13 +307,13 @@ After building MXNet's shared library, you can install other language bindings.
 **NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++](#build-mxnet-with-c++).
 
 The following table provides links to each language binding by operating system:
-| | [Ubuntu](ubuntu_setup.html) | [macOS](osx_setup.html) | [Windows](windows_setup.html) |
+| | [Ubuntu](ubuntu_setup.md) | [macOS](osx_setup.md) | [Windows](windows_setup.md) |
 | --- | ----  | --- | ------- |
-| Python | [Ubuntu guide](ubuntu_setup.html#install-mxnet-for-python) | [OSX guide](osx_setup.html) | [Windows guide](windows_setup.html#install-mxnet-for-python) |
-| C++ | [C++ guide](c_plus_plus.html) | [C++ guide](c_plus_plus.html) | [C++ guide](c_plus_plus.html) |
+| Python | [Ubuntu guide](ubuntu_setup.md#install-mxnet-for-python) | [OSX guide](osx_setup.md) | [Windows guide](windows_setup.md#install-mxnet-for-python) |
+| C++ | [C++ guide](c_plus_plus.md) | [C++ guide](c_plus_plus.md) | [C++ guide](c_plus_plus.md) |
 | Clojure | [Clojure guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) | [Clojure guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) | n/a |
-| Julia | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-julia) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-julia) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-julia) |
-| Perl | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-perl) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-perl) | n/a |
-| R | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-r) |
-| Scala | [Scala guide](scala_setup.html) | [Scala guide](scala_setup.html) | n/a |
-| Java | [Java guide](java_setup.html) | [Java Guide](java_setup.html) | n/a |
+| Julia | [Ubuntu guide](ubuntu_setup.md#install-the-mxnet-package-for-julia) | [OSX guide](osx_setup.md#install-the-mxnet-package-for-julia) | [Windows guide](windows_setup.md#install-the-mxnet-package-for-julia) |
+| Perl | [Ubuntu guide](ubuntu_setup.md#install-the-mxnet-package-for-perl) | [OSX guide](osx_setup.md#install-the-mxnet-package-for-perl) | n/a |
+| R | [Ubuntu guide](ubuntu_setup.md#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.md#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.md#install-the-mxnet-package-for-r) |
+| Scala | [Scala guide](scala_setup.md) | [Scala guide](scala_setup.md) | n/a |
+| Java | [Java guide](java_setup.md) | [Java Guide](java_setup.md) | n/a |
