@@ -447,6 +447,21 @@ def test_gradient():
     assert abs(x.grad.asscalar() - 2.71828175) < 1e-7
 
 
+def test_ag_grad():
+    x = mx.nd.ones((3,3))
+    y = mx.nd.ones((3,3))
+    x.attach_grad()
+    y.attach_grad()
+    with mx.autograd.record():
+        #z = x + y
+        z = x + y
+        x_grad_y_grad = mx.autograd.grad(z, x, create_graph=True, retain_graph=True)
+        print(x_grad_y_grad)
+        first_grad = nd.concat(*[x.reshape(-1) for x in x_grad_y_grad], dim=0)
+        fg_f = 2 * first_grad
+        second_grad = mx.autograd.grad(fg_f, [x,y], retain_graph=True)
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()
