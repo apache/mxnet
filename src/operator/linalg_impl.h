@@ -1255,18 +1255,27 @@ LINALG_CPU_GETRF(dgetrf, double)
 
 #ifdef __CUDACC__
 
-// There is no implementation of getrf in cusolver, so it's left unimplemented
-// util magma is introduced to mxnet.
-#define LINALG_GPU_GETRF(fname, DType) \
+// Since there is no "getri" in cuSolver, we are using batched version of
+// "getrf" and "getri" in cuBLAS here. These routines are good for large
+// batches of small matrices, so performance issue may happen when computing
+// large matices. We leave it here until MAGMA which has "getri" is introduced
+// into MXNet.
+#define LINALG_GPU_BATCH_GETRF(fname, DType) \
 template<> inline \
-void linalg_getrf<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
-                              const Tensor<gpu, 1, DType>& work, \
-                              Stream<gpu> *s) { \
-  LOG(FATAL) << "no GPU implementation for getrf"; \
+void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                    const Tensor<gpu, 1, DType>& work, \
+                                    Stream<gpu> *s) { \
+  Storage::Handle info = Storage::Get()->Alloc(sizeof(int) * A.size(1), Context::GPU()); \
+  CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
+                            A.size(1), A.dptr_, A.stride_, \
+                            static_cast<int *>(work.dptr_), \
+                            static_cast<int *>(info.dptr), \
+                            A.size(0)); \
+  Storage::Get()->Free(info); \
 }
 
-LINALG_GPU_GETRF(DnSgetrf, float)
-LINALG_GPU_GETRF(DnDgetrf, double)
+LINALG_GPU_GETRF(SgetrfBatched, float)
+LINALG_GPU_GETRF(DgetrfBatched, double)
 
 #endif  // __CUDACC__
 
@@ -1294,44 +1303,52 @@ void linalg_getri<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
 LINALG_CPU_GETRI(sgetri, float)
 LINALG_CPU_GETRI(dgetri, double)
 
-// Mangle temp storage requirements for DType and int into a single
-// request as we can only allocate one temp space per operator. We
-// partition this temp space into two chunks again when calling getri.
-// Returned is the number of elements of type DType that the temp space
-// needs to accomodate. This also makes this function signature equivalent
-// to the work space query on GPU.
+// Query workspace for the whole batch of matrices.For cpu version, the workspace
+// is re-used, so space for only one matrix is enough.
 #define LINALG_CPU_GETRI_WORKSPACE_QUERY(func, DType) \
 template<> inline \
-int linalg_getri_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+int linalg_getri_workspace_query<cpu, DType>(const Tensor<cpu, 3, DType>& A, \
                                              Stream<cpu> *s) { \
+  const Tensor<cpu, 2, DType>& matrix = A[0]; \
   DType lwork(0); \
-  MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
-                      A.stride_, nullptr, &lwork, -1); \
-  int ipiv = (sizeof(int) * A.size(0) + sizeof(DType) - 1) / sizeof(DType); \
-  return ipiv + static_cast<int>(lwork); \
+  MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, matrix.size(0), matrix.dptr_, \
+                      matrix.stride_, nullptr, &lwork, -1); \
+  int ipiv = (sizeof(int) * matrix.size(0) + sizeof(DType) - 1) / sizeof(DType); \
+  return static_cast<int>(lwork) + ipiv; \
 }
 LINALG_CPU_GETRI_WORKSPACE_QUERY(sgetri, float)
 LINALG_CPU_GETRI_WORKSPACE_QUERY(dgetri, double)
 
 #ifdef __CUDACC__
 
-// There is no implementation of getri in cusolver, so it's left unimplemented
-// util magma is introduced to mxnet.
-#define LINALG_GPU_GETRI(fname, DType) \
+// Since there is no "getri" in cuSolver, we are using batched version of
+// "getrf" and "getri" in cuBLAS here. These routines are good for large
+// batches of small matrices, so performance issue may happen when computing
+// large matices. We leave it here until MAGMA which has "getri" is introduced
+// into MXNet.
+#define LINALG_GPU_BATCH_GETRI(fname, DType) \
 template<> inline \
-void linalg_getri<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
-                              const Tensor<gpu, 1, DType>& work, \
-                              Stream<gpu> *s) { \
-  LOG(FATAL) << "no GPU implementation for getri"; \
+void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                    const Tensor<gpu, 3, DType>& B, \
+                                    const Tensor<gpu, 1, DType>& work, \
+                                    Stream<gpu> *s) { \
+  Storage::Handle info = Storage::Get()->Alloc(sizeof(int) * A.size(1), Context::GPU()); \
+  CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
+                            A.size(1), A.dptr_, A.stride_, \
+                            static_cast<int *>(work.dptr_), \
+                            B.dptr_, B.stride_, \
+                            static_cast<int *>(info.dptr), \
+                            A.size(0)); \
+  Storage::Get()->Free(info); \
 }
-
+LINALG_GPU_BATCH_GETRI(SgetriBatched, float)
+LINALG_GPU_BATCH_GETRI(DgetriBatched, double)
 
 #define LINALG_GPU_GETRI_WORKSPACE_QUERY(fname, DType) \
 template<> inline \
-int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
+int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                              Stream<gpu> *s) { \
-  LOG(FATAL) << "no GPU implementation for getri"; \
-  return 0; \
+  return (sizeof(int) * A.size(0) * A.size(1) + sizeof(DType) - 1) / sizeof(DType);
 }
 
 LINALG_GPU_GETRI(DnSgetri, float)
@@ -1339,6 +1356,42 @@ LINALG_GPU_GETRI(DnDgetri, double)
 
 LINALG_GPU_GETRI_WORKSPACE_QUERY(DnSgetri, float)
 LINALG_GPU_GETRI_WORKSPACE_QUERY(DnDgetri, double)
+
+#endif  // __CUDACC__
+
+//////////////////////////////// INVERSE ////////////////////////////////////////////
+
+// CPU/GPU-versions of matrix inversion combining LAPACK function "getrf" and "getri"
+
+// Note A = inverse(B)
+#define LINALG_CPU_BATCH_INVERSE(xpu, DType) \
+template<> inline \
+void linalg_batch_inverse<xpu, DType>(const Tensor<cpu, 3, DType>& A, \
+                                      const Tensor<cpu, 3, DType>& B, \
+                                      const Tensor<cpu, 1, DType>& work, \
+                                      Stream<cpu> *s) { \
+  Copy(A, B, s); \
+  for (index_t i = 0; i < A.size(0); ++i) { \
+    linalg_getrf(A[i], work, s); \
+    linalg_getri(A[i], work, s); \
+  } \
+}
+LINALG_CPU_BATCH_INVERSE(cpu, float)
+LINALG_CPU_BATCH_INVERSE(cpu, double)
+
+#ifdef __CUDACC__
+
+#define LINALG_GPU_BATCH_INVERSE(xpu, DType) \
+template<> inline \
+void linalg_batch_inverse<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                      const Tensor<gpu, 3, DType>& B, \
+                                      const Tensor<gpu, 1, DType>& work, \
+                                      Stream<gpu> *s) { \
+  linalg_batch_getrf(B, work); \
+  linalg_batch_getri(A, B, work); \
+}
+LINALG_GPU_BATCH_INVERSE(gpu, float)
+LINALG_GPU_BATCH_INVERSE(gpu, double)
 
 #endif  // __CUDACC__
 

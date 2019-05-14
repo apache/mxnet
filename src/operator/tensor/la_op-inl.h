@@ -459,18 +459,13 @@ struct inverse {
   static void op(const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 3, DType>& A,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    // Since inverse(A) = trans(inverse(trans(A))), so we don't need to transpose
-    // A even if we are using the col-major version of getrf and getri routines.
-    if (A.dptr_ != B.dptr_) Copy(A, B, s);
     // Reserve workspace (size determined by query)
-    int lwork(linalg_getri_workspace_query(A[0], s));
+    int lwork(linalg_getri_workspace_query(A, s));
     Tensor<xpu, 1, DType> work = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
-    // Loop over items in batch
-    for (index_t i = 0; i < A.size(0); ++i) {
-      linalg_getrf(A[i], work, s);
-      linalg_getri(A[i], work, s);
-    }
+    // Since inverse(A) = trans(inverse(trans(A))), so we don't need to transpose
+    // A even if we are using the col-major version of getrf and getri routines.
+    linalg_batch_inverse(A, B, work, s);
   }
 };
 
