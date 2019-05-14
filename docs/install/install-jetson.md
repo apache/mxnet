@@ -267,6 +267,15 @@ import mxnet
 mxnet.__version__
 ```
 
+You can also verify MXNet can use your GPU with the following test:
+
+```python
+import mxnet as mx
+a = mx.nd.ones((2, 3), mx.gpu())
+b = a * 2 + 1
+b.asnumpy()
+```
+
 If everything is working, it will report the version number.
 
 For assistance, head over to the [MXNet Forum](https://discuss.mxnet.io/).
