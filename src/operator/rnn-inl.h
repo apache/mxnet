@@ -1398,7 +1398,7 @@ class RNNOp {
                                        x_desc_vec_[0],
                                        &cudnn_param_size,
                                        dtype_));
-      // CHECK_EQ(w.shape_[0] * sizeof(DType), cudnn_param_size);
+      CHECK_EQ(w.shape_[0] * sizeof(DType), cudnn_param_size);
       // Set param descriptors
       int dim_w[3] = {1, 1, 1};
       dim_w[0] = w.shape_[0];
