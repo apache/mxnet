@@ -406,6 +406,11 @@ class RNNOp {
     #if MXNET_USE_CUDNN_RNN
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
+#if __CUDA_ARCH__ < 530 && CUDNN_MAJOR >=7 && CUDNN_MINOR >= 5
+    if (dtype_ == CUDNN_DATA_HALF) {
+      dtype_ = CUDNN_DATA_FLOAT;
+    }
+#endif    
     // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
     // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
     cudnn_tensor_core_ = false;
@@ -1388,7 +1393,7 @@ class RNNOp {
                                        x_desc_vec_[0],
                                        &cudnn_param_size,
                                        dtype_));
-      CHECK_EQ(w.shape_[0] * sizeof(DType), cudnn_param_size);
+      // CHECK_EQ(w.shape_[0] * sizeof(DType), cudnn_param_size);
       // Set param descriptors
       int dim_w[3] = {1, 1, 1};
       dim_w[0] = w.shape_[0];
