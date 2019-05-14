@@ -30,6 +30,7 @@
 #include <algorithm>
 
 #include "../common/cuda_utils.h"
+#include "mxnet_op.h"
 
 // Convenience functions.
 inline void linalg_check_batch_size(int A, int B, int C) {
@@ -1244,7 +1245,7 @@ template<> inline \
 void linalg_getrf<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                               const Tensor<cpu, 1, DType>& work, \
                               Stream<cpu> *s) { \
-  int *ipiv = static_cast<int *>(static_cast<void *>(work.dptr_)); \
+  int *ipiv = reinterpret_cast<int *>(work.dptr_); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(1), A.size(0), \
                                A.dptr_, A.stride_, ipiv)); \
   CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
@@ -1254,6 +1255,13 @@ LINALG_CPU_GETRF(sgetrf, float)
 LINALG_CPU_GETRF(dgetrf, double)
 
 #ifdef __CUDACC__
+
+struct set_matrix : public mxnet::op::mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType **p, DType *m, int step) {
+	p[i] = m + i * step;
+  }
+};
 
 // Since there is no "getri" in cuSolver, we are using batched version of
 // "getrf" and "getri" in cuBLAS here. These routines are good for large
@@ -1266,18 +1274,17 @@ void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                     const Tensor<gpu, 1, DType>& work, \
                                     Stream<gpu> *s) { \
   using namespace mxnet; \
+  using namespace mxnet::op::mxnet_op; \
   CHECK_NOTNULL(s); \
-  DType **A_ptr = new DType*[A.size(0)]; \
-  for (index_t i = 0; i < A.size(0); ++i) { \
-    A_ptr[i] = A[i].dptr_; \
-  } \
-  int *work_ptr = static_cast<int *>(static_cast<void *>(work.dptr_)); \
-  Storage::Handle info = Storage::Get()->Alloc(sizeof(int) * A.size(1), Context::GPU()); \
+  int *pivot = reinterpret_cast<int *>(work.dptr_); \
+  int *info = pivot + A.size(0) * A.size(1); \
+  DType **A_ptr = reinterpret_cast<DType **>(info + A.size(0)); \
+  Kernel<set_matrix, gpu>::Launch(s, A.size(0), \
+                                  A_ptr, A.dptr_, \
+                                  A.size(1) * A.size(2)); \
   CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
-                            A.size(1), A_ptr, A.size(2), work_ptr, \
-                            static_cast<int *>(info.dptr), A.size(0))) \
-  delete [] A_ptr; \
-  Storage::Get()->Free(info); \
+                            A.size(1), A_ptr, A.size(2), pivot, \
+                            info, A.size(0))) \
 }
 
 LINALG_GPU_BATCH_GETRF(SgetrfBatched, float)
@@ -1300,8 +1307,8 @@ void linalg_getri<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
   MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
                        A.stride_, nullptr, &wkopt, -1); \
   int lwork(static_cast<int>(wkopt)); \
-  int *ipiv = static_cast<int *>(static_cast<void *>(work.dptr_)); \
-  DType *pwork = static_cast<DType *>(static_cast<void *>(ipiv + A.size(0))); \
+  int *ipiv = reinterpret_cast<int *>(work.dptr_); \
+  DType *pwork = reinterpret_cast<DType *>(ipiv + A.size(0)); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
                                A.stride_, ipiv, pwork, lwork)); \
   CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
@@ -1320,7 +1327,7 @@ int linalg_getri_workspace_query<cpu, DType>(const Tensor<cpu, 3, DType>& A, \
   MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, matrix.size(0), matrix.dptr_, \
                       matrix.stride_, nullptr, &lwork, -1); \
   int ipiv = (sizeof(int) * matrix.size(0) + sizeof(DType) - 1) / sizeof(DType); \
-  return static_cast<int>(lwork) + ipiv; \
+  return ipiv + static_cast<int>(lwork); \
 }
 LINALG_CPU_GETRI_WORKSPACE_QUERY(sgetri, float)
 LINALG_CPU_GETRI_WORKSPACE_QUERY(dgetri, double)
@@ -1339,25 +1346,22 @@ void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                     const Tensor<gpu, 1, DType>& work, \
                                     Stream<gpu> *s) { \
   using namespace mxnet; \
+  using namespace mxnet::op::mxnet_op; \
   CHECK_NOTNULL(s); \
-  const DType **A_ptr = new const DType*[A.size(0)]; \
-  for (index_t i = 0; i < A.size(0); ++i) { \
-    A_ptr[i] = A[i].dptr_; \
-  } \
-  DType **B_ptr = new DType*[B.size(0)]; \
-  for (index_t i = 0; i < B.size(0); ++i) { \
-    B_ptr[i] = B[i].dptr_; \
-  } \
-  const int *work_ptr = static_cast<const int *>(static_cast<void *>(work.dptr_)); \
-  Storage::Handle info = Storage::Get()->Alloc(sizeof(int) * A.size(1), Context::GPU()); \
+  int *pivot = reinterpret_cast<int *>(work.dptr_); \
+  int *info = pivot + A.size(0) * A.size(1); \
+  DType **A_ptr = reinterpret_cast<DType **>(info + A.size(0)); \
+  Kernel<set_matrix, gpu>::Launch(s, A.size(0), \
+                                  A_ptr, A.dptr_, \
+                                  A.size(1) * A.size(2)); \
+  DType **B_ptr = A_ptr + A.size(0); \
+  Kernel<set_matrix, gpu>::Launch(s, B.size(0), \
+                                  B_ptr, B.dptr_, \
+                                  B.size(1) * B.size(2)); \
   CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
-                            A.size(1), A_ptr, A.size(2), \
-                            work_ptr, B_ptr, B.size(2), \
-                            static_cast<int *>(info.dptr), \
-                            A.size(0))) \
-  delete [] A_ptr; \
-  delete [] B_ptr; \
-  Storage::Get()->Free(info); \
+                            A.size(1), const_cast<const DType**>(A_ptr), \
+                            A.size(2), const_cast<const int *>(pivot), \
+                            B_ptr, B.size(2), info, A.size(0))) \
 }
 LINALG_GPU_BATCH_GETRI(SgetriBatched, float)
 LINALG_GPU_BATCH_GETRI(DgetriBatched, double)
@@ -1366,7 +1370,10 @@ LINALG_GPU_BATCH_GETRI(DgetriBatched, double)
 template<> inline \
 int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                              Stream<gpu> *s) { \
-  return (sizeof(int) * A.size(0) * A.size(1) + sizeof(DType) - 1) / sizeof(DType); \
+  int pivot_size = sizeof(int) * A.size(0) * A.size(1); \
+  int info_size = sizeof(int) * A.size(0); \
+  int ptr_size = sizeof(DType *) * A.size(0) * 2; \
+  return (pivot_size + info_size + ptr_size + sizeof(DType) - 1) / sizeof(DType); \
 }
 LINALG_GPU_GETRI_WORKSPACE_QUERY(SgetriBatched, float)
 LINALG_GPU_GETRI_WORKSPACE_QUERY(DgetriBatched, double)
