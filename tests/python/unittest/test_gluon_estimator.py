@@ -139,7 +139,13 @@ def test_initializer():
                         initializer=mx.init.MSRAPrelu(),
                         trainer=trainer,
                         context=ctx)
-        assert 'Network already initialized' in str(w[-1].message)
+        assert 'Network already fully initialized' in str(w[-1].message)
+    # net partially initialized, fine tuning use case
+    net = gluon.model_zoo.vision.resnet18_v1(pretrained=True, ctx=ctx)
+    net.output = gluon.nn.Dense(10) #last layer not initialized
+    est = Estimator(net, loss=loss, metrics=acc, context=ctx)
+    dataset =  gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
+    train_data = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     est.fit(train_data=train_data,
             epochs=num_epochs)
 
@@ -335,6 +341,7 @@ def test_default_handlers():
         assert 'You are training with the' in str(w[-1].message)
 
     # handler with prepared loss and metrics
+    # use mix of default and user defined handlers
     train_metrics, val_metrics = est.prepare_loss_and_metrics()
     logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
     with warnings.catch_warnings(record=True) as w:
@@ -344,21 +351,21 @@ def test_default_handlers():
         assert 'MetricHandler' in str(w[-1].message)
 
     # handler with all user defined metrics
-    val_metrics = [mx.metric.RMSE("val acc")]
+    # use mix of default and user defined handlers
     metric = MetricHandler(train_metrics=[train_acc])
-    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
+    logging = LoggingHandler(train_metrics=[train_acc], val_metrics=[mx.metric.RMSE("val acc")])
     est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[metric, logging])
 
     # handler with mixed metrics, some handler use metrics prepared by estimator
     # some handler use metrics user prepared
-    val_metrics = [mx.metric.RMSE("val acc")]
-    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=val_metrics)
+    logging = LoggingHandler(train_metrics=train_metrics, val_metrics=[mx.metric.RMSE("val acc")])
     with assert_raises(ValueError):
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # test handler order
+    train_metrics, val_metrics = est.prepare_loss_and_metrics()
     early_stopping = EarlyStoppingHandler(monitor=val_metrics[0])
     handlers = est._prepare_default_handlers(val_data=None, event_handlers=[early_stopping])
-    assert len(handlers) == 3
+    assert len(handlers) == 4
     assert isinstance(handlers[0], MetricHandler)
-    assert isinstance(handlers[2], LoggingHandler)
+    assert isinstance(handlers[3], LoggingHandler)
