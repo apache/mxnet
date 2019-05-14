@@ -18,10 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file mkl_functions-inl.h
- * \brief
- * \author
+ * \brief Wrapper for MKL VML functions
+ * \author Tao Lv, Shufan Wu
 */
 #ifndef MXNET_OPERATOR_MKL_FUNCTIONS_INL_H_
 #define MXNET_OPERATOR_MKL_FUNCTIONS_INL_H_
@@ -154,7 +154,8 @@ MSHADOW_XINLINE static void LayerNormLastDim(const index_t m,
                                              const DType *mean,
                                              const DType *var,
                                              const DType eps) {
-#pragma omp parallel for
+  auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+#pragma omp parallel for num_threads(nthreads)
   for (index_t i = 0; i < m; i++) {
     DType* in_offset = a + i * n;
     DType* out_offset = b + i * n;
@@ -179,7 +180,8 @@ MSHADOW_XINLINE static void SoftmaxLastDim(const index_t m,
                                            const index_t n,
                                            const DType *a,
                                            const DType *b) {
-#pragma omp paralle for
+  auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+#pragma omp parallel for num_threads(nthreads)
   for (index_t i = 0; i < m; i++) {
     DType* in_offset = a + i * n;
     DType* out_offset = b + i * n;
@@ -196,7 +198,8 @@ MSHADOW_XINLINE static void LogSoftmaxLastDim(const index_t m,
                                               const index_t n,
                                               const DType *a,
                                               const DType *b) {
-#pragma parallel for
+  auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+#pragma omp parallel for num_threads(nthreads)
   for (index_t i = 0; i < m; i++) {
     DType* in_offset = a + i * n;
     DType* out_offset = b + i * n;
