@@ -1265,17 +1265,23 @@ template<> inline \
 void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                     const Tensor<gpu, 1, DType>& work, \
                                     Stream<gpu> *s) { \
+  using namespace mxnet; \
+  CHECK_NOTNULL(s); \
+  DType **A_ptr = new DType*[A.size(0)]; \
+  for (index_t i = 0; i < A.size(0); ++i) { \
+    A_ptr[i] = A[i].dptr_; \
+  } \
+  int *work_ptr = static_cast<int *>(static_cast<void *>(work.dptr_)); \
   Storage::Handle info = Storage::Get()->Alloc(sizeof(int) * A.size(1), Context::GPU()); \
   CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
-                            A.size(1), A.dptr_, A.stride_, \
-                            static_cast<int *>(work.dptr_), \
-                            static_cast<int *>(info.dptr), \
-                            A.size(0)); \
+                            A.size(1), A_ptr, A.size(2), work_ptr, \
+                            static_cast<int *>(info.dptr), A.size(0))) \
+  delete [] A_ptr; \
   Storage::Get()->Free(info); \
 }
 
-LINALG_GPU_GETRF(SgetrfBatched, float)
-LINALG_GPU_GETRF(DgetrfBatched, double)
+LINALG_GPU_BATCH_GETRF(SgetrfBatched, float)
+LINALG_GPU_BATCH_GETRF(DgetrfBatched, double)
 
 #endif  // __CUDACC__
 
@@ -1332,13 +1338,25 @@ void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                     const Tensor<gpu, 3, DType>& B, \
                                     const Tensor<gpu, 1, DType>& work, \
                                     Stream<gpu> *s) { \
+  using namespace mxnet; \
+  CHECK_NOTNULL(s); \
+  const DType **A_ptr = new const DType*[A.size(0)]; \
+  for (index_t i = 0; i < A.size(0); ++i) { \
+    A_ptr[i] = A[i].dptr_; \
+  } \
+  DType **B_ptr = new DType*[B.size(0)]; \
+  for (index_t i = 0; i < B.size(0); ++i) { \
+    B_ptr[i] = B[i].dptr_; \
+  } \
+  const int *work_ptr = static_cast<const int *>(static_cast<void *>(work.dptr_)); \
   Storage::Handle info = Storage::Get()->Alloc(sizeof(int) * A.size(1), Context::GPU()); \
   CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
-                            A.size(1), A.dptr_, A.stride_, \
-                            static_cast<int *>(work.dptr_), \
-                            B.dptr_, B.stride_, \
+                            A.size(1), A_ptr, A.size(2), \
+                            work_ptr, B_ptr, B.size(2), \
                             static_cast<int *>(info.dptr), \
-                            A.size(0)); \
+                            A.size(0))) \
+  delete [] A_ptr; \
+  delete [] B_ptr; \
   Storage::Get()->Free(info); \
 }
 LINALG_GPU_BATCH_GETRI(SgetriBatched, float)
@@ -1348,14 +1366,10 @@ LINALG_GPU_BATCH_GETRI(DgetriBatched, double)
 template<> inline \
 int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                              Stream<gpu> *s) { \
-  return (sizeof(int) * A.size(0) * A.size(1) + sizeof(DType) - 1) / sizeof(DType);
+  return (sizeof(int) * A.size(0) * A.size(1) + sizeof(DType) - 1) / sizeof(DType); \
 }
-
-LINALG_GPU_GETRI(DnSgetri, float)
-LINALG_GPU_GETRI(DnDgetri, double)
-
-LINALG_GPU_GETRI_WORKSPACE_QUERY(DnSgetri, float)
-LINALG_GPU_GETRI_WORKSPACE_QUERY(DnDgetri, double)
+LINALG_GPU_GETRI_WORKSPACE_QUERY(SgetriBatched, float)
+LINALG_GPU_GETRI_WORKSPACE_QUERY(DgetriBatched, double)
 
 #endif  // __CUDACC__
 
@@ -1366,9 +1380,9 @@ LINALG_GPU_GETRI_WORKSPACE_QUERY(DnDgetri, double)
 // Note A = inverse(B)
 #define LINALG_CPU_BATCH_INVERSE(xpu, DType) \
 template<> inline \
-void linalg_batch_inverse<xpu, DType>(const Tensor<cpu, 3, DType>& A, \
-                                      const Tensor<cpu, 3, DType>& B, \
-                                      const Tensor<cpu, 1, DType>& work, \
+void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
+                                      const Tensor<xpu, 3, DType>& B, \
+                                      const Tensor<xpu, 1, DType>& work, \
                                       Stream<cpu> *s) { \
   Copy(A, B, s); \
   for (index_t i = 0; i < A.size(0); ++i) { \
@@ -1383,12 +1397,12 @@ LINALG_CPU_BATCH_INVERSE(cpu, double)
 
 #define LINALG_GPU_BATCH_INVERSE(xpu, DType) \
 template<> inline \
-void linalg_batch_inverse<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
-                                      const Tensor<gpu, 3, DType>& B, \
-                                      const Tensor<gpu, 1, DType>& work, \
+void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
+                                      const Tensor<xpu, 3, DType>& B, \
+                                      const Tensor<xpu, 1, DType>& work, \
                                       Stream<gpu> *s) { \
-  linalg_batch_getrf(B, work); \
-  linalg_batch_getri(A, B, work); \
+  linalg_batch_getrf(B, work, s); \
+  linalg_batch_getri(A, B, work, s); \
 }
 LINALG_GPU_BATCH_INVERSE(gpu, float)
 LINALG_GPU_BATCH_INVERSE(gpu, double)

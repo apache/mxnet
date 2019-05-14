@@ -202,6 +202,11 @@ void linalg_getrf(const Tensor<xpu, 2, DType>& A,
                   const Tensor<xpu, 1, DType>& work,
                   Stream<xpu> *s = 0);
 
+template<typename xpu, typename DType>
+void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
+                        const Tensor<xpu, 1, DType>& work,
+                        Stream<xpu> *s = 0);
+
 //////////////////////////////// GETRI ////////////////////////////////////////////
 
 // CPU/GPU-versions of LAPACK function "getri". Please refer to the
@@ -212,6 +217,12 @@ template<typename xpu, typename DType>
 void linalg_getri(const Tensor<xpu, 2, DType>& A,
                   const Tensor<xpu, 1, DType>& work,
                   Stream<xpu> *s = 0);
+
+template<typename xpu, typename DType>
+void linalg_batch_getri(const Tensor<xpu, 3, DType>& A,
+                        const Tensor<xpu, 3, DType>& B,
+                        const Tensor<xpu, 1, DType>& work,
+                        Stream<xpu> *s = 0);
 
 // This function determines the amount of workspace needed for linalg_getri to operate
 // on a batch of matrices which is returned as number of elements of type DType.
