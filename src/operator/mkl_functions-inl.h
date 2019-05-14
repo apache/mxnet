@@ -27,7 +27,7 @@
 #define MXNET_OPERATOR_MKL_FUNCTIONS_INL_H_
 
 #if MSHADOW_USE_MKL == 1
-#include "mkl.h"
+#include "mkl_vml.h"
 
 namespace mxnet {
 namespace op {

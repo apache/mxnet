@@ -570,8 +570,8 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
 
 #if MSHADOW_USE_MKL == 1
   /*! \bried MKL Unary compute.
-   *  *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
-   *   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
+   *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
+   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
   */
   #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$,                          \
                                                          __kernel$, __mkl_kernel$)                 \
@@ -584,8 +584,8 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
                           __mkl_kernel$>)
 
   /*! \bried MKL Unary compute.
-   *  *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
-   *   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
+   *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
+   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
   */
   #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$, __mkl_kernel$)    \
     MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                         \
@@ -619,11 +619,12 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
 /*! \brief Unary compute, dense result.
- *  *  FInferStorageType attr is not set using this macro. By default DefaultStorageType is used.
+ *  FInferStorageType attr is not set using this macro. By default DefaultStorageType is used.
  */
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)        \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)
+
 }  // namespace op
 }  // namespace mxnet
 
