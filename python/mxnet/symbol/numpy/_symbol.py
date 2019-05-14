@@ -23,7 +23,7 @@ import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
 from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
-from ...base import numeric_types
+from ...base import numeric_types, set_module
 from ...context import current_context
 from .. import _internal
 from ..symbol import Symbol
@@ -33,7 +33,8 @@ from .. import _internal as _sym_internal
 __all__ = ['zeros', 'ones', 'maximum', 'minimum']
 
 
-class _NumpySymbol(Symbol):
+@set_module('mxnet.symbol.numpy')
+class _Symbol(Symbol):
 
     def _is_np_compat(self):
         return True
@@ -45,7 +46,7 @@ class _NumpySymbol(Symbol):
         raise NotImplementedError
 
     def __iter__(self):
-        raise AttributeError('_NumpySymbol object has no attribute __iter__')
+        raise AttributeError('_Symbol object has no attribute __iter__')
 
     @use_np_compat
     def __add__(self, other):
@@ -55,7 +56,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_add_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -66,7 +67,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_subtract_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -77,7 +78,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_rsubtract_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -88,7 +89,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_multiply_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -99,18 +100,18 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_multiply_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     def __div__(self, other):
-        raise AttributeError('_NumpySymbol.__div__ is replaced by __truediv__. If you are using'
+        raise AttributeError('_Symbol.__div__ is replaced by __truediv__. If you are using'
                              ' Python2, please use the statement from __future__ import division'
                              ' to change the / operator to mean true division throughout the'
                              ' module. If you are using Python3, this error should not have'
                              ' been encountered.')
 
     def __rdiv__(self, other):
-        raise AttributeError('_NumpySymbol.__rdiv__ is replaced by __rtruediv__. If you are using'
+        raise AttributeError('_Symbol.__rdiv__ is replaced by __rtruediv__. If you are using'
                              ' Python2, please use the statement from __future__ import division'
                              ' to change the / operator to mean true division throughout the'
                              ' module. If you are using Python3, this error should not have'
@@ -124,7 +125,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_mod_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -135,7 +136,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_rmod_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -150,7 +151,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._true_divide_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as divisor"
+            raise TypeError("_Symbol does not support type {} as divisor"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -161,7 +162,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._rtrue_divide_scalar(self, float(other)).as_np_ndarray()
         else:
-            raise TypeError("_NumpySymbol does not support type {} as dividend"
+            raise TypeError("_Symbol does not support type {} as dividend"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -176,7 +177,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_power_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -187,7 +188,7 @@ class _NumpySymbol(Symbol):
         elif isinstance(other, numeric_types):
             return _sym_internal._np_rpower_scalar(self, float(other))
         else:
-            raise TypeError("_NumpySymbol does not support type {} as operand"
+            raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
     @use_np_compat
@@ -197,7 +198,7 @@ class _NumpySymbol(Symbol):
 
     @use_np_compat
     def __deepcopy__(self, _):
-        return super(_NumpySymbol, self).as_np_ndarray()
+        return super(_Symbol, self).as_np_ndarray()
 
     @use_np_compat
     def __eq__(self, other):
@@ -233,7 +234,7 @@ class _NumpySymbol(Symbol):
         raise NotImplementedError
 
     def as_classic_ndarray(self):
-        """Convert _NumpySymbol to mxnet.symbol.Symbol to use its convenience fluent methods."""
+        """Convert _Symbol to mxnet.symbol.Symbol to use its convenience fluent methods."""
         hdl = SymbolHandle()
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
         return Symbol(handle=hdl)
@@ -266,7 +267,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`reshape_like`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute reshape_like')
+        raise AttributeError('_Symbol object has no attribute reshape_like')
 
     def zeros_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`zeros_like`.
@@ -274,7 +275,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`zeros_like`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute zeros_like')
+        raise AttributeError('_Symbol object has no attribute zeros_like')
 
     def ones_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`ones_like`.
@@ -282,7 +283,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`ones_like`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute ones_like')
+        raise AttributeError('_Symbol object has no attribute ones_like')
 
     def broadcast_axes(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`broadcast_axes`.
@@ -290,7 +291,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`broadcast_axes`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute broadcast_like')
+        raise AttributeError('_Symbol object has no attribute broadcast_like')
 
     @use_np_compat
     def repeat(self, *args, **kwargs):
@@ -307,7 +308,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`pad`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute pad')
+        raise AttributeError('_Symbol object has no attribute pad')
 
     @use_np_compat
     def swapaxes(self, *args, **kwargs):
@@ -324,7 +325,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`split`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute split')
+        raise AttributeError('_Symbol object has no attribute split')
 
     def split_v2(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split_v2`.
@@ -332,7 +333,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`split_v2`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute split_v2')
+        raise AttributeError('_Symbol object has no attribute split_v2')
 
     def slice(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice`.
@@ -340,7 +341,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`slice`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute slice')
+        raise AttributeError('_Symbol object has no attribute slice')
 
     def slice_axis(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice_axis`.
@@ -348,7 +349,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`slice_axis`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute slice_axis')
+        raise AttributeError('_Symbol object has no attribute slice_axis')
 
     def slice_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice_like`.
@@ -356,7 +357,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`slice_like`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute slice_like')
+        raise AttributeError('_Symbol object has no attribute slice_like')
 
     @use_np_compat
     def take(self, *args, **kwargs):
@@ -373,7 +374,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`one_hot`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute one_hot')
+        raise AttributeError('_Symbol object has no attribute one_hot')
 
     def pick(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pick`.
@@ -381,7 +382,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`pick`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute pick')
+        raise AttributeError('_Symbol object has no attribute pick')
 
     @use_np_compat
     def sort(self, *args, **kwargs):
@@ -398,7 +399,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`topk`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute topk')
+        raise AttributeError('_Symbol object has no attribute topk')
 
     @use_np_compat
     def argsort(self, *args, **kwargs):
@@ -424,7 +425,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`argmax_channel`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute argmax_channel')
+        raise AttributeError('_Symbol object has no attribute argmax_channel')
 
     @use_np_compat
     def argmin(self, *args, **kwargs):
@@ -450,7 +451,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`abs`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute abs')
+        raise AttributeError('_Symbol object has no attribute abs')
 
     def sign(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sign`.
@@ -458,7 +459,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`sign`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute abs')
+        raise AttributeError('_Symbol object has no attribute abs')
 
     @use_np_compat
     def flatten(self, *args, **kwargs):
@@ -475,7 +476,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`shape_array`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute shape_array')
+        raise AttributeError('_Symbol object has no attribute shape_array')
 
     def size_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`size_array`.
@@ -483,7 +484,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`size_array`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute size_array')
+        raise AttributeError('_Symbol object has no attribute size_array')
 
     def expand_dims(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expand_dims`.
@@ -491,7 +492,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`expand_dims`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute expand_dims')
+        raise AttributeError('_Symbol object has no attribute expand_dims')
 
     def tile(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tile`.
@@ -499,7 +500,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`tile`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute tile')
+        raise AttributeError('_Symbol object has no attribute tile')
 
     @use_np_compat
     def transpose(self, *axes):  # pylint: disable=arguments-differ
@@ -516,7 +517,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`flip`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute flip')
+        raise AttributeError('_Symbol object has no attribute flip')
 
     def depth_to_space(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`depth_to_space`.
@@ -524,7 +525,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`depth_to_space`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute depth_to_space')
+        raise AttributeError('_Symbol object has no attribute depth_to_space')
 
     def space_to_depth(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`space_to_depth`.
@@ -532,7 +533,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`space_to_depth`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute space_to_depth')
+        raise AttributeError('_Symbol object has no attribute space_to_depth')
 
     def diag(self, k=0, **kwargs):
         """Convenience fluent method for :py:func:`diag`.
@@ -540,7 +541,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`diag`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute diag')
+        raise AttributeError('_Symbol object has no attribute diag')
 
     @use_np_compat
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
@@ -557,7 +558,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`nansum`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute nansum')
+        raise AttributeError('_Symbol object has no attribute nansum')
 
     @use_np_compat
     def prod(self, *args, **kwargs):
@@ -574,7 +575,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`nanprod`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute nanprod')
+        raise AttributeError('_Symbol object has no attribute nanprod')
 
     @use_np_compat
     def mean(self, *args, **kwargs):
@@ -609,7 +610,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`norm`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute norm')
+        raise AttributeError('_Symbol object has no attribute norm')
 
     @use_np_compat
     def round(self, *args, **kwargs):
@@ -626,7 +627,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`rint`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute rint')
+        raise AttributeError('_Symbol object has no attribute rint')
 
     def fix(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`fix`.
@@ -634,7 +635,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`fix`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute fix')
+        raise AttributeError('_Symbol object has no attribute fix')
 
     def floor(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`floor`.
@@ -642,7 +643,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`floor`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute floor')
+        raise AttributeError('_Symbol object has no attribute floor')
 
     def ceil(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`ceil`.
@@ -650,7 +651,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`ceil`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute ceil')
+        raise AttributeError('_Symbol object has no attribute ceil')
 
     def trunc(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`trunc`.
@@ -658,7 +659,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`trunc`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute trunc')
+        raise AttributeError('_Symbol object has no attribute trunc')
 
     def sin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sin`.
@@ -666,7 +667,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`sin`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute sin')
+        raise AttributeError('_Symbol object has no attribute sin')
 
     def cos(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`cos`.
@@ -674,7 +675,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`cos`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute cos')
+        raise AttributeError('_Symbol object has no attribute cos')
 
     def tan(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tan`.
@@ -682,7 +683,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`tan`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute tan')
+        raise AttributeError('_Symbol object has no attribute tan')
 
     def arcsin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arcsin`.
@@ -690,7 +691,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`arcsin`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute arcsin')
+        raise AttributeError('_Symbol object has no attribute arcsin')
 
     def arccos(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arccos`.
@@ -698,7 +699,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`arccos`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute arccos')
+        raise AttributeError('_Symbol object has no attribute arccos')
 
     def arctan(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arctan`.
@@ -706,7 +707,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`arctan`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute arctan')
+        raise AttributeError('_Symbol object has no attribute arctan')
 
     def degrees(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`degrees`.
@@ -714,7 +715,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`degrees`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute degrees')
+        raise AttributeError('_Symbol object has no attribute degrees')
 
     def radians(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`radians`.
@@ -722,7 +723,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`radians`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute radians')
+        raise AttributeError('_Symbol object has no attribute radians')
 
     def sinh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sinh`.
@@ -730,7 +731,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`sinh`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute sinh')
+        raise AttributeError('_Symbol object has no attribute sinh')
 
     def cosh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`cosh`.
@@ -738,7 +739,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`cosh`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute cosh')
+        raise AttributeError('_Symbol object has no attribute cosh')
 
     def tanh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tanh`.
@@ -746,7 +747,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`tanh`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute tanh')
+        raise AttributeError('_Symbol object has no attribute tanh')
 
     def arcsinh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arcsinh`.
@@ -754,7 +755,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`arcsinh`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute arcsinh')
+        raise AttributeError('_Symbol object has no attribute arcsinh')
 
     def arccosh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arccosh`.
@@ -762,7 +763,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`arccosh`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute arccosh')
+        raise AttributeError('_Symbol object has no attribute arccosh')
 
     def arctanh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arctanh`.
@@ -770,7 +771,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`arctanh`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute arctanh')
+        raise AttributeError('_Symbol object has no attribute arctanh')
 
     def exp(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`exp`.
@@ -778,7 +779,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`exp`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute exp')
+        raise AttributeError('_Symbol object has no attribute exp')
 
     def expm1(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expm1`.
@@ -786,7 +787,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`expm1`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute expm1')
+        raise AttributeError('_Symbol object has no attribute expm1')
 
     def log(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log`.
@@ -794,7 +795,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`log`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute log')
+        raise AttributeError('_Symbol object has no attribute log')
 
     def log10(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log10`.
@@ -802,7 +803,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`log10`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute log10')
+        raise AttributeError('_Symbol object has no attribute log10')
 
     def log2(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log2`.
@@ -810,7 +811,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`log2`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute log2')
+        raise AttributeError('_Symbol object has no attribute log2')
 
     def log1p(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log1p`.
@@ -818,7 +819,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`log1p`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute log1p')
+        raise AttributeError('_Symbol object has no attribute log1p')
 
     def sqrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sqrt`.
@@ -826,7 +827,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`sqrt`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute sqrt')
+        raise AttributeError('_Symbol object has no attribute sqrt')
 
     def rsqrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rsqrt`.
@@ -834,7 +835,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`rsqrt`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute rsqrt')
+        raise AttributeError('_Symbol object has no attribute rsqrt')
 
     def cbrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`cbrt`.
@@ -842,7 +843,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`cbrt`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute cqrt')
+        raise AttributeError('_Symbol object has no attribute cqrt')
 
     def rcbrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rcbrt`.
@@ -850,7 +851,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`rcbrt`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute rcqrt')
+        raise AttributeError('_Symbol object has no attribute rcqrt')
 
     def square(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`square`.
@@ -858,7 +859,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`square`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute square')
+        raise AttributeError('_Symbol object has no attribute square')
 
     def reciprocal(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reciprocal`.
@@ -866,7 +867,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`reciprocal`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute reciprocal')
+        raise AttributeError('_Symbol object has no attribute reciprocal')
 
     def relu(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`relu`.
@@ -874,7 +875,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`relu`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute relu')
+        raise AttributeError('_Symbol object has no attribute relu')
 
     def sigmoid(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sigmoid`.
@@ -882,7 +883,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`sigmoid`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute sigmoid')
+        raise AttributeError('_Symbol object has no attribute sigmoid')
 
     def softmax(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`softmax`.
@@ -890,7 +891,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`softmax`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute softmax')
+        raise AttributeError('_Symbol object has no attribute softmax')
 
     def log_softmax(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log_softmax`.
@@ -898,7 +899,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`log_softmax`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute log_softmax')
+        raise AttributeError('_Symbol object has no attribute log_softmax')
 
     def softmin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`softmin`.
@@ -906,7 +907,7 @@ class _NumpySymbol(Symbol):
         The arguments are the same as for :py:func:`softmin`, with
         this array as data.
         """
-        raise AttributeError('_NumpySymbol object has no attribute softmin')
+        raise AttributeError('_Symbol object has no attribute softmin')
 
     @use_np_compat
     def squeeze(self, *args, **kwargs):
@@ -918,12 +919,13 @@ class _NumpySymbol(Symbol):
         raise NotImplementedError
 
     def broadcast_to(self, *args, **kwargs):
-        raise AttributeError('_NumpySymbol object has no attribute broadcast_to')
+        raise AttributeError('_Symbol object has no attribute broadcast_to')
 
     def broadcast_like(self, *args, **kwargs):
-        raise AttributeError('_NumpySymbol object has no attribute broadcast_like')
+        raise AttributeError('_Symbol object has no attribute broadcast_like')
 
 
+@set_module('mxnet.symbol.numpy')
 @use_np_compat
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
@@ -955,6 +957,7 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     return _internal._np_zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
 
 
+@set_module('mxnet.symbol.numpy')
 @use_np_compat
 def ones(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
@@ -1035,16 +1038,18 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 
+@set_module('mxnet.symbol.numpy')
 @use_np_compat
 def maximum(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _internal._np_maximum, _np.maximum,
                          _internal._np_maximum_scalar, None, out)
 
 
+@set_module('mxnet.symbol.numpy')
 @use_np_compat
 def minimum(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _internal._np_minimum, _np.minimum,
                          _internal._np_minimum_scalar, None, out)
 
 
-_set_np_symbol_class(_NumpySymbol)
+_set_np_symbol_class(_Symbol)

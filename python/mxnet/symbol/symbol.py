@@ -61,14 +61,14 @@ class Symbol(SymbolBase):
     __array_priority__ = 1000.0
 
     def as_np_ndarray(self):
-        """Convert mxnet.symbol.Symbol to _NumpySymbol."""
-        from .numpy import _NumpySymbol
+        """Convert mxnet.symbol.Symbol to mx.sym.np._Symbol."""
+        from .numpy import _Symbol
         hdl = SymbolHandle()
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
-        return _NumpySymbol(hdl)
+        return _Symbol(hdl)
 
     def _is_np_compat(self):
-        """Always returns False except for mxnet.symbol.numpy._NumpySymbol."""
+        """Always returns False except for mxnet.symbol.numpy._Symbol."""
         return False
 
     def __repr__(self):

@@ -21,7 +21,7 @@ from . import random
 from . import linalg
 from . import ext
 from . import _op, _symbol
-from ._symbol import _NumpySymbol
+from ._symbol import _Symbol
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 from ._symbol import *  # pylint: disable=wildcard-import

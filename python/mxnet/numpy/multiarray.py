@@ -29,7 +29,7 @@ from ..ndarray import NDArray, _DTYPE_NP_TO_MX
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check_params
-from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types
+from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, set_module
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray import _internal as _nd_internal
@@ -73,6 +73,7 @@ def _np_ndarray_cls(handle, writable=True, stype=0):
 _set_np_ndarray_class(_np_ndarray_cls)
 
 
+@set_module('mxnet.numpy')
 class ndarray(NDArray):  # pylint: disable=invalid-name
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
@@ -1126,6 +1127,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tostype')
 
 
+@set_module('mxnet.numpy')
 @use_np_compat
 def empty(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, without initializing entries.
@@ -1158,6 +1160,7 @@ def empty(shape, dtype=None, **kwargs):
     return ndarray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
 
+@set_module('mxnet.numpy')
 @use_np_compat
 def array(object, dtype=None, **kwargs):
     """
@@ -1198,6 +1201,7 @@ def array(object, dtype=None, **kwargs):
     return ret
 
 
+@set_module('mxnet.numpy')
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
@@ -1223,6 +1227,7 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     return _mx_nd_np.zeros(shape, dtype, **kwargs)
 
 
+@set_module('mxnet.numpy')
 def ones(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
@@ -1248,6 +1253,7 @@ def ones(shape, dtype=None, **kwargs):
     return _mx_nd_np.ones(shape, dtype, **kwargs)
 
 
+@set_module('mxnet.numpy')
 def maximum(x1, x2, out=None):
     """Returns element-wise maximum of the input arrays with broadcasting.
 
@@ -1264,6 +1270,7 @@ def maximum(x1, x2, out=None):
     return _mx_nd_np.maximum(x1, x2, out=out)
 
 
+@set_module('mxnet.numpy')
 def minimum(x1, x2, out=None):
     """Returns element-wise minimum of the input arrays with broadcasting.
 

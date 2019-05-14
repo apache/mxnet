@@ -19,7 +19,7 @@
 
 from __future__ import absolute_import
 import numpy as _np
-from ...base import _sanity_check_params, use_np_compat, numeric_types
+from ...base import _sanity_check_params, use_np_compat, numeric_types, set_module
 from ...context import current_context
 from .. import _internal
 from ..ndarray import NDArray
@@ -27,6 +27,7 @@ from ..ndarray import NDArray
 __all__ = ['zeros', 'ones', 'maximum', 'minimum']
 
 
+@set_module('mxnet.ndarray.numpy')
 @use_np_compat
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
@@ -58,6 +59,7 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     return _internal._np_zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
 
 
+@set_module('mxnet.ndarray.numpy')
 @use_np_compat
 def ones(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with ones.
@@ -138,6 +140,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 
+@set_module('mxnet.ndarray.numpy')
 @use_np_compat
 def maximum(x1, x2, out=None):
     """Returns element-wise maximum of the input arrays with broadcasting.
@@ -156,6 +159,7 @@ def maximum(x1, x2, out=None):
                          _internal._np_maximum_scalar, None, out)
 
 
+@set_module('mxnet.ndarray.numpy')
 @use_np_compat
 def minimum(x1, x2, out=None):
     """Returns element-wise minimum of the input arrays with broadcasting.

@@ -943,7 +943,6 @@ def _init_np_op_module(root_namespace, module_name, make_op_func):
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
         submodule_name = _get_np_op_submodule_name(name)
-        module_name_local = module_name
         if len(submodule_name) > 0:
             func_name = name[(len(_NP_OP_PREFIX) + len(submodule_name)):]
             cur_module = submodule_dict[submodule_name]
@@ -952,8 +951,27 @@ def _init_np_op_module(root_namespace, module_name, make_op_func):
         else:
             func_name = name[len(_NP_OP_PREFIX):]
             cur_module = module_np_op
+            module_name_local = module_pattern[:-len('._op')] % (root_namespace, module_name)
 
         function = make_op_func(hdl, name, func_name)
         function.__module__ = module_name_local
         setattr(cur_module, function.__name__, function)
         cur_module.__all__.append(function.__name__)
+
+
+def set_module(module):
+    """Decorator for overriding __module__ on a function or class.
+
+    Example usage::
+
+        @set_module('mxnet.numpy')
+        def example():
+            pass
+
+        assert example.__module__ == 'numpy'
+    """
+    def decorator(func):
+        if module is not None:
+            func.__module__ = module
+        return func
+    return decorator

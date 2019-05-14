@@ -198,7 +198,7 @@ def test_np_transpose():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a')
     ret = mx.sym.np.transpose(data)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    assert type(ret) == mx.sym.np._Symbol
 
     dtypes = ['float32', 'int32']
     for dtype in dtypes:
@@ -228,7 +228,7 @@ def test_relu():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('data')
     ret = mx.sym.np.ext.relu(data)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    assert type(ret) == mx.sym.np._Symbol
 
     shapes = [(), (0, 2, 0)]
     shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
@@ -244,7 +244,7 @@ def test_sigmoid():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('data')
     ret = mx.sym.np.ext.sigmoid(data)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    assert type(ret) == mx.sym.np._Symbol
 
     shapes = [(), (0, 2, 0)]
     shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
@@ -260,7 +260,7 @@ def test_np_reshape():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a')
     ret = mx.sym.np.reshape(data, newshape=())
-    assert type(ret) == mx.sym.np._NumpySymbol
+    assert type(ret) == mx.sym.np._Symbol
 
     data = np.ones((1, 1, 1))
     ret = np.reshape(data, ())
@@ -276,7 +276,7 @@ def test_np_maximum():
     # TODO(junwu): Add more test cases
     x1, x2 = mx.sym.var('x1'), mx.sym.var('x2')
     ret = mx.sym.np.maximum(x1, x2)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    assert type(ret) == mx.sym.np._Symbol
 
     def check_maximum(x1, x2):
         mx_out = np.maximum(x1, x2)
@@ -297,7 +297,7 @@ def test_np_minimum():
     # TODO(junwu): Add more test cases
     x1, x2 = mx.sym.var('x1'), mx.sym.var('x2')
     ret = mx.sym.np.minimum(x1, x2)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    assert type(ret) == mx.sym.np._Symbol
 
     def check_minimum(x1, x2):
         mx_out = np.minimum(x1, x2)
