@@ -68,6 +68,13 @@ struct ReshapeParam : public dmlc::Parameter<ReshapeParam> {
               "If set to true, then the first dim in target_shape is ignored,"
               "and always fixed as input");
   }
+
+  bool operator==(const ReshapeParam &other) const {
+    return this->target_shape == other.target_shape &&
+           this->keep_highest == other.keep_highest &&
+           this->shape == other.shape &&
+           this->reverse == other.reverse;
+  }
 };
 
 template<typename IType>
@@ -2864,6 +2871,18 @@ struct hash<mxnet::op::TransposeParam> {
   size_t operator()(const mxnet::op::TransposeParam& val) {
     size_t ret = 0;
     ret = dmlc::HashCombine(ret, val.axes);
+    return ret;
+  }
+};
+
+template<>
+struct hash<mxnet::op::ReshapeParam> {
+  size_t operator()(const mxnet::op::ReshapeParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.target_shape);
+    ret = dmlc::HashCombine(ret, val.keep_highest);
+    ret = dmlc::HashCombine(ret, val.shape);
+    ret = dmlc::HashCombine(ret, val.reverse);
     return ret;
   }
 };
