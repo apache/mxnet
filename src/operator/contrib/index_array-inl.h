@@ -89,13 +89,6 @@ inline void IndexArrayBuildSelectedAxesWorkspace(const mxnet::Tuple<int> &axes,
   }
 }
 
-template<typename xpu>
-void IndexArrayForward(const nnvm::NodeAttrs &attrs,
-                       const OpContext &ctx,
-                       const std::vector<TBlob> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &outputs);
-
 struct IndexArrayParam : public dmlc::Parameter<IndexArrayParam> {
   dmlc::optional<mxnet::Tuple<int>> axes;
   DMLC_DECLARE_PARAMETER(IndexArrayParam) {

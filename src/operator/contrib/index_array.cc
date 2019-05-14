@@ -23,12 +23,11 @@
 namespace mxnet {
 namespace op {
 
-template<>
-void IndexArrayForward<cpu>(const nnvm::NodeAttrs &attrs,
-                            const OpContext &ctx,
-                            const std::vector<TBlob> &inputs,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<TBlob> &outputs) {
+void IndexArrayForwardCPU(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const std::vector<TBlob> &inputs,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
@@ -159,7 +158,7 @@ Examples::
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
   return out_attrs->at(0) != -1;
 })
-.set_attr<FCompute>("FCompute<cpu>", IndexArrayForward<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", IndexArrayForwardCPU)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

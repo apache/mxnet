@@ -24,12 +24,11 @@ namespace op {
 
 using namespace mshadow::cuda;
 
-template<>
-void IndexArrayForward<gpu>(const nnvm::NodeAttrs &attrs,
-                            const OpContext &ctx,
-                            const std::vector<TBlob> &inputs,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<TBlob> &outputs) {
+void IndexArrayForwardGPU(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const std::vector<TBlob> &inputs,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
@@ -80,7 +79,7 @@ void IndexArrayForward<gpu>(const nnvm::NodeAttrs &attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_index_array)
-.set_attr<FCompute>("FCompute<gpu>", IndexArrayForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", IndexArrayForwardGPU);
 
 }  // namespace op
 }  // namespace mxnet
