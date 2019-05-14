@@ -1207,7 +1207,12 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& lshape = (*in_attrs)[0];
   mxnet::TShape& rshape = (*in_attrs)[1];
+  // return false if lhs and rhs both have fully unknown shape
   if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
+  // only partially infer shape if last dim of lhs and first dim of rhs is known
+  bool last_dim_known = dim_size_is_known(lshape, lshape.ndim() > 1 ? lshape.ndim() - 1 : 0);
+  bool first_dim_known = dim_size_is_known(rshape, 0);
+  if ( !last_dim_known || !first_dim_known) return false;
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
     CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
@@ -1244,8 +1249,8 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
     mxnet::TShape oshape(buf.begin(), buf.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
-  if(!shape_is_known(lshape) || !shape_is_known(rshape) || !shape_is_known((*out_attrs)[0])) return false;
-  return true;
+  // return true if output shape is fully inferred
+  return shape_is_known((*out_attrs)[0]);
 }
 
 template<typename xpu>
@@ -1481,8 +1486,13 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   mxnet::TShape& lshape = (*in_attrs)[0];
   mxnet::TShape& rshape = (*in_attrs)[1];
+  // return false if lhs and rhs both have fully unknown shape
   if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
   if (lshape.ndim() == 3 && rshape.ndim() == 3) {
+    // only partially infer shape if last dim of lhs and second dim of rhs is known
+    bool last_dim_known = dim_size_is_known(lshape, 2);
+    bool second_dim_known = dim_size_is_known(rshape, 1);
+    if ( !last_dim_known || !second_dim_known) return false; 
     CHECK(lshape[0] == rshape[0])
       << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape
       << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
@@ -1498,8 +1508,8 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "batch_dot currently only support 3D*3D array"
                << lshape << " v.s. " << rshape;
   }
-  if(!shape_is_known(lshape) || !shape_is_known(rshape) || !shape_is_known((*out_attrs)[0])) return false;
-  return true;
+  // return true if output shape is fully inferred
+  return shape_is_known((*out_attrs)[0]);
 }
 
 }  // namespace op

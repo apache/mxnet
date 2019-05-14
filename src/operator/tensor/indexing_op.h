@@ -682,7 +682,7 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   const mxnet::TShape &arrshape = (*in_attrs)[take_::kArr];
   const mxnet::TShape &idxshape = (*in_attrs)[take_::kIdx];
-  if (!ndim_is_known(idxshape)) return false;
+  if (!shape_is_known(idxshape)) return false;
   const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
   if (param.mode == take_::kRaise) {
     LOG(FATAL) << "Raise is not supported for the time being...";
@@ -1170,7 +1170,7 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   // The shape of indices
   const mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!ndim_is_known(ishape)) return false;
+  if (!shape_is_known(ishape)) return false;
 
   int depth = 0;
   double on_value = 1.0;

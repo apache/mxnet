@@ -2074,7 +2074,7 @@ inline bool StackOpShape(const nnvm::NodeAttrs& attrs,
   for (const mxnet::TShape& i : (*in_attrs)) {
     shape_assign(&dshape, i);
   }
-  if (!ndim_is_known(dshape)) return false;
+  if (!shape_is_known(dshape)) return false;
 
   mxnet::TShape oshape(dshape.ndim() + 1, -1);
   int axis = CheckAxis(param.axis, oshape.ndim());
