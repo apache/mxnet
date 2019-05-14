@@ -1492,7 +1492,7 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
     // only partially infer shape if last dim of lhs and second dim of rhs is known
     bool last_dim_known = dim_size_is_known(lshape, 2);
     bool second_dim_known = dim_size_is_known(rshape, 1);
-    if ( !last_dim_known || !second_dim_known) return false; 
+    if ( !last_dim_known || !second_dim_known) return false;
     CHECK(lshape[0] == rshape[0])
       << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape
       << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
