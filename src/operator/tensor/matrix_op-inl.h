@@ -236,7 +236,7 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U) << "Input: [data]";
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape &dshape = (*in_attrs)[0];
-  if (!ndim_is_known(dshape)) return false;
+  if (!shape_is_known(dshape)) return false;
   int target_dim = 1;
   for (int i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
@@ -2194,7 +2194,7 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& dshape = in_attrs->at(0);
   const int dndim = dshape.ndim();
-  if (!ndim_is_known(dshape)) return false;
+  if (!shape_is_known(dshape)) return false;
   mxnet::TShape oshape = dshape;
   if (param.axis.has_value()) {
     // preprocess axis

@@ -1244,6 +1244,7 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
     mxnet::TShape oshape(buf.begin(), buf.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
+  if(!shape_is_known(lshape) || !shape_is_known(rshape) || !shape_is_known((*out_attrs)[0])) return false;
   return true;
 }
 
@@ -1497,6 +1498,7 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "batch_dot currently only support 3D*3D array"
                << lshape << " v.s. " << rshape;
   }
+  if(!shape_is_known(lshape) || !shape_is_known(rshape) || !shape_is_known((*out_attrs)[0])) return false;
   return true;
 }
 

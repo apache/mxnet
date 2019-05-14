@@ -8511,13 +8511,25 @@ def test_add_n():
 def test_dot_partial_shape():
     x = mx.sym.Variable("x")
     y = mx.sym.Variable("y")
-    for op in [mx.sym.dot, mx.sym.batch_dot]:
-        z = op(x, y)
-        # both side unknown
-        z.infer_shape_partial(x=(0, 3, 4), y=(0, 4, 5))
-        with mx.np_compat(True):
-            # rhs unknown
-            z.infer_shape_partial(x=(3, 3, 4), y=(-1, 4, 5))
+    z = mx.sym.dot(x, y)
+    # batch size unknown
+    _, result_shape, _ = z.infer_shape_partial(x=(0, 3, 4), y=(4, 5))
+    assert result_shape == [(0, 3, 5)]
+    with mx.np_compat(True):
+        _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(4, 5))
+        assert result_shape == [(-1, 3, 5)]
+
+
+def test_batch_dot_partial_shape():
+    x = mx.sym.Variable("x")
+    y = mx.sym.Variable("y")
+    z = mx.sym.batch_dot(x, y)
+    # batch size unknown
+    _, result_shape, _ = z.infer_shape_partial(x=(0, 3, 4), y=(0, 4, 5))
+    assert result_shape == [(0, 3, 5)]
+    with mx.np_compat(True):
+        _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(-1, 4, 5))
+        assert result_shape == [(-1, 3, 5)]
 
 
 def test_embedding_partial_shape():

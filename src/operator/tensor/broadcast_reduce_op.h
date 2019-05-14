@@ -309,6 +309,7 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
                                          param.keepdims, param.exclude));
+  if (!shape_is_known((*in_attrs)[0]) || !shape_is_known((*out_attrs)[0])) return false;
   return true;
 }
 
@@ -1373,7 +1374,7 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
   const mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!ndim_is_known(ishape)) return false;
+  if (!shape_is_known(ishape)) return false;
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
   if (!param.axis) LOG(FATAL)
     << "axis=None is not supported by pick yet. Must specify an axis.";
