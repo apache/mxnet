@@ -406,11 +406,6 @@ class RNNOp {
     #if MXNET_USE_CUDNN_RNN
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
-#if __CUDA_ARCH__ < 530 && CUDNN_MAJOR >=7 && CUDNN_MINOR >= 5
-    if (dtype_ == CUDNN_DATA_HALF) {
-      dtype_ = CUDNN_DATA_FLOAT;
-    }
-#endif    
     // TensorCore algos only allowed on fp16-I/O convolutions if permitted by the global policy.
     // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
     cudnn_tensor_core_ = false;
@@ -1320,8 +1315,18 @@ class RNNOp {
                                            seed_));
 
       // RNN descriptors
+      cudnnDataType_t dtype_with_fallback_;
       #if CUDNN_MAJOR >= 6
       cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
+      #if __CUDA_ARCH__ < 530 && CUDNN_MAJOR >=7 && CUDNN_MINOR >= 5
+      if (dtype_ == CUDNN_DATA_HALF) {
+        dtype_with_fallback_ = CUDNN_DATA_FLOAT;
+      } else {
+        dtype_with_fallback_ = dtype_;
+      }
+      #else
+        dtype_with_fallback_ = dtype_;
+      #endif    
       CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
                                           rnn_desc_,
                                           param_.state_size,
@@ -1331,7 +1336,7 @@ class RNNOp {
                                           direction_,
                                           mode_,
                                           rnn_algo,
-                                          dtype_));
+                                          dtype_with_fallback_));
       #else
       CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
                                        param_.state_size,
