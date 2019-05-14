@@ -4261,6 +4261,7 @@ def from_numpy(ndarray, zero_copy=True):
 
     if not ndarray.flags['C_CONTIGUOUS']:
         raise ValueError("Only c-contiguous arrays are supported for zero-copy")
+    ndarray.flags['WRITEABLE'] = False
     c_obj = _make_dl_managed_tensor(ndarray)
     address = ctypes.addressof(c_obj)
     address = ctypes.cast(address, ctypes.c_void_p)
