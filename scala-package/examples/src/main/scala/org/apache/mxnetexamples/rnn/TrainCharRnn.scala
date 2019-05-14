@@ -33,7 +33,7 @@ object TrainCharRnn {
 
   def runTrainCharRnn(dataPath: String, saveModelPath: String,
                       ctx : Context, numEpoch : Int): Unit = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       // The batch size for training
       val batchSize = 32
       // We can support various length input

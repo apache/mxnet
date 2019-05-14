@@ -43,11 +43,12 @@ from . import op
 from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
-           "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
-           "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
-           "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
-           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
-           "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack", "from_numpy"]
+           "ones", "add", "arange", "linspace", "eye", "divide", "equal", "full", "greater",
+           "greater_equal", "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or",
+           "logical_xor", "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal",
+           "onehot_encode", "power", "subtract", "true_divide", "waitall", "_new_empty_handle",
+           "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
+           "from_numpy"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -2609,6 +2610,52 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dty
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              infer_range=False, dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
+
+
+# pylint: disable= no-member, protected-access, too-many-arguments
+def linspace(start, stop, num, endpoint=True, ctx=None, dtype=mx_real_t):
+    """Return evenly spaced numbers within a specified interval.
+
+    Values are generated within the half-open interval [`start`, `stop`) or
+    closed interval [start, stop] depending on whether `endpoint` is True or
+    False. The function is similar to `numpy.linspace`, but returns an `NDArray`.
+
+    Parameters
+    ----------
+    start : number
+        Start of interval.
+    stop : number
+        End of interval, unless endpoint is set to False.  In that case,
+        the sequence consists of all but the last of `num + 1` evenly spaced
+        samples, so that stop is excluded. Note that the step size changes
+        when endpoint is False.
+    num : number
+        Number of samples to generate. Must be non-negative.
+    endpoint : bool
+        If True, stop is the last sample. Otherwise, it is not included.
+        The default is True.
+    ctx : Context, optional
+        Device context. Default context is the current default context.
+    dtype : str or numpy.dtype, optional
+        The data type of the `NDArray`. The default datatype is `np.float32`.
+
+    Returns
+    -------
+    NDArray
+        `NDArray` of evenly spaced values in the specified range.
+
+    Examples
+    --------
+    >>> mx.nd.linspace(2.0, 3.0, 5).asnumpy()
+    array([ 2.,  2.25.,  2.5,  2.75,  3.], dtype=float32)
+    >>> mx.nd.linspace(2.0, 3.0, 5, endpoint=False).asnumpy()
+    array([ 2.,  2.2.,  2.4,  2.6,  2.8], dtype=float32)
+    """
+    if ctx is None:
+        ctx = current_context()
+    return _internal._linspace(start=start, stop=stop, num=num,
+                               endpoint=endpoint, dtype=dtype, ctx=str(ctx))
+# pylint: disable= no-member, protected-access, too-many-arguments
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access

@@ -268,7 +268,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
       // only request memory for kBadStorageID
       if (storage[eid] == GraphAllocator::kBadStorageID) {
         auto &eshape = shape_vec[eid];
-        size_t esize = eshape.Size();
+        size_t esize = ndim_is_known(shape_vec[eid]) ? eshape.Size() : 0;
         eids.insert(std::make_pair(esize, eid));
       }
     }

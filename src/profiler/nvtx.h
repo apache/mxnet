@@ -17,24 +17,43 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2015 by Contributors
- * \file rnn.cu
- * \brief
- * \author Sebastian Bodenstein
-*/
 
-#include "./rnn-inl.h"
-#include <algorithm>
+#ifndef MXNET_PROFILER_NVTX_H_
+#define MXNET_PROFILER_NVTX_H_
+
+#if MXNET_USE_NVTX
+
+#include <string>
+#include <unordered_map>
+#include "nvToolsExt.h"
 
 namespace mxnet {
-namespace op {
+namespace profiler {
+namespace nvtx {
+
+class NVTXDuration {
+ public:
+  explicit NVTXDuration(const char *name) noexcept
+      : range_id_(0), name_(name) {}
+
+  inline void start() {
+    range_id_ = nvtxRangeStartA(name_);
+  }
+
+  inline void stop() {
+    nvtxRangeEnd(range_id_);
+  }
+
+ private:
+  nvtxRangeId_t range_id_;
+  const char *name_;
+};
 
 
-NNVM_REGISTER_OP(RNN)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", RNNStatefulCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_RNN)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", RNNStatefulGradCompute<gpu>);
-}  // namespace op
+}  // namespace nvtx
+}  // namespace profiler
 }  // namespace mxnet
+
+#endif  // MXNET_USE_NVTX
+#endif  // MXNET_PROFILER_NVTX_H_

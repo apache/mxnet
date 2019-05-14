@@ -24,6 +24,31 @@
 
 set -ex
 
+if [ -z ${CUDNN_VERSION} ]; then
+	echo "Error: CUDNN_VERSION environment variable undefiend"
+	exit 1
+fi
+
 apt-get update || true
-apt-get install -y libcudnn7=7.3.1.20-1+cuda10.0 libcudnn7-dev=7.3.1.20-1+cuda10.0
+
+case ${CUDA_VERSION} in
+	10\.0*)
+		export libcudnn7_version="${CUDNN_VERSION}-1+cuda10.0"
+		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda10.0"
+		;;
+	9\.0*)
+		export libcudnn7_version="${CUDNN_VERSION}-1+cuda9.0"
+		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda9.0"
+		;;
+	9\.2*)
+		export libcudnn7_version="${CUDNN_VERSION}-1+cuda9.2"
+		export libcudnn7_dev_version="${CUDNN_VERSION}-1+cuda9.2"
+		;;
+	*)
+		echo "Unsupported CUDA version ${CUDA_VERSION}"
+		exit 1
+		;;
+esac
+
+apt-get install -y libcudnn7=${libcudnn7_version} libcudnn7-dev=${libcudnn7_dev_version}
 

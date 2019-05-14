@@ -915,6 +915,7 @@ def test_sparse_nd_fluent():
 
     check_fluent_regular('csr', 'slice', {'begin': (2, 5), 'end': (4, 7)}, shape=(5, 17))
     check_fluent_regular('row_sparse', 'clip', {'a_min': -0.25, 'a_max': 0.75})
+    check_fluent_regular('csr', 'clip', {'a_min': -0.25, 'a_max': 0.75})
 
     for func in ['sum', 'mean', 'norm']:
         check_fluent_regular('csr', func, {'axis': 0})
