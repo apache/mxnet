@@ -70,7 +70,10 @@ namespace mshadow {
                                             const index_t num_classes,
                                             const index_t channels_each_class,
                                             DType* top_data, DType* top_count) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
     const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+#pragma GCC diagnostic pop
 #pragma omp parallel for num_threads(omp_threads)
     for (index_t index = 0; index < count; index++) {
       // The output is in order (n, ctop, ph, pw)

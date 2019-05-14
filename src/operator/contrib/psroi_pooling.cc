@@ -51,7 +51,10 @@ template <typename DType>
   const int output_dim,
   const int group_size,
   DType* top_data) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+#pragma GCC diagnostic pop
 #pragma omp parallel for num_threads(omp_threads)
   for (int index = 0; index < count; index++) {
     // The output is in order (n, ctop, ph, pw)
