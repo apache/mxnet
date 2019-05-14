@@ -309,8 +309,7 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
                                          param.keepdims, param.exclude));
-  if (!shape_is_known((*in_attrs)[0]) || !shape_is_known((*out_attrs)[0])) return false;
-  return true;
+  return shape_is_known((*out_attrs)[0]);
 }
 
 inline bool ReduceMinMaxAxesShape(const nnvm::NodeAttrs& attrs,
