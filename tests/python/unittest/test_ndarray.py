@@ -727,6 +727,23 @@ def test_arange():
 
 
 @with_seed()
+def test_linspace():
+    for i in range(5):
+        start = np.random.rand() * 100
+        stop = np.random.rand() * 100
+        num = np.random.randint(20)
+        gt = np.linspace(start, stop, num)
+        pred = mx.nd.linspace(start, stop, num).asnumpy()
+        assert_almost_equal(pred, gt)
+        gt = np.linspace(start, stop, num, endpoint=False)
+        pred = mx.nd.linspace(start, stop, num, endpoint=False).asnumpy()
+        assert_almost_equal(pred, gt)
+        gt = np.linspace(start, stop, num, dtype="int32")
+        pred = mx.nd.linspace(start, stop, num, dtype="int32").asnumpy()
+        assert_almost_equal(pred, gt)
+
+
+@with_seed()
 def test_order():
     ctx = default_context()
     dat_size = 5

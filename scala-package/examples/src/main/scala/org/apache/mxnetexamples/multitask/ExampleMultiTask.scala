@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import org.apache.commons.io.FileUtils
-import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, Executor, NDArray, NDArrayCollector, Shape, Symbol, Xavier}
+import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, Executor, NDArray, ResourceScope, Shape, Symbol, Xavier}
 import org.apache.mxnet.DType.DType
 import org.apache.mxnet.optimizer.RMSProp
 import org.apache.mxnetexamples.Util
@@ -222,7 +222,7 @@ object ExampleMultiTask {
 
   def train(batchSize: Int, numEpoch: Int, ctx: Context, modelDirPath: String):
   (Executor, MultiAccuracy) = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val lr = 0.001f
       val network = ExampleMultiTask.buildNetwork()
       val (trainIter, valIter) =

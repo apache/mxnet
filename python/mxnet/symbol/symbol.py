@@ -47,8 +47,8 @@ from . import op
 from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
-           "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange",
-           "histogram", "split_v2"]
+           "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
+           "ones", "full", "arange", "linspace", "histogram", "split_v2"]
 
 
 class Symbol(SymbolBase):
@@ -3080,6 +3080,42 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, d
         dtype = _numpy.float32
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              infer_range=infer_range, name=name, dtype=dtype)
+
+def linspace(start, stop, num, endpoint=True, name=None, dtype=None):
+    """Return evenly spaced numbers within a specified interval.
+
+    Values are generated within the half-open interval [`start`, `stop`) or
+    closed interval [start, stop] depending on whether `endpoint` is True or
+    False. The function is similar to `numpy.linspace`, but returns a `Symbol`.
+
+    Parameters
+    ----------
+    start : number
+        Start of interval.
+    stop : number
+        End of interval, unless endpoint is set to False.  In that case,
+        the sequence consists of all but the last of `num + 1` evenly spaced
+        samples, so that stop is excluded. Note that the step size changes
+        when endpoint is False.
+    num : number
+        Number of samples to generate. Must be non-negative.
+    endpoint : bool
+        If True, stop is the last sample. Otherwise, it is not included.
+        The default is True.
+    ctx : Context, optional
+        Device context. Default context is the current default context.
+    dtype : str or numpy.dtype, optional
+        The data type of the `NDArray`. The default datatype is `np.float32`.
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    if dtype is None:
+        dtype = _numpy.float32
+    return _internal._linspace(start=start, stop=stop, num=num, endpoint=endpoint,
+                               name=name, dtype=dtype)
 
 def histogram(a, bins=10, range=None, **kwargs):
     """Compute the histogram of the input data.
