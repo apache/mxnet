@@ -6118,6 +6118,15 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_sumlogdiag, [a])
 
+    # test inverse
+    a = np.sqrt(np.arange(4 * 4)).reshape(4, 4)
+    a = rep_3x(a, 4, 4)
+    r = np.linalg.inv(a)
+    test_inverse = mx.sym.linalg.inverse(data1)
+    check_fw(test_inverse, [a], [r])
+    if grad_check == 1:
+        check_grad(test_inverse, [a])
+
 
 # Tests for operators linalg.syrk, linalg.gelqf
 
