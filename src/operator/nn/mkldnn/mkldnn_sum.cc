@@ -141,6 +141,7 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
       in_bufs[i] = inputs[i].Reorder2Default();
       in_mem = in_bufs[i].GetMKLDNNData();
     } else {
+      in_bufs[i] = inputs[i];
       in_mem = inputs[i].GetMKLDNNData();
     }
     mkldnn::memory::primitive_desc tmp_pd = in_mem->get_primitive_desc();
@@ -148,11 +149,11 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     data_mem.push_back(in_mem);
   }
 
-  MKLDNNSumFwd &fwd = GetSumForward(scales, inputs, data_md);
+  MKLDNNSumFwd &fwd = GetSumForward(scales, in_bufs, data_md);
   mxnet::mkldnn_output_t out_mem = CreateMKLDNNMem(out_data,
                                                    fwd.fwd_pd.dst_primitive_desc(),
                                                    req,
-                                                   &inputs[0]);
+                                                   &in_bufs[0]);
   fwd.SetNewMem(data_mem, *out_mem.second);
   MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
   CommitOutput(out_data, out_mem);
