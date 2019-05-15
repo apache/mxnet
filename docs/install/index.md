@@ -124,7 +124,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 $ pip install mxnet
 ```
 
-MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../..//faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
 
 ```
 $ pip install mxnet-mkl==1.4.0
