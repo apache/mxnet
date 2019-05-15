@@ -24,7 +24,6 @@ TARGET_DTYPE_FUNCS = [
     'Deconvolution',
     'FullyConnected',
     'RNN',
-    'NormalizedConvolution',
     ]
 
 # Functions that should not be casted, either because
@@ -32,9 +31,7 @@ TARGET_DTYPE_FUNCS = [
 # like image transformations or optimizers) or they
 # are dtype neutral (can work in both fp16 and fp32)
 TARGET_DTYPE_FP32_FUNCS = [
-    'BNStatsFinalize',
     'BatchNorm',
-    'BatchNormAddRelu',
     'BatchNorm_v1',
     'BilinearSampler',
     'BlockGrad',
@@ -592,7 +589,6 @@ WIDEST_TYPE_CASTS = [
     '_sparse_elemwise_mul',
     '_sparse_elemwise_sub',
     '_sparse_sum',
-    'add_relu',
     ]
 
 LOSS_OUTPUT_FUNCTIONS = [
