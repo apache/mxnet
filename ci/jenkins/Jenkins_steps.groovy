@@ -535,7 +535,7 @@ def compile_windows_cpu_mkldnn_mkl() {
         ws('workspace/build-cpu-mkldnn-mkl') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKLDNN_MKL'
+            powershell '($Env:MKL_ROOT="C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl") -and (py -3 ci/build_windows.py -f WIN_CPU_MKLDNN_MKL)'
             stash includes: 'windows_package.7z', name: 'windows_package_cpu_mkldnn_mkl'
           }
         }
