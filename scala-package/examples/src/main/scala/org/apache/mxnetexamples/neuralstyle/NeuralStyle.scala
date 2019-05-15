@@ -170,7 +170,7 @@ object NeuralStyle {
                   contentWeight : Float, tvWeight : Float, gaussianRadius : Int,
                   lr: Float, maxNumEpochs: Int, maxLongEdge: Int,
                   saveEpochs : Int, stopEps: Float) : Unit = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val contentNp = preprocessContentImage(contentImage, maxLongEdge, dev)
       val styleNp = preprocessStyleImage(styleImage, contentNp.shape, dev)
       val size = (contentNp.shape(2), contentNp.shape(3))
