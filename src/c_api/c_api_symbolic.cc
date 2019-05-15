@@ -810,6 +810,177 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
+int MXReducePrecisionSymbol(SymbolHandle sym_handle,
+                            SymbolHandle *ret_sym_handle,
+                            mx_uint num_args,
+                            const int* arg_type_data,
+                            const int* target_dtype,
+                            const mx_uint num_target_dtype_op_names,
+                            const mx_uint num_fp32_op_names,
+                            const mx_uint num_widest_dtype_op_names,
+                            const mx_uint num_conditional_fp32_op_names,
+                            const mx_uint num_excluded_symbols,
+                            const char **target_dtype_op_names,
+                            const char **fp32_op_names,
+                            const char **widest_dtype_op_names,
+                            const char **conditional_fp32_op_names,
+                            const char **excluded_symbols,
+                            const char **keys) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
+  nnvm::Graph g = Symbol2Graph(*sym);
+  std::unordered_set<std::string> target_dtype_ops;
+  std::unordered_set<std::string> fp32_ops;
+  std::unordered_set<std::string> widest_dtype_ops;
+  std::unordered_set<std::string> conditional_fp32_ops;
+  std::unordered_set<std::string> excluded_syms;
+  int target_dt = *target_dtype;
+
+  for (size_t i = 0; i < num_target_dtype_op_names; ++i) {
+    target_dtype_ops.emplace(target_dtype_op_names[i]);
+  }
+  for (size_t i = 0; i < num_fp32_op_names; ++i) {
+    fp32_ops.emplace(fp32_op_names[i]);
+  }
+  for (size_t i = 0; i < num_widest_dtype_op_names; ++i) {
+    widest_dtype_ops.emplace(widest_dtype_op_names[i]);
+  }
+  for (size_t i = 0; i < num_conditional_fp32_op_names; ++i) {
+    conditional_fp32_ops.emplace(conditional_fp32_op_names[i]);
+  }
+  for (size_t i = 0; i < num_excluded_symbols; ++i) {
+    excluded_syms.emplace(excluded_symbols[i]);
+  }
+  std::unordered_map<std::string, int> kwargs;
+  std::unordered_map<std::string, int> node_name_dtype_map;
+  nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
+  for (mx_uint i = 0; i < num_args; ++i) {
+    kwargs[keys[i]] = arg_type_data[i];
+    node_name_dtype_map[keys[i]] = arg_type_data[i];
+  }
+  mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
+
+  g.attrs["target_dtype_ops"] =
+      std::make_shared<nnvm::any>(std::move(target_dtype_ops));
+  g.attrs["fp32_ops"] = std::make_shared<nnvm::any>(std::move(fp32_ops));
+  g.attrs["widest_dtype_ops"] =
+      std::make_shared<nnvm::any>(std::move(widest_dtype_ops));
+  g.attrs["conditional_fp32_ops"] =
+      std::make_shared<nnvm::any>(std::move(conditional_fp32_ops));
+  g.attrs["excluded_syms"] =
+      std::make_shared<nnvm::any>(std::move(excluded_syms));
+  g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
+  g = ApplyPass(std::move(g), "ReducePrecision");
+  g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "");
+  const nnvm::DTypeVector& inferred_dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
+  //LOG(INFO) << "size of inferred_dtype_vector " << g.GetAttr<nnvm::DTypeVector>("dtype").size();
+  CopyAttr(g.indexed_graph(), inferred_dtypes,
+           &(ret->arg_types), &(ret->out_types), &(ret->aux_types));
+  //auto inferred_dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
+  const nnvm::IndexedGraph& idx = g.indexed_graph();
+  const std::string dtype_keyword = "__dtype__";
+  /*
+  for (size_t count = 0; count < inferred_dtypes.size(); count++) {
+    if (idx[count].source && idx[count].source->is_variable()) {
+      auto node = idx[count].source;
+      auto it = node->attrs.dict.find(dtype_keyword);
+      if (it != node->attrs.dict.end()) {
+        //if (inferred_dtypes[count] == -1) inferred_dtypes[count] = 2;
+        node_name_dtype_map[node->attrs.name] = inferred_dtypes[count];
+        LOG(INFO) << node->attrs.name;
+        LOG(INFO) << inferred_dtypes[count];
+        //LOG(INFO) << inferred_dtypes[count];
+      }
+    }
+  }
+  */
+  int count_args = 0;
+  int count_auxs = 0;
+  LOG(INFO) << "len of ret->arg_types is " << ret->arg_types.size();
+  LOG(INFO) << "len of ret->aux_types is " << ret->aux_types.size();
+  LOG(INFO) << "len of ret->out_types is " << ret->out_types.size();
+  LOG(INFO) << "len of idx.input_nodes() " << idx.input_nodes().size();
+  for (uint32_t nid : idx.input_nodes()) {
+      auto node = idx[nid].source;
+      auto it = node->attrs.dict.find(dtype_keyword);
+      if (it != node->attrs.dict.end()) {
+        if (idx.mutable_input_nodes().count(nid) == 0) {
+          if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
+              node_name_dtype_map[node->attrs.name] = 2;
+          } else {
+          node_name_dtype_map[node->attrs.name] = inferred_dtypes[idx.entry_id(nid, 0)];
+          }
+          count_args++;
+          LOG(INFO) << node->attrs.name;
+          LOG(INFO) << node_name_dtype_map[node->attrs.name];
+        } else {
+          if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
+          node_name_dtype_map[node->attrs.name] = 2;
+          } else {
+          node_name_dtype_map[node->attrs.name] = inferred_dtypes[idx.entry_id(nid, 0)];
+          }
+          count_auxs++;
+          LOG(INFO) << node->attrs.name;
+          LOG(INFO) << node_name_dtype_map[node->attrs.name];
+        }
+      }
+  }
+
+  /*
+  for (uint32_t nid : idx.outputs()) {
+  }
+  */
+
+  auto args = s->ListInputs(nnvm::Symbol::kAll);
+  for (int i = 0; i < args.size(); ++i) {
+    LOG(INFO) << args[i]->attrs.name;
+    auto it = node_name_dtype_map.find(args[i]->attrs.name);
+    if (it != node_name_dtype_map.end()) {
+        if (args[i]->attrs.dict.find(dtype_keyword) != args[i]->attrs.dict.end()) {
+            args[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
+        }
+    }
+    // LOG(INFO) << args[i]->attrs.dict["__dtype__"];
+    // args[i]->attrs.dict["__dtype__"] = "-1";
+    // LOG(INFO) << std::string(args[i]->attrs.dict["__dtype__"]);
+  }
+
+  /*
+  for (int i = 0; i < args.size(); ++i) {
+      LOG(INFO) << args[i]->attrs.name;
+      LOG(INFO) << args[i]->attrs.dict["__dtype__"];
+  }
+  */
+
+  s->outputs = g.outputs;
+  *ret_sym_handle = s;
+  nnvm::Symbol* ret_sym = static_cast<nnvm::Symbol *>(*ret_sym_handle);
+  auto args2 = ret_sym->ListInputs(nnvm::Symbol::kAll);
+  /*
+  for (int i = 0; i < args2.size(); ++i) {
+      LOG(INFO) << args2[i]->attrs.name;
+      LOG(INFO) << args[i]->attrs.dict["__dtype__"];
+  }
+  */
+  for (int i = 0; i < args2.size(); ++i) {
+    LOG(INFO) << args2[i]->attrs.name;
+    auto it = node_name_dtype_map.find(args2[i]->attrs.name);
+    if (it != node_name_dtype_map.end()) {
+      if (args2[i]->attrs.dict.find(dtype_keyword) !=
+          args2[i]->attrs.dict.end()) {
+        args2[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
+      }
+    }
+    // LOG(INFO) << args[i]->attrs.dict["__dtype__"];
+    // args[i]->attrs.dict["__dtype__"] = "-1";
+    // LOG(INFO) << std::string(args[i]->attrs.dict["__dtype__"]);
+  }
+
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
                                      const mx_uint num_layers,
                                      const char** layer_names,
