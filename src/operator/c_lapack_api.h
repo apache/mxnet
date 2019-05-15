@@ -120,15 +120,26 @@ extern "C" {
   MXNET_LAPACK_FSIG_SYEVD(ssyevd, float)
   MXNET_LAPACK_FSIG_SYEVD(dsyevd, double)
 
-  #define MXNET_LAPACK_FSIG_GETRF(func, dtype) \
-    void func##_(int *m, int *n, dtype *a, int *lda, int *ipiv, int *info);
+  #ifdef __ANDROID__
+    #define MXNET_LAPACK_FSIG_GETRF(func, dtype) \
+      int func##_(int *m, int *n, dtype *a, int *lda, int *ipiv, int *info);
+  #else
+    #define MXNET_LAPACK_FSIG_GETRF(func, dtype) \
+      void func##_(int *m, int *n, dtype *a, int *lda, int *ipiv, int *info);
+  #endif
 
   MXNET_LAPACK_FSIG_GETRF(sgetrf, float)
   MXNET_LAPACK_FSIG_GETRF(dgetrf, double)
 
-  #define MXNET_LAPACK_FSIG_GETRI(func, dtype) \
-    void func##_(int *n, dtype *a, int *lda, int *ipiv, dtype *work, \
-                 int *lwork, int *info);
+  #ifdef __ANDROID__
+    #define MXNET_LAPACK_FSIG_GETRI(func, dtype) \
+      int func##_(int *n, dtype *a, int *lda, int *ipiv, dtype *work, \
+                  int *lwork, int *info);
+  #else
+    #define MXNET_LAPACK_FSIG_GETRI(func, dtype) \
+      void func##_(int *n, dtype *a, int *lda, int *ipiv, dtype *work, \
+                   int *lwork, int *info);
+  #endif
 
   MXNET_LAPACK_FSIG_GETRI(sgetri, float)
   MXNET_LAPACK_FSIG_GETRI(dgetri, double)
