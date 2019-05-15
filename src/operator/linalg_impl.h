@@ -1259,7 +1259,7 @@ LINALG_CPU_GETRF(dgetrf, double)
 struct set_matrix : public mxnet::op::mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType **p, DType *m, int step) {
-	p[i] = m + i * step;
+  p[i] = m + i * step;
   }
 };
 
