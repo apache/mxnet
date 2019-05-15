@@ -19,7 +19,7 @@
 """Lists of functions whitelisted/blacklisted for automatic mixed precision in symbol API."""
 
 # Functions that should be cast to lower precision
-FP16_FUNCS = [
+TARGET_DTYPE_FUNCS = [
     'Convolution',
     'Deconvolution',
     'FullyConnected',
@@ -31,7 +31,7 @@ FP16_FUNCS = [
 # they are irrelevant (not used in the network itself
 # like image transformations or optimizers) or they
 # are dtype neutral (can work in both fp16 and fp32)
-FP16_FP32_FUNCS = [
+TARGET_DTYPE_FP32_FUNCS = [
     'BNStatsFinalize',
     'BatchNorm',
     'BatchNormAddRelu',
@@ -246,7 +246,6 @@ FP16_FP32_FUNCS = [
     'argmax',
     'argmax_channel',
     'argmin',
-    'argsort',
     'batch_take',
     'broadcast_axes',
     'broadcast_axis',
@@ -256,7 +255,6 @@ FP16_FP32_FUNCS = [
     'ceil',
     'choose_element_0index',
     'clip',
-    'concat',
     'cos',
     'crop',
     'degrees',
@@ -456,6 +454,7 @@ FP32_FUNCS = [
     '_sparse_mean',
     '_sparse_norm',
     '_sparse_rsqrt',
+    'argsort',
 
     # Neural network
     'SoftmaxOutput',
@@ -530,6 +529,7 @@ WIDEST_TYPE_CASTS = [
     '_mul',
     '_not_equal',
     'Concat',
+    'concat',
     'Correlation',
     'ElementWiseSum',
     '_sparse_ElementWiseSum',

@@ -32,6 +32,7 @@ from ..ndarray import NDArray
 from ..ndarray import contrib as ndarray_contrib
 from . import lists
 from ..gluon import trainer
+from .. import base
 from .. import optimizer as opt
 from .loss_scaler import LossScaler
 
@@ -48,6 +49,24 @@ def _cast_symbol_NDArray(s, dtype):
             return s
     else:
         return s
+
+def _get_fun_to_wrap(name, module, submodule_dict):
+    module_internal = getattr(module, "_internal")
+    prefix = base._get_op_name_prefix(name)
+    if len(prefix) > 0:
+        if prefix != '_random_' or name.endswith('_like'):
+            func_name = name[len(prefix):]
+            cur_module = submodule_dict[prefix]
+        else:
+            func_name = name
+            cur_module = module_internal
+    elif name.startswith('_'):
+        func_name = name
+        cur_module = module_internal
+    else:
+        func_name = name
+        cur_module = module
+    return func_name, cur_module
 
 def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
                            conditional_fp32_ops=None, fp32_ops=None):
@@ -126,37 +145,58 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
 
     _wrapper = _symbol_wrapper if module in (symbol, Symbol, symbol_contrib) else _ndarray_wrapper
 
+    submodule_dict = {}
+    for op_name_prefix in base._OP_NAME_PREFIX_LIST:
+        submodule_dict[op_name_prefix] =\
+                getattr(module, op_name_prefix[1:-1])
+
     wrap_list = target_precision_ops if target_precision_ops is not None \
-                    else lists.symbol.FP16_FUNCS
+                    else lists.symbol.TARGET_DTYPE_FUNCS
     for fun_name in wrap_list:
         try:
-            f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, _wrapper(f_to_wrap, target_dtype))
+            fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
+            f_to_wrap = getattr(cur_module, fun_name)
+            setattr(cur_module, fun_name, _wrapper(f_to_wrap, target_dtype))
+            if cur_module == module:
+                setattr(module.op, fun_name, _wrapper(f_to_wrap, target_dtype))
         except AttributeError:
+            print("Failed to find " + fun_name + " in " + cur_module.__name__)
             pass
 
     wrap_list = fp32_ops if fp32_ops is not None else lists.symbol.FP32_FUNCS
     for fun_name in wrap_list:
         try:
-            f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, _wrapper(f_to_wrap, np.float32))
+            fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
+            f_to_wrap = getattr(cur_module, fun_name)
+            setattr(cur_module, fun_name, _wrapper(f_to_wrap, np.float32))
+            if cur_module == module:
+                setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32))
         except AttributeError:
+            print("Failed to find " + fun_name + " in " + module.__name__)
             pass
 
     wrap_list = conditional_fp32_ops if conditional_fp32_ops is not None \
                     else lists.symbol.CONDITIONAL_FP32_FUNCS
     for fun_name, arg, arg_values in wrap_list:
         try:
-            f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
+            fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
+            f_to_wrap = getattr(cur_module, fun_name)
+            setattr(cur_module, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
+            if cur_module == module:
+                setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
         except AttributeError:
+            print("Failed to find " + fun_name + " in " + module.__name__)
             pass
 
     for fun_name in lists.symbol.WIDEST_TYPE_CASTS:
         try:
-            f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, _symbol_widest_wrapper(f_to_wrap))
+            fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
+            f_to_wrap = getattr(cur_module, fun_name)
+            setattr(cur_module, fun_name, _symbol_widest_wrapper(f_to_wrap))
+            if cur_module == module:
+                setattr(module.op, fun_name, _symbol_widest_wrapper(f_to_wrap))
         except AttributeError:
+            print("Failed to find " + fun_name + " in " + module.__name__)
             pass
 
 def _wrap_loss_output_functions(module, ls):
@@ -198,7 +238,8 @@ _loss_scaler = None
 def scale_loss(loss, optimizer_or_trainer):
     assert optimizer_or_trainer._amp_loss_scaler is not None, \
         'Loss scaler is not initialized, did you forget to call amp.init_trainer()?'
-    optimizer_or_trainer._scale = 1. / optimizer_or_trainer._amp_loss_scaler.loss_scale
+    optimizer_or_trainer._scale = (optimizer_or_trainer._amp_original_scale /
+                                   optimizer_or_trainer._amp_loss_scaler.loss_scale)
     if isinstance(loss, (list, tuple)):
         yield [l * optimizer_or_trainer._amp_loss_scaler.loss_scale for l in loss]
     else:
@@ -233,19 +274,7 @@ def init(target_dtype='float16', target_precision_ops=None,
         target_dtype = np.dtype(target_dtype)
         _wrap_symbol_functions(symbol, target_dtype, target_precision_ops,
                                conditional_fp32_ops, fp32_ops)
-        _wrap_symbol_functions(symbol._internal, target_dtype, target_precision_ops,
-                               conditional_fp32_ops, fp32_ops)
-        _wrap_symbol_functions(Symbol, target_dtype, target_precision_ops,
-                               conditional_fp32_ops, fp32_ops)
-        _wrap_symbol_functions(symbol_contrib, target_dtype, target_precision_ops,
-                               conditional_fp32_ops, fp32_ops)
         _wrap_symbol_functions(ndarray, target_dtype, target_precision_ops,
-                               conditional_fp32_ops, fp32_ops)
-        _wrap_symbol_functions(ndarray._internal, target_dtype, target_precision_ops,
-                               conditional_fp32_ops, fp32_ops)
-        _wrap_symbol_functions(NDArray, target_dtype, target_precision_ops,
-                               conditional_fp32_ops, fp32_ops)
-        _wrap_symbol_functions(ndarray_contrib, target_dtype, target_precision_ops,
                                conditional_fp32_ops, fp32_ops)
         _loss_scaler = LossScaler()
         _wrap_loss_output_functions(ndarray, _loss_scaler)
@@ -271,6 +300,7 @@ def init_trainer(optimizer_or_trainer):
     #_wrap_output
     if isinstance(optimizer_or_trainer, trainer.Trainer):
         optimizer_or_trainer._amp_loss_scaler = loss_scaler
+        optimizer_or_trainer._amp_original_scale = optimizer_or_trainer._scale
         skip_update = optimizer_or_trainer._amp_loss_scaler.wait_and_update
         optimizer_or_trainer._optimizer.old_update_multi_precision = \
                 optimizer_or_trainer._optimizer.update_multi_precision
