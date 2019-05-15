@@ -8401,9 +8401,12 @@ def test_norm():
                     np.int32: 'int32', np.int64: 'int64'}
     is_windows = sys.platform.startswith('win')
     for enforce_safe_acc in ["1", "0"]:
-        # os.environ["MXNET_SAFE_ACCUMULATION"] = enforce_safe_acc
-        os.putenv("MXNET_SAFE_ACCUMULATION", enforce_safe_acc)
-        # raise ValueError("in python safe_acc is: {}".format(os.environ["MXNET_SAFE_ACCUMULATION"]))
+        if is_windows:
+            if enforce_safe_acc == "0":
+                break
+            enforce_safe_acc = "0" if "MXNET_SAFE_ACCUMULATION" not in os.environ else os.environ["MXNET_SAFE_ACCUMULATION"]
+        else:
+            os.environ["MXNET_SAFE_ACCUMULATION"] = enforce_safe_acc
         for order in [1, 2]:
             for dtype in [np.float16, np.float32, np.float64]:
                 for i in range(in_data_dim):
