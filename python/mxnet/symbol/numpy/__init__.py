@@ -19,7 +19,6 @@
 
 from . import random
 from . import linalg
-from . import ext
 from . import _op, _symbol
 from ._symbol import _Symbol
 from . import _register

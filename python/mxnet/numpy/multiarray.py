@@ -356,9 +356,22 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     @use_np_compat
     def __repr__(self):
-        """Returns a string representation of the array."""
-        return '%s\n<%s shape=%s ctx=%s>' % (str(self.asnumpy()), self.__class__.__name__,
-                                             self.shape, self.context)
+        """Returns a string representation of the array using the following rules:
+        1. If the `ndarray` is a scalar tensor, only the string of the scalar is returned.
+        2. Else if the `ndarray` is allocated on cpu, the string of its numpy form, class name,
+        and shape is returned.
+        3. Else (the `ndarray` is allocated on gpu), the string of its numpy form, class name,
+        shape, and context is returned."""
+        array_str = str(self.asnumpy())
+        if self.ndim == 0:  # scalar tensor
+            return array_str
+        context = self.context
+        if context.device_type == 'gpu':
+            return '%s\n<%s shape=%s ctx=%s>' % (array_str, self.__class__.__name__, self.shape,
+                                                 context)
+        else:
+            return '%s\n<%s shape=%s>' % (array_str, self.__class__.__name__, self.shape)
+
 
     @use_np_compat
     def attach_grad(self, grad_req='write', stype=None):
