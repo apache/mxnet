@@ -27,6 +27,9 @@ C:\Python27\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 -
 if (! $?) { Throw ("Error running unittest") }
 C:\Python27\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py
 if (! $?) { Throw ("Error running tests") }
+$env:MXNET_SAFE_ACCUMULATION=1
+C:\Python27\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py:test_norm
+if (! $?) { Throw ("Error running tests") }
 C:\Python27\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_forward.xml tests\python\gpu\test_forward.py
 if (! $?) { Throw ("Error running tests") }
 C:\Python27\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error tests\python\train
