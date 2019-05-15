@@ -283,7 +283,7 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 * MXNET_SUBGRAPH_BACKEND
   - Values: String ```(default="")```
   - This variable controls the subgraph partitioning in MXNet.
-  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion pass.
+  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
 
 Settings for Minimum Memory Usage
 ---------------------------------
