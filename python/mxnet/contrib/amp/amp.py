@@ -24,16 +24,16 @@ import logging
 import contextlib
 import numpy as np
 
-from .. import symbol
-from ..symbol import Symbol
-from ..symbol import contrib as symbol_contrib
-from .. import ndarray
-from ..ndarray import NDArray
-from ..ndarray import contrib as ndarray_contrib
+from ... import symbol
+from ...symbol import Symbol
+from ...symbol import contrib as symbol_contrib
+from ... import ndarray
+from ...ndarray import NDArray
+from ...ndarray import contrib as ndarray_contrib
 from . import lists
-from ..gluon import trainer
-from .. import base
-from .. import optimizer as opt
+from ...gluon import trainer
+from ... import base
+from ... import optimizer as opt
 from .loss_scaler import LossScaler
 
 def _cast_symbol_NDArray(s, dtype):
