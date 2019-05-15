@@ -535,8 +535,9 @@ def compile_windows_cpu_mkldnn_mkl() {
         ws('workspace/build-cpu-mkldnn-mkl') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell '($Env:MKL_ROOT="C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl") -and (py -3 ci/build_windows.py -f WIN_CPU_MKLDNN_MKL)'
-            stash includes: 'windows_package.7z', name: 'windows_package_cpu_mkldnn_mkl'
+            //powershell '($Env:MKL_ROOT="C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl") -and (py -3 ci/build_windows.py -f WIN_CPU_MKLDNN_MKL)'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKLDNN_MKL'
+			stash includes: 'windows_package.7z', name: 'windows_package_cpu_mkldnn_mkl'
           }
         }
       }
@@ -550,7 +551,7 @@ def compile_windows_cpu_mkl() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
             powershell '$Env:MKL_ROOT="C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl"'
-            powershell 'cd $Env:MKL_ROOT'
+            //powershell 'cd $Env:MKL_ROOT'
             powershell 'py -3 ci/build_windows.py -f WIN_CPU_MKL'
             stash includes: 'windows_package.7z', name: 'windows_package_cpu_mkl'
           }
