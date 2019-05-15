@@ -1329,7 +1329,7 @@ class RNNOp {
       }
       #else
         dtype_with_fallback_ = dtype_;
-      #endif    
+      #endif
       CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
                                           rnn_desc_,
                                           param_.state_size,
