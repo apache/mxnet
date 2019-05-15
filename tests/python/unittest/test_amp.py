@@ -21,18 +21,28 @@ import ctypes
 import mxnet.amp as amp
 
 def test_amp_coverage():
+    conditional = [item[0] for item in amp.lists.symbol.CONDITIONAL_FP32_FUNCS]
+
+    # Check for duplicates
     for a in [amp.lists.symbol.FP16_FUNCS,
           amp.lists.symbol.FP16_FP32_FUNCS,
           amp.lists.symbol.FP32_FUNCS,
-          amp.lists.symbol.WIDEST_TYPE_CASTS]:
-        assert([item for item, count in collections.Counter(a).items() if count > 1] == [])
+          amp.lists.symbol.WIDEST_TYPE_CASTS,
+          conditional]:
+        ret = [item for item, count in collections.Counter(a).items() if count > 1]
+        assert ret == [], "Elements " + str(ret) + " are duplicated in the AMP lists."
+
     t = []
     for a in [amp.lists.symbol.FP16_FUNCS,
               amp.lists.symbol.FP16_FP32_FUNCS,
               amp.lists.symbol.FP32_FUNCS,
-              amp.lists.symbol.WIDEST_TYPE_CASTS]:
+              amp.lists.symbol.WIDEST_TYPE_CASTS,
+              conditional]:
         t += a
-    assert([item for item, count in collections.Counter(t).items() if count > 1] == [])
+    ret = [item for item, count in collections.Counter(t).items() if count > 1]
+    assert ret == [], "Elements " + str(ret) + " exist in more than 1 AMP list."
+
+    # Check the coverage
     py_str = lambda x: x.decode('utf-8')
 
     plist = ctypes.POINTER(ctypes.c_char_p)()
@@ -47,7 +57,29 @@ def test_amp_coverage():
            and not s.startswith("_contrib_backward_"):
             op_names.append(s)
 
-    assert(op_names.sort() == t.sort())
+    ret1 = set(op_names) - set(t)
+    ret2 = set(t) - set(op_names)
+
+    assert ret1 == set(), ("Operators " + str(ret1) + " do not exist in AMP lists (in "
+                           "python/mxnet/contrib/amp/lists/symbol.py) - please add them. "
+                           """Please follow these guidelines for choosing a proper list:
+                           - if your operator is not to be used in a computational graph
+                             (e.g. image manipulation operators, optimizers) or does not have
+                             inputs, put it in FP16_FP32_FUNCS list,
+                           - if your operator requires FP32 inputs or is not safe to use with lower
+                             precision, put it in FP32_FUNCS list,
+                           - if your operator supports both FP32 and lower precision, has
+                             multiple inputs and expects all inputs to be of the same
+                             type, put it in WIDEST_TYPE_CASTS list,
+                           - if your operator supports both FP32 and lower precision and has
+                             either a single input or supports inputs of different type,
+                             put it in FP16_FP32_FUNCS list,
+                           - if your operator is both safe to use in lower precision and
+                             it is highly beneficial to use it in lower precision, then
+                             put it in FP16_FUNCS (this is unlikely for new operators)""")
+    assert ret2 == set(), ("Operators " + str(ret2) + " exist in AMP lists (in "
+                           "python/mxnet/contrib/amp/lists/symbol.py) but are not "
+                           "MXNet operators. Please remove them.")
 
 if __name__ == '__main__':
     test_amp_coverage()
