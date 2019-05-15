@@ -902,6 +902,18 @@ If *n>2*, *inverse* is performed separately on the trailing two dimensions
 for all inputs (batch mode).
 
 .. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+   // Single matrix inversion
+   A = [[1., 4.], [2., 3.]]
+   inverse(A) = [[-0.6, 0.8], [0.4, -0.2]]
+
+   // Batch matrix inversion
+   A = [[[1., 4.], [2., 3.]],
+        [[1., 3.], [2., 4.]]]
+   inverse(A) = [[[-0.6, 0.8], [0.4, -0.2]],
+                 [[-2., 1.5], [1., -0.5]]]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
