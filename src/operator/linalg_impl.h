@@ -1263,6 +1263,9 @@ struct set_matrix : public mxnet::op::mxnet_op::tunable {
   }
 };
 
+// GETRF only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
 // Since there is no "getri" in cuSolver, we are using batched version of
 // "getrf" and "getri" in cuBLAS here. These routines are good for large
 // batches of small matrices, so performance issue may happen when computing
@@ -1289,6 +1292,18 @@ void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                             A.size(1), A_ptr, A.size(2), pivot, \
                             info, A.size(0))) \
 }
+
+#else
+
+#define LINALG_GPU_BATCH_GETRF(fname, DType) \
+template<> inline \
+void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                    const Tensor<gpu, 1, DType>& work, \
+                                    Stream<gpu> *s) { \
+  LOG(FATAL) << "batched getrf requires CUDA version >= 8.0!"; \
+}
+
+#endif  // CUDA_VERSION >= 8000
 
 LINALG_GPU_BATCH_GETRF(SgetrfBatched, float)
 LINALG_GPU_BATCH_GETRF(DgetrfBatched, double)
@@ -1337,6 +1352,9 @@ LINALG_CPU_GETRI_WORKSPACE_QUERY(dgetri, double)
 
 #ifdef __CUDACC__
 
+// GETRI only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
 // Since there is no "getri" in cuSolver, we are using batched version of
 // "getrf" and "getri" in cuBLAS here. These routines are good for large
 // batches of small matrices, so performance issue may happen when computing
@@ -1368,8 +1386,6 @@ void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                             B.size(2), const_cast<const int *>(pivot), \
                             A_ptr, A.size(2), info, A.size(0))) \
 }
-LINALG_GPU_BATCH_GETRI(SgetriBatched, float)
-LINALG_GPU_BATCH_GETRI(DgetriBatched, double)
 
 #define LINALG_GPU_GETRI_WORKSPACE_QUERY(fname, DType) \
 template<> inline \
@@ -1381,6 +1397,30 @@ int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
   int matrix_size = sizeof(DType) * A.shape_.Size(); \
   return (pivot_size + info_size + ptr_size + matrix_size + sizeof(DType) - 1) / sizeof(DType); \
 }
+
+#else
+
+#define LINALG_GPU_BATCH_GETRI(fname, DType) \
+template<> inline \
+void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                    const Tensor<gpu, 3, DType>& B, \
+                                    const Tensor<gpu, 1, DType>& work, \
+                                    Stream<gpu> *s) { \
+  LOG(FATAL) << "batched getri requires CUDA version >= 8.0!"; \
+}
+
+#define LINALG_GPU_GETRI_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                             Stream<gpu> *s) { \
+  LOG(FATAL) << "batched getri requires CUDA version >= 8.0!"; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
+LINALG_GPU_BATCH_GETRI(SgetriBatched, float)
+LINALG_GPU_BATCH_GETRI(DgetriBatched, double)
+
 LINALG_GPU_GETRI_WORKSPACE_QUERY(SgetriBatched, float)
 LINALG_GPU_GETRI_WORKSPACE_QUERY(DgetriBatched, double)
 
@@ -1408,6 +1448,9 @@ LINALG_CPU_BATCH_INVERSE(cpu, double)
 
 #ifdef __CUDACC__
 
+// GETRF and GETRI only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
 #define LINALG_GPU_BATCH_INVERSE(xpu, DType) \
 template<> inline \
 void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
@@ -1417,6 +1460,20 @@ void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
   linalg_batch_getrf(B, work, s); \
   linalg_batch_getri(A, B, work, s); \
 }
+
+#else
+
+#define LINALG_GPU_BATCH_INVERSE(xpu, DType) \
+template<> inline \
+void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
+                                      const Tensor<xpu, 3, DType>& B, \
+                                      const Tensor<xpu, 1, DType>& work, \
+                                      Stream<gpu> *s) { \
+  LOG(FATAL) << "batched getrf and getri requires CUDA version >= 8.0!"; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
 LINALG_GPU_BATCH_INVERSE(gpu, float)
 LINALG_GPU_BATCH_INVERSE(gpu, double)
 
