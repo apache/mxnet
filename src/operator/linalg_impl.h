@@ -1279,11 +1279,11 @@ void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
   using namespace mxnet; \
   using namespace mxnet::op::mxnet_op; \
   CHECK_NOTNULL(s); \
-  DType **A_ptr = reinterpret_cast<DType **>(work.dptr_); \
-  int *pivot = reinterpret_cast<int *>(A_ptr + A.size(0) * 2); \
+  Storage::Handle A_ptr_buf = Storage::Get()->Alloc(sizeof(DType *) * A.size(0), Context::GPU()); \
+  DType **A_ptr = static_cast<DType **>(A_ptr_buf.dptr); \
+  const Tensor<gpu, 3, DType> temp(work.dptr_, A.shape_, s); \
+  int *pivot = reinterpret_cast<int *>(temp.dptr_ + temp.shape_.Size()); \
   int *info = pivot + A.size(0) * A.size(1); \
-  const Tensor<gpu, 3, DType> temp( \
-    reinterpret_cast<DType *>(info + A.size(0)), A.shape_, s); \
   Copy(temp, A, s); \
   Kernel<set_matrix, gpu>::Launch(s, temp.size(0), \
                                   A_ptr, temp.dptr_, \
@@ -1291,6 +1291,7 @@ void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
   CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
                             A.size(1), A_ptr, A.size(2), pivot, \
                             info, A.size(0))) \
+  Storage::Get()->Free(A_ptr_buf); \
 }
 
 #else
@@ -1369,12 +1370,13 @@ void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
   using namespace mxnet; \
   using namespace mxnet::op::mxnet_op; \
   CHECK_NOTNULL(s); \
-  DType **A_ptr = reinterpret_cast<DType **>(work.dptr_); \
-  DType **B_ptr = A_ptr + A.size(0); \
-  int *pivot = reinterpret_cast<int *>(A_ptr + A.size(0) * 2); \
+  Storage::Handle A_ptr_buf = Storage::Get()->Alloc(sizeof(DType *) * A.size(0), Context::GPU()); \
+  DType **A_ptr = static_cast<DType **>(A_ptr_buf.dptr); \
+  Storage::Handle B_ptr_buf = Storage::Get()->Alloc(sizeof(DType *) * A.size(0), Context::GPU()); \
+  DType **B_ptr = static_cast<DType **>(B_ptr_buf.dptr); \
+  Tensor<gpu, 3, DType> temp(work.dptr_, A.shape_, s); \
+  int *pivot = reinterpret_cast<int *>(temp.dptr_ + temp.shape_.Size()); \
   int *info = pivot + A.size(0) * A.size(1); \
-  Tensor<gpu, 3, DType> temp( \
-    reinterpret_cast<DType *>(info + A.size(0)), A.shape_, s); \
   Kernel<set_matrix, gpu>::Launch(s, A.size(0), \
                                   A_ptr, A.dptr_, \
                                   A.size(1) * A.size(2)); \
@@ -1382,9 +1384,11 @@ void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                   B_ptr, temp.dptr_, \
                                   temp.size(1) * temp.size(2)); \
   CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
-                            A.size(1), const_cast<const DType**>(B_ptr), \
+                            A.size(1), const_cast<const DType **>(B_ptr), \
                             B.size(2), const_cast<const int *>(pivot), \
                             A_ptr, A.size(2), info, A.size(0))) \
+  Storage::Get()->Free(A_ptr_buf); \
+  Storage::Get()->Free(B_ptr_buf); \
 }
 
 #define LINALG_GPU_GETRI_WORKSPACE_QUERY(fname, DType) \
@@ -1393,9 +1397,8 @@ int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                              Stream<gpu> *s) { \
   int pivot_size = sizeof(int) * A.size(0) * A.size(1); \
   int info_size = sizeof(int) * A.size(0); \
-  int ptr_size = sizeof(DType *) * A.size(0) * 2; \
   int matrix_size = sizeof(DType) * A.shape_.Size(); \
-  return (pivot_size + info_size + ptr_size + matrix_size + sizeof(DType) - 1) / sizeof(DType); \
+  return (pivot_size + info_size + matrix_size + sizeof(DType) - 1) / sizeof(DType); \
 }
 
 #else
