@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 
-MXNET_OPERATOR_REGISTER_UNARY(_numpy__ext_relu)
+MXNET_OPERATOR_REGISTER_UNARY(_npe_relu)
 .describe(R"code(Computes rectified linear activation.
 
 .. math::
@@ -38,7 +38,7 @@ MXNET_OPERATOR_REGISTER_UNARY(_numpy__ext_relu)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_relu"})
 .set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true);
 
-MXNET_OPERATOR_REGISTER_UNARY(_numpy__ext_sigmoid)
+MXNET_OPERATOR_REGISTER_UNARY(_npe_sigmoid)
 .describe(R"code(Computes sigmoid of x element-wise.
 
 .. math::

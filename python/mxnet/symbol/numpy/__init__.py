@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy module for numpy ops under mxnet.symbol."""
+"""Module for numpy ops under mxnet.symbol."""
 
 from . import random
 from . import linalg

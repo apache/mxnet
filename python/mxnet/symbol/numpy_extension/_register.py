@@ -15,20 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Symbol API of MXNet."""
+"""Registering numpy_extension ops."""
 
-from . import _internal, contrib, linalg, op, random, sparse, image, symbol, numpy
-# pylint: disable=wildcard-import, redefined-builtin
-try:
-    from .gen_op import * # pylint: disable=unused-wildcard-import
-except ImportError:
-    pass
-from . import register
-from .op import *
-from .symbol import *
-# pylint: enable=wildcard-import
-from . import numpy as np
-from . import numpy_extension as npe
+from ...base import _init_np_op_module
+from ..register import _make_symbol_function
 
-__all__ = op.__all__ + symbol.__all__\
-          + ['contrib', 'linalg', 'random', 'sparse', 'image', 'numpy', 'numpy_extension']
+_init_np_op_module(root_module_name='mxnet', np_module_name='numpy_extension',
+                   mx_module_name='symbol', make_op_func=_make_symbol_function)

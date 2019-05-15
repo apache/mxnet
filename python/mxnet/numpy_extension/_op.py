@@ -15,20 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Symbol API of MXNet."""
+"""Namespace for registering numpy_extension ops for imperative programming."""
 
-from . import _internal, contrib, linalg, op, random, sparse, image, symbol, numpy
-# pylint: disable=wildcard-import, redefined-builtin
-try:
-    from .gen_op import * # pylint: disable=unused-wildcard-import
-except ImportError:
-    pass
-from . import register
-from .op import *
-from .symbol import *
-# pylint: enable=wildcard-import
-from . import numpy as np
-from . import numpy_extension as npe
-
-__all__ = op.__all__ + symbol.__all__\
-          + ['contrib', 'linalg', 'random', 'sparse', 'image', 'numpy', 'numpy_extension']
+__all__ = []

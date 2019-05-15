@@ -436,7 +436,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         if order != 'C':
             raise NotImplementedError('reshape only supports C-order,'
                                       ' while received {}'.format(order))
-        return _mx_np_op.reshape(self, shape=shape, order=order)
+        return _mx_np_op.reshape(self, newshape=shape, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -1172,10 +1172,7 @@ def array(object, dtype=None, **kwargs):
         An array, any object exposing the array interface, an object whose
         __array__ method returns an array, or any (nested) sequence.
     dtype : data-type, optional
-        The desired data-type for the array.  If not given, then the type will
-        be determined as the minimum type required to hold the objects in the
-        sequence. This argument can only be used to 'upcast' the array.  For
-        downcasting, use the .astype(t) method.
+        The desired data-type for the array. Default is `float32`.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -1189,13 +1186,13 @@ def array(object, dtype=None, **kwargs):
     ctx = kwargs.get('ctx', current_context())
     if ctx is None:
         ctx = current_context()
+    if dtype is None:
+        dtype = _np.float32
     if not isinstance(object, (ndarray, NDArray, _np.ndarray)):
         try:
             object = _np.array(object, dtype=dtype)
         except:
             raise TypeError('source array must be an array like object')
-    if dtype is None:
-        dtype = object.dtype
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     ret[:] = object
     return ret

@@ -37,11 +37,11 @@ def test_array_creation():
             mx_arr = np.array(src, dtype=dtype)
             assert mx_arr.context == mx.current_context()
             if isinstance(src, mx.nd.NDArray):
-                np_arr = _np.array(src.asnumpy(), dtype=dtype)
+                np_arr = _np.array(src.asnumpy(), dtype=dtype if dtype is not None else _np.float32)
             else:
-                np_arr = _np.array(src, dtype=dtype)
-            assert same(mx_arr.asnumpy(), np_arr)
+                np_arr = _np.array(src, dtype=dtype if dtype is not None else _np.float32)
             assert mx_arr.dtype == np_arr.dtype
+            assert same(mx_arr.asnumpy(), np_arr)
 
 
 @with_seed()

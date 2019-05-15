@@ -29,6 +29,7 @@ from . import contrib
 from . import ndarray
 from . import ndarray as nd
 from . import numpy
+from . import numpy_extension
 from . import name
 # use mx.sym as short for symbol
 from . import symbol as sym

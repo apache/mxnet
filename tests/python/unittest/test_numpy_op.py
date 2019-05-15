@@ -19,7 +19,7 @@
 from __future__ import absolute_import
 import numpy as _np
 import mxnet as mx
-from mxnet import numpy as np
+from mxnet import numpy as np, numpy_extension as npe
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient
@@ -227,14 +227,14 @@ def test_np_transpose():
 def test_relu():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('data')
-    ret = mx.sym.np.ext.relu(data)
+    ret = mx.sym.npe.relu(data)
     assert type(ret) == mx.sym.np._Symbol
 
     shapes = [(), (0, 2, 0)]
     shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
     for shape in shapes:
         data = np.array(_np.random.uniform(size=shape).astype('float32'))
-        ret = np.ext.relu(data)
+        ret = npe.relu(data)
         assert type(ret) == np.ndarray
 
 
@@ -243,14 +243,14 @@ def test_relu():
 def test_sigmoid():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('data')
-    ret = mx.sym.np.ext.sigmoid(data)
+    ret = mx.sym.npe.sigmoid(data)
     assert type(ret) == mx.sym.np._Symbol
 
     shapes = [(), (0, 2, 0)]
     shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
     for shape in shapes:
         data = np.array(_np.random.uniform(size=shape).astype('float32'))
-        ret = np.ext.sigmoid(data)
+        ret = npe.sigmoid(data)
         assert type(ret) == np.ndarray
 
 

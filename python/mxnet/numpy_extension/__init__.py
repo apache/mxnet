@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,6 +17,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""namespace for registering numpy.ext ops for imperative programming."""
+"""Module for ops not belonging to the official numpy package for imperative programming."""
+
+from __future__ import absolute_import
+from . import _op
+from . import _register
+from ._op import *  # pylint: disable=wildcard-import
 
 __all__ = []

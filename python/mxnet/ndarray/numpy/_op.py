@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy namespace for operators used in Gluon APIs dispatched by F=ndarray module."""
+"""Namespace for numpy operators used in Gluon dispatched by F=ndarray."""
 
 from __future__ import absolute_import
 import numpy as _np

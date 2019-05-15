@@ -887,19 +887,22 @@ def _sanity_check_params(func_name, unsupported_params, param_dict):
                                       .format(func_name, param_name))
 
 
-_NP_OP_SUBMODULE_LIST = ['_ext_', '_random_', '_linalg_']
 _NP_OP_PREFIX = '_numpy_'
+_NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
+
+_NP_EXT_OP_PREFIX = '_npe_'
+_NP_EXT_SUBMODULE_LIST = []
 
 
-def _get_np_op_submodule_name(op_name):
-    assert op_name.startswith(_NP_OP_PREFIX)
-    for name in _NP_OP_SUBMODULE_LIST:
-        if op_name[len(_NP_OP_PREFIX):].startswith(name):
-            return name
+def _get_op_submodule_name(op_name, op_name_prefix, submodule_name_list):
+    assert op_name.startswith(op_name_prefix)
+    for submodule_name in submodule_name_list:
+        if op_name[len(op_name_prefix):].startswith(submodule_name):
+            return submodule_name
     return ""
 
 
-def _init_np_op_module(root_namespace, module_name, make_op_func):
+def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op_func):
     """
     Register numpy operators in namespaces `mxnet.numpy`, `mxnet.ndarray.numpy`
     and `mxnet.symbol.numpy`. They are used in imperative mode, Gluon APIs w/o hybridization,
@@ -909,49 +912,61 @@ def _init_np_op_module(root_namespace, module_name, make_op_func):
 
     Parameters
     ----------
-    root_namespace : str
+    root_module_name : str
         Top level module name, `mxnet` in the current cases.
-    module_name : str
-        Second level module name, `ndarray` or `symbol` in the current case.
+    np_module_name : str
+        Second level module name, `numpy` or `numpy_extension` in the current case.
     make_op_func : function
         Function for creating op functions.
     """
+    if np_module_name == 'numpy':
+        op_name_prefix = '_numpy_'
+        submodule_name_list = _NP_OP_SUBMODULE_LIST
+    elif np_module_name == 'numpy_extension':
+        op_name_prefix = '_npe_'
+        submodule_name_list = _NP_EXT_SUBMODULE_LIST
+    else:
+        raise ValueError('unsupported np module name {}'.format(np_module_name))
+
     plist = ctypes.POINTER(ctypes.c_char_p)()
     size = ctypes.c_uint()
-
     check_call(_LIB.MXListAllOpNames(ctypes.byref(size), ctypes.byref(plist)))
     op_names = []
     for i in range(size.value):
         name = py_str(plist[i])
-        if name.startswith(_NP_OP_PREFIX):
+        if name.startswith(op_name_prefix):
             op_names.append(name)
 
-    if module_name == 'numpy':
-        # register ops for mxnet.numpy
-        module_pattern = "%s.%s._op"
-        submodule_pattern = "%s.%s.%s"
+    if mx_module_name is None:
+        # register np/npe ops for imperative programming
+        op_module_name = "%s.%s._op" % (root_module_name, np_module_name)  # e.g. mxnet.numpy._op
+        op_submodule_name = "%s.%s" % (root_module_name, np_module_name)  # e.g. mxnet.numpy.random
+    elif mx_module_name == 'ndarray' or mx_module_name == 'symbol':
+        # register np/npe ops for use in Gluon
+        # e.g. mxnet.symbol.numpy._op
+        op_module_name = "%s.%s.%s._op" % (root_module_name, mx_module_name, np_module_name)
+        # e.g. mxnet.symbol.numpy.random
+        op_submodule_name = "%s.%s.%s" % (root_module_name, mx_module_name, np_module_name)
     else:
-        # register ops for mxnet.ndarray.numpy or mxnet.symbol.numpy
-        module_pattern = "%s.%s.numpy._op"
-        submodule_pattern = "%s.%s.numpy.%s"
-    module_np_op = sys.modules[module_pattern % (root_namespace, module_name)]
+        raise ValueError('unsupported mxnet module {}'.format(mx_module_name))
+    op_submodule_name += '.%s'
+
+    op_module = sys.modules[op_module_name]
     submodule_dict = {}
-    for submodule_name in _NP_OP_SUBMODULE_LIST:
-        submodule_dict[submodule_name] = \
-            sys.modules[submodule_pattern % (root_namespace, module_name, submodule_name[1:-1])]
+    for submodule_name in submodule_name_list:
+        submodule_dict[submodule_name] = sys.modules[op_submodule_name % submodule_name[1:-1]]
     for name in op_names:
         hdl = OpHandle()
         check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
-        submodule_name = _get_np_op_submodule_name(name)
+        submodule_name = _get_op_submodule_name(name, op_name_prefix, submodule_name_list)
         if len(submodule_name) > 0:
-            func_name = name[(len(_NP_OP_PREFIX) + len(submodule_name)):]
+            func_name = name[(len(op_name_prefix) + len(submodule_name)):]
             cur_module = submodule_dict[submodule_name]
-            module_name_local = submodule_pattern % (root_namespace,
-                                                     module_name, submodule_name[1:-1])
+            module_name_local = op_submodule_name % submodule_name[1:-1]
         else:
-            func_name = name[len(_NP_OP_PREFIX):]
-            cur_module = module_np_op
-            module_name_local = module_pattern[:-len('._op')] % (root_namespace, module_name)
+            func_name = name[len(op_name_prefix):]
+            cur_module = op_module
+            module_name_local = op_module_name[:-len('._op')]
 
         function = make_op_func(hdl, name, func_name)
         function.__module__ = module_name_local

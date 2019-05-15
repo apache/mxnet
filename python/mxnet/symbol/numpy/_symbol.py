@@ -259,7 +259,7 @@ class _Symbol(Symbol):
         if order != 'C':
             raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
                                       'received {}'.format(str(order)))
-        return _mx_np_op.reshape(self, shape=shape, order=order)
+        return _mx_np_op.reshape(self, newshape=shape, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
