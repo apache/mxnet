@@ -39,7 +39,7 @@ core_logic: {
     custom_steps.compile_unix_full_gpu(),
     custom_steps.compile_unix_cmake_mkldnn_gpu(),
     custom_steps.compile_unix_cmake_gpu(),
-    // custom_steps.compile_unix_tensorrt_gpu(),
+    custom_steps.compile_unix_tensorrt_gpu(),
     custom_steps.compile_unix_int64_gpu()
   ]) 
 
@@ -51,7 +51,7 @@ core_logic: {
     custom_steps.test_unix_python2_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
-    // custom_steps.test_unix_python3_tensorrt_gpu(),
+    custom_steps.test_unix_python3_tensorrt_gpu(),
     custom_steps.test_unix_perl_gpu(),
     custom_steps.test_unix_r_gpu(),
     custom_steps.test_unix_cpp_gpu(),
