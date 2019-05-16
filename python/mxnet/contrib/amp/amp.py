@@ -264,6 +264,8 @@ def init(target_dtype='float16', target_precision_ops=None,
     global _amp_initialized
     global _loss_scaler
     if not _amp_initialized:
+        assert target_dtype == 'float16' or target_dtype == np.float16, \
+               "AMP currently supports only float16 as a target_dtype"
         _amp_initialized = True
         logging.info("Using AMP")
         target_dtype = np.dtype(target_dtype)
