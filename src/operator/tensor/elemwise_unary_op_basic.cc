@@ -424,9 +424,9 @@ bool ReshapeLikeShapeCompute(const nnvm::NodeAttrs &attrs,
   GetReshapeLikeParams(param, lshape, rshape, &lhs_begin, &lhs_end, &rhs_begin,
                        &rhs_end);
 
-  int lhsrank = static_cast<int>(lshape.ndim());
+  int lhsrank = lshape.ndim();
   int orank = lhsrank + (rhs_end - rhs_begin) - (lhs_end - lhs_begin);
-  mxnet::TShape oshape(orank);
+  mxnet::TShape oshape(orank, -1);
 
   for (int i = 0; i < lhs_begin; ++i)
     oshape[i] = lshape[i];
@@ -447,7 +447,7 @@ bool ReshapeLikeShapeCompute(const nnvm::NodeAttrs &attrs,
       << "shape " << oshape << " because they have different "
       << "size.";
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 DMLC_REGISTER_PARAMETER(ReshapeLikeParam);
@@ -548,7 +548,7 @@ Example::
      mxnet::ShapeVector *out_attrs) {
     CHECK_EQ(in_attrs->size(), 1U);
     CHECK_EQ(out_attrs->size(), 1U);
-    mxnet::TShape target_shape(1);
+    mxnet::TShape target_shape(1, -1);
     target_shape[0] = in_attrs->at(0).ndim();
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
     return !shape_is_none(out_attrs->at(0));
@@ -600,7 +600,7 @@ Example::
      mxnet::ShapeVector *out_attrs) {
     CHECK_EQ(in_attrs->size(), 1U);
     CHECK_EQ(out_attrs->size(), 1U);
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, 1U);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, 1));
     return !shape_is_none(out_attrs->at(0));
   })
 .set_attr<nnvm::FInferType>("FInferType",

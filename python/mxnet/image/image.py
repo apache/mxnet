@@ -585,13 +585,11 @@ def random_size_crop(src, size, area, ratio, interp=2, **kwargs):
         area = (area, 1.0)
     for _ in range(10):
         target_area = random.uniform(area[0], area[1]) * src_area
-        new_ratio = random.uniform(*ratio)
+        log_ratio = (np.log(ratio[0]), np.log(ratio[1]))
+        new_ratio = np.exp(random.uniform(*log_ratio))
 
         new_w = int(round(np.sqrt(target_area * new_ratio)))
         new_h = int(round(np.sqrt(target_area / new_ratio)))
-
-        if random.random() < 0.5:
-            new_h, new_w = new_w, new_h
 
         if new_w <= w and new_h <= h:
             x0 = random.randint(0, w - new_w)
@@ -1376,7 +1374,7 @@ class ImageIter(io.DataIter):
         pad = batch_size - i
         # handle padding for the last batch
         if pad != 0:
-            if self.last_batch_handle == 'discard':
+            if self.last_batch_handle == 'discard': # pylint: disable=no-else-raise
                 raise StopIteration
             # if the option is 'roll_over', throw StopIteration and cache the data
             elif self.last_batch_handle == 'roll_over' and \

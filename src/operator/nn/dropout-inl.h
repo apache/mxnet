@@ -39,7 +39,10 @@
 #include "../random/sampler.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 
-#define MXNET_USE_MKL_DROPOUT defined(USE_MKL) && defined(_OPENMP) && !defined(__CUDACC__)
+#if defined(USE_MKL) && defined(_OPENMP) && !defined(__CUDACC__)
+#define MXNET_USE_MKL_DROPOUT 1
+#endif
+
 #if MXNET_USE_MKL_DROPOUT
 #include <omp.h>
 
@@ -75,7 +78,7 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .add_enum("always", dropout::kAlways)
     .set_default(dropout::kTraining)
     .describe("Whether to only turn on dropout during training or to also turn on for inference.");
-    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0, 0))
     .describe("Axes for variational dropout kernel.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>(false))
     .describe("Whether to turn off cudnn in dropout operator. "

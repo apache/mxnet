@@ -161,8 +161,7 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
   override def next(): DataBatch = {
     if (hasNext) {
       cursor += dataBatchSize
-      new DataBatch(getData(), getLabel(), getIndex(), getPad(),
-        null, null, null)
+      new DataBatch(getData(), getLabel(), getIndex(), getPad())
     } else {
       throw new NoSuchElementException
     }
@@ -178,7 +177,7 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
     val shape = Shape(dataBatchSize) ++ ndArray.shape.slice(1, ndArray.shape.size)
     // The new NDArray  has to be created such that it inherits dtype from the passed in array
     val newArray = NDArray.zeros(shape, dtype = ndArray.dtype)
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val batch = ndArray.slice(cursor, numData)
       val padding = ndArray.slice(0, padNum)
       newArray.slice(0, dataBatchSize - padNum).set(batch)

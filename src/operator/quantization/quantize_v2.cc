@@ -47,6 +47,22 @@ static bool QuantizeV2StorageType(const nnvm::NodeAttrs& attrs, const int dev_ma
   return true;
 }
 
+static OpStatePtr CreateQuantizeV2State(const nnvm::NodeAttrs& attrs, Context ctx,
+                                        const std::vector<TShape>& in_shapes,
+                                        const std::vector<int>& in_types) {
+  OpStatePtr state;
+  if (ctx.dev_type == kGPU) {
+    state = OpStatePtr::Create<QuantizeV2Operator<gpu>>(attrs);
+  } else {
+#if MXNET_USE_MKLDNN == 1
+    state = OpStatePtr::Create<SgMKLDNNQuantizeOperator>(attrs);
+#else
+    state = OpStatePtr::Create<QuantizeV2Operator<cpu>>(attrs);
+#endif
+  }
+  return state;
+}
+
 NNVM_REGISTER_OP(_contrib_quantize_v2)
 .describe(R"code(Quantize a input tensor from float to `out_type`,
 with user-specified `min_calib_range` and `max_calib_range` or the input range collected at runtime.
@@ -86,11 +102,12 @@ If min_calib_range isn't presented, the output type will be int8.
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
 // will be reverted after the improvement of CachedOP is done.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<FCreateOpState>("FCreateOpState", CreateQuantizeV2State)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
-.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeV2Compute)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNQuantizeForward)
 #endif
-.set_attr<FCompute>("FCompute<cpu>", QuantizeV2Compute<cpu>)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", QuantizeV2Forward<cpu>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs) {
   return std::vector<std::pair<int, int> >{{0, 0}};
 })

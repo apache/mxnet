@@ -22,14 +22,29 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 private[mxnet] class AddNDArrayFunctions(isContrib: Boolean) extends StaticAnnotation {
+/**
+  * Generate non-typesafe method for NDArray operations
+  * @param annottees Annottees used to define Class or Module
+  * @return Generated code for injection
+  */
   private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addDefs
 }
 
 private[mxnet] class AddNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
+/**
+  * Generate typesafe method for NDArray operations
+  * @param annottees Annottees used to define Class or Module
+  * @return Generated code for injection
+  */
   private[mxnet] def macroTransform(annottees: Any*) = macro TypedNDArrayAPIMacro.typeSafeAPIDefs
 }
 
 private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
+/**
+  * Generate typesafe method for Random Symbol
+  * @param annottees Annottees used to define Class or Module
+  * @return Generated code for injection
+  */
   private[mxnet] def macroTransform(annottees: Any*) =
   macro TypedNDArrayRandomAPIMacro.typeSafeAPIDefs
 }
@@ -38,7 +53,12 @@ private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnno
   * For non-typed NDArray API
   */
 private[mxnet] object NDArrayMacro extends GeneratorBase {
-
+  /**
+    * Methods that check the ``isContrib`` and call code generation
+    * @param c Context used for code gen
+    * @param annottees Annottees used to define Class or Module
+    * @return Generated code for injection
+    */
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
     val isContrib: Boolean = c.prefix.tree match {
@@ -49,7 +69,7 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
   }
 
   private def impl(c: blackbox.Context)
-                  (isContrib: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+                  (isContrib: Boolean, annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     import c.universe._
 
     val functions = functionsToGenerate(isSymbol = false, isContrib)
@@ -81,7 +101,12 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
   * NDArray.api code generation
   */
 private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
-
+  /**
+    * Methods that check the ``isContrib`` and call code generation
+    * @param c Context used for code gen
+    * @param annottees Annottees used to define Class or Module
+    * @return Generated code for injection
+    */
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
     val isContrib: Boolean = c.prefix.tree match {
@@ -94,6 +119,12 @@ private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
     structGeneration(c)(functionDefs, annottees: _*)
   }
 
+  /**
+    * Methods that construct the code and build the syntax tree
+    * @param c Context used for code gen
+    * @param function Case class that store all information of the single function
+    * @return Generated syntax tree
+    */
   protected def buildTypedFunction(c: blackbox.Context)
                                   (function: Func): c.universe.DefDef = {
     import c.universe._
@@ -147,7 +178,12 @@ private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
   */
 private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
   with RandomHelpers {
-
+  /**
+    * methods that check the ``isContrib`` and call code generation
+    * @param c Context used for code gen
+    * @param annottees annottees used to define Class or Module
+    * @return generated code for injection
+    */
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     // Note: no contrib managed in this module
 
@@ -157,6 +193,12 @@ private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
     structGeneration(c)(functionDefs, annottees: _*)
   }
 
+  /**
+    * Methods that construct the code and build the syntax tree
+    * @param c Context used for code gen
+    * @param function Case class that store all information of the single function
+    * @return Generated syntax tree
+    */
   protected def buildTypedFunction(c: blackbox.Context)
                                   (function: Func): c.universe.DefDef = {
     import c.universe._

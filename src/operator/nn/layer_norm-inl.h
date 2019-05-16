@@ -167,7 +167,7 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   int axis = param.axis;
   if (axis < 0) {
-    axis += static_cast<int>(inputs[0].ndim());
+    axis += inputs[0].ndim();
   }
   CHECK(axis >= 0 && axis < inputs[0].ndim()) << "Channel axis out of range: " << param.axis;
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -203,14 +203,14 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_src_shape,
-                                                             kAddTo, red_dst_shape));
+                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_dst_shape,
+                                                             kAddTo, red_src_shape));
     });
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_exclude_src_shape, kAddTo,
-                                                             red_exclude_dst_shape));
+                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_exclude_dst_shape, kAddTo,
+                                                             red_exclude_src_shape));
     });
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(

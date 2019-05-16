@@ -60,6 +60,9 @@ namespace engine {
 // Forward declarations
 struct ThreadedOpr;
 
+/*! shared_ptr to exception_ptr, used for exception handling */
+typedef std::shared_ptr<std::exception_ptr> ExceptionRef;
+
 /*!
  * \brief Operation block in the scheduler.
  *  Each OprBlock corresponds to an operation pushed to the engine.
@@ -177,8 +180,12 @@ class ThreadedVar final
   static std::atomic<std::size_t> counter;
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
-  /*! \brief exception_ptr associated with the ThreadedVar */
-  std::shared_ptr<std::exception_ptr> var_exception;
+  /*!
+   * \brief exception_ptr associated with the ThreadedOpr
+   * cannot modify state of exception object since dereferencing
+   * exception_ptr is undefined behavior. Using shared_ptr to hold
+   * exception_ptr and overcome this limitation */
+  ExceptionRef var_exception;
 
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
@@ -254,8 +261,12 @@ struct ThreadedOpr final : public Opr,
   }
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
-  /*! \brief exception_ptr associated with the ThreadedOpr */
-  std::shared_ptr<std::exception_ptr> opr_exception;
+  /*!
+   * \brief exception_ptr associated with the ThreadedOpr
+   * cannot modify state of exception object since dereferencing
+   * exception_ptr is undefined behavior. Using shared_ptr to hold
+   * exception_ptr and overcome this limitation */
+  ExceptionRef opr_exception;
 };  // struct ThreadedOpr
 
 /*!
@@ -295,6 +306,7 @@ class ThreadedEngine : public Engine {
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
+  void Throw(VarHandle var) override;
   void NotifyShutdown() override {
     shutdown_phase_.store(true);
   }
@@ -363,13 +375,13 @@ class ThreadedEngine : public Engine {
           LOG(INFO) << "ExecuteOprFn ";
         }
         try {
-          if (!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
-              threaded_opr->wait) {
+          if ((!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
+              threaded_opr->prop == FnProperty::kNoSkip) || threaded_opr->wait) {
             threaded_opr->fn(run_ctx, callback);
           } else {
             callback();
           }
-        } catch (dmlc::Error& e) {
+        } catch (const std::exception& e) {
           threaded_opr->opr_exception =
               std::make_shared<std::exception_ptr>(std::current_exception());
           callback();
@@ -432,6 +444,7 @@ class ThreadedEngine : public Engine {
   };
   /*! thread local store for bulk */
   typedef dmlc::ThreadLocalStore<BulkStatus> BulkStatusStore;
+
   /*!
    * \brief check if thee is duplication in const_vars and mutable_vars.
    * \param const_vars the variables to read from.
@@ -460,6 +473,7 @@ class ThreadedEngine : public Engine {
     for (auto&& i : threaded_opr->const_vars) {
       if (i->var_exception && *i->var_exception) {
         threaded_opr->opr_exception = i->var_exception;
+        AddToGlobalExceptions(threaded_opr->opr_exception);
         break;
       }
     }
@@ -467,6 +481,7 @@ class ThreadedEngine : public Engine {
       for (auto&& i : threaded_opr->mutable_vars) {
         if (i->var_exception && *i->var_exception) {
           threaded_opr->opr_exception = i->var_exception;
+          AddToGlobalExceptions(threaded_opr->opr_exception);
           break;
         }
       }
@@ -475,6 +490,18 @@ class ThreadedEngine : public Engine {
 
   static void OnCompleteStatic(Engine *engine, void *threaded_opr,
                                const dmlc::Error* error);
+  /*!
+   * \brief find exception in global_exception_refs and add it if missing
+   * \param opr_exception the exception to be added to global_exception_refs
+   */
+  inline void AddToGlobalExceptions(const ExceptionRef& opr_exception) {
+    auto it = std::find(global_exception_refs_.begin(),
+                        global_exception_refs_.end(), opr_exception);
+    if (it == global_exception_refs_.end()) {
+      global_exception_refs_.push_back(opr_exception);
+    }
+    return;
+  }
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,
@@ -542,6 +569,8 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
+  /*! \brief global exception refs, which are rethrown when WaitForAll is called */
+  std::vector<ExceptionRef> global_exception_refs_;
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early

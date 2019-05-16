@@ -17,12 +17,13 @@
 
 package org.apache.mxnetexamples.neuralstyle
 
-import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
 import org.apache.mxnetexamples.neuralstyle.end2end.{BoostInference, BoostTrain}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 /**

@@ -106,27 +106,6 @@ DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
 DMLC_REGISTER_PARAMETER(SplitParam);
 
 #if MXNET_USE_MKLDNN == 1
-void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
-  MSHADOW_TYPE_SWITCH(in_data.dtype(), DType, {
-    auto this_mem = in_data.GetMKLDNNData();
-    auto out_dptr = out_data.data().dptr<DType>();
-    mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
-    mkldnn::memory::desc this_desc = this_pd.desc();
-    mkldnn::memory::dims dims(this_desc.data.dims,
-                              this_desc.data.dims + this_desc.data.ndims);
-    auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
-    auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
-    mkldnn::memory::desc data_md(dims, this_dtype, this_format);
-    mkldnn::memory::primitive_desc pd(data_md, this_pd.get_engine());
-    auto temp_mem = mkldnn::memory(pd, out_dptr);
-    MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*this_mem, temp_mem));
-    MKLDNNStream::Get()->Submit();
-
-    // Removing out_data mkl_mem_ and store data in the default format
-    const_cast<NDArray &>(out_data).InvalidateMKLDNNData();
-  });
-}
-
 static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
@@ -137,8 +116,8 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape()) && req[0] != kAddTo) {
-    MKLDNNReshape(inputs[0], outputs[0]);
+  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape())) {
+    MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -234,7 +213,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-#else
+#endif
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -243,7 +222,6 @@ If the argument `reverse` is set to 1, then the special values are inferred from
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-#endif
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
@@ -339,6 +317,35 @@ Example::
   })
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
 
+#if MXNET_USE_MKLDNN == 1
+static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
+  const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
+  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  if (SupportMKLDNNTranspose(param, inputs[0])) {
+    MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+inline static bool TransposeStorageType(const nnvm::NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int>* in_attrs,
+                                        std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+#endif
+
 NNVM_REGISTER_OP(transpose)
 .describe(R"code(Permutes the dimensions of an array.
 
@@ -381,8 +388,8 @@ Examples::
           "transpose", n, ograds, {},
           std::unordered_map<std::string, std::string>());
     } else {
-      mxnet::TShape axes = mxnet::TShape(param.axes.ndim());
-      for (index_t i = 0; i < axes.ndim(); ++i) {
+      mxnet::TShape axes = mxnet::TShape(param.axes.ndim(), -1);
+      for (int i = 0; i < axes.ndim(); ++i) {
         axes[param.axes[i]] = i;
       }
       std::ostringstream os;
@@ -393,6 +400,11 @@ Examples::
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", TransposeComputeExCPU)
+.set_attr<FInferStorageType>("FInferStorageType", TransposeStorageType)
+#endif
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(TransposeParam::__FIELDS__());
 
@@ -735,7 +747,7 @@ parameter values:
     if (!dispatched && param.a_min <= 0.0 && param.a_max >= 0.0) {
       const int this_stype = (*in_attrs)[0];
       if (this_stype != kUndefinedStorage) {
-        dispatched = storage_type_assign(&(*out_attrs)[0], kRowSparseStorage,
+        dispatched = storage_type_assign(&(*out_attrs)[0], mxnet::NDArrayStorageType(this_stype),
                                          dispatch_mode, DispatchMode::kFComputeEx);
       }
     }

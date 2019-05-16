@@ -207,11 +207,13 @@ void ElementwiseSumContainsDnsImpl(mshadow::Stream<cpu>* s,
   using namespace mxnet::op::mxnet_op;
   const TBlob& out_data = out->data();
   MSHADOW_TYPE_SWITCH(out->dtype(), DType, {  // data type
-    Kernel<set_zero, cpu>::Launch(s, out_data.Size(), out_data.dptr<DType>());
+    // Do not set_zero when output mem inplace with input[0] mem
+    // Now for add_n OP, output mem can be in-placed with the first input
+    if (nds[0].data().dptr<DType>() != out_data.dptr<DType>()) {
+      Kernel<set_zero, cpu>::Launch(s, out_data.Size(), out_data.dptr<DType>());
+    }
     for (size_t i = 0; i < nds.size(); ++i) {
       const NDArray& nd = nds[i];
-      const nnvm::dim_t num_rows = nd.shape()[0];
-      const nnvm::dim_t num_cols = nd.shape()[1];
       const TBlob& nd_data = nd.data();
 
       if (i == 0) {
@@ -234,6 +236,8 @@ void ElementwiseSumContainsDnsImpl(mshadow::Stream<cpu>* s,
         case kCSRStorage: {
           const TBlob& nd_indices = nd.aux_data(csr::kIdx);
           const TBlob& nd_indptr = nd.aux_data(csr::kIndPtr);
+          const nnvm::dim_t num_rows = nd.shape()[0];
+          const nnvm::dim_t num_cols = nd.shape()[1];
           MSHADOW_IDX_TYPE_SWITCH(nd_indices.type_flag_, IType, {  // indices type
             MSHADOW_IDX_TYPE_SWITCH(nd_indptr.type_flag_, CType, {  // indptr type
               if (nd.storage_initialized()) {
@@ -248,6 +252,8 @@ void ElementwiseSumContainsDnsImpl(mshadow::Stream<cpu>* s,
         }
         case kRowSparseStorage: {
           const TBlob& nd_indices = nd.aux_data(rowsparse::kIdx);
+          const nnvm::dim_t num_rows = nd.shape()[0];
+          const nnvm::dim_t num_cols = nd.shape()[1];
           MSHADOW_IDX_TYPE_SWITCH(nd_indices.type_flag_, IType, {  // indices type
             if (nd.storage_initialized()) {
               const nnvm::dim_t nz_rows = nd_indices.Size();

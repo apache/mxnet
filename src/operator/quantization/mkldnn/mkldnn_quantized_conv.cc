@@ -72,7 +72,7 @@ static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
   MKLDNNStream::Get()->Submit();
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const size_t num_inputs = param.no_bias ? 2 : 3;
-  mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
+  mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(s, 1,
            out_data[1].data().dptr<float>(), out_data[2].data().dptr<float>(),
            in_data[num_inputs].data().dptr<float>(),
            in_data[num_inputs+1].data().dptr<float>(),

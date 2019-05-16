@@ -24,6 +24,7 @@
 
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
+#include <mxnet/imperative.h>
 #include "./exec_pass.h"
 #include "../operator/operator_common.h"
 #include "../common/exec_utils.h"
@@ -467,6 +468,12 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   std::vector<AttrType> ishape, oshape;
   // whether a shape is dynamic
   std::vector<int> is_dynamic(rshape.size(), 0);
+
+  // convert to numpy compatible shape to use operator's infer shape function
+  if (!Imperative::Get()->is_np_comp()) {
+    common::ConvertToNumpyShape(&rshape);
+  }
+
   // inference step function for nid
   auto infer_step = [&](uint32_t nid, bool last_iter) {
     const auto& inode = idx[nid];
@@ -483,6 +490,9 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
         if (it != inode.source->attrs.dict.end()) {
           std::istringstream is(it->second);
           CHECK(is >> rshape[out_ent_id]) << "Invalid attribute";
+          if (!Imperative::Get()->is_np_comp()) {
+            common::ConvertToNumpyShape(&rshape[out_ent_id]);
+          }
         }
       }
       // assign a default value to node attribute
@@ -546,7 +556,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       bool is_input_dynamic_shape = false;
       for (uint32_t i = 0; i < ishape.size(); ++i) {
         ishape[i] = rshape[idx.entry_id(inode.inputs[i])];
-        if (ishape[i].ndim() == 0 && is_dynamic[idx.entry_id(inode.inputs[i])]) {
+        if (!mxnet::ndim_is_known(ishape[i]) && is_dynamic[idx.entry_id(inode.inputs[i])]) {
           is_input_dynamic_shape = true;
         }
         if (fis_none(ishape[i])) forward_known = false;
@@ -563,7 +573,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       auto finfer = finfer_shape.get(inode.source->op(), fdefault);
       if (finfer == nullptr || is_input_dynamic_shape) {
         for (uint32_t i = 0; i < oshape.size(); ++i) {
-          if (oshape[i].ndim() == 0) {
+          if (!mxnet::ndim_is_known(oshape[i].ndim())) {
             is_dynamic[idx.entry_id(nid, i)] = 1;
           }
         }
@@ -648,14 +658,14 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
       std::move(graph), mxnet::TShape(),
       "FInferShape", "shape_inputs", "shape_attr_key",
       "shape", "shape_num_unknown_nodes",
-      [](const mxnet::TShape& s) { return s.ndim() == 0 || s.Size() == 0; },
+      [](const mxnet::TShape& s) { return !mxnet::shape_is_known(s); },
       [](const mxnet::TShape& s) {
-        if (s.ndim() == 0) {  // TODO(reminisce): Usage of ndim
+        if (!mxnet::ndim_is_known(s)) {
           return static_cast<size_t>(1);
         }
         size_t ret = 0;
         for (const auto& val : s) {
-          if (val == 0) {
+          if (!mxnet::dim_size_is_known(val)) {
             ++ret;
           }
         }

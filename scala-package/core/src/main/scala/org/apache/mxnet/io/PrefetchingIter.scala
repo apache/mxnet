@@ -42,71 +42,51 @@ class PrefetchingIter(
 
   require(iters.nonEmpty, "Iters length must be greater than 0")
 
-  private val _provideData: ListMap[String, Shape] = {
+  @deprecated("Please use provideDataDesc instead", "1.3.0")
+  override def provideData: ListMap[String, Shape] = {
     if (dataNames == null) {
-      iters.map(_.provideData).foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
-        acc ++ elem
-      }
+      iters.map(_.provideData).reduce(_ ++ _)
     } else {
-      iters.zipWithIndex.map(tu => (tu._1.provideData, tu._2))
-             .map(m => m._1.map(t => (dataNames(m._2)(t._1), t._2)))
-             .foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
-        acc ++ elem
-      }
+      iters.map(_.provideData).zip(dataNames).map { case (providedData, names) =>
+        providedData.map { case (oldName, shape) => names(oldName) -> shape }
+      }.reduceLeft(_ ++ _)
     }
   }
 
-  private val _provideLabel: ListMap[String, Shape] = {
+  @deprecated("Please use provideDataDesc instead", "1.3.0")
+  override def provideLabel: ListMap[String, Shape] = {
     if (labelNames == null) {
-      iters.map(_.provideLabel).foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
-        acc ++ elem
-      }
+      iters.map(_.provideLabel).reduce(_ ++ _)
     } else {
-      iters.zipWithIndex.map(tu => (tu._1.provideLabel, tu._2))
-             .map(m => m._1.map(t => (labelNames(m._2)(t._1), t._2)))
-             .foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
-        acc ++ elem
-      }
+      iters.map(_.provideLabel).zip(labelNames).map { case (providedLabel, names) =>
+        providedLabel.map { case (oldName, shape) => names(oldName) -> shape }
+      }.reduceLeft(_ ++ _)
     }
   }
 
-  private val _provideDataDesc: IndexedSeq[DataDesc] = {
+  override def provideDataDesc: IndexedSeq[DataDesc] = {
     if (dataNames == null) {
-      iters.map(_.provideDataDesc).foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
-        acc ++ elem
-      }
+      iters.flatMap(_.provideDataDesc)
     } else {
-      iters.zipWithIndex.map(tu => (tu._1.provideDataDesc, tu._2))
-        .map(m =>
-          m._1.map(t =>
-            new DataDesc(dataNames(m._2)(t.name), t.shape, t.dtype, t.layout)
-          )
-        )
-        .foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
-          acc ++ elem
-        }
+      iters.map(_.provideDataDesc).zip(dataNames).flatMap { case (providedDataDesc, names) =>
+          providedDataDesc.map(desc =>
+            new DataDesc(names(desc.name), desc.shape, desc.dtype, desc.layout))
+      }
     }
   }
 
-  private val _provideLabelDesc: IndexedSeq[DataDesc] = {
+  override def provideLabelDesc: IndexedSeq[DataDesc] = {
     if (labelNames == null) {
-      iters.map(_.provideLabelDesc).foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
-        acc ++ elem
-      }
+      iters.flatMap(_.provideLabelDesc)
     } else {
-      iters.zipWithIndex.map(tu => (tu._1.provideLabelDesc, tu._2))
-        .map(m =>
-          m._1.map(t =>
-            new DataDesc(labelNames(m._2)(t.name), t.shape, t.dtype, t.layout)
-          )
-        )
-        .foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
-          acc ++ elem
-        }
+      iters.map(_.provideLabelDesc).zip(labelNames).flatMap { case (providedLabelDesc, names) =>
+        providedLabelDesc.map(desc =>
+          new DataDesc(names(desc.name), desc.shape, desc.dtype, desc.layout))
+      }
     }
   }
 
-  private val _batchSize: Int = this._provideData.toList(0)._2(0)
+  private val _batchSize: Int = this.provideDataDesc.head.shape(0)
   private val dataReady: IndexedSeq[Semaphore] =
                                         (0 until iters.length).map(i => new Semaphore(0))
   private val dataTaken: IndexedSeq[Semaphore] =
@@ -177,20 +157,6 @@ class PrefetchingIter(
     */
   override def getPad(): Int = this.currentBatch.pad
 
-  // The name and shape of label provided by this iterator
-  @deprecated("Please use provideDataDesc instead", "1.3.0")
-  override def provideLabel: ListMap[String, Shape] = this._provideLabel
-
-  // The name and shape of data provided by this iterator
-  @deprecated("Please use provideLabelDesc instead", "1.3.0")
-  override def provideData: ListMap[String, Shape] = this._provideData
-
-  // Provide type:DataDesc of the data
-  override def provideDataDesc: IndexedSeq[DataDesc] = _provideDataDesc
-
-  // Provide type:DataDesc of the label
-  override def provideLabelDesc: IndexedSeq[DataDesc] = _provideLabelDesc
-
   override def hasNext: Boolean = {
     for (e <- dataReady) e.acquire()
     if (nextBatch(0) == null) {
@@ -209,8 +175,7 @@ class PrefetchingIter(
       currentBatch = new DataBatch(datas.toIndexedSeq.flatten,
         labels.toIndexedSeq.flatten,
         nextBatch(0).index,
-        nextBatch(0).pad,
-        null, null, null)
+        nextBatch(0).pad)
       for (e <- dataTaken) e.release()
       true
     }

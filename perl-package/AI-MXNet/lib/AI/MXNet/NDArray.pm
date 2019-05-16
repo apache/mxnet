@@ -535,7 +535,7 @@ method wait_to_read()
 
 method shape()
 {
-    return scalar(check_call(AI::MXNetCAPI::NDArrayGetShape($self->handle)));
+    return scalar(check_call(AI::MXNetCAPI::NDArrayGetShapeEx($self->handle)));
 }
 
 =head2 size
@@ -1460,7 +1460,7 @@ func _new_alloc_handle($shape, $ctx, $delay_alloc, $dtype)
 method _new_from_shared_mem($shared_pid, $shared_id, $shape, $dtype)
 {
     my $hdl = check_call(
-        AI::MXNetCAPI::NDArrayCreateFromSharedMem(
+        AI::MXNetCAPI::NDArrayCreateFromSharedMemEx(
             $shared_pid,
             $shared_id,
             $shape,
