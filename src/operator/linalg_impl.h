@@ -1256,10 +1256,13 @@ LINALG_CPU_GETRF(dgetrf, double)
 
 #ifdef __CUDACC__
 
+// "getrfBatched" and "getriBatched" in cuBLAS must have DType *matrices[] as input
+// to store the pointers of each batch matrix. This kernel is used to build the
+// pointer array.
 struct set_matrix : public mxnet::op::mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType **p, DType *m, int step) {
-  p[i] = m + i * step;
+    p[i] = m + i * step;
   }
 };
 
