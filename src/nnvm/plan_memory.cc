@@ -242,6 +242,8 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
                                       inode.source->attrs).size() == inode.source->num_inputs());
         // Identity should only be true if shape.Size() and types match
         bool real_identity = identity[ipair] &&
+                             ndim_is_known(shape_vec[eid_out]) &&
+                             ndim_is_known(shape_vec[eid_in]) &&
                              shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
                              dtype_vec[eid_out] == dtype_vec[eid_in];
         if (taken[kv.first] == false &&
