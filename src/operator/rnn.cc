@@ -23,6 +23,9 @@
  * \brief
  * \author Sebastian Bodenstein
 */
+
+#include <iterator>
+
 #include "./rnn-inl.h"
 
 namespace mxnet {
@@ -30,11 +33,20 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(RNNParam);
 static inline std::vector<std::string> ListArguments(const RNNParam& param_) {
+  // All RNNs start off with same 3 input arguments
+  std::vector<std::string> arguments{"data", "parameters", "state"};
+
+  // LSTMs also have an additional state_cell argument
   if (param_.mode == rnn_enum::kLstm) {
-    return {"data", "parameters", "state", "state_cell"};
-  } else {
-    return {"data", "parameters", "state"};
+    arguments.emplace_back("state_cell");
   }
+
+  // All RNNs have option of additional sequence_length argument
+  if (param_.use_sequence_length) {
+    arguments.emplace_back("sequence_length");
+  }
+
+  return arguments;
 }
 
 static bool RNNShape(const nnvm::NodeAttrs& attrs,
@@ -42,13 +54,13 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
                      std::vector<TShape> *out_shape) {
   const RNNParam& param_ = nnvm::get<RNNParam>(attrs.parsed);
   using namespace mshadow;
-  if (param_.mode == rnn_enum::kLstm) {
-    CHECK_EQ(in_shape->size(), 4U) << "Needed input:[data, parameters, state, cell_state],"
-        << " got in_shape->size(): " << in_shape->size();
-  } else {
-    CHECK_EQ(in_shape->size(), 3U) <<
-      "Needed input:[data, parameters, state], got in_shape->size(): " << in_shape->size();
-  }
+
+  // Query param_ object to figure out what the expectd input arguments are
+  std::vector<std::string> expected_arguments = ListArguments(param_);
+
+  CHECK_EQ(in_shape->size(), expected_arguments.size()) << "Input shape mismatch. Expected " <<
+    expected_arguments.size() << " input parameters but got " << in_shape->size() << ".";
+
   const TShape &dshape = (*in_shape)[rnn_enum::kData];
   if (!mxnet::ndim_is_known(dshape)) return false;
   CHECK_EQ(dshape.ndim(), 3U) \
@@ -77,6 +89,15 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
                                    param_.mode,
                                    param_.projection_size);
   SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
+
+  // Check on sequence_length shape if using
+  if (param_.use_sequence_length) {
+    size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+    if (param_.mode != rnn_enum::kLstm) --seq_len_input_idx;
+
+    SHAPE_ASSIGN_CHECK(*in_shape, seq_len_input_idx, Shape1(batch_size));
+  }
+
   out_shape->clear();
   // output: [sequence len, batch, output size]
   TShape oshape = dshape;
@@ -106,6 +127,7 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
       out_shape->push_back(cellStateShape);
     }
   }
+
   return true;
 }
 
@@ -113,18 +135,24 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
                     std::vector<int> *in_type,
                     std::vector<int> *out_type) {
   const RNNParam& param_ = nnvm::get<RNNParam>(attrs.parsed);
-  if (param_.mode == rnn_enum::kLstm) {
-    CHECK_EQ(in_type->size(), 4U);
-  } else {
-    CHECK_EQ(in_type->size(), 3U);
-  }
+
+  CHECK_EQ(in_type->size(), GetNumInputArguments(param_));
+
+  size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+  if (param_.mode != rnn_enum::kLstm)  --seq_len_input_idx;
+
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
+  std::vector<std::string> arguments = ListArguments(param_);
   for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       TYPE_ASSIGN_CHECK(*in_type, i, dtype);
     } else {
-      UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments(param_)[i]);
+      // If using sequence length argument, it has its own indexing type
+      // All other input arguments must match the main data type
+      if (!(param_.use_sequence_length && i == seq_len_input_idx)) {
+        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, arguments[i]);
+      }
     }
   }
   out_type->clear();
@@ -132,8 +160,9 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
   if (param_.state_outputs) {
     out_type->push_back(dtype);
     // Deal with lstm cell state
-    if (param_.mode == rnn_enum::kLstm)
+    if (param_.mode == rnn_enum::kLstm) {
       out_type->push_back(dtype);
+    }
   }
   return true;
 }
@@ -220,7 +249,7 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr_parser(ParamParser<RNNParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
   const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
-  return params.mode == rnn_enum::kLstm ? 4 : 3;
+  return GetNumInputArguments(params);
 })
 .set_num_outputs([](const NodeAttrs& attrs) {
   const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
@@ -246,13 +275,13 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr<FResourceRequestEx>("FResourceRequestEx",
   [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
     std::vector<ResourceRequest> request;
-    const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-    if (param.p == 0) return request;
     if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN_RNN
-      if (1.0f - param.p > 0) {
+      request.emplace_back(ResourceRequest::kTempSpace);
+
+      const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
+      if (param.p != 0 && 1.0f - param.p > 0) {
         request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
-        return request;
       }
 #endif
     }
@@ -264,12 +293,15 @@ The definition of GRU here is slightly different from paper but compatible with 
 .add_argument("state", "NDArray-or-Symbol", "initial hidden state of the RNN")
 .add_argument("state_cell", "NDArray-or-Symbol",
               "initial cell state for LSTM networks (only for LSTM)")
+.add_argument("sequence_length", "NDArray-or-Symbol",
+              "Vector of valid sequence lengths for each element in batch. (Only used if"
+              " use_sequence_length kwarg is True)")
 .add_arguments(RNNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_RNN)
 .set_num_outputs([](const NodeAttrs& attrs) {
   const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
-  return params.mode == rnn_enum::kLstm ? 4 : 3;
+  return GetNumInputArguments(params);
 })
 .set_attr_parser(ParamParser<RNNParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
