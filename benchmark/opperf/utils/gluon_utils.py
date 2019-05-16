@@ -15,7 +15,7 @@ def block_forward_backward_and_profile(*args, block, runs, **kwargs):
     :param runs: Number of times to execute the block operation
     :param args: Arguments for the block being executed.
     :param kwargs: Key value arguments for the block being executed.
-    :return: Tuple of (Total execution time in seconds, any results from block execution)
+    :return: any results from block execution
     """
     for _ in range(runs):
         with mx.autograd.record():
@@ -36,7 +36,7 @@ def block_forward_and_profile(*args, block, runs, **kwargs):
     :param runs: Number of times to execute the block operation
     :param args: Arguments for the block being executed.
     :param kwargs: Key value arguments for the block being executed.
-    :return: Tuple of (Total execution time in seconds, any results from block execution)
+    :return: any results from block execution
     """
 
     for _ in range(runs):

@@ -3,6 +3,14 @@ import functools
 from .common_utils import merge_map_list
 from mxnet import profiler
 
+"""
+TODO: Below we are using logic of parsing the MXNet profiler output string to
+fetch the benchmark results. Note that this is a temporary solution till we add 
+a new utility API into MXNet profiler to get_summary(), reset(). All the below
+parsing logic should be removed once these read APIs are available in Profiler.
+
+"""
+
 
 def _get_memory_profile(memory_profile_results):
     memory_profile = {}
@@ -32,9 +40,6 @@ def _get_operator_profile(operator_name, operator_profile_results):
 def parse_profiler_dump(operator_name, profiler_dump):
     """Parse the MXNet profiler dump output, fetch Memory profile results and
     Operator compute profiler results.
-
-    NOTE: This is a temporary solution, till we add a new utility API
-    into MXNet profiler to get_summary().
 
     :param profiler_dump: string, MXNet profiler output from mx.profiler.dumps() API.
     :return: map, Memory and Compute profiler results.
@@ -115,8 +120,16 @@ def profile(func):
     of the operation.
 
     :param func: Operation to be executed and timed.
-    :return: JSON string, profiler output with summary of operation execution
-
+    :return: res, profiler output. res being an return values from operator execution.
+             profiler output is a dictionary with summary of operation execution.
+             Example output : { "add": [{"avg_time_mem_alloc_cpu/0": 207618.0469,
+                                         "avg_time_forward_broadcast_add": 4.204,
+                                         "avg_time_backward_broadcast_add": 5.6288,
+                                         "inputs": {
+                                                    "lhs": [1024, 1024],
+                                                    "rhs": [1024,1024]
+                                                    }]
+                              }
     """
 
     @functools.wraps(func)

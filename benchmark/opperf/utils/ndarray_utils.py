@@ -7,16 +7,17 @@ from .profiler_utils import profile
 
 @profile
 def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
-    """Helper function to run a given NDArray operator (F) for 'runs' number of times with
+    """Helper function to run a given NDArray operator (op) for 'runs' number of times with
     given args and kwargs. Executes both forward and backward pass.
 
     NOTE: This is a sync call and waits for all the operations execution to complete.
 
     :param op: NDArray operator (Function reference) to execute. Example: mx.nd.add
     :param runs: Number of times to execute the operation
-    :param args: Arguments for the NDArray operator (F) being executed.
-    :param kwargs: Key value arguments for the NDArray operator (F) being executed.
-    :return: Tuple of (Total execution time in seconds, any results from NDArray operation execution)
+    :param args: Arguments for the NDArray operator (op) being executed.
+    :param kwargs: Key value arguments for the NDArray operator (op) being executed.
+    :return: any results from NDArray operation execution
+
     """
     for _ in range(runs):
         with mx.autograd.record():
@@ -28,16 +29,16 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
 
 @profile
 def nd_forward_and_profile(op, runs, *args, **kwargs):
-    """Helper function to run a given NDArray operator (F) for 'runs' number of times with
+    """Helper function to run a given NDArray operator (op) for 'runs' number of times with
     given args and kwargs. Executes ONLY forward pass.
 
     NOTE: This is a sync call and waits for all the operations execution to complete.
 
-    :param F: NDArray operator (Function feference) to execute. Example: mx.nd.add
+    :param op: NDArray operator (Function reference) to execute. Example: mx.nd.add
     :param runs: Number of time to execute the operation
-    :param args: Arguments for the NDArray operator (F) being executed.
-    :param kwargs: Key value arguments for the NDArray operator (F) being executed.
-    :return: Tuple(Total execution time in seconds, any results from NDArray operation execution)
+    :param args: Arguments for the NDArray operator (op) being executed.
+    :param kwargs: Key value arguments for the NDArray operator (op) being executed.
+    :return: any results from NDArray operation execution
     """
     for _ in range(runs):
         res = op(*args, **kwargs)
