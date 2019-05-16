@@ -469,6 +469,15 @@ struct inverse {
   }
 };
 
+// A = det(B).
+struct det {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 1, DType>& A,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+  }
+};
+
 // Backward operators (always using batch processing)
 
 struct gemm_backward {

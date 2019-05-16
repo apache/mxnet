@@ -939,5 +939,41 @@ NNVM_REGISTER_OP(_backward_linalg_inverse)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", LaOpBackward<cpu, 2, 2, 2, 1, inverse_backward>);
 
+NNVM_REGISTER_OP(_linalg_det)
+.add_alias("linalg_det")
+.describe(R"code(Compute the determinant of a matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, *A* is a square matrix. We compute:
+
+  *out* = *det(A)*
+
+If *n>2*, *det* is performed separately on the trailing two dimensions
+for all inputs (batch mode).
+
+.. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+   // Single matrix inversion
+   A = [[1., 4.], [2., 3.]]
+   det(A) = [-5.]
+
+   // Batch matrix inversion
+   A = [[[1., 4.], [2., 3.]],
+        [[1., 3.], [2., 4.]]]
+   det(A) = [-5., -2.]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; } )
+.set_attr<mxnet::FInferShape>("FInferShape", DetShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 0, 1, 1, det>)
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+
 }  // namespace op
 }  // namespace mxnet
