@@ -69,6 +69,8 @@ The committers are the granted write access to the project.
   - Patric is a parallel computing expert and a major contributor to the MXNet MKL-DNN backend.
 * [Tao Lv](https://github.com/TaoLv)
   - Tao is a major contributor to the MXNet MKL-DNN backend and performance on CPU.
+* [Zach Kimberg](https://github.com/zachgk)
+  - Zach is one of the major maintainers of the MXNet Scala package.
 
 
 ### Become a Committer
@@ -238,7 +240,6 @@ List of Contributors
 * [Zhiyuan Huang](https://github.com/huangzhiyuan)
 * [Zak Jost](https://github.com/zjost)
 * [Shoubhik Bhattacharya](https://github.com/shoubhik)
-* [Zach Kimberg](https://github.com/zachgk)
 * [Rohit Srivastava](https://github.com/access2rohit)
 
 Label Bot
