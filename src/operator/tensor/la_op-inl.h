@@ -813,7 +813,6 @@ struct syevd_backward {
 struct inverse_backward {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& dA,
-                 const Tensor<xpu, 3, DType>& B,
                  const Tensor<xpu, 3, DType>& A,
                  const Tensor<xpu, 3, DType>& dB,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
