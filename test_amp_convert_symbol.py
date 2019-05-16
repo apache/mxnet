@@ -41,7 +41,7 @@ FP32_FUNCS = [
 'norm',
 'softmin',
 # Misc
-                                                                                                                                        'gamma',
+'gamma',
 'gammaln',
 'linalg_syrk',
 'linalg_potrf',
@@ -140,11 +140,39 @@ WIDEST_TYPE_CASTS = [
 '_rnn_concat_param',
 ]
 
+'''
 sym, arg_params, aux_params = mx.model.load_checkpoint("resnet18", 0)
 result_sym, arg_params, aux_params = mx.contrib.amp.convert_model(sym, arg_params, aux_params, target_dtype="float16",
                                                                   target_dtype_ops=FP16_FUNCS, fp32_ops=FP32_FUNCS, widest_dtype_ops=WIDEST_TYPE_CASTS)
-#mod = mx.mod.Module(result_sym, data_names=['data'], label_names=['softmax_label'], context=mx.gpu(0))
 mod = mx.mod.Module(result_sym, data_names=['data'], context=mx.gpu(0))
+mod.bind(data_shapes=[['data', (1, 3, 224, 224)]])
+for key in mod._arg_params:
+    print(key)
+    print(mod._arg_params[key].dtype)
+mod.set_params(arg_params, aux_params)
+mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
+                            label=[mx.nd.ones((1,))]))
+result = mod.get_outputs()[0].asnumpy()
+sym, arg_params, aux_params = mx.model.load_checkpoint("imagenet1k-resnet-152", 0)
+result_sym, arg_params, aux_params = mx.contrib.amp.convert_model(sym, arg_params, aux_params, target_dtype="float16",
+                                                                  target_dtype_ops=FP16_FUNCS, fp32_ops=FP32_FUNCS, widest_dtype_ops=WIDEST_TYPE_CASTS)
+'''
+path='http://data.mxnet.io/models/imagenet/'
+[mx.test_utils.download(path+'resnet/18-layers/resnet-18-0000.params'),
+mx.test_utils.download(path+'resnet/18-layers/resnet-18-symbol.json'),
+mx.test_utils.download(path+'synset.txt')]
+'''
+[mx.test_utils.download(path+'resnet/50-layers/resnet-50-0000.params'),
+        mx.test_utils.download(path+'resnet/50-layers/resnet-50-symbol.json'),
+        mx.test_utils.download(path+'synset.txt')]
+'''
+
+sym, arg_params, aux_params = mx.model.load_checkpoint("resnet-18", 0)
+result_sym, arg_params, aux_params = mx.contrib.amp.convert_model(sym, arg_params, aux_params, target_dtype="float16",
+                                                                          target_dtype_ops=FP16_FUNCS, fp32_ops=FP32_FUNCS, widest_dtype_ops=WIDEST_TYPE_CASTS)
+mod = mx.mod.Module(result_sym, data_names=['data'], label_names=['softmax_label'], context=mx.gpu(0))
+#mod = mx.mod.Module(sym, data_names=['data'], context=mx.gpu(0))
+#mod = mx.mod.Module(result_sym, data_names=['data'], context=mx.gpu(0))
 #mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
 mod.bind(data_shapes=[['data', (1, 3, 224, 224)]])
 mod.set_params(arg_params, aux_params)
@@ -155,3 +183,4 @@ for key in aux_params.keys():
 mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
                             label=[mx.nd.ones((1,))]))
 result = mod.get_outputs()[0].asnumpy()
+mod._symbol.save("after.json")

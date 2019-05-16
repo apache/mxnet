@@ -110,9 +110,21 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
 
     target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
+    attr_dict = sym.attr_dict()
+    data_names = []
+    print(attr_dict)
+    for sym_name in sym.list_arguments():
+        if not sym_name in attr_dict:
+            data_names.append(sym_name)
+            continue
+        if not "__dtype__" in attr_dict[sym_name]:
+            data_names.append(sym_name)
+    print("data_names is ")
+    print(data_names)
+
     str_keys = []
     sdata = []
-    for k in input_names:
+    for k in data_names:
         str_keys.append(k)
         sdata.append(0)
     keys = c_str_array(str_keys)
