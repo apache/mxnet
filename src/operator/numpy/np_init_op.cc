@@ -28,7 +28,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_np_zeros)
+NNVM_REGISTER_OP(_npi_zeros)
 .describe("Return a new array of given shape, type, and context, filled with zeros.")
 .set_num_inputs(0)
 .set_num_outputs(1)
@@ -37,10 +37,9 @@ NNVM_REGISTER_OP(_np_zeros)
 .set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
 .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<InitOpParam, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .add_arguments(InitOpParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_np_ones)
+NNVM_REGISTER_OP(_npi_ones)
 .describe("Return a new array of given shape, type, and context, filled with ones.")
 .set_num_inputs(0)
 .set_num_outputs(1)
@@ -48,7 +47,6 @@ NNVM_REGISTER_OP(_np_ones)
 .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
 .set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .add_arguments(InitOpParam::__FIELDS__());
 
 }  // namespace op

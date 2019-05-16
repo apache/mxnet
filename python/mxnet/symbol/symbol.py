@@ -67,10 +67,6 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
         return _Symbol(hdl)
 
-    def _is_np_compat(self):
-        """Always returns False except for mxnet.symbol.numpy._Symbol."""
-        return False
-
     def __repr__(self):
         """Gets a string representation of the symbol."""
         name = self.name
@@ -108,9 +104,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_add` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__add__(self)
+        if type(other) is Symbol:
             return _internal._Plus(self, other)
         if isinstance(other, Number):
             return _internal._PlusScalar(self, scalar=other)
@@ -126,8 +120,6 @@ class Symbol(SymbolBase):
         raise NotImplementedForSymbol(self.__iadd__, '+=', other, 1)
 
     def __radd__(self, other):
-        if isinstance(other, Symbol) and other._is_np_compat():
-            return other.__add__(self)
         return self.__add__(other)
 
     def __sub__(self, other):
@@ -135,9 +127,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_sub` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__rsub__(self)
+        if type(other) is Symbol:
             return _internal._Minus(self, other)
         if isinstance(other, Number):
             return _internal._MinusScalar(self, scalar=other)
@@ -160,7 +150,7 @@ class Symbol(SymbolBase):
         array([[-2., -2., -2.],
                [-2., -2., -2.]], dtype=float32)
         """
-        if isinstance(other, Symbol) and other._is_np_compat():
+        if type(other) is Symbol:
             return other.__sub__(self)
         if isinstance(other, Number):
             return _internal._RMinusScalar(self, scalar=other)
@@ -172,9 +162,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_mul` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__mul__(self)
+        if type(other) is Symbol:
             return _internal._Mul(self, other)
         if isinstance(other, Number):
             return _internal._MulScalar(self, scalar=other)
@@ -185,8 +173,6 @@ class Symbol(SymbolBase):
         raise NotImplementedForSymbol(self.__imul__, '*=', other)
 
     def __rmul__(self, other):
-        if isinstance(other, Symbol) and other._is_np_compat():
-            return other.__mul__(self)
         return self.__mul__(other)
 
     def __div__(self, other):
@@ -194,9 +180,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_div` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__rtruediv__(self)
+        if type(other) is Symbol:
             return _internal._Div(self, other)
         if isinstance(other, Number):
             return _internal._DivScalar(self, scalar=other)
@@ -216,7 +200,7 @@ class Symbol(SymbolBase):
         array([[ 0.33333334,  0.33333334,  0.33333334],
                [ 0.33333334,  0.33333334,  0.33333334]], dtype=float32)
         """
-        if isinstance(other, Symbol) and other._is_np_compat():
+        if type(other) is Symbol:
             return other.__truediv__(self)
         if isinstance(other, Number):
             return _internal._RDivScalar(self, scalar=other)
@@ -228,9 +212,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_mod` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__rmod__(self)
+        if type(other) is Symbol:
             return _internal._Mod(self, other)
         if isinstance(other, Number):
             return _internal._ModScalar(self, scalar=other)
@@ -250,7 +232,7 @@ class Symbol(SymbolBase):
         array([[ 1.,  1.,  1.,
                [ 1.,  1.,  1., dtype=float32)
         """
-        if isinstance(other, Symbol) and other._is_np_compat():
+        if type(other) is Symbol:
             return other.__mod__(self)
         if isinstance(other, Number):
             return _internal._RModScalar(self, scalar=other)
@@ -274,9 +256,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_pow` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__rpow__(self)
+        if type(other) is Symbol:
             return _internal._Power(self, other)
         if isinstance(other, Number):
             return _internal._PowerScalar(self, scalar=other)
@@ -285,9 +265,7 @@ class Symbol(SymbolBase):
 
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__pow__(self)
+        if type(other) is Symbol:
             return other.__pow__(self)
         elif isinstance(other, Number):
             return _internal._rpower_scalar(self, scalar=other)
@@ -346,9 +324,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_equal` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__eq__(self)
+        if type(other) is Symbol:
             return _internal._equal(self, other)
         if isinstance(other, numeric_types):
             return _internal._equal_scalar(self, scalar=other)
@@ -360,9 +336,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_not_equal` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__ne__(self)
+        if type(other) is Symbol:
             return _internal._not_equal(self, other)
         if isinstance(other, numeric_types):
             return _internal._not_equal_scalar(self, scalar=other)
@@ -374,9 +348,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_greater` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__lt__(self)
+        if type(other) is Symbol:
             return _internal._greater(self, other)
         if isinstance(other, numeric_types):
             return _internal._greater_scalar(self, scalar=other)
@@ -388,9 +360,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_greater_equal` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__le__(self)
+        if type(other) is Symbol:
             return _internal._greater_equal(self, other)
         if isinstance(other, numeric_types):
             return _internal._greater_equal_scalar(self, scalar=other)
@@ -402,9 +372,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_lesser` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__gt__(self)
+        if type(other) is Symbol:
             return _internal._lesser(self, other)
         if isinstance(other, numeric_types):
             return _internal._lesser_scalar(self, scalar=other)
@@ -416,9 +384,7 @@ class Symbol(SymbolBase):
 
         Scalar input is supported.
         Broadcasting is not supported. Use `broadcast_lesser_equal` instead. """
-        if isinstance(other, Symbol):
-            if other._is_np_compat():
-                return other.__ge__(self)
+        if type(other) is Symbol:
             return _internal._lesser_equal(self, other)
         if isinstance(other, numeric_types):
             return _internal._lesser_equal_scalar(self, scalar=other)

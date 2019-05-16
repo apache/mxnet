@@ -32,7 +32,7 @@ from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, set_module
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
-from ..ndarray import _internal as _nd_internal
+from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum']
 
@@ -81,9 +81,6 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
 
-    def _is_np_compat(self):
-        return True
-
     @use_np_compat
     def __getitem__(self, item):
         # TODO(junwu): make output shape of integer indexing correct
@@ -96,10 +93,10 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @use_np_compat
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_add(self, other)
+        if isinstance(other, ndarray):
+            return _npi.add(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_add_scalar(self, float(other))
+            return _npi.add_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -108,20 +105,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__iadd__(y) <=> x += y"""
         if not self.writable:
             raise ValueError('trying to add to a readonly ndarray')
-        if isinstance(other, NDArray):
-            return _nd_internal._np_add(self, other, out=self)
+        if isinstance(other, ndarray):
+            return _npi.add(self, other, out=self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_add_scalar(self, float(other), out=self)
+            return _npi.add_scalar(self, float(other), out=self)
         else:
             raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_subtract(self, other)
+        if isinstance(other, ndarray):
+            return _npi.subtract(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_subtract_scalar(self, float(other))
+            return _npi.subtract_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -130,30 +127,30 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__isub__(y) <=> x -= y"""
         if not self.writable:
             raise ValueError('trying to subtract from a readonly ndarray')
-        if isinstance(other, NDArray):
-            return _nd_internal._np_subtract(self, other, out=self)
+        if isinstance(other, ndarray):
+            return _npi.subtract(self, other, out=self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_subtract_scalar(self, float(other), out=self)
+            return _npi.subtract_scalar(self, float(other), out=self)
         else:
             raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_subtract(other, self)
+        if isinstance(other, ndarray):
+            return _npi.subtract(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_rsubtract_scalar(self, float(other))
+            return _npi.rsubtract_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_multiply(self, other)
+        if isinstance(other, ndarray):
+            return _npi.multiply(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_multiply_scalar(self, float(other))
+            return _npi.multiply_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -191,20 +188,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @use_np_compat
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._true_divide(self, other)
+        if isinstance(other, ndarray):
+            return _npi.true_divide(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._true_divide_scalar(self, float(other))
+            return _npi.true_divide_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as divisor".format(str(type(other))))
 
     @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        if isinstance(other, NDArray):
-            return _nd_internal._true_divide(other, self)
+        if isinstance(other, ndarray):
+            return _npi.true_divide(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._rtrue_divide_scalar(self, float(other))
+            return _npi.rtrue_divide_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as dividend".format(str(type(other))))
 
@@ -215,20 +212,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @use_np_compat
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_mod(self, other)
+        if isinstance(other, ndarray):
+            return _npi.mod(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_mod_scalar(self, float(other))
+            return _npi.mod_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_mod(other, self)
+        if isinstance(other, ndarray):
+            return _npi.mod(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_rmod_scalar(self, float(other))
+            return _npi.rmod_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -239,20 +236,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @use_np_compat
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_power(self, other)
+        if isinstance(other, ndarray):
+            return _npi.power(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_power_scalar(self, float(other))
+            return _npi.power_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_power(other, self)
+        if isinstance(other, ndarray):
+            return _npi.power(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_rpower_scalar(self, float(other))
+            return _npi.rpower_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -371,7 +368,6 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
                                                  context)
         else:
             return '%s\n<%s shape=%s>' % (array_str, self.__class__.__name__, self.shape)
-
 
     @use_np_compat
     def attach_grad(self, grad_req='write', stype=None):

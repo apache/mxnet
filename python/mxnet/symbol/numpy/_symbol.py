@@ -25,20 +25,15 @@ from . import _op as _mx_np_op
 from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
 from ...base import numeric_types, set_module
 from ...context import current_context
-from .. import _internal
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
-from .. import _internal as _sym_internal
+from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum']
 
 
 @set_module('mxnet.symbol.numpy')
 class _Symbol(Symbol):
-
-    def _is_np_compat(self):
-        return True
-
     def __getitem__(self, item):
         raise NotImplementedError
 
@@ -51,10 +46,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_add(self, other)
+        if isinstance(other, _Symbol):
+            return _npi.add(self, other)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_add_scalar(self, float(other))
+            return _npi.add_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -62,10 +57,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_subtract(self, other)
+        if isinstance(other, _Symbol):
+            return _npi.subtract(self, other)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_subtract_scalar(self, float(other))
+            return _npi.subtract_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -73,10 +68,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_subtract(other, self)
+        if isinstance(other, _Symbol):
+            return _npi.subtract(other, self)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_rsubtract_scalar(self, float(other))
+            return _npi.rsubtract_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -84,10 +79,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_multiply(self, other)
+        if isinstance(other, _Symbol):
+            return _npi.multiply(self, other)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_multiply_scalar(self, float(other))
+            return _npi.multiply_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -95,10 +90,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __rmul__(self, other):
         """x.__rmul__(y) <=> y * x"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_multiply(self, other)
+        if isinstance(other, _Symbol):
+            return _npi.multiply(self, other)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_multiply_scalar(self, float(other))
+            return _npi.multiply_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -120,10 +115,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_mod(self, other)
+        if isinstance(other, _Symbol):
+            return _npi.mod(self, other)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_mod_scalar(self, float(other))
+            return _npi.mod_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -131,10 +126,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_mod(other, self)
+        if isinstance(other, _Symbol):
+            return _npi.mod(other, self)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_rmod_scalar(self, float(other))
+            return _npi.rmod_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -146,10 +141,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
-        if isinstance(other, Symbol):
-            return _sym_internal._true_divide(self, other)
+        if isinstance(other, _Symbol):
+            return _npi.true_divide(self, other)
         elif isinstance(other, numeric_types):
-            return _sym_internal._true_divide_scalar(self, float(other))
+            return _npi.true_divide_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as divisor"
                             .format(str(type(other))))
@@ -157,10 +152,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        if isinstance(other, Symbol):
-            return _sym_internal._true_divide(other, self)
+        if isinstance(other, _Symbol):
+            return _npi.true_divide(other, self)
         elif isinstance(other, numeric_types):
-            return _sym_internal._rtrue_divide_scalar(self, float(other)).as_np_ndarray()
+            return _npi.rtrue_divide_scalar(self, float(other)).as_np_ndarray()
         else:
             raise TypeError("_Symbol does not support type {} as dividend"
                             .format(str(type(other))))
@@ -172,10 +167,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_power(self, other)
+        if isinstance(other, _Symbol):
+            return _npi.power(self, other)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_power_scalar(self, float(other))
+            return _npi.power_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -183,10 +178,10 @@ class _Symbol(Symbol):
     @use_np_compat
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
-        if isinstance(other, Symbol):
-            return _sym_internal._np_power(other, self)
+        if isinstance(other, _Symbol):
+            return _npi.power(other, self)
         elif isinstance(other, numeric_types):
-            return _sym_internal._np_rpower_scalar(self, float(other))
+            return _npi.rpower_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
@@ -954,7 +949,7 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
-    return _internal._np_zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    return _npi.zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -986,7 +981,7 @@ def ones(shape, dtype=None, **kwargs):
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
-    return _internal._np_ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    return _npi.ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
@@ -1041,15 +1036,13 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
 @set_module('mxnet.symbol.numpy')
 @use_np_compat
 def maximum(x1, x2, out=None):
-    return _ufunc_helper(x1, x2, _internal._np_maximum, _np.maximum,
-                         _internal._np_maximum_scalar, None, out)
+    return _ufunc_helper(x1, x2, _npi.maximum, _np.maximum, _npi.maximum_scalar, None, out)
 
 
 @set_module('mxnet.symbol.numpy')
 @use_np_compat
 def minimum(x1, x2, out=None):
-    return _ufunc_helper(x1, x2, _internal._np_minimum, _np.minimum,
-                         _internal._np_minimum_scalar, None, out)
+    return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
 
 
 _set_np_symbol_class(_Symbol)

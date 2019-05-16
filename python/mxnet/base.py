@@ -599,7 +599,9 @@ def _init_op_module(root_namespace, module_name, make_op_func):
                                      ctypes.byref(plist)))
     op_names = []
     for i in range(size.value):
-        op_names.append(py_str(plist[i]))
+        op_name = py_str(plist[i])
+        if not _is_np_op(op_name):
+            op_names.append(op_name)
 
     module_op = sys.modules["%s.%s.op" % (root_namespace, module_name)]
     module_internal = sys.modules["%s.%s._internal" % (root_namespace, module_name)]
@@ -693,7 +695,9 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
                                      ctypes.byref(plist)))
     op_names = []
     for i in range(size.value):
-        op_names.append(py_str(plist[i]))
+        op_name = py_str(plist[i])
+        if not _is_np_op(op_name):
+            op_names.append(op_name)
 
     module_op_file = get_module_file("%s.%s.op" % (root_namespace, module_name))
     module_op_all = []
@@ -874,12 +878,6 @@ def use_np_compat(func):
     return _with_np_compat
 
 
-def _is_np_compat_op(op_handle):
-    is_np_op = ctypes.c_int(0)
-    check_call(_LIB.MXIsNumpyCompatOp(ctypes.c_void_p(op_handle), ctypes.byref(is_np_op)))
-    return is_np_op.value != 0
-
-
 def _sanity_check_params(func_name, unsupported_params, param_dict):
     for param_name in unsupported_params:
         if param_name in param_dict:
@@ -887,11 +885,17 @@ def _sanity_check_params(func_name, unsupported_params, param_dict):
                                       .format(func_name, param_name))
 
 
-_NP_OP_PREFIX = '_numpy_'
+_NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
 
 _NP_EXT_OP_PREFIX = '_npe_'
-_NP_EXT_SUBMODULE_LIST = []
+
+_NP_INTERNAL_OP_PREFIX = '_npi_'
+
+
+def _is_np_op(op_name):
+    return op_name.startswith(_NP_OP_PREFIX) or op_name.startswith(_NP_EXT_OP_PREFIX)\
+           or op_name.startswith(_NP_INTERNAL_OP_PREFIX)
 
 
 def _get_op_submodule_name(op_name, op_name_prefix, submodule_name_list):
@@ -920,11 +924,14 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
         Function for creating op functions.
     """
     if np_module_name == 'numpy':
-        op_name_prefix = '_numpy_'
+        op_name_prefix = _NP_OP_PREFIX
         submodule_name_list = _NP_OP_SUBMODULE_LIST
     elif np_module_name == 'numpy_extension':
-        op_name_prefix = '_npe_'
-        submodule_name_list = _NP_EXT_SUBMODULE_LIST
+        op_name_prefix = _NP_EXT_OP_PREFIX
+        submodule_name_list = []
+    elif np_module_name == 'numpy._internal':
+        op_name_prefix = _NP_INTERNAL_OP_PREFIX
+        submodule_name_list = []
     else:
         raise ValueError('unsupported np module name {}'.format(np_module_name))
 
@@ -942,9 +949,13 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
         op_module_name = "%s.%s._op" % (root_module_name, np_module_name)  # e.g. mxnet.numpy._op
         op_submodule_name = "%s.%s" % (root_module_name, np_module_name)  # e.g. mxnet.numpy.random
     elif mx_module_name == 'ndarray' or mx_module_name == 'symbol':
-        # register np/npe ops for use in Gluon
-        # e.g. mxnet.symbol.numpy._op
-        op_module_name = "%s.%s.%s._op" % (root_module_name, mx_module_name, np_module_name)
+        # register numpy internal ops and np/npe ops for use in Gluon
+        # np internal ops are registered in mxnet.ndarray/symbol.numpy._internal
+        # np ops are registered in mxnet.ndarray/symbol.numpy._op
+        # npe ops are registered in mxnet.ndarray/symbol.numpy_extension._op
+        op_module_name = "%s.%s.%s" % (root_module_name, mx_module_name, np_module_name)
+        if op_name_prefix != _NP_INTERNAL_OP_PREFIX:
+            op_module_name += '._op'
         # e.g. mxnet.symbol.numpy.random
         op_submodule_name = "%s.%s.%s" % (root_module_name, mx_module_name, np_module_name)
     else:
@@ -966,7 +977,8 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
         else:
             func_name = name[len(op_name_prefix):]
             cur_module = op_module
-            module_name_local = op_module_name[:-len('._op')]
+            module_name_local =\
+                op_module_name[:-len('._op')] if op_module_name.endswith('._op') else op_module_name
 
         function = make_op_func(hdl, name, func_name)
         function.__module__ = module_name_local

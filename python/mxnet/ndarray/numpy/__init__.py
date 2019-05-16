@@ -19,7 +19,7 @@
 
 from . import random
 from . import linalg
-from . import _op
+from . import _op, _internal
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 

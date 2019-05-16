@@ -35,8 +35,7 @@ MXNET_OPERATOR_REGISTER_UNARY(_npe_relu)
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::relu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_relu"})
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true);
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_relu"});
 
 MXNET_OPERATOR_REGISTER_UNARY(_npe_sigmoid)
 .describe(R"code(Computes sigmoid of x element-wise.
@@ -46,18 +45,16 @@ MXNET_OPERATOR_REGISTER_UNARY(_npe_sigmoid)
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::sigmoid>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"})
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true);
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});
 
-MXNET_OPERATOR_REGISTER_UNARY(_np_copy)
+MXNET_OPERATOR_REGISTER_UNARY(_npi_copy)
 .MXNET_DESCRIBE("Returns a copy of the input.")
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true);
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
 
 }  // namespace op
 }  // namespace mxnet

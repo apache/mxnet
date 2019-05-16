@@ -54,7 +54,7 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(ret);
 }
 
-NNVM_REGISTER_OP(_numpy_transpose)
+NNVM_REGISTER_OP(_np_transpose)
 .describe(R"code(Permute the dimensions of an array.
 
 Examples::
@@ -105,7 +105,6 @@ Examples::
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyTranspose<cpu>)
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a"};
@@ -189,7 +188,7 @@ bool NumpyReshapeShape(const nnvm::NodeAttrs& attrs,
   return success;
 }
 
-NNVM_REGISTER_OP(_numpy_reshape)
+NNVM_REGISTER_OP(_np_reshape)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -210,7 +209,6 @@ NNVM_REGISTER_OP(_numpy_reshape)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a"};
   })
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .add_argument("a", "NDArray-or-Symbol", "Array to be reshaped.")
 .add_arguments(NumpyReshapeParam::__FIELDS__());
 
