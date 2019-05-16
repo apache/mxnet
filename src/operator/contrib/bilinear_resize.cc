@@ -97,7 +97,8 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
                                               const std::vector<TBlob> &input,
-                                              const std::vector<TBlob> &output) {
+                                              const std::vector<TBlob> &output,
+                                              bool modeLike) {
   Tensor<xpu, 4, DType> gradOutput = input[0].get<xpu, 4, DType>(s);
   Tensor<xpu, 4, DType> gradInput = output[0].get<xpu, 4, DType>(s);
 
@@ -108,8 +109,8 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
   int inputHeight = gradInput.size(2);
   int inputWidth = gradInput.size(3);
 
-  DType *data1 = gradInput.dptr_;
-  DType *data2 = gradOutput.dptr_;
+  DType *dataInput = gradInput.dptr_;
+  DType *dataOutput = gradOutput.dptr_;
   channels = nbatch * channels;
 
   // special case: same-size matching grids
@@ -118,8 +119,8 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
       const int h1 = h2;
       for (int w2 = 0; w2 < outputWidth; ++w2) {
         const int w1 = w2;
-        DType* pos1 = &data1[h1 * inputWidth + w1];
-        const DType* pos2 = &data2[h2 * outputWidth + w2];
+        DType* pos1 = &dataInput[h1 * inputWidth + w1];
+        const DType* pos2 = &dataOutput[h2 * outputWidth + w2];
         for (int c = 0; c < channels; ++c) {
           pos1[0] += pos2[0];
           pos1 += inputWidth * inputHeight;
@@ -145,15 +146,32 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
       const int w1p = (w1 < inputWidth - 1) ? 1 : 0;
       const DType w1lambda = w1r - w1;
       const DType w0lambda = (DType)1. - w1lambda;
-      DType* pos1 = &data1[h1 * inputWidth + w1];
-      const DType* pos2 = &data2[h2 * outputWidth + w2];
+      DType* posInput = &dataInput[h1 * inputWidth + w1];
+      const DType* posOutput = &dataOutput[h2 * outputWidth + w2];
       for (int c = 0; c < channels; ++c) {
-        pos1[0] += h0lambda * w0lambda * pos2[0];
-        pos1[w1p] += h0lambda * w1lambda * pos2[0];
-        pos1[h1p * inputWidth] += h1lambda * w0lambda * pos2[0];
-        pos1[h1p * inputWidth + w1p] += h1lambda * w1lambda * pos2[0];
-        pos1 += inputWidth * inputHeight;
-        pos2 += outputWidth * outputHeight;
+        posInput[0] += h0lambda * w0lambda * posOutput[0];
+        posInput[w1p] += h0lambda * w1lambda * posOutput[0];
+        posInput[h1p * inputWidth] += h1lambda * w0lambda * posOutput[0];
+        posInput[h1p * inputWidth + w1p] += h1lambda * w1lambda * posOutput[0];
+        posInput += inputWidth * inputHeight;
+        posOutput += outputWidth * outputHeight;
+      }
+    }
+  }
+
+  if (modeLike) {
+    Tensor<xpu, 4, DType> gradInputLike = output[1].get<xpu, 4, DType>(s);
+    int inputHeightLike = gradInputLike.size(2);
+    int inputWidthLike = gradInputLike.size(3);
+    DType *dataInputLike = gradInputLike.dptr_;
+    int channelsLike = nbatch * gradInputLike.size(1);
+    for (int h_like = 0; h_like < inputHeightLike; ++h_like) {
+      for (int w_like = 0; w_like < inputWidthLike; ++w_like) {
+        DType *posInput = &dataInputLike[h_like * inputWidthLike + w_like];
+        for (int c = 0; c < channelsLike; ++c) {
+          posInput[0] = 0;
+          posInput += inputWidthLike * inputHeightLike;
+        }
       }
     }
   }
@@ -174,19 +192,21 @@ first in one direction, and then again in the other direction. See the wikipedia
 for more details.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BilinearSampleParam>)
-.set_num_inputs(1)
+.set_num_inputs(BilinearSampleOpNumInputs)
 .set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames", BilinearSampleOpInputNames)
 .set_attr<mxnet::FInferShape>("FInferShape", BilinearSampleOpInferShape)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   ElemwiseGradUseNone{"_backward_contrib_BilinearResize2D"})
 .add_argument("data", "NDArray-or-Symbol", "Input data")
+.add_argument("like", "NDArray-or-Symbol", "Resize data to it's shape")
 .add_arguments(BilinearSampleParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_BilinearResize2D)
 .set_attr_parser(ParamParser<BilinearSampleParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
+.set_num_inputs(BilinearSampleOpNumBackwardInputs)
+.set_num_outputs(BilinearSampleOpNumBackwardOutputs)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpBackward<cpu>);
 

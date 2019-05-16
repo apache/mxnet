@@ -22,11 +22,38 @@
 
 set -ex
 
-# Multipackage installation does not fail in yum
-CUDNN_DOWNLOAD_SUM=4e15a323f2edffa928b4574f696fc0e449a32e6bc35c9ccb03a47af26c2de3fa
-curl -fsSL http://developer.download.nvidia.com/compute/redist/cudnn/v7.3.1/cudnn-10.0-linux-x64-v7.3.1.20.tgz -O
-echo "$CUDNN_DOWNLOAD_SUM cudnn-10.0-linux-x64-v7.3.1.20.tgz" | sha256sum -c -
-tar --no-same-owner -xzf cudnn-10.0-linux-x64-v7.3.1.20.tgz -C /usr/local
-rm cudnn-10.0-linux-x64-v7.3.1.20.tgz
-ldconfig
+if [ -z ${CUDA_VERSION} ]; then
+    echo "Error: CUDA_VERSION environment variable undefined"
+    exit 1
+fi
 
+if [ -z ${CUDNN_VERSION} ]; then
+    echo "Error: CUDNN_VERSION environment variable undefined"
+    exit 1
+fi
+
+SHORT_CUDA_VERSION=""
+SHORT_CUDNN_VERSION=""
+
+if [[ ${CUDA_VERSION} =~ ([0-9]+\.[0-9]+)\.* ]]; then
+    SHORT_CUDA_VERSION=${BASH_REMATCH[1]}
+else
+    echo "Error: CUDA_VERSION (${CUDA_VERSION}) did not match expected format [0-9]+.[0-9]+.*"
+fi
+
+if [[ ${CUDNN_VERSION} =~ ([0-9]+\.[0-9]+\.[0-9]+)\.* ]]; then
+    SHORT_CUDNN_VERSION=${BASH_REMATCH[1]}
+else
+    echo "Error: CUDNN_VERSION (${CUDNN_VERSION}) did not match expected format [0-9]+.[0-9]+.[0-9]+.*"
+fi
+
+# Multipackage installation does not fail in yum
+CUDNN_PKG="cudnn-${SHORT_CUDA_VERSION}-linux-x64-v${CUDNN_VERSION}.tgz"
+CUDNN_PKG_URL="http://developer.download.nvidia.com/compute/redist/cudnn/v${SHORT_CUDNN_VERSION}/${CUDNN_PKG}"
+CUDNN_DOWNLOAD_SUM=`curl -fsSL "${CUDNN_PKG_URL}.sha256"`
+
+curl -fsSL ${CUDNN_PKG_URL} -O
+echo "${CUDNN_DOWNLOAD_SUM}" | sha256sum -c -
+tar --no-same-owner -xzf ${CUDNN_PKG} -C /usr/local
+rm ${CUDNN_PKG}
+ldconfig

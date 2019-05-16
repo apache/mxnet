@@ -64,6 +64,7 @@ import scala.collection.mutable
  *  });
  *  </pre>
  */
+@deprecated("Please use ResourceScope instead", "1.5.0")
 object NDArrayCollector {
   private val logger = LoggerFactory.getLogger(classOf[NDArrayCollector])
 
@@ -75,12 +76,14 @@ object NDArrayCollector {
    * Create a collector which will dispose the collected NDArrays automatically.
    * @return an auto-disposable collector.
    */
+  @deprecated("Please use ResourceScope instead", "1.5.0")
   def auto(): NDArrayCollector = new NDArrayCollector(true)
 
   /**
    * Create a collector allows users to later dispose the collected NDArray manually.
    * @return a manually-disposable collector.
    */
+  @deprecated("Please use ResourceScope instead", "1.5.0")
   @Experimental
   def manual(): NDArrayCollector = new NDArrayCollector(false)
 
@@ -88,11 +91,13 @@ object NDArrayCollector {
    * Collect the NDArrays into the collector of the current thread.
    * @param ndArray NDArrays need to be collected.
    */
+  @deprecated("Please use ResourceScope instead", "1.5.0")
   @varargs def collect(ndArray: NDArray*): Unit = {
     currCollector.get().add(ndArray: _*)
   }
 }
 
+@deprecated("Please use ResourceScope instead", "1.5.0")
 class NDArrayCollector private(private val autoDispose: Boolean = true,
                                private val doCollect: Boolean = true) {
   // native ptr (handle) of the NDArray -> NDArray
@@ -142,6 +147,7 @@ class NDArrayCollector private(private val autoDispose: Boolean = true,
    * @return The result of function <em>codeBlock</em>.
    */
   @Experimental
+  @deprecated("Please use ResourceScope instead", "1.5.0")
   def withScope[T](codeBlock: => T): T = {
     val old = NDArrayCollector.currCollector.get()
     NDArrayCollector.currCollector.set(this)

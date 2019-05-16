@@ -19,7 +19,7 @@ package org.apache.mxnetexamples.customop
 
 import org.apache.mxnet.Callback.Speedometer
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.{Accuracy, Context, CustomOp, CustomOpProp, NDArray, NDArrayCollector, Operator, Shape, Symbol, Xavier}
+import org.apache.mxnet.{Accuracy, Context, CustomOp, CustomOpProp, NDArray, Operator, ResourceScope, Shape, Symbol, Xavier}
 import org.apache.mxnet.optimizer.RMSProp
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -141,7 +141,7 @@ object ExampleCustomOp {
       evalMetric.reset()
       var nBatch = 0
       var epochDone = false
-      NDArrayCollector.auto().withScope {
+      ResourceScope.using() {
         trainIter.reset()
         while (!epochDone) {
           var doReset = true
