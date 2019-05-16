@@ -29,7 +29,6 @@ from ...symbol import Symbol
 from ...symbol import contrib as symbol_contrib
 from ... import ndarray
 from ...ndarray import NDArray
-from ...ndarray import contrib as ndarray_contrib
 from . import lists
 from ...gluon import trainer
 from ... import base
@@ -160,8 +159,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, target_dtype))
         except AttributeError:
-            print("Failed to find " + fun_name + " in " + cur_module.__name__)
-            pass
+            logging.warning("Failed to find " + fun_name + " in " + cur_module.__name__)
 
     wrap_list = fp32_ops if fp32_ops is not None else lists.symbol.FP32_FUNCS
     for fun_name in wrap_list:
@@ -172,8 +170,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32))
         except AttributeError:
-            print("Failed to find " + fun_name + " in " + module.__name__)
-            pass
+            logging.warning("Failed to find " + fun_name + " in " + module.__name__)
 
     wrap_list = conditional_fp32_ops if conditional_fp32_ops is not None \
                     else lists.symbol.CONDITIONAL_FP32_FUNCS
@@ -185,8 +182,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
         except AttributeError:
-            print("Failed to find " + fun_name + " in " + module.__name__)
-            pass
+            logging.warning("Failed to find " + fun_name + " in " + module.__name__)
 
     for fun_name in lists.symbol.WIDEST_TYPE_CASTS:
         try:
@@ -196,8 +192,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _symbol_widest_wrapper(f_to_wrap))
         except AttributeError:
-            print("Failed to find " + fun_name + " in " + module.__name__)
-            pass
+            logging.warning("Failed to find " + fun_name + " in " + module.__name__)
 
 def _wrap_loss_output_functions(module, ls):
     if module == ndarray:
