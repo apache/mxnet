@@ -142,10 +142,18 @@ def profile(func):
 
         # Prepare the results
         profiler_dump = profiler.dumps(reset=True)
-        # args[0] is assumed to operator name. This parameter should
-        # be removed when we get away from parsing profiler output
-        # and start using new profiler APIs - get_summary(), reset()
-        profiler_output = parse_profiler_dump(args[0].__name__, profiler_dump)
+
+        # args[0] is assumed to operator name, if not found check for block name.
+        # NOTE: This parameter should be removed when we get away from parsing
+        # profiler output and start using new profiler APIs - get_summary(), reset()
+        if len(args) > 0:
+            operator_name = args[0].__name__
+        elif 'block' in kwargs:
+            operator_name = kwargs['block']._op_name
+        else:
+            raise ValueError("Unable to identify operator name to extract profiler output!")
+
+        profiler_output = parse_profiler_dump(operator_name, profiler_dump)
         return res, profiler_output
 
     return profile_it

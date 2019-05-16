@@ -2,6 +2,7 @@ import mxnet as mx
 from mxnet import nd
 
 from .ndarray_utils import get_mx_ndarray, nd_forward_backward_and_profile
+from .gluon_utils import block_forward_backward_and_profile
 
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
@@ -10,7 +11,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key in ["lhs", "rhs"]:
+            if key in ["lhs", "rhs", "data"]:
                 kwargs[key] = get_mx_ndarray(ctx=ctx, in_tensor=value,
                                              dtype=dtype,
                                              initializer=nd.normal,
@@ -20,6 +21,47 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
         kwargs_list.append(kwargs)
 
     return kwargs_list
+
+
+def _run_nd_operator_performance_test(op, warmup, runs, inputs, kwargs_list):
+    # Warm up, ignore the profiler output
+    _, _ = nd_forward_backward_and_profile(op, warmup, **kwargs_list[0])
+
+    # Run Benchmarks
+    op_benchmark_result = {op.__name__: []}
+    print("Begin Benchmark - ", op.__name__)
+    for idx, kwargs in enumerate(kwargs_list):
+        _, profiler_output = nd_forward_backward_and_profile(op, runs, **kwargs)
+
+        # Add inputs used for profiling this operator into result
+        profiler_output["inputs"] = inputs[idx]
+        op_benchmark_result[op.__name__].append(profiler_output)
+    print("Complete Benchmark - ", op.__name__)
+    return op_benchmark_result
+
+
+def _run_gluon_block_performance_test(op, ctx, warmup, runs, inputs, kwargs_list):
+    # Run Benchmarks
+    op_benchmark_result = {op.__name__: []}
+    print("Begin Benchmark - ", op.__name__)
+    for idx, kwargs in enumerate(kwargs_list):
+        # Inputs will data and parameters required to create a block
+        data = kwargs['data']
+        del kwargs['data']
+        # Create and initialize the block
+        block = op(**kwargs)
+        block.initialize(ctx=ctx)
+
+        # Warm up, ignore profiler output
+        _, _ = block_forward_backward_and_profile(block=block, runs=warmup, x=data)
+
+        _, profiler_output = block_forward_backward_and_profile(block=block, runs=runs, x=data)
+
+        # Add inputs used for profiling this operator into result
+        profiler_output["inputs"] = inputs[idx]
+        op_benchmark_result[op.__name__].append(profiler_output)
+    print("Complete Benchmark - ", op.__name__)
+    return op_benchmark_result
 
 
 def run_performance_test(op, inputs, run_backward=True,
@@ -43,17 +85,9 @@ def run_performance_test(op, inputs, run_backward=True,
 
     """
     kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)
-    # TODO - Check if this is a Gluon or an NDArray operator being profiled.
-    # Warm up, ignore profiler output
-    _, _ = nd_forward_backward_and_profile(op, warmup, **kwargs_list[0])
-
-    # Run Benchmarks
-    op_benchmark_result = {op.__name__: []}
-    for idx, kwargs in enumerate(kwargs_list):
-        _, profiler_output = nd_forward_backward_and_profile(op, runs, **kwargs)
-
-        # Add inputs used for profiling this operator into result
-        profiler_output["inputs"] = inputs[idx]
-        op_benchmark_result[op.__name__].append(profiler_output)
-
+    op_benchmark_result = {}
+    if hasattr(mx.nd, op.__name__):
+        op_benchmark_result = _run_nd_operator_performance_test(op, warmup, runs, inputs, kwargs_list)
+    elif issubclass(op, mx.gluon.Block):
+        op_benchmark_result = _run_gluon_block_performance_test(op, ctx, warmup, runs, inputs, kwargs_list)
     return op_benchmark_result
