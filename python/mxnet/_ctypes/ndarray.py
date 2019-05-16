@@ -70,7 +70,7 @@ def _set_np_ndarray_class(cls):
     _np_ndarray_cls = cls
 
 
-def _imperative_invoke(handle, ndargs, keys, vals, out, create_ndarray_fn):
+def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op):
     """ctypes implementation of imperative invoke wrapper"""
     if out is not None:
         original_output = out
@@ -99,6 +99,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, create_ndarray_fn):
         c_str_array([str(s) for s in vals]),
         ctypes.byref(out_stypes)))
 
+    create_ndarray_fn = _np_ndarray_cls if is_np_op else _ndarray_cls
     if original_output is not None:
         return original_output
     if num_output.value == 1:
