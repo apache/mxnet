@@ -1208,13 +1208,13 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& lshape = (*in_attrs)[0];
   mxnet::TShape& rshape = (*in_attrs)[1];
   // check if lhs ndim is larger than 1 and last dim is known
-  if (lshape.ndim() < 1 || !dim_size_is_known(lshape, lshape.ndim() - 1)){
+  if (lshape.ndim() < 1 || !dim_size_is_known(lshape, lshape.ndim() - 1)) {
     return false;
   }
   // check if rhs ndim is larger than 1 and first dim is known
-  if (rshape.ndim() < 1 || !dim_size_is_known(rshape, 0)){
+  if (rshape.ndim() < 1 || !dim_size_is_known(rshape, 0)) {
     return false;
-  } 
+  }
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
     CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
