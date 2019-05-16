@@ -24,8 +24,8 @@ def test_amp_coverage():
     conditional = [item[0] for item in amp.lists.symbol.CONDITIONAL_FP32_FUNCS]
 
     # Check for duplicates
-    for a in [amp.lists.symbol.TARGET_DTYPE_FUNCS,
-          amp.lists.symbol.TARGET_DTYPE_FP32_FUNCS,
+    for a in [amp.lists.symbol.FP16_FUNCS,
+          amp.lists.symbol.FP16_FP32_FUNCS,
           amp.lists.symbol.FP32_FUNCS,
           amp.lists.symbol.WIDEST_TYPE_CASTS,
           conditional]:
@@ -33,8 +33,8 @@ def test_amp_coverage():
         assert ret == [], "Elements " + str(ret) + " are duplicated in the AMP lists."
 
     t = []
-    for a in [amp.lists.symbol.TARGET_DTYPE_FUNCS,
-              amp.lists.symbol.TARGET_DTYPE_FP32_FUNCS,
+    for a in [amp.lists.symbol.FP16_FUNCS,
+              amp.lists.symbol.FP16_FP32_FUNCS,
               amp.lists.symbol.FP32_FUNCS,
               amp.lists.symbol.WIDEST_TYPE_CASTS,
               conditional]:
@@ -65,7 +65,7 @@ def test_amp_coverage():
                            """Please follow these guidelines for choosing a proper list:
                            - if your operator is not to be used in a computational graph
                              (e.g. image manipulation operators, optimizers) or does not have
-                             inputs, put it in TARGET_DTYPE_FP32_FUNCS list,
+                             inputs, put it in FP16_FP32_FUNCS list,
                            - if your operator requires FP32 inputs or is not safe to use with lower
                              precision, put it in FP32_FUNCS list,
                            - if your operator supports both FP32 and lower precision, has
@@ -73,10 +73,10 @@ def test_amp_coverage():
                              type, put it in WIDEST_TYPE_CASTS list,
                            - if your operator supports both FP32 and lower precision and has
                              either a single input or supports inputs of different type,
-                             put it in TARGET_DTYPE_FP32_FUNCS list,
+                             put it in FP16_FP32_FUNCS list,
                            - if your operator is both safe to use in lower precision and
                              it is highly beneficial to use it in lower precision, then
-                             put it in TARGET_DTYPE_FUNCS (this is unlikely for new operators)
+                             put it in FP16_FUNCS (this is unlikely for new operators)
                            - If you are not sure which list to choose, FP32_FUNCS is the
                              safest option""")
     assert ret2 == set(), ("Operators " + str(ret2) + " exist in AMP lists (in "

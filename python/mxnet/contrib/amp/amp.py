@@ -150,7 +150,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
                 getattr(module, op_name_prefix[1:-1])
 
     wrap_list = target_precision_ops if target_precision_ops is not None \
-                    else lists.symbol.TARGET_DTYPE_FUNCS
+                    else lists.symbol.FP16_FUNCS
     for fun_name in wrap_list:
         try:
             fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)

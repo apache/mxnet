@@ -19,7 +19,7 @@
 """Lists of functions whitelisted/blacklisted for automatic mixed precision in symbol API."""
 
 # Functions that should be cast to lower precision
-TARGET_DTYPE_FUNCS = [
+FP16_FUNCS = [
     'Convolution',
     'Deconvolution',
     'FullyConnected',
@@ -30,7 +30,7 @@ TARGET_DTYPE_FUNCS = [
 # they are irrelevant (not used in the network itself
 # like image transformations or optimizers) or they
 # are dtype neutral (can work in both fp16 and fp32)
-TARGET_DTYPE_FP32_FUNCS = [
+FP16_FP32_FUNCS = [
     'BatchNorm',
     'BatchNorm_v1',
     'BilinearSampler',
