@@ -43,7 +43,6 @@ Indicate your preferred configuration. Then, follow the customized commands to i
   <span class="caret"></span></button>
   <ul class="dropdown-menu opt-group">
     <li class="opt active versions"><a href="#">v1.4.1</a></li>
-    <li class="opt versions"><a href="#">v1.4.0</a></li>
     <li class="opt versions"><a href="#">v1.3.1</a></li>
     <li class="opt versions"><a href="#">v1.2.1</a></li>
     <li class="opt versions"><a href="#">v1.1.0</a></li>
