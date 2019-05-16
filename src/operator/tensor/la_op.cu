@@ -97,7 +97,7 @@ NNVM_REGISTER_OP(_linalg_inverse)
 .set_attr<FCompute>("FCompute<gpu>", LaOpForward<gpu, 2, 2, 1, 1, inverse>);
 
 NNVM_REGISTER_OP(_backward_linalg_inverse)
-.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 3, 1, inverse_backward>);
+.set_attr<FCompute>("FCompute<gpu>", LaOpBackward<gpu, 2, 2, 2, 1, inverse_backward>);
 
 #if MXNET_USE_CUSOLVER == 1
 
