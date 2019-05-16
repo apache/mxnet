@@ -1443,7 +1443,7 @@ void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
                                       const Tensor<xpu, 3, DType>& B, \
                                       const Tensor<xpu, 1, DType>& work, \
                                       Stream<cpu> *s) { \
-  Copy(A, B, s); \
+  if (A.dptr_ != B.dptr_) Copy(A, B, s); \
   for (index_t i = 0; i < A.size(0); ++i) { \
     linalg_getrf(A[i], work, s); \
     linalg_getri(A[i], work, s); \
