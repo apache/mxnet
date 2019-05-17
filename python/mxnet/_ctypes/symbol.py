@@ -122,7 +122,7 @@ def _set_np_symbol_class(cls):
     _np_symbol_cls = cls
 
 
-def _symbol_creator(handle, args, kwargs, keys, vals, name, create_symbol_fn):
+def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op):
     sym_handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateAtomicSymbol(
         ctypes.c_void_p(handle),
@@ -135,6 +135,7 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name, create_symbol_fn):
         raise TypeError(
             'Operators with variable length input can only accept input'
             'Symbols either as positional or keyword arguments, not both')
+    create_symbol_fn = _np_symbol_cls if is_np_op else _symbol_cls
     s = create_symbol_fn(sym_handle)
     if args:
         s._compose(*args, name=name)

@@ -40,17 +40,15 @@ def _verify_all_np_ndarrays(op_name, func_name, *array_list):
     array_list : list of arrays
     """
     from ..numpy import ndarray as np_ndarray
-    from . import NDArray as classic_ndarray
     for array in array_list:
         if array is not None and type(array) is not np_ndarray:
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
-                            'This is an MXNet numpy operator which can only accept '
-                            'ndarrays of type `{}`, while received type `{}`. '
-                            'If you are passing an ndarray of type `{}`, '
-                            'please call `as_np_ndarray()` upon it to convert to type '
-                            '`{}` and then feed the converted array to this operator.'
-                            .format(op_name, func_name, str(np_ndarray), str(type(array)),
-                                    str(classic_ndarray), str(np_ndarray)))
+                            'This is a numpy operator which can only accept '
+                            'MXNet numpy ndarrays, while received a classic ndarray. '
+                            'Please call `as_np_ndarray()` upon the classic ndarray to '
+                            'convert it to an MXNet numpy ndarray, and then feed the converted '
+                            'array to this operator.'
+                            .format(op_name, func_name))
 
 
 def _verify_all_classic_ndarrays(op_name, func_name, *array_list):
@@ -65,18 +63,16 @@ def _verify_all_classic_ndarrays(op_name, func_name, *array_list):
         the prefix of the full operator names registered in backend.
     array_list : list of arrays
     """
-    from . import NDArray as classic_ndarray
     from ..numpy import ndarray as np_ndarray
     for array in array_list:
-        if array is not None and type(array) is not classic_ndarray:
+        if array is not None and type(array) is np_ndarray:
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
-                            'This is an MXNet classic operator which can only accept '
-                            'ndarrays of type `{}`, while received type `{}`. '
-                            'If you are passing an ndarray of type mxnet.numpy.ndarray, '
-                            'please call `as_classic_ndarray()` upon it to convert to type '
-                            '`{}` and then feed the converted array to this operator.'
-                            .format(op_name, func_name, str(classic_ndarray), str(type(array)),
-                                    str(classic_ndarray), str(np_ndarray), str(classic_ndarray)))
+                            'This is a classic operator which can only accept '
+                            'classic ndarrays, while received an MXNet numpy ndarray. '
+                            'Please call `as_classic_ndarray()` upon the numpy ndarray to '
+                            'convert it to a classic ndarray, and then feed the converted '
+                            'array to this operator.'
+                            .format(op_name, func_name))
 
 
 # pylint: disable=too-many-locals
