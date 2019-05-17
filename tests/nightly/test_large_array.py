@@ -67,7 +67,7 @@ def test_ndarray_random_randint():
     a = nd.random.randint(low_large_value,high_large_value, dtype=np.int64)
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
-    assert a.__gt__(low) & a.__lt__(high)
+    assert a.__gt__(low) and a.__lt__(high)
 
 
 def test_ndarray_empty():
