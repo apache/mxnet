@@ -154,7 +154,7 @@ User can follow the same steps of Visual Studio 2015 to build MXNET with MKL-DNN
 
 Preinstall python and some dependent modules: 
 ```
-pip install numpy==1.15.2 graphviz==0.8.4 requests
+pip install numpy graphviz
 set PYTHONPATH=[workdir]\incubator-mxnet\python
 ```
 or install mxnet
