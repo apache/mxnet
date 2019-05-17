@@ -2672,7 +2672,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
 Variable = var
 
 
-def Group(symbols):
+def Group(symbols, create_fn=Symbol):
     """Creates a symbol that contains a collection of other symbols, grouped together.
     A classic symbol (`mx.sym.Symbol`) will be returned if all the symbols in the list
     are of that type; a numpy symbol (`mx.sym.np._Symbol`) will be returned if all the
@@ -2691,6 +2691,9 @@ def Group(symbols):
     symbols : list
         List of symbols to be grouped.
 
+    create_fn : mx.sym.Symbol or mx.sym.np._Symbol
+        Symbol class for creating the grouped symbol.
+
     Returns
     -------
     sym : Symbol
@@ -2698,25 +2701,11 @@ def Group(symbols):
      """
     if not symbols or any(not isinstance(sym, Symbol) for sym in symbols):
         raise TypeError('Expected a list of symbols as input')
-    # check whether all the symbols in the list are of the same type
-    from .numpy import _Symbol as np_symbol
-    is_np_sym = True if type(symbols[0]) is np_symbol else False
-    for s in symbols[1:]:
-        if is_np_sym != type(s) is np_symbol:
-            raise TypeError('Cannot build a computation graph by grouping inhomogeneous types of '
-                            'symbols. If you want numpy ndarray output(s) from the computation '
-                            'graph, please convert all the classic symbols in the list to numpy '
-                            'symbols by calling `as_np_ndarray()` on each of them; if you want '
-                            'classic ndarray output(s) from the computation graph, please convert '
-                            'all numpy symbols in the list to classic symbols by calling '
-                            '`as_classic_ndarray()` on each of them. After having all the symbols '
-                            'in the list of the same type, either classic or numpy, you can call'
-                            'this function to make a computation graph from them.')
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateGroup(
         mx_uint(len(symbols)),
         c_handle_array(symbols), ctypes.byref(handle)))
-    return np_symbol(handle) if is_np_sym else Symbol(handle)
+    return create_fn(handle)
 
 
 def load(fname):

@@ -189,8 +189,8 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             key_var_num_args, key_var_num_args))
 
             code.append("""
-    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name)"""%(
-        handle.value))
+    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name, %s)"""%(
+        handle.value, str(is_np_op)))
     else:
         code.append("""
 def %s(%s):"""%(func_name, ', '.join(signature)))
