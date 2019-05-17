@@ -144,16 +144,16 @@ MSHADOW_XINLINE static void max_(int n, DType * __restrict__ in, DType *dst) {
 
 // LayerNorm on the last dimension
 template <typename DType>
-MSHADOW_XINLINE static void LayerNormLastDim(const index_t m,
-                                             const index_t n,
-                                             const DType *a,
-                                             const DType *b,
-                                             const DType *ws,
-                                             const DType *gamma,
-                                             const DType *beta,
-                                             const DType *mean,
-                                             const DType *var,
-                                             const DType eps) {
+MSHADOW_XINLINE static void LayerNormLastDim(index_t m,
+                                             index_t n,
+                                             DType *a,
+                                             DType *b,
+                                             DType *ws,
+                                             DType *gamma,
+                                             DType *beta,
+                                             DType *mean,
+                                             DType *var,
+                                             DType eps) {
   auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 #pragma omp parallel for num_threads(nthreads)
   for (index_t i = 0; i < m; i++) {
@@ -164,40 +164,21 @@ MSHADOW_XINLINE static void LayerNormLastDim(const index_t m,
     sum_(n, in_offset, &(mean[i]));
     mean[i] /= n;
     sub_(n, in_offset, mean[i], out_offset);
-    square(n, out_offset, ws_offset);
+    square::Vectorize(n, out_offset, ws_offset);
     sum_(n, ws_offset, &(var[i]));
-    var[i] = sqrt(var[i] / n + eps);
+    var[i] = math::sqrt(var[i] / n + eps);
 
-    mul(n, out_offset, gamma, out_offset);
+    mul::Vectorize(n, out_offset, gamma, out_offset);
     div_(n, out_offset, var[i], out_offset);
-    add(n, out_offset, beta, out_offset);
-  }
-}
-
-// softmax on the last dimension
-template <typename DType>
-MSHADOW_XINLINE static void SoftmaxLastDim(const index_t m,
-                                           const index_t n,
-                                           const DType *a,
-                                           const DType *b) {
-  auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-#pragma omp parallel for num_threads(nthreads)
-  for (index_t i = 0; i < m; i++) {
-    DType* in_offset = a + i * n;
-    DType* out_offset = b + i * n;
-
-    exp(n, in_offset, out_offset);
-    float sum = 0.0f;
-    sum_(n, out_offset, &sum);
-    div_(n, out_offset, sum, out_offset);
+    add::Vectorize(n, out_offset, beta, out_offset);
   }
 }
 
 template <typename DType>
-MSHADOW_XINLINE static void LogSoftmaxLastDim(const index_t m,
-                                              const index_t n,
-                                              const DType *a,
-                                              const DType *b) {
+MSHADOW_XINLINE static void LogSoftmaxLastDim(index_t m,
+                                              index_t n,
+                                              DType *a,
+                                              DType *b) {
   auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 #pragma omp parallel for num_threads(nthreads)
   for (index_t i = 0; i < m; i++) {
@@ -207,7 +188,7 @@ MSHADOW_XINLINE static void LogSoftmaxLastDim(const index_t m,
     DType b, logsum;
     max_(n, in_offset, &b);
     sub_(n, in_offset, b, out_offset);
-    exp(n, out_offset, out_offset);
+    exp::Vectorize(n, out_offset, out_offset);
     sum_(n, out_offset, &logsum);
     logsum = b + logf(logsum);
     sub_(n, in_offset, logsum, out_offset);
