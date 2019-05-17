@@ -580,8 +580,7 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
     .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1,                    \
                                  false, true, true>)                                               \
     .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)   \
-    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__kernel$,             \
-                          __mkl_kernel$>)
+    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
   /*! \bried MKL Unary compute.
    *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
@@ -593,8 +592,7 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
     .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1,                    \
                                  false, true, false>)                                              \
     .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)   \
-    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__kernel$,             \
-                          __mkl_kerbel$>)
+    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__xpu$, __kernel$>)
 
   #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$,             \
                                                            __mkl_kernel$)                          \
