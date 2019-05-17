@@ -47,14 +47,27 @@ MXNET_OPERATOR_REGISTER_UNARY(_npe_sigmoid)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::sigmoid>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});
 
-MXNET_OPERATOR_REGISTER_UNARY(_npi_copy)
-.MXNET_DESCRIBE("Returns a copy of the input.")
+NNVM_REGISTER_OP(_np_copy)
+.describe(R"code(Return an array copy of the given object.)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a"};
+  })
+.add_argument("a", "NDArray-or-Symbol", "The input");
 
 }  // namespace op
 }  // namespace mxnet

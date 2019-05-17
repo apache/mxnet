@@ -436,6 +436,43 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         self.copyto(res)
         return res
 
+    @use_np_compat
+    def copyto(self, other):
+        """Copies the value of this array to another array.
+
+        If ``other`` is a ``ndarray`` object, then ``other.shape`` and
+        ``self.shape`` should be the same. This function copies the value from
+        ``self`` to ``other``.
+
+        If ``other`` is a context, a new ``NDArray`` will be first created on
+        the target context, and the value of ``self`` is copied.
+
+        Parameters
+        ----------
+        other : ndarray or Context
+            The destination array or context.
+
+        Returns
+        -------
+        ndarray
+            The copied array. If ``other`` is an ``ndarray``, then the return value
+            and ``other`` will point to the same ``ndarray``.
+
+        Examples
+        --------
+        >>> x = np.ones((2,3))
+        >>> y = np.zeros((2,3), mx.gpu(0))
+        >>> z = x.copyto(y)
+        >>> z is y
+        True
+        >>> y.asnumpy()
+        array([[ 1.,  1.,  1.],
+               [ 1.,  1.,  1.]], dtype=float32)
+        """
+        if type(other) is ndarray:
+            other = other.as_classic_ndarray()
+        return self.as_classic_ndarray().copyto(other).as_np_ndarray()
+
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute as_scalar')
 

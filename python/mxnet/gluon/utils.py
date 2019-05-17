@@ -424,7 +424,7 @@ def _check_same_symbol_type(symbols):
     for s in symbols[1:]:
         if is_np_sym != (type(s) is np_symbol):
             raise TypeError('Found both classic symbol (mx.sym.Symbol) and numpy symbol '
-                            '(mx.sym.np._Symbol) as outputs. This will prevent you from building '
+                            '(mx.sym.np._Symbol) in outputs. This will prevent you from building '
                             'a computation graph by grouping them since different types of symbols '
                             'are not allowed to be grouped in Gluon to form a computation graph. '
                             'You will need to convert them to the same type of symbols, either '

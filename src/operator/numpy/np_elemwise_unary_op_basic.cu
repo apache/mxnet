@@ -32,7 +32,7 @@ NNVM_REGISTER_OP(_npe_relu)
 NNVM_REGISTER_OP(_npe_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sigmoid>);
 
-NNVM_REGISTER_OP(_npi_copy)
+NNVM_REGISTER_OP(_np_copy)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 }  // namespace op

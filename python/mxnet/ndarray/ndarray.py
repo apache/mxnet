@@ -186,10 +186,10 @@ fixed-size items.
 
     def as_np_ndarray(self):
         """Convert mxnet.ndarray.NDArray to mxnet.numpy.ndarray."""
-        st = self.stype
-        if st != 'default':
+        storage_type = self.stype
+        if storage_type != 'default':
             raise ValueError('cannot convert ndarray of stype {} to numpy ndarray'
-                             .format(str(type(st))))
+                             .format(str(type(storage_type))))
         from ..numpy import ndarray
         hdl = NDArrayHandle()
         check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
