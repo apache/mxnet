@@ -136,9 +136,9 @@ MSHADOW_XINLINE static void sum_(index_t n, DType *in, DType *dst) {
 }
 
 template <typename DType>
-MSHADOW_XINLINE static void max_(int n, DType *in, DType *dst) {
+MSHADOW_XINLINE static void max_(index_t n, DType *in, DType *dst) {
   dst[0] = in[0];
-  for (int i = 1; i < n; i++)
+  for (index_t i = 1; i < n; i++)
     dst[0] = (dst[0] < in[i]) ? in[i] : dst[0];
 }
 
