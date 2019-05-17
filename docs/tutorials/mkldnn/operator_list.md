@@ -56,7 +56,7 @@ For example, you can enable all FP32 fusion passes in the following table by:
 export MXNET_SUBGRAPH_BACKEND=MKLDNN
 ```
 
-And disable `Convolution + Activation(ReLU)` fusion by:
+And disable `Convolution + Activation` fusion by:
 
 ```
 export MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU=1
@@ -66,17 +66,17 @@ When generating the corresponding INT8 symbol, users can enable INT8 operator fu
 
 ```
 # get qsym after model quantization
-qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')
+qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
 qsym.save(symbol_name) # fused INT8 operators will be save into the symbol JSON file
 ```
 
 | Fusion pattern                                            | Disable                             |
 | ---                                                       | ---                                 |
-| Convolution + Activation(ReLU)                            | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
+| Convolution + Activation                                  | MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU |
 | Convolution + elemwise_add                                | MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM  |
 | Convolution + BatchNorm                                   | MXNET_DISABLE_MKLDNN_FUSE_CONV_BN   |
-| Convolution + Activation(ReLu) + elemwise_add             |                                     |
-| Convolution + BatchNorm + Activation(ReLu) + elemwise_add |                                     |
+| Convolution + Activation + elemwise_add                   |                                     |
+| Convolution + BatchNorm + Activation + elemwise_add       |                                     |
 | FullyConnected + Activation(ReLU)                         | MXNET_DISABLE_MKLDNN_FUSE_FC_RELU   |
 | Convolution (INT8) + re-quantization                      |                                     |
 | FullyConnected (INT8) + re-quantization                   |                                     |
