@@ -159,7 +159,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, target_dtype))
         except AttributeError:
-            logging.warning("Failed to find " + fun_name + " in " + cur_module.__name__)
+            pass
 
     wrap_list = fp32_ops if fp32_ops is not None else lists.symbol.FP32_FUNCS
     for fun_name in wrap_list:
@@ -170,7 +170,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32))
         except AttributeError:
-            logging.warning("Failed to find " + fun_name + " in " + module.__name__)
+            pass
 
     wrap_list = conditional_fp32_ops if conditional_fp32_ops is not None \
                     else lists.symbol.CONDITIONAL_FP32_FUNCS
@@ -182,7 +182,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
         except AttributeError:
-            logging.warning("Failed to find " + fun_name + " in " + module.__name__)
+            pass
 
     for fun_name in lists.symbol.WIDEST_TYPE_CASTS:
         try:
@@ -192,7 +192,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _symbol_widest_wrapper(f_to_wrap))
         except AttributeError:
-            logging.warning("Failed to find " + fun_name + " in " + module.__name__)
+            pass
 
 def _wrap_loss_output_functions(module, ls):
     if module == ndarray:
