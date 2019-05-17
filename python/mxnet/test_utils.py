@@ -80,6 +80,11 @@ def get_rtol(rtol=None):
     # be needed for different device and dtype
     return 1e-5 if rtol is None else rtol
 
+def get_etol(etol=None):
+    """Get default numerical threshold for regression test."""
+    # _TODO: get from env variable, different threshold might
+    # be needed for different device and dtype
+    return 0 if etol is None else etol
 
 def random_arrays(*shapes):
     """Generate some random numpy arrays."""
@@ -493,6 +498,50 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
                             % (rel, rtol, atol, str(index), a[index], b[index]),
                             names=names)
     raise AssertionError(msg)
+
+def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False):
+    """Test that two numpy arrays are almost equal within given error rate. Raise exception message if not.
+
+    Parameters
+    ----------
+    a : np.ndarray
+    b : np.ndarray
+    threshold : None or float
+        The checking threshold. Default threshold will be used if set to ``None``.
+    etol : None or float
+        The error rate threshold. If etol is float, return true if error_rate < etol even if
+        any error is found.
+    """
+    rtol = get_rtol(rtol)
+    atol = get_atol(atol)
+    etol = get_etol(etol)
+    if etol:
+        equals = np.isclose(a, b, rtol=rtol, atol=atol)
+        err = 1 - np.count_nonzero(equals) / equals.size
+        if err > etol:
+            #if True:
+            index, rel = find_max_violation(a, b, rtol, atol)
+            np.set_printoptions(threshold=4, suppress=True)
+            msg = npt.build_err_msg([a, b],
+                                    err_msg="Error %f exceeds tolerance rtol=%f, atol=%f, etol=%f."
+                                            " Error_rate=%f. Location of maximum error:%s, a=%f, b=%f"
+                                    % (rel, rtol, atol, etol, err, str(index), a[index], b[index]),
+                                    names=names)
+            raise AssertionError(msg)
+
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            return
+    else:
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            return
+        index, rel = find_max_violation(a, b, rtol, atol)
+        np.set_printoptions(threshold=4, suppress=True)
+        msg = npt.build_err_msg([a, b],
+                                err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
+                                        " Location of maximum error:%s, a=%f, b=%f"
+                                % (rel, rtol, atol, str(index), a[index], b[index]),
+                                names=names)
+        raise AssertionError(msg)
 
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
