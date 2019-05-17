@@ -138,13 +138,12 @@ command:
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
    These commands produce mxnet library called ```libmxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder. Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/mkldnn/src/Release/```
-  
+
 5. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml*.dll`, `libiomp5.dll`, `libopenblas*.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
 
 **Visual Studio 2017**
 
-User can follow the same steps of Visual Studio 2015 to build MXNET with MKL-DNN, but change the version related command, for example, 
-```C:\opencv\build\x64\vc15\bin```
+User can follow the same steps of Visual Studio 2015 to build MXNET with MKL-DNN, but change the version related command, for example,```C:\opencv\build\x64\vc15\bin``` and build command is as below:
 
 ```
 >cmake -G "Visual Studio 15 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release -DMKL_ROOT="C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl"
