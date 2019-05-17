@@ -48,9 +48,6 @@ RUN /work/arm8_core.sh
 COPY install/arm8_python.sh /work/
 RUN /work/arm8_python.sh
 
-COPY install/arm8_scala.sh /work/
-RUN /work/arm8_scala.sh
-
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
