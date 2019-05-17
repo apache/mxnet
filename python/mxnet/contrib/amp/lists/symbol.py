@@ -345,6 +345,9 @@ FP16_FP32_FUNCS = [
     'uniform',
     'unravel_index',
     'zeros_like',
+    '_sg_mkldnn_conv',
+    '_sg_mkldnn_fully_connected',
+    'CuDNNBatchNorm',
     ]
 
 # Functions that have to be cast to FP32 due to possible

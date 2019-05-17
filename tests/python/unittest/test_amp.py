@@ -58,7 +58,6 @@ def test_amp_coverage():
             op_names.append(s)
 
     ret1 = set(op_names) - set(t)
-    ret2 = set(t) - set(op_names)
 
     assert ret1 == set(), ("Operators " + str(ret1) + " do not exist in AMP lists (in "
                            "python/mxnet/contrib/amp/lists/symbol.py) - please add them. "
@@ -79,9 +78,6 @@ def test_amp_coverage():
                              put it in FP16_FUNCS (this is unlikely for new operators)
                            - If you are not sure which list to choose, FP32_FUNCS is the
                              safest option""")
-    assert ret2 == set(), ("Operators " + str(ret2) + " exist in AMP lists (in "
-                           "python/mxnet/contrib/amp/lists/symbol.py) but are not "
-                           "MXNet operators. Please remove them.")
 
 if __name__ == '__main__':
     test_amp_coverage()
