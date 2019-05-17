@@ -233,7 +233,7 @@ class SyncBatchNorm(BatchNorm):
         warnings.warn("Caution using SyncBatchNorm: "
                       "if not using all the GPUs, please mannually set num_devices",
                       UserWarning)
-        num_devices = len(test_utils.list_gpus())
+        num_devices = mx.context.num_gpus()
         num_devices = num_devices if num_devices > 0 else 1
         return num_devices
 
