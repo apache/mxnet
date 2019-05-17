@@ -34,6 +34,7 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
   bool Select(const BiDirectedNode &sn) override {
     const auto &n = *sn.node;
     if (n.op() == Op::Get("_contrib_quantized_concat")) {
+      head_ = sn;
       matched_list_.clear();
       visit_list_.clear();
       visit_list_.insert(&n);
@@ -97,7 +98,14 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     }
   }
 
+  void Reset() override {
+    auto new_selector = SgMKLDNNConcatPostQuantizeSelector();
+    new_selector.Select(head_);
+    *this = new_selector;
+  }
+
  private:
+  BiDirectedNode head_;
   bool select_output_;
   std::vector<const BiDirectedNode *> matched_list_;
   std::unordered_set<const nnvm::Node*> visit_list_;
@@ -127,7 +135,7 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
  * conv4 = mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4', num_filter=64,
  *                               kernel=(3, 3), stride=(1, 1), no_bias=True)
  * concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
- * 
+ *
  * This pass will collect the maximum calib range from conv1 to conv4, and apply it to all
  * conv1 to conv4. Then concat don't need extra scale alignment operation. Performance and
  * accuracy are both improved.

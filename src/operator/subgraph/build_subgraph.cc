@@ -299,6 +299,7 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
       }
       LOG(INFO) << "Found a cycle when BFS from node " << simple_nodes[snid]->node->attrs.name
                 << ". Excluding nodes " << excluded_node_names << "and retrying";
+      subgraph_selector->Reset();
     }
     ++count;
   }
@@ -509,9 +510,9 @@ void FindOutputEntries(nnvm::Graph* g,
 void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
                     std::vector<nnvm::NodeEntry> *orig_entries,
                     const bool skip_var = false) {
-  orig_entries->reserve(input_entries.size());
+  orig_entries->resize(input_entries.size());
   // map for creating unique var nodes for deduplicating entries from the same node
-  std::unordered_map<std::string, nnvm::NodePtr> new_node_map;
+  std::unordered_map<std::string, int> name_count_map;
   for (size_t i = 0; i < input_entries.size(); ++i) {
     nnvm::NodeEntry *e = input_entries[i];
     // If the node is a variable itself, we may want to skip the node.
@@ -519,17 +520,19 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
       continue;
     }
 
+    orig_entries->at(i) = *e;
     nnvm::Symbol sym;
     sym.outputs.push_back(*e);
     const auto output_names = sym.ListOutputNames();
     CHECK_EQ(output_names.size(), 1U);
     const std::string& var_name = output_names[0];
-    auto it = new_node_map.find(var_name);
-    if (it == new_node_map.end()) {
-      orig_entries->push_back(*e);
-      new_node_map[var_name] = nnvm::CreateVariableNode(var_name);
+    auto it = name_count_map.find(var_name);
+    if (name_count_map.end() == it) {
+      name_count_map.emplace(var_name, 0);
+    } else {
+      ++(it->second);
     }
-    nnvm::NodePtr n = new_node_map[var_name];
+    nnvm::NodePtr n = nnvm::CreateVariableNode(var_name + std::to_string(name_count_map[var_name]));
     *e = nnvm::NodeEntry{n, 0, 0};
   }
 }
