@@ -73,8 +73,8 @@ def _np_ndarray_cls(handle, writable=True, stype=0):
 _set_np_ndarray_class(_np_ndarray_cls)
 
 
-@set_module('mxnet.numpy')
-class ndarray(NDArray):  # pylint: disable=invalid-name
+@set_module('mxnet.numpy')  # pylint: disable=invalid-name
+class ndarray(NDArray):
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
@@ -469,7 +469,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         array([[ 1.,  1.,  1.],
                [ 1.,  1.,  1.]], dtype=float32)
         """
-        if type(other) is ndarray:
+        if isinstance(other, ndarray):
             other = other.as_classic_ndarray()
         return self.as_classic_ndarray().copyto(other).as_np_ndarray()
 

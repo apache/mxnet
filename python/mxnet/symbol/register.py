@@ -45,7 +45,7 @@ def _verify_np_symbol(op_name, func_name, sym):
     sym : symbol to be verified
     """
     from .numpy._symbol import _Symbol as np_symbol
-    if type(sym) is not np_symbol:
+    if not isinstance(sym, np_symbol):
         raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                         'This is a numpy operator which can only accept '
                         'MXNet numpy ndarrays, while received a classic ndarray. '
@@ -68,7 +68,7 @@ def _verify_classic_symbol(op_name, func_name, sym):
     sym : symbol to be verified
     """
     from .numpy._symbol import _Symbol as np_symbol
-    if type(sym) is np_symbol:
+    if isinstance(sym, np_symbol):
         raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                         'This is a classic operator which can only accept '
                         'classic ndarrays, while received an MXNet numpy ndarray. '

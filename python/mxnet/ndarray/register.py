@@ -41,7 +41,7 @@ def _verify_all_np_ndarrays(op_name, func_name, *array_list):
     """
     from ..numpy import ndarray as np_ndarray
     for array in array_list:
-        if (array is not None) and (type(array) is not np_ndarray):
+        if (array is not None) and (not isinstance(array, np_ndarray)):
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                             'This is a numpy operator which can only accept '
                             'MXNet numpy ndarrays, while received a classic ndarray. '
@@ -65,7 +65,7 @@ def _verify_all_classic_ndarrays(op_name, func_name, *array_list):
     """
     from ..numpy import ndarray as np_ndarray
     for array in array_list:
-        if (array is not None) and (type(array) is np_ndarray):
+        if (array is not None) and (isinstance(array, np_ndarray)):
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                             'This is a classic operator which can only accept '
                             'classic ndarrays, while received an MXNet numpy ndarray. '
@@ -192,7 +192,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_classic_ndarrays.__name__
     if not signature_only:
         code.append("""
-    {}("{}", "{}", *ndargs, out)
+    {}("{}", "{}", out, *ndargs)
         """.format(verify_ndarrays_fn, op_name, func_name))
         code.append("""
     return _imperative_invoke(%d, ndargs, keys, vals, out, %s)"""%(

@@ -118,7 +118,7 @@ class CachedOp(object):
         self.handle = CachedOpHandle()
 
         from ..symbol.numpy._symbol import _Symbol
-        self.is_np_sym = True if type(sym) is _Symbol else False
+        self.is_np_sym = True if isinstance(sym, _Symbol) else False
 
         check_call(_LIB.MXCreateCachedOpEx(
             sym.handle,
