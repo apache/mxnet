@@ -587,7 +587,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda100_cudnn7
+    build_ubuntu_gpu_cuda101_cudnn7
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -687,7 +687,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda100_cudnn7() {
+build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
