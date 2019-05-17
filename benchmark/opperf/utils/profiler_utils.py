@@ -26,7 +26,7 @@ def _get_memory_profile(memory_profile_results):
 def _get_operator_profile(operator_name, operator_profile_results):
     operator_profile = {}
     for line in operator_profile_results:
-        if operator_name in line:
+        if operator_name in line or operator_name[:3] in line:
             operation = line.split()[0]
             operation_avg_time = float(line.split()[-1])
             if "_backward" in operation:
