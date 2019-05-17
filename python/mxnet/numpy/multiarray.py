@@ -25,7 +25,7 @@ from __future__ import division
 from array import array as native_array
 import ctypes
 import numpy as _np
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check_params
@@ -88,7 +88,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     @use_np_compat
     def __setitem__(self, key, value):
-        super(ndarray, self).__setitem__(key, value)
+        self.as_classic_ndarray().__setitem__(key, value)
 
     @use_np_compat
     def __add__(self, other):
@@ -370,10 +370,24 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
             return '%s\n<%s shape=%s>' % (array_str, self.__class__.__name__, self.shape)
 
     @use_np_compat
-    def attach_grad(self, grad_req='write', stype=None):
-        if stype is not None:
-            raise NotImplementedError('mxnet.numpy.ndarray currently does not support stype')
-        super(ndarray, self).attach_grad(grad_req, stype)
+    def attach_grad(self, grad_req='write'):  # pylint: disable=arguments-differ
+        """Attach a gradient buffer to this ndarray, so that `backward`
+        can compute gradient with respect to it.
+
+        Parameters
+        ----------
+        grad_req : {'write', 'add', 'null'}
+            How gradient will be accumulated.
+            - 'write': gradient will be overwritten on every backward.
+            - 'add': gradient will be added to existing value on every backward.
+            - 'null': do not compute gradient for this NDArray.
+        """
+        grad = _mx_np_op.zeros_like(self)  # pylint: disable=undefined-variable
+        grad_req = _GRAD_REQ_MAP[grad_req]
+        check_call(_LIB.MXAutogradMarkVariables(
+            1, ctypes.pointer(self.handle),
+            ctypes.pointer(mx_uint(grad_req)),
+            ctypes.pointer(grad.handle)))
 
     @property
     def grad(self):
@@ -1126,11 +1140,6 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     def size(self):
         """Number of elements in the array."""
         return super(ndarray, self).size
-
-    @property
-    @use_np_compat
-    def stype(self):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute stype')
 
     def tostype(self, stype):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tostype')

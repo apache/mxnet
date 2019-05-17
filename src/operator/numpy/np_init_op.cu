@@ -34,5 +34,11 @@ NNVM_REGISTER_OP(_npi_zeros)
 NNVM_REGISTER_OP(_npi_ones)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
 
+NNVM_REGISTER_OP(_np_zeros_like)
+.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
+
+NNVM_REGISTER_OP(_np_ones_like)
+.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
+
 }  // namespace op
 }  // namespace mxnet

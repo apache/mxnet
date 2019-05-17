@@ -38,7 +38,7 @@ def test_np_sum():
             self._keepdims = keepdims
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.numpy.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+            return F.np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     def is_int(dtype):
         return 'int' in dtype
@@ -63,6 +63,7 @@ def test_np_sum():
                             x = mx.nd.array(x)
                         else:
                             x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
+                        x = x.as_np_ndarray()
                         x.attach_grad()
                         expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
                         expected_ret = expected_ret.astype(dtype)
@@ -77,8 +78,8 @@ def test_np_sum():
 
                         # test numeric
                         if itype == 'float32' and dtype == 'float32':
-                            x_sym = mx.sym.Variable("x")
-                            mx_sym = mx.sym.numpy.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims)
+                            x_sym = mx.sym.Variable("x").as_np_ndarray()
+                            mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_classic_ndarray()
                             check_numeric_gradient(mx_sym, [x], numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
 
                         # test imperative
@@ -110,12 +111,12 @@ def test_np_dot():
         a = mx.nd.array(np_a)
         b = mx.nd.array(np_b)
         np_res = _np.dot(np_a, np_b)
-        mx_res = np.dot(a, b)
+        mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
         assert mx_res.shape == np_res.shape
         assert_almost_equal(np_res, mx_res.asnumpy(), rtol=1e-5, atol=1e-5)
         mx_a = mx.sym.Variable("a")
         mx_b = mx.sym.Variable("b")
-        mx_sym = mx.sym.numpy.dot(mx_a, mx_b)
+        mx_sym = mx.sym.np.dot(mx_a.as_np_ndarray(), mx_b.as_np_ndarray()).as_classic_ndarray()
         check_numeric_gradient(mx_sym, {"a": a, "b": b}, numeric_eps=eps, rtol=1e-2, atol=1e-3)
 
     bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6, ))]
@@ -124,7 +125,7 @@ def test_np_dot():
         a = mx.nd.array(random.random()) if len(shape_a) == 0 else rand_ndarray(shape_a)
         b = mx.nd.array(random.random()) if len(shape_b) == 0 else rand_ndarray(shape_b)
         try:
-            mx_res = np.dot(a, b)
+            mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
         except mx.base.MXNetError:
             continue
         assert False

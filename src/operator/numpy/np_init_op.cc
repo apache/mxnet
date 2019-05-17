@@ -49,5 +49,63 @@ NNVM_REGISTER_OP(_npi_ones)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
 .add_arguments(InitOpParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_np_zeros_like)
+.describe(R"code(Return an array of zeros with the same shape and type as a given array.
+
+Examples::
+
+  x = [[ 1.,  1.,  1.],
+       [ 1.,  1.,  1.]]
+
+  zeros_like(x) = [[ 0.,  0.,  0.],
+                   [ 0.,  0.,  0.]]
+
+)code")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
+  [](const NodeAttrs& attrs) {
+    return std::vector<uint32_t>(1, 0);
+  })
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a"};
+  })
+.set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("a", "NDArray-or-Symbol",
+              "The shape and data-type of a define these same attributes of the returned array.");
+
+NNVM_REGISTER_OP(_np_ones_like)
+.describe(R"code(Return an array of ones with the same shape and type as a given array.
+
+Examples::
+
+  x = [[ 0.,  0.,  0.],
+       [ 0.,  0.,  0.]]
+
+  ones_like(x) = [[ 1.,  1.,  1.],
+                  [ 1.,  1.,  1.]]
+
+)code")
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
+  [](const NodeAttrs& attrs) {
+    return std::vector<uint32_t>(1, 0);
+  })
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a"};
+  })
+.set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("a", "NDArray-or-Symbol",
+              "The shape and data-type of a define these same attributes of the returned array.");
+
 }  // namespace op
 }  // namespace mxnet
