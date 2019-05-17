@@ -1315,8 +1315,21 @@ class RNNOp {
                                            seed_));
 
       // RNN descriptors
+      cudnnDataType_t dtype_with_fallback_;
       #if CUDNN_MAJOR >= 6
       cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
+      // On arch's 50 and 52(Maxwell), the gpu doesn't support native fp16 compute.
+      // Before cuDNN 7.5.0, when running fp16, cuDNN fallback to fp32 under the hood on Maxwell.
+      // That's not the case begining from 7.5.0. Thereby adding fallback explicitly here.
+      #if __CUDA_ARCH__ < 530 && CUDNN_MAJOR >=7 && CUDNN_MINOR >= 5
+      if (dtype_ == CUDNN_DATA_HALF) {
+        dtype_with_fallback_ = CUDNN_DATA_FLOAT;
+      } else {
+        dtype_with_fallback_ = dtype_;
+      }
+      #else
+        dtype_with_fallback_ = dtype_;
+      #endif
       CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
                                           rnn_desc_,
                                           param_.state_size,
@@ -1326,7 +1339,7 @@ class RNNOp {
                                           direction_,
                                           mode_,
                                           rnn_algo,
-                                          dtype_));
+                                          dtype_with_fallback_));
       #else
       CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
                                        param_.state_size,
