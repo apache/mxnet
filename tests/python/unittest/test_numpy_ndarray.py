@@ -20,7 +20,7 @@ from __future__ import absolute_import
 from __future__ import division
 import numpy as _np
 import mxnet as mx
-from mxnet import numpy as np
+from mxnet import np
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, assert_exception
 from common import with_seed
@@ -45,7 +45,7 @@ def test_array_creation():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_zeros():
     # test np.zeros in Gluon
     class TestZeros(HybridBlock):
@@ -93,7 +93,7 @@ def test_zeros():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_ones():
     # test np.ones in Gluon
     class TestOnes(HybridBlock):
@@ -141,7 +141,7 @@ def test_ones():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_ndarray_binary_element_wise_ops():
     # Cannot test operators like >, because boolean arrays are not supported yet.
     np_op_map = {'+': _np.add, '*': _np.multiply, '-': _np.subtract, '/': _np.divide,
@@ -292,17 +292,17 @@ def test_ndarray_binary_element_wise_ops():
 @with_seed()
 def test_hybrid_block_multiple_outputs():
     class TestAllNumpyOutputs(HybridBlock):
-        @mx.use_np_compat
+        @np.use_np_compat
         def hybrid_forward(self, F, x, *args, **kwargs):
             return F.npe.relu(x), F.np.sum(x)
 
     class TestAllClassicOutputs(HybridBlock):
-        @mx.use_np_compat
+        @np.use_np_compat
         def hybrid_forward(self, F, x, *args, **kwargs):
             return F.relu(x.as_classic_ndarray()), F.sum(x.as_classic_ndarray())
 
     class TestMixedTypeOutputsSuccess(HybridBlock):
-        @mx.use_np_compat
+        @np.use_np_compat
         def hybrid_forward(self, F, x, *args, **kwargs):
             return F.relu(x.as_classic_ndarray()).as_np_ndarray(), F.np.sum(x)
 
@@ -319,7 +319,7 @@ def test_hybrid_block_multiple_outputs():
             assert type(out2) is expected_out_type
 
     class TestMixedTypeOutputsFailure(HybridBlock):
-        @mx.use_np_compat
+        @np.use_np_compat
         def hybrid_forward(self, F, x, *args, **kwargs):
             return F.relu(x.as_classic_ndarray()), F.np.sum(x)
 
