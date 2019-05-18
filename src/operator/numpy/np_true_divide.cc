@@ -54,7 +54,7 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-NNVM_REGISTER_OP(_true_divide)
+NNVM_REGISTER_OP(_npi_true_divide)
 .describe(R"code(
 Returns a true division of the inputs, element-wise.
 
@@ -86,11 +86,10 @@ Example::
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"})
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
 .add_argument("rhs", "NDArray-or-Symbol", "Divisor array");
 
-NNVM_REGISTER_OP(_true_divide_scalar)
+NNVM_REGISTER_OP(_npi_true_divide_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
@@ -104,11 +103,10 @@ NNVM_REGISTER_OP(_true_divide_scalar)
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::div>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_div_scalar"})
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_argument("scalar", "float", "scalar input");
 
-NNVM_REGISTER_OP(_rtrue_divide_scalar)
+NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
@@ -122,7 +120,6 @@ NNVM_REGISTER_OP(_rtrue_divide_scalar)
   })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rdiv>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_rdiv_scalar"})
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_argument("scalar", "float", "scalar input");
 

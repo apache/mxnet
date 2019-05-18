@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,15 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Module for numpy ops used in imperative programming."""
-
-from __future__ import absolute_import
-from . import random
-from . import linalg
-from .multiarray import *  # pylint: disable=wildcard-import
-from . import _op
-from . import _register
-from ._op import *  # pylint: disable=wildcard-import
-from ..base import use_np_compat, set_np_compat, np_compat
+"""Namespace for registering numpy_extension ops for imperative programming."""
 
 __all__ = []
