@@ -17,15 +17,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Module for numpy ops used in imperative programming."""
+"""Module for ops not belonging to the official numpy package for imperative programming."""
 
 from __future__ import absolute_import
-from . import random
-from . import linalg
-from .multiarray import *  # pylint: disable=wildcard-import
 from . import _op
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
-from ..base import use_np_compat, set_np_compat, np_compat
+from ..context import *  # pylint: disable=wildcard-import
 
 __all__ = []

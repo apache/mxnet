@@ -71,7 +71,7 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-NNVM_REGISTER_OP(_numpy_dot)
+NNVM_REGISTER_OP(_np_dot)
 .describe(R"doc(Dot product of two arrays. Specifically,
 
 - If both a and b are 1-D arrays, it is inner product of vectors.
