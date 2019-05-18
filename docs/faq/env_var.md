@@ -16,9 +16,7 @@
 <!--- under the License. -->
 
 Environment Variables
-
-
-================
+=====================
 MXNet has several settings that you can change with environment variables.
 Typically, you wouldn't need to change these settings, but they are listed here for reference.
 
