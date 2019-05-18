@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy.ext namespace for operators used in Gluon APIs dispatched by F=symbol module."""
+"""Namespace for the operators not belonging to the official numpy package
+used in Gluon dispatched by F=ndarray module."""
 
 __all__ = []

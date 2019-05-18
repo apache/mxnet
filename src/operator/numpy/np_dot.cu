@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_numpy_dot)
+NNVM_REGISTER_OP(_np_dot)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDotForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_np_dot)

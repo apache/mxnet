@@ -22,7 +22,7 @@ from __future__ import absolute_import as _abs
 
 import ctypes
 from ..base import _LIB
-from ..base import c_str_array, c_handle_array, c_str, mx_uint, _is_np_compat_op
+from ..base import c_str_array, c_handle_array, c_str, mx_uint
 from ..base import SymbolHandle
 from ..base import check_call
 
@@ -122,7 +122,7 @@ def _set_np_symbol_class(cls):
     _np_symbol_cls = cls
 
 
-def _symbol_creator(handle, args, kwargs, keys, vals, name):
+def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op):
     sym_handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateAtomicSymbol(
         ctypes.c_void_p(handle),
@@ -135,10 +135,8 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name):
         raise TypeError(
             'Operators with variable length input can only accept input'
             'Symbols either as positional or keyword arguments, not both')
-    if _is_np_compat_op(handle):
-        s = _np_symbol_cls(sym_handle)
-    else:
-        s = _symbol_cls(sym_handle)
+    create_symbol_fn = _np_symbol_cls if is_np_op else _symbol_cls
+    s = create_symbol_fn(sym_handle)
     if args:
         s._compose(*args, name=name)
     elif kwargs:

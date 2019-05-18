@@ -169,6 +169,7 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   if (param.initial.has_value()) {
     LOG(FATAL) << "initial is not supported yet";
   }
+  if (outputs[0].shape_.Size() == 0U) return;  // zero-size tensor
   if (param.axis.has_value() && param.axis.value().ndim() == 0) {
     UnaryOp::IdentityCompute<xpu>(attrs, ctx, inputs, req, outputs);
   }
