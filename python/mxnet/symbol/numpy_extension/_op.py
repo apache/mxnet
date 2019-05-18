@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""namespace for registering numpy.ext ops for imperative programming."""
+"""Namespace for operators not belonging to the official numpy package
+used in Gluon APIs dispatched by F=symbol module."""
 
 __all__ = []

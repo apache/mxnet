@@ -47,7 +47,7 @@ inline bool NumpySumType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1 && in_attrs->at(0) != -1;
 }
 
-NNVM_REGISTER_OP(_numpy_sum)
+NNVM_REGISTER_OP(_np_sum)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -61,14 +61,13 @@ NNVM_REGISTER_OP(_numpy_sum)
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true>)
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_numpy_sum"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_sum"});
 
-NNVM_REGISTER_OP(_backward_numpy_sum)
+NNVM_REGISTER_OP(_backward_np_sum)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -102,7 +101,7 @@ inline bool NumpyMeanType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1 && in_attrs->at(0) != -1;
 }
 
-NNVM_REGISTER_OP(_numpy_mean)
+NNVM_REGISTER_OP(_np_mean)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -116,14 +115,13 @@ NNVM_REGISTER_OP(_numpy_mean)
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true, true>)
-.set_attr<mxnet::TIsNumpyCompatible>("TIsNumpyCompatible", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_numpy_mean"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_mean"});
 
-NNVM_REGISTER_OP(_backward_numpy_mean)
+NNVM_REGISTER_OP(_backward_np_mean)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
