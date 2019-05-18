@@ -419,7 +419,7 @@ inline bool DetShape(const nnvm::NodeAttrs& attrs,
                      mxnet::ShapeVector* in_attrs,
                      mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
-  CHECK_EQ(out_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 3);
   const mxnet::TShape& in = (*in_attrs)[0];
   const int ndim(in.ndim());
   CHECK_GE(ndim, 2) << "Input A's dimension must be >= 2";
@@ -430,7 +430,24 @@ inline bool DetShape(const nnvm::NodeAttrs& attrs,
   } else {
     out = mxnet::TShape(in.begin(), in.end() - 2);
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, out); /* det */
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, in); /* LU */
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape(in.begin(), in.end() - 1)); /* pivot */
+  return true;
+}
+
+inline bool DetType(const nnvm::NodeAttrs& attrs,
+                    std::vector<int>* in_type,
+                    std::vector<int>* out_type) {
+  using namespace mshadow;
+  CHECK_EQ(in_type->size(), 1U);
+  int dtype = (*in_type)[0];
+  CHECK_NE(dtype, -1) << "Input must have specified type";
+
+  out_type->clear();
+  out_type->push_back(dtype);
+  out_type->push_back(dtype);
+  out_type->push_back(mshadow::kInt32);
   return true;
 }
 
@@ -773,6 +790,26 @@ void LaOpBackwSyevd(const nnvm::NodeAttrs& attrs,
     }
   });
 }
+
+// (A) => (det, LU, pivot)
+template<typename xpu, typename laop>
+void LaOpDetForward(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 3);
+  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    laop::op(inputs[0].FlatToKD<xpu, 3, OType>(s),
+             outputs[0].FlatToKD<xpu, 1, OType>(s),
+             outputs[1].FlatToKD<xpu, 3, OType>(s),
+             outputs[2].FlatToKD<xpu, 2, int>(s), ctx, attrs);
+  });
+}
+
 
 }  // namespace op
 }  // namespace mxnet

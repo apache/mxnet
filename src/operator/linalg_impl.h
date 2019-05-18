@@ -1240,26 +1240,38 @@ LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnDsyevd, double)
 
 // The input of this function should be col-major for performance.
 // Tensor work holds space for ipiv in getrf
-#define LINALG_CPU_GETRF(fname, DType) \
+#define LINALG_CPU_GETRF1(fname, DType) \
 template<> inline \
-void linalg_getrf<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
-                              const Tensor<cpu, 1, DType>& work, \
-                              Stream<cpu> *s) { \
+void linalg_getrf<cpu, DType, DType>(const Tensor<cpu, 2, DType>& A, \
+                                     const Tensor<cpu, 1, DType>& work, \
+                                     Stream<cpu> *s) { \
   int *ipiv = reinterpret_cast<int *>(work.dptr_); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(1), A.size(0), \
                                A.dptr_, A.stride_, ipiv)); \
   CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
 }
 
-LINALG_CPU_GETRF(sgetrf, float)
-LINALG_CPU_GETRF(dgetrf, double)
+#define LINALG_CPU_GETRF2(fname, DType) \
+template<> inline \
+void linalg_getrf<cpu, DType, int>(const Tensor<cpu, 2, DType>& A, \
+                                   const Tensor<cpu, 1, int>& work, \
+                                   Stream<cpu> *s) { \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(1), A.size(0), \
+                               A.dptr_, A.stride_, work.dptr_)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+
+LINALG_CPU_GETRF1(sgetrf, float)
+LINALG_CPU_GETRF1(dgetrf, double)
+LINALG_CPU_GETRF2(sgetrf, float)
+LINALG_CPU_GETRF2(dgetrf, double)
 
 #ifdef __CUDACC__
 
 // "getrfBatched" and "getriBatched" in cuBLAS must have DType *matrices[] as input
 // to store the pointers of each batch matrix. This kernel is used to build the
 // pointer array.
-struct set_matrix : public mxnet::op::mxnet_op::tunable {
+struct set_matrix {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType **p, DType *m, int step) {
     p[i] = m + i * step;

@@ -197,9 +197,9 @@ int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
 // LAPACK documentation for further details.
 // Note that this is A = getrf(A), so A is input and output parameter.
 
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename WType>
 void linalg_getrf(const Tensor<xpu, 2, DType>& A,
-                  const Tensor<xpu, 1, DType>& work,
+                  const Tensor<xpu, 1, WType>& work,
                   Stream<xpu> *s = 0);
 
 template<typename xpu, typename DType>

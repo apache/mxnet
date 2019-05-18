@@ -469,12 +469,44 @@ struct inverse {
   }
 };
 
-// A = det(B).
+struct SignedLogDet {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int N, int* pivot,
+                                  DType *LU, DType* sign, DType *logdet) {
+    int changes(0);
+    DType diag_sign(1);
+    DType diag_logsum(0);
+    int *pivot_mat = pivot + i * N;
+    DType *LU_mat = LU + i * N * N;
+    for ( int j = 0; j < N; ++j ) {
+      changes += (pivot_mat[j] == (j + 1));
+      DType diag = LU_mat[j * (N + 1)];
+      diag_sign *= ((DType(0) < diag) - (diag < DType(0)));
+      diag_logsum += std::log(std::abs(diag));
+    }
+    sign[i] = (changes % 2 == 1 ? DType(-1) : DType(1)) * diag_sign;
+    logdet[i] = diag_logsum;
+  }
+};
+// det = det(A), LU and pivot store the LU decomposition output which will be
+// used in computing gradient
 struct det {
   template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 1, DType>& A,
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& det,
+                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, int>& pivot,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 1, DType> sign = ctx.requested[0]
+      .get_space_typed<xpu, 1, DType>(det.shape_, s);
+    Copy(LU, A, s);
+    for(index_t i = 0; i < A.size(0); ++i) {
+      linalg_getrf(LU[i], pivot[i], s);
+    }
+    using namespace mxnet_op;
+    using namespace mshadow::expr;
+    Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
+                                      LU.dptr_, sign.dptr_, det.dptr_);
+    const_cast<Tensor<xpu, 1, DType>&>(det) = sign * F<mshadow_op::exp>(det);
   }
 };
 

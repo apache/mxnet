@@ -965,14 +965,16 @@ Examples::
    det(A) = [-5., -2.]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
-.set_num_outputs(1)
+.set_num_outputs(3)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A"}; } )
+  { return std::vector<std::string>{"A", "LU", "pivot"}; })
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) {
+  return 1; })
 .set_attr<mxnet::FInferShape>("FInferShape", DetShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", DetType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpForward<cpu, 2, 0, 1, 1, det>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, det>)
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 }  // namespace op
