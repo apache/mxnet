@@ -16,7 +16,9 @@
 <!--- under the License. -->
 
 Environment Variables
-=====================
+
+
+================
 MXNet has several settings that you can change with environment variables.
 Typically, you wouldn't need to change these settings, but they are listed here for reference.
 
@@ -284,6 +286,14 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: String ```(default="")```
   - This variable controls the subgraph partitioning in MXNet.
   - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+
+* MXNET_SAFE_ACCUMULATION
+  - Values: Values: 0(false) or 1(true) ```(default=0)```
+  - If this variable is set, the accumulation will enter the safe mode, meaning accumulation is done in a data type of higher precision than
+    the input data type, leading to more accurate accumulation results with a possible performance loss and backward compatibility loss.
+    For example, when the variable is set to 1(true), if the input data type is float16, then the accumulation will be done
+    with float32.
+  - Model accuracies do not necessarily improve with this environment variable turned on.
 
 Settings for Minimum Memory Usage
 ---------------------------------
