@@ -280,6 +280,11 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: Int ```(default=4)```
   - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
 
+* MXNET_SUBGRAPH_BACKEND
+  - Values: String ```(default="")```
+  - This variable controls the subgraph partitioning in MXNet.
+  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+
 * MXNET_SAFE_ACCUMULATION
   - Values: Values: 0(false) or 1(true) ```(default=0)```
   - If this variable is set, the accumulation will enter the safe mode, meaning accumulation is done in a data type of higher precision than
