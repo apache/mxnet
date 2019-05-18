@@ -15,6 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy.random namespace for operators used in Gluon APIs dispatched by F=symbol module."""
+"""Namespace for operators used in Gluon dispatched by F=symbol."""
 
 __all__ = []
