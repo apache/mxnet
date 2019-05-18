@@ -121,7 +121,7 @@ After you have installed all of the required dependencies, build the MXNet sourc
 git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd C:\incubator-mxent
 ```
-2. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the 
+2. Enable Intel MKL-DNN by -DUSE_MKLDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the 
 command:
 ```
 >mkdir build
