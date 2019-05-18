@@ -95,6 +95,7 @@ inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
   const TBlob& a = inputs[0];
   const TBlob& b = inputs[1];
   const TBlob& out = outputs[0];
+  if (out.shape_.Size() == 0U) return;  // zero-size tensor, no need to launch kernel
   const mxnet::TShape a_shape = a.shape_;
   const mxnet::TShape b_shape = b.shape_;
 
@@ -107,7 +108,13 @@ inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
       (out.type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
       << "dot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
   MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-    if (a_shape.ndim() == 1 && b_shape.ndim() == 1) {
+    if (a_shape.Size() == 0U || b_shape.Size() == 0U) {
+      if (req[0] != kAddTo) {
+        Tensor<xpu, 1, DType> out_data = out.get_with_shape<xpu, 1, DType>(
+            Shape1(out.shape_.Size()), s);
+        out_data = static_cast<DType>(0);
+      }
+    } else if (a_shape.ndim() == 1 && b_shape.ndim() == 1) {
       // Case 1: both 1-D arrays, inner product of vectors
       if (out.type_flag_ == kFloat16) {
         MMImpl<xpu>(ctx, a, b, out, req[0]);
@@ -158,12 +165,14 @@ inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
 
   const TBlob& ograd = inputs[0];
+  if (ograd.shape_.Size() == 0U) return;
   const TBlob& a = inputs[1];
   const TBlob& b = inputs[2];
   const TBlob& grad_a = outputs[0];
   const TBlob& grad_b = outputs[1];
   const mxnet::TShape a_shape = a.shape_;
   const mxnet::TShape b_shape = b.shape_;
+  if (a_shape.Size() == 0U || b_shape.Size() == 0U) return;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, DType, {

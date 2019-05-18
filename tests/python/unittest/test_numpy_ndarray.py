@@ -20,7 +20,7 @@ from __future__ import absolute_import
 from __future__ import division
 import numpy as _np
 import mxnet as mx
-from mxnet import numpy as np
+from mxnet import np
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, assert_exception
 from common import with_seed
@@ -37,15 +37,15 @@ def test_array_creation():
             mx_arr = np.array(src, dtype=dtype)
             assert mx_arr.context == mx.current_context()
             if isinstance(src, mx.nd.NDArray):
-                np_arr = _np.array(src.asnumpy(), dtype=dtype)
+                np_arr = _np.array(src.asnumpy(), dtype=dtype if dtype is not None else _np.float32)
             else:
-                np_arr = _np.array(src, dtype=dtype)
-            assert same(mx_arr.asnumpy(), np_arr)
+                np_arr = _np.array(src, dtype=dtype if dtype is not None else _np.float32)
             assert mx_arr.dtype == np_arr.dtype
+            assert same(mx_arr.asnumpy(), np_arr)
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_zeros():
     # test np.zeros in Gluon
     class TestZeros(HybridBlock):
@@ -76,7 +76,7 @@ def test_zeros():
     for shape in shapes:
         for dtype in dtypes:
             check_zero_array_creation(shape, dtype)
-            x = mx.nd.array(_np.random.uniform(size=shape), dtype=dtype)
+            x = np.array(_np.random.uniform(size=shape), dtype=dtype)
             if dtype is None:
                 x = x.astype('float32')
             for hybridize in [True, False]:
@@ -93,7 +93,7 @@ def test_zeros():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_ones():
     # test np.ones in Gluon
     class TestOnes(HybridBlock):
@@ -141,7 +141,7 @@ def test_ones():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_ndarray_binary_element_wise_ops():
     # Cannot test operators like >, because boolean arrays are not supported yet.
     np_op_map = {'+': _np.add, '*': _np.multiply, '-': _np.subtract, '/': _np.divide,
@@ -241,23 +241,22 @@ def test_ndarray_binary_element_wise_ops():
         np_out = get_np_ret(np_input1, np_input2, op)
         for hybridize in [True, False]:
             if scalar is None:
-                get_mx_ret = TestBinaryElementWiseOp(op)
+                get_mx_ret_np = TestBinaryElementWiseOp(op)
+                get_mx_ret_classic = TestBinaryElementWiseOp(op)
                 if hybridize:
-                    get_mx_ret.hybridize()
-                mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
+                    get_mx_ret_np.hybridize()
+                    get_mx_ret_classic.hybridize()
+                mx_out = get_mx_ret_np(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
                 assert type(mx_out) == np.ndarray
                 assert np_out.shape == mx_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
 
-                mx_out = get_mx_ret(mx_input1, mx_input2.as_np_ndarray())
-                assert type(mx_out) == np.ndarray
-                assert np_out.shape == mx_out.shape
-                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
-
-                mx_out = get_mx_ret(mx_input1.as_np_ndarray(), mx_input2)
-                assert type(mx_out) == np.ndarray
-                assert np_out.shape == mx_out.shape
-                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+                if mx_input1.shape == mx_input2.shape:
+                    # classic symbol does not support element-wise binary broadcast.
+                    mx_out = get_mx_ret_classic(mx_input1, mx_input2)
+                    assert type(mx_out) == mx.nd.NDArray
+                    assert np_out.shape == mx_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
             else:
                 get_mx_ret = TestBinaryElementWiseOp(op, scalar=scalar, reverse=reverse)
                 if hybridize:
@@ -291,29 +290,42 @@ def test_ndarray_binary_element_wise_ops():
 
 
 @with_seed()
-def test_np_op_output_type():
-    # test imperative invoke
-    data = np.array([1., 3.], dtype='float32')
-    ret = np.sum(data)
-    assert type(ret) == np.ndarray
-    ret = mx.nd.sin(data)
-    assert type(ret) == mx.nd.NDArray
-
-    # test cached op
-    class TestCachedOpOutputType(HybridBlock):
-        @mx.use_np_compat
+def test_hybrid_block_multiple_outputs():
+    class TestAllNumpyOutputs(HybridBlock):
+        @np.use_np_compat
         def hybrid_forward(self, F, x, *args, **kwargs):
-            ret1 = F.sin(x)
-            ret2 = F.np.sum(x)
-            return ret1, ret2
+            return F.npe.relu(x), F.np.sum(x)
 
-    net = TestCachedOpOutputType()
-    for hybridize in [True, False]:
-        if hybridize:
-            net.hybridize()
-        ret1, ret2 = net(data)
-        assert type(ret1) == mx.nd.NDArray
-        assert type(ret2) == np.ndarray
+    class TestAllClassicOutputs(HybridBlock):
+        @np.use_np_compat
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return F.relu(x.as_classic_ndarray()), F.sum(x.as_classic_ndarray())
+
+    class TestMixedTypeOutputsSuccess(HybridBlock):
+        @np.use_np_compat
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return F.relu(x.as_classic_ndarray()).as_np_ndarray(), F.np.sum(x)
+
+    data_np = np.ones((2, 3))
+    for block, expected_out_type in [(TestAllClassicOutputs, mx.nd.NDArray),
+                                      (TestAllNumpyOutputs, np.ndarray),
+                                      (TestMixedTypeOutputsSuccess, np.ndarray)]:
+        net = block()
+        for hybridize in [True, False]:
+            if hybridize:
+                net.hybridize()
+            out1, out2 = net(data_np)
+            assert type(out1) is expected_out_type
+            assert type(out2) is expected_out_type
+
+    class TestMixedTypeOutputsFailure(HybridBlock):
+        @np.use_np_compat
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return F.relu(x.as_classic_ndarray()), F.np.sum(x)
+
+    net = TestMixedTypeOutputsFailure()
+    net.hybridize()
+    assert_exception(net, TypeError, data_np)
 
 
 @with_seed()
@@ -331,6 +343,7 @@ def test_np_ndarray_astype():
 
     def check_astype_equal(dtype, copy, expect_zero_copy=False):
         mx_ret = mx_data.astype(dtype=dtype, copy=copy)
+        assert type(mx_ret) is np.ndarray
         np_ret = np_data.astype(dtype=dtype, copy=copy)
         assert mx_ret.dtype == np_ret.dtype
         assert same(mx_ret.asnumpy(), np_ret)
