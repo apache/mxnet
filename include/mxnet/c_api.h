@@ -2903,14 +2903,6 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
 /*!
-  * \brief Determines if an op is a Numpy op by its name prefix.
-  * Every Numpy op starts with a prefix string "_numpy_".
-  * \param creator Operator handle
-  * \param is_np_op Indicator of whether creator is a numpy op handle
-  */
-MXNET_DLL int MXIsNumpyCompatOp(AtomicSymbolCreator creator,
-                                int* is_np_op);
-/*!
  * \brief Create an NDArray from source sharing the same data chunk.
  * \param src source NDArray
  * \param out new NDArray sharing the same data chunck with src
@@ -2922,15 +2914,6 @@ MXNET_DLL int MXShallowCopyNDArray(NDArrayHandle src, NDArrayHandle* out);
  * \param out new Symbol sharing the same graph structure with src
  */
 MXNET_DLL int MXShallowCopySymbol(SymbolHandle src, SymbolHandle * out);
-/*!
- * \brief Checks if an output of CachedOp is from a numpy op.
- * \param handle CachedOp shared ptr
- * \param output_idx index of the output of the CachedOp
- * \param is_from_np_op indicator of whether the output is from a numpy op
- */
-MXNET_DLL int MXIsCachedOpOutputFromNumpyCompatOp(CachedOpHandle handle,
-                                                  int output_idx,
-                                                  int* is_from_np_op);
 
 /*!
   * \brief Push an asynchronous operation to the engine.

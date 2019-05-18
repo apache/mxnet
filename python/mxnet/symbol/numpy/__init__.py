@@ -15,13 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy module for numpy ops under mxnet.symbol."""
+"""Module for numpy ops under mxnet.symbol."""
 
 from . import random
 from . import linalg
-from . import ext
-from . import _op, _symbol
-from ._symbol import _NumpySymbol
+from . import _op, _symbol, _internal
+from ._symbol import _Symbol
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 from ._symbol import *  # pylint: disable=wildcard-import
