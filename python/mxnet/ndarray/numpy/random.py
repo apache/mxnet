@@ -15,6 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy.random namespace for operators used in Gluon APIs dispatched by F=ndarray module."""
+"""Namespace for operators used in Gluon dispatched by F=ndarray."""
 
 __all__ = []

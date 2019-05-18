@@ -48,6 +48,7 @@ from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
+from .symbol.numpy import _Symbol as np_symbol
 
 
 def default_context():
@@ -946,7 +947,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     input_shape = {k: v.shape for k, v in location.items()}
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
+    is_np_sym = True if isinstance(sym, np_symbol) else False
+    if is_np_sym:  # convert to np symbol for using element-wise multiplication
+        proj = proj.as_np_ndarray()
     out = sym * proj
+    if is_np_sym:  # convert to classic symbol so that make_loss can be used
+        out = out.as_classic_ndarray()
     out = mx.sym.make_loss(out)
 
     location = dict(list(location.items()) +
