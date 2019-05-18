@@ -15,9 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""module for registering numpy ops under mxnet.symbol.numpy."""
+"""Registering numpy ops."""
 
 from ...base import _init_np_op_module
 from ..register import _make_symbol_function
 
-_init_np_op_module('mxnet', 'symbol', _make_symbol_function)
+_init_np_op_module(root_module_name='mxnet', np_module_name='numpy',
+                   mx_module_name='symbol', make_op_func=_make_symbol_function)
+
+
+_init_np_op_module(root_module_name='mxnet', np_module_name='numpy._internal',
+                   mx_module_name='symbol', make_op_func=_make_symbol_function)

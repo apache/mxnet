@@ -25,14 +25,14 @@ from __future__ import division
 from array import array as native_array
 import ctypes
 import numpy as _np
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check_params
-from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types
+from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, set_module
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
-from ..ndarray import _internal as _nd_internal
+from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum']
 
@@ -73,15 +73,13 @@ def _np_ndarray_cls(handle, writable=True, stype=0):
 _set_np_ndarray_class(_np_ndarray_cls)
 
 
-class ndarray(NDArray):  # pylint: disable=invalid-name
+@set_module('mxnet.numpy')  # pylint: disable=invalid-name
+class ndarray(NDArray):
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
     (its byte-order, how many bytes it occupies in memory, whether it is an integer, a
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
-
-    def _is_np_compat(self):
-        return True
 
     @use_np_compat
     def __getitem__(self, item):
@@ -90,15 +88,15 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     @use_np_compat
     def __setitem__(self, key, value):
-        super(ndarray, self).__setitem__(key, value)
+        self.as_classic_ndarray().__setitem__(key, value)
 
     @use_np_compat
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_add(self, other)
+        if isinstance(other, ndarray):
+            return _npi.add(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_add_scalar(self, float(other))
+            return _npi.add_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -107,20 +105,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__iadd__(y) <=> x += y"""
         if not self.writable:
             raise ValueError('trying to add to a readonly ndarray')
-        if isinstance(other, NDArray):
-            return _nd_internal._np_add(self, other, out=self)
+        if isinstance(other, ndarray):
+            return _npi.add(self, other, out=self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_add_scalar(self, float(other), out=self)
+            return _npi.add_scalar(self, float(other), out=self)
         else:
             raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_subtract(self, other)
+        if isinstance(other, ndarray):
+            return _npi.subtract(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_subtract_scalar(self, float(other))
+            return _npi.subtract_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -129,30 +127,30 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """x.__isub__(y) <=> x -= y"""
         if not self.writable:
             raise ValueError('trying to subtract from a readonly ndarray')
-        if isinstance(other, NDArray):
-            return _nd_internal._np_subtract(self, other, out=self)
+        if isinstance(other, ndarray):
+            return _npi.subtract(self, other, out=self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_subtract_scalar(self, float(other), out=self)
+            return _npi.subtract_scalar(self, float(other), out=self)
         else:
             raise TypeError('type {} is not supported'.format(str(type(other))))
 
     @use_np_compat
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_subtract(other, self)
+        if isinstance(other, ndarray):
+            return _npi.subtract(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_rsubtract_scalar(self, float(other))
+            return _npi.rsubtract_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_multiply(self, other)
+        if isinstance(other, ndarray):
+            return _npi.multiply(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_multiply_scalar(self, float(other))
+            return _npi.multiply_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -190,20 +188,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @use_np_compat
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._true_divide(self, other)
+        if isinstance(other, ndarray):
+            return _npi.true_divide(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._true_divide_scalar(self, float(other))
+            return _npi.true_divide_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as divisor".format(str(type(other))))
 
     @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        if isinstance(other, NDArray):
-            return _nd_internal._true_divide(other, self)
+        if isinstance(other, ndarray):
+            return _npi.true_divide(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._rtrue_divide_scalar(self, float(other))
+            return _npi.rtrue_divide_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as dividend".format(str(type(other))))
 
@@ -214,20 +212,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @use_np_compat
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_mod(self, other)
+        if isinstance(other, ndarray):
+            return _npi.mod(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_mod_scalar(self, float(other))
+            return _npi.mod_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_mod(other, self)
+        if isinstance(other, ndarray):
+            return _npi.mod(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_rmod_scalar(self, float(other))
+            return _npi.rmod_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -238,20 +236,20 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
     @use_np_compat
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_power(self, other)
+        if isinstance(other, ndarray):
+            return _npi.power(self, other)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_power_scalar(self, float(other))
+            return _npi.power_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     @use_np_compat
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
-        if isinstance(other, NDArray):
-            return _nd_internal._np_power(other, self)
+        if isinstance(other, ndarray):
+            return _npi.power(other, self)
         elif isinstance(other, numeric_types):
-            return _nd_internal._np_rpower_scalar(self, float(other))
+            return _npi.rpower_scalar(self, float(other))
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
@@ -355,15 +353,41 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
 
     @use_np_compat
     def __repr__(self):
-        """Returns a string representation of the array."""
-        return '%s\n<%s shape=%s ctx=%s>' % (str(self.asnumpy()), self.__class__.__name__,
-                                             self.shape, self.context)
+        """Returns a string representation of the array using the following rules:
+        1. If the `ndarray` is a scalar tensor, only the string of the scalar is returned.
+        2. Else if the `ndarray` is allocated on cpu, the string of its numpy form, class name,
+        and shape is returned.
+        3. Else (the `ndarray` is allocated on gpu), the string of its numpy form, class name,
+        shape, and context is returned."""
+        array_str = str(self.asnumpy())
+        if self.ndim == 0:  # scalar tensor
+            return array_str
+        context = self.context
+        if context.device_type == 'gpu':
+            return '%s\n<%s shape=%s ctx=%s>' % (array_str, self.__class__.__name__, self.shape,
+                                                 context)
+        else:
+            return '%s\n<%s shape=%s>' % (array_str, self.__class__.__name__, self.shape)
 
     @use_np_compat
-    def attach_grad(self, grad_req='write', stype=None):
-        if stype is not None:
-            raise NotImplementedError('mxnet.numpy.ndarray currently does not support stype')
-        super(ndarray, self).attach_grad(grad_req, stype)
+    def attach_grad(self, grad_req='write'):  # pylint: disable=arguments-differ
+        """Attach a gradient buffer to this ndarray, so that `backward`
+        can compute gradient with respect to it.
+
+        Parameters
+        ----------
+        grad_req : {'write', 'add', 'null'}
+            How gradient will be accumulated.
+            - 'write': gradient will be overwritten on every backward.
+            - 'add': gradient will be added to existing value on every backward.
+            - 'null': do not compute gradient for this NDArray.
+        """
+        grad = _mx_np_op.zeros_like(self)  # pylint: disable=undefined-variable
+        grad_req = _GRAD_REQ_MAP[grad_req]
+        check_call(_LIB.MXAutogradMarkVariables(
+            1, ctypes.pointer(self.handle),
+            ctypes.pointer(mx_uint(grad_req)),
+            ctypes.pointer(grad.handle)))
 
     @property
     def grad(self):
@@ -412,6 +436,43 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         self.copyto(res)
         return res
 
+    @use_np_compat
+    def copyto(self, other):
+        """Copies the value of this array to another array.
+
+        If ``other`` is a ``ndarray`` object, then ``other.shape`` and
+        ``self.shape`` should be the same. This function copies the value from
+        ``self`` to ``other``.
+
+        If ``other`` is a context, a new ``NDArray`` will be first created on
+        the target context, and the value of ``self`` is copied.
+
+        Parameters
+        ----------
+        other : ndarray or Context
+            The destination array or context.
+
+        Returns
+        -------
+        ndarray
+            The copied array. If ``other`` is an ``ndarray``, then the return value
+            and ``other`` will point to the same ``ndarray``.
+
+        Examples
+        --------
+        >>> x = np.ones((2,3))
+        >>> y = np.zeros((2,3), mx.gpu(0))
+        >>> z = x.copyto(y)
+        >>> z is y
+        True
+        >>> y.asnumpy()
+        array([[ 1.,  1.,  1.],
+               [ 1.,  1.,  1.]], dtype=float32)
+        """
+        if isinstance(other, ndarray):
+            other = other.as_classic_ndarray()
+        return self.as_classic_ndarray().copyto(other).as_np_ndarray()
+
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute as_scalar')
 
@@ -435,7 +496,7 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         if order != 'C':
             raise NotImplementedError('reshape only supports C-order,'
                                       ' while received {}'.format(order))
-        return _mx_np_op.reshape(self, shape=shape, order=order)
+        return _mx_np_op.reshape(self, newshape=shape, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -1117,15 +1178,11 @@ class ndarray(NDArray):  # pylint: disable=invalid-name
         """Number of elements in the array."""
         return super(ndarray, self).size
 
-    @property
-    @use_np_compat
-    def stype(self):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute stype')
-
     def tostype(self, stype):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tostype')
 
 
+@set_module('mxnet.numpy')
 @use_np_compat
 def empty(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, without initializing entries.
@@ -1158,6 +1215,7 @@ def empty(shape, dtype=None, **kwargs):
     return ndarray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
 
+@set_module('mxnet.numpy')
 @use_np_compat
 def array(object, dtype=None, **kwargs):
     """
@@ -1169,10 +1227,7 @@ def array(object, dtype=None, **kwargs):
         An array, any object exposing the array interface, an object whose
         __array__ method returns an array, or any (nested) sequence.
     dtype : data-type, optional
-        The desired data-type for the array.  If not given, then the type will
-        be determined as the minimum type required to hold the objects in the
-        sequence. This argument can only be used to 'upcast' the array.  For
-        downcasting, use the .astype(t) method.
+        The desired data-type for the array. Default is `float32`.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -1186,18 +1241,19 @@ def array(object, dtype=None, **kwargs):
     ctx = kwargs.get('ctx', current_context())
     if ctx is None:
         ctx = current_context()
+    if dtype is None:
+        dtype = _np.float32
     if not isinstance(object, (ndarray, NDArray, _np.ndarray)):
         try:
             object = _np.array(object, dtype=dtype)
         except:
             raise TypeError('source array must be an array like object')
-    if dtype is None:
-        dtype = object.dtype
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     ret[:] = object
     return ret
 
 
+@set_module('mxnet.numpy')
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
@@ -1223,6 +1279,7 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     return _mx_nd_np.zeros(shape, dtype, **kwargs)
 
 
+@set_module('mxnet.numpy')
 def ones(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
@@ -1248,6 +1305,7 @@ def ones(shape, dtype=None, **kwargs):
     return _mx_nd_np.ones(shape, dtype, **kwargs)
 
 
+@set_module('mxnet.numpy')
 def maximum(x1, x2, out=None):
     """Returns element-wise maximum of the input arrays with broadcasting.
 
@@ -1264,6 +1322,7 @@ def maximum(x1, x2, out=None):
     return _mx_nd_np.maximum(x1, x2, out=out)
 
 
+@set_module('mxnet.numpy')
 def minimum(x1, x2, out=None):
     """Returns element-wise minimum of the input arrays with broadcasting.
 

@@ -15,18 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy namespace for operators used in Gluon APIs dispatched by F=ndarray module."""
+"""Namespace for numpy operators used in Gluon dispatched by F=ndarray."""
 
 from __future__ import absolute_import
 import numpy as _np
-from ...base import _sanity_check_params, use_np_compat, numeric_types
+from ...base import _sanity_check_params, use_np_compat, numeric_types, set_module
 from ...context import current_context
-from .. import _internal
+from . import _internal as _npi
 from ..ndarray import NDArray
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum']
 
 
+@set_module('mxnet.ndarray.numpy')
 @use_np_compat
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
@@ -55,9 +56,10 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
-    return _internal._np_zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    return _npi.zeros(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
 
 
+@set_module('mxnet.ndarray.numpy')
 @use_np_compat
 def ones(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with ones.
@@ -86,7 +88,7 @@ def ones(shape, dtype=None, **kwargs):
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
-    return _internal._np_ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+    return _npi.ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
@@ -138,6 +140,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
 #pylint: enable= too-many-arguments, no-member, protected-access
 
 
+@set_module('mxnet.ndarray.numpy')
 @use_np_compat
 def maximum(x1, x2, out=None):
     """Returns element-wise maximum of the input arrays with broadcasting.
@@ -152,10 +155,10 @@ def maximum(x1, x2, out=None):
     -------
     out : mxnet.numpy.ndarray or scalar
         The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
-    return _ufunc_helper(x1, x2, _internal._np_maximum, _np.maximum,
-                         _internal._np_maximum_scalar, None, out)
+    return _ufunc_helper(x1, x2, _npi.maximum, _np.maximum, _npi.maximum_scalar, None, out)
 
 
+@set_module('mxnet.ndarray.numpy')
 @use_np_compat
 def minimum(x1, x2, out=None):
     """Returns element-wise minimum of the input arrays with broadcasting.
@@ -170,5 +173,4 @@ def minimum(x1, x2, out=None):
     -------
     out : mxnet.numpy.ndarray or scalar
         The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
-    return _ufunc_helper(x1, x2, _internal._np_minimum, _np.minimum,
-                         _internal._np_minimum_scalar, None, out)
+    return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)

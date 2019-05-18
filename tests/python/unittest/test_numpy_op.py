@@ -19,7 +19,7 @@
 from __future__ import absolute_import
 import numpy as _np
 import mxnet as mx
-from mxnet import numpy as np
+from mxnet import np, npe
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient
@@ -27,7 +27,7 @@ from common import with_seed
 import random
 
 
-@mx.use_np_compat
+@np.use_np_compat
 @with_seed()
 def test_np_sum():
     class TestSum(HybridBlock):
@@ -38,7 +38,7 @@ def test_np_sum():
             self._keepdims = keepdims
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.numpy.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+            return F.np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     def is_int(dtype):
         return 'int' in dtype
@@ -63,6 +63,7 @@ def test_np_sum():
                             x = mx.nd.array(x)
                         else:
                             x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
+                        x = x.as_np_ndarray()
                         x.attach_grad()
                         expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
                         expected_ret = expected_ret.astype(dtype)
@@ -77,8 +78,8 @@ def test_np_sum():
 
                         # test numeric
                         if itype == 'float32' and dtype == 'float32':
-                            x_sym = mx.sym.Variable("x")
-                            mx_sym = mx.sym.numpy.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims)
+                            x_sym = mx.sym.Variable("x").as_np_ndarray()
+                            mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_classic_ndarray()
                             check_numeric_gradient(mx_sym, [x], numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
 
                         # test imperative
@@ -87,10 +88,11 @@ def test_np_sum():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@mx.use_np_compat
+@np.use_np_compat
 @with_seed()
 def test_np_dot():
     shapes = [
+        ((3, 0), (0, 4)),
         ((3,), (3,)),        # Case 1
         ((3, 4), (4, 5)),    # Case 2
         ((), ()),            # Case 3
@@ -102,7 +104,6 @@ def test_np_dot():
     eps = 1e-3
 
     for shape_a, shape_b in shapes:
-        print(shape_a, shape_b)
         np_a = _np.random.uniform(-1.0, 1.0, shape_a)
         np_a[abs(np_a) < eps] = 2 * eps;
         np_b = _np.random.uniform(-1.0, 1.0, shape_b)
@@ -110,12 +111,12 @@ def test_np_dot():
         a = mx.nd.array(np_a)
         b = mx.nd.array(np_b)
         np_res = _np.dot(np_a, np_b)
-        mx_res = np.dot(a, b)
+        mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
         assert mx_res.shape == np_res.shape
         assert_almost_equal(np_res, mx_res.asnumpy(), rtol=1e-5, atol=1e-5)
         mx_a = mx.sym.Variable("a")
         mx_b = mx.sym.Variable("b")
-        mx_sym = mx.sym.numpy.dot(mx_a, mx_b)
+        mx_sym = mx.sym.np.dot(mx_a.as_np_ndarray(), mx_b.as_np_ndarray()).as_classic_ndarray()
         check_numeric_gradient(mx_sym, {"a": a, "b": b}, numeric_eps=eps, rtol=1e-2, atol=1e-3)
 
     bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6, ))]
@@ -124,13 +125,13 @@ def test_np_dot():
         a = mx.nd.array(random.random()) if len(shape_a) == 0 else rand_ndarray(shape_a)
         b = mx.nd.array(random.random()) if len(shape_b) == 0 else rand_ndarray(shape_b)
         try:
-            mx_res = np.dot(a, b)
+            mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
         except mx.base.MXNetError:
             continue
         assert False
 
 
-@mx.use_np_compat
+@np.use_np_compat
 @with_seed()
 def test_np_mean():
     class TestMean(HybridBlock):
@@ -141,7 +142,7 @@ def test_np_mean():
             self._keepdims = keepdims
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.numpy.mean(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+            return F.np.mean(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     def is_int(dtype):
         return 'int' in dtype
@@ -167,6 +168,7 @@ def test_np_mean():
                             x = mx.nd.array(x, dtype=itype)
                         else:
                             x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
+                        x = x.as_np_ndarray()
                         x.attach_grad()
                         expected_ret = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
                         expected_ret = expected_ret.astype(dtype)
@@ -182,8 +184,8 @@ def test_np_mean():
 
                         # test numeric
                         if itype == 'float32' and dtype == 'float32':
-                            x_sym = mx.sym.Variable("x")
-                            mx_sym = mx.sym.numpy.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims)
+                            x_sym = mx.sym.Variable("x").as_np_ndarray()
+                            mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_classic_ndarray()
                             check_numeric_gradient(mx_sym, [x], numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
 
                         # test imperative
@@ -193,12 +195,12 @@ def test_np_mean():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_np_transpose():
     # TODO(junwu): Add more test cases
-    data = mx.sym.var('a')
-    ret = mx.sym.np.transpose(data)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    data = mx.sym.var('a').as_np_ndarray()
+    ret = data.transpose()
+    assert type(ret) == mx.sym.np._Symbol
 
     dtypes = ['float32', 'int32']
     for dtype in dtypes:
@@ -223,44 +225,44 @@ def test_np_transpose():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_relu():
     # TODO(junwu): Add more test cases
-    data = mx.sym.var('data')
-    ret = mx.sym.np.ext.relu(data)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    data = mx.sym.var('data').as_np_ndarray()
+    ret = mx.sym.npe.relu(data)
+    assert type(ret) == mx.sym.np._Symbol
 
     shapes = [(), (0, 2, 0)]
     shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
     for shape in shapes:
         data = np.array(_np.random.uniform(size=shape).astype('float32'))
-        ret = np.ext.relu(data)
+        ret = npe.relu(data)
         assert type(ret) == np.ndarray
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_sigmoid():
     # TODO(junwu): Add more test cases
-    data = mx.sym.var('data')
-    ret = mx.sym.np.ext.sigmoid(data)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    data = mx.sym.var('data').as_np_ndarray()
+    ret = mx.sym.npe.sigmoid(data)
+    assert type(ret) == mx.sym.np._Symbol
 
     shapes = [(), (0, 2, 0)]
     shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
     for shape in shapes:
         data = np.array(_np.random.uniform(size=shape).astype('float32'))
-        ret = np.ext.sigmoid(data)
+        ret = npe.sigmoid(data)
         assert type(ret) == np.ndarray
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_np_reshape():
     # TODO(junwu): Add more test cases
-    data = mx.sym.var('a')
-    ret = mx.sym.np.reshape(data, newshape=())
-    assert type(ret) == mx.sym.np._NumpySymbol
+    data = mx.sym.var('a').as_np_ndarray()
+    ret = data.reshape(shape=())
+    assert type(ret) == mx.sym.np._Symbol
 
     data = np.ones((1, 1, 1))
     ret = np.reshape(data, ())
@@ -271,12 +273,12 @@ def test_np_reshape():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_np_maximum():
     # TODO(junwu): Add more test cases
-    x1, x2 = mx.sym.var('x1'), mx.sym.var('x2')
+    x1, x2 = mx.sym.var('x1').as_np_ndarray(), mx.sym.var('x2').as_np_ndarray()
     ret = mx.sym.np.maximum(x1, x2)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    assert type(ret) == mx.sym.np._Symbol
 
     def check_maximum(x1, x2):
         mx_out = np.maximum(x1, x2)
@@ -292,12 +294,12 @@ def test_np_maximum():
 
 
 @with_seed()
-@mx.use_np_compat
+@np.use_np_compat
 def test_np_minimum():
     # TODO(junwu): Add more test cases
-    x1, x2 = mx.sym.var('x1'), mx.sym.var('x2')
+    x1, x2 = mx.sym.var('x1').as_np_ndarray(), mx.sym.var('x2').as_np_ndarray()
     ret = mx.sym.np.minimum(x1, x2)
-    assert type(ret) == mx.sym.np._NumpySymbol
+    assert type(ret) == mx.sym.np._Symbol
 
     def check_minimum(x1, x2):
         mx_out = np.minimum(x1, x2)
