@@ -26,7 +26,7 @@ import ctypes
 from ..base import _LIB
 from ..base import c_str_array, c_handle_array
 from ..base import NDArrayHandle, CachedOpHandle
-from ..base import check_call, _is_np_compat_op
+from ..base import check_call
 
 
 class NDArrayBase(object):
@@ -102,7 +102,6 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op):
     create_ndarray_fn = _np_ndarray_cls if is_np_op else _ndarray_cls
     if original_output is not None:
         return original_output
-    create_ndarray_fn = _np_ndarray_cls if _is_np_compat_op(handle) else _ndarray_cls
     if num_output.value == 1:
         return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
                                  stype=out_stypes[0])

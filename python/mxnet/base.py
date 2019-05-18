@@ -748,6 +748,7 @@ _NP_EXT_OP_SUBMODULE_LIST = ['_image_']
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 
+_NP_EXT_OP_PREFIX = '_npe_'
 
 def _is_np_op(op_name):
     return op_name.startswith(_NP_OP_PREFIX) or op_name.startswith(_NP_EXT_OP_PREFIX)\

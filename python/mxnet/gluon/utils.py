@@ -444,7 +444,6 @@ def shape_is_known(shape):
                                             "received {}".format(unknown_dim_size, dim_size)
     return True
 
-
 def _check_same_symbol_type(symbols):
     """Check whether all the symbols in the list are of the same type.
     Raise type error if the types are different. Return the class of
