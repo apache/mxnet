@@ -33,7 +33,7 @@ from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
-from .utils import _indent, _brief_print_list, HookHandle
+from .utils import _indent, _brief_print_list, HookHandle, _check_same_symbol_type
 from .. import numpy as _mx_np
 
 
@@ -754,7 +754,7 @@ class HybridBlock(Block):
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
-            self._cached_graph = inputs, symbol.Group(out)
+            self._cached_graph = inputs, symbol.Group(out, _check_same_symbol_type(out))
 
         return self._cached_graph
 
@@ -1063,7 +1063,7 @@ class SymbolBlock(HybridBlock):
 
         syms, self._in_format = _flatten(inputs, "input")
         out, self._out_format = _flatten(outputs, "output")
-        out = symbol.Group(out)
+        out = symbol.Group(out, _check_same_symbol_type(out))
 
         input_names = set()
         for i in syms:

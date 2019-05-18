@@ -15,6 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""numpy.ext namespace for operators used in Gluon APIs dispatched by F=ndarray module."""
+"""Registering numpy_extension ops."""
 
-__all__ = []
+from ...base import _init_np_op_module
+from ..register import _make_ndarray_function
+
+
+_init_np_op_module(root_module_name='mxnet', np_module_name='numpy_extension',
+                   mx_module_name='ndarray', make_op_func=_make_ndarray_function)
