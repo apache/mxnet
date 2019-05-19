@@ -7671,6 +7671,7 @@ def test_op_all_names_monitor():
     check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
 
 @with_seed()
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
 def test_activation():
     shapes = [(9,), (9, 10), (9, 10, 10), (1, 9, 10, 10)]
     dtype_l = [np.float64, np.float32, np.float16]
@@ -8178,6 +8179,34 @@ def test_split_v2():
     check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)
     out_grad = [np.ones(arr.shape) for arr in np_out]
     check_symbolic_backward(sym, {"data": mx_data}, out_grad, [np.concatenate(out_grad, axis=axis)])
+
+
+@with_seed()
+def test_moments():
+    dim = random.randint(2, 5)
+    shape = rand_shape_nd(dim, dim=5)
+    axes = [i for i in range(dim)]
+    test_dims = random.sample(axes, random.randint(1, dim))
+    test_axes = tuple(sorted(test_dims))
+    np_a = np.random.uniform(-1.0, 1.0, shape)
+    a = mx.nd.array(np_a)
+    for keepdims in [True, False]:
+        eps = 1e-3
+        np_a[abs(np_a) < eps] = 2 * eps
+        np_mean = np.mean(np_a, axis=test_axes, keepdims=keepdims)
+        np_var = np.var(np_a, axis=test_axes, keepdims=keepdims)
+        mx_mean, mx_var = mx.nd.moments(a, keepdims=keepdims, axes=test_axes)
+        N = np_a.size / np_mean.size
+        mx_sym = mx.sym.Variable("data")
+        mx_moments = mx.sym.moments(mx_sym, axes=test_axes, keepdims=keepdims)
+        mx_test_sym = mx.sym.elemwise_add(mx_moments[0], mx_moments[1])
+        if len(np_mean.shape) == 0:
+            np_mean = np_mean.reshape(mx_mean.shape)
+            np_var = np_var.reshape(mx_var.shape)
+        assert np_mean.shape == mx_mean.shape
+        assert np_var.shape == mx_var.shape
+        check_symbolic_forward(mx_test_sym, [np_a], [np_mean + np_var], rtol=1e-3, atol=1e-5)
+        check_numeric_gradient(mx_test_sym, [np_a], numeric_eps=eps, rtol=1e-2, atol=2e-4)
 
 
 @with_seed()
