@@ -1687,10 +1687,8 @@ def test_zero_from_numpy():
             mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
     np_array = arrays[0]
     mx_array = mx.nd.from_numpy(np_array)
-    try:
-        np_array[2, 1] = 0
-    except ValueError:
-        pass
+    assertRaises(ValueError, np_array.__setitem__, (2, 1), 0)
+
     mx_array[2, 1] = 100
     mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
     np_array = np.array([[1, 2], [3, 4], [5, 6]]).transpose()
