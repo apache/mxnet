@@ -622,7 +622,7 @@ This limitations of this experimental feature are:
 
 - This feature will only run on the CPU, even if you're using a GPU-enabled build of MXNet. 
 
-- [MXNet Graph Optimization and Quantization Technical Information and Performance Details](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
+- [MXNet Graph Optimization and Quantization Technical Information and Performance Details](https://medium.com/apache-mxnet/model-quantization-for-production-level-neural-network-inference-f54462ebba05).
 
 <h2 id="7">Quantization and Inference with INT8</h2>
 
@@ -637,4 +637,3 @@ Benefiting from Intel MKL-DNN, MXNet built with Intel MKL-DNN brings outstanding
 - For questions or support specific to MKL, visit the [Intel MKLDNN](https://github.com/intel/mkl-dnn) website.
 
 - If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN).
->>>>>>> 3d6646a4984839a5f37f8fa4f2a66880a303f1a5
