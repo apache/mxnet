@@ -4212,7 +4212,12 @@ def dl_managed_tensor_deleter(dl_managed_tensor_handle):
 
 
 def from_numpy(ndarray, zero_copy=True):
-    """Returns an MXNet's NDArray backed by Numpy's ndarray.
+    """Returns an MXNet's ndarray backed by numpy's ndarray.
+    When `zero_copy` is set to be true,
+    this API consumes numpy's ndarray and produces MXNet's ndarray
+    without having to copy the content. In this case, we disallow
+    users to modify the given numpy ndarray, and it is suggested
+    not to read the numpy ndarray as well for internal correctness.
 
     Parameters
     ----------
