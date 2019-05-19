@@ -197,8 +197,8 @@ int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
 // LAPACK documentation for further details.
 // Note:
 // - A is input and output parameter (overwritten by LU)
-// - Param check_singular is only useful in cpu version.
-//   If check_singular is false, don't throw error when A is in-convertible matrix.
+// - Param check_singular is only useful in cpu version. If check_singular is false,
+//   don't throw error when A is non-invertible matrix.
 
 template<typename xpu, typename DType>
 void linalg_getrf(const Tensor<xpu, 2, DType>& A,
@@ -230,7 +230,7 @@ template<typename xpu, typename DType>
 void linalg_batch_getri(const Tensor<xpu, 3, DType>& A,
                         const Tensor<xpu, 3, DType>& LU,
                         const Tensor<xpu, 2, int>& pivot,
-                        Stream<gpu> *s = 0);
+                        Stream<xpu> *s = 0);
 
 //////////////////////////////// INVERSE ////////////////////////////////////////////
 
@@ -240,6 +240,18 @@ template<typename xpu, typename DType>
 void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
                           const Tensor<xpu, 3, DType>& B,
                           const mxnet::OpContext& ctx);
+
+//////////////////////////////// DET ////////////////////////////////////////////
+
+// CPU/GPU-versions of helper functions to compute matrix determinant
+// Compute matrix inversion with LU and pivot using temp workspace,
+// the result stores back to LU
+template<typename xpu, typename DType>
+void linalg_batch_det_helper(const Tensor<xpu, 3, DType>& LU,
+                             const Tensor<xpu, 2, int>& pivot,
+                             const Tensor<xpu, 1, DType>& det,
+                             const Tensor<xpu, 3, DType>& temp,
+                             const mxnet::OpContext& ctx);
 
 #include "linalg_impl.h"
 

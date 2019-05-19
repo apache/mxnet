@@ -1500,4 +1500,61 @@ LINALG_GPU_BATCH_INVERSE(gpu, double)
 
 #endif  // __CUDACC__
 
+//////////////////////////////// DET ////////////////////////////////////////////
+
+// CPU/GPU-versions of helper functions to compute matrix determinant
+
+#define LINALG_CPU_BATCH_DET_HELPER(xpu, DType) \
+template<> inline \
+void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
+                                         const Tensor<xpu, 2, int>& pivot, \
+                                         const Tensor<xpu, 1, DType>& det, \
+                                         const Tensor<xpu, 3, DType>& temp, \
+                                         const mxnet::OpContext& ctx) { \
+  Stream<xpu> *s = ctx.get_stream<xpu>(); \
+  int lwork(linalg_getri_workspace_query(LU[0], s)); \
+  Tensor<xpu, 1, DType> work = ctx.requested[0].\
+    get_space_typed<xpu, 1, DType>(Shape1(lwork), s); \
+  for (index_t i = 0; i < LU.size(0); ++i) { \
+    if (det[i] != DType(0)) { \
+      linalg_getri(LU[i], pivot[i], work, s); \
+    } \
+  } \
+}
+
+LINALG_CPU_BATCH_DET_HELPER(cpu, float)
+LINALG_CPU_BATCH_DET_HELPER(cpu, double)
+
+// GETRF and GETRI only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
+#define LINALG_GPU_BATCH_DET_HELPER(xpu, DType) \
+template<> inline \
+void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
+                                         const Tensor<xpu, 2, int>& pivot, \
+                                         const Tensor<xpu, 1, DType>& det, \
+                                         const Tensor<xpu, 3, DType>& temp, \
+                                         const mxnet::OpContext& ctx) { \
+  Stream<xpu> *s = ctx.get_stream<xpu>(); \
+  linalg_batch_getri(temp, LU, pivot, s); \
+  Copy(LU, temp, s); \
+}
+
+#else
+
+#define LINALG_GPU_BATCH_DET_HELPER(xpu, DType) \
+template<> inline \
+void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
+                                         const Tensor<xpu, 2, int>& pivot, \
+                                         const Tensor<xpu, 1, DType>& det, \
+                                         const Tensor<xpu, 3, DType>& temp, \
+                                         const mxnet::OpContext& ctx) { \
+  LOG(FATAL) << "gpu matrix inversion requires CUDA version >= 8.0!"; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
+LINALG_GPU_BATCH_DET_HELPER(gpu, float)
+LINALG_GPU_BATCH_DET_HELPER(gpu, double)
+
 #endif  // MXNET_OPERATOR_LINALG_IMPL_H_

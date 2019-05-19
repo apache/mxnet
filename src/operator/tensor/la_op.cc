@@ -975,7 +975,16 @@ Examples::
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, det>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_det"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+
+NNVM_REGISTER_OP(_backward_linalg_det)
+.set_num_inputs(6)
+.set_num_outputs(1)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetBackward<cpu, 1, det_backward>);
 
 NNVM_REGISTER_OP(_linalg_logdet)
 .add_alias("linalg_logdet")

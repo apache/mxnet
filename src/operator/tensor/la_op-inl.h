@@ -477,7 +477,7 @@ struct SignedLogDet {
     int *pivot_mat = pivot + i * N;
     DType *LU_mat = LU + i * N * N;
     for (int j = 0; j < N; ++j) {
-      changes += (pivot_mat[j] == (j + 1));
+      changes += (pivot_mat[j] != (j + 1));
       DType diag = LU_mat[j * (N + 1)];
       diag_sign *= ((DType(0) < diag) - (diag < DType(0)));
       diag_logsum += std::log(std::abs(diag));
@@ -898,6 +898,27 @@ struct inverse_backward {
       .get_space_typed<xpu, 3, DType>(A.shape_, s);
     gemm2::op(dA, A, temp, DType(1), false, true, s);
     gemm2::op(A, temp, dB, DType(-1), true, false, s);
+  }
+};
+
+// Backward of det(A) is derived from Jacobi's formula.
+// The closed form solution is pretty easy when A is invertible.
+// TODO(arcadiaphy) add implementation for non-invertible case
+struct det_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 1, DType>& ddet,
+                 const Tensor<xpu, 1, DType>& det,
+                 const Tensor<xpu, 3, DType>& LU,
+                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 3, DType>& dA,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    // compute inverse(A) and stores it to LU
+    linalg_batch_det_helper(LU, pivot, det, dA, ctx);
+    const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
+      Shape3(det.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
+      transpose(LU, Shape3(0, 2, 1));
   }
 };
 
