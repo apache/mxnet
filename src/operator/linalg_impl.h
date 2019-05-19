@@ -1353,6 +1353,7 @@ template<typename xpu, typename DType>
 int linalg_getri_workspace_query(const Tensor<xpu, 2, DType>& A, \
                                  Stream<cpu> *s) {
   LOG(FATAL) << "it only takes float or double Tensor";
+  return 0;
 }
 
 // Query workspace for "getri"
@@ -1400,7 +1401,7 @@ void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
                                   LU_ptr, LU.dptr_, \
                                   LU.size(1) * LU.size(2)); \
   CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), A.size(1), \
-                            const_cast<const DType **>(LU_ptr), B.size(2), \
+                            const_cast<const DType **>(LU_ptr), LU.size(2), \
                             const_cast<const int *>(pivot.dptr_), A_ptr, A.size(2), \
                             static_cast<int *>(info.dptr), A.size(0))) \
   Storage::Get()->Free(info); \
@@ -1468,18 +1469,18 @@ void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
                                       const mxnet::OpContext& ctx) { \
   Stream<xpu> *s = ctx.get_stream<xpu>(); \
   int pivot_size = sizeof(int) * A.size(0) * A.size(1); \
-  int matrix_size = sizeof(DType) * A.Size(); \
+  int matrix_size = sizeof(DType) * A.shape_.Size(); \
   int workspace_size = (pivot_size + matrix_size + \
     sizeof(DType) - 1) / sizeof(DType); \
   Tensor<xpu, 1, DType> workspace = ctx.requested[0].\
     get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s); \
   const Tensor<xpu, 2, int> pivot(reinterpret_cast<int *>(workspace.dptr_), \
                                   Shape2(A.size(0), A.size(1))); \
-  const Tensor<xpu, 3, DType> temp(reinterpret_cast<DType *>(pivot.dptr_ + pivot.MSize()), \
-                                   A.shape_); \
-  Copy(temp, A, s); \
-  linalg_batch_getrf(temp, pivot, true, s); \
-  linalg_batch_getri(A, temp, pivot, s); \
+  const Tensor<xpu, 3, DType> LU(reinterpret_cast<DType *>(pivot.dptr_ + pivot.MSize()), \
+                                 A.shape_); \
+  Copy(LU, B, s); \
+  linalg_batch_getrf(LU, pivot, true, s); \
+  linalg_batch_getri(A, LU, pivot, s); \
 }
 
 #else
