@@ -458,17 +458,15 @@ struct inverse {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 3, DType>& A,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    // Reserve workspace (size determined by query)
-    int lwork(linalg_getri_workspace_query(A, s));
-    Tensor<xpu, 1, DType> work = ctx.requested[0]
-      .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
     // Since inverse(A) = trans(inverse(trans(A))), so we don't need to transpose
     // A even if we are using the col-major version of getrf and getri routines.
-    linalg_batch_inverse(A, B, work, s);
+    linalg_batch_inverse(A, B, ctx);
   }
 };
 
+// partial pivoting LU decomposition: A = PLU, so det(A) = det(P)det(L)det(U)
+// det(P) depends on number of row changes in P, det(L) = 1, det(U) = prod(diag(U))
+// this kernel computes sign(det(A)), log(abs(det(A)))
 struct SignedLogDet {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, int N, int* pivot,
@@ -478,7 +476,7 @@ struct SignedLogDet {
     DType diag_logsum(0);
     int *pivot_mat = pivot + i * N;
     DType *LU_mat = LU + i * N * N;
-    for ( int j = 0; j < N; ++j ) {
+    for (int j = 0; j < N; ++j) {
       changes += (pivot_mat[j] == (j + 1));
       DType diag = LU_mat[j * (N + 1)];
       diag_sign *= ((DType(0) < diag) - (diag < DType(0)));
@@ -488,6 +486,7 @@ struct SignedLogDet {
     logdet[i] = diag_logsum;
   }
 };
+
 // det = det(A), LU and pivot store the LU decomposition output which will be
 // used in computing gradient
 struct det {
@@ -499,14 +498,50 @@ struct det {
     Tensor<xpu, 1, DType> sign = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(det.shape_, s);
     Copy(LU, A, s);
-    for(index_t i = 0; i < A.size(0); ++i) {
-      linalg_getrf(LU[i], pivot[i], s);
-    }
+    // since det(A) = det(trans(A)), so we'll use col-major blas routines here
+    linalg_batch_getrf(LU, pivot, false, s);
     using namespace mxnet_op;
     using namespace mshadow::expr;
     Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
                                       LU.dptr_, sign.dptr_, det.dptr_);
     const_cast<Tensor<xpu, 1, DType>&>(det) = sign * F<mshadow_op::exp>(det);
+  }
+};
+
+// logdet = log(det(A))
+struct logdet {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& logdet,
+                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, int>& pivot,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 1, DType> sign = ctx.requested[0]
+      .get_space_typed<xpu, 1, DType>(logdet.shape_, s);
+    Copy(LU, A, s);
+    linalg_batch_getrf(LU, pivot, false, s);
+    using namespace mxnet_op;
+    using namespace mshadow::expr;
+    Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
+                                      LU.dptr_, sign.dptr_, logdet.dptr_);
+    const_cast<Tensor<xpu, 1, DType>&>(logdet) = F<mshadow_op::log>(sign) + logdet;
+  }
+};
+
+// sign = sign(det(A))
+// logdet = log(abs(det(A)))
+struct slogdet {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& sign,
+                 const Tensor<xpu, 1, DType>& logdet, const Tensor<xpu, 3, DType>& LU,
+                 const Tensor<xpu, 2, int>& pivot, const OpContext& ctx,
+                 const nnvm::NodeAttrs& attrs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Copy(LU, A, s);
+    linalg_batch_getrf(LU, pivot, false, s);
+    using namespace mxnet_op;
+    using namespace mshadow::expr;
+    Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
+                                      LU.dptr_, sign.dptr_, logdet.dptr_);
   }
 };
 

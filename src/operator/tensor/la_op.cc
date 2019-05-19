@@ -961,20 +961,101 @@ Examples::
 
    // Batch matrix inversion
    A = [[[1., 4.], [2., 3.]],
-        [[1., 3.], [2., 4.]]]
-   det(A) = [-5., -2.]
+        [[2., 3.], [1., 4.]]]
+   det(A) = [-5., 5.]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(3)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
-  { return std::vector<std::string>{"A", "LU", "pivot"}; })
+  { return std::vector<std::string>{"A"}; })
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) {
   return 1; })
-.set_attr<mxnet::FInferShape>("FInferShape", DetShape)
-.set_attr<nnvm::FInferType>("FInferType", DetType)
+.set_attr<mxnet::FInferShape>("FInferShape", DetShape<1>)
+.set_attr<nnvm::FInferType>("FInferType", DetType<1>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
-.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, det>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, det>)
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+
+NNVM_REGISTER_OP(_linalg_logdet)
+.add_alias("linalg_logdet")
+.describe(R"code(Compute the log determinant of a matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, *A* is a square matrix. We compute:
+
+  *out* = *log(det(A))*
+
+If *n>2*, *logdet* is performed separately on the trailing two dimensions
+for all inputs (batch mode).
+
+.. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+   // Single matrix inversion
+   A = [[2., 3.], [1., 4.]]
+   logdet(A) = [1.609438]
+
+   // Batch matrix inversion
+   A = [[[2., 3.], [1., 4.]],
+        [[1., 2.], [2., 4.]],
+        [[1., 2.], [4., 3.]]]
+   logdet(A) = [1.609438, -inf, nan]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(3)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; })
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) {
+  return 1; })
+.set_attr<mxnet::FInferShape>("FInferShape", DetShape<1>)
+.set_attr<nnvm::FInferType>("FInferType", DetType<1>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, logdet>)
+.add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
+
+NNVM_REGISTER_OP(_linalg_slogdet)
+.add_alias("linalg_slogdet")
+.describe(R"code(Compute the sign and log of the determinant of a matrix.
+Input is a tensor *A* of dimension *n >= 2*.
+
+If *n=2*, *A* is a square matrix. We compute:
+
+  *sign* = *sign(det(A))*
+  *logdet* = *log(abs(det(A)))*
+
+If *n>2*, *slogdet* is performed separately on the trailing two dimensions
+for all inputs (batch mode).
+
+.. note:: The operator supports float32 and float64 data types only.
+
+Examples::
+
+   // Single matrix inversion
+   A = [[2., 3.], [1., 4.]]
+   sign, logdet = slogdet(A)
+   sign = [1.]
+   logdet = [1.609438]
+
+   // Batch matrix inversion
+   A = [[[2., 3.], [1., 4.]],
+        [[1., 2.], [2., 4.]],
+        [[1., 2.], [4., 3.]]]
+   sign, logdet = slogdet(A)
+   sign = [1., 0., -1.]
+   logdet = [1.609438, -inf, 1.609438]
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(4)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs)
+  { return std::vector<std::string>{"A"}; })
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) {
+  return 2; })
+.set_attr<mxnet::FInferShape>("FInferShape", DetShape<2>)
+.set_attr<nnvm::FInferType>("FInferType", DetType<2>)
+.set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 2, slogdet>)
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 }  // namespace op
