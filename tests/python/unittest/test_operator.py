@@ -4303,47 +4303,108 @@ def test_cast():
             assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), rtol=1e-3, atol=1e-5)
             assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), rtol=1e-3, atol=1e-5)
 
-
-# Test requires all platforms to round float32->float16 with same round-to-nearest-even policy.
-@with_seed()
-def test_cast_float32_to_float16():
+def get_cast_op_data():
     FP16_FRACTION_BITS = 10
     FP32_FRACTION_BITS = 23
     FP32_EXP_MIN = -126
     FP32_EXP_MAX = 127
     # generate test cases in the vicinity of representable float16 mantissas
     # and mid-way between them, but over the full range of float32 exponents.
-    def get_data():
-        for sign_bit in [0, 1]:
-            for exponent in range(FP32_EXP_MIN - FP32_FRACTION_BITS - 1, FP32_EXP_MAX + 2):
-                denominator = 2**(FP16_FRACTION_BITS + 1)
-                for numerator in range(0, denominator):
-                    fraction = numerator / float(denominator)
-                    for y in [-1.0, 0.0, 1.0]:
-                        small_delta = y / 2**FP32_FRACTION_BITS
-                        val = (-1.0)**sign_bit * 2.0**exponent * (1.0 + fraction + small_delta)
-                        yield val
-        # Add np.nan as a final data value to process
-        yield np.nan
 
-    input_np = np.array(list(get_data())).astype(np.float32)
+    for sign_bit in [0, 1]:
+        for exponent in range(FP32_EXP_MIN - FP32_FRACTION_BITS - 1, FP32_EXP_MAX + 2):
+            denominator = 2**(FP16_FRACTION_BITS + 1)
+            for numerator in range(0, denominator):
+                fraction = numerator / float(denominator)
+                for y in [-1.0, 0.0, 1.0]:
+                    small_delta = y / 2**FP32_FRACTION_BITS
+                    val = (-1.0)**sign_bit * 2.0**exponent * (1.0 + fraction + small_delta)
+                    yield val
+    # Add np.nan as a final data value to process
+    yield np.nan
+
+# Test requires all platforms to round float32->float16 with same round-to-nearest-even policy.
+@with_seed()
+def test_cast_float32_to_float16():
+    input_np = np.array(list(get_cast_op_data())).astype(np.float32)
     # The intermediate cast to np.float64 below gets around a numpy rounding bug that is fixed
     # as of numpy 1.17 by PR https://github.com/numpy/numpy/pull/12722
     expected_output = input_np.astype(np.float64).astype(np.float16)
 
-    x = mx.sym.Variable('x', dtype=np.float32)
-    sym = mx.sym.Cast(x, dtype=np.float16)
+    def check_cast(op, input_np, expected_output):
+        x = mx.sym.Variable('x', dtype=np.float32)
+        sym = op(x, dtype=np.float16)
+        ctx = default_context()
+        exe = sym.bind(ctx, {'x': mx.nd.array(input_np, dtype=np.float32, ctx=ctx)})
+        assert exe.arg_arrays[0].dtype == np.float32
+        assert exe.outputs[0].dtype == np.float16
+        exe.forward(is_train=True)
+        sym_output = exe.outputs[0].asnumpy()
+        for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
+            assert (model_fp16_val == np_fp16_val) or \
+                   (np.isnan(model_fp16_val) and np.isnan(np_fp16_val)), \
+                   'fp32->fp16 cast mismatch: with fp32 value {}, model_fp16 = {}, numpy_fp16 = {}'.format(
+                    fp32_val, model_fp16_val, np_fp16_val)
+
+    check_cast(mx.sym.Cast, input_np, expected_output)
+    check_cast(mx.sym.amp_cast, input_np, expected_output)
+
+
+@with_seed()
+def test_amp_multicast():
+    x = mx.sym.Variable('x', dtype=np.float16)
+    y = mx.sym.Variable('y', dtype=np.float32)
+    z = mx.sym.Variable('z', dtype=np.float16)
     ctx = default_context()
-    exe = sym.bind(ctx, {'x' : mx.nd.array(input_np, dtype=np.float32, ctx=ctx)})
-    assert exe.arg_arrays[0].dtype == np.float32
-    assert exe.outputs[0].dtype == np.float16
+    res = mx.sym.amp_multicast(x, y, z, num_outputs=3)
+    exe = res.bind(ctx, {'x': mx.nd.random.uniform(shape=(3, 3), dtype=np.float16, ctx=ctx),
+                         'y': mx.nd.random.uniform(shape=(3, 3), dtype=np.float32, ctx=ctx),
+                         'z': mx.nd.random.uniform(shape=(3, 3), dtype=np.float16, ctx=ctx)})
+    exe.forward(is_train=True)
+    out1, out2, out3 = exe.outputs
+    assert out1.asnumpy().dtype == np.float32
+    assert out2.asnumpy().dtype == np.float32
+    assert out3.asnumpy().dtype == np.float32
+
+    def check_amp_multicast(input_np, expected_output):
+        x = mx.sym.Variable('x', dtype=np.float16)
+        y = mx.sym.Variable('y', dtype=np.float32)
+        z = mx.sym.Variable('z', dtype=np.float16)
+        ctx = default_context()
+        res = mx.sym.amp_multicast(x, y, z, num_outputs=3)
+        exe = res.bind(ctx, {'x': mx.nd.array(input_np, dtype=np.float16, ctx=ctx),
+                             'y': mx.nd.array(input_np, dtype=np.float32, ctx=ctx),
+                             'z': mx.nd.array(input_np, dtype=np.float16, ctx=ctx)})
+        exe.forward(is_train=True)
+        sym_output = exe.outputs[0].asnumpy()
+        for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
+            assert (model_fp16_val == np_fp16_val) or \
+                   (np.isnan(model_fp16_val) and np.isnan(np_fp16_val)), \
+                   'fp32->fp16 cast mismatch: with fp32 value {}, model_fp16 = {}, numpy_fp16 = {}'.format(
+                    fp32_val, model_fp16_val, np_fp16_val)
+
+    input_np = np.array(list(get_cast_op_data()), dtype=np.float16)
+    expected_output = input_np.astype(np.float32)
+    check_amp_multicast(input_np, expected_output)
+
+
+@with_seed()
+def test_all_finite():
+    data = mx.sym.Variable("data", dtype=np.float32)
+    data2 = mx.sym.Variable("data2", dtype=np.float32)
+    finite_arr = mx.nd.array([[0, 0]])
+    inf_arr = mx.nd.array([[np.inf, np.inf]])
+    z = mx.sym.all_finite(data)
+    ctx = default_context()
+    exe = z.bind(ctx, {'data': inf_arr})
     exe.forward(is_train=False)
     sym_output = exe.outputs[0].asnumpy()
-    for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
-        assert (model_fp16_val == np_fp16_val) or \
-               (np.isnan(model_fp16_val) and np.isnan(np_fp16_val)), \
-            'fp32->fp16 cast mismatch: with fp32 value {}, model_fp16 = {}, numpy_fp16 = {}'.format(
-                fp32_val, model_fp16_val, np_fp16_val)
+    assert sym_output[0] == 0
+    z = mx.sym.multi_all_finite(data, data2, num_arrays=2)
+    exe = z.bind(ctx, {'data': finite_arr, 'data2': inf_arr})
+    exe.forward(is_train=False)
+    sym_output = exe.outputs[0].asnumpy()
+    assert sym_output[0] == 0
 
 
 @with_seed()

@@ -1292,6 +1292,8 @@ class Symbol(SymbolBase):
             - "s3://my-bucket/path/my-s3-symbol"
             - "hdfs://my-bucket/path/my-hdfs-symbol"
             - "/path-to/my-local-symbol"
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
 
         See Also
         --------

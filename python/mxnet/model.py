@@ -406,6 +406,8 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, remove_amp_ca
         Model parameter, dict of name to NDArray of net's weights.
     aux_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's auxiliary states.
+    remove_amp_cast : bool, optional
+        Whether to remove the amp_cast and amp_multicast operators, before saving the model.
     Notes
     -----
     - ``prefix-symbol.json`` will be saved for symbol.
@@ -916,6 +918,8 @@ class FeedForward(BASE_ESTIMATOR):
         ----------
         prefix : str
             Prefix of model name.
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
 
         Notes
         -----
