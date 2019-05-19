@@ -430,7 +430,7 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
         self.current_epoch = 0
         self.current_batch = 0
         if self.save_best:
-            self.best = np.Inf if self.monitor_op == np.less else -np.Inf
+            self.best = np.Inf if self.monitor_op == np.less else -np.Inf # pylint: disable=comparison-with-callable
         if self.resume_from_checkpoint:
             error_msg = "To use resume from checkpoint, you must only specify " \
                         "the same type of period you used for training." \
@@ -666,7 +666,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
                                  "if you want otherwise", self.monitor.get()[0])
                 self.monitor_op = np.less
 
-        if self.monitor_op == np.greater:
+        if self.monitor_op == np.greater: # pylint: disable=comparison-with-callable
             self.min_delta *= 1
         else:
             self.min_delta *= -1
@@ -679,7 +679,7 @@ class EarlyStoppingHandler(TrainBegin, EpochEnd, TrainEnd):
         if self.baseline is not None:
             self.best = self.baseline
         else:
-            self.best = np.Inf if self.monitor_op == np.less else -np.Inf
+            self.best = np.Inf if self.monitor_op == np.less else -np.Inf # pylint: disable=comparison-with-callable
 
     def epoch_end(self, estimator, *args, **kwargs):
         monitor_name, monitor_value = self.monitor.get()
