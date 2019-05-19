@@ -35,8 +35,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           utils.init_git()
-          //sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
-          utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+          utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda100_cudnn7', false)
           utils.pack_lib('gpu', mx_lib)
         }
       }

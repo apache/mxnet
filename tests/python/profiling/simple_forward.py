@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,13 +15,28 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+import mxnet as mx
+from mxnet.gluon import nn
 
-data_path=model
 
-if [ ! -d "$data_path" ]; then
-  mkdir -p "$data_path"
-  curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/BertQA/vocab.json -o $data_path/vocab.json
-  curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/BertQA/static_bert_qa-0002.params -o $data_path/static_bert_qa-0002.params
-  curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/BertQA/static_bert_qa-symbol.json -o $data_path/static_bert_qa-symbol.json
-fi
+def simple_forward():
+    ctx = mx.gpu()
+    mx.profiler.set_config(profile_all=True)
+    mx.profiler.set_state('run')
+
+    # define simple gluon network with random weights
+    net = nn.Sequential()
+    with net.name_scope():
+        net.add(nn.Dense(128, activation='relu'))
+        net.add(nn.Dense(64, activation='relu'))
+        net.add(nn.Dense(10))
+    net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
+
+    input = mx.nd.zeros((128,), ctx=ctx)
+    predictions = net(input)
+    print('Ran simple NN forward, results:')
+    print(predictions.asnumpy())
+
+
+if __name__ == '__main__':
+    simple_forward()

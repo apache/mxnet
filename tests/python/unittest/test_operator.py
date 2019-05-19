@@ -3364,7 +3364,9 @@ def test_l2_normalization():
             check_l2_normalization((nbatch, nchannel, height, width), mode, dtype)
 
 
-def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_check_eps=1E-3):
+def check_layer_normalization(in_shape, axis, eps, dtype=np.float32,
+                              forward_check_eps=1E-3, backward_check_eps=1E-3,
+                              npy_grad_check=True, finite_grad_check=True):
     def npy_layer_norm(data, gamma, beta, axis=1, eps=1E-5):
         if axis < 0:
             axis += data.ndim
@@ -3376,6 +3378,24 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
         out = np.reshape(gamma, broadcast_shape) * (data - mean) / std + \
               np.reshape(beta, broadcast_shape)
         return out
+
+    def npy_layer_norm_grad(data, gamma, out_grad, axis, eps):
+        if axis < 0:
+            axis += data.ndim
+        exclude_axis = tuple([ele for ele in range(data.ndim) if ele != axis])
+        data_mean = data.mean(axis=axis, keepdims=True)
+        data_var = data.var(axis=axis, keepdims=True)
+        data_std = np.sqrt(data_var + eps)
+        centered_data = (data - data_mean) / data_std
+        gamma_grad = (centered_data * out_grad).sum(axis=exclude_axis, keepdims=True)
+        beta_grad = out_grad.sum(axis=exclude_axis, keepdims=True)
+        w = out_grad * gamma.reshape([1 if i != axis else data.shape[axis] for i in range(data.ndim)])\
+            / data_std
+        data_grad = w - w.mean(axis=axis, keepdims=True)\
+                    - centered_data * (w * centered_data).mean(axis=axis, keepdims=True)
+        gamma_grad = gamma_grad.reshape((-1,))
+        beta_grad = beta_grad.reshape((-1,))
+        return data_grad, gamma_grad, beta_grad
 
     ctx = default_context()
     data = np.random.normal(0, 1, in_shape).astype(dtype)
@@ -3392,10 +3412,51 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
     out_nd = exe.forward()[0]
     out = npy_layer_norm(data, gamma, beta, axis, eps)
     assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps, forward_check_eps)
-    for req in ['write', 'add']:
-        check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
-                               grad_nodes={'data': req, 'gamma': req, 'beta': req},
-                               numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
+
+    if finite_grad_check:
+        for req in ['write', 'add']:
+            check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
+                                   grad_nodes={'data': req, 'gamma': req, 'beta': req},
+                                   numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
+
+    if npy_grad_check:
+        # Test for grad_req = write
+        out_grad = np.random.normal(0, 1, in_shape).astype(dtype)
+        exe = out_s.simple_bind(ctx, data=in_shape, grad_req='write')
+        exe.arg_dict['data'][:] = data
+        exe.arg_dict['gamma'][:] = gamma
+        exe.arg_dict['beta'][:] = beta
+        exe.forward()
+        exe.backward([mx.nd.array(out_grad, ctx=ctx)])
+        gt_data_grad, gt_gamma_grad, gt_beta_grad =\
+            npy_layer_norm_grad(data, gamma, out_grad, axis, eps)
+        assert_almost_equal(exe.grad_dict['data'].asnumpy(), gt_data_grad, backward_check_eps, backward_check_eps)
+        assert_almost_equal(exe.grad_dict['gamma'].asnumpy(), gt_gamma_grad, backward_check_eps, backward_check_eps)
+        assert_almost_equal(exe.grad_dict['beta'].asnumpy(), gt_beta_grad, backward_check_eps, backward_check_eps)
+    
+        # Test for grad_req = add
+        out_grad = np.random.normal(0, 1, in_shape).astype(dtype)
+        init_data_grad = np.random.normal(0, 1, in_shape).astype(dtype)
+        init_gamma_grad = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+        init_beta_grad = np.random.normal(0, 1, (in_shape[axis],)).astype(dtype)
+        exe = out_s.simple_bind(ctx, data=in_shape, grad_req='add')
+        exe.arg_dict['data'][:] = data
+        exe.arg_dict['gamma'][:] = gamma
+        exe.arg_dict['beta'][:] = beta
+        exe.grad_dict['data'][:] = init_data_grad
+        exe.grad_dict['gamma'][:] = init_gamma_grad
+        exe.grad_dict['beta'][:] = init_beta_grad
+        exe.forward()
+        exe.backward([mx.nd.array(out_grad, ctx=ctx)])
+        gt_data_grad, gt_gamma_grad, gt_beta_grad = \
+            npy_layer_norm_grad(data, gamma, out_grad, axis, eps)
+        assert_almost_equal(exe.grad_dict['data'].asnumpy(),
+                            gt_data_grad + init_data_grad, backward_check_eps, backward_check_eps)
+        assert_almost_equal(exe.grad_dict['gamma'].asnumpy(),
+                            gt_gamma_grad + init_gamma_grad, backward_check_eps, backward_check_eps)
+        assert_almost_equal(exe.grad_dict['beta'].asnumpy(),
+                            gt_beta_grad + init_beta_grad, backward_check_eps, backward_check_eps)
+
 
 @with_seed()
 def test_norm():
@@ -3469,13 +3530,25 @@ def test_norm():
 
 
 def test_layer_norm():
-    for dtype, forward_check_eps in zip([np.float16, np.float32, np.float64],
-                                        [1E-2, 1E-3, 1E-4]):
-        for in_shape in [(10, 6, 5), (10, 10)]:
+    for dtype, forward_check_eps, backward_check_eps in zip([np.float16, np.float32, np.float64],
+                                                            [1E-2, 1E-3, 1E-4],
+                                                            [1E-2, 1E-3, 1E-4]):
+        if dtype != np.float16:
+            in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]
+        else:
+            in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10)], [True, True]  # large input + fp16 does not pass the forward check
+        for in_shape, finite_grad_check in zip(in_shape_l, finite_grad_check_l):
             for axis in range(-len(in_shape), len(in_shape)):
                 for eps in [1E-2, 1E-3]:
+                    if dtype == np.float16:
+                        npy_grad_check = False
+                    else:
+                        npy_grad_check = True
                     check_layer_normalization(in_shape, axis, eps, dtype=dtype,
-                                              forward_check_eps=forward_check_eps)
+                                              forward_check_eps=forward_check_eps,
+                                              backward_check_eps=backward_check_eps,
+                                              npy_grad_check=npy_grad_check,
+                                              finite_grad_check=finite_grad_check)
 
 
 # Numpy Implementation of Sequence Ops
@@ -5467,33 +5540,6 @@ def _build_dot_custom(fun_forward, name):
         def create_operator(self, ctx, shapes, dtypes):
             return Dot()
 
-def _custom_exc3(seed):
-    def custom_exc3():
-        def f(in_data, out_data):
-            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
-            out_data[0].wait_to_read()
-        _build_dot_custom(f, 'Dot3')
-        n = int(1e8)
-        a = mx.nd.zeros((n, 1))
-        b = mx.nd.zeros((1, n))
-        # trigger OOM
-        c = mx.nd.Custom(a, b, op_type='Dot3')
-        c.wait_to_read()
-    assert_raises(MXNetError, custom_exc3)
-
-def _custom_exc4(seed):
-    def custom_exc4():
-        def f(in_data, out_data):
-            out_data[0][:] = mx.nd.dot(in_data[0], in_data[1])
-        _build_dot_custom(f, 'Dot4')
-        n = int(1e8)
-        a = mx.nd.zeros((n, 1))
-        b = mx.nd.zeros((1, n))
-        # trigger OOM
-        c = mx.nd.Custom(a, b, op_type='Dot4')
-        c.wait_to_read()
-    assert_raises(MXNetError, custom_exc4)
-
 @with_seed()
 def test_custom_op_exc():
     # test except handling
@@ -5523,8 +5569,35 @@ def test_custom_op_exc():
     assert_raises(MXNetError, custom_exc2)
 
     # 3. error in real execution
-    run_in_spawned_process(_custom_exc3, {})
-    run_in_spawned_process(_custom_exc4, {})
+    if default_context().device_type == 'cpu':
+        def custom_exc3():
+            def f(in_data, out_data):
+                dot = mx.nd.dot(in_data[0], in_data[1])
+                # input to Cholesky factorization should be
+                # symmetric positive-definite, error will be
+                # triggered in op execution on cpu
+                out_data[0][:] = mx.nd.linalg.potrf(dot)
+                out_data[0].wait_to_read()
+            _build_dot_custom(f, 'Dot3')
+            a = mx.nd.zeros((2, 1))
+            b = mx.nd.zeros((1, 2))
+            c = mx.nd.Custom(a, b, op_type='Dot3')
+            c.wait_to_read()
+        assert_raises(MXNetError, custom_exc3)
+
+        def custom_exc4():
+            def f(in_data, out_data):
+                dot = mx.nd.dot(in_data[0], in_data[1])
+                # input to Cholesky factorization should be
+                # symmetric positive-definite, error will be
+                # triggered in op execution on cpu
+                out_data[0][:] = mx.nd.linalg.potrf(dot)
+            _build_dot_custom(f, 'Dot4')
+            a = mx.nd.zeros((2, 1))
+            b = mx.nd.zeros((1, 2))
+            c = mx.nd.Custom(a, b, op_type='Dot4')
+            c.wait_to_read()
+        assert_raises(MXNetError, custom_exc4)
 
 
 @with_seed()
@@ -7164,6 +7237,45 @@ def test_bilinear_resize_op():
                             h1lambda*((1-w1lambda)*x[b][c][h1+h1p][w1] + \
                             w1lambda*x[b][c][h1+h1p][w1+w1p])
         return y
+    def py_bilinear_resize_backward(x, incoming_grads, mode='size'):
+        data1 = np.zeros_like(x)
+        data2 = incoming_grads
+        batchsize = data1.shape[0]
+        channels = data1.shape[1]
+        height1 = data1.shape[2]
+        width1 = data1.shape[3]
+        height2 = data2.shape[2]
+        width2 = data2.shape[3]
+        rheight = float(height1 - 1) / (height2 - 1) if (height2 > 1) else 0
+        rwidth = float(width1 - 1) / (width2 - 1) if (width2 > 1) else 0
+        # special case: just copy
+        if height1 == height2 and width1 == width2:
+            data1 += data2
+            return [data1]
+        for h2 in range(0, height2):
+            for w2 in range(0, width2):
+                h1r = rheight * h2
+                h1 = int(h1r)
+                h1p = 1 if (h1 < height1 - 1) else 0
+                h1lambda = h1r - h1
+                h0lambda = 1 - h1lambda
+                #
+                w1r = rwidth * w2
+                w1 = int(w1r)
+                w1p = 1 if (w1 < width1 - 1) else 0
+                w1lambda = w1r - w1
+                w0lambda = 1 - w1lambda
+                #
+                for n in range(0, batchsize):
+                    for c in range(0, channels):
+                        d2val = data2[n][c][h2][w2]
+                        data1[n][c][h1][w1] += h0lambda * w0lambda * d2val
+                        data1[n][c][h1][w1 + w1p] += h0lambda * w1lambda * d2val
+                        data1[n][c][h1 + h1p][w1] += h1lambda * w0lambda * d2val
+                        data1[n][c][h1 + h1p][w1 + w1p] += h1lambda * w1lambda * d2val
+        if mode == 'like':
+            return data1, np.zeros_like(incoming_grads)
+        return [data1]
     def check_bilinear_resize_op(shape, height, width):
         x = mx.nd.random.uniform(shape=shape)
         y = mx.nd.contrib.BilinearResize2D(x, height=height, width=width)
@@ -7173,12 +7285,89 @@ def test_bilinear_resize_op():
         y_scale = height / shape[-2]
         y = mx.nd.contrib.BilinearResize2D(x, scale_height=y_scale, scale_width=x_scale)
         assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
+    def check_bilinear_resize_modes_op(shape, scale_height=None, scale_width=None, shape_1=None, mode=None):
+        x = mx.nd.random.uniform(shape=shape)
+        original_h = shape[2]
+        original_w = shape[3]
+        if mode == 'odd_scale':
+            assert scale_height is not None and scale_width is not None
+            new_h = int(original_h * scale_height) if (original_h % 2) == 0 else \
+                int((original_h - 1) * scale_height) + 1
+            new_w = int(original_w * scale_width) if (original_w % 2) == 0 \
+                else int((original_w - 1) * scale_width) + 1
+            y = mx.nd.contrib.BilinearResize2D(x, scale_height=scale_height,
+                                               scale_width=scale_width,
+                                               mode='odd_scale')
+        elif mode == 'to_even_down':
+            new_h = original_h if (original_h % 2) == 0 else original_h - 1
+            new_w = original_w if (original_w % 2) == 0 else original_w - 1
+            y = mx.nd.contrib.BilinearResize2D(x, mode='to_even_down')
+        elif mode == 'to_even_up':
+            new_h = original_h if (original_h % 2) == 0 else original_h + 1
+            new_w = original_w if (original_w % 2) == 0 else original_w + 1
+            y = mx.nd.contrib.BilinearResize2D(x, mode='to_even_up')
+        elif mode == 'to_odd_down':
+            new_h = original_h if (original_h % 2) == 1 else original_h - 1
+            new_w = original_w if (original_w % 2) == 1 else original_w - 1
+            y = mx.nd.contrib.BilinearResize2D(x, mode='to_odd_down')
+        elif mode == 'to_odd_up':
+            new_h = original_h if (original_h % 2) == 1 else original_h + 1
+            new_w = original_w if (original_w % 2) == 1 else original_w + 1
+            y = mx.nd.contrib.BilinearResize2D(x, mode='to_odd_up')
+        elif mode == 'like':
+            x_1 = mx.nd.random.uniform(shape=shape_1)
+            new_h = x_1.shape[2]
+            new_w = x_1.shape[3]
+            y = mx.nd.contrib.BilinearResize2D(x, x_1, mode='like')
+        new_shape_desired = np.array([shape[0], shape[1], new_h, new_w], dtype='int')
+        new_shape_got = np.array(y.shape, dtype='int')
+        data_sym = mx.sym.var('data')
+        data_np = x.asnumpy()
+        expected = py_bilinear_resize(data_np, new_h, new_w)
+        out_grads = np.ones([shape[0], shape[1], new_h, new_w])
+        expected_backward = py_bilinear_resize_backward(data_np, out_grads, mode)
+        assert_array_equal(new_shape_desired, new_shape_got, "Desired and got shapes are not equal. {} vs {}".format(
+            str(new_shape_desired.tolist()), str(new_shape_got.tolist())))
+        assert_almost_equal(y.asnumpy(), expected, 1e-3, 0)
+        if mode != 'like':
+            resize_sym = mx.sym.contrib.BilinearResize2D(data_sym, None, scale_height=scale_height, scale_width=scale_width, mode=mode)
+            check_symbolic_forward(resize_sym, [data_np], [expected], rtol=1e-3)
+            check_symbolic_backward(resize_sym, [data_np], [out_grads], expected_backward, rtol=1e-3)
+            check_numeric_gradient(resize_sym, [data_np])
+        else:
+            data_sym_like = mx.sym.var('data_like')
+            resize_sym = mx.sym.contrib.BilinearResize2D(data_sym, data_sym_like, mode=mode)
+            date_np_like = x_1.asnumpy()
+            check_symbolic_forward(resize_sym, [data_np, date_np_like], [expected], rtol=1e-3)
+            check_symbolic_backward(resize_sym, [data_np, date_np_like], [out_grads], expected_backward, rtol=1e-3)
+            check_numeric_gradient(resize_sym, [data_np, date_np_like])
+
     shape = (2, 2, 10, 10)
     check_bilinear_resize_op(shape, 5, 5)
     check_bilinear_resize_op(shape, 10, 10)
     check_bilinear_resize_op(shape, 15, 15)
     check_bilinear_resize_op(shape, 3, 7)
     check_bilinear_resize_op(shape, 13, 17)
+    shape = (2, 2, 20, 20)
+    check_bilinear_resize_modes_op(shape, scale_height=0.5, scale_width=0.5, mode='odd_scale')
+    check_bilinear_resize_modes_op(shape, scale_height=5, scale_width=10, mode='odd_scale')
+    check_bilinear_resize_modes_op(shape, scale_height=0.1, scale_width=0.2, mode='odd_scale')
+    check_bilinear_resize_modes_op(shape, mode='to_even_down')
+    check_bilinear_resize_modes_op(shape, mode='to_even_up')
+    check_bilinear_resize_modes_op(shape, mode='to_odd_down')
+    check_bilinear_resize_modes_op(shape, mode='to_odd_up')
+    shape = (2, 2, 21, 21)
+    check_bilinear_resize_modes_op(shape, scale_height=0.5, scale_width=0.5, mode='odd_scale')
+    check_bilinear_resize_modes_op(shape, scale_height=5, scale_width=10, mode='odd_scale')
+    check_bilinear_resize_modes_op(shape, scale_height=0.1, scale_width=0.2, mode='odd_scale')
+    check_bilinear_resize_modes_op(shape, mode='to_even_down')
+    check_bilinear_resize_modes_op(shape, mode='to_even_up')
+    check_bilinear_resize_modes_op(shape, mode='to_odd_down')
+    check_bilinear_resize_modes_op(shape, mode='to_odd_up')
+    shape_0 = (2, 2, 21, 21)
+    shape_1 = (2, 2, 10, 10)
+    check_bilinear_resize_modes_op(shape_0, shape_1=shape_1, mode='like')
+    check_bilinear_resize_modes_op(shape_1, shape_1=shape_0, mode='like')
 
 def test_multi_proposal_op():
     # paramters
@@ -8166,6 +8355,18 @@ def test_np_compat_decorator():
         check_concat((0, 3, 4), (5, 3, 4), 0)
         check_concat((8, 0, 5), (8, 7, 5), 1)
         check_concat((8, 0, 0), (8, 0, 0), 2)
+
+
+@with_seed()
+def test_add_n():
+    data_shape = (2, 2)
+    input_num = 5
+    data = [mx.nd.random.uniform(shape=data_shape) for i in range(input_num)]
+    rslt = mx.nd.zeros(shape=data_shape)
+    for i in range(input_num):
+        rslt += data[i]
+    add_n_rslt = mx.nd.add_n(*data, out=data[0])
+    assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
 
 
 if __name__ == '__main__':

@@ -17,7 +17,7 @@
 
 package org.apache.mxnetexamples.neuralstyle
 
-import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
 import org.apache.mxnetexamples.neuralstyle.end2end.{BoostInference, BoostTrain}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}

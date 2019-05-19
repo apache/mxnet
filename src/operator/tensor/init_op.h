@@ -207,6 +207,33 @@ inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param);
 }
 
+struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
+  double start;
+  double stop;
+  int num;
+  bool endpoint;
+  std::string ctx;
+  int dtype;
+  DMLC_DECLARE_PARAMETER(LinspaceParam) {
+    DMLC_DECLARE_FIELD(start)
+    .describe("The starting value of the sequence.");
+    DMLC_DECLARE_FIELD(stop)
+    .describe("The ending value of the sequence");
+    DMLC_DECLARE_FIELD(num)
+    .describe("Number of samples to generate. Must be non-negative.");
+    DMLC_DECLARE_FIELD(endpoint)
+    .set_default(true)
+    .describe("If True, stop is the last sample. Otherwise, it is not included.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    MXNET_ADD_ALL_TYPES
+    .describe("Target data type.");
+  }
+};
+
 template<typename ParamType>
 inline bool InitShape(const nnvm::NodeAttrs& attrs,
                       mxnet::ShapeVector *in_attrs,
@@ -516,6 +543,48 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
   const double out_size = std::ceil((param.stop.value() - param.start) / param.step)
                           * param.repeat;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
+  return true;
+}
+
+struct linspace_fwd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, double start, double stop, double step,
+                                  int req, DType* out) {
+    KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
+  }
+};
+
+template<typename xpu>
+void LinspaceCompute(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const LinspaceParam& param = nnvm::get<LinspaceParam>(attrs.parsed);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      int step_num = param.endpoint ? param.num - 1 : param.num;
+      double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
+      Kernel<linspace_fwd, xpu>::Launch(s,
+                                        outputs[0].Size(),
+                                        param.start,
+                                        param.stop,
+                                        step,
+                                        req[0],
+                                        outputs[0].dptr<DType>());
+  });
+}
+
+inline bool LinspaceShape(const nnvm::NodeAttrs& attrs,
+                       mxnet::ShapeVector *in_attrs,
+                       mxnet::ShapeVector *out_attrs) {
+  const LinspaceParam& param = nnvm::get<LinspaceParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_GE(param.num, 0)
+    << "Number of sequence should be non-negative, received " << param.num;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(param.num)}));
   return true;
 }
 

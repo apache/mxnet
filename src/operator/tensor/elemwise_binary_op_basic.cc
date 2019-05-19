@@ -30,6 +30,12 @@
 namespace mxnet {
 namespace op {
 
+bool SupportMKLDNNSum(const NDArray& input) {
+  int ndim = input.shape().ndim();
+  return input.dtype() == mshadow::kFloat32 && (ndim >= 1 && ndim <= 4) &&
+         input.storage_type() == kDefaultStorage;
+}
+
 static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<NDArray>& inputs,
@@ -38,7 +44,7 @@ static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  if (SupportMKLDNN(inputs[0]) && SupportMKLDNN(inputs[1])) {
+  if (SupportMKLDNNSum(inputs[0]) && SupportMKLDNNSum(inputs[1])) {
     MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
     return;
   } else if (inputs[0].storage_type() == kDefaultStorage
