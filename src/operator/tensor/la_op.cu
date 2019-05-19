@@ -102,7 +102,7 @@ NNVM_REGISTER_OP(_backward_linalg_inverse)
 NNVM_REGISTER_OP(_linalg_det)
 .set_attr<FCompute>("FCompute<gpu>", LaOpDetForward<gpu, 1, det>);
 
-NNVM_REGISTER_OP(_linalg_det_backward)
+NNVM_REGISTER_OP(_backward_linalg_det)
 .set_attr<FCompute>("FCompute<gpu>", LaOpDetBackward<gpu, 1, det_backward>);
 
 NNVM_REGISTER_OP(_linalg_logdet)
