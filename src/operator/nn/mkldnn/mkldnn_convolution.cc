@@ -82,20 +82,16 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullP
   }
   mkldnn::primitive_attr attr;
   mkldnn::post_ops ops;
-  if (param.mkldnn_param.with_relu) {
-    float scale = 1.0f;  // for fp32, scale is 1.
-    float alpha = 0.0f;  // negative slope for mkldnn_eltwise_relu.
-    float beta = 1.0f;   // ignored for mkldnn_eltwise_relu.
-    ops.append_eltwise(scale, eltwise_relu, alpha, beta);
+  if (param.mkldnn_param.with_act) {
+    const auto &act_param = param.act_param;
+    ops.append_eltwise(act_param.scale, act_param.alg, act_param.alpha, act_param.beta);
   }
   if (param.mkldnn_param.with_sum) {
     ops.append_sum(param.sum_scale);
   }
-  if (param.mkldnn_param.with_postsum_relu) {
-    float scale = 1.0f;  // for fp32, scale is 1.
-    float alpha = 0.0f;  // negative slope for mkldnn_eltwise_relu.
-    float beta = 1.0f;   // ignored for mkldnn_eltwise_relu.
-    ops.append_eltwise(scale, eltwise_relu, alpha, beta);
+  if (param.mkldnn_param.with_postsum_act) {
+    const auto &act_param = param.postsum_act_param;
+    ops.append_eltwise(act_param.scale, act_param.alg, act_param.alpha, act_param.beta);
   }
   attr.set_post_ops(ops);
 

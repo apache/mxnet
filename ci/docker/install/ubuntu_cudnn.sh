@@ -50,5 +50,5 @@ case ${CUDA_VERSION} in
 		;;
 esac
 
-apt-get install -y libcudnn7=${libcudnn7_version} libcudnn7-dev=${libcudnn7_dev_version}
+apt-get install -y --allow-downgrades libcudnn7=${libcudnn7_version} libcudnn7-dev=${libcudnn7_dev_version}
 

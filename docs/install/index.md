@@ -120,6 +120,8 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="pip">
 <div class="v1-4-1">
 
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+
 ```
 $ pip install mxnet
 ```
@@ -138,11 +140,23 @@ $ pip install mxnet==1.4.0
 $ pip install mxnet==1.3.1
 ```
 
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl==1.3.1
+```
+
 </div> <!-- End of v1-3-1 -->
 <div class="v1-2-1">
 
 ```
 $ pip install mxnet==1.2.1
+```
+
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl==1.2.1
 ```
 
 </div> <!-- End of v1-2-1 -->
@@ -192,9 +206,15 @@ $ pip install mxnet==0.11.0
 $ pip install mxnet --pre
 ```
 
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl --pre
+```
+
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
+
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png" alt="pip packages"/>
