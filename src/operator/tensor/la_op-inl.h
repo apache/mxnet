@@ -901,6 +901,17 @@ struct inverse_backward {
   }
 };
 
+// Here we set grad to zero if det = 0 as a temporary method
+struct StopZeroDetGrad {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, int grad_step, DType *grad, DType *det, DType zero_det) {
+    int batch_ind = i / grad_step;
+    if (det[batch_ind] == zero_det) {
+      grad[i] = DType(0);
+    }
+  }
+};
+
 // Backward of det(A) is derived from Jacobi's formula.
 // The closed form solution is pretty easy when A is invertible.
 // For non-invertible A, grad is not backwarded now.
@@ -915,11 +926,16 @@ struct det_backward {
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    using namespace mxnet_op;
     // compute inverse(A) and stores it to LU
     linalg_batch_det_helper(LU, pivot, det, dA, DType(0), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
       Shape3(det.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // stop grad for zero det temporarily
+    Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
+                                         dA.dptr_, det.dptr_, DType(0));
   }
 };
 
@@ -937,11 +953,16 @@ struct logdet_backward {
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    using namespace mxnet_op;
     // compute inverse(A) and stores it to LU
     linalg_batch_det_helper(LU, pivot, logdet, dA, DType(-INFINITY), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogdet, \
       Shape3(logdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // stop grad for zero det temporarily
+    Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
+                                         dA.dptr_, logdet.dptr_, DType(-INFINITY));
   }
 };
 
@@ -961,11 +982,16 @@ struct slogdet_backward {
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;
     using namespace mshadow::expr;
+    using namespace mxnet_op;
     // compute inverse(A) and stores it to LU
     linalg_batch_det_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogabsdet, \
       Shape3(logabsdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // stop grad for zero det temporarily
+    Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
+                                         dA.dptr_, logabsdet.dptr_, DType(-INFINITY));
   }
 };
 
