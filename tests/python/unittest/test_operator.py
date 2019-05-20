@@ -6422,7 +6422,7 @@ def test_laop_6():
     rtol_fw = 1e-7
     atol_fw = 1e-9
     num_eps = 1e-6
-    rtol_bw = 1e-5
+    rtol_bw = 1e-4
     atol_bw = 1e-6
 
     data = mx.symbol.Variable('data')
