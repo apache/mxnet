@@ -17,34 +17,23 @@
  * under the License.
  */
 
-#if MXNET_USE_MKLDNN == 1
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file moments.cu
+ * \brief Moments operator
+ * \author Hao Jin
+*/
 
-#include "mkldnn_conv_property.h"
-#include "mkldnn_fc_property.h"
-#include "mkldnn_post_quantize_property.h"
-#include "mkldnn_fc_post_quantize_property.h"
-#include "mkldnn_post_quantize_align_scale_property.h"
+#include "./moments-inl.h"
 
 namespace mxnet {
 namespace op {
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
+NNVM_REGISTER_OP(moments)
+.set_attr<FCompute>("FCompute<gpu>", MomentsForward<gpu>);
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNFCProperty);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNConvProperty)
-.set_attr("quantize", true);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCProperty)
-.set_attr("quantize", true);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeProperty);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCPostQuantizeProperty);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeAlignScaleProperty);
+NNVM_REGISTER_OP(_backward_moments)
+.set_attr<FCompute>("FCompute<gpu>", MomentsBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-
-#endif  // MXNET_USE_MKLDNN == 1

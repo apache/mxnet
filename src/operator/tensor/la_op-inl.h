@@ -98,11 +98,16 @@ struct gemm {
 struct gemm2 {
   template<typename xpu, int dim, typename DType>
   static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
+                 const Tensor<xpu, dim, DType>& C, DType alpha, bool tA, bool tB,
+                 Stream<xpu> *s) {
+    gemm::op(A, B, C, DType(alpha), DType(0), tA, tB, s);
+  }
+  template<typename xpu, int dim, typename DType>
+  static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
                  const Tensor<xpu, dim, DType>& C, Stream<xpu> *s,
                  const nnvm::NodeAttrs& attrs) {
     const LaMatrixMultParam& param = nnvm::get<LaMatrixMultParam>(attrs.parsed);
-    gemm::op(A, B, C, DType(param.alpha), DType(0), param.transpose_a,
-             param.transpose_b, s);
+    op(A, B, C, DType(param.alpha), param.transpose_a, param.transpose_b, s);
   }
   template<typename xpu, int dim, typename DType>
   static void op(const Tensor<xpu, dim, DType>& A, const Tensor<xpu, dim, DType>& B,
@@ -448,6 +453,22 @@ struct syevd {
   }
 };
 
+// A = inverse(B).
+struct inverse {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& B, const Tensor<xpu, 3, DType>& A,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    // Reserve workspace (size determined by query)
+    int lwork(linalg_getri_workspace_query(A, s));
+    Tensor<xpu, 1, DType> work = ctx.requested[0]
+      .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
+    // Since inverse(A) = trans(inverse(trans(A))), so we don't need to transpose
+    // A even if we are using the col-major version of getrf and getri routines.
+    linalg_batch_inverse(A, B, work, s);
+  }
+};
+
 // Backward operators (always using batch processing)
 
 struct gemm_backward {
@@ -786,6 +807,21 @@ struct syevd_backward {
        L.stride_, dL.dptr_, dL.stride_, dA.dptr_, dA.stride_);
     gemm::op(U, dA, tempM, DType(1.0), DType(0.0), true, false, s);
     gemm::op(tempM, U, dA, DType(1.0), DType(0.0), false, false, s);
+  }
+};
+
+struct inverse_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& dA,
+                 const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& dB,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    // Backward of A = inverse(B)
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    Tensor<xpu, 3, DType> temp = ctx.requested[0]
+      .get_space_typed<xpu, 3, DType>(A.shape_, s);
+    gemm2::op(dA, A, temp, DType(1), false, true, s);
+    gemm2::op(A, temp, dB, DType(-1), true, false, s);
   }
 };
 

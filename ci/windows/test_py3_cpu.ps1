@@ -27,3 +27,7 @@ C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 -
 if (! $?) { Throw ("Error running unittest") }
 C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_train.xml tests\python\train
 if (! $?) { Throw ("Error running train tests") }
+# Adding this extra test since it's not possible to set env var on the fly in Windows.
+$env:MXNET_SAFE_ACCUMULATION=1
+C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest\test_operator.py:test_norm
+if (! $?) { Throw ("Error running unittest") }

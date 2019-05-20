@@ -3482,51 +3482,61 @@ def test_norm():
     epsilon = 1e-3
     acc_type = {np.float16: np.float32, np.float32: np.float32, np.float64: np.float64,
                 np.int32: np.int32, np.int64: np.int64}
+    dtype_to_str = {np.float16: 'float16', np.float32: 'float32', np.float64: 'float64',
+                    np.int32: 'int32', np.int64: 'int64'}
     is_windows = sys.platform.startswith('win')
-    for order in [1, 2]:
-        for dtype in [np.float16, np.float32, np.float64, np.int32, np.int64]:
-            for i in range(in_data_dim):
-                for out_dtype in ['float32', 'float64', 'int32', 'int64']:
-                    if (dtype == np.int32 or dtype == np.int64) and ('int' not in out_dtype or is_windows):
-                        continue
-                    if dtype != np.int32 and dtype != np.int64 and 'int' in out_dtype:
-                        continue
-                    backward_dtype = np.float32 if out_dtype == 'float32' else np.float64
-                    skip_backward = 'int' in out_dtype
-                    print(order, dtype, i, out_dtype, in_shape)
-                    in_data = np.random.uniform(-1, 1, in_shape).astype(acc_type[dtype])
-                    in_data[abs(in_data) < epsilon] = 2 * epsilon
-                    norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, out_dtype=out_dtype, keepdims=True)
-                    npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
-                    npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                    check_symbolic_forward(norm_sym, [in_data.astype(dtype)], [npy_out.astype(out_dtype)],
-                                           rtol=1e-3, atol=1e-5, ctx=ctx)
-                    if not skip_backward:
-                        check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
-                                                [np.ones(npy_out.shape).astype(out_dtype)],
-                                                [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
-                                                dtype=backward_dtype)
-                    # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
-                    # check gradient
-                    if dtype is not np.float16 and not skip_backward:
-                        check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
-                                               rtol=1e-1, atol=1e-3, dtype=backward_dtype)
-                    if i < in_data_dim-1:
-                        norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
-                        npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+    for enforce_safe_acc in ["1", "0"]:
+        if is_windows:
+            if enforce_safe_acc == "0":
+                break
+            enforce_safe_acc = "0" if "MXNET_SAFE_ACCUMULATION" not in os.environ else os.environ["MXNET_SAFE_ACCUMULATION"]
+        else:
+            os.environ["MXNET_SAFE_ACCUMULATION"] = enforce_safe_acc
+        for order in [1, 2]:
+            for dtype in [np.float16, np.float32, np.float64]:
+                for i in range(in_data_dim):
+                    for out_dtype in ['float32', 'float64']:
+                        backward_dtype = np.float32 if out_dtype == 'float32' else np.float64
+                        accumulation_type = acc_type[dtype]
+                        if enforce_safe_acc == "0":
+                            backward_dtype = dtype
+                            out_dtype = dtype_to_str[dtype]
+                            accumulation_type = dtype
+                        skip_backward = 'int' in out_dtype
+                        in_data = np.random.uniform(-1, 1, in_shape).astype(accumulation_type)
+                        in_data[abs(in_data) < epsilon] = 2 * epsilon
+                        norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, out_dtype=out_dtype, keepdims=True)
+                        npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
                         npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                        check_symbolic_forward(norm_sym, [in_data], [npy_out.astype(dtype)],
-                                               rtol=1e-3 if dtype is np.float16 else 1e-3,
-                                               atol=1e-5 if dtype is np.float16 else 1e-5, ctx=ctx)
-                        if not skip_backward:
-                            check_symbolic_backward(norm_sym, [in_data],
+                        check_symbolic_forward(norm_sym, [in_data.astype(dtype)], [npy_out.astype(out_dtype)],
+                                               rtol=1e-2 if dtype == np.float16 else 1e-3,
+                                               atol=1e-4 if dtype == np.float16 else 1e-5, ctx=ctx, dtype=dtype)
+                        if dtype is not np.float16 and not skip_backward:
+                            check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
                                                     [np.ones(npy_out.shape).astype(out_dtype)],
-                                                    [npy_out_backward.astype(out_dtype)],
-                                                    rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
+                                                    [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
+                                                    dtype=backward_dtype)
+                        # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
                         # check gradient
                         if dtype is not np.float16 and not skip_backward:
                             check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
                                                    rtol=1e-1, atol=1e-3, dtype=backward_dtype)
+                        if i < in_data_dim-1:
+                            norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
+                            npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+                            npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
+                            check_symbolic_forward(norm_sym, [in_data], [npy_out.astype(dtype)],
+                                                   rtol=1e-2 if dtype is np.float16 else 1e-3,
+                                                   atol=1e-4 if dtype is np.float16 else 1e-5, ctx=ctx)
+                            if dtype is not np.float16 and not skip_backward:
+                                check_symbolic_backward(norm_sym, [in_data],
+                                                        [np.ones(npy_out.shape).astype(out_dtype)],
+                                                        [npy_out_backward.astype(out_dtype)],
+                                                        rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
+                            # check gradient
+                            if dtype is not np.float16 and not skip_backward:
+                                check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
+                                                       rtol=1e-1, atol=1e-3, dtype=backward_dtype)
 
 
 def test_layer_norm():
@@ -6485,6 +6495,34 @@ def test_laop_5():
                     check_symbolic_forward(test_trian, [data_in], [res_trian])
                     check_numeric_gradient(test_trian, [data_in])
 
+# Tests for linalg.inverse
+@with_seed()
+def test_laop_6():
+    dtype = np.float64
+    rtol_fw = 1e-7
+    atol_fw = 1e-9
+    num_eps = 1e-6
+    rtol_bw = 1e-4
+    atol_bw = 1e-6
+
+    data = mx.symbol.Variable('data')
+
+    check_fw = lambda sym, location, expected:\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
+                               atol=atol_bw, dtype=dtype)
+
+    a = np.sqrt(np.arange(4 * 4)).reshape(4, 4)
+    a = np.tile(a, (3, 1, 1))
+    r = np.eye(4)
+    r = np.tile(r, (3, 1, 1))
+    test_inverse = mx.sym.linalg.inverse(data)
+    test_eye = mx.sym.linalg.gemm2(data, test_inverse)
+    check_fw(test_eye, [a], [r])
+    check_grad(test_inverse, [a])
+
 @with_seed()
 def test_stack():
     for _ in range(100):
@@ -7731,6 +7769,7 @@ def test_op_all_names_monitor():
     check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
 
 @with_seed()
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
 def test_activation():
     shapes = [(9,), (9, 10), (9, 10, 10), (1, 9, 10, 10)]
     dtype_l = [np.float64, np.float32, np.float16]
@@ -8238,6 +8277,34 @@ def test_split_v2():
     check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)
     out_grad = [np.ones(arr.shape) for arr in np_out]
     check_symbolic_backward(sym, {"data": mx_data}, out_grad, [np.concatenate(out_grad, axis=axis)])
+
+
+@with_seed()
+def test_moments():
+    dim = random.randint(2, 5)
+    shape = rand_shape_nd(dim, dim=5)
+    axes = [i for i in range(dim)]
+    test_dims = random.sample(axes, random.randint(1, dim))
+    test_axes = tuple(sorted(test_dims))
+    np_a = np.random.uniform(-1.0, 1.0, shape)
+    a = mx.nd.array(np_a)
+    for keepdims in [True, False]:
+        eps = 1e-3
+        np_a[abs(np_a) < eps] = 2 * eps
+        np_mean = np.mean(np_a, axis=test_axes, keepdims=keepdims)
+        np_var = np.var(np_a, axis=test_axes, keepdims=keepdims)
+        mx_mean, mx_var = mx.nd.moments(a, keepdims=keepdims, axes=test_axes)
+        N = np_a.size / np_mean.size
+        mx_sym = mx.sym.Variable("data")
+        mx_moments = mx.sym.moments(mx_sym, axes=test_axes, keepdims=keepdims)
+        mx_test_sym = mx.sym.elemwise_add(mx_moments[0], mx_moments[1])
+        if len(np_mean.shape) == 0:
+            np_mean = np_mean.reshape(mx_mean.shape)
+            np_var = np_var.reshape(mx_var.shape)
+        assert np_mean.shape == mx_mean.shape
+        assert np_var.shape == mx_var.shape
+        check_symbolic_forward(mx_test_sym, [np_a], [np_mean + np_var], rtol=1e-3, atol=1e-5)
+        check_numeric_gradient(mx_test_sym, [np_a], numeric_eps=eps, rtol=1e-2, atol=2e-4)
 
 
 @with_seed()

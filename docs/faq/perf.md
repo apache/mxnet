@@ -34,8 +34,13 @@ Performance is mainly affected by the following 4 factors:
 
 ## Intel CPU
 
-For using Intel Xeon CPUs for training and inference, we suggest enabling
-`USE_MKLDNN = 1` in `config.mk`. 
+When using Intel Xeon CPUs for training and inference, the `mxnet-mkl` package is recommended. Adding `--pre` installs a nightly build from master. Without it you will install the latest patched release of MXNet:
+
+```
+$ pip install mxnet-mkl [--pre]
+```
+
+Or build MXNet from source code with `USE_MKLDNN=1`. For Linux users, `USE_MKLDNN=1` will be turned on by default.
 
 We also find that setting the following environment variables can help:
 

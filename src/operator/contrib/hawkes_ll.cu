@@ -16,35 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+/*!
+ * Copyright (c) 2018 by Contributors
+ * \file hawkes_ll.cu
+ * \brief Log likelihood of a marked self-exciting Hawkes process
+ * \author Caner Turkmen <turkmen.ac@gmail.com>
+ */
 
-#if MXNET_USE_MKLDNN == 1
-
-#include "mkldnn_conv_property.h"
-#include "mkldnn_fc_property.h"
-#include "mkldnn_post_quantize_property.h"
-#include "mkldnn_fc_post_quantize_property.h"
-#include "mkldnn_post_quantize_align_scale_property.h"
+#include "./hawkes_ll-inl.h"
 
 namespace mxnet {
 namespace op {
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
+NNVM_REGISTER_OP(_contrib_hawkesll)
+.set_attr<FCompute>("FCompute<gpu>", HawkesLLForward<gpu>);
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNFCProperty);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNConvProperty)
-.set_attr("quantize", true);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCProperty)
-.set_attr("quantize", true);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeProperty);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNFCPostQuantizeProperty);
-
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_QUANTIZE, SgMKLDNNPostQuantizeAlignScaleProperty);
+NNVM_REGISTER_OP(_contrib_backward_hawkesll)
+.set_attr<FCompute>("FCompute<gpu>", HawkesLLBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-
-#endif  // MXNET_USE_MKLDNN == 1
