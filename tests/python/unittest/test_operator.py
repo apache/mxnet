@@ -6443,6 +6443,7 @@ def test_stack():
 
 
 @with_seed()
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14288")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
