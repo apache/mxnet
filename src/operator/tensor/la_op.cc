@@ -975,11 +975,11 @@ Examples::
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, det>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_det"})
+.set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<1>{"_backward_linalg_det"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 NNVM_REGISTER_OP(_backward_linalg_det)
-.set_num_inputs(6)
+.set_num_inputs(4)
 .set_num_outputs(1)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
@@ -1023,11 +1023,11 @@ Examples::
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 1, logdet>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_logdet"})
+.set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<1>{"_backward_linalg_logdet"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 NNVM_REGISTER_OP(_backward_linalg_logdet)
-.set_num_inputs(6)
+.set_num_inputs(4)
 .set_num_outputs(1)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
@@ -1048,7 +1048,8 @@ If *n>2*, *slogdet* is performed separately on the trailing two dimensions
 for all inputs (batch mode).
 
 .. note:: The operator supports float32 and float64 data types only.
-.. note:: The gradient is not properly defined on sign, so it's ignored.
+.. note:: The gradient is not properly defined on sign, so it's not allowed
+          to pass gradient on it.
 
 Examples::
 
@@ -1075,11 +1076,11 @@ Examples::
 .set_attr<mxnet::FInferShape>("FInferShape", DetShape<2>)
 .set_attr<nnvm::FInferType>("FInferType", DetType<2>)
 .set_attr<FCompute>("FCompute<cpu>", LaOpDetForward<cpu, 2, slogdet>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_linalg_slogdet"})
+.set_attr<nnvm::FGradient>("FGradient", ReduceDetGrad<2>{"_backward_linalg_slogdet"})
 .add_argument("A", "NDArray-or-Symbol", "Tensor of square matrix");
 
 NNVM_REGISTER_OP(_backward_linalg_slogdet)
-.set_num_inputs(8)
+.set_num_inputs(5)
 .set_num_outputs(1)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
   { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })

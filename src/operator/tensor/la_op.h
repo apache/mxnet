@@ -865,9 +865,9 @@ struct LaOpDetBackwardCaller<xpu, DType, 1, laop> {
                  const OpContext& ctx) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     laop::op(inputs[0].FlatToKD<xpu, 1, DType>(s),
-             inputs[3].FlatToKD<xpu, 1, DType>(s),
-             inputs[4].FlatToKD<xpu, 3, DType>(s),
-             inputs[5].FlatToKD<xpu, 2, int>(s),
+             inputs[1].FlatToKD<xpu, 1, DType>(s),
+             inputs[2].FlatToKD<xpu, 3, DType>(s),
+             inputs[3].FlatToKD<xpu, 2, int>(s),
              outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
   }
 };
@@ -878,11 +878,11 @@ struct LaOpDetBackwardCaller<xpu, DType, 2, laop> {
                  const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[1].FlatToKD<xpu, 1, DType>(s),
-             inputs[4].FlatToKD<xpu, 1, DType>(s),
-             inputs[5].FlatToKD<xpu, 1, DType>(s),
-             inputs[6].FlatToKD<xpu, 3, DType>(s),
-             inputs[7].FlatToKD<xpu, 2, int>(s),
+    laop::op(inputs[0].FlatToKD<xpu, 1, DType>(s),
+             inputs[1].FlatToKD<xpu, 1, DType>(s),
+             inputs[2].FlatToKD<xpu, 1, DType>(s),
+             inputs[3].FlatToKD<xpu, 3, DType>(s),
+             inputs[4].FlatToKD<xpu, 2, int>(s),
              outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
   }
 };
@@ -894,7 +894,7 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK_EQ(inputs.size(), (onum + 2) * 2);
+  CHECK_EQ(inputs.size(), onum + 3);
   CHECK_EQ(outputs.size(), 1);
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     std::vector<TBlob> tspace(outputs);
@@ -913,6 +913,22 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
     }
   });
 }
+
+// Only transfer ddet and outputs to gradient
+template<int onum>
+struct ReduceDetGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) {
+    std::vector<nnvm::NodeEntry> heads;
+    heads.push_back(ograds[onum - 1]);
+    uint32_t n_out = n->num_outputs();
+    for (uint32_t i = 0; i < n_out; ++i) {
+      heads.emplace_back(nnvm::NodeEntry{n, i, 0});
+    }
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
 
 }  // namespace op
 }  // namespace mxnet
