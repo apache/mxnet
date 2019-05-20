@@ -1263,7 +1263,7 @@ void linalg_batch_getrf<cpu, DType>(const Tensor<cpu, 3, DType>& A, \
                                     const Tensor<cpu, 2, int>& pivot, \
                                     bool check_singular, \
                                     Stream<cpu> *s) { \
-  for(index_t i = 0; i < A.size(0); ++i) { \
+  for (index_t i = 0; i < A.size(0); ++i) { \
     linalg_getrf(A[i], pivot[i], check_singular); \
   } \
 }
