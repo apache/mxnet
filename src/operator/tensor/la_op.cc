@@ -1042,7 +1042,7 @@ Input is a tensor *A* of dimension *n >= 2*.
 If *n=2*, *A* is a square matrix. We compute:
 
   *sign* = *sign(det(A))*
-  *logdet* = *log(abs(det(A)))*
+  *logabsdet* = *log(abs(det(A)))*
 
 If *n>2*, *slogdet* is performed separately on the trailing two dimensions
 for all inputs (batch mode).
@@ -1055,17 +1055,17 @@ Examples::
 
    // Single matrix inversion
    A = [[2., 3.], [1., 4.]]
-   sign, logdet = slogdet(A)
+   sign, logabsdet = slogdet(A)
    sign = [1.]
-   logdet = [1.609438]
+   logabsdet = [1.609438]
 
    // Batch matrix inversion
    A = [[[2., 3.], [1., 4.]],
         [[1., 2.], [2., 4.]],
         [[1., 2.], [4., 3.]]]
-   sign, logdet = slogdet(A)
+   sign, logabsdet = slogdet(A)
    sign = [1., 0., -1.]
-   logdet = [1.609438, -inf, 1.609438]
+   logabsdet = [1.609438, -inf, 1.609438]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(4)
