@@ -166,17 +166,12 @@ def test_dot_partial_shape():
     x = mx.sym.Variable("x")
     y = mx.sym.Variable("y")
     z = mx.sym.dot(x, y)
-    # first dim of rhs unknwon
-    _, result_shape, _ = z.infer_shape_partial(x=(0, 3, 4), y=(0, 4, 5))
-    assert result_shape == [()]
     # batch size(first dim) of lhs unknown
     _, result_shape, _ = z.infer_shape_partial(x=(0, 3, 4), y=(4, 5))
     assert result_shape == [(0, 3, 5)]
     with mx.np_compat(True):
         _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(4, 5))
         assert result_shape == [(-1, 3, 5)]
-        _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(-1, 4, 5))
-        assert result_shape == [None]
 
 
 def test_batch_dot_partial_shape():
@@ -243,7 +238,7 @@ def test_where_partial_shape():
     where_op.infer_shape_partial(cond=(0, 2), x=(0, 2), y =(0, 2))
     with mx.np_compat(True):
         where_op.infer_shape_partial(cond=(-1, 2), x=(-1, 2), y =(-1, 2))
-        
+
 
 if __name__ == "__main__":
     test_mlp2_infer_shape()
