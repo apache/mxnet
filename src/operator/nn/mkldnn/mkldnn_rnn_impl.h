@@ -29,7 +29,6 @@
 #include <vector>
 #include <utility>
 #include <string>
-#include "../../math.h"
 #include "../../math_functions-inl.h"
 #include "../../operator_common.h"
 #include "../../rnn_impl.h"
@@ -167,7 +166,7 @@ void AdjustGruBiasGateOrder(DType* bias,
     bias_reset[i] = tmp;
   }
 }
-// since there is different sematics of MKLDNN's Fused RNN and Mxnet FusedRNN,
+// since there is different sematics of MKLDNN's Fused RNN and MXNet FusedRNN,
 // bidirectional will be fused layer by layer,
 // unidirectional will be done by fused 1 + fused (L - 1) layers or fused L layers(when I = H)
 
@@ -487,6 +486,8 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
       if (mode == rnn_enum::kGru) {
         AdjustGruWeightGateOrder(wx, I, H);
         AdjustGruWeightGateOrder(wh, H, H);
+        AdjustGruBiasGateOrder(b_ptr, H);
+        AdjustGruBiasGateOrder(b_ptr + H * ngates, H);
       }
       src_wx_f.set_data_handle(wx);
       src_wh_f.set_data_handle(wh);
