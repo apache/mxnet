@@ -251,6 +251,7 @@ void linalg_batch_det_helper(const Tensor<xpu, 3, DType>& LU,
                              const Tensor<xpu, 2, int>& pivot,
                              const Tensor<xpu, 1, DType>& det,
                              const Tensor<xpu, 3, DType>& temp,
+                             const DType zero_det,
                              const mxnet::OpContext& ctx);
 
 #include "linalg_impl.h"

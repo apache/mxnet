@@ -1510,13 +1510,14 @@ void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
                                          const Tensor<xpu, 2, int>& pivot, \
                                          const Tensor<xpu, 1, DType>& det, \
                                          const Tensor<xpu, 3, DType>& temp, \
+                                         const DType zero_det, \
                                          const mxnet::OpContext& ctx) { \
   Stream<xpu> *s = ctx.get_stream<xpu>(); \
   int lwork(linalg_getri_workspace_query(LU[0], s)); \
   Tensor<xpu, 1, DType> work = ctx.requested[0].\
     get_space_typed<xpu, 1, DType>(Shape1(lwork), s); \
   for (index_t i = 0; i < LU.size(0); ++i) { \
-    if (det[i] != DType(0)) { \
+    if (det[i] != zero_det) { \
       linalg_getri(LU[i], pivot[i], work, s); \
     } \
   } \
@@ -1534,6 +1535,7 @@ void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
                                          const Tensor<xpu, 2, int>& pivot, \
                                          const Tensor<xpu, 1, DType>& det, \
                                          const Tensor<xpu, 3, DType>& temp, \
+                                         const DType zero_det, \
                                          const mxnet::OpContext& ctx) { \
   Stream<xpu> *s = ctx.get_stream<xpu>(); \
   linalg_batch_getri(temp, LU, pivot, s); \
@@ -1548,6 +1550,7 @@ void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
                                          const Tensor<xpu, 2, int>& pivot, \
                                          const Tensor<xpu, 1, DType>& det, \
                                          const Tensor<xpu, 3, DType>& temp, \
+                                         const DType zero_det, \
                                          const mxnet::OpContext& ctx) { \
   LOG(FATAL) << "gpu matrix inversion requires CUDA version >= 8.0!"; \
 }

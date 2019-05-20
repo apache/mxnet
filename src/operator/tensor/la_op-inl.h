@@ -528,11 +528,11 @@ struct logdet {
 };
 
 // sign = sign(det(A))
-// logdet = log(abs(det(A)))
+// logabsdet = log(abs(det(A)))
 struct slogdet {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& sign,
-                 const Tensor<xpu, 1, DType>& logdet, const Tensor<xpu, 3, DType>& LU,
+                 const Tensor<xpu, 1, DType>& logabsdet, const Tensor<xpu, 3, DType>& LU,
                  const Tensor<xpu, 2, int>& pivot, const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -541,7 +541,7 @@ struct slogdet {
     using namespace mxnet_op;
     using namespace mshadow::expr;
     Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
-                                      LU.dptr_, sign.dptr_, logdet.dptr_);
+                                      LU.dptr_, sign.dptr_, logabsdet.dptr_);
   }
 };
 
@@ -903,6 +903,7 @@ struct inverse_backward {
 
 // Backward of det(A) is derived from Jacobi's formula.
 // The closed form solution is pretty easy when A is invertible.
+// For non-invertible A, grad is not backwarded now.
 // TODO(arcadiaphy) add implementation for non-invertible case
 struct det_backward {
   template<typename xpu, typename DType>
@@ -915,9 +916,55 @@ struct det_backward {
     using namespace mshadow;
     using namespace mshadow::expr;
     // compute inverse(A) and stores it to LU
-    linalg_batch_det_helper(LU, pivot, det, dA, ctx);
+    linalg_batch_det_helper(LU, pivot, det, dA, DType(0), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
       Shape3(det.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
+      transpose(LU, Shape3(0, 2, 1));
+  }
+};
+
+// Backward of logdet(A) is derived from Jacobi's formula.
+// The closed form solution is pretty easy when A is invertible.
+// For non-invertible A, grad is not backwarded now.
+// TODO(arcadiaphy) add implementation for non-invertible case
+struct logdet_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 1, DType>& dlogdet,
+                 const Tensor<xpu, 1, DType>& logdet,
+                 const Tensor<xpu, 3, DType>& LU,
+                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 3, DType>& dA,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    // compute inverse(A) and stores it to LU
+    linalg_batch_det_helper(LU, pivot, logdet, dA, DType(-INFINITY), ctx);
+    const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogdet, \
+      Shape3(logdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
+      transpose(LU, Shape3(0, 2, 1));
+  }
+};
+
+// Backward of slogdet(A) is derived from Jacobi's formula.
+// The closed form solution is pretty easy when A is invertible.
+// For non-invertible A, grad is not backwarded now.
+// Grad is not properly defined on sign, so it's not backwarded either.
+// TODO(arcadiaphy) add implementation for non-invertible case
+struct slogdet_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 1, DType>& dlogabsdet,
+                 const Tensor<xpu, 1, DType>& sign,
+                 const Tensor<xpu, 1, DType>& logabsdet,
+                 const Tensor<xpu, 3, DType>& LU,
+                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 3, DType>& dA,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    // compute inverse(A) and stores it to LU
+    linalg_batch_det_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
+    const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogabsdet, \
+      Shape3(logabsdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
   }
 };

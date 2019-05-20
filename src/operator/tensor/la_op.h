@@ -878,12 +878,12 @@ struct LaOpDetBackwardCaller<xpu, DType, 2, laop> {
                  const nnvm::NodeAttrs& attrs,
                  const OpContext& ctx) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    laop::op(inputs[0].FlatToKD<xpu, 1, DType>(s),
+    laop::op(inputs[1].FlatToKD<xpu, 1, DType>(s),
              inputs[4].FlatToKD<xpu, 1, DType>(s),
              inputs[5].FlatToKD<xpu, 1, DType>(s),
              inputs[6].FlatToKD<xpu, 3, DType>(s),
              inputs[7].FlatToKD<xpu, 2, int>(s),
-             outputs[1].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
+             outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
   }
 };
 template<typename xpu, int onum, typename laop>
@@ -895,7 +895,7 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), (onum + 2) * 2);
-  CHECK_EQ(outputs.size(), onum);
+  CHECK_EQ(outputs.size(), 1);
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     std::vector<TBlob> tspace(outputs);
     for ( int i = 0; i < onum; ++i ) {
