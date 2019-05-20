@@ -20,12 +20,11 @@ import argparse
 import mxnet as mx
 from benchmark.opperf.tensor_operations.arithmetic_operations import run_arithmetic_operators_benchmarks
 from benchmark.opperf.tensor_operations.comparison_operations import run_comparison_operators_benchmarks
-from benchmark.opperf.nn_operations.convolution_operations import run_convolution_operators_benchmarks
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 
 
 def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
-    """Run all the MXNet operators (NDArray and Gluon) benchmarks.
+    """Run all the MXNet operators (NDArray) benchmarks.
 
     :return: Dictionary of benchmark results.
     """
@@ -40,10 +39,6 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
                                                                                 dtype=dtype))
 
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
-
-    # Run all Gluon Convolution Layers operations benchmarks with default input values
-    mxnet_operator_benchmark_results.append(run_convolution_operators_benchmarks(ctx=ctx,
-                                                                                 dtype=dtype))
 
     # ****************************** PREPARE FINAL RESULTS ********************************
     final_benchmark_result_map = merge_map_list(mxnet_operator_benchmark_results)
@@ -66,7 +61,7 @@ if __name__ == '__main__':
 
     # 1. GET USER INPUTS
     parser = argparse.ArgumentParser(
-        description='Run all the MXNet operators (NDArray and Gluon) benchmarks')
+        description='Run all the MXNet operators (NDArray) benchmarks')
 
     parser.add_argument('--ctx', type=str, default='cpu',
                         help='Global context to run all benchmarks. By default, cpu on a '

@@ -19,7 +19,6 @@ import mxnet as mx
 from mxnet import nd
 
 from .ndarray_utils import get_mx_ndarray, nd_forward_and_profile, nd_forward_backward_and_profile
-from .gluon_utils import block_forward_backward_and_profile
 
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
@@ -57,30 +56,6 @@ def _run_nd_operator_performance_test(op, warmup, runs, inputs, kwargs_list):
     return op_benchmark_result
 
 
-def _run_gluon_block_performance_test(op, ctx, warmup, runs, inputs, kwargs_list):
-    # Run Benchmarks
-    op_benchmark_result = {op.__name__: []}
-    print("Begin Benchmark - ", op.__name__)
-    for idx, kwargs in enumerate(kwargs_list):
-        # Inputs will data and parameters required to create a block
-        data = kwargs['data']
-        del kwargs['data']
-        # Create and initialize the block
-        block = op(**kwargs)
-        block.initialize(ctx=ctx)
-
-        # Warm up, ignore profiler output
-        _, _ = block_forward_backward_and_profile(block=block, runs=warmup, x=data)
-
-        _, profiler_output = block_forward_backward_and_profile(block=block, runs=runs, x=data)
-
-        # Add inputs used for profiling this operator into result
-        profiler_output["inputs"] = inputs[idx]
-        op_benchmark_result[op.__name__].append(profiler_output)
-    print("Complete Benchmark - ", op.__name__)
-    return op_benchmark_result
-
-
 def run_performance_test(ops, inputs, run_backward=True,
                          dtype='float32', ctx=mx.cpu(),
                          warmup=10, runs=50):
@@ -90,7 +65,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     key -> name of the operator and value -> map of results (forward time, backward time, time spent in memory
     operations.
 
-    :param ops: One or list of operators to benchmark. Can be an NDArray operator or a Gluon Block
+    :param ops: One or list of operators to benchmark. Should be an NDArray operator.
     :param inputs: map, Inputs for operator. Key should be name of parameter for operator.
                    Example: inputs = {"lhs": (1024, 1024), "rhs": (1024, 1024)} for mx.nd.add
     :param run_backward: Default is True. Should we have backward operator benchmarks.
@@ -110,7 +85,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     for op in ops:
         if hasattr(mx.nd, op.__name__):
             benchmark_result = _run_nd_operator_performance_test(op, warmup, runs, inputs, kwargs_list)
-        elif issubclass(op, mx.gluon.Block):
-            benchmark_result = _run_gluon_block_performance_test(op, ctx, warmup, runs, inputs, kwargs_list)
+        else:
+            raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
         op_benchmark_result.append(benchmark_result)
     return op_benchmark_result

@@ -15,13 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-""" Performance benchmark tests for MXNet Gluon Basic NN Layers
+""" Performance benchmark tests for MXNet NDArray NN Operators
 
 TODO
 
-1. Dense
-2. Lambda
-3. Flatten
-4. Embedding
+1. FullyConnected (Basic)
+2. Flatten
+3. Embedding
 
 """

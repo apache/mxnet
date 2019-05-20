@@ -15,17 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-""" Performance benchmark Tests for MXNet Gluon Activation Layers.
+""" Performance benchmark Tests for MXNet NDArray NN Activation Operators.
 
 TODO
 
 1. LeakyRelu
 2. PRelu
 3. Activation (Sigmoid)
-4. Activation (Softmax) (Note - GLUON does not have Softmax block, using NDArray APIs for now)
-5. Activation (Log_Softmax) (Note - GLUON does not have Log_Softmax block, using NDArray APIs for now)
+4. Activation (Softmax)
+5. Activation (Log_Softmax)
 6. Activation (tanh)
 7. Elu
 8. Selu
-9. Swish
 """
