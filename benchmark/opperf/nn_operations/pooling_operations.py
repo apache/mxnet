@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-""" Performance benchmark tests for MXNet Gluon Pooling Layers
+""" Performance benchmark tests for MXNet NDArray Pooling Operators
 
 TODO
 
@@ -27,4 +27,6 @@ TODO
 6. GlobalMaxPool2D
 7. GlobalAvgPool1D
 8. GlobalAvgPool2D
+
+Under the hood uses mx.nd.pooling
 """

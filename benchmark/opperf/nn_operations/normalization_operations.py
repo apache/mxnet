@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-""" Performance benchmark tests for MXNet Gluon Normalization Layers.
+""" Performance benchmark tests for MXNet NDArray Normalization Operators.
 
 TODO
 

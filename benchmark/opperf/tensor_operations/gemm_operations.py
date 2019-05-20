@@ -15,13 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-""" Performance benchmark tests for MXNet NDArray GEMM Operations
+import mxnet as mx
+from mxnet import nd
+from benchmark.opperf.utils.benchmark_utils import run_performance_test
+from benchmark.opperf.utils.common_utils import merge_map_list
 
-TODO
+"""Performance benchmark tests for MXNet NDArray GEMM Operators.
 
 1. dot
 2. batch_dot
 
+TODO
 3. As part of default tests, following needs to be added:
     3.1 Sparse dot. (csr, default) -> row_sparse
     3.2 Sparse dot. (csr, row_sparse) -> default
@@ -29,3 +33,48 @@ TODO
     3.4 With Transpose of rhs
 4. 1D array: inner product of vectors
 """
+
+
+def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+    """Runs benchmarks with the given context and precision (dtype)for all the GEMM
+    operators (dot, batch_dot) in MXNet.
+
+    :param ctx: Context to run benchmarks
+    :param dtype: Precision to use for benchmarks
+    :param warmup: Number of times to run for warmup
+    :param runs: Number of runs to capture benchmark results
+    :return: Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+    """
+    # Benchmark tests for dot and batch_dot operators
+    dot_benchmark_res = run_performance_test(
+        [nd.dot], run_backward=True,
+        dtype=dtype, ctx=ctx,
+        inputs=[{"lhs": (1024, 1024),
+                 "rhs": (1024, 1024)},
+                {"lhs": (1000, 10),
+                 "rhs": (1000, 10),
+                 "transpose_b": True},
+                {"lhs": (1000, 1),
+                 "rhs": (100, 1000),
+                 "transpose_a": True,
+                 "transpose_b": True}],
+        warmup=warmup, runs=runs)
+
+    batch_dot_benchmark_res = run_performance_test(
+        [nd.batch_dot], run_backward=True,
+        dtype=dtype, ctx=ctx,
+        inputs=[{"lhs": (32, 1024, 1024),
+                 "rhs": (32, 1024, 1024)},
+                {"lhs": (32, 1000, 10),
+                 "rhs": (32, 1000, 10),
+                 "transpose_b": True},
+                {"lhs": (32, 1000, 1),
+                 "rhs": (32, 100, 1000),
+                 "transpose_a": True,
+                 "transpose_b": True}],
+        warmup=warmup, runs=runs)
+
+    # Prepare combined results for GEMM operators
+    mx_gemm_op_results = merge_map_list(dot_benchmark_res + batch_dot_benchmark_res)
+    return mx_gemm_op_results
