@@ -348,6 +348,7 @@ FP16_FP32_FUNCS = [
     '_sg_mkldnn_conv',
     '_sg_mkldnn_fully_connected',
     'CuDNNBatchNorm',
+    '_TensorRT',
     ]
 
 # Functions that have to be cast to FP32 due to possible
@@ -400,6 +401,7 @@ FP32_FUNCS = [
     '_hypot_scalar',
     'broadcast_hypot',
     '_square_sum',
+    '_contrib_hawkesll',
 
     # Reductions
     'sum',
@@ -411,6 +413,7 @@ FP32_FUNCS = [
     'norm',
     'softmin',
     'khatri_rao',
+    'moments',
 
     # Misc
     'gamma',
@@ -429,6 +432,7 @@ FP32_FUNCS = [
     '_linalg_extractdiag',
     '_linalg_maketrian',
     '_linalg_extracttrian',
+    '_linalg_inverse',
     'linalg_syrk',
     'linalg_potrf',
     'linalg_potri',
@@ -441,6 +445,7 @@ FP32_FUNCS = [
     'linalg_extractdiag',
     'linalg_maketrian',
     'linalg_extracttrian',
+    'linalg_inverse',
     '_NDArray',
     '_Native',
     '_contrib_count_sketch',
