@@ -80,16 +80,20 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_GPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```
   - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
-  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.  
+  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.
+
 * MXNET_GPU_MEM_POOL_TYPE
   - Values: String ```(default=Naive)```
   - The type of memory pool.
   - Choices:
     - Naive: A simple memory pool that allocates memory for the exact requested size and cache memory buffers. If a buffered memory chunk matches the size of a new request, the chunk from the memory pool will be returned and reused.
     - Round: A memory pool that always rounds the requested memory size and allocates memory of the rounded size. MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF defines how to round up a memory size. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - Unpooled: No memory pool is used.
+
 * MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
   - Values: Int ```(default=24)```
   - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+
 * MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE
   - Values: Int ```(default=2097152)```
   - When using the naive pool type, memory allocations larger than this threshhold are rounded up to a multiple of this value.
@@ -275,6 +279,19 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 * MXNET_GPU_CUDNN_DROPOUT_STATE_COPY
   - Values: Int ```(default=4)```
   - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
+
+* MXNET_SUBGRAPH_BACKEND
+  - Values: String ```(default="")```
+  - This variable controls the subgraph partitioning in MXNet.
+  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+
+* MXNET_SAFE_ACCUMULATION
+  - Values: Values: 0(false) or 1(true) ```(default=0)```
+  - If this variable is set, the accumulation will enter the safe mode, meaning accumulation is done in a data type of higher precision than
+    the input data type, leading to more accurate accumulation results with a possible performance loss and backward compatibility loss.
+    For example, when the variable is set to 1(true), if the input data type is float16, then the accumulation will be done
+    with float32.
+  - Model accuracies do not necessarily improve with this environment variable turned on.
 
 Settings for Minimum Memory Usage
 ---------------------------------

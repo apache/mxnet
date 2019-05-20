@@ -115,6 +115,13 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
       return candidates;
     }
   }
+
+  void Reset() override {
+    CHECK_GE(matched_list.size(), 1);
+    auto new_selector = SgMKLDNNFCSelector(disable_fc_relu);
+    new_selector.Select(*matched_list[0]);
+    *this = new_selector;
+  }
 };
 
 class SgMKLDNNFCProperty : public SubgraphProperty {

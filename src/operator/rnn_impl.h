@@ -45,10 +45,10 @@ namespace mxnet {
 namespace op {
 
 namespace rnn_enum {
-  enum RNNOpInputs {kData, kParams, kState, kStateCell};
+  enum RNNOpInputs {kData, kParams, kState, kStateCell, kSequenceLength};
   enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
   enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
-  enum RNNOpResource {kCuDNNDropoutDescSpace};
+  enum RNNOpResource {kTempSpace, kCuDNNDropoutDescSpace};
 }
 
 template<typename DType>

@@ -26,6 +26,7 @@
 #include "./pooled_storage_manager.h"
 #include "./cpu_shared_storage_manager.h"
 #include "./cpu_device_storage.h"
+#include "./gpu_device_storage.h"
 #include "./pinned_memory_storage.h"
 #include "../common/lazy_alloc_array.h"
 #include "../profiler/storage_profiler.h"
@@ -106,11 +107,12 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
             if (strategy == "Round") {
               ptr = new storage::GPUPooledRoundedStorageManager(handle->ctx);
               LOG(INFO) << "Using GPUPooledRoundedStorageManager.";
-            } else {
-              if (strategy != "Naive") {
-                LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
-              }
+            } else if (strategy == "Naive") {
               ptr = new storage::GPUPooledStorageManager(handle->ctx);
+            } else if (strategy == "Unpooled") {
+              ptr = new storage::NaiveStorageManager<storage::GPUDeviceStorage>();
+            } else {
+              LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
             }
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
