@@ -18,6 +18,7 @@
 
 # pylint: disable=too-many-lines
 """Weight updating functions."""
+from __future__ import absolute_import
 import logging
 import math
 import pickle
@@ -33,6 +34,7 @@ from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, 
                        multi_mp_sgd_mom_update)
 from ..ndarray import sparse
 from ..random import normal
+from .. import numpy_extension as npe
 
 __all__ = [
     'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LBSGD',
@@ -94,7 +96,7 @@ class Optimizer(object):
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
                  lr_scheduler=None, sym=None, begin_num_update=0,
-                 multi_precision=False, param_dict=None):
+                 multi_precision=False, param_dict=None, is_np_compat=True):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -122,6 +124,7 @@ class Optimizer(object):
 
         self.set_lr_mult({})
         self.set_wd_mult({})
+        self._is_np_compat = is_np_compat
 
     opt_registry = {}
 
@@ -582,6 +585,8 @@ class SGD(Optimizer):
         if self.momentum != 0.0:
             stype = weight.stype if self.lazy_update else 'default'
             momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype)
+            if self._is_np_compat:
+                momentum = momentum.as_np_ndarray()
         return momentum
 
     def _update_impl(self, indices, weights, grads, states, multi_precision=False):
@@ -610,8 +615,10 @@ class SGD(Optimizer):
         if aggregate:
             if not multi_precision:
                 if self.momentum > 0:
-                    multi_sgd_mom_update(*_flatten_list(zip(weights, grads, states)), out=weights,
-                                         num_weights=len(weights), lrs=lrs, wds=wds, **kwargs)
+                    updater =\
+                        npe.multi_sgd_mom_update if self._is_np_compat else multi_sgd_mom_update
+                    updater(*_flatten_list(zip(weights, grads, states)), out=weights,
+                            num_weights=len(weights), lrs=lrs, wds=wds, **kwargs)
                 else:
                     multi_sgd_update(*_flatten_list(zip(weights, grads)), out=weights,
                                      num_weights=len(weights), lrs=lrs, wds=wds, **kwargs)

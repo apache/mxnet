@@ -192,8 +192,13 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_classic_ndarrays.__name__
     if not signature_only:
         code.append("""
-    {}("{}", "{}", out, *ndargs)
-        """.format(verify_ndarrays_fn, op_name, func_name))
+    if isinstance(out, (tuple, list)):
+        {verify_fn}("{op_name}", "{func_name}", *ndargs, *out)
+    elif out is None:
+        {verify_fn}("{op_name}", "{func_name}", *ndargs)
+    else:
+        {verify_fn}("{op_name}", "{func_name}", out, *ndargs)
+        """.format(verify_fn=verify_ndarrays_fn, op_name=op_name, func_name=func_name))
         code.append("""
     return _imperative_invoke(%d, ndargs, keys, vals, out, %s)"""%(
         handle.value, str(is_np_op)))
