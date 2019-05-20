@@ -51,36 +51,16 @@ def run_arithmetic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
     :return: Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
-    # Benchmark tests for Add operator
-    add_res = run_performance_test(nd.add, run_backward=True, dtype=dtype, ctx=ctx,
-                                   inputs=[{"lhs": (1024, 1024),
-                                            "rhs": (1024, 1024)},
-                                           {"lhs": (10000, 10),
-                                            "rhs": (10000, 10)},
-                                           {"lhs": (10000, 1),
-                                            "rhs": (10000, 100)}],
-                                   warmup=warmup, runs=runs)
-
-    # Benchmark tests for Sub operator
-    sub_res = run_performance_test(nd.subtract, run_backward=True, dtype=dtype, ctx=ctx,
-                                   inputs=[{"lhs": (1024, 1024),
-                                            "rhs": (1024, 1024)},
-                                           {"lhs": (10000, 10),
-                                            "rhs": (10000, 10)},
-                                           {"lhs": (10000, 1),
-                                            "rhs": (10000, 100)}],
-                                   warmup=warmup, runs=runs)
-
-    # Benchmark tests for Mul operator
-    mul_res = run_performance_test(nd.multiply, run_backward=True, dtype=dtype, ctx=ctx,
-                                   inputs=[{"lhs": (1024, 1024),
-                                            "rhs": (1024, 1024)},
-                                           {"lhs": (10000, 10),
-                                            "rhs": (10000, 10)},
-                                           {"lhs": (10000, 1),
-                                            "rhs": (10000, 100)}],
-                                   warmup=warmup, runs=runs)
+    # Benchmark tests for Add, Sub, Mul operator
+    benchmark_res = run_performance_test([nd.add, nd.subtract, nd.multiply], run_backward=True, dtype=dtype, ctx=ctx,
+                                         inputs=[{"lhs": (1024, 1024),
+                                                  "rhs": (1024, 1024)},
+                                                 {"lhs": (10000, 10),
+                                                  "rhs": (10000, 10)},
+                                                 {"lhs": (10000, 1),
+                                                  "rhs": (10000, 100)}],
+                                         warmup=warmup, runs=runs)
 
     # Prepare combined results for Arithmetic operators
-    mx_arithmetic_op_results = merge_map_list([add_res, sub_res, mul_res])
+    mx_arithmetic_op_results = merge_map_list(benchmark_res)
     return mx_arithmetic_op_results

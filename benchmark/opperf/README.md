@@ -19,6 +19,30 @@
 
 A Python utility for benchmarking and profiling individual MXNet operator execution.
 
+With this utility, for each MXNet operator you can get the following details:
+
+**Timing**
+1. Forward execution time
+2. Backward execution time
+3. Time spent for memory management
+4. Overall end to end execution time
+
+**Memory**
+1. Total memory allocated
+
+# Motivation
+
+Benchmarks are usually done end-to-end for a given Network Architecture. For example: ResNet-50 benchmarks on ImageNet data. This is good measurement of overall performance and health of a deep learning framework. However, it is important to note the following important factors:
+1. Users use a lot more operators that are not part of a standard network like ResNet. Example: Tensor manipulation operators like mean, max, topk, argmax, sort etc.   
+2. A standard Network Architecture like ResNet-50 is made up of many operators Ex: Convolution2D, Softmax, Dense and more. Consider the following scenarios:
+    1. We improved the performance of Convolution2D operator, but due to a bug, Softmax performance went down. Overall, we may observe end to end benchmarks are running fine, we may miss out the performance degradation of a single operator which can accumulate and become untraceable.
+    2. You need to see in a given network, which operator is taking maximum time and plan optimization work. With end to end benchmarks, it is hard to get more fine grained numbers at operator level.
+3. We need to know on different hardware infrastructure (Ex: CPU with MKLDNN, GPU with NVIDIA CUDA and cuDNN) how different operators performs. With these details, we can plan the optimization work at operator level, which could exponentially boost up end to end performance.
+4. You want to have nightly performance tests across all operators in a deep learning framework to catch regressions early. 
+5. We can integrate this framework with a CI/CD system to run per operator performance tests for PRs. Example: When a PR modifies the kernel of TransposeConv2D, we can run benchmarks of TransposeConv2D operator to verify performance.
+
+Hence, in this utility, we will build the functionality to allow users and developers of deep learning frameworks to easily run benchmarks for individual operators.
+
 # How to use
 
 ## Prerequisites
@@ -29,19 +53,19 @@ Make sure to build the flavor of MXNet, for example - with/without MKL, with CUD
 
 ## Usecase 1 - Run benchmarks for all the operators
 
-Below command runs all the MXNet operators (NDArray and Gluon) benchmarks with default inputs and saves the final result as JSON in the provided file.
+Below command runs all the MXNet operators (NDArray) benchmarks with default inputs and saves the final result as JSON in the given file.
 
 ```
 python incubator-mxnet/benchmark/opperf/opperf.py --output-format json --output-file mxnet_operator_benchmark_results.json
 ```
 
-**Other Options:**
+**Other Supported Options:**
 
-1. **output-format** : json or md for markdown file output or csv.
+1. **output-format** : `json` or `md` for markdown file output or csv.
 
-2. **ctx** : By default, cpu on CPU machine, gpu(0) on GPU machine. You can override and set the global context for all operator benchmarks. Example: --ctx gpu(2).
+2. **ctx** : `cpu` or `gpu`. By default, cpu on CPU machine, gpu(0) on GPU machine. You can override and set the global context for all operator benchmarks. Example: --ctx gpu(2).
 
-3. **dtype** : By default, float32. You can override and set the global dtype for all operator benchmarks. Example: --dtype float64.
+3. **dtype** : By default, `float32`. You can override and set the global dtype for all operator benchmarks. Example: --dtype float64.
 
 ## Usecase 2 - Run benchmarks for all the operators in a specific category
 
@@ -101,6 +125,37 @@ Output for the above benchmark run, on a CPU machine, would look something like 
           'inputs': {'lhs': (1024, 1024), 'rhs': (1024, 1024)}}]}
 
 ```
+
+## Usecase 3.1 - Run benchmarks for group of operators with same input
+For example, you want to run benchmarks for `nd.add`, `nd.sub` operator in MXNet, with the same set of inputs. You just run the following python script.
+
+```
+#! /usr/bin/python
+import mxnet as mx
+from mxnet import nd
+
+from benchmark.opperf.utils.benchmark_utils import run_performance_test
+
+add_res = run_performance_test([nd.add, nd.sub], run_backward=True, dtype='float32', ctx=mx.cpu(),
+                               inputs=[{"lhs": (1024, 1024),
+                                        "rhs": (1024, 1024)}],
+                               warmup=10, runs=25)
+```
+
+Output for the above benchmark run, on a CPU machine, would look something like below:
+
+```
+{'add': [{'avg_time_mem_alloc_cpu/0': 102760.4453,
+          'avg_time_forward_broadcast_add': 4.0372,
+          'avg_time_backward_broadcast_add': 5.3841,
+          'inputs': {'lhs': (1024, 1024), 'rhs': (1024, 1024)}}],
+'subtract': [{'avg_time_forward_broadcast_sub': 5.5137, 
+               'avg_time_mem_alloc_cpu/0': 207618.0469,
+               'avg_time_backward_broadcast_sub': 7.2976, 
+               'inputs': {'lhs': (1024, 1024), 'rhs': (1024, 1024)}}
+             ]}
+
+```
 # How does it work under the hood?
 
 Under the hood, executes NDArray operator or a Gluon block using randomly generated data. Use MXNet profiler to get summary of operator execution:
@@ -117,4 +172,4 @@ All contributions are welcome. Below is the list of desired features:
 2. Enhance MXNet profiler with additional APIs to programmatically fetch and process profiler data.
 3. Integration with CI/CD system to run operator benchmarks for PR builds, nightly builds.
 4. Dashboards and other modes of presentation of results for analyzing and planning tasks such as operator performance improvements.
-5. Integration with tools such as [Hypothesis](https://hypothesis.readthedocs.io/en/latest/) for randomized input generation for profiling to identify bottlenecks in operators.
+5. Integration with tools such as [Hypothesis](https://hypothesis.readthedocs.io/en/latest/) for randomized Tensor Shape generation for profiling to identify bottlenecks in the operators.
