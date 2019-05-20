@@ -8,7 +8,6 @@ endif()
 
 project(mxnet C CXX)
 
-
 if(__CMAKE_CROSSCOMPILING_OVERRIDE)
   set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
 endif()
