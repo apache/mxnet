@@ -17,7 +17,7 @@
 
 if(TARGET CONAN_PKG::openblas)
   set(OpenBLAS_FOUND ON)
-  set(OpenBLAS_LIB CONAN_PKG::openblas CONAN_PKG::lapack)
+  set(OpenBLAS_LIB CONAN_PKG::openblas)
   set(OpenBLAS_INCLUDE_DIR ${CONAN_INCLUDE_DIRS_OPENBLAS})
   return()
 endif()
