@@ -1249,7 +1249,7 @@ void linalg_getrf<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                                A.dptr_, A.stride_, pivot.dptr_)); \
   CHECK_GE(ret, 0) << #fname << " failed in lapack on cpu."; \
   if (check_singular) { \
-    CHECK_EQ(ret, 0) << "the input matrix is in-convertible"; \
+    CHECK_EQ(ret, 0) << "the input matrix is non-convertible"; \
   } \
 }
 
