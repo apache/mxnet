@@ -17,9 +17,10 @@
 
 # pylint: disable=unused-import
 """Register backend ops in mxnet.symbol namespace."""
+from __future__ import absolute_import
 import os as _os
 import ctypes
-import numpy as np
+import numpy as _np
 
 from . import _internal
 from ._internal import SymbolBase, _symbol_creator
@@ -109,7 +110,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
+        kwargs['%s'] = _np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
@@ -175,7 +176,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                 code.append("""
     if %s is not _Null:
         _keys.append('%s')
-        _vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        _vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
             code.append("""
     if not hasattr(NameManager._current, "value"):
@@ -208,3 +209,14 @@ def _make_symbol_function(handle, name, func_name):
     return symbol_function
 
 _init_op_module('mxnet', 'symbol', _make_symbol_function)
+
+# Update operator documentation with added float support
+# Note that we can only do this after the op module is initialized
+# Otherwise the backend operators cannot be found
+# pylint: disable=wrong-import-position
+from .contrib import adamw_update, mp_adamw_update
+from ._internal import _adamw_update, _mp_adamw_update
+adamw_update.__doc__ = _adamw_update.__doc__.replace("rescale_grad : Symbol",
+                                                     "rescale_grad : Symbol or float")
+mp_adamw_update.__doc__ = _mp_adamw_update.__doc__.replace("rescale_grad : Symbol",
+                                                           "rescale_grad : Symbol or float")

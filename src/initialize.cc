@@ -26,6 +26,7 @@
 #include <dmlc/logging.h>
 #include <mxnet/engine.h>
 #include "./engine/openmp.h"
+#include "./operator/custom/custom-inl.h"
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
@@ -45,20 +46,23 @@ class LibraryInitializer {
     dmlc::InitLogging("mxnet");
 #if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
     struct sigaction sa;
-    sigaction(SIGSEGV, NULL, &sa);
-    if (sa.sa_handler == NULL) {
+    sigaction(SIGSEGV, nullptr, &sa);
+    if (sa.sa_handler == nullptr) {
         signal(SIGSEGV, SegfaultLogger);
     }
 #endif
 
 // disable openmp for multithreaded workers
 #ifndef _WIN32
+    using op::custom::CustomOperator;
     pthread_atfork(
       []() {
+        CustomOperator::Get()->Stop();
         Engine::Get()->Stop();
       },
       []() {
         Engine::Get()->Start();
+        CustomOperator::Get()->Start();
       },
       []() {
         // Conservative thread management for multiprocess workers
@@ -71,6 +75,7 @@ class LibraryInitializer {
 #endif  // MXNET_USE_OPENCV
         engine::OpenMP::Get()->set_enabled(false);
         Engine::Get()->Start();
+        CustomOperator::Get()->Start();
       });
 #endif
   }

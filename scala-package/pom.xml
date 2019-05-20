@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -37,8 +53,11 @@
   </scm>
 
   <properties>
+    <java.version>1.7</java.version>
     <scala.version>2.11.8</scala.version>
     <build.platform/>
+    <scala.binary.version>2.11</scala.binary.version>
+    <build.platform />
     <cxx>g++</cxx>
     <dollar>$</dollar>
     <MXNET_DIR>${project.basedir}/..</MXNET_DIR>
@@ -236,9 +255,11 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.3</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
           <encoding>UTF-8</encoding>
+          <skipMain>true</skipMain>
+          <skip>true</skip>
         </configuration>
       </plugin>
       <plugin>
@@ -323,11 +344,12 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.4.4</version>
         <configuration>
-          <recompileMode>incremental</recompileMode>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
           <compilerPlugins>
             <compilerPlugin>
               <groupId>org.scalamacros</groupId>
@@ -335,28 +357,26 @@
               <version>2.1.0</version>
             </compilerPlugin>
           </compilerPlugins>
+          <args>
+            <arg>-feature</arg>
+            <arg>-deprecation</arg>
+          </args>
         </configuration>
         <executions>
           <execution>
+            <id>compile</id>
             <goals>
+              <goal>add-source</goal>
               <goal>compile</goal>
               <goal>testCompile</goal>
+              <goal>doc-jar</goal>
             </goals>
           </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-        <version>3.3.2</version>
-        <configuration>
-        </configuration>
-        <executions>
           <execution>
-            <phase>package</phase>
-            <id>attach-javadocs</id>
+            <id>presite</id>
+            <phase>pre-site</phase>
             <goals>
-              <goal>doc-jar</goal>
+              <goal>add-source</goal>
             </goals>
           </execution>
         </executions>
@@ -372,11 +392,17 @@
       </plugin>
     </plugins>
   </build>
+
   <dependencies>
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.10</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
@@ -398,7 +424,7 @@
     <dependency>
       <groupId>org.scalatest</groupId>
       <artifactId>scalatest_2.11</artifactId>
-      <version>3.0.4</version>
+      <version>3.0.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -433,7 +459,12 @@
     <dependency>
       <groupId>org.scala-lang.modules</groupId>
       <artifactId>scala-parser-combinators_2.11</artifactId>
-      <version>1.0.4</version>
+      <version>1.0.5</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-xml_2.11</artifactId>
+      <version>1.0.6</version>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>

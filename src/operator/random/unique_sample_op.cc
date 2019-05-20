@@ -64,7 +64,7 @@ Example::
    trials[0] = 16435
 
 )code" ADD_FILELINE)
-.set_attr<nnvm::FInferShape>("FInferShape", SampleUniqueShape<SampleUniqueZifpianParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", SampleUniqueShape<SampleUniqueZifpianParam>)
 .set_attr<nnvm::FInferType>("FInferType", SampleUniqueType<SampleUniqueZifpianParam>)
 .set_attr<FCompute>("FCompute<cpu>", SampleUniqueZifpian);
 

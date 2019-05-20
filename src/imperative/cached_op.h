@@ -35,8 +35,9 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t backward_bulk_size;
   bool static_alloc;
   bool static_shape;
-  nnvm::Tuple<uint32_t> data_indices;
-  nnvm::Tuple<uint32_t> param_indices;
+  bool is_dynamic;
+  mxnet::Tuple<uint32_t> data_indices;
+  mxnet::Tuple<uint32_t> param_indices;
   std::string subgraph;
   DMLC_DECLARE_PARAMETER(CachedOpConfig) {
     DMLC_DECLARE_FIELD(static_alloc)
@@ -52,20 +53,23 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     .set_default(2)
     .describe("Maximum number of operators that can be inlined.");
     DMLC_DECLARE_FIELD(forward_bulk_size)
-    .set_default(dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15))
+    .set_default(Imperative::BulkExecMaxNodeTrainFwd())
     .describe("Segment size of bulk execution during forward pass.");
     DMLC_DECLARE_FIELD(backward_bulk_size)
-    .set_default(dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15))
+    .set_default(Imperative::BulkExecMaxNodeTrainBwd())
     .describe("Segment size of bulk execution during backward pass.");
     DMLC_DECLARE_FIELD(data_indices)
-    .set_default(nnvm::Tuple<uint32_t>())
+    .set_default(mxnet::Tuple<uint32_t>())
     .describe("Position of argument variables.");
     DMLC_DECLARE_FIELD(param_indices)
-    .set_default(nnvm::Tuple<uint32_t>())
+    .set_default(mxnet::Tuple<uint32_t>())
     .describe("Position of parameters.");
     DMLC_DECLARE_FIELD(subgraph)
     .set_default(std::string(""))
     .describe("JSON string of a subgraph.");
+    DMLC_DECLARE_FIELD(is_dynamic)
+    .set_default(false)
+    .describe("Whether the graph contains dynamic shape operators.");
   }
 };
 
@@ -149,7 +153,8 @@ class CachedOp {
   OpStatePtr DynamicForward(
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      bool use_naive_run = false);
   void DynamicBackward(
       const bool retain_graph,
       const OpStatePtr& op_state,
@@ -181,6 +186,10 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  bool CheckDynamicShapeExists(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      bool erase_result);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;

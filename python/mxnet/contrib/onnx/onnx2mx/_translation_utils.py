@@ -178,7 +178,7 @@ def _fix_channels(op_name, attrs, inputs, proto_obj):
     these attributes. We check the shape of weights provided to get the number.
     """
     weight_name = inputs[1].name
-    if not weight_name in proto_obj._params:
+    if not weight_name in proto_obj._params: # pylint: disable=no-else-raise
         raise ValueError("Unable to get channels/units attr from onnx graph.")
     else:
         wshape = proto_obj._params[weight_name].shape
@@ -221,7 +221,7 @@ def get_input_shape(sym, proto_obj):
     model_input_shape = [data[1] for data  in proto_obj.model_metadata.get('input_tensor_data')]
     data_names = [data[0] for data  in proto_obj.model_metadata.get('input_tensor_data')]
 
-    #creating dummy inputs
+    # creating dummy inputs
     inputs = []
     for  in_shape in model_input_shape:
         inputs.append(nd.ones(shape=in_shape))

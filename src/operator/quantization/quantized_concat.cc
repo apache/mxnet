@@ -28,50 +28,50 @@
 namespace mxnet {
 namespace op {
 
-static bool ConcatShape(const nnvm::NodeAttrs& attrs, std::vector<TShape>* in_shape,
-                        std::vector<TShape>* out_shape) {
+static bool ConcatShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_shape,
+                        mxnet::ShapeVector* out_shape) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_shape->size(), 3U);
-  TShape dshape;
+  mxnet::TShape dshape;
   index_t size = 0;
-  bool has_zero = false;
+  bool has_unknown_dim_size = false;
   int axis = -1;
   for (int i = 0; i < param_.num_args; ++i) {
-    TShape tmp = (*in_shape)[i];
-    if (tmp.ndim()) {
+    mxnet::TShape tmp = (*in_shape)[i];
+    if (tmp.ndim() > 0) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      has_zero = tmp[axis] == 0 || has_zero;
+      has_unknown_dim_size = !mxnet::dim_size_is_known(tmp, axis) || has_unknown_dim_size;
       size += tmp[axis];
-      tmp[axis] = 0;
+      tmp[axis] = -1;
       shape_assign(&dshape, tmp);
     }
   }
 
-  TShape tmp = (*out_shape)[0];
-  if (tmp.ndim()) {
+  mxnet::TShape tmp = (*out_shape)[0];
+  if (tmp.ndim() > 0) {
     axis = CheckAxis(param_.dim, tmp.ndim());
-    tmp[axis] = 0;
+    tmp[axis] = -1;
     shape_assign(&dshape, tmp);
   }
 
-  if (dshape.ndim() == 0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
 
   for (int i = 0; i < param_.num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))
         << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
   }
 
-  if (!has_zero) dshape[axis] = size;
+  if (!has_unknown_dim_size) dshape[axis] = size;
   CHECK(shape_assign(&(*out_shape)[0], dshape))
       << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
 
   for (int i = param_.num_args; i < param_.num_args * 3; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_shape, i, TShape{1});
+    SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape{1});
   }
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, TShape{1});
-  SHAPE_ASSIGN_CHECK(*out_shape, 2, TShape{1});
-  return dshape.Size() != 0;
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape{1});
+  return shape_is_known(dshape);
 }
 
 static bool ConcatType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
@@ -127,8 +127,11 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"output", "min_output", "max_output"};
 })
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
-.set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
 .set_attr<std::string>("key_var_num_args", "num_args")
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());

@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Installing MXNet on Ubuntu
 
 The following installation instructions are for installing MXNet on computers running **Ubuntu 16.04**. Support for later versions of Ubuntu is [not yet available](#contributions).
@@ -80,7 +97,7 @@ Alternatively, you can use the table below to select the package that suits your
 
 The following table presents the pip packages that are recommended for each version of MXNet.
 
-![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
+![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.4.0.png)
 
 To install an older version of MXNet with one of the packages in the previous table add `==` with the version you require. For example for version 1.1.0 of MXNet with CUDA 8, you would use `pip install mxnet-cu80==1.1.0`.
 
@@ -120,11 +137,32 @@ It is recommended that you review the general [build from source](build_from_sou
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
-**Step 1:** Install build tools and git.
+**Step 1:** Install prerequisite packages.
 ```bash
     sudo apt-get update
-    sudo apt-get install -y build-essential git
+    sudo apt-get install -y build-essential git ninja-build ccache
 ```
+
+**For Ubuntu 18.04 and CUDA builds you need to update CMake**
+
+```bash
+#!/usr/bin/env bash
+set -exuo pipefail
+sudo apt remove --purge --auto-remove cmake
+
+# Update CMAKE for correct cuda autotedetection: https://github.com/clab/dynet/issues/1457
+version=3.14
+build=0
+mkdir -p ~/tmp
+cd ~/tmp
+wget https://cmake.org/files/v$version/cmake-$version.$build.tar.gz
+tar -xzvf cmake-$version.$build.tar.gz
+cd cmake-$version.$build/
+./bootstrap
+make -j$(nproc)
+sudo make install
+```
+
 
 **Step 2:** Install a Math Library.
 
@@ -150,48 +188,72 @@ For other libraries, visit the [Math Library Selection](build_from_source.html#m
 
 If building on CPU and using OpenBLAS:
 
-```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet.git
-    cd incubator-mxnet
-    echo "USE_OPENCV = 1" >> ./config.mk
-    echo "USE_BLAS = openblas" >> ./config.mk
-    make -j $(nproc)
-```
-
-If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)):
+Clone the repository:
 
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
-    echo "USE_OPENCV = 1" >> ./config.mk
-    echo "USE_BLAS = openblas" >> ./config.mk
-    echo "USE_CUDA = 0" >> ./config.mk
-    echo "USE_MKLDNN = 1" >> ./config.mk
-    make -j $(nproc)
 ```
 
-If building on GPU and you want OpenCV and OpenBLAS (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):
+Build with CMake and ninja, without GPU and without MKL.
 
 ```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet.git
-    cd incubator-mxnet
-    echo "USE_OPENCV = 1" >> ./config.mk
-    echo "USE_BLAS = openblas" >> ./config.mk
-    echo "USE_CUDA = 1" >> ./config.mk
-    echo "USE_CUDA_PATH = /usr/local/cuda" >> ./config.mk
-    echo "USE_CUDNN = 1" >> ./config.mk
-    make -j $(nproc)
+    rm -rf build
+    mkdir -p build && cd build
+    cmake -GNinja \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    ..
+    ninja
 ```
 
-*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk` and also review common [usage examples](build_from_source.html#usage-examples).
-
-Building from source creates a library called ```libmxnet.so``` in the `lib` folder in your MXNet project root.
-
-You may also want to add the MXNet shared library to your `LD_LIBRARY_PATH`:
+If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/mkldnn/MKLDNN_README.md)):
 
 ```bash
-export LD_LIBRARY_PATH=$PWD/lib
+    rm -rf build
+    mkdir -p build && cd build
+    cmake -GNinja \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    ..
+    ninja
 ```
+
+If building on GPU (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):
+Cuda 10.1 in Ubuntu 18.04 builds fine but is not currently tested in CI.
+
+```bash
+    rm -rf build
+    mkdir -p build && cd build
+    cmake -GNinja \
+        -DUSE_CUDA=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    ..
+    ninja
+```
+
+*Note* - You can explore and use more compilation options as they are delcared in the top of `CMakeLists.txt` and also review common [usage examples](build_from_source.html#usage-examples).
+Optionally, you can also use a higher level, scripted version of the above with an editable CMake options file by doing the
+following:
+
+```bash
+cp cmake/cmake_options.yml .
+# Edit cmake_options.yml in the MXNet root to your taste
+$EDITOR cmake_options.yml
+# Launch a local CMake build
+./dev_menu.py build
+```
+
+Building from source creates a library called ```libmxnet.so``` in the `build` folder in your MXNet project root.
 
 After building the MXNet library, you may install language bindings.
 

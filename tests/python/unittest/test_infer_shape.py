@@ -147,6 +147,21 @@ def test_fc_infer_type():
         assert arg_type_dict[k] == v
 
 
+def test_shape_completely_unknown():
+    data = mx.sym.var("data")
+    ret = mx.sym.sin(data)
+    arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+    assert arg_shapes[0] == ()
+    assert out_shapes[0] == ()
+
+    with mx.np_compat():
+        data = mx.sym.var("data")
+        ret = mx.sym.sin(data)
+        arg_shapes, out_shapes, _ = ret.infer_shape_partial()
+        assert arg_shapes[0] is None
+        assert out_shapes[0] is None
+
+
 if __name__ == "__main__":
     test_mlp2_infer_shape()
     test_mlp2_infer_error()
@@ -156,3 +171,4 @@ if __name__ == "__main__":
     test_incomplete_infer_slicechannel()
     test_incomplete_infer_convolution()
     test_incomplete_infer_concat()
+    test_shape_completely_unknown()

@@ -28,15 +28,17 @@ object Optimizer {
   def getUpdater(optimizer: Optimizer): MXKVStoreUpdater = {
     new MXKVStoreUpdater with MXKVStoreCachedStates {
       override def update(index: Int, grad: NDArray, weight: NDArray): Unit = {
-        val state =
-          if (states.contains(index)) {
-            states.get(index).get
-          } else {
-            val newState = optimizer.createState(index, weight)
-            states.put(index, newState)
-            newState
-          }
-        optimizer.update(index, weight, grad, state)
+        ResourceScope.usingIfScopeExists(this.scope) {
+          val state =
+            if (states.contains(index)) {
+              states.get(index).get
+            } else {
+              val newState = optimizer.createState(index, weight)
+              states.put(index, newState)
+              newState
+            }
+          optimizer.update(index, weight, grad, state)
+        }
       }
 
       override def dispose(): Unit = {
@@ -52,15 +54,13 @@ object Optimizer {
           val out = new ObjectOutputStream(bos)
           out.writeInt(states.size)
           states.foreach { case (k, v) =>
-            if (v != null) {
-              out.writeInt(k)
-              val stateBytes = optimizer.serializeState(v)
-              if (stateBytes == null) {
-                out.writeInt(0)
-              } else {
-                out.writeInt(stateBytes.length)
-                out.write(stateBytes)
-              }
+            out.writeInt(k)
+            val stateBytes = optimizer.serializeState(v)
+            if (stateBytes == null) {
+              out.writeInt(0)
+            } else {
+              out.writeInt(stateBytes.length)
+              out.write(stateBytes)
             }
           }
           out.flush()

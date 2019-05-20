@@ -57,10 +57,10 @@ namespace conv {
 }
 
 struct DeformableConvolutionParam : public dmlc::Parameter<DeformableConvolutionParam> {
-  TShape kernel;
-  TShape stride;
-  TShape dilate;
-  TShape pad;
+  mxnet::TShape kernel;
+  mxnet::TShape stride;
+  mxnet::TShape dilate;
+  mxnet::TShape pad;
   uint32_t num_filter;
   uint32_t num_group;
   uint32_t num_deformable_group;
@@ -69,11 +69,11 @@ struct DeformableConvolutionParam : public dmlc::Parameter<DeformableConvolution
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeformableConvolutionParam) {
     DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(stride).set_default(TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, -1))
       .describe("Convolution stride: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(dilate).set_default(TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0, -1))
       .describe("Convolution dilate: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(pad).set_default(TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, -1))
       .describe("Zero pad for convolution: (h, w) or (d, h, w). Defaults to no padding.");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
       .describe("Convolution filter(channel) number");
@@ -127,9 +127,9 @@ class DeformableConvolutionOp : public Operator {
     Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
     // calculate the shape of col_buffer
-    TShape col_buffer_shape(num_spatial_axes_ + 1);
+    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1, -1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
-    for (size_t i = 1; i < col_buffer_shape.ndim(); ++i) {
+    for (int i = 1; i < col_buffer_shape.ndim(); ++i) {
       col_buffer_shape[i] = out_data[0].shape_[i + 1];
     }
     // create a column buffer using workspace and col_buffer_shape
@@ -189,7 +189,7 @@ class DeformableConvolutionOp : public Operator {
     Tensor<xpu, 1, DType> workspace = ctx.requested[conv::kTempSpace]
       .get_space_typed<xpu, 1, DType>(Shape1(col_buffer_size_), s);
     // calculate the shape of col_buffer
-    TShape col_buffer_shape(num_spatial_axes_ + 1);
+    mxnet::TShape col_buffer_shape(num_spatial_axes_ + 1, -1);
     col_buffer_shape[0] = conv_in_channels_ * param_.kernel.Size();
     for (index_t i = 1; i < col_buffer_shape.ndim(); ++i) {
       col_buffer_shape[i] = out_grad[conv::kData].shape_[i + 1];
@@ -265,7 +265,9 @@ class DeformableConvolutionOp : public Operator {
   }
 
  private:
-  void LayerSetUp(const TShape& ishape, const TShape& offset_shape, const TShape& oshape) {
+  void LayerSetUp(const mxnet::TShape& ishape,
+                  const mxnet::TShape& offset_shape,
+                  const mxnet::TShape& oshape) {
     channel_axis_ = 1;  // hard code channel axis
     const index_t first_spatial_axis = channel_axis_ + 1;
     const index_t num_axes = param_.kernel.ndim() + 2;
@@ -325,8 +327,8 @@ class DeformableConvolutionOp : public Operator {
 
 template<typename xpu>
 Operator* CreateOp(DeformableConvolutionParam param, int dtype,
-  std::vector<TShape> *in_shape,
-  std::vector<TShape> *out_shape,
+  mxnet::ShapeVector *in_shape,
+  mxnet::ShapeVector *out_shape,
   Context ctx);
 
 #if DMLC_USE_CXX11
@@ -357,19 +359,19 @@ class DeformableConvolutionProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-    std::vector<TShape> *out_shape,
-    std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+    mxnet::ShapeVector *out_shape,
+    mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 4U) << "Input:[data, offset, weight, bias]";
     } else {
       CHECK_EQ(in_shape->size(), 3U) << "Input:[data, offset, weight]";
     }
-    out_shape->resize(1, TShape());
-    const TShape &dshp = (*in_shape)[conv::kData];
-    const TShape &oshp = (*in_shape)[conv::kOffset];
-    if (dshp.ndim() == 0) return false;
+    out_shape->resize(1, mxnet::TShape());
+    const mxnet::TShape &dshp = (*in_shape)[conv::kData];
+    const mxnet::TShape &oshp = (*in_shape)[conv::kOffset];
+    if (mxnet::op::shape_is_none(dshp)) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv
       CHECK_EQ(dshp.ndim(), 4U) \
@@ -484,12 +486,12 @@ class DeformableConvolutionProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-    const std::vector<TShape> &in_shape) const override {
+    const mxnet::ShapeVector &in_shape) const override {
     return{ ResourceRequest::kTempSpace };
   }
 
   std::vector<ResourceRequest> BackwardResource(
-    const std::vector<TShape> &in_shape) const override {
+    const mxnet::ShapeVector &in_shape) const override {
     return{ ResourceRequest::kTempSpace };
   }
 
@@ -498,7 +500,7 @@ class DeformableConvolutionProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
     std::vector<int> *in_type) const override;
 
  private:

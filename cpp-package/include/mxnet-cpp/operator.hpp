@@ -134,9 +134,11 @@ inline void Operator::Invoke(std::vector<NDArray> &outputs) {
     outputs_receiver = output_handles.data();
   }
 
-  MXImperativeInvoke(handle_, num_inputs, input_ndarrays_.data(),
-      &num_outputs, &outputs_receiver,
-      param_keys.size(), param_keys.data(), param_values.data());
+  if (MXImperativeInvoke(handle_, num_inputs, input_ndarrays_.data(),
+                         &num_outputs, &outputs_receiver,
+                         param_keys.size(), param_keys.data(),
+                         param_values.data()))
+      LOG(FATAL) << MXGetLastError();
 
   if (outputs.size() > 0)
     return;

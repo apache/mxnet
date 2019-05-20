@@ -83,8 +83,8 @@ struct SGDParam : public dmlc::Parameter<SGDParam> {
 };
 
 struct MultiSGDParam : public dmlc::Parameter<MultiSGDParam> {
-  nnvm::Tuple<float> lrs;
-  nnvm::Tuple<float> wds;
+  mxnet::Tuple<float> lrs;
+  mxnet::Tuple<float> wds;
   float rescale_grad;
   float clip_gradient;
   int num_weights;
@@ -110,8 +110,8 @@ struct MultiSGDParam : public dmlc::Parameter<MultiSGDParam> {
 };
 
 struct MultiSGDMomParam : public dmlc::Parameter<MultiSGDMomParam> {
-  nnvm::Tuple<float> lrs;
-  nnvm::Tuple<float> wds;
+  mxnet::Tuple<float> lrs;
+  mxnet::Tuple<float> wds;
   float momentum;
   float rescale_grad;
   float clip_gradient;
@@ -142,8 +142,8 @@ struct MultiSGDMomParam : public dmlc::Parameter<MultiSGDMomParam> {
 
 template<typename ParamType, int input_stride>
 inline bool MultiSGDShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   const ParamType& param = dmlc::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), input_stride * param.num_weights);
   CHECK_EQ(out_attrs->size(), param.num_weights);
@@ -163,8 +163,8 @@ inline bool MultiSGDShape(const nnvm::NodeAttrs& attrs,
     << param.num_weights << ", and got " << param.wds.ndim();
   // Weights and gradients
   for (int i = 0; i < param.num_weights; ++i) {
-    std::vector<TShape> input_vec;
-    std::vector<TShape> output_vec({output_shapes[i]});
+    mxnet::ShapeVector input_vec;
+    mxnet::ShapeVector output_vec({output_shapes[i]});
     for (int j = 0; j < input_stride; ++j) {
       input_vec.push_back(input_shapes[i * input_stride + j]);
     }

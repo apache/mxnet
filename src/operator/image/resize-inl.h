@@ -49,12 +49,12 @@ void ResizeImplCUDA(Stream<gpu> *s,
 #endif  // MXNET_USE_CUDA
 
 struct ResizeParam : public dmlc::Parameter<ResizeParam> {
-  nnvm::Tuple<int> size;
+  mxnet::Tuple<int> size;
   bool keep_ratio;
   int interp;
   DMLC_DECLARE_PARAMETER(ResizeParam) {
     DMLC_DECLARE_FIELD(size)
-    .set_default(nnvm::Tuple<int>())
+    .set_default(mxnet::Tuple<int>())
     .describe("Size of new image. Could be (width, height) or (size)");
     DMLC_DECLARE_FIELD(keep_ratio)
     .describe("Whether to resize the short edge or both edges to `size`, "
@@ -113,8 +113,8 @@ inline SizeParam GetHeightAndWidth(int data_h,
 }
 
 inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
+                             mxnet::ShapeVector *in_attrs,
+                             mxnet::ShapeVector *out_attrs) {
   // input attrs should only be (h, w, c) or (n, h, w, c)
   CHECK((in_attrs->at(0).ndim() == 3U) || (in_attrs->at(0).ndim() == 4U))
     << "Input image dimension should be 3 or 4 but got "
@@ -124,11 +124,11 @@ inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
   SizeParam size;
   if (ishape.ndim() == 3) {
     size = GetHeightAndWidth(ishape[H], ishape[W], param);
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({size.height, size.width, ishape[C]}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({size.height, size.width, ishape[C]}));
   } else {
     size = GetHeightAndWidth(ishape[kH], ishape[kW], param);
     SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-      TShape({ishape[N], size.height, size.width, ishape[kC]}));
+      mxnet::TShape({ishape[N], size.height, size.width, ishape[kC]}));
   }
   return true;
 }

@@ -129,10 +129,37 @@ struct LaSyrkParam : public dmlc::Parameter<LaSyrkParam> {
   }
 };
 
+// Parameters for diag extraction/creation.
+struct LaDiagParam : public dmlc::Parameter<LaDiagParam> {
+  int offset;
+  DMLC_DECLARE_PARAMETER(LaDiagParam) {
+    DMLC_DECLARE_FIELD(offset)
+      .set_default(0)
+      .describe("Offset of the diagonal versus the main diagonal. 0 corresponds to the main "
+                "diagonal, a negative/positive value to diagonals below/above the main diagonal.");
+  }
+};
+
+// Parameters for trian extraction/creation.
+struct LaTrianParam : public dmlc::Parameter<LaTrianParam> {
+  int  offset;
+  bool lower;
+  DMLC_DECLARE_PARAMETER(LaTrianParam) {
+    DMLC_DECLARE_FIELD(offset)
+      .set_default(0)
+      .describe("Offset of the diagonal versus the main diagonal. 0 corresponds to the main "
+                "diagonal, a negative/positive value to diagonals below/above the main diagonal.");
+    DMLC_DECLARE_FIELD(lower)
+      .set_default(true)
+      .describe("Refer to the lower triangular matrix if lower=true, refer to the upper otherwise."
+                 " Only relevant when offset=0");
+  }
+};
+
 // Common function for shape inference for matrix mult and matrix mac.
 inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
-                                   std::vector<TShape>* in_attrs,
-                                   std::vector<TShape>* out_attrs) {
+                                   mxnet::ShapeVector* in_attrs,
+                                   mxnet::ShapeVector* out_attrs) {
   CHECK_GE(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
   bool transpose_a(false), transpose_b(false);
@@ -167,7 +194,7 @@ inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
              << "Incompatible matrix dimensions for multiplication";
     oshape[axis] = (transpose_a ? (*in_attrs)[0][ndim-1] : (*in_attrs)[0][axis]);
     oshape[ndim-1] = (transpose_b ? (*in_attrs)[1][axis] : (*in_attrs)[1][ndim-1]);
-    TShape tshape(oshape.begin(), oshape.end());
+    mxnet::TShape tshape(oshape.begin(), oshape.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
     if ( in_attrs->size() > 2 ) {
        // Infer/check shape of third operand of a mac.
@@ -180,8 +207,8 @@ inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
-                                      std::vector<TShape>* in_attrs,
-                                      std::vector<TShape>* out_attrs) {
+                                      mxnet::ShapeVector* in_attrs,
+                                      mxnet::ShapeVector* out_attrs) {
   const LaTriangMatrixMultParam& param = nnvm::get<LaTriangMatrixMultParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
@@ -210,7 +237,7 @@ inline bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
       oshape[ndim-2] = (param.transpose ? (*in_attrs)[0][ndim-1] : (*in_attrs)[0][ndim-2]);
       oshape[ndim-1] = (*in_attrs)[1][ndim-1];
     }
-    TShape tshape(oshape.begin(), oshape.end());
+    mxnet::TShape tshape(oshape.begin(), oshape.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
     return true;
   }
@@ -230,9 +257,9 @@ inline bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
       ishape2[odim-1] = (*out_attrs)[0][odim-1];
       ishape1[odim-2] = ishape1[odim-1] = ishape2[odim-2] = (*out_attrs)[0][odim-2];
     }
-    TShape tshape1(ishape1.begin(), ishape1.end());
+    mxnet::TShape tshape1(ishape1.begin(), ishape1.end());
     SHAPE_ASSIGN_CHECK(*in_attrs, 0, tshape1);
-    TShape tshape2(ishape2.begin(), ishape2.end());
+    mxnet::TShape tshape2(ishape2.begin(), ishape2.end());
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, tshape2);
     return true;
   }
@@ -241,8 +268,8 @@ inline bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
 
 template<int dim>
 inline bool LaReduceShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape>* in_attrs,
-                          std::vector<TShape>* out_attrs) {
+                          mxnet::ShapeVector* in_attrs,
+                          mxnet::ShapeVector* out_attrs) {
   // Shape for reduction of the dim lowest dimensions to a scalar.
   // Can only deduct in forward direction.
   CHECK_EQ(in_attrs->size(), 1);
@@ -257,18 +284,59 @@ inline bool LaReduceShape(const nnvm::NodeAttrs& attrs,
     oshape[i] = (*in_attrs)[0][i];
   }
   // Will reduce all matrices/vectors to a scalar.
-  TShape tshape(oshape.begin(), oshape.end());
+  mxnet::TShape tshape(oshape.begin(), oshape.end());
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
+  return true;
+}
+
+template<bool diag, bool extract>
+inline bool LaDiagTrianShape(const nnvm::NodeAttrs& attrs,
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const int ndim((*in_attrs)[0].ndim());
+  // Only infer in forward direction
+  if (ndim == 0) {
+    return false;
+  }
+  const int offset = (diag ? nnvm::get<LaDiagParam>(attrs.parsed).offset
+                           : nnvm::get<LaTrianParam>(attrs.parsed).offset);
+  std::vector<int> oshape(extract ? ndim-1 : ndim+1);
+  for (int i = 0; i < ndim-1; ++i) {
+    oshape[i] = (*in_attrs)[0][i];
+  }
+  if (extract) {
+    CHECK_GE(ndim, 2)
+      << "Input operand must be a tensor of matrices";
+    CHECK_EQ((*in_attrs)[0][ndim-2], (*in_attrs)[0][ndim-1])
+      << "Input operand must be a tensor of square matrices";
+    const int n((*in_attrs)[0][ndim-1]-abs(offset));
+    CHECK_GT(n, 0)
+      << "Illegal offset " << offset << " for diag/trian extraction of matrix with dimension "
+      << ndim;
+    oshape[ndim-2] = (diag ? n : (n*(n+1))/2);
+  } else if (diag) {
+    oshape[ndim] = oshape[ndim-1] = (*in_attrs)[0][ndim-1]+abs(offset);
+  } else {
+    const int n((*in_attrs)[0][ndim-1]);
+    const int m(std::floor(0.5+(std::sqrt(8*n+1)-1.0)*0.5));
+    CHECK_EQ((m*(m+1))/2, n)
+      << "Input tensor of maketrian has an invalid dimension for the last axis.";
+    oshape[ndim] = oshape[ndim-1] = m+abs(offset);
+  }
+  mxnet::TShape tshape(oshape.begin(), oshape.end());
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
   return true;
 }
 
 // Shape inference function for linalg_syrk
 inline bool LaSyrkShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape>* in_attrs,
-                        std::vector<TShape>* out_attrs) {
+                        mxnet::ShapeVector* in_attrs,
+                        mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  const TShape& in_attr = (*in_attrs)[0];
+  const mxnet::TShape& in_attr = (*in_attrs)[0];
   bool transpose = nnvm::get<LaSyrkParam>(attrs.parsed).transpose;
   const int ndim = in_attr.ndim();
   if ( ndim >= 2 ) {
@@ -279,7 +347,7 @@ inline bool LaSyrkShape(const nnvm::NodeAttrs& attrs,
     }
     oshape[ndim-2] = (transpose ? in_attr[ndim-1] : in_attr[ndim-2]);
     oshape[ndim-1] = oshape[ndim-2];
-    TShape tshape(oshape.begin(), oshape.end());
+    mxnet::TShape tshape(oshape.begin(), oshape.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
     return true;
   }
@@ -290,13 +358,13 @@ inline bool LaSyrkShape(const nnvm::NodeAttrs& attrs,
 // Shape inference function for linalg_gelqf
 // Inputs: A. Outputs: Q, L
 inline bool LaLQFactShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape>* in_attrs,
-                          std::vector<TShape>* out_attrs) {
+                          mxnet::ShapeVector* in_attrs,
+                          mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 2);
-  const TShape& in_a = (*in_attrs)[0];
-  const TShape& out_q = (*out_attrs)[0];
-  const TShape& out_l = (*out_attrs)[1];
+  const mxnet::TShape& in_a = (*in_attrs)[0];
+  const mxnet::TShape& out_q = (*out_attrs)[0];
+  const mxnet::TShape& out_l = (*out_attrs)[1];
   if ( in_a.ndim() >= 2 ) {
     // Forward shape inference.
     const int ndim(in_a.ndim());
@@ -309,7 +377,7 @@ inline bool LaLQFactShape(const nnvm::NodeAttrs& attrs,
       oshape_l[i] = in_a[i];
     }
     oshape_l[ndim-1] = in_a[ndim-2];
-    TShape tshape_l(oshape_l.begin(), oshape_l.end());
+    mxnet::TShape tshape_l(oshape_l.begin(), oshape_l.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, tshape_l);
     return true;
   }
@@ -333,13 +401,13 @@ inline bool LaLQFactShape(const nnvm::NodeAttrs& attrs,
 // Shape inference function for linalg_syevd
 // Inputs: A. Outputs: U, L
 inline bool LaEigFactShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape>* in_attrs,
-                           std::vector<TShape>* out_attrs) {
+                           mxnet::ShapeVector* in_attrs,
+                           mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 2);
-  const TShape& in_a = (*in_attrs)[0];
-  const TShape& out_u = (*out_attrs)[0];
-  const TShape& out_l = (*out_attrs)[1];
+  const mxnet::TShape& in_a = (*in_attrs)[0];
+  const mxnet::TShape& out_u = (*out_attrs)[0];
+  const mxnet::TShape& out_l = (*out_attrs)[1];
   if ( in_a.ndim() >= 2 ) {
     // Forward shape inference.
     const int ndim(in_a.ndim());
@@ -351,7 +419,7 @@ inline bool LaEigFactShape(const nnvm::NodeAttrs& attrs,
     for ( int i = 0; i < ndim-1; ++i ) {
       oshape_l[i] = in_a[i];
     }
-    TShape tshape_l(oshape_l.begin(), oshape_l.end());
+    mxnet::TShape tshape_l(oshape_l.begin(), oshape_l.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, tshape_l);
     return true;
   }
@@ -384,7 +452,7 @@ mshadow::Tensor<xpu, dim, DType> LaOpFlatten(const TBlob& blob,
   }
   // Collapse ranges [0,axis-1] and [axis+1,ndim-2].
   CHECK_EQ(dim, 4);
-  TShape shape(dim);
+  mxnet::TShape shape(dim, -1);
   shape[0] = 1;
   for (int i = 0; i < axis; ++i) {
     shape[0] *= blob.shape_[i];

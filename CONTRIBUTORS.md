@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 Contributors of Apache MXNet (incubating)
 =========================================
 MXNet has been developed by a community of people who are interested in large-scale machine learning and deep learning.
@@ -48,6 +65,10 @@ The committers are the granted write access to the project.
  - Marco is the creator of the current MXNet CI.
 * [Carin Meier](https://github.com/gigasquid)
   - Carin created and is the current maintainer for the Clojure interface.
+* [Patric Zhao](https://github.com/pengzhao-intel)
+  - Patric is a parallel computing expert and a major contributor to the MXNet MKL-DNN backend.
+* [Tao Lv](https://github.com/TaoLv)
+  - Tao is a major contributor to the MXNet MKL-DNN backend and performance on CPU.
 
 
 ### Become a Committer
@@ -194,7 +215,29 @@ List of Contributors
 * [Harsh Patel](https://github.com/harshp8l)
 * [Xiao Wang](https://github.com/BeyonderXX)
 * [Piyush Ghai](https://github.com/piyushghai)
+* [Dang Trung Kien](https://github.com/kiendang)
 * [Zach Boldyga](https://github.com/zboldyga)
+* [Gordon Reid](https://github.com/gordon1992)
+* [Ming Yang](http://ufoym.com)
+* [Satya Krishna Gorti](https://github.com/satyakrishnagorti)
+* [Neo Chien](https://github.com/cchung100m)
+* [Wujie Zhou](https://github.com/eureka7mt)
+* [Ciyong Chen](https://github.com/ciyongch)
+* [Hao Li](https://github.com/lihaofd)
+* [Jin Huang](https://github.com/jinhuang415)
+* [Luobao Zou](https://github.com/luobao-intel)
+* [Pengxin Yuan](https://github.com/pengxin99)
+* [Rong Zhang](https://github.com/rongzha1/)
+* [Shu Zhang](https://github.com/Sherry-Zhang)
+* [Shufan Wu](https://github.com/juliusshufan)
+* [Wenting Jiang](https://github.com/wentingj)
+* [Xiaotao Chen](https://github.com/XiaotaoChen)
+* [Xinyu Chen](https://github.com/xinyu-intel)
+* [Zhennan Qin](https://github.com/ZhennanQin)
+* [Zhiyuan Huang](https://github.com/huangzhiyuan)
+* [Zak Jost](https://github.com/zjost)
+* [Shoubhik Bhattacharya](https://github.com/shoubhik)
+* [Zach Kimberg](https://github.com/zachgk)
 
 Label Bot
 ---------

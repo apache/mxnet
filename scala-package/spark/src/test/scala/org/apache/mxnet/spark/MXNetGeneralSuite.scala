@@ -20,6 +20,7 @@ package org.apache.mxnet.spark
 import java.io.{BufferedReader, File, InputStreamReader}
 import java.nio.file.Files
 
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 import org.apache.spark.SparkContext

@@ -52,14 +52,14 @@ class ObjectDetectorOutput (className: String, args: Array[Float]){
     *
     * @return       Float of the max X coordinate for the object bounding box
     */
-  def getXMax: Float = args(2)
+  def getXMax: Float = args(3)
 
   /**
     * Gets the minimum Y coordinate for the bounding box containing the predicted object.
     *
     * @return       Float of the min Y coordinate for the object bounding box
     */
-  def getYMin: Float = args(3)
+  def getYMin: Float = args(2)
 
   /**
     * Gets the maximum Y coordinate for the bounding box containing the predicted object.

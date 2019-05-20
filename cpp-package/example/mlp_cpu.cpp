@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  TRY
   auto net = mlp(layers);
 
   Context ctx = Context::cpu();  // Use CPU for training
@@ -139,6 +140,8 @@ int main(int argc, char** argv) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

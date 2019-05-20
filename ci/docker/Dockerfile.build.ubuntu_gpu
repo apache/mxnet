@@ -18,7 +18,9 @@
 #
 # Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
-FROM nvidia/cuda:9.1-cudnn7-devel
+FROM nvidia/cuda:10.0-devel-ubuntu16.04
+
+ENV CUDNN_VERSION=7.3.1.20
 
 WORKDIR /work/deps
 
@@ -71,6 +73,9 @@ ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
+
+COPY install/ubuntu_cudnn.sh /work/
+RUN /work/ubuntu_cudnn.sh
 
 COPY runtime_functions.sh /work/
 

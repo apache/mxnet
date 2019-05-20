@@ -16,8 +16,11 @@
 # under the License.
 """general utility functions"""
 
+import ctypes
 import os
 import sys
+
+from .base import _LIB, check_call
 
 
 def makedirs(d):
@@ -28,3 +31,16 @@ def makedirs(d):
         mkpath(d)
     else:
         os.makedirs(d, exist_ok=True)  # pylint: disable=unexpected-keyword-arg
+
+
+def get_gpu_count():
+    size = ctypes.c_int()
+    check_call(_LIB.MXGetGPUCount(ctypes.byref(size)))
+    return size.value
+
+
+def get_gpu_memory(gpu_dev_id):
+    free_mem = ctypes.c_uint64(0)
+    total_mem = ctypes.c_uint64(0)
+    check_call(_LIB.MXGetGPUMemoryInformation64(gpu_dev_id, ctypes.byref(free_mem), ctypes.byref(total_mem)))
+    return free_mem.value, total_mem.value

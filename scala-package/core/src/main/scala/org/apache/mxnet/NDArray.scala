@@ -36,6 +36,11 @@ import scala.util.Try
   */
 @AddNDArrayFunctions(false)
 object NDArray extends NDArrayBase {
+  /**
+    * method to convert NDArrayFunctionReturn to NDArray
+    * @param ret the returned NDArray list
+    * @return NDArray result
+    */
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
 
@@ -575,15 +580,13 @@ object NDArray extends NDArrayBase {
    * @param stop End of interval.
    * @param step Spacing between values. The default step size is 1.
    * @param repeat Number of times to repeat each element. The default repeat count is 1.
-   * @param infer_range
-   *          When set to True, infer the stop position from the start, step,
-   *          repeat, and output tensor size.
    * @param ctx Device context. Default context is the current default context.
    * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
    * @return NDArray of evenly spaced values in the specified range.
    */
-  def arange(start: Float, stop: Option[Float], step: Float,
-             repeat: Int, ctx: Context, dType: DType): NDArray = {
+  def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
+             repeat: Int = 1, ctx: Context = Context.defaultCtx,
+             dType: DType = Base.MX_REAL_TYPE): NDArray = {
     val params = Map("start" -> start, "step" -> step, "repeat" -> repeat,
       "infer_range" -> false, "ctx" -> ctx.toString, "dtype" -> dType.toString())
     val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
@@ -728,12 +731,15 @@ object NDArray extends NDArrayBase {
 }
 
 /**
- * NDArray object in mxnet.
- * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
- * <b>
- * WARNING: it is your responsibility to clear this object through dispose().
- * </b>
- */
+  * NDArray object in mxnet.
+  * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
+  * <b>
+  * NOTE: NDArray is stored in native memory. Use NDArray in a try-with-resources() construct
+  * or a [[org.apache.mxnet.ResourceScope]] in a try-with-resource to have them
+  * automatically disposed. You can explicitly control the lifetime of NDArray
+  * by calling dispose manually. Failure to do this will result in leaking native memory.
+  * </b>
+  */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean = true,
                              addToCollector: Boolean = true) extends NativeResource {
@@ -775,21 +781,22 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   /**
-   * Dispose all NDArrays who help to construct this array. <br />
-   * e.g. (a * b + c).disposeDeps() will dispose a, b, c (including their deps) and a * b
-   * @return this array
-   */
+    * Dispose all NDArrays who help to construct this array. <br />
+    * e.g. (a * b + c).disposeDeps() will dispose a, b, c (including their deps) and a * b
+    * @return this NDArray
+    */
   def disposeDeps(): NDArray = {
     disposeDepsExcept()
   }
 
   /**
-   * Dispose all NDArrays who help to construct this array, excepts those in the arguments. <br />
-   * e.g. (a * b + c).disposeDepsExcept(a, b)
-   * will dispose c and a * b.
-   * Note that a, b's dependencies will not be disposed either.
-   * @return this array
-   */
+    * Dispose all NDArrays who help to construct this array, excepts those in the arguments. <br />
+    * e.g. (a * b + c).disposeDepsExcept(a, b)
+    * will dispose c and a * b.
+    * Note that a, b's dependencies will not be disposed either.
+    * @param arrs array of NDArrays
+    * @return this array
+    */
   def disposeDepsExcept(arrs: NDArray*): NDArray = {
     if (dependencies != null) {
       val excepts = mutable.HashSet.empty[Long]
@@ -948,8 +955,19 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return a reshaped NDArray that shares memory with current one.
    */
   def reshape(dims: Array[Int]): NDArray = {
+    reshape(dims.map(_.toLong))
+  }
+
+  /**
+    * Return a reshaped NDArray that shares memory with current one.
+    * @param dims New shape.
+    * @param reverse whether to inplace reshape
+    * @return a reshaped NDArray that shares memory with current one.
+    */
+  def reshape(dims: Array[Long], reverse: Option[Boolean] = None): NDArray = {
     val reshapeHandle = new NDArrayHandleRef
-    checkCall(_LIB.mxNDArrayReshape(handle, dims.length, dims, reshapeHandle))
+    checkCall(_LIB.mxNDArrayReshape64(handle,
+      dims.length, dims, reverse.getOrElse(false), reshapeHandle))
     new NDArray(handle = reshapeHandle.value, writable = this.writable)
   }
 
@@ -1261,11 +1279,15 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return an array representing shape of current ndarray
    */
   def shape: Shape = {
-    val ndim = new MXUintRef
+    val ndim = new RefInt
     val data = ArrayBuffer[Int]()
     checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
-    require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
-    Shape(data)
+    if (ndim.value == -1) {
+      null
+    } else {
+      require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
+      Shape(data)
+    }
   }
 
   // Get size of current NDArray.

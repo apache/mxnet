@@ -128,9 +128,9 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
   }
 };
 
-inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TShape *target_shape,
-                           int *batch_size, int *element_num, int *axis, int *k,
-                           bool *do_transpose, bool *is_ascend) {
+inline void ParseTopKParam(const mxnet::TShape& src_shape, const TopKParam& param,
+                           mxnet::TShape *target_shape, int *batch_size, int *element_num,
+                           int *axis, int *k, bool *do_transpose, bool *is_ascend) {
   *do_transpose = false;
   *k = param.k;
   *is_ascend = param.is_ascend;
@@ -149,7 +149,7 @@ inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TSha
                                                   << src_shape.ndim() << ", found axis=" << *axis;
     *batch_size = src_shape.Size() / src_shape[*axis];
     *element_num = src_shape[*axis];
-    if (*axis != static_cast<int>(src_shape.ndim()) - 1) {
+    if (*axis != src_shape.ndim() - 1) {
       *do_transpose = true;
     }
   }
@@ -387,7 +387,7 @@ void TopKImpl(const RunContext &ctx,
   bool is_ascend = false;
   int k = 0;
   size_t alignment = std::max(sizeof(DType), sizeof(int));
-  TShape target_shape;
+  mxnet::TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
   CHECK_LE(element_num, mxnet::common::MaxIntegerValue<IDType>())
@@ -479,7 +479,7 @@ void TopKImpl(const RunContext &ctx,
                                                      element_num)), 0, k),
                               Shape1(batch_size * k));
     if (do_transpose) {
-      TShape src_shape = src.shape_.FlatTo3D(axis);
+      mxnet::TShape src_shape = src.shape_.FlatTo3D(axis);
       CHECK_EQ(sel_indices.CheckContiguous(), true);
       sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
                                       Shape3(0, 2, 1));
@@ -610,7 +610,7 @@ void TopKBackwardImpl(const OpContext &ctx,
   bool do_transpose = false;
   bool is_ascend = false;
   int k = 0;
-  TShape target_shape;
+  mxnet::TShape target_shape;
   ParseTopKParam(outputs[0].shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
   CHECK_LE(element_num, mxnet::common::MaxIntegerValue<IDType>())
@@ -632,11 +632,11 @@ void TopKBackwardImpl(const OpContext &ctx,
                                            batch_shift.dptr_);
   if (do_transpose) {
     Tensor<xpu, 1, IDType> indices = inputs[2].FlatTo1D<xpu, IDType>(s);
-    TShape src_shape = outputs[0].shape_.FlatTo3D(axis);
+    mxnet::TShape src_shape = outputs[0].shape_.FlatTo3D(axis);
     sel_indices = reshape(transpose(
                             broadcast_to(inplace_reshape(batch_shift,
                                                          Shape3(src_shape[0], src_shape[2], 1)),
-                                         TShape(Shape3(src_shape[0], src_shape[2], k))),
+                                         mxnet::TShape(Shape3(src_shape[0], src_shape[2], k))),
                             Shape3(0, 2, 1)),
                           Shape1(batch_size * k));
     sel_indices += tcast<int>(indices);
@@ -647,7 +647,7 @@ void TopKBackwardImpl(const OpContext &ctx,
       inputs[2].get_with_shape<xpu, 2, IDType>(Shape2(batch_size, k), s);
     sel_indices = reshape(tcast<int>(indices) +
                           broadcast_to(inplace_reshape(batch_shift, Shape2(batch_size, 1)),
-                                       TShape(Shape2(batch_size, k))),
+                                       mxnet::TShape(Shape2(batch_size, k))),
                           Shape1(batch_size * k));
   }
   CHECK_EQ(sel_indices.CheckContiguous(), true);
@@ -742,8 +742,8 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool TopKShapeImpl(const TopKParam& param,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   if (param.ret_typ == topk_enum::kReturnIndices ||
     param.ret_typ == topk_enum::kReturnMask) {
@@ -751,13 +751,13 @@ inline bool TopKShapeImpl(const TopKParam& param,
   } else {
     CHECK_EQ(out_attrs->size(), 2U);
   }
-  TShape& in_shape = (*in_attrs)[0];
+  mxnet::TShape& in_shape = (*in_attrs)[0];
   int batch_size, element_num;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
   bool is_ascend = false;
   int k = 0;
-  TShape target_shape;
+  mxnet::TShape target_shape;
   ParseTopKParam(in_shape, param,
     &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
   if (param.ret_typ == topk_enum::kReturnIndices ||
@@ -771,8 +771,8 @@ inline bool TopKShapeImpl(const TopKParam& param,
 }
 
 inline bool TopKShape(const nnvm::NodeAttrs& attrs,
-                      std::vector<TShape> *in_attrs,
-                      std::vector<TShape> *out_attrs) {
+                      mxnet::ShapeVector *in_attrs,
+                      mxnet::ShapeVector *out_attrs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   return TopKShapeImpl(param, in_attrs, out_attrs);
 }
@@ -800,8 +800,8 @@ inline bool SortType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool SortShape(const nnvm::NodeAttrs& attrs,
-                      std::vector<TShape> *in_attrs,
-                      std::vector<TShape> *out_attrs) {
+                      mxnet::ShapeVector *in_attrs,
+                      mxnet::ShapeVector *out_attrs) {
   const SortParam& param = nnvm::get<SortParam>(attrs.parsed);
   TopKParam topk_param;
   topk_param.axis = param.axis;
@@ -821,8 +821,8 @@ inline bool ArgSortType(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool ArgSortShape(const nnvm::NodeAttrs& attrs,
-                         std::vector<TShape> *in_attrs,
-                         std::vector<TShape> *out_attrs) {
+                         mxnet::ShapeVector *in_attrs,
+                         mxnet::ShapeVector *out_attrs) {
   const ArgSortParam& param = nnvm::get<ArgSortParam>(attrs.parsed);
   TopKParam topk_param;
   topk_param.axis = param.axis;

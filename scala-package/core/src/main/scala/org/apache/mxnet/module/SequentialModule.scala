@@ -112,6 +112,16 @@ class SequentialModule extends BaseModule {
   }
 
   /**
+    * Get output shapes.
+    * @return The output shapes of the last
+    * module is the output shape of a SequentialModule.
+    */
+  def outputDesc: IndexedSeq[DataDesc] = {
+    require(this.binded, "bind() must be called first.")
+    this.modules.reverse.head.dataShapes
+  }
+
+  /**
    * Get output shapes.
    * @return The output shapes of the last
    * module is the output shape of a SequentialModule.
@@ -154,38 +164,37 @@ class SequentialModule extends BaseModule {
                           allowMissing: Boolean = false,
                           forceInit: Boolean = false,
                           allowExtra: Boolean = false): Unit = {
-    if (this.paramsInitialized && !forceInit) {
-      return
-    }
-    require(this.binded, "call bind before initializing the parameters")
+    if (!this.paramsInitialized || forceInit) {
+      require(this.binded, "call bind before initializing the parameters")
 
-    for (module <- this.modules) {
-      module.initParams(initializer = initializer, argParams = argParams,
-          auxParams = auxParams, allowMissing = allowMissing,
-          forceInit = forceInit, allowExtra = allowExtra)
-    }
-
-    // Internal function to help checking duplicated names,
-    // make sure we do not have duplicated parameter names.
-    def checkName(knownNames: scala.collection.mutable.Map[String, Int],
-      newNames: Array[String], modules: ArrayBuffer[BaseModule], i: Int): Unit = {
-      for (name <- newNames) {
-        require(!knownNames.contains(name), s"Duplicated parameter names: " +
-            s"name $name in layer $i (${modules(i).getClass.getName}) is already " +
-            s"used in layer ${knownNames("name")}" +
-            s"(${modules(knownNames("name")).getClass.getName})")
-        knownNames(name) = i
+      for (module <- this.modules) {
+        module.initParams(initializer = initializer, argParams = argParams,
+            auxParams = auxParams, allowMissing = allowMissing,
+            forceInit = forceInit, allowExtra = allowExtra)
       }
-    }
 
-    val argNames = scala.collection.mutable.Map[String, Int]()
-    val auxNames = scala.collection.mutable.Map[String, Int]()
-    for ((module, iLayer) <- this.modules.zipWithIndex) {
-      val (argParams, auxParams) = module.getParams
-      checkName(argNames, argParams.keys.toArray, this.modules, iLayer)
-      checkName(auxNames, auxParams.keys.toArray, this.modules, iLayer)
+      // Internal function to help checking duplicated names,
+      // make sure we do not have duplicated parameter names.
+      def checkName(knownNames: scala.collection.mutable.Map[String, Int],
+        newNames: Array[String], modules: ArrayBuffer[BaseModule], i: Int): Unit = {
+        for (name <- newNames) {
+          require(!knownNames.contains(name), s"Duplicated parameter names: " +
+              s"name $name in layer $i (${modules(i).getClass.getName}) is already " +
+              s"used in layer ${knownNames("name")}" +
+              s"(${modules(knownNames("name")).getClass.getName})")
+          knownNames(name) = i
+        }
+      }
+
+      val argNames = scala.collection.mutable.Map[String, Int]()
+      val auxNames = scala.collection.mutable.Map[String, Int]()
+      for ((module, iLayer) <- this.modules.zipWithIndex) {
+        val (argParams, auxParams) = module.getParams
+        checkName(argNames, argParams.keys.toArray, this.modules, iLayer)
+        checkName(auxNames, auxParams.keys.toArray, this.modules, iLayer)
+      }
+      this.paramsInitialized = true
     }
-    this.paramsInitialized = true
   }
 
   /**
@@ -216,54 +225,54 @@ class SequentialModule extends BaseModule {
                     gradReq: String = "write"): Unit = {
     if (this.binded && !forceRebind) {
       logger.warn(s"Already binded, ignoring bind()")
-      return
-    }
-
-    if (inputsNeedGrad) {
-      require(forTraining, "inputsNeedGrad can be set only for training")
-    }
-
-    require(sharedModule == None, "Shared module is not supported")
-    require(this.modules.length > 0, "Attempting to bind an empty SequentialModule")
-
-    this.forTraining = forTraining
-    this.inputsNeedGrad = inputsNeedGrad
-    this.binded = true
-
-    // the same label shapes are used for all chained modules
-    this.labelShapesVar = labelShapes
-
-    var myDataShapes = dataShapes
-    var myLabelShapes = labelShapes
-    var anybodyEverNeedsLabel = false
-    for ((module, iLayer) <- this.modules.zipWithIndex) {
-      val meta = this.metas(iLayer)
-      if (meta.contains(META_TAKE_LABELS) && meta(META_TAKE_LABELS)) {
-        myLabelShapes = labelShapes
-        anybodyEverNeedsLabel = true
-      } else myLabelShapes = None
-
-      val myInputsNeedGrad = if (inputsNeedGrad || (forTraining && iLayer > 0)) true else false
-      if (meta.contains(META_AUTO_WIRING) && meta(META_AUTO_WIRING)) {
-        val dataNames = module.dataNames
-        require(dataNames.length == myDataShapes.length,
-          s"dataNmes $dataNames and dataShapes $myDataShapes do not match")
-        myDataShapes = dataNames.zip(myDataShapes).map { case (newName, dataDes) =>
-          DataDesc(newName, dataDes.shape)
-        }
+    } else {
+      if (inputsNeedGrad) {
+        require(forTraining, "inputsNeedGrad can be set only for training")
       }
 
-      module.bind(myDataShapes, myLabelShapes, forTraining, myInputsNeedGrad,
+      require(sharedModule == None, "Shared module is not supported")
+      require(this.modules.length > 0, "Attempting to bind an empty SequentialModule")
+
+      this.forTraining = forTraining
+      this.inputsNeedGrad = inputsNeedGrad
+      this.binded = true
+
+      // the same label shapes are used for all chained modules
+      this.labelShapesVar = labelShapes
+
+      var myDataShapes = dataShapes
+      var myLabelShapes = labelShapes
+      var anybodyEverNeedsLabel = false
+      for ((module, iLayer) <- this.modules.zipWithIndex) {
+        val meta = this.metas(iLayer)
+        if (meta.contains(META_TAKE_LABELS) && meta(META_TAKE_LABELS)) {
+          myLabelShapes = labelShapes
+          anybodyEverNeedsLabel = true
+        } else myLabelShapes = None
+
+        val myInputsNeedGrad = if (inputsNeedGrad || (forTraining && iLayer > 0)) true else false
+        if (meta.contains(META_AUTO_WIRING) && meta(META_AUTO_WIRING)) {
+          val dataNames = module.dataNames
+          require(dataNames.length == myDataShapes.length,
+            s"dataNmes $dataNames and dataShapes $myDataShapes do not match")
+          myDataShapes = dataNames.zip(myDataShapes).map { case (newName, dataDes) =>
+            DataDesc(newName, dataDes.shape)
+          }
+        }
+
+        module.bind(myDataShapes, myLabelShapes, forTraining, myInputsNeedGrad,
           forceRebind, sharedModule = None, gradReq)
-      // the output of the previous module is the data of the next module
-      myDataShapes = module.outputShapes.map{case (name, shape) => DataDesc(name, shape)}
-    }
+        // the output of the previous module is the data of the next module
+        myDataShapes = module.outputShapes.map{case (name, shape) => DataDesc(name, shape)}
+      }
 
 
-    if (!anybodyEverNeedsLabel) {
-      // then I do not need label either
-      this.labelShapesVar = None
+      if (!anybodyEverNeedsLabel) {
+        // then I do not need label either
+        this.labelShapesVar = None
+      }
     }
+
   }
 
   /**
@@ -307,12 +316,8 @@ class SequentialModule extends BaseModule {
         val dataNames = module.outputShapes.map(_._1)
         require(dataNames.length == data.data.length,
           s"dataNames $dataNames do not match with number of arrays in batch")
-        var provideData = ListMap[String, Shape]()
-        for ((name, x) <- dataNames.zip(out.head)) {
-          provideData += name -> x.shape
-        }
         data = new DataBatch(out.head, data.label, data.index,
-            data.pad, data.bucketKey, provideData, data.provideLabel)
+            data.pad, data.bucketKey, outputDesc, data.provideLabelDesc)
       }
     }
   }

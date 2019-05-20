@@ -34,11 +34,6 @@ namespace mxnet {
 namespace op {
 namespace custom {
 
-CustomOperator* CustomOperator::Get() {
-  static CustomOperator inst;
-  return &inst;
-}
-
 struct CustomParam {
   std::string op_type;
   size_t num_args, num_outs, num_auxs;
@@ -128,22 +123,26 @@ void AttrParser(NodeAttrs* attrs) {
 }
 
 bool InferShape(const NodeAttrs& attrs,
-                std::vector<TShape> *in_shape,
-                std::vector<TShape> *out_shape) {
+                mxnet::ShapeVector *in_shape,
+                mxnet::ShapeVector *out_shape) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
   size_t total = params.num_args + params.num_outs + params.num_auxs;
-  std::vector<uint32_t*> shapes(total);
+  std::vector<int*> shapes(total);
   std::vector<int> ndims(total);
   size_t buff_size = 0;
-  for (const auto& i : *in_shape) buff_size += i.ndim();
-  std::vector<uint32_t> buff(buff_size);
-  uint32_t *ptr = buff.data();
+  for (const auto& i : *in_shape) {
+    if (i.ndim() > 0) {
+      buff_size += i.ndim();
+    }
+  }
+  std::vector<int> buff(buff_size);
+  int *ptr = buff.data();
   for (size_t i = 0; i < in_shape->size(); ++i) {
     shapes[i] = ptr;
     ndims[i] = (*in_shape)[i].ndim();
-    for (size_t j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
-      *ptr = static_cast<uint32_t>((*in_shape)[i][j]);
+    for (int j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
+      *ptr = (*in_shape)[i][j];
     }
   }
 
@@ -153,19 +152,19 @@ bool InferShape(const NodeAttrs& attrs,
           params.info->contexts[kCustomOpPropInferShape]));
 
   for (size_t i = 0; i < params.num_args; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
+    SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape(shapes[i], shapes[i]+ndims[i]));
   }
 
   size_t base = params.num_args;
   for (size_t i = 0; i < params.num_outs; ++i) {
     SHAPE_ASSIGN_CHECK(*out_shape, i,
-        TShape(shapes[base+i], shapes[base+i]+ndims[base+i]));
+        mxnet::TShape(shapes[base+i], shapes[base+i]+ndims[base+i]));
   }
 
   base = params.num_args + params.num_outs;
   for (size_t i = 0; i < params.num_auxs; ++i) {
     SHAPE_ASSIGN_CHECK(*in_shape, params.num_args+i,
-        TShape(shapes[base+i], shapes[base+i]+ndims[base+i]));
+        mxnet::TShape(shapes[base+i], shapes[base+i]+ndims[base+i]));
   }
   return true;
 }
@@ -255,7 +254,7 @@ std::vector<nnvm::NodeEntry> Gradient(
 
 
 OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
-                       const std::vector<TShape>& in_shape,
+                       const mxnet::ShapeVector& in_shape,
                        const std::vector<int>& in_type) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
@@ -268,7 +267,7 @@ OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
   for (size_t i = 0; i < in_shape.size(); ++i) {
     shapes[i] = ptr;
     ndims[i] = in_shape[i].ndim();
-    for (size_t j = 0; j < in_shape[i].ndim(); ++j, ++ptr) {
+    for (int j = 0; j < in_shape[i].ndim(); ++j, ++ptr) {
       *ptr = static_cast<uint32_t>(in_shape[i][j]);
     }
   }
@@ -554,7 +553,7 @@ Please check the tutorial here: http://mxnet.io/faq/new_op.html.
     return params.num_outs;
   })
 .set_attr_parser(AttrParser)
-.set_attr<nnvm::FInferShape>("FInferShape", InferShape)
+.set_attr<mxnet::FInferShape>("FInferShape", InferShape)
 .set_attr<nnvm::FInferType>("FInferType", InferType)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
     std::vector<std::string> args = List<kCustomOpPropListArguments>(attrs);

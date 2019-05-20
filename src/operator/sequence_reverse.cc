@@ -40,7 +40,7 @@ Operator *CreateOp<cpu>(SequenceReverseParam param, int dtype, int itype) {
 
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *SequenceReverseProp::CreateOperatorEx(
-    Context ctx, std::vector<TShape> *in_shape,
+    Context ctx, mxnet::ShapeVector *in_shape,
     std::vector<int> *in_type) const {
 
   if (in_type->size() >= 2 && (*in_type)[1] != -1) {

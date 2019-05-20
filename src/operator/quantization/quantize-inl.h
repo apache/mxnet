@@ -95,6 +95,10 @@ void QuantizeCompute(const nnvm::NodeAttrs& attrs,
 
   const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
   if (param.out_type == mshadow::kUint8) {
+    if (std::is_same<xpu, gpu>::value) {
+      LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
+                    "please switch to the context of CPU or int8 data type for GPU.";
+    }
     Kernel<quantize_unsigned, xpu>::Launch(s, outputs[0].Size(),
       outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(), outputs[2].dptr<float>(),
       inputs[0].dptr<float>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
@@ -110,19 +114,19 @@ void QuantizeCompute(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool QuantizeShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
 
   for (size_t i = 1; i < 3; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_attrs, i, TShape({1}));
+    SHAPE_ASSIGN_CHECK(*in_attrs, i, mxnet::TShape(1, 1));
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape{1});
-  SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape{1});
-  return !shape_is_none(out_attrs->at(0));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape{1});
+  return shape_is_known(out_attrs->at(0));
 }
 
 inline bool QuantizeType(const nnvm::NodeAttrs& attrs,

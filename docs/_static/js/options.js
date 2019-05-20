@@ -1,8 +1,9 @@
+
 /*!
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * regarding copyright ownership.  The ASF licenses this file 
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -18,7 +19,7 @@
  */
 
 /* Installation page display functions for install selector */
-var versionSelect   = defaultVersion = 'v1.3.1';
+var versionSelect   = defaultVersion = 'v1.4.0';
 var platformSelect    = 'Linux';
 var languageSelect  = 'Python';
 var processorSelect = 'CPU';

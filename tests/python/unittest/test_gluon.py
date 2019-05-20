@@ -506,56 +506,201 @@ def test_deconv():
 
 @with_seed()
 def test_pool():
-    layers1d = [
-        nn.MaxPool1D(),
-        nn.MaxPool1D(3),
-        nn.MaxPool1D(3, 2),
-        nn.AvgPool1D(),
-        nn.AvgPool1D(count_include_pad=False),
-        nn.GlobalAvgPool1D(),
-        ]
-    for layer in layers1d:
-        check_layer_forward(layer, (1, 2, 10))
+    # transpose shape to bring feature dimension 'c' from 2nd position to last
+    def transpose(shape):
+        return (shape[0],) + shape[2:] + (shape[1],)
+
+    for layout in ['NCW', 'NWC']:
+        shape1d = (1, 2, 10)
+        if layout == 'NWC':
+            shape1d = transpose(shape1d)
+        layers1d = [
+            nn.MaxPool1D(layout=layout),
+            nn.MaxPool1D(3, layout=layout),
+            nn.MaxPool1D(3, 2, layout=layout),
+            nn.AvgPool1D(layout=layout),
+            nn.AvgPool1D(count_include_pad=False, layout=layout),
+            nn.GlobalAvgPool1D(layout=layout),
+            ]
+        for layer in layers1d:
+            check_layer_forward(layer, shape1d)
 
 
-    layers2d = [
-        nn.MaxPool2D(),
-        nn.MaxPool2D((3, 3)),
-        nn.MaxPool2D(3, 2),
-        nn.AvgPool2D(),
-        nn.AvgPool2D(count_include_pad=False),
-        nn.GlobalAvgPool2D(),
-        ]
-    for layer in layers2d:
-        check_layer_forward(layer, (1, 2, 10, 10))
+    for layout in ['NCHW', 'NHWC']:
+        shape2d = (1, 2, 10, 10)
+        if layout == 'NHWC':
+            shape2d = transpose(shape2d)
+        layers2d = [
+            nn.MaxPool2D(layout=layout),
+            nn.MaxPool2D((3, 3), layout=layout),
+            nn.MaxPool2D(3, 2, layout=layout),
+            nn.AvgPool2D(layout=layout),
+            nn.AvgPool2D(count_include_pad=False, layout=layout),
+            nn.GlobalAvgPool2D(layout=layout),
+            ]
+        for layer in layers2d:
+            check_layer_forward(layer, shape2d)
 
-    layers3d = [
-        nn.MaxPool3D(),
-        nn.MaxPool3D((3, 3, 3)),
-        nn.MaxPool3D(3, 2),
-        nn.AvgPool3D(),
-        nn.AvgPool3D(count_include_pad=False),
-        nn.GlobalAvgPool3D(),
-        ]
-    for layer in layers3d:
-        check_layer_forward(layer, (1, 2, 10, 10, 10))
+    for layout in ['NCDHW', 'NDHWC']:
+        shape3d = (1, 2, 10, 10, 10)
+        if layout == 'NDHWC':
+            shape3d = transpose(shape3d)
+        layers3d = [
+            nn.MaxPool3D(layout=layout),
+            nn.MaxPool3D((3, 3, 3), layout=layout),
+            nn.MaxPool3D(3, 2, layout=layout),
+            nn.AvgPool3D(layout=layout),
+            nn.AvgPool3D(count_include_pad=False, layout=layout),
+            nn.GlobalAvgPool3D(layout=layout),
+            ]
+        for layer in layers3d:
+            check_layer_forward(layer, shape3d)
 
     # test ceil_mode
-    x = mx.nd.zeros((2, 2, 10, 10))
+    for layout in ['NCHW', 'NHWC']:
+        xshape = (2, 2, 10, 10)
+        noceil_out_shape = (2, 2, 3, 3)
+        ceil_out_shape = (2, 2, 4, 4)
+        if layout == 'NHWC':
+            xshape = transpose(xshape)
+            noceil_out_shape = transpose(noceil_out_shape)
+            ceil_out_shape = transpose(ceil_out_shape)
 
-    layer = nn.MaxPool2D(3, ceil_mode=False)
-    layer.collect_params().initialize()
-    assert (layer(x).shape==(2, 2, 3, 3))
+        x = mx.nd.zeros(xshape)
 
-    layer = nn.MaxPool2D(3, ceil_mode=True)
-    layer.collect_params().initialize()
-    assert (layer(x).shape==(2, 2, 4, 4))
+        layer = nn.MaxPool2D(3, ceil_mode=False, layout=layout)
+        layer.collect_params().initialize()
+        assert (layer(x).shape==noceil_out_shape)
+
+        layer = nn.MaxPool2D(3, ceil_mode=True, layout=layout)
+        layer.collect_params().initialize()
+        assert (layer(x).shape==ceil_out_shape)
 
 
 @with_seed()
 def test_batchnorm():
     layer = nn.BatchNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
+
+
+@with_seed()
+def test_sync_batchnorm():
+    def _check_batchnorm_result(input, num_devices=1, cuda=False):
+        from mxnet.gluon.utils import split_and_load
+
+        def _find_bn(module):
+            if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+                return module
+            elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+                return module.module
+
+            raise RuntimeError('BN not found')
+
+        def _syncParameters(bn1, bn2, ctx):
+            ctx = input.context
+            bn2.gamma.set_data(bn1.gamma.data(ctx))
+            bn2.beta.set_data(bn1.beta.data(ctx))
+            bn2.running_mean.set_data(bn1.running_mean.data(ctx))
+            bn2.running_var.set_data(bn1.running_var.data(ctx))
+
+        input1 = input.copy()
+        input2 = input.copy()
+
+        if cuda:
+            input1 = input.as_in_context(mx.gpu(0))
+            ctx_list = [mx.gpu(i) for i in range(num_devices)]
+        else:
+            ctx_list = [mx.cpu(0) for _ in range(num_devices)]
+
+        nch = input.shape[1] if input.ndim > 1 else 1
+        bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
+        bn2 = mx.gluon.contrib.nn.SyncBatchNorm(
+            in_channels=nch, num_devices=num_devices)
+
+        bn1.initialize(ctx=ctx_list[0])
+        bn2.initialize(ctx=ctx_list)
+
+        # using the same values for gamma and beta
+        #_syncParameters(_find_bn(bn1), _find_bn(bn2), ctx_list[0])
+
+        input1.attach_grad()
+        inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
+        for xi in inputs2:
+            xi.attach_grad()
+
+        with mx.autograd.record():
+            output1 = bn1(input1)
+            output2 = [bn2(xi) for xi in inputs2]
+            loss1 = (output1 ** 2).sum()
+            loss2 = [(output ** 2).sum() for output in output2]
+            mx.autograd.backward(loss1)
+            mx.autograd.backward(loss2)
+
+        output2 = mx.nd.concat(*[output.as_in_context(input.context)
+                                 for output in output2], dim=0)
+        # check bn1
+
+        momentum = 0.9
+        epsilon = 1e-5
+        axis = 1
+        data = input1
+        running_mean = mx.nd.zeros(nch, ctx=data.context)
+        running_var = mx.nd.ones(nch, ctx=data.context)
+
+        data_mean = data.mean(
+            axis=axis, exclude=True, keepdims=True)
+        data_var = (data - data_mean).square().mean(axis=axis,
+                                                    exclude=True, keepdims=True)
+
+        target_output = (data - data_mean) / (data_var + epsilon).sqrt()
+
+        # squeeze data_mean and data_var
+        data_mean_flat = data_mean.squeeze()
+        data_var_flat = data_var.squeeze()
+
+        running_mean = running_mean * momentum + \
+            data_mean_flat * (1 - momentum)
+        running_var = running_var * momentum + \
+            data_var_flat * (1 - momentum)
+
+        atol = 1e-2
+        rtol = 1e-2
+        assert_almost_equal(output1.asnumpy(), target_output.asnumpy(),
+                            atol=atol, rtol=rtol)
+        assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
+                            running_mean.asnumpy(),
+                            atol=atol, rtol=rtol)
+        assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
+                            running_var.asnumpy(),
+                            atol=atol, rtol=rtol)
+        # assert forwarding
+        assert_almost_equal(input1.asnumpy(), input2.asnumpy(),
+                            atol=atol, rtol=rtol)
+        assert_almost_equal(output1.asnumpy(),
+                            output2.asnumpy(), atol=atol, rtol=rtol)
+        assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
+                            _find_bn(bn2).running_mean.data(ctx_list[0]).asnumpy(),
+                            atol=atol, rtol=rtol)
+        assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
+                            _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
+                            atol=atol, rtol=rtol)
+        input2grad = mx.nd.concat(
+            *[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
+        assert_almost_equal(input1.grad.asnumpy(),
+                            input2grad.asnumpy(), atol=atol, rtol=rtol)
+
+    cfgs = [(1, False)]
+    num_gpus = mx.context.num_gpus()
+    for i in range(1, num_gpus + 1):
+        cfgs.append((i, True))
+    for ndev, cuda in cfgs:
+        # check with unsync version
+        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
+            print(str((ndev, cuda, shape)))
+            for i in range(10):
+                _check_batchnorm_result(mx.nd.random.uniform(shape=shape,
+                                                             ctx=mx.cpu(0)),
+                                        num_devices=ndev, cuda=cuda)
 
 
 @with_seed()
@@ -857,8 +1002,13 @@ def test_import():
     net2 = gluon.SymbolBlock.imports(
         'net1-symbol.json', ['data'], 'net1-0001.params', ctx)
     out2 = net2(data)
+    lines = str(net2).splitlines()
 
     assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+    assert lines[0] == 'SymbolBlock('
+    assert lines[1]
+    assert lines[2] == ')'
+
 
 @with_seed()
 def test_hybrid_stale_cache():
@@ -1030,7 +1180,7 @@ def test_activations():
     elu = mx.gluon.nn.ELU()
     def elu_test(x):
         def elu(x):
-            return 1.0 * (mx.nd.exp(x) - 1) if x < 0 else x
+            return mx.nd.expm1(x) if x <= 0.0 else x
         return [elu(x_i) for x_i in x]
 
     for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
@@ -1040,16 +1190,30 @@ def test_activations():
     def selu_test(x):
         def selu(x):
             scale, alpha = 1.0507009873554804934193349852946, 1.6732632423543772848170429916717
-            return scale * x if x >= 0 else alpha * mx.nd.exp(x) - alpha
+            return scale * x if x >= 0 else scale * alpha * mx.nd.expm1(x)
         return [selu(x_i) for x_i in x]
 
-    for test_point, ref_point in zip(selu(point_to_validate), selu(point_to_validate)):
+    for test_point, ref_point in zip(selu_test(point_to_validate), selu(point_to_validate)):
         assert test_point == ref_point
 
     prelu = mx.gluon.nn.PReLU()
     prelu.initialize()
     x = point_to_validate.reshape((1, 3, 2))
     assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
+
+    gelu = mx.gluon.nn.GELU()
+    def gelu_test(x):
+        CUBE_CONSTANT = 0.044715
+        ROOT_TWO_OVER_PI = 0.7978845608028654
+        def g(x):
+            return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * x * x * x)
+        def f(x):
+            return 1.0 + mx.nd.tanh(g(x))
+        def gelu(x):
+            return 0.5 * x * f(x)
+        for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
+            assert test_point == ref_point
+
 
 @with_seed()
 def test_dropout():
@@ -2091,31 +2255,41 @@ def test_reshape_pooling2d():
 
 @with_seed()
 def test_slice_pooling2d():
-    max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
-    avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
-    global_maxpooling = nn.GlobalMaxPool2D()
-    global_avgpooling = nn.GlobalAvgPool2D()
-    pooling_layers = [max_pooling, avg_pooling, global_maxpooling, global_avgpooling]
-    class Net(gluon.HybridBlock):
-        def __init__(self,
-                     slice,
-                     pooling_layer,
-                     **kwargs):
-            super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.slice = slice
-                self.pool0 = pooling_layer
+    # transpose shape to bring feature dimension 'c' from 2nd position to last
+    def transpose(shape):
+        return (shape[0],) + shape[2:] + (shape[1],)
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
-            out = self.pool0(x_slice)
-            return out
+    for layout in ['NCHW', 'NHWC']:
+        max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1), layout=layout)
+        avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1), layout=layout)
+        global_maxpooling = nn.GlobalMaxPool2D(layout=layout)
+        global_avgpooling = nn.GlobalAvgPool2D(layout=layout)
+        pooling_layers = [max_pooling, avg_pooling, global_maxpooling, global_avgpooling]
+        class Net(gluon.HybridBlock):
+            def __init__(self,
+                         slice,
+                         pooling_layer,
+                         **kwargs):
+                super(Net, self).__init__(**kwargs)
+                with self.name_scope():
+                    self.slice = slice
+                    self.pool0 = pooling_layer
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
-    slice = [(0, 0, 0, 0), (4, 16, 32, 64)]
-    for i in range(len(pooling_layers)):
-        net = Net(slice, pooling_layers[i])
-        check_layer_forward_withinput(net, x)
+            def hybrid_forward(self, F, x):
+                x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
+                out = self.pool0(x_slice)
+                return out
+
+        xshape = (16, 128, 256, 256)
+        slice_shape = (4, 16, 32, 64)
+        if layout == 'NHWC':
+            xshape = transpose(xshape)
+            slice_shape = transpose(slice_shape)
+        x = mx.nd.random.uniform(shape=xshape)
+        slice = [(0, 0, 0, 0), slice_shape]
+        for i in range(len(pooling_layers)):
+            net = Net(slice, pooling_layers[i])
+            check_layer_forward_withinput(net, x)
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')

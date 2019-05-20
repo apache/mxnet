@@ -75,12 +75,11 @@ class Optimizer(object):
         The initial number of updates.
 
     multi_precision : bool, optional, default False
-       Flag to control the internal precision of the optimizer.::
-
-           False: results in using the same precision as the weights (default),
-           True: makes internal 32-bit copy of the weights and applies gradients
-           in 32-bit precision even if actual weights used in the model have lower precision.
-           Turning this on can improve convergence and accuracy when training with float16.
+       Flag to control the internal precision of the optimizer.
+       False: results in using the same precision as the weights (default),
+       True: makes internal 32-bit copy of the weights and applies gradients
+       in 32-bit precision even if actual weights used in the model have lower precision.
+       Turning this on can improve convergence and accuracy when training with float16.
 
     param_dict : dict of int -> gluon.Parameter, default None
         Dictionary of parameter index to gluon.Parameter, used to lookup parameter attributes
@@ -107,7 +106,8 @@ class Optimizer(object):
         self.wd_mult = {}
         self.begin_num_update = begin_num_update
         self.num_update = begin_num_update
-        self._index_update_count = {}
+        self._all_index_update_counts = {0 : {}}
+        self._index_update_count = self._all_index_update_counts[0]
         self.clip_gradient = clip_gradient
         self.multi_precision = multi_precision
         self.aggregate_num = 0
@@ -298,7 +298,7 @@ class Optimizer(object):
         lr : float
             The new learning rate of the optimizer.
         """
-        if self.lr_scheduler is not None:
+        if self.lr_scheduler is not None: # pylint: disable=no-else-raise
             raise UserWarning("LRScheduler of the optimizer has already been "
                               "defined. Note that set_learning_rate can mutate "
                               "the value of the learning rate of the optimizer "
@@ -380,6 +380,18 @@ class Optimizer(object):
                 if name in attr and '__wd_mult__' in attr[name]:
                     self.wd_mult[name] = float(attr[name]['__wd_mult__'])
         self.wd_mult.update(args_wd_mult)
+
+    def _set_current_context(self, device_id):
+        """Sets the number of the currently handled device.
+
+        Parameters
+        ----------
+        device_id : int
+            The number of current device.
+        """
+        if device_id not in self._all_index_update_counts:
+            self._all_index_update_counts[device_id] = {}
+        self._index_update_count = self._all_index_update_counts[device_id]
 
     def _update_count(self, index):
         """Updates num_update.
@@ -541,12 +553,11 @@ class SGD(Optimizer):
         Default is True. If True, lazy updates are applied \
         if the storage types of weight and grad are both ``row_sparse``.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, lazy_update=True, **kwargs):
         super(SGD, self).__init__(**kwargs)
@@ -790,12 +801,11 @@ class LBSGD(Optimizer):
     momentum : float, optional
         The momentum value.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
 
     warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
     warmup_epochs: unsigned, default: 5
@@ -1031,12 +1041,11 @@ class NAG(Optimizer):
     momentum : float, optional
        The momentum value.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, **kwargs):
         super(NAG, self).__init__(**kwargs)
@@ -1095,8 +1104,9 @@ class SGLD(Optimizer):
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
-        weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr), shape=weight.shape,
-                                                            dtype=weight.dtype, ctx=weight.context)
+        weight[:] += - lr/2 * (grad + wd * weight)
+        weight[:] += normal(0, math.sqrt(lr), shape=weight.shape,
+                            dtype=weight.dtype, ctx=weight.context)
 
 
 
@@ -1376,9 +1386,11 @@ class AdaDelta(Optimizer):
         acc_g, acc_delta = state
 
         # update g, delta
-        acc_g[:] = self.rho * acc_g + (1. - self.rho) * grad * grad
+        acc_g[:] *= self.rho
+        acc_g[:] += (1. - self.rho) * grad * grad
         current_delta = sqrt(acc_delta + self.epsilon) / sqrt(acc_g + self.epsilon) * grad
-        acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta * current_delta
+        acc_delta[:] *= self.rho
+        acc_delta[:] += (1. - self.rho) * current_delta * current_delta
 
         # update weight
         weight[:] -= current_delta + wd * weight
@@ -1511,7 +1523,8 @@ class Adamax(Optimizer):
 
         # update m_t and u_t
         m_t, u_t = state
-        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
+        m_t[:] *= self.beta1
+        m_t[:] += (1. - self.beta1) * grad
         u_t[:] = maximum(self.beta2 * u_t, NDabs(grad))
 
         # update weight
@@ -1574,8 +1587,10 @@ class Nadam(Optimizer):
 
         # update m_t and v_t
         m_t, v_t = state
-        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
-        v_t[:] = self.beta2 * v_t + (1. - self.beta2) * grad * grad
+        m_t[:] *= self.beta1
+        m_t[:] += (1. - self.beta1) * grad
+        v_t[:] *= self.beta2
+        v_t[:] += (1. - self.beta2) * grad * grad
 
         grad_prime = grad / (1. - self.m_schedule)
         m_t_prime = m_t / (1. - m_schedule_next)
@@ -1621,6 +1636,8 @@ class Updater(object):
             indices = index
             grads = grad
             weights = weight
+        if weights:
+            self.optimizer._set_current_context(weights[0].context.device_id)
         for i, idx in enumerate(indices):
             # convert ctypes.char_p.value back to python str if needed
             if isinstance(idx, bytes):

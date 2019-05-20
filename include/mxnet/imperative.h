@@ -97,6 +97,16 @@ class Imperative {
       is_recording_ = is_recording;
       return old;
   }
+  /*! brief whether numpy compatibility is on. */
+  bool is_np_comp() const {
+    return is_np_comp_;
+  }
+  /*! brief turn on or turn off numpy compatibility switch. */
+  bool set_is_np_comp(bool is_np_comp) {
+    bool old = is_np_comp_;
+    is_np_comp_ = is_np_comp;
+    return old;
+  }
   /*! \brief to record operator, return corresponding node. */
   void RecordOp(nnvm::NodeAttrs&& attrs,
                 const std::vector<NDArray*>& inputs,
@@ -129,14 +139,31 @@ class Imperative {
                                  bool create_graph);
   /*! \return AutogradRuntime singleton */
   static Imperative* Get();
+  /*! \brief Should op execution bulking be employed during inference. */
+  static bool PreferBulkExecInference() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
+  }
+  /*! \brief Should op execution bulking be employed during training. */
+  static bool PreferBulkExecTrain() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", true);
+  }
+  /*! \brief The max number of op nodes in a bulk during forward pass of training. */
+  static int BulkExecMaxNodeTrainFwd() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD",
+                        dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15));
+  }
+  /*! \brief The max number of op nodes in a bulk during backward pass of training. */
+  static int BulkExecMaxNodeTrainBwd() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD",
+                        dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15));
+  }
 
  private:
   friend class NDArray;
   /*! \brief make constructor protected. */
   Imperative() {
-    if (dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1)) {
-      backward_bulk_size_ =  dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
-    }
+    if (PreferBulkExecTrain())
+      backward_bulk_size_ = BulkExecMaxNodeTrainBwd();
   }
   /*! \brief find the input/output ndarrays that are needed for backward */
   void GetBackwardDependency(
@@ -148,9 +175,15 @@ class Imperative {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
   static thread_local bool is_recording_;
+  // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
+  // Delete it in the next major release.
+  static thread_local bool is_np_comp_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
+  // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
+  // Delete it in the next major release.
+  static MX_THREAD_LOCAL bool is_np_comp_;
 #endif
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};

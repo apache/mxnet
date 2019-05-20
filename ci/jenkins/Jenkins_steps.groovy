@@ -119,6 +119,34 @@ def compile_unix_openblas_debug_cpu() {
     }]
 }
 
+def compile_unix_int64_cpu() {
+    return ['CPU: USE_INT64_TENSOR_SIZE': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-int64') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_large_tensor', false)
+            utils.pack_lib('ubuntu_cpu_int64', mx_cmake_lib, true)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_int64_gpu() {
+    return ['GPU: USE_INT64_TENSOR_SIZE': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/build-gpu-int64') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_large_tensor', false)
+            utils.pack_lib('ubuntu_gpu_int64', mx_cmake_lib, true)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_mkl_cpu() {
     return ['CPU: MKL': {
       node(NODE_LINUX_CPU) {
@@ -190,12 +218,12 @@ def compile_unix_mkldnn_nocudnn_gpu() {
 }
 
 def compile_unix_full_gpu() {
-    return ['GPU: CUDA9.1+cuDNN7': {
+    return ['GPU: CUDA10.0+cuDNN7': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda100_cudnn7', false)
             utils.pack_lib('gpu', mx_lib_cpp_examples, true)
           }
         }
@@ -476,13 +504,11 @@ def compile_unix_amalgamation() {
 def compile_windows_cpu() {
     return ['Build CPU windows':{
       node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/build-cpu') {
-            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
-              utils.init_git_win()
-              powershell 'python ci/build_windows.py -f WIN_CPU'
-              stash includes: 'windows_package.7z', name: 'windows_package_cpu'
-            }
+        ws('workspace/build-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU'
+            stash includes: 'windows_package.7z', name: 'windows_package_cpu'
           }
         }
       }
@@ -492,13 +518,11 @@ def compile_windows_cpu() {
 def compile_windows_gpu() {
     return ['Build GPU windows':{
       node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/build-gpu') {
-            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0']) {
+        ws('workspace/build-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
               utils.init_git_win()
-              powershell 'python ci/build_windows.py -f WIN_GPU'
+              powershell 'py -3 ci/build_windows.py -f WIN_GPU'
               stash includes: 'windows_package.7z', name: 'windows_package_gpu'
-            }
           }
         }
       }
@@ -508,13 +532,11 @@ def compile_windows_gpu() {
 def compile_windows_gpu_mkldnn() {
     return ['Build GPU MKLDNN windows':{
       node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/build-gpu') {
-            withEnv(['OpenBLAS_HOME=C:\\mxnet\\openblas', 'OpenCV_DIR=C:\\mxnet\\opencv_vc14', 'CUDA_PATH=C:\\CUDA\\v8.0','BUILD_NAME=vc14_gpu_mkldnn']) {
-              utils.init_git_win()
-              powershell 'python ci/build_windows.py -f WIN_GPU_MKLDNN'
-              stash includes: 'windows_package.7z', name: 'windows_package_gpu_mkldnn'
-            }
+        ws('workspace/build-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            powershell 'py -3 ci/build_windows.py -f WIN_GPU_MKLDNN'
+            stash includes: 'windows_package.7z', name: 'windows_package_gpu_mkldnn'
           }
         }
       }
@@ -527,7 +549,7 @@ def test_static_scala_cpu() {
         ws('workspace/ut-publish-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run("publish.ubuntu1404_cpu", 'build_scala_static_mkl', false)
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_static_scala_mkl', false)
           }
         }
     }
@@ -541,6 +563,19 @@ def test_static_python_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run("publish.ubuntu1404_cpu", 'build_static_python_mkl', false)
+          }
+        }
+    }
+  }]
+}
+
+def test_static_python_gpu() {
+  return ['Static build GPU 14.04 Python' : {
+    node(NODE_LINUX_GPU) {
+        ws('workspace/ut-publish-python-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run("publish.ubuntu1404_gpu", 'build_static_python_cu100mkl', true)
           }
         }
     }
@@ -1028,7 +1063,7 @@ def test_unix_r_gpu() {
 def test_unix_julia07_cpu() {
     return ['Julia 0.7: CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/ut-julia07-cpu') {
+        ws('workspace/ut-it-julia07-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia07', false)
@@ -1041,7 +1076,7 @@ def test_unix_julia07_cpu() {
 def test_unix_julia10_cpu() {
     return ['Julia 1.0: CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/ut-julia10-cpu') {
+        ws('workspace/ut-it-julia10-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia10', false)

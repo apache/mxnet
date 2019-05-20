@@ -25,7 +25,7 @@ import ctypes
 import copy
 import numpy as np
 from .base import _LIB
-from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str
+from .base import mx_uint, NDArrayHandle, ExecutorHandle, py_str, mx_int
 from .base import check_call, c_handle_array, c_array_buf, c_str_array
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
@@ -234,13 +234,15 @@ class Executor(object):
             ndarray,
             ctypes.c_int(is_train)))
 
-    def set_monitor_callback(self, callback):
+    def set_monitor_callback(self, callback, monitor_all=False):
         """Install callback for monitor.
 
         Parameters
         ----------
         callback : function
             Takes a string and an NDArrayHandle.
+        monitor_all : bool, default False
+            If true, monitor both input and output, otherwise monitor output only.
 
         Examples
         --------
@@ -251,10 +253,11 @@ class Executor(object):
         """
         cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle, ctypes.c_void_p)
         self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
-        check_call(_LIB.MXExecutorSetMonitorCallback(
+        check_call(_LIB.MXExecutorSetMonitorCallbackEX(
             self.handle,
             self._monitor_callback,
-            None))
+            None,
+            ctypes.c_int(monitor_all)))
 
     @property
     def arg_dict(self):
@@ -430,29 +433,29 @@ class Executor(object):
         num_aux_states = ctypes.c_uint()
         aux_state_handles = ctypes.POINTER(NDArrayHandle)()
 
-        check_call(_LIB.MXExecutorReshape(ctypes.c_int(int(partial_shaping)),
-                                          ctypes.c_int(int(allow_up_sizing)),
-                                          ctypes.c_int(self._ctx.device_typeid),
-                                          ctypes.c_int(self._ctx.device_id),
-                                          mx_uint(len(ctx_map_keys)),
-                                          c_str_array(ctx_map_keys),
-                                          c_array_buf(ctypes.c_int,
-                                                      py_array('i', ctx_map_dev_types)),
-                                          c_array_buf(ctypes.c_int,
-                                                      py_array('i', ctx_map_dev_ids)),
-                                          mx_uint(len(provided_arg_shape_names)),
-                                          c_str_array(provided_arg_shape_names),
-                                          c_array_buf(mx_uint,
-                                                      py_array('I', provided_arg_shape_data)),
-                                          c_array_buf(mx_uint,
-                                                      py_array('I', provided_arg_shape_idx)),
-                                          ctypes.byref(num_in_args),
-                                          ctypes.byref(in_arg_handles),
-                                          ctypes.byref(arg_grad_handles),
-                                          ctypes.byref(num_aux_states),
-                                          ctypes.byref(aux_state_handles),
-                                          shared_handle,
-                                          ctypes.byref(handle)))
+        check_call(_LIB.MXExecutorReshapeEx(ctypes.c_int(int(partial_shaping)),
+                                            ctypes.c_int(int(allow_up_sizing)),
+                                            ctypes.c_int(self._ctx.device_typeid),
+                                            ctypes.c_int(self._ctx.device_id),
+                                            mx_uint(len(ctx_map_keys)),
+                                            c_str_array(ctx_map_keys),
+                                            c_array_buf(ctypes.c_int,
+                                                        py_array('i', ctx_map_dev_types)),
+                                            c_array_buf(ctypes.c_int,
+                                                        py_array('i', ctx_map_dev_ids)),
+                                            mx_uint(len(provided_arg_shape_names)),
+                                            c_str_array(provided_arg_shape_names),
+                                            c_array_buf(mx_int,
+                                                        py_array('i', provided_arg_shape_data)),
+                                            c_array_buf(mx_uint,
+                                                        py_array('I', provided_arg_shape_idx)),
+                                            ctypes.byref(num_in_args),
+                                            ctypes.byref(in_arg_handles),
+                                            ctypes.byref(arg_grad_handles),
+                                            ctypes.byref(num_aux_states),
+                                            ctypes.byref(aux_state_handles),
+                                            shared_handle,
+                                            ctypes.byref(handle)))
 
         arg_arrays = [_ndarray_cls(NDArrayHandle(in_arg_handles[i]))
                       for i in range(num_in_args.value)]

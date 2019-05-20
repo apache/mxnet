@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 ## Subgraph API
 
 The subgraph API has been proposed and implemented as the default mechanism for integrating backend libraries to MXNet. The subgraph API is a very flexible interface. Although it was proposed as an integration mechanism, it has been used as a tool for manipulating NNVM graphs for graph-level optimizations, such as operator fusion.
@@ -80,21 +97,55 @@ class SgProperty : public SubgraphProperty {
     return n;
   }
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
-    return std::make_shared<SgSelector>();
+    auto property = std::make_shared<CreateSubgraphSelector>();
+    property->SetAttr<std::string>("property_name", "subgraph example pass"); // Optional, better to have it.
+    property->SetAttr<bool>("inference_only", true); // Optional, only for inference_only pass.
+    return property;
   }
 };
 ```
+`SetAttr` is optional and developer can define their own attributes to control property behavior.
+There're 2 built-in attributes that used by MXNet executor.
 
-After defining the subgraph property, we need to register it.
+`property_name`  : std::string, name of this property.
+
+`inference_only` : bool, apply this property only for inference. Property will be skiped when need_grad=True. Default `false` if this attribute isn't defined.
+
+After defining the subgraph property, we need to register it in .cc file.
 
 ```C++
 MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty);
 ```
 
-After compiling this subgraph mechanism into MXNet, we can use the environment variable `MXNET_SUBGRAPH_BACKEND` to activate it.
+It's possible to register multiple properties for same backend. In practice, we recommend to put each property definition into .h file, and register backend in single .cc file. Property will be executed according to the register order.
+
+```C++
+#include "SgProperty.h" // Define SgProperty class
+#include "SgProperty2.h" // Define SgProperty2 class
+#include "SgProperty3.h" // Define SgProperty3 class
+
+MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty);  // Execution order 1.
+MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty2); // Execution order 2.
+MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty3); // Execution order 3.
+```
+
+After compiling this subgraph mechanism into MXNet, we can use the environment variable `MXNET_SUBGRAPH_BACKEND` to activate it during symbol bind.
 
 ```bash
 export MXNET_SUBGRAPH_BACKEND=SgTest
+```
+
+Or you can use python symbol API `get_backend_symbol` to run all properties registered for this backend and get returned symbol.
+
+```Python
+sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+sym = sym.get_backend_symbol('SgTest')
+```
+
+When `SgProperty` is activated, a message will be shown in terminal as
+
+```bash
+start to execute subgraph example pass.
 ```
 
 This tutorial shows a simple example of how to use the subgraph API to search for patterns in an NNVM graph.

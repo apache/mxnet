@@ -35,12 +35,12 @@ namespace mxnet {
 namespace op {
 
 bool LRNShape(const nnvm::NodeAttrs& attrs,
-              std::vector<TShape> *in_shape,
-              std::vector<TShape> *out_shape) {
+              mxnet::ShapeVector *in_shape,
+              mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
-  const TShape &dshape = in_shape->at(0);
-  if (dshape.ndim() == 0) return false;
+  const mxnet::TShape &dshape = in_shape->at(0);
+  if (!shape_is_known(dshape)) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
   out_shape->push_back(dshape);
@@ -167,7 +167,7 @@ number of kernels in the layer.
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
                                     [](const NodeAttrs& attrs) { return 1; })
 .set_attr_parser(ParamParser<LRNParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", LRNShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LRNShape)
 .set_attr<nnvm::FInferType>("FInferType", LRNType)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", LRNForwardInferStorageType)

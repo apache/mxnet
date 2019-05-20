@@ -181,8 +181,10 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             w, g = p
             updates[k].append((index*num_device+k, g, w))
     for dev_updates in updates:
-        i, w, g = zip(*dev_updates)
-        updater(i, w, g)
+        # update params if param_arrays and grad_arrays are not empty
+        if dev_updates:
+            i, w, g = zip(*dev_updates)
+            updater(i, w, g)
 
 
 def _multiple_callbacks(callbacks, *args, **kwargs):
@@ -638,7 +640,7 @@ class FeedForward(BASE_ESTIMATOR):
         """Initialize the iterator given input."""
         if isinstance(X, (np.ndarray, nd.NDArray)):
             if y is None:
-                if is_train:
+                if is_train: # pylint: disable=no-else-raise
                     raise ValueError('y must be specified when X is numpy.ndarray')
                 else:
                     y = np.zeros(X.shape[0])
@@ -882,6 +884,8 @@ class FeedForward(BASE_ESTIMATOR):
                                    rescale_grad=(1.0/batch_size),
                                    **(self.kwargs))
         elif isinstance(self.optimizer, opt.Optimizer):
+            if not optimizer.idx2name:
+                optimizer.idx2name = param_idx2name.copy()
             optimizer = self.optimizer
 
         # do training

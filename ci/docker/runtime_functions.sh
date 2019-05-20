@@ -292,6 +292,7 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_MKLDNN=0 \
         USE_DIST_KVSTORE=1 \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -326,6 +327,7 @@ build_centos7_mkldnn() {
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -365,6 +367,8 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_MKLDNN=0                  \
         USE_DIST_KVSTORE=1            \
+        USE_LIBJPEG_TURBO=1           \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -380,6 +384,7 @@ build_ubuntu_cpu_mkl() {
         USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -510,6 +515,7 @@ build_ubuntu_cpu_clang39_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -526,6 +532,7 @@ build_ubuntu_cpu_clang60_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -539,6 +546,7 @@ build_ubuntu_cpu_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -552,11 +560,12 @@ build_ubuntu_cpu_mkldnn_mkl() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda91_cudnn7
+    build_ubuntu_gpu_cuda100_cudnn7
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -635,6 +644,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
@@ -651,10 +661,11 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda91_cudnn7() {
+build_ubuntu_gpu_cuda100_cudnn7() {
     set -ex
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
@@ -669,6 +680,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
@@ -743,6 +755,53 @@ build_ubuntu_gpu_cmake() {
     ninja -v
 }
 
+build_ubuntu_cpu_large_tensor() {
+    set -ex
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=OFF                          \
+        -DUSE_CUDNN=OFF                         \
+        -DUSE_MKLDNN=OFF                        \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DUSE_INT64_TENSOR_SIZE=ON              \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
+}
+
+build_ubuntu_gpu_large_tensor() {
+    set -ex
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=ON                           \
+        -DUSE_CUDNN=ON                          \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_MKLML_MKL=OFF                     \
+        -DUSE_MKLDNN=OFF                        \
+        -DUSE_DIST_KVSTORE=ON                   \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DUSE_INT64_TENSOR_SIZE=ON              \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
+}
+
 build_ubuntu_blc() {
     echo "pass"
 }
@@ -791,7 +850,7 @@ unittest_ubuntu_python2_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -800,7 +859,7 @@ unittest_ubuntu_python3_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -817,7 +876,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
 }
@@ -829,7 +888,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -840,7 +899,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -953,6 +1012,7 @@ unittest_ubuntu_cpu_julia() {
     export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
+    export INTEGRATION_TEST=1
 
     julia -e 'using InteractiveUtils; versioninfo()'
 
@@ -990,7 +1050,7 @@ unittest_centos7_cpu() {
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1020,8 +1080,6 @@ integrationtest_ubuntu_cpu_asan() {
     set -ex
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
 
-    # We do not want to fail the build on ASAN errors until memory leaks have been addressed.
-    export ASAN_OPTIONS=exitcode=0
     cd /work/mxnet/build/cpp-package/example/
     /work/mxnet/cpp-package/example/get_data.sh
     ./mlp_cpu
@@ -1172,6 +1230,13 @@ nightly_test_KVStore_singleNode() {
     python tests/nightly/test_kvstore.py
 }
 
+#Test Large Tensor Size
+nightly_test_large_tensor() {
+    set -ex
+    export PYTHONPATH=./python/
+    nosetests-3.4 tests/nightly/test_large_array.py
+}
+
 #Tests Amalgamation Build with 5 different sets of flags
 nightly_test_amalgamation() {
     set -ex
@@ -1316,7 +1381,7 @@ deploy_jl_docs() {
     # ...
 }
 
-build_scala_static_mkl() {
+build_static_scala_mkl() {
     set -ex
     pushd .
     scala_prepare
@@ -1330,6 +1395,14 @@ build_static_python_mkl() {
     set -ex
     pushd .
     export mxnet_variant=mkl
+    ./ci/publish/python/build.sh
+    popd
+}
+
+build_static_python_cu100mkl() {
+    set -ex
+    pushd .
+    export mxnet_variant=cu100mkl
     ./ci/publish/python/build.sh
     popd
 }

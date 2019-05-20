@@ -517,7 +517,9 @@ def test_sgld():
                 if (dtype == np.float16 and ('multi_precision' not in kwarg or
                     not kwarg['multi_precision'])):
                     continue
-                compare_optimizer_noise_seeded(opt1(**kwarg), opt2(**kwarg), shape, dtype, seed)
+                atol = 1e-2 if dtype == np.float16 else 1e-3
+                rtol = 1e-4 if dtype == np.float16 else 1e-5
+                compare_optimizer_noise_seeded(opt1(**kwarg), opt2(**kwarg), shape, dtype, seed, atol=atol, rtol=rtol)
 
 
 

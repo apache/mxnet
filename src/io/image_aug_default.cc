@@ -32,6 +32,7 @@
 #include "../common/utils.h"
 
 #if MXNET_USE_OPENCV
+#include "./opencv_compatibility.h"
 // Registers
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mxnet::io::ImageAugmenterReg);
@@ -96,7 +97,7 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   /*! \brief padding size */
   int pad;
   /*! \brief shape of the image data*/
-  TShape data_shape;
+  mxnet::TShape data_shape;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {
@@ -461,7 +462,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
       float alpha_s = 1.0 + std::uniform_real_distribution<float>(-param_.saturation,
                                                                   param_.saturation)(*prnd);
       int rand_order[3] = {0, 1, 2};
-      std::random_shuffle(std::begin(rand_order), std::end(rand_order));
+      std::shuffle(std::begin(rand_order), std::end(rand_order), *prnd);
       for (int i : rand_order) {
         if (i == 0) {
           // brightness

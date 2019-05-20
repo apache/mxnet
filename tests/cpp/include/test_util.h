@@ -50,7 +50,7 @@ extern bool performance_run;
 extern bool csv;
 
 template<typename DType>
-inline size_t shapeMemorySize(const TShape& shape) {
+inline size_t shapeMemorySize(const mxnet::TShape& shape) {
   return shape.Size() * sizeof(DType);
 }
 
@@ -70,11 +70,9 @@ class BlobMemory {
     return handle_.dptr;
   }
   void Free() {
-    if (handle_.dptr) {
-      Storage *storage = mxnet::Storage::Get();
-      storage->DirectFree(handle_);
-      handle_.dptr = nullptr;
-    }
+    mxnet::Storage::Get()->DirectFree(handle_);
+    handle_.dptr = nullptr;
+    handle_.size = 0;
   }
   size_t Size() const {
     return handle_.size;
@@ -87,7 +85,7 @@ class BlobMemory {
 
 class StandaloneBlob : public TBlob {
  public:
-  inline StandaloneBlob(const TShape& shape, const bool isGPU, const int dtype)
+  inline StandaloneBlob(const mxnet::TShape& shape, const bool isGPU, const int dtype)
     : TBlob(nullptr, shape, isGPU ? gpu::kDevMask : cpu::kDevMask, dtype)
       , memory_(std::make_shared<BlobMemory>(isGPU)) {
     MSHADOW_TYPE_SWITCH(dtype, DType, {
@@ -261,12 +259,12 @@ inline void dump(Stream *os, const TBlob& blob, const char *suffix = "f") {
 
 
 /*! \brief Return reference to data at position indexes */
-inline index_t getMult(const TShape& shape, const index_t axis) {
+inline index_t getMult(const mxnet::TShape& shape, const index_t axis) {
   return axis < shape.ndim() ? shape[axis] : 1;
 }
 
 /*! \brief offset, given indices such as bn, channel, depth, row, column */
-inline index_t offset(const TShape& shape, const std::vector<size_t>& indices) {
+inline index_t offset(const mxnet::TShape& shape, const std::vector<size_t>& indices) {
   const size_t dim = shape.ndim();
   CHECK_LE(indices.size(), dim);
   size_t offset = 0;
@@ -314,8 +312,8 @@ inline std::string repeatedStr(const char *s, const signed int count,
 
 /*! \brief Pretty print a shape with optional label */
 template<typename StreamType>
-inline StreamType& print_shape(StreamType *_os, const std::string& label, const TShape& shape,
-                               const bool add_endl = true) {
+inline StreamType& print_shape(StreamType *_os, const std::string& label,
+                               const mxnet::TShape& shape, const bool add_endl = true) {
   if (!label.empty()) {
     *_os << label << ": ";
   }
@@ -355,14 +353,14 @@ inline StreamType& print_blob_(const RunContext& ctx,
 
   if (dim == 1) {
     // probably a 1d tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<DType>(), TShape(3), blob.dev_mask(), blob.dev_id());
+    TBlob changed(blob.dptr<DType>(), mxnet::TShape(3, -1), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
     return print_blob_<DType>(ctx, &os, changed, false, false, add_endl);
   } else if (dim == 2) {
     // probably a 2d tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<DType>(), TShape(4), blob.dev_mask(), blob.dev_id());
+    TBlob changed(blob.dptr<DType>(), mxnet::TShape(4, -1), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
@@ -504,35 +502,35 @@ inline StreamType& print(const RunContext& ctx, StreamType *_os,
   switch (arr.storage_type()) {
     case kRowSparseStorage: {
       // data
-      const TShape& shape = arr.shape();
+      const mxnet::TShape& shape = arr.shape();
       print_shape(_os, "[row_sparse] main shape", shape, false);
-      const TShape& storage_shape = arr.storage_shape();
+      const mxnet::TShape& storage_shape = arr.storage_shape();
       const bool is_one_row = storage_shape[0] < 2;
       print_shape(_os, "storage shape", storage_shape, false);
       print(ctx, _os, arr.data(), true, true, !is_one_row);
 
       // indices
-      const TShape& indices_shape = arr.aux_shape(rowsparse::kIdx);
+      const mxnet::TShape& indices_shape = arr.aux_shape(rowsparse::kIdx);
       print_shape(_os, "indices shape", indices_shape, false);
       print(ctx, _os, arr.aux_data(rowsparse::kIdx), true, true, false) << std::endl;
       break;
     }
     case kCSRStorage: {
       // data
-      const TShape& shape = arr.shape();
+      const mxnet::TShape& shape = arr.shape();
       print_shape(_os, "[CSR] main shape", shape, false);
-      const TShape& storage_shape = arr.storage_shape();
+      const mxnet::TShape& storage_shape = arr.storage_shape();
       const bool is_one_row = storage_shape[0] < 2;
       print_shape(_os, "storage shape", storage_shape, false);
       print(ctx, _os, arr.data(), true, true, !is_one_row);
 
       // row ptrs
-      const TShape& ind_ptr_shape = arr.aux_shape(csr::kIndPtr);
+      const mxnet::TShape& ind_ptr_shape = arr.aux_shape(csr::kIndPtr);
       print_shape(_os, "row ptrs shape", ind_ptr_shape, false);
       print(ctx, _os, arr.aux_data(csr::kIndPtr), true, true, false) << std::endl;
 
       // col indices
-      const TShape& indices_shape = arr.aux_shape(csr::kIdx);
+      const mxnet::TShape& indices_shape = arr.aux_shape(csr::kIdx);
       print_shape(_os, "col indices shape", indices_shape, false);
       print(ctx, _os, arr.aux_data(csr::kIdx), true, true, false) << std::endl;
 
@@ -540,7 +538,7 @@ inline StreamType& print(const RunContext& ctx, StreamType *_os,
     }
     case kDefaultStorage: {
       // data
-      const TShape& shape = arr.shape();
+      const mxnet::TShape& shape = arr.shape();
       const bool is_one_row = shape[0] < 2;
       print_shape(_os, "[dense] main shape", shape, !is_one_row);
       print(ctx, _os, arr.data(), true, true, !is_one_row) << std::endl;
@@ -696,13 +694,13 @@ inline ScalarType rangedRand(const ScalarType min, const ScalarType max) {
 }
 
 /*!
- * \brief Deterministically compare TShape objects as less-than,
+ * \brief Deterministically compare mxnet::TShape objects as less-than,
  *        for use in stl sorted key such as map and set
  * \param s1 First shape
  * \param s2 Second shape
  * \return true if s1 is less than s2
  */
-inline bool operator < (const nnvm::TShape &s1, const nnvm::TShape &s2) {
+inline bool operator < (const mxnet::TShape &s1, const mxnet::TShape &s2) {
   if (s1.Size() == s2.Size()) {
     if (s1.ndim() == s2.ndim()) {
       for (size_t i = 0, n = s1.ndim(); i < n; ++i) {
@@ -719,13 +717,14 @@ inline bool operator < (const nnvm::TShape &s1, const nnvm::TShape &s2) {
 }
 
 /*!
- * \brief Deterministically compare a vector of TShape objects as less-than,
+ * \brief Deterministically compare a vector of mxnet::TShape objects as less-than,
  *        for use in stl sorted key such as map and set
  * \param v1 First vector of shapes
  * \param v2 Second vector of shapes
  * \return true if v1 is less than v2
  */
-inline bool operator < (const std::vector<nnvm::TShape>& v1, const std::vector<nnvm::TShape>& v2) {
+inline bool operator < (const std::vector<mxnet::TShape>& v1,
+                        const std::vector<mxnet::TShape>& v2) {
   if (v1.size() == v2.size()) {
     for (size_t i = 0, n = v1.size(); i < n; ++i) {
       if (v1[i] == v2[i]) {
@@ -742,7 +741,8 @@ inline bool operator < (const std::vector<nnvm::TShape>& v1, const std::vector<n
  * \brief std::less compare structure for compating vectors of shapes for stl sorted containers
  */
 struct less_shapevect {
-  bool operator()(const std::vector<nnvm::TShape>& v1, const std::vector<nnvm::TShape>& v2) const {
+  bool operator()(const std::vector<mxnet::TShape>& v1,
+                  const std::vector<mxnet::TShape>& v2) const {
     if (v1.size() == v2.size()) {
       for (size_t i = 0, n = v1.size(); i < n; ++i) {
         if (v1[i] == v2[i]) {

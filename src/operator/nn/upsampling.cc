@@ -32,11 +32,11 @@ namespace mxnet {
 namespace op {
 
 static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
-                            std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+                            mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape) {
   const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(attrs.parsed);
   CHECK_GE(in_shape->size(), 1U);
-  const TShape &dshape = (*in_shape)[0];
-  TShape oshape = dshape;
+  const mxnet::TShape &dshape = (*in_shape)[0];
+  mxnet::TShape oshape = dshape;
   if (param_.sample_type == up_enum::kNearest) {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     oshape[1] = 0;
@@ -60,7 +60,7 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     CHECK_EQ(dshape.ndim(), 4U) << \
       "UpSamplingBilinear: Input data should be 4D in (batch, channel, y, x)";
-    if (dshape.ndim() ==  0) return false;
+    if (!shape_is_known(dshape)) return false;
     int kernel = 2 * param_.scale - param_.scale % 2;
     SHAPE_ASSIGN_CHECK(*in_shape,
         up_enum::kWeight,
@@ -121,7 +121,9 @@ struct UpSamplingGrad {
 DMLC_REGISTER_PARAMETER(UpSamplingParam);
 
 NNVM_REGISTER_OP(UpSampling)
-.describe("Performs nearest neighbor/bilinear up sampling to inputs.")
+.describe("Performs nearest neighbor/bilinear up sampling to inputs. "
+          "Bilinear upsampling makes use of deconvolution. Therefore, "
+          "provide 2 inputs - data and weight. ")
 .set_num_inputs([](const NodeAttrs& attrs) {
   const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
   return params.sample_type == up_enum::kNearest ? params.num_args : 2;
@@ -136,7 +138,7 @@ NNVM_REGISTER_OP(UpSampling)
     [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", UpSamplingShape)
+.set_attr<mxnet::FInferShape>("FInferShape", UpSamplingShape)
 .set_attr<nnvm::FInferType>("FInferType", UpSamplingType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   const UpSamplingParam& param = nnvm::get<UpSamplingParam>(n.parsed);
@@ -149,7 +151,8 @@ NNVM_REGISTER_OP(UpSampling)
 .set_attr<FCompute>("FCompute<cpu>", UpSamplingCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", UpSamplingGrad{"_backward_UpSampling"})
 .set_attr<std::string>("key_var_num_args", "num_args")
-.add_argument("data", "NDArray-or-Symbol[]", "Array of tensors to upsample")
+.add_argument("data", "NDArray-or-Symbol[]", "Array of tensors to upsample. "
+              "For bilinear upsampling, there should be 2 inputs - 1 data and 1 weight.")
 .add_arguments(UpSamplingParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {

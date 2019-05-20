@@ -59,7 +59,7 @@ void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const NDArrayStorageType istype = inputs[0].storage_type();
-  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+  const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape();
   if ((istype == kRowSparseStorage || istype == kCSRStorage) && axis.ndim() == 0 &&
        param.ord == 2) {
     // l2 norm on the entire array
@@ -186,7 +186,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nanprod)
 .set_num_inputs(3)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nanprod_grad>);
 
-MXNET_OPERATOR_REGISTER_REDUCE(max)
+MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(max)
 .add_alias("max_axis")
 .describe(get_reduce_axes_description("max", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::maximum>)
@@ -200,7 +200,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_max)
 .set_num_inputs(3)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::eq>);
 
-MXNET_OPERATOR_REGISTER_REDUCE(min)
+MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(min)
 .add_alias("min_axis")
 .describe(get_reduce_axes_description("min", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::minimum>)
@@ -238,7 +238,7 @@ Example::
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastAxesParam>)
 .add_arguments(BroadcastAxesParam::__FIELDS__())
-.set_attr<nnvm::FInferShape>("FInferShape", BroadcastAxesShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BroadcastAxesShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
@@ -262,7 +262,7 @@ So with `shape=(2,0)`, we will obtain the same result as in the above example.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastToParam>)
 .add_arguments(BroadcastToParam::__FIELDS__())
-.set_attr<nnvm::FInferShape>("FInferShape", BroadcastToShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BroadcastToShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 // backward op for broadcast.
@@ -315,7 +315,7 @@ For example::
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BroadcastLikeParam>)
 .add_arguments(BroadcastLikeParam::__FIELDS__())
-.set_attr<nnvm::FInferShape>("FInferShape", BroadcastLikeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BroadcastLikeShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
 NNVM_REGISTER_OP(norm)
@@ -351,8 +351,8 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NormParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", NormShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", NormShape)
+.set_attr<nnvm::FInferType>("FInferType", NormType)
 .set_attr<FInferStorageType>("FInferStorageType", LpNormStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_norm" })
 .set_attr<FResourceRequest>("FResourceRequest",

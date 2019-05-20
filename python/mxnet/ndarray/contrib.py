@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=wildcard-import, unused-wildcard-import,redefined-outer-name
 """Contrib NDArray API of MXNet."""
+from __future__ import absolute_import
 import math
 import numpy as np
 from ..context import current_context
@@ -513,7 +514,7 @@ def isfinite(data):
     [0. 0. 0. 1.]
     <NDArray 4 @cpu(0)>
     """
-    is_data_not_nan = data == data
+    is_data_not_nan = data == data # pylint: disable=comparison-with-itself
     is_data_not_infinite = data.abs() != np.inf
     return ndarray.logical_and(is_data_not_infinite, is_data_not_nan)
 
@@ -541,4 +542,30 @@ def isnan(data):
     [1. 0.]
     <NDArray 2 @cpu(0)>
     """
-    return data != data
+    return data != data # pylint: disable=comparison-with-itself
+
+def adamw_update(weight, grad, mean, var, rescale_grad, lr, eta, beta1=0.9, beta2=0.999,
+                 epsilon=1e-8, wd=0, clip_gradient=-1, out=None, name=None, **kwargs):
+    if not isinstance(rescale_grad, ndarray.NDArray):
+        rescale_grad = ndarray.full(shape=(1,), val=rescale_grad, ctx=weight.context)
+    else:
+        rescale_grad = rescale_grad.as_in_context(weight.context)
+    return ndarray._internal._adamw_update(weight=weight, grad=grad, mean=mean, var=var,
+                                           rescale_grad=rescale_grad, lr=lr, eta=eta,
+                                           beta1=beta1, beta2=beta2, epsilon=epsilon,
+                                           wd=wd, clip_gradient=clip_gradient, out=out,
+                                           name=name, **kwargs)
+
+def mp_adamw_update(weight, grad, mean, var, weight32, rescale_grad, lr, eta, beta1=0.9,
+                    beta2=0.999, epsilon=1e-8, wd=0, clip_gradient=-1, out=None,
+                    name=None, **kwargs):
+    if not isinstance(rescale_grad, ndarray.NDArray):
+        rescale_grad = ndarray.full(shape=(1,), val=rescale_grad, ctx=weight.context)
+    else:
+        rescale_grad = rescale_grad.as_in_context(weight.context)
+    return ndarray._internal._mp_adamw_update(weight=weight, grad=grad, mean=mean, var=var,
+                                              weight32=weight32,
+                                              rescale_grad=rescale_grad, lr=lr, eta=eta,
+                                              beta1=beta1, beta2=beta2, epsilon=epsilon,
+                                              wd=wd, clip_gradient=clip_gradient, out=out,
+                                              name=name, **kwargs)

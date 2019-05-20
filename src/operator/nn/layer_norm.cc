@@ -33,31 +33,31 @@ namespace op {
 DMLC_REGISTER_PARAMETER(LayerNormParam);
 
 static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_shape,
-                           std::vector<TShape> *out_shape) {
+                           mxnet::ShapeVector *in_shape,
+                           mxnet::ShapeVector *out_shape) {
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
-  const TShape &dshape = in_shape->at(layernorm::kData);
+  const mxnet::TShape &dshape = in_shape->at(layernorm::kData);
   int axis = param.axis;
   if (axis < 0) {
-    axis += static_cast<int>(dshape.ndim());
+    axis += dshape.ndim();
   }
-  CHECK(axis >= 0 && axis < static_cast<int>(dshape.ndim()))
+  CHECK(axis >= 0 && axis < dshape.ndim())
     << "Channel axis out of range: axis=" << param.axis;
 
   const int channelCount = dshape[axis];
 
-  if (dshape.ndim() == 0) {
+  if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
 
-  in_shape->at(layernorm::kGamma) = TShape(Shape1(channelCount));
-  in_shape->at(layernorm::kBeta) = TShape(Shape1(channelCount));
+  in_shape->at(layernorm::kGamma) = mxnet::TShape(Shape1(channelCount));
+  in_shape->at(layernorm::kBeta) = mxnet::TShape(Shape1(channelCount));
 
   out_shape->clear();
   out_shape->push_back(dshape);                // kOut
-  TShape moments_shape(dshape.begin(), dshape.end());
+  mxnet::TShape moments_shape(dshape.begin(), dshape.end());
   moments_shape[axis] = 1;
   out_shape->push_back(moments_shape);  // kMean
   out_shape->push_back(moments_shape);  // kInvstd
@@ -108,7 +108,7 @@ axis to be the last item in the input shape.
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   return param.output_mean_var ? 3 : 1;
 })
-.set_attr<nnvm::FInferShape>("FInferShape", LayerNormShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LayerNormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 3>)
 .set_attr<FCompute>("FCompute<cpu>", LayerNormCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", [](const nnvm::NodePtr& n,

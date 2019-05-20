@@ -141,24 +141,24 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<cpu, 2, DType> dst,
 }
 template<typename ParamType>
 inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
+                             mxnet::ShapeVector *in_attrs,
+                             mxnet::ShapeVector *out_attrs) {
   using namespace mshadow;
-  const TShape &dshape = (*in_attrs)[embedding::kData];
-  if (dshape.ndim() ==  0) return false;
+  const mxnet::TShape &dshape = (*in_attrs)[embedding::kData];
+  if (!shape_is_known(dshape)) return false;
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight, Shape2(param.input_dim,
                                                            param.output_dim));
   out_attrs->clear();
 
-  TShape oshape(dshape.ndim()+1);
-  for (size_t i = 0; i < dshape.ndim(); ++i) {
+  mxnet::TShape oshape(dshape.ndim()+1, -1);
+  for (int i = 0; i < dshape.ndim(); ++i) {
     oshape[i] = dshape[i];
   }
   oshape[dshape.ndim()] = param.output_dim;
 
   out_attrs->push_back(oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 template<typename ParamType>
@@ -521,8 +521,8 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
           << "Embedding layer doesn't support calculate data gradient";
   CHECK_EQ(outputs[1].type_flag_, inputs[0].type_flag_);
 
-  const TShape& ishape = inputs[1].shape_;
-  const TShape& oshape = inputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
+  const mxnet::TShape& oshape = inputs[0].shape_;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[1].type_flag_, DType, {
@@ -677,23 +677,23 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
 };
 
 inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *in_attrs,
-                        std::vector<TShape> *out_attrs) {
+                        mxnet::ShapeVector *in_attrs,
+                        mxnet::ShapeVector *out_attrs) {
   using namespace mshadow;
-  const TShape &arrshape = (*in_attrs)[take_::kArr];
-  const TShape &idxshape = (*in_attrs)[take_::kIdx];
-  if (idxshape.ndim() == 0U || idxshape.Size() == 0U) return false;
+  const mxnet::TShape &arrshape = (*in_attrs)[take_::kArr];
+  const mxnet::TShape &idxshape = (*in_attrs)[take_::kIdx];
+  if (!shape_is_known(idxshape)) return false;
   const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
   if (param.mode == take_::kRaise) {
     LOG(FATAL) << "Raise is not supported for the time being...";
   }
-  CHECK(param.axis >= -1 * (int)arrshape.ndim() && param.axis < (int)arrshape.ndim())
+  CHECK(param.axis >= -1 * arrshape.ndim() && param.axis < arrshape.ndim())
     << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
 
   out_attrs->clear();
 
   const index_t actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
-  TShape oshape(idxshape.ndim() + arrshape.ndim() - 1);
+  mxnet::TShape oshape(idxshape.ndim() + arrshape.ndim() - 1, -1);
   for (index_t i = 0; i < idxshape.ndim(); ++i) {
     oshape[i + actual_axis] = idxshape[i];
   }
@@ -705,7 +705,7 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
     }
   }
   out_attrs->push_back(oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
@@ -838,9 +838,9 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK(axis != 0) << "axis == 0 case should be dispatched to the legacy implementation";
-  const TShape& arrshape = arr.shape_;
-  const TShape& idxshape = idx.shape_;
-  const TShape& oshape = ograd.shape_;
+  const mxnet::TShape& arrshape = arr.shape_;
+  const mxnet::TShape& idxshape = idx.shape_;
+  const mxnet::TShape& oshape = ograd.shape_;
   MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
     // get size of temporary storage for sort
     int* src_indptr_ptr = nullptr;
@@ -910,9 +910,9 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK(axis != 0) << "axis == 0 case should be dispatched to the legacy implementation";
-  const TShape& arrshape = arr.shape_;
-  const TShape& idxshape = idx.shape_;
-  const TShape& oshape = ograd.shape_;
+  const mxnet::TShape& arrshape = arr.shape_;
+  const mxnet::TShape& idxshape = idx.shape_;
+  const mxnet::TShape& oshape = ograd.shape_;
   MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
     // get size of temporary storage for sort
     char* temp_storage_ptr = nullptr;
@@ -1019,9 +1019,9 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       // inputs are specified in the .cc file, which are the gradients from
       // the upper layer and the input index
       // outputs are the gradients of inputs in the feed-forward pass
-      const TShape& idxshape = inputs[1].shape_;
-      const TShape& arrshape = outputs[0].shape_;
-      const TShape& oshape = inputs[0].shape_;
+      const mxnet::TShape& idxshape = inputs[1].shape_;
+      const mxnet::TShape& arrshape = outputs[0].shape_;
+      const mxnet::TShape& oshape = inputs[0].shape_;
 
       if (req[take_::kIdx] != kNullOp) {
         mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
@@ -1065,8 +1065,8 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
+                             mxnet::ShapeVector *in_attrs,
+                             mxnet::ShapeVector *out_attrs) {
   LOG(INFO) << "batch_take is deprecated. Please use pick instead.";
   CHECK_EQ(in_attrs->size(), 2U) << "BatchTake op requires two inputs";
   if ((*in_attrs)[1].ndim() != 0) {
@@ -1163,13 +1163,14 @@ inline void GetOneHotParams(const OneHotParam& param, int* depth, double* on_val
 }
 
 inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   const OneHotParam& param = nnvm::get<OneHotParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   // The shape of indices
-  const TShape& ishape = (*in_attrs)[0];
+  const mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!shape_is_known(ishape)) return false;
 
   int depth = 0;
   double on_value = 1.0;
@@ -1177,13 +1178,13 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   int dtype = mshadow::kFloat32;
   GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
 
-  TShape oshape(ishape.ndim() + 1);
+  mxnet::TShape oshape(ishape.ndim() + 1, -1);
   for (index_t i = 0; i < ishape.ndim(); ++i) {
     oshape[i] = ishape[i];
   }
   oshape[oshape.ndim()-1] = depth;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
@@ -1251,13 +1252,13 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   // The shape of indices
-  const TShape& dshape = (*in_attrs)[0];
-  const TShape& ishape = (*in_attrs)[1];
+  const mxnet::TShape& dshape = (*in_attrs)[0];
+  const mxnet::TShape& ishape = (*in_attrs)[1];
 
   if (shape_is_none(dshape) || shape_is_none(ishape)) return false;
 
@@ -1270,15 +1271,17 @@ inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
   CHECK_LE(ishape[0], 10)
     << "gather_nd supports indexing along at most 10 dimensions.";
 
-  TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0]);
+  mxnet::TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0], -1);
 
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) oshape[i] = ishape[i+1];
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
+    oshape[i] = ishape[i+1];
+  }
   for (int i = 0; i < dshape.ndim() - ishape[0]; ++i) {
     oshape[ishape.ndim()-1+i] = dshape[ishape[0] + i];
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 inline bool GatherNDType(const nnvm::NodeAttrs& attrs,
@@ -1319,8 +1322,8 @@ void GatherNDForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   if (req[0] == kNullOp) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TShape& dshape = inputs[0].shape_;
-  const TShape& ishape = inputs[1].shape_;
+  const mxnet::TShape& dshape = inputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
   int M = ishape[0];
   int N = ishape.Size() / M;
   int K = dshape.ProdShape(M, dshape.ndim());
@@ -1337,7 +1340,7 @@ void GatherNDForward(const nnvm::NodeAttrs& attrs,
 
 
 struct ScatterNDParam : public dmlc::Parameter<ScatterNDParam> {
-  TShape shape;
+  mxnet::TShape shape;
   DMLC_DECLARE_PARAMETER(ScatterNDParam) {
     DMLC_DECLARE_FIELD(shape)
       .describe("Shape of output.");
@@ -1345,17 +1348,17 @@ struct ScatterNDParam : public dmlc::Parameter<ScatterNDParam> {
 };
 
 inline bool ScatterNDShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_attrs,
-                           std::vector<TShape> *out_attrs) {
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const auto& params = dmlc::get<ScatterNDParam>(attrs.parsed);
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, params.shape);
 
-  const TShape& dshape = (*in_attrs)[0];
-  const TShape& ishape = (*in_attrs)[1];
-  const TShape& oshape = (*out_attrs)[0];
+  const mxnet::TShape& dshape = (*in_attrs)[0];
+  const mxnet::TShape& ishape = (*in_attrs)[1];
+  const mxnet::TShape& oshape = (*out_attrs)[0];
 
   if (shape_is_none(dshape) || shape_is_none(ishape) || shape_is_none(oshape)) return false;
 
@@ -1370,7 +1373,7 @@ inline bool ScatterNDShape(const nnvm::NodeAttrs& attrs,
 
   bool valid = dshape.ndim() == ishape.ndim() - 1 + oshape.ndim() - ishape[0];
 
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) {
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
     valid = valid && dshape[i] == ishape[i+1];
   }
   for (int i = 0; i < oshape.ndim() - ishape[0]; ++i) {
@@ -1422,8 +1425,8 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   if (req[0] == kNullOp) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TShape& oshape = outputs[0].shape_;
-  const TShape& ishape = inputs[1].shape_;
+  const mxnet::TShape& oshape = outputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
   dim_t M = ishape[0];
   dim_t N = ishape.Size() / M;
   dim_t K = oshape.ProdShape(M, oshape.ndim());
@@ -1479,8 +1482,8 @@ void GatherNDBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   if (req[0] == kNullOp) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TShape& oshape = outputs[0].shape_;
-  const TShape& ishape = inputs[1].shape_;
+  const mxnet::TShape& oshape = outputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
   dim_t M = ishape[0];
   dim_t N = ishape.Size() / M;
   dim_t K = oshape.ProdShape(M, oshape.ndim());

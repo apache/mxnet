@@ -28,8 +28,7 @@ class LongLivingDataBatch(
   override val data: IndexedSeq[NDArray],
   override val label: IndexedSeq[NDArray],
   override val index: IndexedSeq[Long],
-  override val pad: Int) extends DataBatch(data, label, index, pad,
-  null, null, null) {
+  override val pad: Int) extends DataBatch(data, label, index, pad) {
   override def dispose(): Unit = {}
   def disposeForce(): Unit = super.dispose()
 }

@@ -19,11 +19,16 @@
 # Dockerfile to run the MXNet Installation Tests on Ubuntu 16.04
 # This should run in an empty docker with ubuntu and cuda.
 
-FROM nvidia/cuda:9.1-cudnn7-devel
+FROM nvidia/cuda:10.0-devel-ubuntu16.04
+
+ENV CUDNN_VERSION=7.3.1.20
 
 WORKDIR /work/deps
 
 RUN apt-get update && apt-get -y install sudo
+
+COPY install/ubuntu_cudnn.sh /work/
+RUN /work/ubuntu_cudnn.sh
 
 ARG USER_ID=0
 ARG GROUP_ID=0

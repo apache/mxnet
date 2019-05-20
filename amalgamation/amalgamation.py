@@ -46,6 +46,14 @@ if platform.system() != 'Darwin':
 if platform.system() != 'Windows':
     blacklist.append('windows.h')
     blacklist.append('process.h')
+    blacklist.append('Shlwapi.h')
+
+if platform.system() == 'Windows':
+    blacklist.append('unistd.h')
+
+if 'freebsd' not in sys.platform:
+    blacklist.append('sys/endian.h')
+
 
 
 def get_sources(def_file):
@@ -94,6 +102,7 @@ def find_source(name, start, stage):
 
 re1 = re.compile('<([./a-zA-Z0-9_-]*)>')
 re2 = re.compile('"([./a-zA-Z0-9_-]*)"')
+re3 = re.compile('DMLC_EXECINFO_H')
 
 sysheaders = []
 history = set([])
@@ -129,6 +138,9 @@ def expand(x, pending, stage):
     with open(x, 'rb') as x_h:
         for line in x_h.readlines():
             uline = line.decode('utf-8')
+            if '#define DMLC_LOG_STACK_TRACE 1' in uline.strip():
+                # Do not enable stacktrace logging
+                continue
             if uline.find('#include') < 0:
                 out.write(line)
                 continue
@@ -138,12 +150,22 @@ def expand(x, pending, stage):
             m = re1.search(uline)
             if not m:
                 m = re2.search(uline)
-            if not m:
-                print(uline + ' not found')
-                continue
-            path = m.groups()[0]
+            if m:
+                path = m.groups()[0]
+            else:
+                m = re3.search(uline)
+                if m:
+                    path = 'execinfo.h'
+                else:
+                    print(uline + ' not found')
+                    continue
             h = path.strip('./') if "../3rdparty/" not in path else path
-            source = find_source(h, x, stage)
+            if h.endswith('complex.h') and x.endswith('openblas_config.h'):
+                source = ''
+            elif h.startswith('ps/'):
+                source = '../3rdparty/ps-lite/include/' + h
+            else:
+                source = find_source(h, x, stage)
             if not source:
                 if (h not in blacklist and
                     h not in sysheaders and

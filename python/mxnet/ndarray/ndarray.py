@@ -35,7 +35,7 @@ from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle
+from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int
 from ..base import ctypes2buffer
 from ..context import Context, current_context
 from . import _internal
@@ -47,7 +47,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
            "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
-           "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
+           "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack", "from_numpy"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -143,11 +143,11 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
 
 def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateFromSharedMem(
+    check_call(_LIB.MXNDArrayCreateFromSharedMemEx(
         ctypes.c_int(shared_pid),
         ctypes.c_int(shared_id),
-        c_array(mx_uint, shape),
-        mx_uint(len(shape)),
+        c_array(mx_int, shape),
+        mx_int(len(shape)),
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         ctypes.byref(hdl)))
     return hdl
@@ -158,12 +158,9 @@ def waitall():
 
     This function is used for benchmarking only.
 
-    .. warning::
+    .. note::
 
-       If your code has exceptions, `waitall` can cause silent failures.
-       For this reason you should avoid `waitall` in your code.
-       Use it only if you are confident that your code is error free.
-       Then make sure you call `wait_to_read` on all outputs after `waitall`.
+       If your mxnet code throws an exception, then waitall can cause performance impact.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
@@ -1848,11 +1845,14 @@ fixed-size items.
         >>> y.shape
         (2L, 3L, 4L)
         """
-        ndim = mx_uint()
-        pdata = ctypes.POINTER(mx_uint)()
-        check_call(_LIB.MXNDArrayGetShape(
+        ndim = mx_int()
+        pdata = ctypes.POINTER(mx_int)()
+        check_call(_LIB.MXNDArrayGetShapeEx(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
-        return tuple(pdata[:ndim.value]) # pylint: disable=invalid-slice-index
+        if ndim.value == -1:
+            return None
+        else:
+            return tuple(pdata[:ndim.value])  # pylint: disable=invalid-slice-index
 
 
     @property
@@ -2513,10 +2513,10 @@ def moveaxis(tensor, source, destination):
     ----------
     tensor : mx.nd.array
         The array which axes should be reordered
-    source : int
-        Original position of the axes to move.
-    destination : int
-        Destination position for each of the original axes.
+    source : int or sequence of int
+        Original position of the axes to move. Can be negative but must be unique.
+    destination : int or sequence of int
+        Destination position for each of the original axes. Can be negative but must be unique.
 
     Returns
     -------
@@ -2528,23 +2528,36 @@ def moveaxis(tensor, source, destination):
     >>> X = mx.nd.array([[1, 2, 3], [4, 5, 6]])
     >>> mx.nd.moveaxis(X, 0, 1).shape
     (3L, 2L)
+
+    >>> X = mx.nd.zeros((3, 4, 5))
+    >>> mx.nd.moveaxis(X, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
     """
-    axes = list(range(tensor.ndim))
     try:
-        axes.pop(source)
+        source = np.core.numeric.normalize_axis_tuple(source, tensor.ndim)
     except IndexError:
         raise ValueError('Source should verify 0 <= source < tensor.ndim'
                          'Got %d' % source)
     try:
-        axes.insert(destination, source)
+        destination = np.core.numeric.normalize_axis_tuple(destination, tensor.ndim)
     except IndexError:
-        raise ValueError('Destination should verify 0 <= destination < tensor.ndim'
-                         'Got %d' % destination)
-    return op.transpose(tensor, axes)
+        raise ValueError('Destination should verify 0 <= destination < tensor.ndim (%d).'
+                         % tensor.ndim, 'Got %d' % destination)
+
+    if len(source) != len(destination):
+        raise ValueError('`source` and `destination` arguments must have '
+                         'the same number of elements')
+
+    order = [n for n in range(tensor.ndim) if n not in source]
+
+    for dest, src in sorted(zip(destination, source)):
+        order.insert(dest, src)
+
+    return op.transpose(tensor, order)
 
 
 # pylint: disable= no-member, protected-access, too-many-arguments, redefined-outer-name
-def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dtype=mx_real_t):
+def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dtype=mx_real_t):
     """Returns evenly spaced values within a given interval.
 
     Values are generated within the half-open interval [`start`, `stop`). In other
@@ -2588,10 +2601,13 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dt
     >>> mx.nd.arange(2, 6, step=2, repeat=3, dtype='int32').asnumpy()
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
+    if infer_range is not None:
+        warnings.warn('`infer_range` argument has been deprecated',
+                      DeprecationWarning)
     if ctx is None:
         ctx = current_context()
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             infer_range=infer_range, dtype=dtype, ctx=str(ctx))
+                             infer_range=False, dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
 
 
@@ -4098,4 +4114,109 @@ def from_dlpack(dlpack):
     ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
     # delete the deleter of the old dlpack
     ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
+    return NDArray(handle=handle)
+
+class DLContext(ctypes.Structure):
+    _fields_ = [("device_type", ctypes.c_int),
+                ("device_id", ctypes.c_int)]
+
+
+class DLDataType(ctypes.Structure):
+    _fields_ = [("type_code", ctypes.c_uint8),
+                ("bits", ctypes.c_uint8),
+                ("lanes", ctypes.c_uint16)]
+    TYPE_MAP = {
+        "int32": (0, 32, 1),
+        "int64": (0, 64, 1),
+        "bool": (1, 1, 1),
+        "uint32": (1, 32, 1),
+        "uint64": (1, 64, 1),
+        "float32": (2, 32, 1),
+        "float64": (2, 64, 1),
+    }
+
+
+class DLTensor(ctypes.Structure):
+    _fields_ = [("data", ctypes.c_void_p),
+                ("ctx", DLContext),
+                ("ndim", ctypes.c_int),
+                ("dtype", DLDataType),
+                ("shape", ctypes.POINTER(ctypes.c_int64)),
+                ("strides", ctypes.POINTER(ctypes.c_int64)),
+                ("byte_offset", ctypes.c_uint64)]
+
+class DLManagedTensor(ctypes.Structure):
+    pass
+
+
+DeleterFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(DLManagedTensor))
+
+
+DLManagedTensor._fields_ = [("dl_tensor", DLTensor),           # pylint: disable=protected-access
+                            ("manager_ctx", ctypes.c_void_p),
+                            ("deleter", DeleterFunc)]
+
+
+@DeleterFunc
+def dl_managed_tensor_deleter(dl_managed_tensor_handle):
+    void_p = dl_managed_tensor_handle.contents.manager_ctx
+    pyobj = ctypes.cast(void_p, ctypes.py_object)
+    ctypes.pythonapi.Py_DecRef(pyobj)
+
+
+def from_numpy(ndarray, zero_copy=True):
+    """Returns an MXNet's NDArray backed by Numpy's ndarray.
+
+    Parameters
+    ----------
+    ndarray: numpy.ndarray
+        input data
+
+    zero_copy: bool
+        Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
+        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+
+    Returns
+    -------
+    NDArray
+        a NDArray backed by a dlpack tensor
+
+    """
+
+    def _make_manager_ctx(obj):
+        pyobj = ctypes.py_object(obj)
+        void_p = ctypes.c_void_p.from_buffer(pyobj)
+        ctypes.pythonapi.Py_IncRef(pyobj)
+        return void_p
+
+    def _make_dl_tensor(array):
+        if str(array.dtype) not in DLDataType.TYPE_MAP:
+            raise ValueError(str(array.dtype) + " is not supported.")
+        dl_tensor = DLTensor()
+        dl_tensor.data = array.ctypes.data_as(ctypes.c_void_p)
+        dl_tensor.ctx = DLContext(1, 0)
+        dl_tensor.ndim = array.ndim
+        dl_tensor.dtype = DLDataType.TYPE_MAP[str(array.dtype)]
+        dl_tensor.shape = array.ctypes.shape_as(ctypes.c_int64)
+        dl_tensor.strides = None
+        dl_tensor.byte_offset = 0
+        return dl_tensor
+
+    def _make_dl_managed_tensor(array):
+        c_obj = DLManagedTensor()
+        c_obj.dl_tensor = _make_dl_tensor(array)
+        c_obj.manager_ctx = _make_manager_ctx(array)
+        c_obj.deleter = dl_managed_tensor_deleter
+        return c_obj
+
+    if not zero_copy:
+        return array(ndarray, dtype=ndarray.dtype)
+
+    if not ndarray.flags['C_CONTIGUOUS']:
+        raise ValueError("Only c-contiguous arrays are supported for zero-copy")
+    c_obj = _make_dl_managed_tensor(ndarray)
+    address = ctypes.addressof(c_obj)
+    address = ctypes.cast(address, ctypes.c_void_p)
+    handle = NDArrayHandle()
+    check_call(_LIB.MXNDArrayFromDLPack(address, ctypes.byref(handle)))
     return NDArray(handle=handle)

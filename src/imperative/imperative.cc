@@ -25,9 +25,11 @@ namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
 thread_local bool Imperative::is_train_ = false;
 thread_local bool Imperative::is_recording_ = false;
+thread_local bool Imperative::is_np_comp_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_ = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_ = false;
+MX_THREAD_LOCAL bool Imperative::is_np_comp_ = false;
 #endif
 
 Imperative* Imperative::Get() {
@@ -109,7 +111,7 @@ OpStatePtr Imperative::Invoke(
   OpStatePtr ret = InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
   // the followinng loop is used for finding out the correct shape when some shapes are dynamic
   for (size_t i = 0; i < outputs.size(); i++) {
-    if (outputs[i]->shape().ndim() == 0) {
+    if (!shape_is_known(outputs[i]->shape())) {
       // the WaitToRead overhead here does not seem to be avoidable
       outputs[i]->WaitToRead();
       outputs[i]->SetShapeFromChunk();
@@ -351,7 +353,7 @@ std::vector<NDArray*> Imperative::Backward(
         << "There are no inputs in computation graph that require gradients.";
   }
 
-  Graph g_graph = pass::Gradient(
+  Graph g_graph = pass::MXGradient(
       graph, graph.outputs, xs, ograd_entries,
       exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
@@ -442,9 +444,10 @@ std::vector<NDArray*> Imperative::Backward(
 
     ShapeVector shapes;
     shapes.reserve(idx.num_node_entries());
+    bool contain_unknown = false;
     for (const auto& i : arrays) shapes.emplace_back(i->shape());
     CheckAndInferShape(&graph, std::move(shapes), false,
-                       node_range, entry_range);
+                       node_range, entry_range, &contain_unknown);
 
     DTypeVector dtypes;
     dtypes.reserve(idx.num_node_entries());
@@ -479,7 +482,7 @@ std::vector<NDArray*> Imperative::Backward(
     array_reqs[eid] = x_reqs[i - num_forward_outputs];
   }
 
-  const auto& shapes = graph.GetAttr<ShapeVector>("shape");
+  const auto& shapes = graph.GetAttr<mxnet::ShapeVector>("shape");
   const auto& dtypes = graph.GetAttr<DTypeVector>("dtype");
   const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
   const auto& dispatch_modes = graph.GetAttr<DispatchModeVector>("dispatch_mode");

@@ -1,13 +1,38 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet Java Sample Project
-This is an project created to use Maven-published Scala/Java package with two Java examples.
+This is a project demonstrating how to use the Maven published Scala/Java MXNet package. 
+The examples provided include:
+* NDArray creation
+* NDArray operation
+* Object Detection using the Inference API
+* Image Classification using the Predictor API
+
 ## Setup
-You are required to use Maven to build the package with the following commands:
+You are required to use Maven to build the package with the following commands under `java-demo`:
 ```
 mvn package
 ```
 This command will pick the default values specified in the [pom](https://github.com/apache/incubator-mxnet/blob/master/scala-package/mxnet-demo/java-demo/pom.xml) file.
 
 Note: If you are planning to use GPU, please add `-Dmxnet.profile=linux-x86_64-gpu`
+
+Note: The Maven package is built with CUDA 9.2.
 
 ### Use customized version set
 You can use the following instruction as an alternative to achieve the same result:
@@ -25,16 +50,16 @@ The `SCALA_PKG_PROFILE` should be chosen from `osx-x86_64-cpu`, `linux-x86_64-cp
 
 
 ## Run
-### Hello World
-The Scala file is being executed using Java. You can execute the helloWorld example as follows:
+### NDArrayCreation
+The Scala file is being executed using Java. You can execute the `NDArrayCreation` example as follows:
 ```Bash
 bash bin/java_sample.sh
 ```
 You can also run the following command manually:
 ```Bash
-java -cp $CLASSPATH sample.HelloWorld
+java -cp $CLASSPATH sample.NDArrayCreation
 ```
-However, you have to define the Classpath before you run the demo code. More information can be found in the `java_sample.sh`.
+However, you have to define the Classpath before you run the demo code. More information can be found in `bin/java_sample.sh`.
 The `CLASSPATH` should point to the jar file you have downloaded.
 
 It will load the library automatically and run the example

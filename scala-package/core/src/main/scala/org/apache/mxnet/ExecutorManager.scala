@@ -395,8 +395,8 @@ private[mxnet] object ExecutorManager {
  * @param paramNames Names of all trainable parameters.
  * @param ctx List of devices for training (data parallel)
  * @param slices Describes how the data parallel splits data into different devices.
- * @param providedData training data shapes
- * @param providedLabel training label shapes
+ * @param providedDataDesc training data descriptions
+ * @param providedLabelDesc training label descriptions
  * @param sharedGroup: DataParallelExecutorGroup
  *                   An existing executor group, if to share parameters with it.
  *
@@ -404,8 +404,8 @@ private[mxnet] object ExecutorManager {
 private class DataParallelExecutorGroup private(sym: Symbol,
                                 argNames: IndexedSeq[String], paramNames: Set[String],
                                 ctx: Array[Context], private val slices: Array[(Int, Int)],
-                                providedData: Map[String, Shape],
-                                providedLabel: Map[String, Shape],
+                                providedDataDesc: IndexedSeq[DataDesc],
+                                providedLabelDesc: IndexedSeq[DataDesc],
                                 sharedGroup: DataParallelExecutorGroup)  {
   // make sure the architecture is valid
   ExecutorManager.checkArguments(sym)
@@ -417,8 +417,8 @@ private class DataParallelExecutorGroup private(sym: Symbol,
       sharedGroup.sharedDataArrays
     }
 
-  private[mxnet] val dataNames = providedData.map { case (k, _) => k }.toList
-  private[mxnet] val labelNames = providedLabel.map { case (k, _) => k }.toList
+  private[mxnet] val dataNames = providedDataDesc.map(_.name).toList
+  private[mxnet] val labelNames = providedLabelDesc.map(_.name).toList
   private[mxnet] val auxNames = sym.listAuxiliaryStates()
   private[mxnet] val paramIdx = argNames.zipWithIndex
     .filter { case (name, i) => paramNames.contains(name) }
@@ -428,9 +428,10 @@ private class DataParallelExecutorGroup private(sym: Symbol,
   private[mxnet] val trainExecs: Array[Executor] =
     ctx.zipWithIndex.map { case (ctxi, i) =>
       val dataShapes =
-        (providedData ++ providedLabel) map { case (name, shape) =>
-          name -> (Shape(slices(i)._2 - slices(i)._1) ++ shape.slice(1, shape.length))
-        }
+        (providedDataDesc ++ providedLabelDesc).map( desc => {
+          desc.name ->
+            (Shape(slices(i)._2 - slices(i)._1) ++ desc.shape.slice(1, desc.shape.length))
+        }).toMap
       val sharedExec: Executor = if (sharedGroup == null) null else sharedGroup.trainExecs(i)
       ExecutorManager.bindExec(sym, ctxi, dataShapes, paramNamesComb,
         needGrad = true, baseExec = sharedExec,
@@ -479,7 +480,7 @@ private class DataParallelExecutorGroup private(sym: Symbol,
       trainData: DataIter,
       sharedGroup: DataParallelExecutorGroup) {
     this(sym, argNames, paramNames, ctx, slices,
-      trainData.provideData, trainData.provideLabel, sharedGroup)
+      trainData.provideDataDesc, trainData.provideLabelDesc, sharedGroup)
   }
 
   def this(sym: Symbol,
@@ -487,7 +488,7 @@ private class DataParallelExecutorGroup private(sym: Symbol,
            ctx: Array[Context], slices: Array[(Int, Int)],
            trainData: DataIter) {
     this(sym, argNames, paramNames, ctx, slices,
-      trainData.provideData, trainData.provideLabel, null)
+      trainData.provideDataDesc, trainData.provideLabelDesc, null)
   }
 
   /**
@@ -509,7 +510,7 @@ private class DataParallelExecutorGroup private(sym: Symbol,
       trainData: DataBatch,
       sharedGroup: DataParallelExecutorGroup) {
     this(sym, argNames, paramNames, ctx, slices,
-      trainData.provideData, trainData.provideLabel, sharedGroup)
+      trainData.provideDataDesc, trainData.provideLabelDesc, sharedGroup)
   }
 
   def this(sym: Symbol,
@@ -517,7 +518,7 @@ private class DataParallelExecutorGroup private(sym: Symbol,
            ctx: Array[Context], slices: Array[(Int, Int)],
            trainData: DataBatch) {
     this(sym, argNames, paramNames, ctx, slices,
-      trainData.provideData, trainData.provideLabel, null)
+      trainData.provideDataDesc, trainData.provideLabelDesc, null)
   }
 
   // load data and labels into arrays
