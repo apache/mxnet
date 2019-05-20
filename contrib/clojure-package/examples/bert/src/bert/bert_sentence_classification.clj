@@ -87,13 +87,12 @@
                :strict true))
 
 (defn prepare-data
-  "This prepares the senetence pairs into NDArrays for use in NDArrayIterator"
-  []
-  (let [raw-file (get-raw-data)
-        vocab (bert-util/get-vocab)
+  "This prepares the sentence pairs into NDArrays for use in NDArrayIterator"
+  [raw-data]
+  (let [vocab (bert-util/get-vocab)
         idx->token (:idx->token vocab)
         token->idx (:token->idx vocab)
-        data-train-raw (->> raw-file
+        data-train-raw (->> raw-data
                             (mapv #(vals (select-keys % [3 4 0])))
                             (rest) ;;drop header
                             (into []))
@@ -111,7 +110,7 @@
   [dev num-epoch]
   (let [bert-base (m/load-checkpoint {:prefix model-path-prefix :epoch 0})
         model-sym (fine-tune-model (m/symbol bert-base) {:num-classes 2 :dropout 0.1})
-        {:keys [data0s data1s data2s labels train-num]} (prepare-data)
+        {:keys [data0s data1s data2s labels train-num]} (prepare-data (get-raw-data))
         batch-size 32
         data-desc0 (mx-io/data-desc {:name "data0"
                                      :shape [train-num seq-length]
