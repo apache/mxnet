@@ -7222,6 +7222,7 @@ def test_adaptive_avg_pool_op():
             check_adaptive_avg_pool_op(shape, i, j)
 
 @with_seed()
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14902")
 def test_bilinear_resize_op():
     def py_bilinear_resize(x, outputHeight, outputWidth):
         batch, channel, inputHeight, inputWidth = x.shape
