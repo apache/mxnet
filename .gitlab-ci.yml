@@ -46,16 +46,16 @@ cmake_32bit:
     - cmake --build build
     - pytest tests/binary
 
-cmake_64bit:
-  stage: build_and_test
-  image: $BASE_TEMPORARY_IMAGE
-  script:
-    - mkdir build
-    - cd build
-    - cmake -DBINARY_WORD_TYPE=uint64 -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
-    - cd ..
-    - cmake --build build
-    - pytest tests/binary
+#cmake_64bit:
+#  stage: build_and_test
+#  image: $BASE_TEMPORARY_IMAGE
+#  script:
+#    - mkdir build
+#    - cd build
+#    - cmake -DBINARY_WORD_TYPE=uint64 -DUSE_CUDA=OFF -DUSE_MKL_IF_AVAILABLE=OFF -GNinja ..
+#    - cd ..
+#    - cmake --build build
+#    - pytest tests/binary
 
 tag_image:
   stage: tag
