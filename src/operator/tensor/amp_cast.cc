@@ -47,6 +47,11 @@ It casts only between low precision float/FP32 and does not do anything for othe
     return std::vector<bool>{true};
   })
 .set_attr<FCompute>("FCompute<cpu>", AMPCastCompute<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FInferStorageType>("FInferStorageType", AMPCastStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", AMPCastExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_amp_cast"})
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(AMPCastParam::__FIELDS__());
@@ -61,6 +66,11 @@ NNVM_REGISTER_OP(_backward_amp_cast)
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FInferStorageType>("FInferStorageType", AMPCastStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", AMPCastExCPU)
+#endif
 .set_attr<FCompute>("FCompute<cpu>", AMPCastCompute<cpu>);
 
 NNVM_REGISTER_OP(amp_multicast)
@@ -72,17 +82,18 @@ It casts only between low precision float/FP32 and does not do anything for othe
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
     const AMPMultiCastParam& param = dmlc::get<AMPMultiCastParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_outputs);
-  })
+})
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
     const AMPMultiCastParam& param = dmlc::get<AMPMultiCastParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_outputs);
-  })
+})
 .set_attr_parser(ParamParser<AMPMultiCastParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", AMPMultiCastShape)
 .set_attr<nnvm::FInferType>("FInferType", AMPMultiCastType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    uint32_t num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
+    uint32_t num_args =
+        dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     std::vector<std::string> ret;
     for (uint32_t i = 0; i < num_args; ++i) {
       ret.push_back(std::string("data_") + std::to_string(i));
@@ -90,8 +101,9 @@ It casts only between low precision float/FP32 and does not do anything for othe
     return ret;
   })
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    int num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
+  [](const NodeAttrs& attrs) {
+    int num_args =
+        dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     std::vector<std::pair<int, int>> ret;
     for (int i = 0; i < num_args; ++i) {
       ret.emplace_back(i, i);
@@ -99,11 +111,17 @@ It casts only between low precision float/FP32 and does not do anything for othe
     return ret;
   })
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
-  [](const NodeAttrs& attrs){
-    int num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
+  [](const NodeAttrs& attrs) {
+    int num_args =
+        dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     return std::vector<bool>(num_args, true);
   })
 .set_attr<FCompute>("FCompute<cpu>", AMPMultiCastCompute<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FInferStorageType>("FInferStorageType", AMPMultiCastStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", AMPMultiCastExCPU)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_amp_multicast"})
 .add_argument("data", "NDArray-or-Symbol[]", "Weights")
 .add_arguments(AMPMultiCastParam::__FIELDS__());
@@ -142,6 +160,11 @@ NNVM_REGISTER_OP(_backward_amp_multicast)
     int num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     return std::vector<bool>(num_args, true);
   })
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FInferStorageType>("FInferStorageType", AMPMultiCastStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", AMPMultiCastExCPU)
+#endif
 .set_attr<FCompute>("FCompute<cpu>", AMPMultiCastCompute<cpu>)
 .add_argument("grad", "NDArray-or-Symbol[]", "Gradients")
 .add_arguments(AMPMultiCastParam::__FIELDS__());

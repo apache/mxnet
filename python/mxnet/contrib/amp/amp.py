@@ -20,6 +20,7 @@
 __all__ = ['init', 'init_trainer', 'scale_loss', 'unscale', 'convert_model',
            'convert_hybrid_block', 'list_fp16_ops', 'list_fp32_ops',
            'list_fp16_fp32_ops', 'list_conditional_fp32_ops',
+           'list_widest_type_cast', 'list_loss_output_functions',
            'convert_symbol']
 
 from types import MethodType
@@ -43,14 +44,17 @@ from ...base import c_str_array, SymbolHandle, check_call, _LIB, mx_uint, c_arra
 from ... import optimizer as opt
 from .loss_scaler import LossScaler
 
+bfloat16 = np.dtype([('bfloat16', np.uint16)])
+
 def _cast_symbol_NDArray(s, dtype):
-    float_types = (np.float16, np.float32)
+    float_types_gpu = (np.float16, np.float32)
+    float_types_cpu = (bfloat16, np.float32)
     if isinstance(s, Symbol):
         return symbol.amp_cast(s, dtype=dtype)
     elif isinstance(s, NDArray):
-        if (s.dtype != dtype and
-                s.dtype in float_types and
-                s.context.device_type != 'cpu'):
+        if (s.dtype != dtype and s.dtype in float_types_gpu and s.context.device_type != 'cpu'):
+            return ndarray.amp_cast(s, dtype=dtype)
+        elif (s.dtype != dtype and s.dtype in float_types_cpu and s.context.device_type == 'cpu'):
             return ndarray.amp_cast(s, dtype=dtype)
         else:
             return s
@@ -158,7 +162,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
                 getattr(module, op_name_prefix[1:-1])
 
     wrap_list = target_precision_ops if target_precision_ops is not None \
-                    else lists.symbol.FP16_FUNCS
+                    else list_fp16_ops(target_dtype)
     for fun_name in wrap_list:
         try:
             fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
@@ -167,9 +171,9 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, target_dtype))
         except AttributeError:
-            pass
+            raise
 
-    wrap_list = fp32_ops if fp32_ops is not None else lists.symbol.FP32_FUNCS
+    wrap_list = fp32_ops if fp32_ops is not None else list_fp32_ops(target_dtype)
     for fun_name in wrap_list:
         try:
             fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
@@ -178,10 +182,10 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32))
         except AttributeError:
-            pass
+            raise
 
     wrap_list = conditional_fp32_ops if conditional_fp32_ops is not None \
-                    else lists.symbol.CONDITIONAL_FP32_FUNCS
+                    else list_conditional_fp32_ops(target_dtype)
     for fun_name, arg, arg_values in wrap_list:
         try:
             fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
@@ -190,9 +194,10 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
         except AttributeError:
-            pass
+            raise
 
-    for fun_name in lists.symbol.WIDEST_TYPE_CASTS:
+
+    for fun_name in list_widest_type_cast(target_dtype):
         try:
             fun_name, cur_module = _get_fun_to_wrap(fun_name, module, submodule_dict)
             f_to_wrap = getattr(cur_module, fun_name)
@@ -200,9 +205,9 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
             if cur_module == module:
                 setattr(module.op, fun_name, _symbol_widest_wrapper(f_to_wrap))
         except AttributeError:
-            pass
+            raise
 
-def _wrap_loss_output_functions(module, ls):
+def _wrap_loss_output_functions(module, ls, target_dtype):
     if module == ndarray:
         def _wrapper(f):
             def _scaling_wrapper(*args, **kwargs):
@@ -226,7 +231,7 @@ def _wrap_loss_output_functions(module, ls):
             _warning_wrapper.__doc__ = f.__doc__
             return _warning_wrapper
 
-    for fun_name in lists.symbol.LOSS_OUTPUT_FUNCTIONS:
+    for fun_name in list_loss_output_functions(target_dtype):
         try:
             f_to_wrap = getattr(module, fun_name)
             setattr(module, fun_name, _wrapper(f_to_wrap))
@@ -256,11 +261,11 @@ def init(target_dtype='float16', target_precision_ops=None,
 
     Parameters
     ----------
-    target_dtype : {'float16'}
-        Target low precision type for AMP. Currently only float16 is supported.
+    target_dtype : {'float16', 'bfloat16'}
+        Target low precision type for AMP. Currently only float16 and bfloat16 are supported.
     target_precision_ops : list of string
-        Override the list of functions casted to FP16. Entries in this list
-        are names of the functions casted to FP16.
+        Override the list of functions casted to target_dtype. Entries in this list
+        are names of the functions casted to target_dtype.
     conditional_fp32_ops : list of (string, string, list of string)
         Override the list of functions conditionally casted to FP32. The format
         of the list is (name of the function, name of the parameter, list of
@@ -272,18 +277,21 @@ def init(target_dtype='float16', target_precision_ops=None,
     global _amp_initialized
     global _loss_scaler
     if not _amp_initialized:
-        assert target_dtype in ['float16', np.float16], \
-               "AMP currently supports only float16 as a target_dtype"
+        assert target_dtype in ['float16', np.float16, 'bfloat16', bfloat16], \
+               "AMP currently supports only float16 or bfloat16 as a target_dtype"
         _amp_initialized = True
         logging.info("Using AMP")
-        target_dtype = np.dtype(target_dtype)
+        if target_dtype == "bfloat16":
+            target_dtype = bfloat16
+        else:
+            target_dtype = np.dtype(target_dtype)
         _wrap_symbol_functions(symbol, target_dtype, target_precision_ops,
                                conditional_fp32_ops, fp32_ops)
         _wrap_symbol_functions(ndarray, target_dtype, target_precision_ops,
                                conditional_fp32_ops, fp32_ops)
         _loss_scaler = LossScaler()
-        _wrap_loss_output_functions(ndarray, _loss_scaler)
-        _wrap_loss_output_functions(symbol, _loss_scaler)
+        _wrap_loss_output_functions(ndarray, _loss_scaler, target_dtype)
+        _wrap_loss_output_functions(symbol, _loss_scaler, target_dtype)
 
 def init_trainer(optimizer_or_trainer):
     """Initialize trainer or optimizer to work with AMP dynamic loss scaling.
@@ -390,23 +398,23 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     """
     assert isinstance(sym, Symbol), "First argument to convert_symbol should be Symbol"
 
-    if target_dtype != "float16":
-        raise ValueError("Only target_dtype float16 is supported currently")
+    assert target_dtype in ['float16'], \
+               "Only target_dtype float16 is supported currently"
 
     if target_dtype_ops is not None:
         assert isinstance(target_dtype_ops, list), "target_dtype_ops should be a list of strs"
     else:
-        target_dtype_ops = lists.symbol.FP16_FUNCS
+        target_dtype_ops = list_fp16_ops(target_dtype)
 
     if fp32_ops is not None:
         assert isinstance(fp32_ops, list), "fp32_ops should be a list of strs"
     else:
-        fp32_ops = lists.symbol.FP32_FUNCS
+        fp32_ops = list_fp32_ops(target_dtype)
 
     if conditional_fp32_ops is not None:
         assert isinstance(conditional_fp32_ops, list), "conditional_fp32_ops should be a list"
     else:
-        conditional_fp32_ops = lists.symbol.CONDITIONAL_FP32_FUNCS
+        conditional_fp32_ops = list_conditional_fp32_ops(target_dtype)
 
     original_conditional_op_names = []
     conditional_op_names = []
@@ -427,7 +435,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     else:
         excluded_sym_names = []
 
-    for original_conditional_fp32_op in lists.symbol.CONDITIONAL_FP32_FUNCS:
+    for original_conditional_fp32_op in list_conditional_fp32_ops(target_dtype):
         original_conditional_op_names.append(original_conditional_fp32_op[0])
 
     # Op lists should not have intersection
@@ -442,19 +450,19 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                                  "Common ops in fp32_ops and conditional_fp32_ops {}".format(common_ops)
 
     combined_ops = set(target_dtype_ops + fp32_ops + conditional_op_names)
-    all_fp16_fp32_ops = set(lists.symbol.FP16_FUNCS + lists.symbol.FP32_FUNCS
-                            + lists.symbol.FP16_FP32_FUNCS + original_conditional_op_names)
+    all_fp16_fp32_ops = set(list_fp16_ops(target_dtype) + list_fp32_ops(target_dtype)
+                            + list_fp16_fp32_ops(target_dtype) + original_conditional_op_names)
 
     illegal_ops = combined_ops - all_fp16_fp32_ops
     assert not illegal_ops, '''Can only choose ops from one of the three lists
                             for fp16_ops and fp32_ops
-                            1. amp.list_fp16_ops()
-                            2. amp.list_fp32_ops()
-                            3. amp.list_fp16_fp32_ops()
-                            4. amp.list_conditional_fp32_ops()
+                            1. amp.list_fp16_ops(target_dtype)
+                            2. amp.list_fp32_ops(target_dtype)
+                            3. amp.list_fp16_fp32_ops(target_dtype)
+                            4. amp.list_conditional_fp32_ops(target_dtype)
                             Op %s not in any of them''' % (illegal_ops)
 
-    widest_dtype_ops = lists.symbol.WIDEST_TYPE_CASTS
+    widest_dtype_ops = list_widest_type_cast(target_dtype)
     target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
     # Prepare a data_names list based on list_inputs if its not provided
@@ -736,22 +744,50 @@ def convert_bucketing_module(bucketing_mod, target_dtype="float16", target_dtype
                                            compression_params=bucketing_mod._compression_params)
     return result_mod
 
-def list_fp16_ops():
+def list_fp16_ops(target_dtype):
     """Get the default list of FP16 ops for AMP
     """
-    return lists.symbol.FP16_FUNCS
+    if target_dtype in ['float16', np.float16]:
+        return lists.symbol_fp16.FP16_FUNCS
+    elif target_dtype == bfloat16:
+        return lists.symbol_bf16.FP16_FUNCS
 
-def list_fp32_ops():
+def list_fp32_ops(target_dtype):
     """Get the default list of FP32 ops for AMP
     """
-    return lists.symbol.FP32_FUNCS
+    if target_dtype in ['float16', np.float16]:
+        return lists.symbol_fp16.FP32_FUNCS
+    elif target_dtype in [bfloat16]:
+        return lists.symbol_bf16.FP32_FUNCS
 
-def list_fp16_fp32_ops():
+def list_fp16_fp32_ops(target_dtype):
     """Get the default list of ops which run in both FP16 and FP32
     """
-    return lists.symbol.FP16_FP32_FUNCS
+    if target_dtype in ['float16', np.float16]:
+        return lists.symbol_fp16.FP16_FP32_FUNCS
+    elif target_dtype in [bfloat16]:
+        return lists.symbol_bf16.FP16_FP32_FUNCS
 
-def list_conditional_fp32_ops():
+def list_conditional_fp32_ops(target_dtype):
     """Get the conditional fp32 ops list
     """
-    return lists.symbol.CONDITIONAL_FP32_FUNCS
+    if target_dtype in ['float16', np.float16]:
+        return lists.symbol_fp16.CONDITIONAL_FP32_FUNCS
+    elif target_dtype in [bfloat16]:
+        return lists.symbol_bf16.CONDITIONAL_FP32_FUNCS
+
+def list_widest_type_cast(target_dtype):
+    """Get the widest type cast ops list
+    """
+    if target_dtype in ['float16', np.float16]:
+        return lists.symbol_fp16.WIDEST_TYPE_CASTS
+    elif target_dtype in [bfloat16]:
+        return lists.symbol_bf16.WIDEST_TYPE_CASTS
+
+def list_loss_output_functions(target_dtype):
+    """Get loss function list
+    """
+    if target_dtype in ['float16', np.float16]:
+        return lists.symbol_fp16.LOSS_OUTPUT_FUNCTIONS
+    elif target_dtype in [bfloat16]:
+        return lists.symbol_bf16.LOSS_OUTPUT_FUNCTIONS

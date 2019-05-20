@@ -97,6 +97,11 @@ struct data_type_enum<float> {
 };
 
 template <>
+struct data_type_enum<mshadow::bfloat::bf16_t> {
+  enum { type = mkldnn::memory::data_type::bf16 };
+};
+
+template <>
 struct data_type_enum<int32_t> {
   enum { type = static_cast<unsigned int>(mkldnn::memory::data_type::s32) };
 };
@@ -114,8 +119,9 @@ struct data_type_enum<uint8_t> {
 static inline bool SupportMKLDNNArray(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
   bool support = ndim == 1 || ndim == 2 || ndim == 4;
-  support = support && (dtype == mshadow::kFloat32 || dtype == mshadow::kInt32
-                        || dtype == mshadow::kInt8 || dtype == mshadow::kUint8);
+  support = support &&
+            (dtype == mshadow::kFloat32 || dtype == mshadow::kInt32 || dtype == mshadow::kInt8 ||
+             dtype == mshadow::kUint8 || dtype == mshadow::kBfloat16);
   return support;
 }
 
@@ -125,11 +131,8 @@ static inline bool SupportStorageMKLDNN(int stype) {
 
 static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
-  if (ndim == 0 || shape.Size() == 0) {
-    // MKLDNN currently does not support 0-dim Tensor and 0-size Tensor
-    return false;
-  }
-  return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
+  return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
+         (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
 static inline bool SupportMKLDNNRnn(const NDArray &input) {
@@ -142,7 +145,7 @@ static inline bool SupportMKLDNNRnn(const NDArray &input) {
 
 static inline bool SupportMKLDNNQuantize(int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kInt8 ||
-         dtype == mshadow::kUint8;
+         dtype == mshadow::kUint8 || dtype == mshadow::kBfloat16;
 }
 
 static inline bool SupportMKLDNN(const NDArray &input) {
@@ -217,6 +220,8 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   switch (dtype) {
     case mshadow::kFloat32:
       return mkldnn::memory::data_type::f32;
+    case mshadow::kBfloat16:
+      return mkldnn::memory::data_type::bf16;
     case mshadow::kInt32:
       return mkldnn::memory::data_type::s32;
     case mshadow::kInt8:
@@ -224,7 +229,7 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
     case mshadow::kUint8:
       return mkldnn::memory::data_type::u8;
     default:
-      LOG(FATAL) << "unknown type for MKLDNN";
+      LOG(FATAL) << "unknown type for MKLDNN:" << dtype;
       return mkldnn::memory::data_type::undef;
   }
 }
@@ -249,6 +254,8 @@ static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
   switch (mkldnn_dtype) {
     case mkldnn::memory::data_type::f32:
       return mshadow::kFloat32;
+    case mkldnn::memory::data_type::bf16:
+      return mshadow::kBfloat16;
     case mkldnn::memory::data_type::s32:
       return mshadow::kInt32;
     case mkldnn::memory::data_type::s8:
@@ -256,7 +263,7 @@ static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
     case mkldnn::memory::data_type::u8:
       return mshadow::kUint8;
     default:
-      LOG(FATAL) << "unknown MKLDNN type";
+      LOG(FATAL) << "unknown MKLDNN type: " << mkldnn_dtype;
       return mshadow::kFloat32;
   }
 }

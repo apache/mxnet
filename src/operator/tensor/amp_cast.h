@@ -63,10 +63,11 @@ inline bool AMPCastType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *out_attrs) {
   using mshadow::kFloat32;
   using mshadow::kFloat16;
+  using mshadow::kBfloat16;
   const AMPCastParam& param = nnvm::get<AMPCastParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if ((*in_attrs)[0] == kFloat32 || (*in_attrs)[0] == kFloat16) {
+  if ((*in_attrs)[0] == kFloat32 || (*in_attrs)[0] == kFloat16 || (*in_attrs)[0] == kBfloat16) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
   } else {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
@@ -79,20 +80,23 @@ inline bool AMPMultiCastType(const nnvm::NodeAttrs& attrs,
                         std::vector<int> *out_attrs) {
   using mshadow::kFloat32;
   using mshadow::kFloat16;
+  using mshadow::kBfloat16;
   const AMPMultiCastParam& param = nnvm::get<AMPMultiCastParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), param.num_outputs);
   CHECK_EQ(out_attrs->size(), param.num_outputs);
   bool ret = true;
-  int widest_type = param.cast_narrow ? kFloat32 : kFloat16;
+  int widest_type = kFloat32;
   for (int i = 0; i < param.num_outputs; ++i) {
     if (!param.cast_narrow && ((*in_attrs)[i] == kFloat32 || (*out_attrs)[i] == kFloat32)) {
       widest_type = kFloat32;
-    } else if (param.cast_narrow &&((*in_attrs)[i] == kFloat16 || (*out_attrs)[i] == kFloat16)) {
+    } else if (param.cast_narrow && ((*in_attrs)[i] == kFloat16 || (*out_attrs)[i] == kFloat16)) {
       widest_type = kFloat16;
+    } else if (param.cast_narrow && ((*in_attrs)[i] == kBfloat16 || (*out_attrs)[i] == kBfloat16)) {
+      widest_type = kBfloat16;
     }
   }
   for (int i = 0; i < param.num_outputs; ++i) {
-    if ((*in_attrs)[i] == kFloat32 || (*in_attrs)[i] == kFloat16) {
+    if ((*in_attrs)[i] == kFloat32 || (*in_attrs)[i] == kFloat16 || (*in_attrs)[i] == kBfloat16) {
       TYPE_ASSIGN_CHECK(*out_attrs, i, widest_type);
     } else {
       TYPE_ASSIGN_CHECK(*out_attrs, i, (*in_attrs)[i]);
@@ -163,6 +167,87 @@ void AMPMultiCastCompute(const nnvm::NodeAttrs& attrs,
     });
   }
 }
+
+#if MXNET_USE_MKLDNN == 1
+static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kWriteInplace) {
+    return;
+  }
+  mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+  auto data = inputs[0];
+  if (data.IsView() && data.IsMKLDNNData())
+    data = data.Reorder2Default();
+  const auto i_mem = data.GetMKLDNNData();
+  auto i_mpd = i_mem->get_primitive_desc();
+  auto i_desc = i_mpd.desc();
+  const mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
+  const size_t i_ndim = data.shape().ndim();
+  mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
+  for (size_t i = 0; i < i_ndim; i++) {
+    i_dims[i] = static_cast<int>(data.shape()[i]);
+  }
+  const auto o_desc = mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()), i_fmt);
+  const auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
+  const auto out_mem = CreateMKLDNNMem(outputs[0], o_mpd, req[0]);
+  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*i_mem, *out_mem.second));
+  MKLDNNStream::Get()->Submit();
+}
+
+inline static bool AMPCastStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                                      DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                      std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  auto ret = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return ret;
+}
+
+static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                              const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+  const AMPMultiCastParam& param = nnvm::get<AMPMultiCastParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), param.num_outputs);
+  CHECK_EQ(outputs.size(), param.num_outputs);
+  mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+  for (int i = 0; i < param.num_outputs; ++i) {
+    if (req[i] == kWriteInplace) {
+      continue;
+    }
+    auto data = inputs[i];
+    if (data.IsView() && data.IsMKLDNNData()) data = data.Reorder2Default();
+    const auto i_mem = data.GetMKLDNNData();
+    auto i_mpd = i_mem->get_primitive_desc();
+    auto i_desc = i_mpd.desc();
+    const mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
+    const size_t i_ndim = data.shape().ndim();
+    mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
+    for (size_t i = 0; i < i_ndim; i++) {
+      i_dims[i] = static_cast<int>(data.shape()[i]);
+    }
+    const auto o_desc = mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[i].dtype()), i_fmt);
+    const auto o_mpd = memory::primitive_desc(o_desc, cpu_engine);
+    const auto out_mem = CreateMKLDNNMem(outputs[i], o_mpd, req[0]);
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*i_mem, *out_mem.second));
+  }
+  MKLDNNStream::Get()->Submit();
+}
+
+inline static bool AMPMultiCastStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                                           DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                           std::vector<int>* out_attrs) {
+  const AMPMultiCastParam& param = nnvm::get<AMPMultiCastParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), param.num_outputs);
+  CHECK_EQ(out_attrs->size(), param.num_outputs);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+
+#endif  // MXNET_USE_MKLDNN == 1
 
 }  // namespace op
 }  // namespace mxnet
