@@ -195,11 +195,11 @@ int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
 
 // CPU/GPU-versions of LAPACK function "getrf". Please refer to the
 // LAPACK documentation for further details.
+
 // Note:
 // - A is input and output parameter (overwritten by LU)
 // - Param check_singular is only useful in cpu version. If check_singular is false,
 //   don't throw error when A is non-invertible matrix.
-
 template<typename xpu, typename DType>
 void linalg_getrf(const Tensor<xpu, 2, DType>& A,
                   const Tensor<xpu, 1, int>& pivot,
@@ -216,16 +216,19 @@ void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
 
 // CPU/GPU-versions of LAPACK function "getri". Please refer to the
 // LAPACK documentation for further details.
+
 // Note:
 // - pivot and LU is the output of getrf(A)
 // - LU is also the output parameter (overwritten by inverse(A))
-
 template<typename xpu, typename DType>
 void linalg_getri(const Tensor<xpu, 2, DType>& LU,
                   const Tensor<xpu, 1, int>& pivot, \
                   const Tensor<xpu, 1, DType>& work,
                   Stream<xpu> *s = 0);
 
+// Note that this function only implements GPU version with "getriBatched" in cuBLAS.
+// Unlike lapack routines in cpu, it is computed out-of-place, so the final matrix
+// inversion is stored in A.
 template<typename xpu, typename DType>
 void linalg_batch_getri(const Tensor<xpu, 3, DType>& A,
                         const Tensor<xpu, 3, DType>& LU,
