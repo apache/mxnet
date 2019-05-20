@@ -33,7 +33,7 @@ template<typename DType>
 struct AllFiniteCPUKernel {
   MSHADOW_XINLINE static void Map(int i, const DType* in, float* out) {
     bool is_finite = true;
-    is_finite = std::isfinite(in[i])  ? is_finite : false;
+    is_finite = std::isfinite(static_cast<float>(in[i]))  ? is_finite : false;
     if (!is_finite) {
       out[0] = 0.;
     }
@@ -66,7 +66,7 @@ struct MultiAllFiniteCPUKernel {
     bool is_finite = true;
     for (int index = 0; index < param.count; ++index) {
       if ((size_t)i < param.sizes[index]) {
-        is_finite = std::isfinite(param.arrays[index][i]) ? is_finite : false;
+        is_finite = std::isfinite(static_cast<float>(param.arrays[index][i])) ? is_finite : false;
       }
     }
     if (!is_finite) {
