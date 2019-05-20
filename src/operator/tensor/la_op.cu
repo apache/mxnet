@@ -115,7 +115,7 @@ NNVM_REGISTER_OP(_linalg_slogdet)
 .set_attr<FCompute>("FCompute<gpu>", LaOpDetForward<gpu, 2, slogdet>);
 
 NNVM_REGISTER_OP(_backward_linalg_slogdet)
-.set_attr<FCompute>("FCompute<gpu>", LaOpDetBackward<gpu, 1, slogdet_backward>);
+.set_attr<FCompute>("FCompute<gpu>", LaOpDetBackward<gpu, 2, slogdet_backward>);
 
 #if MXNET_USE_CUSOLVER == 1
 
