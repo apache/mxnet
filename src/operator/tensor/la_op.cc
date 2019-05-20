@@ -1048,8 +1048,8 @@ If *n>2*, *slogdet* is performed separately on the trailing two dimensions
 for all inputs (batch mode).
 
 .. note:: The operator supports float32 and float64 data types only.
-.. note:: The gradient is not properly defined on sign, so it's not allowed
-          to pass gradient on it.
+.. note:: The gradient is not properly defined on sign, so the gradient of
+          it is not backwarded.
 
 Examples::
 
