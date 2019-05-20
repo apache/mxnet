@@ -2535,19 +2535,27 @@ def test_broadcast():
         size = tuple([shape[ele] for ele in axis])
         for ele in axis:
             shape[ele] = 1
+        target_shape_with_zero = list(target_shape)
+        for idx in range(len(target_shape_with_zero)):
+            if idx not in axis:
+                target_shape_with_zero[idx] = 0
+                break
+
         a = mx.symbol.Variable('a')
         sym_bcast_axis = mx.symbol.broadcast_axis(a, axis=axis, size=size)
         sym_bcast_to = mx.symbol.broadcast_to(a, shape=tuple(target_shape))
+        sym_bcast_to_with_zero = mx.symbol.broadcast_to(a, shape=tuple(target_shape_with_zero))
         sym_bcast_like = mx.symbol.broadcast_like(a, sym_bcast_to)
+
         def test_broadcasting_ele(sym_bcast):
             dat_npy = np.random.rand(*shape)
             groundtruth = dat_npy
             grad_nd = mx.nd.empty(shape)
             outgrad_npy = np.random.rand(*target_shape)
             grad_groundtruth = np_reduce(outgrad_npy, axis=axis, keepdims=True,
-                                          numpy_reduce_func=np.sum)
+                                         numpy_reduce_func=np.sum)
             net = sym_bcast.bind(default_context(), args={'a': mx.nd.array(dat_npy)},
-                                                 args_grad={'a': grad_nd})
+                                 args_grad={'a': grad_nd})
             net.forward(is_train=True)
             assert (net.outputs[0].shape == target_shape).all()
             assert_almost_equal(net.outputs[0].asnumpy(), groundtruth, rtol=1e-4)
@@ -2555,6 +2563,7 @@ def test_broadcast():
             assert_almost_equal(grad_nd.asnumpy(), grad_groundtruth, rtol=1e-4)
         test_broadcasting_ele(sym_bcast_axis)
         test_broadcasting_ele(sym_bcast_to)
+        test_broadcasting_ele(sym_bcast_to_with_zero)
         test_broadcasting_ele(sym_bcast_like)
 
 
