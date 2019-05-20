@@ -8,11 +8,6 @@ endif()
 
 project(mxnet C CXX)
 
-if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
-  include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
-  conan_basic_setup(TARGETS)
-  message(STATUS "using conan")
-endif()
 
 if(__CMAKE_CROSSCOMPILING_OVERRIDE)
   set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
@@ -56,6 +51,14 @@ mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 mxnet_option(USE_TENSORRT         "Enable infeference optimization with TensorRT." OFF)
 mxnet_option(USE_ASAN             "Enable Clang/GCC ASAN sanitizers." OFF)
 mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric output" OFF)
+mxnet_option(USE_CONAN            "Enable conan.io for package management." OFF)
+
+if(USE_CONAN AND EXISTS ${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
+  include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
+  conan_basic_setup(TARGETS)
+  message(STATUS "using conan")
+endif()
+
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
 message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
