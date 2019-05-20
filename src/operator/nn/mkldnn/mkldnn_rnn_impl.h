@@ -219,7 +219,7 @@ void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   auto cpu_engine = CpuEngine::Get()->get_engine();
   auto null_memory_ = null_memory(cpu_engine);
   int offset1 = 0, offset2 = 0;
-  bool cached = *has_cache;
+  bool initialized = *has_cache;
   mkldnn::memory::dims src_layer_tz = {T, N, I};
   mkldnn::memory::dims dst_layer_tz = {T, N, 2 * H};
   mkldnn::memory::dims weights_layer_tz = {1, 2, I, ngates, H};  //  ldigo
@@ -230,7 +230,7 @@ void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   mkldnn::memory::dims src_iter_tz = {1, 2, nstates, N, H};  //  ldsnc
   mkldnn::memory::dims dst_iter_tz = {1, 2, nstates, N, H};  //  ldsnc
 
-  if (!cached) {
+  if (!initialized) {
     if (mode == rnn_enum::kGru) {
       AdjustGruWeightGateOrder(wx, I, H);
       AdjustGruWeightGateOrder(back_wx, I, H);
@@ -411,7 +411,7 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
   auto cpu_engine = CpuEngine::Get()->get_engine();
   auto null_memory_ = null_memory(cpu_engine);
   int offset1 = 0, offset2 = 0;
-  bool cached = *has_cache;
+  bool initialized = *has_cache;
 
   mkldnn::memory::dims src_layer_tz = {T, N, I};
   mkldnn::memory::dims dst_layer_tz = {T, N, H};
@@ -480,7 +480,7 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
   std::vector<void*> srcs_data_h;
   std::vector<mkldnn::memory::dims> src_l_dim_x;
   std::vector<mkldnn::memory::dims> src_l_dim_h;
-  if (!cached) {
+  if (!initialized) {
     if (L == 1) {
       DType* wx = w_ptr;
       DType* wh = w_ptr + I * H * ngates;
