@@ -170,6 +170,7 @@ def profile(func):
         else:
             raise ValueError("Unable to identify operator name to extract profiler output!")
 
+        # Get the MXNet profile output
         profiler_output = parse_profiler_dump(operator_name, profiler_dump)
         return res, profiler_output
 

@@ -24,19 +24,10 @@ from benchmark.opperf.utils.common_utils import merge_map_list
 1. Add
 2. Sub
 3. Mul
-
-TODO
 4. Div
 5. Mod
 6. Pow
 7. Neg
-8. iadd (In place Add with +=)
-9. isub (In place Sub with -=)
-10. imul (In place Mul with *=)
-11. idiv (In place Div with /=)
-12. imod (In place Mod with %=)
-
-13. Logging - Info, Error and Debug
 """
 
 
@@ -51,8 +42,9 @@ def run_arithmetic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
     :return: Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
-    # Benchmark tests for Add, Sub, Mul operator
-    benchmark_res = run_performance_test([nd.add, nd.subtract, nd.multiply], run_backward=True, dtype=dtype, ctx=ctx,
+    # Benchmark tests for Add, Sub, Mul, divide, modulo operators
+    benchmark_res = run_performance_test([nd.add, nd.subtract, nd.multiply, nd.divide, nd.modulo], run_backward=True,
+                                         dtype=dtype, ctx=ctx,
                                          inputs=[{"lhs": (1024, 1024),
                                                   "rhs": (1024, 1024)},
                                                  {"lhs": (10000, 10),
@@ -61,6 +53,20 @@ def run_arithmetic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
                                                   "rhs": (10000, 100)}],
                                          warmup=warmup, runs=runs)
 
+    benchmark_pow = run_performance_test(nd.power, run_backward=True,
+                                         dtype=dtype, ctx=ctx,
+                                         inputs=[{"base": (1024, 1024),
+                                                  "exp": (1024, 1024)},
+                                                 {"base": (10000, 10),
+                                                  "exp": (10000, 10)}],
+                                         warmup=warmup, runs=runs)
+
+    benchmark_neg = run_performance_test(nd.negative, run_backward=True,
+                                         dtype=dtype, ctx=ctx,
+                                         inputs=[{"data": (1024, 1024)},
+                                                 {"data": (10000, 10)}],
+                                         warmup=warmup, runs=runs)
+
     # Prepare combined results for Arithmetic operators
-    mx_arithmetic_op_results = merge_map_list(benchmark_res)
+    mx_arithmetic_op_results = merge_map_list(benchmark_res + benchmark_pow + benchmark_neg)
     return mx_arithmetic_op_results

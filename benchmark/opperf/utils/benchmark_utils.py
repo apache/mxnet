@@ -18,7 +18,7 @@
 import mxnet as mx
 from mxnet import nd
 
-from .ndarray_utils import get_mx_ndarray, nd_forward_backward_and_profile
+from .ndarray_utils import get_mx_ndarray, nd_forward_and_profile, nd_forward_backward_and_profile
 from .gluon_utils import block_forward_backward_and_profile
 
 
@@ -28,7 +28,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key in ["lhs", "rhs", "data"]:
+            if key in ["lhs", "rhs", "data", "base", "exp"]:
                 kwargs[key] = get_mx_ndarray(ctx=ctx, in_tensor=value,
                                              dtype=dtype,
                                              initializer=nd.normal,

@@ -25,7 +25,6 @@ With this utility, for each MXNet operator you can get the following details:
 1. Forward execution time
 2. Backward execution time
 3. Time spent for memory management
-4. Overall end to end execution time
 
 **Memory**
 1. Total memory allocated
@@ -158,11 +157,11 @@ Output for the above benchmark run, on a CPU machine, would look something like 
 ```
 # How does it work under the hood?
 
-Under the hood, executes NDArray operator or a Gluon block using randomly generated data. Use MXNet profiler to get summary of operator execution:
+Under the hood, executes NDArray operator using randomly generated data. Use MXNet profiler to get summary of the operator execution:
 1. Memory
-2. Computation time
+2. Computation time (forward, backward)
 
-See design proposal document for more details - https://cwiki.apache.org/confluence/display/MXNET/MXNet+Operator+Benchmarks 
+See the design proposal document for more details - https://cwiki.apache.org/confluence/display/MXNET/MXNet+Operator+Benchmarks 
 
 # TODO
 
