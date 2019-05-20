@@ -64,10 +64,10 @@ def test_ndarray_random_randint():
     # check if randint can generate value greater than 2**32 (large)
     low_large_value = 2**32
     high_large_value = 2**34
-    a = nd.random.randint(low_large_value,high_large_value)
+    a = nd.random.randint(low_large_value,high_large_value, dtype=np.int64)
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
-    assert a.__gt__(low) & a.__lt__(high)
+    assert a.__gt__(low) and a.__lt__(high)
 
 
 def test_ndarray_empty():
@@ -87,20 +87,20 @@ def test_elementwise():
 
 
 def test_reduce():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
     assert nd.sum(a).asnumpy() == a.shape[0] * a.shape[1]
 
 
 def test_dot():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(SMALL_Y, SMALL_Y))
     res = nd.dot(a, b)
     assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
 
 def test_FullyConnected():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
-    b = nd.ones(shape=(SMALL_Y, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(SMALL_Y, SMALL_Y))
     res = nd.FullyConnected(a, b, num_hidden=b.shape[1], no_bias=True)
     assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
@@ -186,7 +186,7 @@ def test_pick():
     b = mx.nd.ones(shape=(256*35,))
     res = mx.nd.pick(a,b)
     assert res.shape == b.shape
-    
+
 def test_depthtospace():
     def numpy_depth_to_space(x, blocksize):
         b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
