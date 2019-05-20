@@ -4212,7 +4212,12 @@ def dl_managed_tensor_deleter(dl_managed_tensor_handle):
 
 
 def from_numpy(ndarray, zero_copy=True):
-    """Returns an MXNet's NDArray backed by Numpy's ndarray.
+    """Returns an MXNet's ndarray backed by numpy's ndarray.
+    When `zero_copy` is set to be true,
+    this API consumes numpy's ndarray and produces MXNet's ndarray
+    without having to copy the content. In this case, we disallow
+    users to modify the given numpy ndarray, and it is suggested
+    not to read the numpy ndarray as well for internal correctness.
 
     Parameters
     ----------
@@ -4261,6 +4266,7 @@ def from_numpy(ndarray, zero_copy=True):
 
     if not ndarray.flags['C_CONTIGUOUS']:
         raise ValueError("Only c-contiguous arrays are supported for zero-copy")
+    ndarray.flags['WRITEABLE'] = False
     c_obj = _make_dl_managed_tensor(ndarray)
     address = ctypes.addressof(c_obj)
     address = ctypes.cast(address, ctypes.c_void_p)
