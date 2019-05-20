@@ -16,13 +16,20 @@
 ;;
 
 (ns org.apache.clojure-mxnet.callback
+  (:require [org.apache.clojure-mxnet.eval-metric :as em])
   (:import (org.apache.mxnet Callback$Speedometer)))
 
 ;;; used to track status during epoch
 
 (defn speedometer
   ([batch-size frequent]
-   (new Callback$Speedometer (int batch-size) (int frequent)))
+   (proxy [Callback$Speedometer] [(int batch-size) (int frequent)]
+     (invoke [epoch batch-count eval-metric]
+       (proxy-super invoke epoch batch-count eval-metric)
+       ;;; so that it prints to repl as well
+       (when (and (zero? (mod batch-count frequent))
+                  (pos? batch-count))
+        (println "Speedometer: epoch " epoch " count " batch-count " metric " (em/get eval-metric ))))))
   ([batch-size]
    (speedometer batch-size 50)))
 

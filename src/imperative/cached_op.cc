@@ -706,7 +706,7 @@ void CachedOp::StaticRunOps(
           arg_shapes.emplace_back(ndinput->shape());
           arg_dtypes.emplace_back(ndinput->dtype());
         }
-        if (!state.op_states[i]) {
+        if (!config_.static_shape) {
           state.op_states[i] =
               createop[node.source->op()](node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
         }
