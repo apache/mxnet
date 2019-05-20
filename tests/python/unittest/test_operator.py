@@ -4400,11 +4400,20 @@ def test_all_finite():
     exe.forward(is_train=False)
     sym_output = exe.outputs[0].asnumpy()
     assert sym_output[0] == 0
+    exe = z.bind(ctx, {'data': finite_arr})
+    exe.forward(is_train=False)
+    sym_output = exe.outputs[0].asnumpy()
+    assert sym_output[0] == 1
     z = mx.sym.multi_all_finite(data, data2, num_arrays=2)
     exe = z.bind(ctx, {'data': finite_arr, 'data2': inf_arr})
     exe.forward(is_train=False)
     sym_output = exe.outputs[0].asnumpy()
     assert sym_output[0] == 0
+    z = mx.sym.multi_all_finite(data, data2, num_arrays=2)
+    exe = z.bind(ctx, {'data': finite_arr, 'data2': finite_arr})
+    exe.forward(is_train=False)
+    sym_output = exe.outputs[0].asnumpy()
+    assert sym_output[0] == 1
 
 
 @with_seed()
