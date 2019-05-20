@@ -280,10 +280,9 @@ Benefiting from Intel MKL-DNN, MXNet built with Intel MKL-DNN brings outstanding
 
 - [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
 
-<h2 id="8">Next Steps and Support</h2>
-
 - [Model Quantization for Production-Level Neural Network Inference](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
 
+<h2 id="8">Next Steps and Support</h2>
 
 - For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl) website.
 
