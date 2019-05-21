@@ -65,6 +65,22 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
 }
 
 
+template<>
+void LayerNormCompute<cpu>(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx, const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  return LayerNormComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
+}
+
+template<>
+void LayerNormGradCompute<cpu>(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx, const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
+  return LayerNormGradComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
+}
+
 NNVM_REGISTER_OP(LayerNorm)
 .describe(R"code(Layer normalization.
 

@@ -241,6 +241,7 @@ List of Contributors
 * [Zak Jost](https://github.com/zjost)
 * [Shoubhik Bhattacharya](https://github.com/shoubhik)
 * [Rohit Srivastava](https://github.com/access2rohit)
+* [Caner Turkmen](https://github.com/canerturkmen)
 
 Label Bot
 ---------

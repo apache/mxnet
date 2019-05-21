@@ -428,7 +428,10 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DstDType> out = outputs[0].FlatTo1D<xpu, DstDType>(s);
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
       Tensor<xpu, 1, SrcDType> data = inputs[0].FlatTo1D<xpu, SrcDType>(s);
-      Assign(out, req[0], tcast<DstDType>(data));
+      if (outputs[0].type_flag_ != inputs[0].type_flag_ ||
+          req[0] != kWriteInplace) {
+        Assign(out, req[0], tcast<DstDType>(data));
+      }
     });
   });
 }
