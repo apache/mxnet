@@ -8508,6 +8508,27 @@ def test_add_n():
     assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
 
 
+@with_seed()
+def test_slice_sum():
+    shape1 = (5, 8, 4)
+    shape2 = (5, 16, 4)
+    for dtype in [np.float32, np.float16]:
+        for ctx in [mx.cpu(), mx.gpu()]:
+            x = mx.nd.array(np.random.normal(size=shape1).astype(dtype), ctx=ctx)
+            y = mx.nd.array(np.random.normal(size=shape2).astype(dtype), ctx=ctx)
+
+            X = mx.symbol.Variable('X')
+            Y = mx.symbol.Variable('Y')
+            Z = mx.symbol._internal._slice_sum(X, Y, axis=1, begin=4, end=12)
+            exec1 = Z.bind(ctx, args = [x, y])
+            exec1.forward(is_train=False)
+            z_sym = exec1.outputs[0].asnumpy()
+            z_nd = mx.nd._internal._slice_sum(x, y, axis=1, begin=4, end=12).asnumpy() 
+            ref = y.asnumpy()[:,4:12,:] + x.asnumpy()
+
+            for z in [z_sym, z_nd]:
+                assert_allclose(ref, z)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
