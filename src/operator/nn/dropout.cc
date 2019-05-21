@@ -40,9 +40,9 @@ OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
   OpStatePtr state;
   MSHADOW_REAL_TYPE_SWITCH(in_types[dropout::kData], DType, {
     if (ctx.dev_type == kGPU) {
-      state = OpStatePtr::Create<DropoutOp<gpu, DType>>(param, ctx);
+      state = OpStatePtr::Create<DropoutOp<mxnet::gpu, DType>>(param, ctx);
     } else {
-      state = OpStatePtr::Create<DropoutOp<cpu, DType>>(param, ctx);
+      state = OpStatePtr::Create<DropoutOp<mxnet::cpu, DType>>(param, ctx);
     }
     return state;
   });
