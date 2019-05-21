@@ -167,7 +167,7 @@ void Imperative::GetBackwardDependency(
     std::vector<nnvm::NodeEntry> ograd_entries;
     ograd_entries.reserve(num_outputs);
     for (uint32_t i = 0; i < num_outputs; ++i) {
-      ograd_entries.emplace_back(nnvm::NodeEntry{nullptr, i, 1});
+      ograd_entries.emplace_back(nullptr, i, 1);
     }
     auto igrad_entries = fgradient[node->op()](node, ograd_entries);
     for (const auto& i : igrad_entries) {

@@ -239,9 +239,12 @@ std::vector<nnvm::NodeEntry> CachedOp::Gradient(
   p->attrs.parsed = node->attrs.parsed;
   p->control_deps.push_back(node);
   p->inputs.reserve(bwd_ograd_dep_.size() + bwd_in_dep_.size() + bwd_out_dep_.size());
-  for (auto i : bwd_ograd_dep_) p->inputs.push_back(ograds[i]);
-  for (auto i : bwd_in_dep_) p->inputs.push_back(node->inputs[i]);
-  for (auto i : bwd_out_dep_) p->inputs.emplace_back(NodeEntry{node, i, 0});
+  for (auto i : bwd_ograd_dep_)
+    p->inputs.push_back(ograds[i]);
+  for (auto i : bwd_in_dep_)
+    p->inputs.push_back(node->inputs[i]);
+  for (auto i : bwd_out_dep_)
+    p->inputs.emplace_back(node, i, 0);
   std::vector<NodeEntry> ret;
   ret.reserve(num_inputs());
   const auto& auxs = mutable_input_nodes();
@@ -252,13 +255,14 @@ std::vector<nnvm::NodeEntry> CachedOp::Gradient(
     uint32_t k = 0;
     for (const auto& i : fwd_graph_.indexed_graph().input_nodes()) {
       if (auxs.count(i)) {
-        ret.emplace_back(NodeEntry{nop, 0, 0});
+        ret.emplace_back(nop);
       } else {
-        ret.emplace_back(NodeEntry{p, k++, 0});
+        ret.emplace_back(p, k++, 0);
       }
     }
   } else {
-    for (uint32_t i = 0; i < num_inputs(); ++i) ret.emplace_back(NodeEntry{p, i, 0});
+    for (uint32_t i = 0; i < num_inputs(); ++i)
+        ret.emplace_back(p, i, 0);
   }
   return ret;
 }

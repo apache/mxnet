@@ -325,10 +325,9 @@ The storage type of ``make_loss`` output depends upon the input storage type:
   })
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto p = MakeNode("ones_like", n->attrs.name + "_backward",
-                      &(n->inputs), nullptr, &n);
     std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(MakeNode("ones_like", n->attrs.name + "_backward",
+                     &(n->inputs), nullptr, &n));
     return ret;
   });
 
