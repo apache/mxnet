@@ -6520,6 +6520,7 @@ def test_laop_6():
     v = np.random.random(4)
     a = np.eye(4) + np.outer(v, v)
     a = np.tile(a, (3, 1, 1))
+    permute_mat = np.eye(4)[[1, 0, 2, 3]]
 
     # test matrix inverse
     r = np.eye(4)
@@ -6541,10 +6542,13 @@ def test_laop_6():
     check_fw(test_logdet, [a], [r])
     check_grad(test_logdet, [a])
     # test slogdet
-    r = np.log(np.abs(np.linalg.det(a)))
-    _, test_slogdet = mx.sym.linalg.slogdet(data)
-    check_fw(test_slogdet, [a], [r])
-    check_grad(test_slogdet, [a])
+    r1 = np.array([1., 1., 1.])
+    r2 = np.log(np.abs(np.linalg.det(a)))
+    test_sign, test_logabsdet = mx.sym.linalg.slogdet(data)
+    check_fw(test_sign, [a], [r1])
+    check_fw(test_sign, [np.dot(a, permute_mat)], [-r1])
+    check_fw(test_logabsdet, [a], [r2])
+    check_grad(test_logabsdet, [a])
 
 @with_seed()
 def test_stack():
