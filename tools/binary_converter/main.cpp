@@ -54,6 +54,7 @@ const string PATTERN_BIAS = "bias";
 const string PATTERN_FORWARD = "fwd";
 const string PATTERN_ARG = "arg";
 const string PATTERN_PAD = "pad";
+
 // symbol json related
 const char* PREFIX_SYM_JSON_NODES = "nodes";
 const char* PREFIX_SYM_JSON_NODE_ROW_PTR = "node_row_ptr";
@@ -64,13 +65,14 @@ const char* PREFIX_SYM_JSON_ARG_NODES = "arg_nodes";
 // name of standard convolution and dense layer
 const string PREFIX_DENSE = "FullyConnected";
 const string PREFIX_CONVOLUTION = "Convolution";
+
 // use this to distinguish arg_nodes : op = 'null'
 const string ARG_NODES_OP_PATTERN = "null";
 
 const string PREFIX_BINARY_INFERENCE_CONV_LAYER = "BinaryInferenceConvolution";
 const string PREFIX_BINARY_INFERENCE_DENSE_LAYER = "BinaryInferenceFullyConnected";
 
-bool _verbose = false;
+bool VERBOSE = false;
 //==============================================//
 
 /**
@@ -85,8 +87,8 @@ int convert_to_binary_row(mxnet::NDArray& array) {
   CHECK(array.shape().ndim() >= 2); // second dimension is input depth from prev. layer, needed for next line
 
   if (array.shape()[1] % BITS_PER_BINARY_WORD != 0){
-    cout << "Error:" << "the operator has an invalid input dim: " << array.shape()[1];
-    cout << ", which is not divisible by " << BITS_PER_BINARY_WORD << endl;
+    cerr << "Error:" << "the operator has an invalid input dim: " << array.shape()[1];
+    cerr << ", which is not divisible by " << BITS_PER_BINARY_WORD << endl;
     return -1;
   }
 
@@ -98,8 +100,8 @@ int convert_to_binary_row(mxnet::NDArray& array) {
   binarized_shape[3] = array.shape()[3];
 
   mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor::corresponding_dtype());
-  mxnet::op::xnor::get_binary_row((float*) array.data().dptr_, 
-                                  (BINARY_WORD*) temp.data().dptr_, 
+  mxnet::op::xnor::get_binary_row(static_cast<float *>(array.data().dptr_),
+                                  static_cast<BINARY_WORD*> (temp.data().dptr_),
                                   size);
   array = temp;
 
@@ -123,7 +125,8 @@ void transpose(mxnet::NDArray& array) {
   MSHADOW_REAL_TYPE_SWITCH(array.dtype(), DType, {
     for (int row = 0; row < rows; row++) {
       for (int col = 0; col < cols; col++) {
-        ((DType*)temp.data().dptr_)[col * rows + row] = ((DType*)array.data().dptr_)[row * cols + col];
+        (static_cast<DType *> (temp.data().dptr_))[col * rows + row] =
+                                 (static_cast<DType *> (array.data().dptr_))[row * cols + col];
       }
     }
   })
@@ -142,9 +145,9 @@ int transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
 
   CHECK(array.shape().ndim() == 2); // since we binarize column wise, we need to know no of rows and columns
   
-  if (array.shape()[0] % BITS_PER_BINARY_WORD != 0){
-    cout << "Error:" << "the operator has an invalid input dim: " << array.shape()[0];
-    cout << ", which is not divisible by " << BITS_PER_BINARY_WORD << endl;
+  if (array.shape()[0] % BITS_PER_BINARY_WORD != 0) {
+    cerr << "Error:" << "the operator has an invalid input dim: " << array.shape()[0];
+    cerr << ", which is not divisible by " << BITS_PER_BINARY_WORD << endl;
     return -1;
   }
 
@@ -153,10 +156,10 @@ int transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
   binarized_shape[1] = array.shape()[0] / BITS_PER_BINARY_WORD;
 
   mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor::corresponding_dtype());
-  mxnet::op::xnor::get_binary_col_unrolled((float*) array.data().dptr_, 
-                                            (BINARY_WORD*) temp.data().dptr_, 
-                                            array.shape()[0], 
-                                            array.shape()[1]);
+  mxnet::op::xnor::get_binary_col_unrolled(static_cast<float *>(array.data().dptr_),
+                                           static_cast<BINARY_WORD*>(temp.data().dptr_),
+                                           array.shape()[0],
+                                           array.shape()[1]);
   array = temp;
 
   return 0;
@@ -175,41 +178,41 @@ int transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
  *    data: ndarray storing weight params
  *    keys: the corresponding keys to the weights array
  */
-void convert_params(vector<mxnet::NDArray>& data, const vector<string>& keys){
-  string delimiter = ":";
+void convert_params(vector<mxnet::NDArray>& data, const vector<string>& keys) {
+  const string delimiter = ":";
   
-  for (int i = 0; i < keys.size(); ++i)
-  {
-    string tp = keys[i].substr(0, keys[i].find(delimiter));
-    string name = keys[i].substr(keys[i].find(delimiter)+1, keys[i].length()-1);
+  for (int i = 0; i < keys.size(); ++i){
+    string type = keys[i].substr(0, keys[i].find(delimiter));
+    string name = keys[i].substr(keys[i].find(delimiter) + 1, keys[i].length() - 1);
 
-    if (_verbose){
-      //logging
-      cout << "Info: " << '\t' << "type:" << tp << "; ";
+    if (VERBOSE) {
+      // logging
+      cout << "Info: " << '\t' << "type:" << type << "; ";
       cout << "name:" << name << "; ";
       cout << "shape:" << data[i].shape() << endl;
     } 
 
     // concatenate the weights of qconv layer
-    if (tp == PATTERN_ARG
+    if (type == PATTERN_ARG
         && name.find(PATTERN_Q_CONV) != string::npos
-        && name.find("_"+PATTERN_WEIGHT) != string::npos){
-      // concatenates binary row 
-      if(convert_to_binary_row(data[i]) < 0){
-        cout << "Error: weights concatenation FAILED for operator '" << name <<"'" << endl;
-      }else
+        && name.find("_"+PATTERN_WEIGHT) != string::npos) {
+      // concatenates binary row
+      if (convert_to_binary_row(data[i]) < 0) {
+        cerr << "Error: weights concatenation FAILED for operator '" << name << "'" << endl;
+      } else {
         cout << "Info: CONCATENATED layer: '" << name << "'" << endl;
+      }
     }
 
     // concatenate the weights of qfc layer
-    if (tp == PATTERN_ARG
+    if (type == PATTERN_ARG
         && name.find(PATTERN_Q_DENSE) != string::npos
-        && name.find("_"+PATTERN_WEIGHT) != string::npos)
-    {
-      if (transpose_and_convert_to_binary_col(data[i]) < 0){
-        cout << "Error: weights concatenation FAILED for operator '" << name <<"'" << endl;
-      }else
+        && name.find("_" + PATTERN_WEIGHT) != string::npos) {
+      if (transpose_and_convert_to_binary_col(data[i]) < 0) {
+        cerr << "Error: weights concatenation FAILED for operator '" << name << "'" << endl;
+      } else {
         cout << "Info: CONCATENATED layer: '" << name << "'" << endl;
+      }
     }
   }
 }
@@ -225,7 +228,7 @@ void convert_params(vector<mxnet::NDArray>& data, const vector<string>& keys){
 int convert_params_file(const string& input_file, const string& output_file) {
   vector<mxnet::NDArray> data;
   vector<string> keys;
-  
+
   { // loading params file into data and keys
     // logging
     cout << "Info: " <<"LOADING input '.params' file: "<< input_file << endl;
@@ -241,7 +244,7 @@ int convert_params_file(const string& input_file, const string& output_file) {
     mxnet::NDArray::Save(fo.get(), data, keys);
     cout << "Info: " << "converted .params file saved!" << endl;
   }
-  
+
   return 0;
 }
 
@@ -253,7 +256,7 @@ int convert_params_file(const string& input_file, const string& output_file) {
  * @param a json file
  */
 void print_rapidjson_doc(string json, string log_prefix="") {
-  Document d;  
+  Document d;
   d.Parse(json.c_str());
 
   // print heads
@@ -261,10 +264,10 @@ void print_rapidjson_doc(string json, string log_prefix="") {
   rapidjson::Value& heads = d[PREFIX_SYM_JSON_HEADS];
   CHECK(heads.IsArray() && heads.Capacity() > 0);
   // logging
-  cout << "Info: " << log_prefix << "'heads' of input json: " << "[" << "[" 
+  cout << "Info: " << log_prefix << "'heads' of input json: " << "[" << "["
        << heads[0][0].GetInt() << ", "
        << heads[0][1].GetInt() << ", "
-       << heads[0][2].GetInt() 
+       << heads[0][2].GetInt()
        << "]" << "]" << endl;
 
   // print arg_nodes
@@ -273,12 +276,10 @@ void print_rapidjson_doc(string json, string log_prefix="") {
   CHECK(arg_nodes.IsArray());
   CHECK(!arg_nodes.Empty());
   // logging
-  cout << "Info: " << log_prefix << "'arg_nodes' of input json: " << "["; 
-  for (int i = 0; i < arg_nodes.Capacity(); ++i)
-  {
-    cout << arg_nodes[i].GetInt(); 
-    if (i < arg_nodes.Capacity()-1)
-    {
+  cout << "Info: " << log_prefix << "'arg_nodes' of input json: " << "[";
+  for (int i = 0; i < arg_nodes.Capacity(); ++i) {
+    cout << arg_nodes[i].GetInt();
+    if (i < arg_nodes.Capacity()-1) {
       cout << ",";
     }
   }
@@ -290,10 +291,9 @@ void print_rapidjson_doc(string json, string log_prefix="") {
   CHECK(nodes.IsArray());
   CHECK(!nodes.Empty());
 
-  cout <<"Info: " << log_prefix << "number of nodes:" << nodes.Capacity() << endl;    
-  if (_verbose){
-    for (int i = 0; i < nodes.Capacity(); ++i)
-    {    
+  cout <<"Info: " << log_prefix << "number of nodes:" << nodes.Capacity() << endl;
+  if (VERBOSE) {
+    for (int i = 0; i < nodes.Capacity(); ++i) {
       cout <<"Info: \t" << log_prefix << "node index " << i << " : " << nodes[i]["name"].GetString() << endl;
     }
   }
@@ -328,7 +328,7 @@ void adjustIdsForRemovalOf(Value::ValueIterator& itr, uint currentId,
         - nodes: all operators
         - heads: head node
         - arg_nodes: arg nodes, usually 'null' operators.
-        - node_row_ptr: not yet found detailed information about this item, 
+        - node_row_ptr: not yet found detailed information about this item,
                         but it seems not affecting the inference
  * @param input_file path to mxnet symbol file with qconv and qdense layers
  * @param output_file path to converted symbol file
@@ -360,11 +360,11 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
   CHECK(heads.IsArray() && heads.Capacity() > 0);
 
   // update arg_nodes : contains indices of all "null" op
-  CHECK(d.HasMember(PREFIX_SYM_JSON_ARG_NODES));   
+  CHECK(d.HasMember(PREFIX_SYM_JSON_ARG_NODES));
   Value& arg_nodes = d[PREFIX_SYM_JSON_ARG_NODES];
   CHECK(arg_nodes.IsArray());
   CHECK(!arg_nodes.Empty());
-  
+
   // check, create nodes
   CHECK(d.HasMember(PREFIX_SYM_JSON_NODES));
   Value& nodes = d[PREFIX_SYM_JSON_NODES];
@@ -427,17 +427,17 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
       }
 
       // replace convolution and dense operators with binary inference layer
-      if ((*itr)["op"].IsString() && 
+      if ((*itr)["op"].IsString() &&
           string((*itr)["op"].GetString()) == PREFIX_CONVOLUTION) {
         (*itr)["op"].SetString(PREFIX_BINARY_INFERENCE_CONV_LAYER.c_str(), allocator);
         //logging
         cout << "Info: " <<"CONVERTING op: '" << (*itr)["name"].GetString() << "' from '"
              << PREFIX_CONVOLUTION << "' to '" << PREFIX_BINARY_INFERENCE_CONV_LAYER << "'" << endl;
-      } 
-        
-      if ((*itr)["op"].IsString() && 
+      }
+
+      if ((*itr)["op"].IsString() &&
           string((*itr)["op"].GetString()) == PREFIX_DENSE){
-        (*itr)["op"].SetString(PREFIX_BINARY_INFERENCE_DENSE_LAYER.c_str(), allocator);      
+        (*itr)["op"].SetString(PREFIX_BINARY_INFERENCE_DENSE_LAYER.c_str(), allocator);
         //logging
         cout << "Info: " <<"CONVERTING op: '" << (*itr)["name"].GetString() << "' from '"
              << PREFIX_DENSE << "' to '" << PREFIX_BINARY_INFERENCE_DENSE_LAYER << "'" << endl;
@@ -477,20 +477,20 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
     }
 
     // add arg_node
-    if ( string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN) {
+    if (string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN) {
       arg_nodes.PushBack(Value().SetInt(currentNewId), allocator);
     }
   }
 
 
-  // update heads 
+  // update heads
   for (Value::ValueIterator itr = heads.Begin(); itr != heads.End(); ++itr) {
     uint formerId = (*itr)[0].GetUint();
     CHECK(newIds.count(formerId) > 0);
     (*itr)[0].SetUint(newIds[formerId]);
   }
 
-  // update nodes  
+  // update nodes
   nodes = nodes_new;
 
   // Save output json file
@@ -502,7 +502,7 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
   {
     ofstream stream(output_fname);
     if (!stream.is_open()) {
-      cout << "Error: " << "cant find json file at " + output_fname << endl;
+      cerr << "Error: " << "cant find json file at " + output_fname << endl;
       return -1;
     }
     string output = buffer.GetString();
@@ -510,7 +510,7 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
     stream.close();
 
     cout << "Info: " << "converted json file saved!" << endl;
-  
+
     // print the current json docu
     print_rapidjson_doc(output, "updated ");
   }
@@ -522,35 +522,38 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
  * @brief convert mxnet param and symbol file to use only binarized weights in conv and fc layers
  *
  */
-int main(int argc, char ** argv){
+int main(int argc, char ** argv) {
   if (argc < 2 || argc > 4) {
-    cout << "usage: " + string(argv[0]) + " <mxnet *.params file>" + " <output (optional)>" + 
+    cout << "usage: " + string(argv[0]) + " <mxnet *.params file>" + " <output (optional)>" +
         " --verbose" << endl;
     cout << "  will binarize the weights of the qconv or qdense layers of your model," << endl;
     cout << "  pack 32(x86 and ARMv7) or 64(x64) values into one and save the result with the prefix 'binarized_'" << endl;
-    cout << "<output>: specify the location to store the binarized files. If not specified, the same location as the input model will be used."  << endl;
+    cout << "<output>: specify the location to store the binarized files. If not specified, the same location as the input model will be used." << endl;
     cout << "--verbose: for more information" << endl;
     return -1;
   }
 
   // prepare file paths
   const string params_file(argv[1]);
-  char *file_copy_basename = strdup(argv[1]); 
-  char *file_copy_dirname = strdup(argv[1]);  
+  char *file_copy_basename = strdup(argv[1]);
+  char *file_copy_dirname = strdup(argv[1]);
   const string path(dirname(file_copy_dirname));
   const string params_file_name(basename(file_copy_basename));
   string out_path;
-  if(argc >= 3)
+  if (argc >= 3) {
     out_path = argv[2];
+  }
 
-  if(out_path.empty() || out_path == "--verbose")
+  if (out_path.empty() || out_path == "--verbose") {
     out_path = path;
+  }
   free(file_copy_basename);
   free(file_copy_dirname);
 
   if ( (argc == 3 && string(argv[2]) == "--verbose")
-       || (argc == 4 && string(argv[3]) == "--verbose"))
-    _verbose = true;
+       || (argc == 4 && string(argv[3]) == "--verbose")) {
+    VERBOSE = true;
+  }
 
   string base_name = params_file_name;
   base_name.erase(base_name.rfind('-')); // watchout if no '-'
@@ -558,7 +561,7 @@ int main(int argc, char ** argv){
   const string json_file_name(path + "/"                + base_name + "-symbol.json");
   const string param_out_fname(out_path + "/" + "binarized_" + params_file_name);
   const string json_out_fname(out_path + "/" + "binarized_" + base_name + "-symbol.json");
-  
+
   if (int ret = convert_symbol_json(json_file_name, json_out_fname) != 0) {
     return ret;
   }
@@ -566,6 +569,6 @@ int main(int argc, char ** argv){
   if (int ret = convert_params_file(params_file, param_out_fname) != 0) {
     return ret;
   }
- 
+
   return 0;
 }
