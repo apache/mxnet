@@ -241,12 +241,5 @@ def test_where_partial_shape():
 
 
 if __name__ == "__main__":
-    test_mlp2_infer_shape()
-    test_mlp2_infer_error()
-    test_backward_infer()
-    test_incomplete_infer_elewise()
-    test_incomplete_infer_mlp()
-    test_incomplete_infer_slicechannel()
-    test_incomplete_infer_convolution()
-    test_incomplete_infer_concat()
-    test_shape_completely_unknown()
+    import nose
+    nose.runmodule()
