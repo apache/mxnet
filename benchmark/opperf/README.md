@@ -48,7 +48,11 @@ Hence, in this utility, we will build the functionality to allow users and devel
 
 This utility uses MXNet profiler under the hood to fetch compute and memory metrics. Hence, you need to build MXNet with `USE_PROFILER=1` flag.
 
-Make sure to build the flavor of MXNet, for example - with/without MKL, with CUDA 9 or 10.1 etc., on which you would like to measure operator performance.
+Make sure to build the flavor of MXNet, for example - with/without MKL, with CUDA 9 or 10.1 etc., on which you would like to measure operator performance. Finally, you need to add path to your cloned MXNet repository to the PYTHONPATH.
+
+```
+export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/
+```
 
 ## Usecase 1 - Run benchmarks for all the operators
 
@@ -60,7 +64,7 @@ python incubator-mxnet/benchmark/opperf/opperf.py --output-format json --output-
 
 **Other Supported Options:**
 
-1. **output-format** : `json` or `md` for markdown file output or csv.
+1. **output-format** : `json` or `md` for markdown file output.
 
 2. **ctx** : `cpu` or `gpu`. By default, cpu on CPU machine, gpu(0) on GPU machine. You can override and set the global context for all operator benchmarks. Example: --ctx gpu(2).
 
@@ -71,7 +75,7 @@ python incubator-mxnet/benchmark/opperf/opperf.py --output-format json --output-
 For example, you want to run benchmarks for all NDArray Arithmetic Operators, you just run the following python script.
 
 ```
-#! /usr/bin/python
+#!/usr/bin/python
 from benchmark.opperf.tensor_operations.arithmetic_operations import run_arithmetic_operators_benchmarks
 
 # Run all Arithmetic operations benchmarks with default input values
@@ -103,7 +107,7 @@ Output for the above benchmark run, on a CPU machine, would look something like 
 For example, you want to run benchmarks for `nd.add` operator in MXNet, you just run the following python script.
 
 ```
-#! /usr/bin/python
+#!/usr/bin/python
 import mxnet as mx
 from mxnet import nd
 
@@ -129,7 +133,7 @@ Output for the above benchmark run, on a CPU machine, would look something like 
 For example, you want to run benchmarks for `nd.add`, `nd.sub` operator in MXNet, with the same set of inputs. You just run the following python script.
 
 ```
-#! /usr/bin/python
+#!/usr/bin/python
 import mxnet as mx
 from mxnet import nd
 

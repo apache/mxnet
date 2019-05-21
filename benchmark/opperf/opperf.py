@@ -76,13 +76,12 @@ if __name__ == '__main__':
                                                                      'float32. Valid Inputs - float32, float64.')
     parser.add_argument('--output-format', type=str, default='json',
                         help='Benchmark result output format. By default, json. '
-                             'Valid Inputs - json, md, csv')
+                             'Valid Inputs - json, md')
 
     parser.add_argument('--output-file', type=str, default='./mxnet_operator_benchmarks.json',
                         help='Name and path for the '
                              'output file.')
 
-    # TODO - Input validation
     user_options = parser.parse_args()
     print("Running MXNet operator benchmarks with the following options: ")
     print(user_options)

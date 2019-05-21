@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
 import json
 
 from collections import ChainMap
@@ -38,21 +39,22 @@ def save_to_file(inp_dict, out_filepath, out_format='json'):
 
     By default, saves the input dictionary as JSON file. Other supported formats include:
     1. md
-    2. csv
 
     :param inp_dict: Input dictionary to be saved
     :param out_filepath: Output file path
-    :param out_format: Format of the output file. Supported options - 'json', 'md', 'csv'. Default - json.
+    :param out_format: Format of the output file. Supported options - 'json', 'md'. Default - json.
 
     """
     if out_format == 'json':
         # Save as JSON
         with open(out_filepath, "w") as result_file:
             json.dump(inp_dict, result_file, indent=4)
-    elif format == 'md' or format == 'csv':
-        print("MD / CSV file output format not supported yet! Choose JSON")
+    elif out_format == 'md':
+        # Save as md
+        with open(out_filepath, "w") as result_file:
+            result_file.write(_prepare_markdown(inp_dict))
     else:
-        raise ValueError("Invalid output file format provided - '%s'. Supported - json, md, csv".format(format))
+        raise ValueError("Invalid output file format provided - '{}'. Supported - json, md".format(format))
 
 
 def get_json(inp_dict):
@@ -63,3 +65,35 @@ def get_json(inp_dict):
 
     """
     return json.dumps(inp_dict, indent=4)
+
+
+def _prepare_op_benchmark_result(op, op_bench_result):
+    operator_name = op
+    avg_forward_time = "---"
+    avg_backward_time = "---"
+    max_mem_usage = "---"
+    inputs = "---"
+    for key, value in op_bench_result.items():
+        if "avg_time_forward" in key:
+            avg_forward_time = value
+        elif "avg_time_backward" in key:
+            avg_backward_time = value
+        elif "max_mem_usage" in key:
+            max_mem_usage = value
+        elif "inputs" in key:
+            inputs = value
+    return "| {} | {} | {} | {} | {} |".format(operator_name, avg_forward_time, avg_backward_time,
+                                               max_mem_usage, inputs)
+
+
+def _prepare_markdown(results):
+    results_markdown = [
+        "| Operator | Avg Forward Time (ms) | Avg. Backward Time (ms) | Max Mem Usage (Bytes)"
+        " | Inputs |",
+        "| :---: | :---: | :---: | :---:| :--- |"]
+
+    for op, op_bench_results in results.items():
+        for op_bench_result in op_bench_results:
+            results_markdown.append(_prepare_op_benchmark_result(op, op_bench_result))
+
+    return os.linesep.join(results_markdown)
