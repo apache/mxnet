@@ -33,5 +33,8 @@ NNVM_REGISTER_OP(_np_transpose)
 NNVM_REGISTER_OP(_np_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_stack)
+.set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

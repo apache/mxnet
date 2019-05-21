@@ -313,6 +313,34 @@ def test_np_minimum():
     check_minimum(np.zeros(()), np.ones((5, 1, 4)))
 
 
+@with_seed()
+@mx.use_np_compat
+def test_np_stack():
+    a, b, c, d = mx.sym.Variable("a"), mx.sym.Variable("b"), mx.sym.Variable("c"), mx.sym.Variable("d")
+    ret = mx.sym.np.stack([a.as_np_ndarray(), b.as_np_ndarray(), c.as_np_ndarray(), d.as_np_ndarray()])
+    assert type(ret) == mx.sym.np._Symbol
+
+    ndim = random.randint(0, 3)
+    axis = 0 if ndim == 0 else random.randint(0, ndim-1)
+    if ndim != 0:
+        shape = rand_shape_nd(ndim, dim=5)
+    else:
+        shape = ()
+
+    np_a = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+    np_b = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+    np_c = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+    np_d = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+
+    mx_a = np.array(np_a)
+    mx_b = np.array(np_b)
+    mx_c = np.array(np_c)
+    mx_d = np.array(np_d)
+
+    np_out = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
+    mx_out = np.stack([mx_a, mx_b, mx_c, mx_d], axis=axis)
+    assert same(mx_out.asnumpy(), np_out)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
