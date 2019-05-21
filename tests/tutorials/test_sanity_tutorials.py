@@ -63,7 +63,8 @@ whitelist = ['basic/index.md',
              'tensorrt/inference_with_trt.md',
              'java/index.md',
              'java/mxnet_java_on_intellij.md',
-             'java/ssd_inference.md']
+             'java/ssd_inference.md',
+             'amp/index.md']
 whitelist_set = set(whitelist)
 
 def test_tutorial_downloadable():

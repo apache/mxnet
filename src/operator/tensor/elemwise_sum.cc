@@ -54,7 +54,7 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
     nnvm::NodePtr id_node = nnvm::Node::Create();
     id_node->attrs.op = copy_op;
     id_node->inputs = {ograds[0]};
-    ret.push_back(nnvm::NodeEntry{id_node, 0, 0});
+    ret.emplace_back(id_node, 0, 0);
   }
   return ret;
 }

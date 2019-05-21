@@ -38,6 +38,7 @@
    tensorrt/index.md
    unsupervised_learning/index.md
    vision/index.md
+   amp/index.md
 ```
 
 MXNet tutorials can be found in this section. A variety of language bindings are available for MXNet (including Python, Scala, Java, Clojure, C++ and R) and we have a different tutorial section for each language.
@@ -102,6 +103,7 @@ Select API:&nbsp;
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
     * [Module to Gluon API](/tutorials/python/module_to_gluon.html)<span style="color:red"> (new!)</span>
     * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
+    * [Automatic Mixed Precision in Gluon](/tutorials/amp/amp_tutorial.html)
 
 * API Guides
     * Core APIs
