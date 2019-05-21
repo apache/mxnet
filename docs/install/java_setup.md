@@ -123,6 +123,6 @@ To build the docs yourself, follow the [developer build docs instructions](https
 
 ## Resources
 
-* [Java API](../api/java/index.md)
+* [Java API](../api/java/)
 * [javadocs](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package)
-* [MXNet-Java Tutorials](../tutorials/java/index.md)
+* [MXNet-Java Tutorials](../tutorials/java/)

@@ -152,6 +152,6 @@ To build the docs yourself, follow the [developer build docs instructions](https
 
 ## Resources
 
-* [Scala API](../api/scala/index.md)
+* [Scala API](../api/scala/)
 * [scaladocs](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package)
-* [MXNet-Scala Tutorials](../tutorials/scala/index.md)
+* [MXNet-Scala Tutorials](../tutorials/scala/)
