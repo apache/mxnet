@@ -28,8 +28,9 @@ import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
-from ..base import use_np_compat, check_call, _LIB, NDArrayHandle, _sanity_check_params
-from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, set_module
+from ..base import check_call, _LIB, NDArrayHandle
+from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types
+from ..util import _sanity_check_params, set_module, use_np_compat
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
@@ -88,7 +89,18 @@ class ndarray(NDArray):
 
     @use_np_compat
     def __setitem__(self, key, value):
-        self.as_classic_ndarray().__setitem__(key, value)
+        if self.size == 0:
+            return
+        if self.ndim == 0:
+            if key != ():
+                raise IndexError('scalar tensor can only accept `()` as index')
+            # TODO(junwu): Better handling of this situation
+            hdl = NDArrayHandle()
+            check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
+            classic_ndarray = NDArray(handle=hdl, writable=self.writable)
+            classic_ndarray.__setitem__(slice(None), value)
+            return
+        self._as_classic_ndarray().__setitem__(key, value)
 
     @use_np_compat
     def __add__(self, other):
@@ -345,11 +357,25 @@ class ndarray(NDArray):
     def any(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
-    def as_classic_ndarray(self):
-        """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
+    def _as_classic_ndarray(self):
+        """This is not a user-facing API."""
         hdl = NDArrayHandle()
         check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
         return NDArray(handle=hdl, writable=self.writable)
+
+    def as_classic_ndarray(self):
+        """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
+        if self.ndim == 0:  # TODO(junwu): this costs ~10ns, can be moved to backend
+            raise ValueError('cannot convert a scalar np.ndarray to mx.nd.NDArray')
+        if self.size == 0:  # TODO(junwu): this costs ~10ns, can be moved to backend
+            raise ValueError('cannot convert a zero-size np.ndarray to mx.nd.NDArray')
+        return self._as_classic_ndarray()
+
+    def as_np_ndarray(self):
+        """A convenience function for creating a numpy ndarray from the current ndarray
+        with zero copy. For this class, it just returns itself since it's already a
+        numpy ndarray."""
+        return self
 
     @use_np_compat
     def __repr__(self):
@@ -470,8 +496,8 @@ class ndarray(NDArray):
                [ 1.,  1.,  1.]], dtype=float32)
         """
         if isinstance(other, ndarray):
-            other = other.as_classic_ndarray()
-        return self.as_classic_ndarray().copyto(other).as_np_ndarray()
+            other = other._as_classic_ndarray()
+        return self._as_classic_ndarray().copyto(other).as_np_ndarray()
 
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute as_scalar')
@@ -1249,7 +1275,10 @@ def array(object, dtype=None, **kwargs):
         except:
             raise TypeError('source array must be an array like object')
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
-    ret[:] = object
+    if len(object.shape) == 0:
+        ret[()] = object
+    else:
+        ret[:] = object
     return ret
 
 

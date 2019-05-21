@@ -19,7 +19,8 @@
 
 from __future__ import absolute_import
 import numpy as _np
-from ...base import _sanity_check_params, use_np_compat, numeric_types, set_module
+from ...base import numeric_types
+from ...util import _sanity_check_params, use_np_compat, set_module
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray

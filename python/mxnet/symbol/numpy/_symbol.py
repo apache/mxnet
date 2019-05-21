@@ -22,8 +22,8 @@ from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
-from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
-from ...base import numeric_types, set_module
+from ...base import _LIB, SymbolHandle, numeric_types
+from ...util import _sanity_check_params, use_np_compat, check_call, set_module
 from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
