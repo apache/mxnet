@@ -88,7 +88,6 @@ void LayerNormComputeMKL(const nnvm::NodeAttrs& attrs,
 
   if (axis == (inputs[layernorm::kData].ndim() - 1) ||
       (inputs[0].type_flag_ != kFloat32 && inputs[0].type_flag_ != kFloat64)) {
-    Stream<cpu> *s = ctx.get_stream<cpu>();
     // Compute necessary data for the reduce operation.
     mxnet::TShape red_src_shape, red_dst_shape;
     BroadcastReduceShapeCompact(inputs[layernorm::kData].shape_, outputs[layernorm::kMean].shape_,
