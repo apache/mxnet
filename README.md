@@ -7,8 +7,8 @@ This aim was to have only minimal changes to C++ code to get better maintainabil
 
 ## News
 
-- **May 03, 2019** - Upgraded to MXNet v1.4.0
-    - Model converter released
+- **May 21, 2019** - Upgraded to MXNet v1.4.0
+    - Model converter released ([Test & Example](tests/binary/test_converter.py))
     - All changes: [Changelog](CHANGELOG.md)
 - **Sep 01, 2018** - MXNet v1.3.0
     - We are currently rebuilding BMXNet to utilize the new Gluon API for better maintainability
