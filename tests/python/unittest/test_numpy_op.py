@@ -313,6 +313,25 @@ def test_np_minimum():
     check_minimum(np.zeros(()), np.ones((5, 1, 4)))
 
 
+@mx.use_np_compat
+@with_seed()
+def test_np_unary_funcs():
+    func_names = ['abs', 'cbrt', 'ceil', 'exp', 'expm1', 'fix', 'floor', 'log', 'log10',
+                  'log1p', 'log2', 'logical_not', 'negative', 'reciprocal', 'rint', 'sign',
+                  'sqrt', 'square', 'trunc', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
+                  'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh']
+    ndim = random.choice([2, 3, 4])
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    mx_test_data = rand_ndarray(shape).as_np_ndarray()
+    np_test_data = mx_test_data.asnumpy()
+    for func in func_names:
+        np_func = getattr(_np, func)
+        mx_func = getattr(np, func)
+        np_out = np_func(np_test_data)
+        mx_out = mx_func(mx_test_data)
+        assert_almost_equal(np_out, mx_out.asnumpy(), rtol=1e-5, atol=1e-5, equal_nan=True)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
