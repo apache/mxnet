@@ -296,8 +296,8 @@ class CuDNNPoolingOp {
                                              nan_prop_,
                                              kernel_height,
                                              kernel_width,
-                                             param_.global_pool ? 0 : param_.pad[0],
-                                             param_.global_pool ? 0 : param_.pad[1],
+                                             param_.pad[0],
+                                             param_.pad[1],
                                              param_.global_pool ? 1 : param_.stride[0],
                                              param_.global_pool ? 1 : param_.stride[1]));
       #else
@@ -305,8 +305,8 @@ class CuDNNPoolingOp {
                                              mode_,
                                              kernel_height,
                                              kernel_width,
-                                             param_.global_pool ? 0 : param_.pad[0],
-                                             param_.global_pool ? 0 : param_.pad[1],
+                                             param_.pad[0],
+                                             param_.pad[1],
                                              param_.global_pool ? 1 : param_.stride[0],
                                              param_.global_pool ? 1 : param_.stride[1]));
       #endif
@@ -358,9 +358,9 @@ class CuDNNPoolingOp {
                                      param_.global_pool ? static_cast<int>(dshape_ncdhw[4]) :
                                                           static_cast<int>(param_.kernel[2])};
 
-      std::array<int, 3> pad_vec = {param_.global_pool ? 0 : static_cast<int>(param_.pad[0]),
-                                  param_.global_pool ? 0 : static_cast<int>(param_.pad[1]),
-                                  param_.global_pool ? 0 : static_cast<int>(param_.pad[2])};
+      std::array<int, 3> pad_vec = {static_cast<int>(param_.pad[0]),
+                                  static_cast<int>(param_.pad[1]),
+                                  static_cast<int>(param_.pad[2])};
 
       std::array<int, 3> stride_vec = {param_.global_pool ? 1 : static_cast<int>(param_.stride[0]),
                                      param_.global_pool ? 1 : static_cast<int>(param_.stride[1]),

@@ -169,7 +169,6 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
 
   const mkldnn::engine engine = CpuEngine::Get()->get_engine();
   if (param.global_pool) {
-    pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
     stride_h_ = stride_w_ = 1;
   }
 
@@ -246,7 +245,6 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
     }
 
     if (param.global_pool) {
-      pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
       stride_h_ = stride_w_ = 1;
     }
 
@@ -375,7 +373,6 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
     }
 
     if (param.global_pool) {
-      pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
       stride_h_ = stride_w_ = 1;
     }
 

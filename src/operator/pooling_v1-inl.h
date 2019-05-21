@@ -106,10 +106,6 @@ class PoolingV1Op : public Operator {
     // reset padding size for global pooling
     mxnet::TShape padding = param_.pad;
     // mxnet::TShape kernel = param_.kernel;
-    if (param_.global_pool) {
-      padding[0] = padding[1] = 0;
-      // kernel[0] = kernel[1] = 0;
-    }
 
     Tensor<xpu, 4, DType> data = in_data[pool_v1_enum::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> out = out_data[pool_v1_enum::kOut].get<xpu, 4, DType>(s);
@@ -160,9 +156,6 @@ class PoolingV1Op : public Operator {
 
     // reset padding size for global pooling
     mxnet::TShape padding = param_.pad;
-    if (param_.global_pool) {
-      padding[0] = padding[1] = 0;
-    }
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> grad = out_grad[pool_v1_enum::kOut].get<xpu, 4, DType>(s);
