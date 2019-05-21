@@ -30,7 +30,6 @@
    osx_setup.md
    raspbian_setup.md
    scala_setup.md
-   tx2_setup.md
    ubuntu_setup.md
    validate_mxnet.md
    windows_setup.md
