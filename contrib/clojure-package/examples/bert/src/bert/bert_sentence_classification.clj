@@ -16,6 +16,14 @@
 ;;
 
 (ns bert.bert-sentence-classification
+  "Fine-tuning Sentence Pair Classification with BERT
+  This tutorial focuses on fine-tuning with the pre-trained BERT model to classify semantically equivalent sentence pairs.
+
+  Specifically, we will:
+    1. load the state-of-the-art pre-trained BERT model
+    2. attach an additional layer for classification
+    3. process and transform sentence pair data for the task at hand
+    4. fine-tune BERT model for sentence classification"
   (:require [bert.util :as bert-util]
             [clojure-csv.core :as csv]
             [clojure.string :as string]
@@ -29,6 +37,21 @@
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.optimizer :as optimizer]
             [org.apache.clojure-mxnet.symbol :as sym]))
+
+;; Pre-trained language representations have been shown to improve
+;; many downstream NLP tasks such as question answering, and natural
+;; language inference. To apply pre-trained representations to these
+;; tasks, there are two strategies:
+
+;;  *  feature-based approach, which uses the pre-trained representations as additional features to the downstream task.
+;;  * fine-tuning based approach, which trains the downstream tasks by fine-tuning pre-trained parameters.
+
+;; While feature-based approaches such as ELMo are effective in
+;; improving many downstream tasks, they require task-specific
+;; architectures. Devlin, Jacob, et al proposed BERT (Bidirectional
+;; Encoder Representations from Transformers), which fine-tunes deep
+;; bidirectional representations on a wide range of tasks with minimal
+;; task-specific parameters, and obtained state-of-the-art results.
 
 (def model-path-prefix "data/static_bert_base_net")
 
