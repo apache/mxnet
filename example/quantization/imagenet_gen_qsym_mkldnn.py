@@ -279,12 +279,17 @@ if __name__ == '__main__':
     combine_mean_std = {}
     combine_mean_std.update(mean_args)
     combine_mean_std.update(std_args)
+    logger.info('Quantizing FP32 model %s' % args.model)
+    qsym, qarg_params, aux_params, collector = quantize_graph(sym=sym, arg_params=arg_params, aux_params=aux_params,
+                                                              excluded_sym_names=excluded_sym_names,
+                                                              calib_mode=calib_mode, calib_layer=calib_layer,
+                                                              quantized_dtype=args.quantized_dtype, logger=logger)
     if calib_mode == 'none':
-        logger.info('Quantizing FP32 model %s' % args.model)
-        qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                       ctx=ctx, excluded_sym_names=excluded_sym_names,
-                                                       calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
-                                                       logger=logger)
+        # logger.info('Quantizing FP32 model %s' % args.model)
+        # qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
+        #                                                ctx=ctx, excluded_sym_names=excluded_sym_names,
+        #                                                calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
+        #                                                logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
     else:
         logger.info('Creating ImageRecordIter for reading calibration dataset')
@@ -301,12 +306,31 @@ if __name__ == '__main__':
                                      seed=args.shuffle_seed,
                                      **combine_mean_std)
 
-        qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
-                                                        ctx=ctx, excluded_sym_names=excluded_sym_names,
-                                                        calib_mode=calib_mode, calib_data=data,
-                                                        num_calib_examples=num_calib_batches * batch_size,
-                                                        calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
-                                                        label_names=(label_name,), logger=logger)
+        # qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
+        #                                                 ctx=ctx, excluded_sym_names=excluded_sym_names,
+        #                                                 calib_mode=calib_mode, calib_data=data,
+        #                                                 num_calib_examples=num_calib_batches * batch_size,
+        #                                                 calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
+        #                                                 label_names=(label_name,), logger=logger)
+        mod = mx.mod.Module(symbol=sym, label_names=('softmax_label',), context=ctx)
+        mod.bind(for_training=False, data_shapes=data.provide_data, label_shapes=data.provide_label)
+        mod.set_params(arg_params, aux_params)
+        mod._exec_group.execs[0].set_monitor_callback(collector.collect, monitor_all=True)
+        num_batches = 0
+        num_examples = 0
+        max_num_examples = num_calib_batches * batch_size
+        for batch in data:
+            mod.forward(data_batch=batch, is_train=False)
+            num_batches += 1
+            num_examples += batch_size
+            if num_examples >= max_num_examples:
+                break
+        if logger is not None:
+            logger.info("Collected statistics from %d batches with batch_size=%d"
+                        % (num_batches, batch_size))
+        qsym, qarg_params, aux_params = calib_graph(qsym=qsym, arg_params=arg_params, aux_params=aux_params,
+                                                    collector=collector, calib_mode=calib_mode,
+                                                    quantized_dtype=args.quantized_dtype, logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches
         elif calib_mode == 'naive':
