@@ -65,6 +65,14 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+template<>
+void LayerNormCompute<cpu>(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx, const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  return LayerNormComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
+}
+
 #if MSHADOW_USE_MKL == 1
 void LayerNormComputeMKL(const nnvm::NodeAttrs& attrs,
                          const OpContext& ctx,
@@ -91,20 +99,11 @@ void LayerNormComputeMKL(const nnvm::NodeAttrs& attrs,
     const int outter_size = red_dst_shape.Size();
     const int channel_size = red_src_shape.Size() / red_dst_shape.Size();
 
-    // Initialize the workspace
-    Tensor<cpu, 1, char> workspace;
-    size_t workspace_size = 0;
-    MSHADOW_SGL_DBL_TYPE_SWITCH(in_data.type_flag_, DType, {
-      workspace_size = in_data.Size() * sizeof (DType);
-    });
-    workspace = ctx.requested[0].get_space_typed<cpu, 1, char>(Shape1(workspace_size), s);
-
     // call
     MSHADOW_SGL_DBL_TYPE_SWITCH(in_data.type_flag_, DType, {
       mkl_func::LayerNormLastDim(outter_size, channel_size,
                                  in_data.dptr<DType>(),
                                  outputs[layernorm::kOut].dptr<DType>(),
-                                 reinterpret_cast<DType*>(workspace.dptr_),
                                  inputs[layernorm::kGamma].dptr<DType>(),
                                  inputs[layernorm::kBeta].dptr<DType>(),
                                  outputs[layernorm::kMean].dptr<DType>(),
@@ -118,13 +117,6 @@ void LayerNormComputeMKL(const nnvm::NodeAttrs& attrs,
 }
 #endif
 
-template<>
-void LayerNormCompute<cpu>(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx, const std::vector<TBlob>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<TBlob>& outputs) {
-  return LayerNormComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
-}
 
 template<>
 void LayerNormGradCompute<cpu>(const nnvm::NodeAttrs& attrs,
