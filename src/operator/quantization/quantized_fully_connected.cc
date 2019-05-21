@@ -47,9 +47,10 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), num_inputs * 3);
   CHECK_EQ(out_shape->size(), 3U);
 
-  CHECK(shape_is_known(in_shape->at(0)))
-    << "QuantizedFullyConnectedOp input data shape must be given";
-  const mxnet::TShape& dshape = in_shape->at(0);
+  mxnet::TShape dshape = (*in_shape)[0];
+  // require data ndim to be known
+  if (!mxnet::ndim_is_known(dshape)) return false;
+
   index_t num_input;
   if (!param.flatten) {
     num_input = dshape[dshape.ndim() - 1];
@@ -57,7 +58,7 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
     num_input = dshape.ProdShape(1, dshape.ndim());
   }
 
-  TShape wshape = Shape2(param.num_hidden, num_input);
+  mxnet::TShape wshape = Shape2(param.num_hidden, num_input);
   SHAPE_ASSIGN_CHECK(*in_shape, 1, wshape);
   if (!param.no_bias) {
     mxnet::TShape bshape = Shape1(param.num_hidden);
@@ -65,11 +66,11 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   }
 
   for (size_t i = num_inputs; i < 3 * num_inputs; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape{1});
+    SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape(1, 1));
   }
 
   if (!param.flatten) {
-    TShape result_shape(dshape);
+    mxnet::TShape result_shape(dshape);
     result_shape[dshape.ndim() - 1] = param.num_hidden;
     SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
   } else {
@@ -77,6 +78,11 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   }
   SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));
   SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
+
+  if ((*out_shape)[0].ndim() > 0) {
+    dshape[0] = ((*out_shape)[0])[0];
+    SHAPE_ASSIGN_CHECK(*in_shape, 0, dshape);
+  }
   return true;
 }
 
