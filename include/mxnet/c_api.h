@@ -818,10 +818,12 @@ MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
 * The memory is retained until the NDArray went out of scope.
 *
 * \param dlpack the pointer of the input DLManagedTensor
+* \param transient_handle whether the handle will be destructed before calling the deleter
 * \param out_handle pointer holder to get pointer of NDArray
 * \return 0 when success, -1 when failure happens
 */
 MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                                  const bool transient_handle,
                                   NDArrayHandle *out_handle);
 
 /*!
