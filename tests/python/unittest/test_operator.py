@@ -8507,6 +8507,30 @@ def test_add_n():
     add_n_rslt = mx.nd.add_n(*data, out=data[0])
     assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
 
+@with_seed()
+def test_split_bias_act_red():
+    shape1 = (5, 4, 8)
+    shape2 = (5, 4, 16)
+    for ctx in [mx.cpu(), mx.gpu()]:
+        for dtype in [np.float16, np.float32]:
+            x = mx.nd.array(np.random.normal(size=shape1).astype(dtype), ctx=ctx)
+            y = mx.nd.array(np.random.normal(size=shape2).astype(dtype), ctx=ctx)
+
+            X = mx.symbol.Variable('X')
+            Y = mx.symbol.Variable('Y')
+            Z = mx.symbol._internal._split_bias_act_red(X, Y, axis=2)
+            exec1 = Z.bind(ctx, args = [x, y])
+            exec1.forward(is_train=False)
+            z_sym = exec1.outputs[0].asnumpy()
+            z_nd = mx.nd._internal._split_bias_act_red(x, y, axis=2).asnumpy() 
+            y1, y2 = np.split(y.asnumpy(), 2, axis=2)
+            x1 = x.asnumpy()
+            one = np.array(1).astype(dtype)
+            sigmoid = lambda x: one/(one + np.exp(-x))
+            ref = np.tanh(y1 + x1)*sigmoid(y2 + x1)
+
+            for z in [z_sym, z_nd]:
+                assert_allclose(ref, z, rtol=1e-6)
 
 if __name__ == '__main__':
     import nose
