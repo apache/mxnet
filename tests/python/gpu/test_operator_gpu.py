@@ -1134,7 +1134,7 @@ def test_global_pooling():
     def test_1d_pooling(pool_type, p_value=2):
         data = (2, 3, 20)
         kernel = (4,)
-        pad = (2,)
+        pad = (0,)
         stride = (2,)
 
         ctx_list = []
@@ -1156,7 +1156,8 @@ def test_global_pooling():
 
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                       pooling_convention=pooling_convention, global_pool=True, p_value=p_value, cudnn_off=False, name='pool'))
+                                       pooling_convention=pooling_convention, global_pool=True, p_value=p_value,
+                                       cudnn_off=False, name='pool'))
 
         ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type,
@@ -1183,7 +1184,7 @@ def test_global_pooling():
     def test_2d_pooling(pool_type, p_value=2):
         data = (2, 3, 20, 20)
         kernel = (4, 4)
-        pad = (2, 2)
+        pad = (0, 0)
         stride = (2, 2)
 
         ctx_list = []
