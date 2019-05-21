@@ -359,9 +359,12 @@ NDArray NDArray::FromDLPack(const DLManagedTensor* tensor, bool transient_handle
   DLManagedTensor *tensor_copy = transient_handle
                                ? new DLManagedTensor(*tensor)
                                : const_cast<DLManagedTensor*>(tensor);
-  auto deleter = [tensor_copy](){
+  auto deleter = [tensor_copy, transient_handle](){
     if (tensor_copy->deleter != nullptr) {
       tensor_copy->deleter(tensor_copy);
+    }
+    if (transient_handle) {
+      delete tensor_copy;
     }
   };
   return NDArray(TBlob(tensor_copy->dl_tensor), tensor_copy->dl_tensor.ctx.device_id, deleter);
