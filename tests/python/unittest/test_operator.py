@@ -8427,6 +8427,22 @@ def test_image_normalize():
     # check backward using finite difference
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
 
+@with_seed()
+def test_split():
+    ctx = default_context()
+    data = mx.nd.ones((1,4,), ctx=ctx)
+    param = mx.nd.ones((1,4,), ctx=ctx)
+    data.attach_grad(grad_req='write')
+    param.attach_grad(grad_req='write')
+    with mx.autograd.record():
+        z = data*param
+        z1, z2 = z.split(2,1)
+    z1.backward(retain_graph=True)
+    expected = mx.nd.array([[1.0, 1.0, 0.0, 0.0]])
+    assert((np.isclose(data.grad.asnumpy(), expected.asnumpy())).all())
+    z2.backward(retain_graph=True)
+    expected = mx.nd.array([[0.0, 0.0, 1.0, 1.0]])
+    assert((np.isclose(data.grad.asnumpy(), expected.asnumpy())).all())
 
 @with_seed()
 def test_scalar_tensor_creation():

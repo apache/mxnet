@@ -79,7 +79,7 @@ class OperatorState {
  public:
   OperatorState(Operator *opr, const OperatorProperty *prop) {
     opr_ = opr;
-    fwd_init_ = bwd_init_ = false;
+    fwd_init_ = false;
 
     in_data_fwd_.resize(prop->ListArguments().size());
     in_data_bwd_.resize(prop->ListArguments().size());
@@ -130,27 +130,24 @@ class OperatorState {
                 const std::vector<TBlob>& inputs,
                 const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
-    if (!bwd_init_) {
-      CHECK(fwd_init_);
-      CHECK_EQ(arg_data_ptr_.size() + aux_data_.size(), inputs.size());
-      // override tblobs pointed by arg_data_ptr_ since they might not contain
-      // initialized data during forward pass.
-      for (size_t i = 0; i < arg_data_ptr_.size(); ++i) {
-        *arg_data_ptr_[i] = inputs[i];
-      }
-      for (size_t i = 0; i < aux_data_.size(); ++i) {
-        aux_data_[i] = inputs[inputs.size() - aux_data_.size() + i];
-      }
-      CHECK_EQ(outputs.size(), in_grad_.size());
-      for (size_t i = 0; i < outputs.size(); ++i) in_grad_[i] = outputs[i];
-      bwd_init_ = true;
+    CHECK(fwd_init_);
+    CHECK_EQ(arg_data_ptr_.size() + aux_data_.size(), inputs.size());
+    // override tblobs pointed by arg_data_ptr_ since they might not contain
+    // initialized data during forward pass.
+    for (size_t i = 0; i < arg_data_ptr_.size(); ++i) {
+      *arg_data_ptr_[i] = inputs[i];
     }
+    for (size_t i = 0; i < aux_data_.size(); ++i) {
+      aux_data_[i] = inputs[inputs.size() - aux_data_.size() + i];
+    }
+    CHECK_EQ(outputs.size(), in_grad_.size());
+    for (size_t i = 0; i < outputs.size(); ++i) in_grad_[i] = outputs[i];
     opr_->Backward(ctx, out_grad_, in_data_bwd_, out_data_, req, in_grad_, aux_data_);
   }
 
  private:
   Operator *opr_;
-  bool fwd_init_, bwd_init_;
+  bool fwd_init_;
   // input data blobs for forward and backward
   // in_data_fwd_ and in_data_bwd_ will hold different tblobs when StorageFallbackOpExecutor
   // performs storage fallback on a non-default input NDArray. The one in in_data_fwd_ is
