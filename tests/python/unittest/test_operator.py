@@ -1904,8 +1904,8 @@ def test_groupnorm():
         mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
                                   num_groups=num_groups, eps=eps, output_mean_var=True)
         check_symbolic_forward(mx_sym, [mx_data, mx_gamma, mx_beta], [np_out, np_mean, np_std],
-                               rtol=1e-2 if dtype == np.float16 else 1e-4,
-                               atol=4e-3 if dtype == np.float16 else 1e-6, dtype=dtype)
+                               rtol=1e-2 if dtype == np.float16 else 1e-3,
+                               atol=5e-3 if dtype == np.float16 else 1e-5, dtype=dtype)
         mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
                                   num_groups=num_groups, eps=eps, output_mean_var=False)
         np_ograd = np.random.uniform(-1.0, 1.0, dshape).astype(dtype)
@@ -1918,7 +1918,7 @@ def test_groupnorm():
         check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd)],
                                 [np_data_grad, np_gamma_grad, np_beta_grad],
                                 rtol=1e-2 if dtype == np.float16 else 1e-3,
-                                atol=2e-2 if dtype == np.float16 else 1e-5, dtype=dtype)
+                                atol=5e-2 if dtype == np.float16 else 1e-5, dtype=dtype)
 
 
 @with_seed()
