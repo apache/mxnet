@@ -25,6 +25,7 @@ from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-
 from ..ndarray_doc import _build_doc
 
 from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null, _is_np_op  # pylint: disable=unused-import
+from ..util import use_np_compat  # pylint: disable=unused-import
 
 
 def _verify_all_np_ndarrays(op_name, func_name, *array_list):
@@ -138,6 +139,12 @@ def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=F
     signature = ndsignature + signature
 
     code = []
+    is_np_op = _is_np_op(op_name)
+    doc_str_idx = 1
+    if is_np_op:
+        doc_str_idx = 2
+        code.append("""
+@use_np_compat""")
     if arr_name:
         code.append("""
 def %s(*%s, **kwargs):"""%(func_name, arr_name))
@@ -187,7 +194,6 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         keys.append('%s')
         vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
-    is_np_op = _is_np_op(op_name)
     verify_ndarrays_fn =\
         _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_classic_ndarrays.__name__
     if not signature_only:
@@ -209,7 +215,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
     doc_str_lines = _os.linesep+''.join(['    '+s if s.strip() else s
                                          for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
                                          .splitlines(True)])
-    code.insert(1, doc_str_lines)
+    code.insert(doc_str_idx, doc_str_lines)
     return ''.join(code), doc_str
 
 

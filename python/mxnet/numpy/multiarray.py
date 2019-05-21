@@ -74,7 +74,8 @@ def _np_ndarray_cls(handle, writable=True, stype=0):
 _set_np_ndarray_class(_np_ndarray_cls)
 
 
-@set_module('mxnet.numpy')  # pylint: disable=invalid-name
+@set_module('mxnet.numpy')
+@use_np_compat  # pylint: disable=invalid-name
 class ndarray(NDArray):
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
@@ -82,12 +83,10 @@ class ndarray(NDArray):
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
 
-    @use_np_compat
     def __getitem__(self, item):
         # TODO(junwu): make output shape of integer indexing correct
         raise NotImplementedError
 
-    @use_np_compat
     def __setitem__(self, key, value):
         if self.size == 0:
             return
@@ -102,7 +101,6 @@ class ndarray(NDArray):
             return
         self._as_classic_ndarray().__setitem__(key, value)
 
-    @use_np_compat
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
         if isinstance(other, ndarray):
@@ -112,7 +110,6 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
-    @use_np_compat
     def __iadd__(self, other):
         """x.__iadd__(y) <=> x += y"""
         if not self.writable:
@@ -124,7 +121,6 @@ class ndarray(NDArray):
         else:
             raise TypeError('type {} is not supported'.format(str(type(other))))
 
-    @use_np_compat
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
         if isinstance(other, ndarray):
@@ -134,7 +130,6 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
-    @use_np_compat
     def __isub__(self, other):
         """x.__isub__(y) <=> x -= y"""
         if not self.writable:
@@ -146,7 +141,6 @@ class ndarray(NDArray):
         else:
             raise TypeError('type {} is not supported'.format(str(type(other))))
 
-    @use_np_compat
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
         if isinstance(other, ndarray):
@@ -156,7 +150,6 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
-    @use_np_compat
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
         if isinstance(other, ndarray):
@@ -166,15 +159,12 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
-    @use_np_compat
     def __neg__(self):
         return self.__mul__(-1.0)
 
-    @use_np_compat
     def __imul__(self, other):
         raise NotImplementedError
 
-    @use_np_compat
     def __rmul__(self, other):
         """x.__rmul__(y) <=> y * x"""
         return self.__mul__(other)
@@ -193,11 +183,9 @@ class ndarray(NDArray):
                              ' module. If you are using Python3, this error should not have'
                              ' been encountered.')
 
-    @use_np_compat
     def __idiv__(self, other):
         raise NotImplementedError
 
-    @use_np_compat
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
         if isinstance(other, ndarray):
@@ -207,7 +195,6 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as divisor".format(str(type(other))))
 
-    @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
         if isinstance(other, ndarray):
@@ -217,11 +204,9 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as dividend".format(str(type(other))))
 
-    @use_np_compat
     def __itruediv__(self, other):
         raise NotImplementedError
 
-    @use_np_compat
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
         if isinstance(other, ndarray):
@@ -231,7 +216,6 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
-    @use_np_compat
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
         if isinstance(other, ndarray):
@@ -241,11 +225,9 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
-    @use_np_compat
     def __imod__(self, other):
         raise NotImplementedError
 
-    @use_np_compat
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
         if isinstance(other, ndarray):
@@ -255,7 +237,6 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
-    @use_np_compat
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
         if isinstance(other, ndarray):
@@ -265,45 +246,36 @@ class ndarray(NDArray):
         else:
             raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
-    @use_np_compat
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __hash__(self):
         raise NotImplementedError
 
-    @use_np_compat
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __bool__(self):
         raise NotImplementedError
 
-    @use_np_compat
     def __len__(self):
         """Number of elements along the first axis."""
         return self.shape[0]
@@ -341,19 +313,15 @@ class ndarray(NDArray):
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
-    @use_np_compat
     def _slice(self, start, stop):
         raise NotImplementedError
 
-    @use_np_compat
     def _at(self, idx):
         raise NotImplementedError
 
-    @use_np_compat
     def all(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
-    @use_np_compat
     def any(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
@@ -377,7 +345,6 @@ class ndarray(NDArray):
         numpy ndarray."""
         return self
 
-    @use_np_compat
     def __repr__(self):
         """Returns a string representation of the array using the following rules:
         1. If the `ndarray` is a scalar tensor, only the string of the scalar is returned.
@@ -395,7 +362,6 @@ class ndarray(NDArray):
         else:
             return '%s\n<%s shape=%s>' % (array_str, self.__class__.__name__, self.shape)
 
-    @use_np_compat
     def attach_grad(self, grad_req='write'):  # pylint: disable=arguments-differ
         """Attach a gradient buffer to this ndarray, so that `backward`
         can compute gradient with respect to it.
@@ -424,14 +390,12 @@ class ndarray(NDArray):
             return None
         return _np_ndarray_cls(hdl)
 
-    @use_np_compat
     def detach(self):
         """Returns a new ndarray, detached from the current graph."""
         hdl = NDArrayHandle()
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return _np_ndarray_cls(hdl)
 
-    @use_np_compat
     def astype(self, dtype, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument
         """
         Copy of the array, cast to a specified type.
@@ -462,7 +426,6 @@ class ndarray(NDArray):
         self.copyto(res)
         return res
 
-    @use_np_compat
     def copyto(self, other):
         """Copies the value of this array to another array.
 
@@ -505,18 +468,15 @@ class ndarray(NDArray):
     def as_in_context(self, context):
         return super(ndarray, self).as_in_context(context).as_np_ndarray()
 
-    @use_np_compat
     def copy(self, order='C'):  # pylint: disable=arguments-differ
         if order != 'C':
             raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
                                       'received {}'.format(str(order)))
         return super(ndarray, self).copy().as_np_ndarray()
 
-    @use_np_compat
     def dot(self, b, out=None):
         return _mx_np_op.dot(self, b, out=out)
 
-    @use_np_compat
     def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape."""
         if order != 'C':
@@ -556,7 +516,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
 
-    @use_np_compat
     def repeat(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`repeat`.
 
@@ -573,7 +532,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pad')
 
-    @use_np_compat
     def swapaxes(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`swapaxes`.
 
@@ -622,7 +580,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute slice_like')
 
-    @use_np_compat
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
 
@@ -647,7 +604,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pick')
 
-    @use_np_compat
     def sort(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sort`.
 
@@ -664,7 +620,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute topk')
 
-    @use_np_compat
     def argsort(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argsort`.
 
@@ -673,7 +628,6 @@ class ndarray(NDArray):
         """
         raise NotImplementedError
 
-    @use_np_compat
     def argmax(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax`.
 
@@ -690,7 +644,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute argmax_channel')
 
-    @use_np_compat
     def argmin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmin`.
 
@@ -699,7 +652,6 @@ class ndarray(NDArray):
         """
         raise NotImplementedError
 
-    @use_np_compat
     def clip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`clip`.
 
@@ -724,7 +676,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute abs')
 
-    @use_np_compat
     def flatten(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flatten`.
 
@@ -765,7 +716,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tile')
 
-    @use_np_compat
     def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`transpose`.
 
@@ -806,7 +756,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute diag')
 
-    @use_np_compat
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sum`.
 
@@ -823,7 +772,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute nansum')
 
-    @use_np_compat
     def prod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`prod`.
 
@@ -840,7 +788,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute nanprod')
 
-    @use_np_compat
     def mean(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`mean`.
 
@@ -849,7 +796,6 @@ class ndarray(NDArray):
         """
         raise NotImplementedError
 
-    @use_np_compat
     def max(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`max`.
 
@@ -858,7 +804,6 @@ class ndarray(NDArray):
         """
         raise NotImplementedError
 
-    @use_np_compat
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
 
@@ -875,7 +820,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute norm')
 
-    @use_np_compat
     def round(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`round`.
 
@@ -1172,7 +1116,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute softmin')
 
-    @use_np_compat
     def squeeze(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`squeeze`.
 
@@ -1188,12 +1131,10 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
 
     @property
-    @use_np_compat
     def shape(self):
         return super(ndarray, self).shape
 
     @property
-    @use_np_compat
     def ndim(self):
         """Number of array dimensions."""
         return len(self.shape)

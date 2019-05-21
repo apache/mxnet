@@ -20,6 +20,7 @@ import ctypes
 import os
 import sys
 import functools
+import inspect
 
 from .base import _LIB, check_call
 
@@ -176,12 +177,29 @@ def use_np_compat(func):
     Function
         A function for wrapping the user functions in the NumPy compatibility scope.
     """
-    @functools.wraps(func)
-    def _with_np_compat(*args, **kwargs):
-        with np_compat(active=True):
-            return func(*args, **kwargs)
 
-    return _with_np_compat
+    if inspect.isclass(func):
+        for name, method in inspect.getmembers(func,
+                                               predicate=lambda f: inspect.isfunction(f)
+                                                                   or inspect.ismethod(f)
+                                                                   or isinstance(f, property)):
+            if isinstance(method, property):
+                setattr(func, name, property(use_np_compat(method.__get__),
+                                             method.__set__,
+                                             method.__delattr__,
+                                             method.__doc__))
+            else:
+                setattr(func, name, use_np_compat(method))
+        return func
+    elif callable(func):
+        @functools.wraps(func)
+        def _with_np_compat(*args, **kwargs):
+            with np_compat(active=True):
+                return func(*args, **kwargs)
+        return _with_np_compat
+    else:
+        raise TypeError('use_np_compat can only decorate classes and callable objects, '
+                        'while received a {}'.format(str(type(func))))
 
 
 def _sanity_check_params(func_name, unsupported_params, param_dict):
