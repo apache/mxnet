@@ -398,6 +398,21 @@ inline bool LaLQFactShape(const nnvm::NodeAttrs& attrs,
   return false;
 }
 
+// Shape inference function for linalg_inverse
+// Inputs: A. Outputs: inverse(A)
+inline bool InverseShape(const nnvm::NodeAttrs& attrs,
+                         mxnet::ShapeVector* in_attrs,
+                         mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const mxnet::TShape& in = (*in_attrs)[0];
+  const int ndim(in.ndim());
+  CHECK_GE(ndim, 2) << "Input A's dimension must be >= 2";
+  CHECK_EQ(in[ndim-2], in[ndim-1]) << "Input A's last two dimension must be equal";
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, in);
+  return true;
+}
+
 // Shape inference function for linalg_syevd
 // Inputs: A. Outputs: U, L
 inline bool LaEigFactShape(const nnvm::NodeAttrs& attrs,
