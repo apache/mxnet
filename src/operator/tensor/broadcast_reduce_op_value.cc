@@ -290,9 +290,8 @@ NNVM_REGISTER_OP(broadcast_like)
         return MakeZeroGradNodes(n, ograds);
       std::vector<nnvm::NodeEntry> lhs = MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
             {{"keepdims", "true"}});
-      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
-                         {n->inputs[1]}, nullptr, &n);
-      lhs.emplace_back(std::move(ng));
+      lhs.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                       {n->inputs[1]}, nullptr, &n));
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")

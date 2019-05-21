@@ -496,7 +496,7 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
   heads.emplace_back(n->inputs.at(batchnorm::kGamma));
   heads.emplace_back(n->inputs.at(batchnorm::kBeta));
   heads.emplace_back(n->inputs.at(batchnorm::kInMovingMean));
-  heads.emplace_back(n->inputs[batchnorm::kInMovingVar]);
+  heads.emplace_back(n->inputs.at(batchnorm::kInMovingVar));
 
   nnvm::NodePtr gnode = nnvm::Node::Create();
   gnode->inputs = std::move(heads);
@@ -515,7 +515,7 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
   ng->attrs.name = "NoGradient";
   // the aux state of batchnorm
   for (size_t i = 3; i < 5; ++i)
-    in_grad.emplace_back(ng, 0, 0);
+    in_grad.emplace_back(ng);
   return in_grad;
 }
 
