@@ -312,10 +312,10 @@ class LSTMPCell(HybridRecurrentCell):
         forget_gate = F.Activation(slice_gates[1], act_type="sigmoid", name=prefix+'f')
         in_transform = F.Activation(slice_gates[2], act_type="tanh", name=prefix+'c')
         out_gate = F.Activation(slice_gates[3], act_type="sigmoid", name=prefix+'o')
-        next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
-                                   name=prefix+'state')
-        hidden = F._internal._mul(out_gate, F.Activation(next_c, act_type="tanh"),
-                                  name=prefix+'hidden')
+        next_c = F.elemwise_add(forget_gate * states[1], in_gate * in_transform,
+                                name=prefix+'state')
+        hidden = F.elemwise_mul(out_gate, F.Activation(next_c, act_type="tanh"),
+                                name=prefix+'hidden')
         next_r = F.FullyConnected(data=hidden, num_hidden=self._projection_size,
                                   weight=h2r_weight, no_bias=True, name=prefix+'out')
 
