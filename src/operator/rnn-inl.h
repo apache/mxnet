@@ -904,8 +904,8 @@ class RNNOp {
       } else {
         #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
         if (param_.mode != rnn_enum::kGru) {
-          //  TODO(zixuanweeei): MKLDNN GRU has precision issue. A stable one
-          //    will be added to MXNet when it passes the unit test.
+          // TODO(zixuanweeei): MKLDNN GRU has precision issue. A stable one
+          //   will be added to MXNet when we figure out the issue.
           int dtype = in_data[rnn_enum::kData].type_flag_;
           MKLDNNRNNForwardInference<DType>(param_.state_outputs,
                                            param_.num_layers,
