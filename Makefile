@@ -94,7 +94,7 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -D_GLIBCXX_ASSERTIONS
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
