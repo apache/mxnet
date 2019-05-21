@@ -243,9 +243,9 @@ class PoolingV1Prop : public OperatorProperty {
                   mxnet::ShapeVector *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1U);
     const mxnet::TShape &dshape = (*in_shape)[0];
-    CHECK_GE(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
+    CHECK_GE(dshape.ndim(), 4) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
                                << "Or 5D in (batch, channel, d, y, x)";
-    CHECK_LE(dshape.ndim(), 5U) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
+    CHECK_LE(dshape.ndim(), 5) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
                                << "Or 5D in (batch, channel, d, y, x)";
     mxnet::TShape oshape = dshape;
     if (dshape.ndim() ==  -1) return false;

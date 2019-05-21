@@ -70,7 +70,7 @@ class L2NormalizationOpCPU : public L2NormalizationOp<cpu, DType> {
         }
       }
     } else if (this->param_.mode == l2_normalization::kChannel) {
-      CHECK_GE(orig_shape.ndim(), 3U);
+      CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<cpu, 3, DType> data = in_data[l2_normalization::kData]
@@ -94,7 +94,7 @@ class L2NormalizationOpCPU : public L2NormalizationOp<cpu, DType> {
         }
       }
     } else if (this->param_.mode == l2_normalization::kSpatial) {
-      CHECK_GE(orig_shape.ndim(), 3U);
+      CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<cpu, 3, DType> data = in_data[l2_normalization::kData]
