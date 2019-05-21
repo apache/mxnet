@@ -22,6 +22,7 @@
             [org.apache.clojure-mxnet.callback :as callback]
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
+            [org.apache.clojure-mxnet.infer :as infer]
             [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.layout :as layout]
             [org.apache.clojure-mxnet.module :as m]
@@ -30,7 +31,9 @@
             [org.apache.clojure-mxnet.symbol :as sym]))
 
 (def model-path-prefix "data/static_bert_base_net")
-;; epoch number of the model
+
+(def fine-tuned-prefix "fine-tune-sentence-bert")
+
 ;; the maximum length of the sequence
 (def seq-length 128)
 
@@ -38,20 +41,19 @@
   "Preprocesses the sentences in the format that BERT is expecting"
   [idx->token token->idx train-item]
   (let [[sentence-a sentence-b label] train-item
-       ;;; pre-processing tokenize sentence
+        ;; pre-processing tokenize sentence
         token-1 (bert-util/tokenize (string/lower-case sentence-a))
         token-2 (bert-util/tokenize (string/lower-case sentence-b))
         valid-length (+ (count token-1) (count token-2))
-        ;;; generate token types [0000...1111...0000]
+        ;; generate token types [0000...1111...0000]
         qa-embedded (into (bert-util/pad [] 0 (count token-1))
-
                           (bert-util/pad [] 1 (count token-2)))
         token-types (bert-util/pad qa-embedded 0 seq-length)
-        ;;; make BERT pre-processing standard
+        ;; make BERT pre-processing standard
         token-2 (conj token-2 "[SEP]")
         token-1 (into [] (concat ["[CLS]"] token-1 ["[SEP]"] token-2))
         tokens (bert-util/pad token-1 "[PAD]" seq-length)
-        ;;; pre-processing - token to index translation
+        ;; pre-processing - token to index translation
         indexes (bert-util/tokens->idxs token->idx tokens)]
     {:input-batch [indexes
                    token-types
@@ -83,8 +85,8 @@
 
 (defn get-raw-data []
   (csv/parse-csv (string/replace (slurp "data/dev.tsv") "\"" "")
-               :delimiter \tab
-               :strict true))
+                 :delimiter \tab
+                 :strict true))
 
 (defn prepare-data
   "This prepares the sentence pairs into NDArrays for use in NDArrayIterator"
@@ -94,7 +96,7 @@
         token->idx (:token->idx vocab)
         data-train-raw (->> raw-data
                             (mapv #(vals (select-keys % [3 4 0])))
-                            (rest) ;;drop header
+                            (rest) ; drop header
                             (into []))
         processed-datas (mapv #(pre-processing idx->token token->idx %) data-train-raw)]
     {:data0s (slice-inputs-data processed-datas 0)
@@ -138,13 +140,15 @@
                                                                            {:ctx dev})}
                                          :data-batch-size batch-size})
         model (m/module model-sym {:contexts [dev]
-                                   :data-names ["data0" "data1" "data2"]})]
-    (m/fit model {:train-data train-data  :num-epoch num-epoch
-                  :fit-params (m/fit-params {:allow-missing true
-                                             :arg-params (m/arg-params bert-base)
-                                             :aux-params (m/aux-params bert-base)
-                                             :optimizer (optimizer/adam {:learning-rate 5e-6 :episilon 1e-9})
-                                             :batch-end-callback (callback/speedometer batch-size 1)})})))
+                                   :data-names ["data0" "data1" "data2"]})
+        fitted-model (m/fit model {:train-data train-data  :num-epoch num-epoch
+                                   :fit-params (m/fit-params {:allow-missing true
+                                                              :arg-params (m/arg-params bert-base)
+                                                              :aux-params (m/aux-params bert-base)
+                                                              :optimizer (optimizer/adam {:learning-rate 5e-6 :epsilon 1e-9})
+                                                              :batch-end-callback (callback/speedometer batch-size 1)})})]
+    (m/save-checkpoint fitted-model {:prefix fine-tuned-prefix :epoch num-epoch})
+    fitted-model))
 
 (defn -main [& args]
   (let [[dev-arg num-epoch-arg] args
@@ -156,4 +160,90 @@
 (comment
 
   (train (context/cpu 0) 3)
-  (m/save-checkpoint model {:prefix "fine-tune-sentence-bert" :epoch 3}))
+
+  (m/save-checkpoint model {:prefix fine-tuned-prefix :epoch 3})
+
+  
+  ;;;; Explore results from the fine-tuned model
+
+  ;; We need a predictor with a batch size of 1, so we can feed the
+  ;; model a single sentence pair.
+  (def fine-tuned-predictor
+    (infer/create-predictor (infer/model-factory fine-tuned-prefix
+                                                 [{:name "data0" :shape [1 seq-length] :dtype dtype/FLOAT32 :layout layout/NT}
+                                                  {:name "data1" :shape [1 seq-length] :dtype dtype/FLOAT32 :layout layout/NT}
+                                                  {:name "data2" :shape [1]            :dtype dtype/FLOAT32 :layout layout/N}])
+                            {:epoch 3}))
+  
+  ;; Get the fine-tuned model's opinion on whether two sentences are equivalent:
+  (defn equivalence-inference
+    [predictor sentence1 sentence2]
+    (let [vocab (bert.util/get-vocab)
+          processed-test-data (mapv #(pre-processing (:idx->token vocab)
+                                                     (:token->idx vocab) %)
+                                    [[sentence1 sentence2]])
+          prediction (infer/predict-with-ndarray predictor
+                                                 [(ndarray/array (slice-inputs-data processed-test-data 0) [1 seq-length])
+                                                  (ndarray/array (slice-inputs-data processed-test-data 1) [1 seq-length])
+                                                  (ndarray/array (slice-inputs-data processed-test-data 2) [1])])]
+      (ndarray/->vec (first prediction))))
+
+  (equivalence-inference fine-tuned-predictor
+                         "With MXNet , you can use Clojure to explore BERT ."
+                         "MXNet allows you to explore BERT using Clojure .")
+  ;; [0.289691 0.710309]
+  
+  (equivalence-inference fine-tuned-predictor
+                         "With MXNet , you can use Clojure to explore BERT ."
+                         "With MXNet , you can use Clojure to explore BERT .")
+  ;; [0.115873486 0.8841265]
+  
+  ;; Notice that our threshold may not be 0.5:
+  (equivalence-inference fine-tuned-predictor
+                         "No one understands machine learning ."
+                         "Machine learning is easy for anyone to comprehend .")
+  ;; [0.45926097 0.54073906]
+  
+  ;; I'm able to get some odd results:
+  (equivalence-inference fine-tuned-predictor
+                         "It is a lovely spring day , the sun is shining and birds are chirping ."
+                         "Godzilla is trampling city hall ! Run for your lives ! The end is nigh !")
+  ;; [0.0871596 0.9128404]
+  ;; !?!?!
+
+  ;; Maybe it doesn't do so well with words not in the vocabulary?
+  (equivalence-inference fine-tuned-predictor
+                         "Barack Obama will win the nomination tomorrow ."
+                         "Russia annexed Crimea on Thursday , sending in tanks and bombers .")
+  ;; [0.32593858 0.6740614]
+
+  ;; The threshold seems to be ~0.6, but 0.67 seems relatively high for that pair.
+
+  
+  ;; What is the threshold?
+  (def train-data-inferences
+    (->> (get-raw-data)
+         rest                    ; ignore labels
+         (map #(vals (select-keys % [3 4 0])))
+         (map (juxt #(Integer/parseInt (nth % 2))
+                    #(equivalence-inference fine-tuned-predictor (first %) (second %))))))
+  
+  (take 5 train-data-inferences)
+
+  (reduce (fn [acc [true-label [p0 p1 :as prediction]]]
+            (let [threshold 0.55]
+              (if (= true-label (if (> p1 threshold) 1 0))
+                (update acc :agree inc)
+                (update acc :disagree inc))))
+          {:agree 0 :disagree 0}
+          train-data-inferences)
+
+  ;; my results:
+  {:agree 306, :disagree 102} ;; threshold 0.5
+  {:agree 315, :disagree 93} ;; threshold 0.55
+  {:agree 314, :disagree 94} ;; threshold 0.6
+  {:agree 313, :disagree 95} ;; threshold 0.65
+  {:agree 310, :disagree 98} ;; threshold 0.7
+  
+ 
+  )
