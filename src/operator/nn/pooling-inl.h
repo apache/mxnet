@@ -178,6 +178,11 @@ template<typename xpu, typename DType>
 class PoolingOp {
  public:
   void Init(PoolingParam p) {
+    if (p.global_pool && (p.pad[0] ||  p.pad[1]) ) {
+        LOG(WARNING) << "Using global pooling with padding leads to incorrect results"
+                     << "and is only supported for backwards compatibility.\n"
+                     << "If you are training a new network it is recommended that you set padding to 0.";
+    }
     this->param_ = p;
   }
 
