@@ -60,6 +60,9 @@ In the rest of this document, we list routines provided by the `symbol.linalg` p
     extracttrian
     maketrian
     inverse
+    det
+    logdet
+    slogdet
 ```
 
 ## API Reference
