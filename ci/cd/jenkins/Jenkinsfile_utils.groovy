@@ -23,76 +23,6 @@ def get_mxnet_commit_id_for_build() {
   return sh(returnStdout: true, script: '''echo ${MXNET_SHA:-`git ls-remote https://github.com/apache/incubator-mxnet.git ${MXNET_BRANCH} | awk '{ print $1 }'`}''').trim()
 }
 
-// copy all mxnet resources into the workspace
-def bootstrap(recursive = true) {
-  deleteDir()
-  checkout scm
-  checkout_mxnet(env.MXNET_BRANCH, env.MXNET_SHA, recursive)
-  init_workspace()
-}
-
-def init_workspace() {
-  // copy over mxnet source tree
-  sh 'rm -rf incubator-mxnet/.git'
-  sh 'mv incubator-mxnet/* .'
-  sh 'mv incubator-mxnet/.[!.]* .'
-  sh 'rm -rf incubator-mxnet'
-}
-
-// checks out mxnet repository
-def checkout_mxnet(branch, commit_id, recursive) {
-  retry(5) {
-    try {
-
-      if (branch == null || branch.trim() == '') {
-        branch = 'master'
-      }
-
-      if (commit_id == null || commit_id.trim() == '') {
-        error "Missing required mxnet repository commit id"
-      }
-      
-      echo "Cloning MXNet repository:"
-      echo "Branch: ${branch}"
-      echo "Commit Id: ${commit_id}"
-      echo "Recursive clone: ${recursive}"
-
-      def recursive_param = recursive ? '--recursive' : ''
-      sh "git clone https://github.com/apache/incubator-mxnet.git --branch ${branch} --single-branch"
-      dir('incubator-mxnet') {
-        // Make sure wait long enough for api.github.com request quota. Important: Don't increase the amount of
-        // retries as this will increase the amount of requests and worsen the throttling
-        timeout(time: 15, unit: 'MINUTES') {
-
-          if (commit_id != '') {
-            sh "git reset --hard ${commit_id}"
-          }          
-
-          if (recursive) {
-            sh "git submodule update --init --recursive"
-          }
-        }
-      }
-    } catch (exc) {
-      deleteDir()
-      error "Failed to fetch source codes with ${exc}"
-      sleep 2
-    }
-  }
-}
-
-// runs CD runtime function in docker container
-def docker_run(platform, function_name, use_nvidia, shared_mem = '500m', env_vars = "") {
-  def command = "ci/build.py %ENV_VARS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/mxnet/ci/cd/runtime_functions.sh %FUNCTION_NAME%"
-  command = command.replaceAll('%ENV_VARS%', env_vars.length() > 0 ? "-e ${env_vars}" : '')
-  command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
-  command = command.replaceAll('%PLATFORM%', platform)
-  command = command.replaceAll('%FUNCTION_NAME%', function_name)
-  command = command.replaceAll('%SHARED_MEM%', shared_mem)
-
-  sh command
-}
-
 def trigger_release_job(job_name, job_type, mxnet_variants) {
   def run = build(
     job: 'restricted-mxnet-cd/mxnet-cd-release-job', 
@@ -187,31 +117,6 @@ def error_checked_parallel(variant_pipelines) {
     mp << ["${key}": wrap_variant_pipeline_fn(value, variant_pipelines.size())]
   }
   parallel pipelines
-}
-
-// pack libraries for later use
-def pack_lib(name, libs) {
-  sh returnStatus: true, script: """
-set +e
-echo "Packing ${libs} into ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
-return 0
-"""
-  stash includes: libs, name: name
-}
-
-// unpack libraries saved before
-// if unpacking libraries, mxnet has already been compiled.
-// One shouldn't need to recursively clone the repository.
-def unpack_and_bootstrap(name, libs, recursive = false) {
-  bootstrap(recursive)
-  unstash name
-  sh returnStatus: true, script: """
-set +e
-echo "Unpacked ${libs} from ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
-return 0
-"""
 }
 
 return this
