@@ -73,9 +73,9 @@ pipeline {
             windows_gpu: 'restricted-mxnetwindows-gpu'
           )
 
-          // If MXNET_SHA parameter isn't set, use the current commit_id
-          env.MXNET_SHA = env.MXNET_SHA ?: utils.get_git_commit_hash()
-          echo "Commit Id: ${env.MXNET_SHA}"
+          env.MXNET_SHA = env.MXNET_SHA ?: cd_utils.get_mxnet_commit_id_for_build()
+
+          echo "MXNET_SHA: ${env.MXNET_SHA}"
 
           // Convert mxnet variants to a list
           def mxnet_variants = params.MXNET_VARIANTS.split(',').inject([]) { list, item ->

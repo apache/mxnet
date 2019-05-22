@@ -20,7 +20,7 @@
 // returns the value of the MXNET_SHA env. variable, if set
 // or the commit id at the head of the branch being built
 def get_mxnet_commit_id_for_build() {
-  return sh(returnStdout: true, script: '''echo ${MXNET_SHA:-`git ls-remote https://github.com/apache/incubator-mxnet.git ${MXNET_BRANCH} | awk '{ print $1 }'`}''').trim()
+  return sh(returnStdout: true, script: '''git ls-remote https://github.com/apache/incubator-mxnet.git ${MXNET_BRANCH} | awk '{ print $1 }' ''').trim()
 }
 
 def trigger_release_job(job_name, job_type, mxnet_variants) {
