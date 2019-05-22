@@ -150,7 +150,7 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
 
         MXNet utilizes a memory pool to avoid excessive allocations.
         Calling empty_cache will empty the memory pool of the contexts
-        device. This will only free the memory of unreferenced data.
+        device. This will only free the memory of the unreferenced data.
 
         Examples
         -------
