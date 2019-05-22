@@ -180,7 +180,11 @@ sudo apt install libnccl2 libnccl-dev
 # clone MXNet repo
 git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd incubator-mxnet
-# test build PyPi package
+# make sure you pin to specific commit for all the performance sanity check to make fair comparison
+# make change on tools/setup_gpu_build_tools.sh
+# to upgrade CUDA version, please refer to PR #14887, make sure you add new makefile and right debs CUDA uses on the website http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/
+
+# build PyPi package
 tools/staticbuild/build.sh cu100mkl pip
 
 # wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
@@ -191,6 +195,19 @@ pip3 install -e . --pre
 # test MXNet
 >>> import mxnet as mx
 >>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
+>>> exit()
+
+# test nccl version
+export NCCL_DEBUG=VERSION
+vim tests/python/gpu/test_nccl.py
+# remove @unittest.skip("Test requires NCCL library installed and enabled during build") then run
+nosetests --verbose tests/python/gpu/test_nccl.py
+# test_nccl.test_nccl_pushpull ... NCCL version 2.4.2+cuda10.0
+# ok
+# ----------------------------------------------------------------------
+# Ran 1 test in 67.666s
+
+OK
 ```
 #### 3. Performance Sanity Check
 We will test 3 basic models
@@ -203,9 +220,9 @@ pip2 install psutil --user
 pip2 install pandas --upgrade --user
 pip install gluoncv==0.2.0b20180625 --user
 # clone the testing script
-git clone https://github.com/rahul003/deep-learning-benchmark-mirror.git*
+git clone https://github.com/rahul003/deep-learning-benchmark-mirror.git
 # command 
-python mxnet_benchmark/train_imagenet.py --use-rec --batch-size 128 --dtype float32 —num-data-workers 40 —num-epochs 3 —gpus 0 --lr 0.05 —warmup-epochs 5 --last-gamma —mode symbolic —model resnet50_v1b —rec-train /home/ubuntu/data/train-passthrough.rec —rec-train-idx /home/ubuntu/data/train-passthrough.idx —rec-val /home/ubuntu/data/val-passthrough.rec —rec-val-idx /home/ubuntu/data/val-passthrough.idx
+python2 benchmark_runner.py --framework mxnet --metrics-policy metrics_parameters_images_top_1 --task-name metrics_parameters_images_top_1 --metrics-suffix test --num-gpus 8 --command-to-execute 'python mxnet_benchmark/train_imagenet.py --use-rec --batch-size 128 --dtype float32 --num-data-workers 40 --num-epochs 3 --gpus 0,1,2,3,4,5,6,7 --lr 0.4 --warmup-epochs 5 --last-gamma --mode symbolic --model resnet50_v1b --rec-train /home/ubuntu/data/train-passthrough.rec --rec-train-idx /home/ubuntu/data/train-passthrough.idx --rec-val /home/ubuntu/data/val-passthrough.rec --rec-val-idx /home/ubuntu/data/val-passthrough.idx' --data-set MNIST
 # if you want to run above command multiple times, remember to delete log file
 rm metrics_parameters_images_top_1.log
 ```
@@ -226,11 +243,21 @@ The throughput should be around `1000`
 # make sure you install prerequisite package: psutil, pandas
 # download testing script
 git clone https://github.com/awslabs/deeplearning-benchmark.git
+# command
+python2 benchmark_driver.py --framework mxnet --task-name dependency_update_mlp --num-gpus 1 --epochs 10 --metrics-suffix test
+# if you want to run above command twice, remember to delete log file
+rm dependency_update_mlp.log
 ```
-please copy the put the following script to deeplearning-benchmark/mlp.py
-@TODO
-```python
+The throughput should be around `4400`
 
-```
+#### 4. Raise a PR
+1. update the tools/setup_gpu_build_tools.sh please refer to PR [#14988](https://github.com/apache/incubator-mxnet/pull/14988), [#14887](https://github.com/apache/incubator-mxnet/pull/14887/files)
+2. (optional) update the CI-related configuration/shell script/Dockerfile. Please refer to PR [#14986](https://github.com/apache/incubator-mxnet/pull/14986/files), [#14950](https://github.com/apache/incubator-mxnet/pull/14950/files)
 
+#### 5. CI Test
+1. Our CI would test PyPi and Scala publish of latest CUDA version i.e. mxnet-cu100mkl
+
+
+# numpy, requests, graphviz (python dependencies)
+1. 
 
