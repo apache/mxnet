@@ -3434,7 +3434,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32,
         assert_almost_equal(exe.grad_dict['data'].asnumpy(), gt_data_grad, backward_check_eps, backward_check_eps)
         assert_almost_equal(exe.grad_dict['gamma'].asnumpy(), gt_gamma_grad, backward_check_eps, backward_check_eps)
         assert_almost_equal(exe.grad_dict['beta'].asnumpy(), gt_beta_grad, backward_check_eps, backward_check_eps)
-    
+
         # Test for grad_req = add
         out_grad = np.random.normal(0, 1, in_shape).astype(dtype)
         init_data_grad = np.random.normal(0, 1, in_shape).astype(dtype)
@@ -4926,22 +4926,27 @@ def test_softmax_dtype():
         ref_grad_np = ref_input.grad.asnumpy()
         assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
 
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                              'float16', 'float32')
-    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                              'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                              'float32', 'float64')
-    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                              'float32', 'float64', 'float64')
+    import sys
+    is_windows = sys.platform.startswith('win')
+    enforce_safe_acc = os.environ.get("MXNET_SAFE_ACCUMULATION", "0")
+    if not is_windows or enforce_safe_acc == "1":
+        os.environ["MXNET_SAFE_ACCUMULATION"] = "1"
+        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+        check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                                  'float16', 'float32')
+        check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                                  'float16', 'float32', 'float32')
+        check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                                  'float32', 'float64')
+        check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                                  'float32', 'float64', 'float64')
 
 @with_seed()
 def test_pick():
@@ -6457,18 +6462,18 @@ def test_laop_5():
     for n in range(1, 10):
         # test batched and non-batched processing
         for b in range(3):
-            shape = (n, n) if b == 0 else (b, n, n) 
+            shape = (n, n) if b == 0 else (b, n, n)
             data_in = np.random.uniform(1, 10, shape)
             # test all legal offsets of the diagonal
-            for offs in range(1-n, n): 
-                # test extraction of diagonal 
+            for offs in range(1-n, n):
+                # test extraction of diagonal
                 test_diag = mx.sym.linalg.extractdiag(data, offset=offs)
                 res_diag = np.diagonal(data_in, offset=offs) if b==0 else np.diagonal(data_in, axis1=1, axis2=2, offset=offs)
                 check_symbolic_forward(test_diag, [data_in], [res_diag])
                 check_numeric_gradient(test_diag, [data_in])
                 # test generation of diagonal matrix
                 test_diag2 = mx.sym.linalg.makediag(data, offset=offs)
-                res_diag2 = None  
+                res_diag2 = None
                 if b == 0:
                     res_diag2 = np.diagflat(res_diag, k=offs)
                 else:
