@@ -75,6 +75,8 @@ pipeline {
 
           env.MXNET_SHA=cd_utils.get_mxnet_commit_id_for_build()
 
+          sh "printenv"
+
           // Convert mxnet variants to a list
           def mxnet_variants = params.MXNET_VARIANTS.split(',').inject([]) { list, item ->
             list << item.trim()
