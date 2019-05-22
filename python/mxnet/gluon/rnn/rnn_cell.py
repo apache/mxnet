@@ -539,11 +539,11 @@ class LSTMCell(HybridRecurrentCell):
             F, slice_gates[2], self._activation, name=prefix+'c')
         out_gate = self._get_activation(
             F, slice_gates[3], self._recurrent_activation, name=prefix+'o')
-        next_c = F._internal._plus(F.elemwise_mul(forget_gate, states[1], name=prefix+'mul0'),
-                                   F.elemwise_mul(in_gate, in_transform, name=prefix+'mul1'),
-                                   name=prefix+'state')
-        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation, name=prefix+'activation0'),
-                                  name=prefix+'out')
+        next_c = F.elemwise_add(F.elemwise_mul(forget_gate, states[1], name=prefix+'mul0'),
+                                F.elemwise_mul(in_gate, in_transform, name=prefix+'mul1'),
+                                name=prefix+'state')
+        next_h = F.elemwise_mul(out_gate, F.Activation(next_c, act_type=self._activation, name=prefix+'activation0'),
+                                name=prefix+'out')
 
         return next_h, [next_h, next_c]
 
@@ -667,11 +667,11 @@ class GRUCell(HybridRecurrentCell):
                                   name=prefix+'h_act')
 
         ones = F.ones_like(update_gate, name=prefix+"ones_like0")
-        next_h = F._internal._plus(F.elemwise_mul(F.elemwise_sub(ones, update_gate, name=prefix+'minus0'),
-                                                  next_h_tmp,
-                                                  name=prefix+'mul1'),
-                                   F.elemwise_mul(update_gate, prev_state_h, name=prefix+'mul20'),
-                                   name=prefix+'out')
+        next_h = F.elemwise_add(F.elemwise_mul(F.elemwise_sub(ones, update_gate, name=prefix+'minus0'),
+                                               next_h_tmp,
+                                               name=prefix+'mul1'),
+                                F.elemwise_mul(update_gate, prev_state_h, name=prefix+'mul20'),
+                                name=prefix+'out')
 
         return next_h, [next_h]
 

@@ -1275,7 +1275,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-    def save(self, fname):
+    def save(self, fname, remove_amp_cast=True):
         """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
@@ -1292,6 +1292,8 @@ class Symbol(SymbolBase):
             - "s3://my-bucket/path/my-s3-symbol"
             - "hdfs://my-bucket/path/my-hdfs-symbol"
             - "/path-to/my-local-symbol"
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
 
         See Also
         --------
@@ -1299,7 +1301,12 @@ class Symbol(SymbolBase):
         """
         if not isinstance(fname, string_types):
             raise TypeError('fname need to be string')
-        check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
+            check_call(_LIB.MXSymbolSaveToFile(handle, c_str(fname)))
+        else:
+            check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
     def tojson(self):
         """Saves symbol to a JSON string.
@@ -1370,6 +1377,12 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
+
+    def _gen_atomic_symbol(self):
+        handle = SymbolHandle()
+        check_call(_LIB.MXGenAtomicSymbolFromSymbol(self.handle, ctypes.byref(handle)))
+        return Symbol(handle)
+
 
     # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,

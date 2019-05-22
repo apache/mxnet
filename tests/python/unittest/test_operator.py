@@ -3374,6 +3374,7 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
 
 
 @with_seed()
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/15004")
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
         for mode in ['channel', 'spatial', 'instance']:
@@ -3454,7 +3455,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32,
         assert_almost_equal(exe.grad_dict['data'].asnumpy(), gt_data_grad, backward_check_eps, backward_check_eps)
         assert_almost_equal(exe.grad_dict['gamma'].asnumpy(), gt_gamma_grad, backward_check_eps, backward_check_eps)
         assert_almost_equal(exe.grad_dict['beta'].asnumpy(), gt_beta_grad, backward_check_eps, backward_check_eps)
-    
+
         # Test for grad_req = add
         out_grad = np.random.normal(0, 1, in_shape).astype(dtype)
         init_data_grad = np.random.normal(0, 1, in_shape).astype(dtype)
@@ -3561,25 +3562,27 @@ def test_norm():
 
 
 def test_layer_norm():
-    for dtype, forward_check_eps, backward_check_eps in zip([np.float16, np.float32, np.float64],
-                                                            [1E-2, 1E-3, 1E-4],
-                                                            [1E-2, 1E-3, 1E-4]):
-        if dtype != np.float16:
-            in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]
-        else:
-            in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10)], [True, True]  # large input + fp16 does not pass the forward check
-        for in_shape, finite_grad_check in zip(in_shape_l, finite_grad_check_l):
-            for axis in range(-len(in_shape), len(in_shape)):
-                for eps in [1E-2, 1E-3]:
-                    if dtype == np.float16:
-                        npy_grad_check = False
-                    else:
-                        npy_grad_check = True
-                    check_layer_normalization(in_shape, axis, eps, dtype=dtype,
-                                              forward_check_eps=forward_check_eps,
-                                              backward_check_eps=backward_check_eps,
-                                              npy_grad_check=npy_grad_check,
-                                              finite_grad_check=finite_grad_check)
+    for enforce_safe_acc in ["1", "0"]:
+        os.environ["MXNET_SAFE_ACCUMULATION"] = enforce_safe_acc
+        for dtype, forward_check_eps, backward_check_eps in zip([np.float16, np.float32, np.float64],
+                                                                [1E-2, 1E-3, 1E-4],
+                                                                [1E-2, 1E-3, 1E-4]):
+            if dtype != np.float16:
+                in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]
+            else:
+                in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10)], [True, True]  # large input + fp16 does not pass the forward check
+            for in_shape, finite_grad_check in zip(in_shape_l, finite_grad_check_l):
+                for axis in range(-len(in_shape), len(in_shape)):
+                    for eps in [1E-2, 1E-3]:
+                        if dtype == np.float16:
+                            npy_grad_check = False
+                        else:
+                            npy_grad_check = True
+                        check_layer_normalization(in_shape, axis, eps, dtype=dtype,
+                                                  forward_check_eps=forward_check_eps,
+                                                  backward_check_eps=backward_check_eps,
+                                                  npy_grad_check=npy_grad_check,
+                                                  finite_grad_check=finite_grad_check)
 
 
 # Numpy Implementation of Sequence Ops
@@ -4334,47 +4337,117 @@ def test_cast():
             assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), rtol=1e-3, atol=1e-5)
             assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), rtol=1e-3, atol=1e-5)
 
-
-# Test requires all platforms to round float32->float16 with same round-to-nearest-even policy.
-@with_seed()
-def test_cast_float32_to_float16():
+def get_cast_op_data():
     FP16_FRACTION_BITS = 10
     FP32_FRACTION_BITS = 23
     FP32_EXP_MIN = -126
     FP32_EXP_MAX = 127
     # generate test cases in the vicinity of representable float16 mantissas
     # and mid-way between them, but over the full range of float32 exponents.
-    def get_data():
-        for sign_bit in [0, 1]:
-            for exponent in range(FP32_EXP_MIN - FP32_FRACTION_BITS - 1, FP32_EXP_MAX + 2):
-                denominator = 2**(FP16_FRACTION_BITS + 1)
-                for numerator in range(0, denominator):
-                    fraction = numerator / float(denominator)
-                    for y in [-1.0, 0.0, 1.0]:
-                        small_delta = y / 2**FP32_FRACTION_BITS
-                        val = (-1.0)**sign_bit * 2.0**exponent * (1.0 + fraction + small_delta)
-                        yield val
-        # Add np.nan as a final data value to process
-        yield np.nan
 
-    input_np = np.array(list(get_data())).astype(np.float32)
+    for sign_bit in [0, 1]:
+        for exponent in range(FP32_EXP_MIN - FP32_FRACTION_BITS - 1, FP32_EXP_MAX + 2):
+            denominator = 2**(FP16_FRACTION_BITS + 1)
+            for numerator in range(0, denominator):
+                fraction = numerator / float(denominator)
+                for y in [-1.0, 0.0, 1.0]:
+                    small_delta = y / 2**FP32_FRACTION_BITS
+                    val = (-1.0)**sign_bit * 2.0**exponent * (1.0 + fraction + small_delta)
+                    yield val
+    # Add np.nan as a final data value to process
+    yield np.nan
+
+# Test requires all platforms to round float32->float16 with same round-to-nearest-even policy.
+@with_seed()
+def test_cast_float32_to_float16():
+    input_np = np.array(list(get_cast_op_data())).astype(np.float32)
     # The intermediate cast to np.float64 below gets around a numpy rounding bug that is fixed
     # as of numpy 1.17 by PR https://github.com/numpy/numpy/pull/12722
     expected_output = input_np.astype(np.float64).astype(np.float16)
 
-    x = mx.sym.Variable('x', dtype=np.float32)
-    sym = mx.sym.Cast(x, dtype=np.float16)
+    def check_cast(op, input_np, expected_output):
+        x = mx.sym.Variable('x', dtype=np.float32)
+        sym = op(x, dtype=np.float16)
+        ctx = default_context()
+        exe = sym.bind(ctx, {'x': mx.nd.array(input_np, dtype=np.float32, ctx=ctx)})
+        assert exe.arg_arrays[0].dtype == np.float32
+        assert exe.outputs[0].dtype == np.float16
+        exe.forward(is_train=True)
+        sym_output = exe.outputs[0].asnumpy()
+        for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
+            assert (model_fp16_val == np_fp16_val) or \
+                   (np.isnan(model_fp16_val) and np.isnan(np_fp16_val)), \
+                   'fp32->fp16 cast mismatch: with fp32 value {}, model_fp16 = {}, numpy_fp16 = {}'.format(
+                    fp32_val, model_fp16_val, np_fp16_val)
+
+    check_cast(mx.sym.Cast, input_np, expected_output)
+    check_cast(mx.sym.amp_cast, input_np, expected_output)
+
+
+@with_seed()
+def test_amp_multicast():
+    x = mx.sym.Variable('x', dtype=np.float16)
+    y = mx.sym.Variable('y', dtype=np.float32)
+    z = mx.sym.Variable('z', dtype=np.float16)
     ctx = default_context()
-    exe = sym.bind(ctx, {'x' : mx.nd.array(input_np, dtype=np.float32, ctx=ctx)})
-    assert exe.arg_arrays[0].dtype == np.float32
-    assert exe.outputs[0].dtype == np.float16
+    res = mx.sym.amp_multicast(x, y, z, num_outputs=3)
+    exe = res.bind(ctx, {'x': mx.nd.random.uniform(shape=(3, 3), dtype=np.float16, ctx=ctx),
+                         'y': mx.nd.random.uniform(shape=(3, 3), dtype=np.float32, ctx=ctx),
+                         'z': mx.nd.random.uniform(shape=(3, 3), dtype=np.float16, ctx=ctx)})
+    exe.forward(is_train=True)
+    out1, out2, out3 = exe.outputs
+    assert out1.asnumpy().dtype == np.float32
+    assert out2.asnumpy().dtype == np.float32
+    assert out3.asnumpy().dtype == np.float32
+
+    def check_amp_multicast(input_np, expected_output):
+        x = mx.sym.Variable('x', dtype=np.float16)
+        y = mx.sym.Variable('y', dtype=np.float32)
+        z = mx.sym.Variable('z', dtype=np.float16)
+        ctx = default_context()
+        res = mx.sym.amp_multicast(x, y, z, num_outputs=3)
+        exe = res.bind(ctx, {'x': mx.nd.array(input_np, dtype=np.float16, ctx=ctx),
+                             'y': mx.nd.array(input_np, dtype=np.float32, ctx=ctx),
+                             'z': mx.nd.array(input_np, dtype=np.float16, ctx=ctx)})
+        exe.forward(is_train=True)
+        sym_output = exe.outputs[0].asnumpy()
+        for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
+            assert (model_fp16_val == np_fp16_val) or \
+                   (np.isnan(model_fp16_val) and np.isnan(np_fp16_val)), \
+                   'fp32->fp16 cast mismatch: with fp32 value {}, model_fp16 = {}, numpy_fp16 = {}'.format(
+                    fp32_val, model_fp16_val, np_fp16_val)
+
+    input_np = np.array(list(get_cast_op_data()), dtype=np.float16)
+    expected_output = input_np.astype(np.float32)
+    check_amp_multicast(input_np, expected_output)
+
+
+@with_seed()
+def test_all_finite():
+    data = mx.sym.Variable("data", dtype=np.float32)
+    data2 = mx.sym.Variable("data2", dtype=np.float32)
+    finite_arr = mx.nd.array([[0, 0]])
+    inf_arr = mx.nd.array([[np.inf, np.inf]])
+    z = mx.sym.all_finite(data)
+    ctx = default_context()
+    exe = z.bind(ctx, {'data': inf_arr})
     exe.forward(is_train=False)
     sym_output = exe.outputs[0].asnumpy()
-    for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
-        assert (model_fp16_val == np_fp16_val) or \
-               (np.isnan(model_fp16_val) and np.isnan(np_fp16_val)), \
-            'fp32->fp16 cast mismatch: with fp32 value {}, model_fp16 = {}, numpy_fp16 = {}'.format(
-                fp32_val, model_fp16_val, np_fp16_val)
+    assert sym_output[0] == 0
+    exe = z.bind(ctx, {'data': finite_arr})
+    exe.forward(is_train=False)
+    sym_output = exe.outputs[0].asnumpy()
+    assert sym_output[0] == 1
+    z = mx.sym.multi_all_finite(data, data2, num_arrays=2)
+    exe = z.bind(ctx, {'data': finite_arr, 'data2': inf_arr})
+    exe.forward(is_train=False)
+    sym_output = exe.outputs[0].asnumpy()
+    assert sym_output[0] == 0
+    z = mx.sym.multi_all_finite(data, data2, num_arrays=2)
+    exe = z.bind(ctx, {'data': finite_arr, 'data2': finite_arr})
+    exe.forward(is_train=False)
+    sym_output = exe.outputs[0].asnumpy()
+    assert sym_output[0] == 1
 
 
 @with_seed()
@@ -4876,22 +4949,27 @@ def test_softmax_dtype():
         ref_grad_np = ref_input.grad.asnumpy()
         assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
 
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                              'float16', 'float32')
-    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                              'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                              'float32', 'float64')
-    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                              'float32', 'float64', 'float64')
+    import sys
+    is_windows = sys.platform.startswith('win')
+    enforce_safe_acc = os.environ.get("MXNET_SAFE_ACCUMULATION", "0")
+    if not is_windows or enforce_safe_acc == "1":
+        os.environ["MXNET_SAFE_ACCUMULATION"] = "1"
+        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+        check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                                  'float16', 'float32')
+        check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                                  'float16', 'float32', 'float32')
+        check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                                  'float32', 'float64')
+        check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                                  'float32', 'float64', 'float64')
 
 @with_seed()
 def test_pick():
@@ -6407,18 +6485,18 @@ def test_laop_5():
     for n in range(1, 10):
         # test batched and non-batched processing
         for b in range(3):
-            shape = (n, n) if b == 0 else (b, n, n) 
+            shape = (n, n) if b == 0 else (b, n, n)
             data_in = np.random.uniform(1, 10, shape)
             # test all legal offsets of the diagonal
-            for offs in range(1-n, n): 
-                # test extraction of diagonal 
+            for offs in range(1-n, n):
+                # test extraction of diagonal
                 test_diag = mx.sym.linalg.extractdiag(data, offset=offs)
                 res_diag = np.diagonal(data_in, offset=offs) if b==0 else np.diagonal(data_in, axis1=1, axis2=2, offset=offs)
                 check_symbolic_forward(test_diag, [data_in], [res_diag])
                 check_numeric_gradient(test_diag, [data_in])
                 # test generation of diagonal matrix
                 test_diag2 = mx.sym.linalg.makediag(data, offset=offs)
-                res_diag2 = None  
+                res_diag2 = None
                 if b == 0:
                     res_diag2 = np.diagflat(res_diag, k=offs)
                 else:
@@ -6492,6 +6570,7 @@ def test_stack():
 
 
 @with_seed()
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14288")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -7390,16 +7469,16 @@ def test_bilinear_resize_op():
         assert_almost_equal(y.asnumpy(), expected, 1e-3, 0)
         if mode != 'like':
             resize_sym = mx.sym.contrib.BilinearResize2D(data_sym, None, scale_height=scale_height, scale_width=scale_width, mode=mode)
-            check_symbolic_forward(resize_sym, [data_np], [expected], rtol=1e-3)
-            check_symbolic_backward(resize_sym, [data_np], [out_grads], expected_backward, rtol=1e-3)
-            check_numeric_gradient(resize_sym, [data_np])
+            check_symbolic_forward(resize_sym, [data_np], [expected], rtol=1e-3, atol=1e-5)
+            check_symbolic_backward(resize_sym, [data_np], [out_grads], expected_backward, rtol=1e-3, atol=1e-5)
+            check_numeric_gradient(resize_sym, [data_np], rtol=1e-2, atol=1e-5)
         else:
             data_sym_like = mx.sym.var('data_like')
             resize_sym = mx.sym.contrib.BilinearResize2D(data_sym, data_sym_like, mode=mode)
             date_np_like = x_1.asnumpy()
-            check_symbolic_forward(resize_sym, [data_np, date_np_like], [expected], rtol=1e-3)
-            check_symbolic_backward(resize_sym, [data_np, date_np_like], [out_grads], expected_backward, rtol=1e-3)
-            check_numeric_gradient(resize_sym, [data_np, date_np_like])
+            check_symbolic_forward(resize_sym, [data_np, date_np_like], [expected], rtol=1e-3, atol=1e-5)
+            check_symbolic_backward(resize_sym, [data_np, date_np_like], [out_grads], expected_backward, rtol=1e-3, atol=1e-5)
+            check_numeric_gradient(resize_sym, [data_np, date_np_like], rtol=1e-2, atol=1e-5)
 
     shape = (2, 2, 10, 10)
     check_bilinear_resize_op(shape, 5, 5)
