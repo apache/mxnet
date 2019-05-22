@@ -20,25 +20,31 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-utils = load('ci/Jenkinsfile_utils.groovy')
+// utils = load('ci/Jenkinsfile_utils.groovy')
 
 def get_pipeline(mxnet_variant, build_fn) {
   return ["${mxnet_variant}": {
     stage("${mxnet_variant}") {
       stage('Build') {
-        build_fn(mxnet_variant)
+        timeout(time: max_time, unit: 'MINUTES') {
+          build_fn(mxnet_variant)
+        }
       }
 
       stage('Test') {
         def tests = [:]
         tests["${mxnet_variant}: Python 2"] = {
           stage("${mxnet_variant}: Python 2") {
-            unittest_py2(mxnet_variant)
+            timeout(time: max_time, unit: 'MINUTES') {
+              unittest_py2(mxnet_variant)
+            }
           }
         }
         tests["${mxnet_variant}: Python 3"] = {
           stage("${mxnet_variant}: Python 3") {
-            unittest_py3(mxnet_variant)
+            timeout(time: max_time, unit: 'MINUTES') {
+              unittest_py3(mxnet_variant)
+            }
           }
         }
 
@@ -46,12 +52,16 @@ def get_pipeline(mxnet_variant, build_fn) {
         if (mxnet_variant.startsWith('cu') && !mxnet_variant.startsWith('cu80')) {
           tests["${mxnet_variant}: Quantization Python 3"] = {
             stage("${mxnet_variant}: Quantization Python 3") {
-              test_gpu_quantization_py3(mxnet_variant)
+              timeout(time: max_time, unit: 'MINUTES') {
+                test_gpu_quantization_py3(mxnet_variant)
+              }
             }
           }
           tests["${mxnet_variant}: Quantization Python 2"] = {
             stage("${mxnet_variant}: Python 2") {
-              test_gpu_quantization_py2(mxnet_variant)
+              timeout(time: max_time, unit: 'MINUTES') {
+                test_gpu_quantization_py2(mxnet_variant)
+              }
             }
           }
         }

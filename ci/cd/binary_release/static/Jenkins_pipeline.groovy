@@ -20,7 +20,7 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-utils = load('ci/Jenkinsfile_utils.groovy')
+// utils = load('ci/Jenkinsfile_utils.groovy')
 
 // libmxnet location
 libmxnet = 'lib/libmxnet.so'

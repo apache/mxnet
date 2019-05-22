@@ -29,12 +29,12 @@
 // the particular mxnet variant (e.g. cpu, mkl, cu90, cu100mkl, etc.).
 // This job will execute the pipelines in parallel for the variants defined in the "MXNET_VARIANTS" pipeline parameter.
 
+// timeout of each step in minutes
+max_time = 180
+
 pipeline {
   agent {
     label 'restricted-utility'
-  }
-  options {
-    timeout(time: 3, unit: 'HOURS') 
   }
 
   parameters {
@@ -62,7 +62,8 @@ pipeline {
     stage("Release Job") {
       steps {
         script {
-          def cd_utils = load('ci/cd/jenkins/Jenkinsfile_utils.groovy')
+          cd_utils = load('ci/cd/jenkins/Jenkinsfile_utils.groovy')
+          utils = load('ci/Jenkinsfile_utils.groovy')
           env.MXNET_SHA=cd_utils.get_mxnet_commit_id_for_build()
 
           // Convert mxnet variants to a list
