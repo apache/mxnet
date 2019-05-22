@@ -1,0 +1,71 @@
+// -*- mode: groovy -*-
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Jenkins pipeline
+// See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+
+// MXNet Continuous Delivery Pipeline
+// Orchestrates the release of the different artifact by calling
+// downstream release jobs.
+// There are two parallel execution paths: releases based on statically linked libmxnet libraries
+// and base on dynamically linked libmxnet libraries.
+
+pipeline {
+  agent {
+    label 'restricted-utility'
+  }
+  options {
+    timeout(time: 3, unit: 'HOURS') 
+  }
+
+  parameters {
+    // Release parameters
+    string(defaultValue: "master", description: 'The incubator-mxnet branch from which to build the release', name: "MXNET_BRANCH")
+    string(defaultValue: "", description: 'Optional commit id within specified branch to use for build', name: "MXNET_SHA")
+    booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
+    string(defaultValue: "cpu,mkl,cu80,cu80mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+  }
+
+  stages {
+    stage("Init") {
+      steps {
+        script {
+          utils = load('ci/cd/jenkins/Jenkinsfile_utils.groovy')
+          env.MXNET_SHA=utils.get_mxnet_commit_id_for_build()
+        }
+      }
+    }
+
+    stage("MXNet Release") {
+      steps {
+        script {
+          utils.error_checked_parallel([
+
+            "Static libmxnet based Release": {
+              stage("Build") {
+                utils.trigger_release_job("Build static mxnetlib", "binary_release/static", params.MXNET_VARIANTS)    
+              }
+            }
+            
+          ])
+        }
+      }
+    }
+  }
+}
