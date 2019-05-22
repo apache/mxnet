@@ -63,6 +63,10 @@ struct LayerNormParam : public dmlc::Parameter<LayerNormParam> {
   }
 };
 
+static int GetRealAxis(int axis, int ndim) {
+  return axis < 0 ? (axis + ndim) : axis;
+}
+
 template<typename xpu>
 void LayerNormCompute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx, const std::vector<TBlob>& inputs,
@@ -79,10 +83,7 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   if (req[0] == kNullOp) return;
   CHECK_NE(req[0], kAddTo);
-  int axis = param.axis;
-  if (axis < 0) {
-    axis += static_cast<int>(inputs[0].ndim());
-  }
+  int axis = GetRealAxis(param.axis, inputs[0].ndim());
   CHECK(axis >= 0 && axis < inputs[0].ndim()) << "Channel axis out of range: " << param.axis;
   CHECK_EQ(inputs.size(), 3U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
