@@ -63,15 +63,15 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullP
   mkldnn::memory::dims strides(param.conv_param.kernel.ndim());
   mkldnn::memory::dims padding(param.conv_param.kernel.ndim());
   if (param.conv_param.kernel.ndim() == 1) {
-    CHECK_GE(param.conv_param.stride.ndim(), 1U);
-    CHECK_GE(param.conv_param.pad.ndim(), 1U);
-    CHECK_GE(param.conv_param.dilate.ndim(), 1U);
+    CHECK_GE(param.conv_param.stride.ndim(), 1);
+    CHECK_GE(param.conv_param.pad.ndim(), 1);
+    CHECK_GE(param.conv_param.dilate.ndim(), 1);
     strides[0] = param.conv_param.stride[0];
     padding[0] = param.conv_param.pad[0];
   } else if (param.conv_param.kernel.ndim() == 2) {
-    CHECK_GE(param.conv_param.stride.ndim(), 2U);
-    CHECK_GE(param.conv_param.pad.ndim(), 2U);
-    CHECK_GE(param.conv_param.dilate.ndim(), 2U);
+    CHECK_GE(param.conv_param.stride.ndim(), 2);
+    CHECK_GE(param.conv_param.pad.ndim(), 2);
+    CHECK_GE(param.conv_param.dilate.ndim(), 2);
     strides[0] = param.conv_param.stride[0];
     strides[1] = param.conv_param.stride[1];
     padding[0] = param.conv_param.pad[0];
@@ -169,15 +169,15 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
   mkldnn::memory::dims strides(param.kernel.ndim());
   mkldnn::memory::dims padding(param.kernel.ndim());
   if (param.kernel.ndim() == 1) {
-    CHECK_GE(param.stride.ndim(), 1U);
-    CHECK_GE(param.pad.ndim(), 1U);
-    CHECK_GE(param.dilate.ndim(), 1U);
+    CHECK_GE(param.stride.ndim(), 1);
+    CHECK_GE(param.pad.ndim(), 1);
+    CHECK_GE(param.dilate.ndim(), 1);
     strides[0] = param.stride[0];
     padding[0] = param.pad[0];
   } else if (param.kernel.ndim() == 2) {
-    CHECK_GE(param.stride.ndim(), 2U);
-    CHECK_GE(param.pad.ndim(), 2U);
-    CHECK_GE(param.dilate.ndim(), 2U);
+    CHECK_GE(param.stride.ndim(), 2);
+    CHECK_GE(param.pad.ndim(), 2);
+    CHECK_GE(param.dilate.ndim(), 2);
     strides[0] = param.stride[0];
     strides[1] = param.stride[1];
     padding[0] = param.pad[0];
@@ -237,15 +237,15 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
   mkldnn::memory::dims strides(param.kernel.ndim());
   mkldnn::memory::dims padding(param.kernel.ndim());
   if (param.kernel.ndim() == 1) {
-    CHECK_GE(param.stride.ndim(), 1U);
-    CHECK_GE(param.pad.ndim(), 1U);
-    CHECK_GE(param.dilate.ndim(), 1U);
+    CHECK_GE(param.stride.ndim(), 1);
+    CHECK_GE(param.pad.ndim(), 1);
+    CHECK_GE(param.dilate.ndim(), 1);
     strides[0] = param.stride[0];
     padding[0] = param.pad[0];
   } else if (param.kernel.ndim() == 2) {
-    CHECK_GE(param.stride.ndim(), 2U);
-    CHECK_GE(param.pad.ndim(), 2U);
-    CHECK_GE(param.dilate.ndim(), 2U);
+    CHECK_GE(param.stride.ndim(), 2);
+    CHECK_GE(param.pad.ndim(), 2);
+    CHECK_GE(param.dilate.ndim(), 2);
     strides[0] = param.stride[0];
     strides[1] = param.stride[1];
     padding[0] = param.pad[0];
