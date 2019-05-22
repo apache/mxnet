@@ -54,7 +54,6 @@ The dependencies could be categorized by several groups: BLAS libraries, CPU-bas
 
 | Dependencies  | MXNet Version |
 | :------------: |:-------------:| 
-|MKL| N/A | 
 |MKLDNN| 0.19      | 
 |CUDA| 10.1      |
 |cuDNN| 7.5.1     |
@@ -75,7 +74,7 @@ The dependencies could be categorized by several groups: BLAS libraries, CPU-bas
 |protobuf|3.5.1|
 |lz4|r130|
 |cityhash|1.1.1|
-|openssl|1.1.b|
+|openssl|1.1.1b|
 
 # MKL, MKLDNN
 
@@ -191,7 +190,7 @@ tools/staticbuild/build.sh cu100mkl pip
 
 # install python frontend
 cd python
-pip3 install -e . --pre
+pip install -e . --pre
 # test MXNet
 >>> import mxnet as mx
 >>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
@@ -255,9 +254,134 @@ The throughput should be around `4400`
 2. (optional) update the CI-related configuration/shell script/Dockerfile. Please refer to PR [#14986](https://github.com/apache/incubator-mxnet/pull/14986/files), [#14950](https://github.com/apache/incubator-mxnet/pull/14950/files)
 
 #### 5. CI Test
-1. Our CI would test PyPi and Scala publish of latest CUDA version i.e. mxnet-cu100mkl
-
+1. Our CI would test PyPi and Scala publish of latest CUDA version i.e. mxnet-cu101mkl
 
 # numpy, requests, graphviz (python dependencies)
-1. 
+1. Please refer to [#14588](https://github.com/apache/incubator-mxnet/pull/14588/files) and make sure the version have both of upper bound and lower bound
+#### Checklist
+- [ ] Python/setup.py
+- [ ] tools/pip/setup.py
+- [ ] ci/docker/install/docs_requirements
+- [ ] ci/docker/install/ubuntu_publish.sh
+- [ ] ci/docker/install/ubuntu_python.sh
+- [ ] ci/qemu/mxnet_requirements.txt
+- [ ] docs/install/requirements.txt 
 
+2. build from source to do sanity check
+```
+# compile mxnet to get libmxnet.so
+pip install -e . --pre
+python
+>>> import mxnet as mx
+>>> mx.nd.ones((1, 2))
+[[1. 1.]]
+<NDArray 1x2 @cpu(0)>
+```
+
+# OpenCV and its dependencies: zlib, libjpeg-turbo, libpng, libtiff, eigen
+
+#### Update the build script
+1. Find the library under `tools/dependencies` and update the version.
+
+#### Sanity Check
+1. Environment Setup
+```python
+# Take Ubuntu 16.04 for example
+sudo apt update
+sudo apt-get install -y git \
+    cmake \
+    libcurl4-openssl-dev \
+    unzip \
+    gcc-4.8 \
+    g++-4.8 \
+    gfortran \
+    gfortran-4.8 \
+    binutils \
+    nasm \
+    libtool \
+    curl \
+    wget \
+    sudo \
+    gnupg \
+    gnupg2 \
+    gnupg-agent \
+    pandoc \
+    python3-pip \
+    automake \
+    pkg-config \
+    openjdk-8-jdk
+```
+2. Build PyPi package
+```
+# update the dependency under tools/dependencies, then
+tools/staticbuild/build.sh mkl pip
+
+# wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
+
+# install python frontend
+cd python
+pip3 install -e . --pre
+# test MXNet
+>>> import mxnet as mx
+>>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
+>>> exit()
+```
+
+3. Compare the image.imdecode performance
+```python
+>>> with open("test.jpg", 'rb') as fp:
+...     str_image = fp.read()
+...
+>>> for _ in range(100):
+...    image = mx.img.imdecode(str_imag)
+# time the performance of for loop and compare it to original version
+```
+
+# Other dependencies under tools/dependencies
+
+#### Update the build script
+1. Find the library under `tools/dependencies` and update the version.
+
+#### Sanity Check
+1. Environment Setup
+```python
+# Take Ubuntu 16.04 for example
+sudo apt update
+sudo apt-get install -y git \
+    cmake \
+    libcurl4-openssl-dev \
+    unzip \
+    gcc-4.8 \
+    g++-4.8 \
+    gfortran \
+    gfortran-4.8 \
+    binutils \
+    nasm \
+    libtool \
+    curl \
+    wget \
+    sudo \
+    gnupg \
+    gnupg2 \
+    gnupg-agent \
+    pandoc \
+    python3-pip \
+    automake \
+    pkg-config \
+    openjdk-8-jdk
+```
+2. Build PyPi package
+```
+# update the dependency under tools/dependencies, then
+tools/staticbuild/build.sh mkl pip
+
+# wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
+
+# install python frontend
+cd python
+pip3 install -e . --pre
+# test MXNet
+>>> import mxnet as mx
+>>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
+>>> exit()
+```
