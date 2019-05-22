@@ -113,10 +113,18 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
     });
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for float16 inputs for LayerNorm. "
+                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "for more details.");
+  }
+
   // Calculate mean
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+      if (safe_acc) {
         broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
           s, mean_data, req[0], workspace, in_data);
       } else {
@@ -135,7 +143,7 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   const TBlob centered_out = outputs[0].reshape(red_src_shape);
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+      if (safe_acc) {
         broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, false>(
           s, std_data, req[0], workspace, centered_out);
       } else {
@@ -250,10 +258,11 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
                                                {normalized_data, std},
                                                {kWriteTo}, {normalized_data});
   // Calculate grad_beta
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
   if (req[2] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[2].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-        if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+        if (safe_acc) {
           broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
             s, outputs[2].reshape(red_exclude_dst_shape), req[2], workspace,
             ograd.reshape(red_exclude_src_shape));
@@ -271,7 +280,7 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
   if (req[1] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[1].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-        if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+        if (safe_acc) {
           broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
             s, outputs[1].reshape(red_exclude_dst_shape), req[1], workspace,
             ograd_mult.reshape(red_exclude_src_shape));
@@ -296,7 +305,7 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
                                                     {kWriteTo}, {ograd_mult});
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-        if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+        if (safe_acc) {
           broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
             s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
             ograd_mult.reshape(red_src_shape));
@@ -316,7 +325,7 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
                                                         {kWriteTo}, {ograd_mult});
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-        if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+        if (safe_acc) {
           broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
             s, red_out.reshape(red_dst_shape), kWriteTo, workspace,
             ograd_mult.reshape(red_src_shape));
