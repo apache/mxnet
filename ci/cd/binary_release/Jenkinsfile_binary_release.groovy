@@ -20,7 +20,7 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-// utils = load('ci/Jenkinsfile_utils.groovy')
+// NOTE: utils is loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
 
 def get_pipeline(mxnet_variant, build_fn) {
   return ["${mxnet_variant}": {
@@ -97,9 +97,9 @@ def get_environment(mxnet_variant) {
 // to run a step
 def get_jenkins_node_label(mxnet_variant) {
   if (mxnet_variant.startsWith('cu')) {
-    return "restricted-mxnetlinux-gpu"
+    return NODE_LINUX_GPU
   }
-  return "restricted-mxnetlinux-cpu"
+  return NODE_LINUX_CPU
 }
 
 // Runs unit tests using python 3
@@ -131,7 +131,7 @@ def unittest_py2(mxnet_variant) {
 
 // Tests quantization in P3 instance using Python 2
 def test_gpu_quantization_py2(mxnet_variant) {
-  node('restricted-mxnetlinux-gpu-p3') {
+  node(NODE_LINUX_GPU_P3) {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
       utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_BRANCH, env.MXNET_SHA)
@@ -142,7 +142,7 @@ def test_gpu_quantization_py2(mxnet_variant) {
 
 // Tests quantization in P3 instance using Python 3
 def test_gpu_quantization_py3(mxnet_variant) {
-  node('restricted-mxnetlinux-gpu-p3') {
+  node(NODE_LINUX_GPU_P3) {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
       utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_BRANCH, env.MXNET_SHA)
@@ -153,7 +153,7 @@ def test_gpu_quantization_py3(mxnet_variant) {
 
 // Pushes artifact to artifact repository
 def push(mxnet_variant) {
-  node('restricted-mxnetlinux-cpu') {
+  node(NODE_LINUX_CPU) {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def deps = (mxnet_variant.endsWith('mkl')? mx_mkldnn_deps : mx_deps).replaceAll(',', '')
       utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_BRANCH, env.MXNET_SHA)
