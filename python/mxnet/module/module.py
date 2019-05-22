@@ -162,7 +162,7 @@ class Module(BaseModule):
             mod._preload_opt_states = '%s-%04d.states'%(prefix, epoch)
         return mod
 
-    def save_checkpoint(self, prefix, epoch, save_optimizer_states=False):
+    def save_checkpoint(self, prefix, epoch, save_optimizer_states=False, remove_amp_cast=True):
         """Saves current progress to checkpoint.
         Use `mx.callback.module_checkpoint` as `epoch_end_callback` to save during training.
 
@@ -175,7 +175,7 @@ class Module(BaseModule):
         save_optimizer_states : bool
             Whether to save optimizer states to continue training.
         """
-        self._symbol.save('%s-symbol.json'%prefix)
+        self._symbol.save('%s-symbol.json'%prefix, remove_amp_cast=remove_amp_cast)
         param_name = '%s-%04d.params' % (prefix, epoch)
         self.save_params(param_name)
         logging.info('Saved checkpoint to \"%s\"', param_name)

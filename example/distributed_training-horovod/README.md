@@ -21,7 +21,7 @@ excellent scaling efficiency for dense models running on a large number of nodes
 supports mainstream deep learning frameworks such as MXNet, TensorFlow, Keras, and PyTorch. 
 It is created at Uber and currently hosted by the [Linux Foundation Deep Learning](https://lfdl.io)(LF DL). 
 
-MXNet is supported in Horovod 0.16.0 [release](https://eng.uber.com/horovod-pyspark-apache-mxnet-support/).
+MXNet is supported starting from Horovod 0.16.0 [release](https://eng.uber.com/horovod-pyspark-apache-mxnet-support/).
 
 ## What's New?
 Compared with the standard distributed training script in MXNet which uses parameter server to 
@@ -35,7 +35,7 @@ there are a large number of workers and network bandwidth is the bottleneck.
 ```bash
 $ pip install mxnet
 ```
-**Note**: There is a [known issue](https://github.com/horovod/horovod/issues/884) when running Horovod with MXNet on a Linux system with GCC version 5.X and above. We recommend users to build MXNet from source following this [guide](https://mxnet.incubator.apache.org/install/build_from_source.html) as a workaround for now. Also mxnet-mkl package in 1.4.0 release does not support Horovod.
+**Note**: The [known issue](https://github.com/horovod/horovod/issues/884) when running Horovod with MXNet on a Linux system with GCC version 5.X and above has been resolved. Please use MXNet 1.4.1 or later releases with Horovod 0.16.2 or later releases to avoid the GCC incompatibility issue. MXNet 1.4.0 release works with Horovod 0.16.0 and 0.16.1 releases with the GCC incompatibility issue unsolved.
 
 ## Install Horovod
 ```bash
@@ -66,8 +66,8 @@ To run MXNet with Horovod, make the following additions to your training script:
 3. Scale the learning rate by number of workers. Effective batch size in synchronous distributed training is scaled by
     the number of workers. An increase in learning rate compensates for the increased batch size.
 
-4. Wrap optimizer in `hvd.DistributedOptimizer`.  The distributed optimizer delegates gradient computation
-    to the original optimizer, averages gradients using *allreduce* or *allgather*, and then applies those averaged
+4. Create `hvd.DistributedTrainer` with optimizer when using Gluon API or wrap optimizer in `hvd.DistributedOptimizer` when using Module API.  The distributed trainer or optimizer delegates gradient computation
+    to the original optimizer, averages gradients using *allreduce*, and then applies those averaged
     gradients.
 
 5. Add `hvd.broadcast_parameters` to broadcast initial variable states from rank 0 to all other processes.
@@ -97,12 +97,13 @@ num_workers = hvd.size()
 model = ...
 model.hybridize()
 
-# Define hyper parameters
-optimizer_params = ...
 
-# Add Horovod Distributed Optimizer
+# Create optimizer
+optimizer_params = ...
 opt = mx.optimizer.create('sgd', **optimizer_params)
-opt = hvd.DistributedOptimizer(opt)
+
+# Create DistributedTrainer, a subclass of gluon.Trainer
+trainer = hvd.DistributedTrainer(params, opt)
 
 # Initialize parameters
 model.initialize(initializer, ctx=context)
@@ -112,8 +113,7 @@ params = model.collect_params()
 if params is not None:
     hvd.broadcast_parameters(params, root_rank=0)
 
-# Create trainer and loss function
-trainer = gluon.Trainer(params, opt, kvstore=None)
+# Create loss function
 loss_fn = ...
 
 # Train model
@@ -178,7 +178,7 @@ model.fit(train_data,
 
 The example commands below show how to run distributed training. See the 
 [Running Horovod](https://github.com/horovod/horovod/blob/master/docs/running.md)
-page for more instructions, including RoCE/InfiniBand tweaks and tips for dealing with hangs.
+page for more instructions.
 
 1. To run on a machine with 4 CPUs:
 

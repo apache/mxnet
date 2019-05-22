@@ -51,6 +51,16 @@ def test_ndarray_ones():
     assert nd.sum(a).asnumpy() == LARGE_SIZE
 
 
+def test_ndarray_convert():
+    a = nd.zeros(shape=(LARGE_X, SMALL_Y))
+    b = a.astype(np.int32)
+    b.wait_to_read()
+    assert b.dtype == np.int32
+    b = a.tostype('row_sparse')
+    b.wait_to_read()
+    assert isinstance(b, mx.nd.sparse.RowSparseNDArray)
+
+
 @with_seed()
 def test_ndarray_random_uniform():
     a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
@@ -64,10 +74,10 @@ def test_ndarray_random_randint():
     # check if randint can generate value greater than 2**32 (large)
     low_large_value = 2**32
     high_large_value = 2**34
-    a = nd.random.randint(low_large_value,high_large_value)
+    a = nd.random.randint(low_large_value,high_large_value, dtype=np.int64)
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
-    assert a.__gt__(low) & a.__lt__(high)
+    assert a.__gt__(low) and a.__lt__(high)
 
 
 def test_ndarray_empty():
@@ -87,20 +97,20 @@ def test_elementwise():
 
 
 def test_reduce():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
     assert nd.sum(a).asnumpy() == a.shape[0] * a.shape[1]
 
 
 def test_dot():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(SMALL_Y, SMALL_Y))
     res = nd.dot(a, b)
     assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
 
 def test_FullyConnected():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
-    b = nd.ones(shape=(SMALL_Y, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(SMALL_Y, SMALL_Y))
     res = nd.FullyConnected(a, b, num_hidden=b.shape[1], no_bias=True)
     assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
@@ -115,15 +125,40 @@ def test_broadcast():
 
 
 def test_clip():
-    a = nd.arange(0, LARGE_X).reshape(LARGE_X, 1)
-    b = nd.broadcast_to(a, shape=(a.shape[0], SMALL_Y))
-    res = nd.clip(b, a_min=100, a_max=1000)
-    assert np.sum(res[-1].asnumpy() == 1000) == b.shape[1]
+    a = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
+    res = nd.clip(a, a_min=100, a_max=1000)
+    assert np.sum(res[-1].asnumpy() == 1000) == a.shape[1]
 
 
 def test_take():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     idx = nd.arange(LARGE_X-1000, LARGE_X)
+    res = nd.take(a, idx)
+    assert np.sum(res[-1].asnumpy() == 1) == res.shape[1]
+
+
+def test_split():
+    a = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
+    outs = nd.split(a, num_outputs=SMALL_Y, axis=1)
+    result = sum(1 for i, v in enumerate(outs) if i == v[0].asnumpy())
+    assert result == a.shape[1]
+
+
+def test_argmin():
+    a = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
+    idx = mx.nd.argmin(a, axis=0)
+    assert idx.shape[0] == SMALL_Y
+
+
+def test_tile():
+    a = nd.arange(0, LARGE_X).reshape(LARGE_X, 1)
+    b = nd.tile(a, reps=(1, SMALL_Y))
+    assert np.sum(b[-1].asnumpy() == LARGE_X) == b.shape[1]
+
+
+def test_take():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    idx = nd.arange(LARGE_X - 1000, LARGE_X)
     res = nd.take(a, idx)
     assert np.sum(res[-1].asnumpy() == 1) == res.shape[1]
 
@@ -171,14 +206,12 @@ def test_Dense(ctx=mx.cpu(0)):
 
 def test_where():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    b = nd.arange(0, LARGE_X).reshape(LARGE_X, 1)
-    b = nd.broadcast_to(b, shape=(b.shape[0], SMALL_Y))
+    b = nd.arange(0, LARGE_X * SMALL_Y).reshape(LARGE_X, SMALL_Y)
     res = nd.where(b > 100, a, b)
     assert np.sum(res[-1].asnumpy() == 1) == b.shape[1]
-
     csr_cond = nd.sparse.cast_storage(b < 10, 'csr')
     res = nd.sparse.where(csr_cond, a, b)
-    assert np.sum(res[0].asnumpy() == 1) == b.shape[1]
+    assert np.sum(res[0].asnumpy() == 1) == 10
 
 
 def test_pick():
@@ -186,7 +219,8 @@ def test_pick():
     b = mx.nd.ones(shape=(256*35,))
     res = mx.nd.pick(a,b)
     assert res.shape == b.shape
-    
+
+
 def test_depthtospace():
     def numpy_depth_to_space(x, blocksize):
         b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -202,6 +236,7 @@ def test_depthtospace():
     output = mx.nd.depth_to_space(data, 2)
     assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
+
 def test_spacetodepth():
     def numpy_space_to_depth(x, blocksize):
         b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -216,6 +251,33 @@ def test_spacetodepth():
     expected = numpy_space_to_depth(data_np, 2)
     output = mx.nd.space_to_depth(data, 2)
     assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
+
+
+def test_diag():
+    h = np.random.randint(2,9)
+    w = np.random.randint(2,9)
+    a_np = np.random.random((LARGE_X, 64)).astype(np.float32)
+    a = mx.nd.array(a_np)
+
+    # k == 0
+    r = mx.nd.diag(a)
+    assert_almost_equal(r.asnumpy(), np.diag(a_np))
+
+    # k == 1
+    k = 1
+    r = mx.nd.diag(a, k=k)
+    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+
+    # k == -1
+    k = -1
+    r = mx.nd.diag(a, k=k)
+    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+
+    # random k
+    k = np.random.randint(-min(LARGE_X, 64) + 1, min(h, w))
+    r = mx.nd.diag(a, k=k)
+    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+
 
 if __name__ == '__main__':
     import nose

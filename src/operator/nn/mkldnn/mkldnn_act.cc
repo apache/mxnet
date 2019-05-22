@@ -57,6 +57,12 @@ bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input) {
   return SupportMKLDNNAct(param);
 }
 
+bool SupportQuantizedMKLDNNAct(const ActivationParam &param) {
+  // TODO(zhennan): Add more activation type when mkldnn supports.
+  //                Remove this when it's identity to SupportMKLDNNAct.
+  return param.act_type == activation::kReLU;
+}
+
 mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
   switch (param.act_type) {
     case activation::kReLU:

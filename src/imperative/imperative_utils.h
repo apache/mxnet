@@ -595,23 +595,21 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, mxnet::ShapeVector&& shapes,
     *contain_unknown = false;
   }
   nnvm::Graph& g = *p_g;
-  if (use_inputs) {
-    if (g.attrs.count("shape_inputs") &&
-        g.GetAttr<mxnet::ShapeVector>("shape_inputs") == shapes) return true;
-  } else if (g.attrs.count("shape")) {
+  if (g.attrs.count("shape")) {
     const auto& prev_shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    CHECK_EQ(prev_shapes.size(), shapes.size());
-    bool match = true;
-    for (size_t i = 0; i < shapes.size(); ++i) {
-      if (i == entry_range.first) {
-        i = entry_range.second;
-        if (i >= shapes.size()) break;
+    if (prev_shapes.size() == shapes.size()) {
+      bool match = true;
+      for (size_t i = 0; i < shapes.size(); ++i) {
+        if (i == entry_range.first) {
+          i = entry_range.second;
+          if (i >= shapes.size()) break;
+        }
+        if (shapes[i] == prev_shapes[i]) continue;
+        match = false;
+        break;
       }
-      if (shapes[i] == prev_shapes[i]) continue;
-      match = false;
-      break;
+      if (match) return true;
     }
-    if (match) return true;
   }
   g.attrs.erase("shape");
   g.attrs.erase("shape_inputs");

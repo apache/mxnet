@@ -107,6 +107,13 @@ class SgMKLDNNPostQuantizeSelector : public SubgraphSelector {
       return candidates;
     }
   }
+
+  void Reset() override {
+    CHECK_GE(matched_list.size(), 1);
+    auto new_selector = SgMKLDNNPostQuantizeSelector();
+    new_selector.Select(*matched_list[0]);
+    *this = new_selector;
+  }
 };
 
 class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
