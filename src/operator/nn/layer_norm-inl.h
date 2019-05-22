@@ -116,8 +116,13 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   // Calculate mean
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, true>(
-        s, mean_data, req[0], workspace, in_data);
+      if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+        broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, false>(
+          s, mean_data, req[0], workspace, in_data);
+      } else {
+        broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, true>(
+          s, mean_data, req[0], workspace, in_data);
+      }
       Tensor<xpu, 1, DType> mean_data_tensor = mean_data.FlatTo1D<xpu, DType>(s);
       mean_data_tensor /= scalar<DType>(channel_size);
     });
@@ -130,8 +135,13 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   const TBlob centered_out = outputs[0].reshape(red_src_shape);
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, true>(
-        s, std_data, req[0], workspace, centered_out);
+      if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+        broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, false>(
+          s, std_data, req[0], workspace, centered_out);
+      } else {
+        broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, true>(
+          s, std_data, req[0], workspace, centered_out);
+      }
       Tensor<xpu, 1, DType> std_data_tensor = std_data.FlatTo1D<xpu, DType>(s);
       std_data_tensor = F<mshadow_op::square_root>(std_data_tensor / scalar<DType>(channel_size)
                         + scalar<DType>(param.eps));
