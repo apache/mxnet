@@ -62,8 +62,8 @@ pipeline {
     stage("Release Job") {
       steps {
         script {
-          def utils = load('ci/cd/jenkins/Jenkinsfile_utils.groovy')
-          env.MXNET_SHA=utils.get_mxnet_commit_id_for_build()
+          def cd_utils = load('ci/cd/jenkins/Jenkinsfile_utils.groovy')
+          env.MXNET_SHA=cd_utils.get_mxnet_commit_id_for_build()
 
           // Convert mxnet variants to a list
           def mxnet_variants = params.MXNET_VARIANTS.split(',').inject([]) { list, item ->
@@ -85,7 +85,7 @@ pipeline {
           //  - SUCCESS if all pipelines succeed
           //  - UNSTABLE if some (but not all) pipelines fail
           //  - FAILURE if all pipelines fail
-          utils.error_checked_parallel(pipelines)
+          cd_utils.error_checked_parallel(pipelines)
         }
       }
     }

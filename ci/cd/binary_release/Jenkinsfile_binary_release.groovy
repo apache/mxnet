@@ -20,7 +20,7 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-utils = load('ci/cd/jenkins/Jenkinsfile_utils.groovy')
+utils = load('ci/Jenkinsfile_utils.groovy')
 
 def get_pipeline(mxnet_variant, build_fn) {
   return ["${mxnet_variant}": {
@@ -100,8 +100,8 @@ def unittest_py3(mxnet_variant) {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
       def use_nvidia_docker = mxnet_variant.startsWith('cu')
-      utils.unpack_and_bootstrap("mxnet_${mxnet_variant}", get_stash(mxnet_variant), true)
-      utils.docker_run(image, "unittest_ubuntu ${mxnet_variant} python3", use_nvidia_docker)
+      utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_BRANCH, env.MXNET_SHA)
+      utils.docker_run(image, "cd_unittest_ubuntu ${mxnet_variant} python3", use_nvidia_docker)
     }
   }
 }
@@ -113,8 +113,8 @@ def unittest_py2(mxnet_variant) {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
       def use_nvidia_docker = mxnet_variant.startsWith('cu')
-      utils.unpack_and_bootstrap("mxnet_${mxnet_variant}", get_stash(mxnet_variant), true)
-      utils.docker_run(image, "unittest_ubuntu ${mxnet_variant} python", use_nvidia_docker)
+      utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_BRANCH, env.MXNET_SHA)
+      utils.docker_run(image, "cd_unittest_ubuntu ${mxnet_variant} python", use_nvidia_docker)
     }
   }
 }
@@ -124,7 +124,7 @@ def test_gpu_quantization_py2(mxnet_variant) {
   node('restricted-mxnetlinux-gpu-p3') {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
-      utils.unpack_and_bootstrap("mxnet_${mxnet_variant}", get_stash(mxnet_variant))
+      utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_BRANCH, env.MXNET_SHA)
       utils.docker_run(image, "unittest_ubuntu_python2_quantization_gpu", true)
     }
   }
@@ -135,7 +135,7 @@ def test_gpu_quantization_py3(mxnet_variant) {
   node('restricted-mxnetlinux-gpu-p3') {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
-      utils.unpack_and_bootstrap("mxnet_${mxnet_variant}", get_stash(mxnet_variant))
+      utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_BRANCH, env.MXNET_SHA)
       utils.docker_run(image, "unittest_ubuntu_python3_quantization_gpu", true)
     }
   }
@@ -146,7 +146,7 @@ def push(mxnet_variant) {
   node('restricted-mxnetlinux-cpu') {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def deps = (mxnet_variant.endsWith('mkl')? mx_mkldnn_deps : mx_deps).replaceAll(',', '')
-      utils.unpack_and_bootstrap("mxnet_${mxnet_variant}", get_stash(mxnet_variant))
+      utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_BRANCH, env.MXNET_SHA)
       utils.push_artifact(libmxnet, mxnet_variant, is_dynamic_binary, licenses, deps)
     }
   }

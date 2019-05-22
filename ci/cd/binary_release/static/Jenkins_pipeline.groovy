@@ -20,7 +20,7 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-utils = load('ci/cd/jenkins/Jenkinsfile_utils.groovy')
+utils = load('ci/Jenkinsfile_utils.groovy')
 
 // libmxnet location
 libmxnet = 'lib/libmxnet.so'
@@ -42,7 +42,7 @@ binary_release = load('ci/cd/binary_release/Jenkinsfile_binary_release.groovy')
 def build(mxnet_variant) {
   node('restricted-mxnetlinux-cpu') {
     ws("workspace/${workspace_name}/${mxnet_variant}/${env.BUILD_NUMBER}") {
-      utils.bootstrap()
+      utils.init_git(env.MXNET_BRANCH, env.MXNET_SHA)
       utils.docker_run('publish.ubuntu1404_cpu', "build_static_python ${mxnet_variant}", false)
       utils.pack_lib("mxnet_${mxnet_variant}", binary_release.get_stash(mxnet_variant))
     }

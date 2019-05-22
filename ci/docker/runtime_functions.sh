@@ -816,6 +816,50 @@ sanity_check() {
     nosetests-3.4 tests/tutorials/test_sanity_tutorials.py
 }
 
+# Tests libmxnet
+# Parameters:
+# $1 -> mxnet_variant: The variant of the libmxnet.so library
+# $2 -> python_cmd: The python command to use to execute the tests, python or python3
+cd_unittest_ubuntu() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+
+    local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
+    local python_cmd=${2:?"This function requires a python command as the first argument"}
+    
+    local nose_cmd="nosetests-3.4"
+
+    if [[ ${python_cmd} = "python" ]]; then
+        nose_cmd="nosetests-2.7"
+    fi
+
+    $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
+    $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization    
+
+    # https://github.com/apache/incubator-mxnet/issues/11801
+    # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
+        # integrationtest_ubuntu_cpu_dist_kvstore
+    # fi
+
+    if [[ ${mxnet_variant} = cu* ]]; then
+        $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/gpu
+
+        # Adding these here as CI doesn't test all CUDA environments
+        $python_cmd example/image-classification/test_score.py
+        integrationtest_ubuntu_gpu_dist_kvstore
+    fi
+
+    if [[ ${mxnet_variant} = *mkl ]]; then
+        # skipping python 2 testing
+        # https://github.com/apache/incubator-mxnet/issues/14675
+        if [[ ${python_cmd} = "python3" ]]; then 
+            $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/mkl
+        fi
+    fi
+}
+
 
 unittest_ubuntu_python2_cpu() {
     set -ex
@@ -1389,6 +1433,15 @@ deploy_jl_docs() {
 
     # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
     # ...
+}
+
+build_static_python() {
+    set -ex
+    pushd .
+    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    build_ccache_wrappers
+    source tools/staticbuild/build.sh ${mxnet_variant} pip
+    popd
 }
 
 build_static_scala_mkl() {
