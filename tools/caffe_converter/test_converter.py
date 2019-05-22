@@ -90,7 +90,7 @@ def main():
         gpus = [-1]
         default_batch_size = 32
     else:
-        num_gpus = mx.context.nu_gpus()
+        num_gpus = mx.context.num_gpus()
         assert num_gpus, 'At least one GPU is needed to run test_converter in GPU mode'
         default_batch_size = 32 * num_gpus
 
