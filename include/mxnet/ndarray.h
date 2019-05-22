@@ -180,7 +180,9 @@ class NDArray {
    * \brief set the correct shape of NDArray directly from the storage_shape of its own chunk.
    */
   void SetShapeFromChunk() {
-    shape_ = ptr_->storage_shape;
+    if (!(ptr_->storage_shape.ndim() == 1 && ptr_->storage_shape[0] == 0)) {
+      shape_ = ptr_->storage_shape;
+    }
   }
   /*
    * This indicates whether an array is a view of another array (created by
@@ -585,7 +587,7 @@ class NDArray {
    *
    * \return The created NDArray view.
    */
-  static NDArray FromDLPack(const DLManagedTensor* tensor);
+  static NDArray FromDLPack(const DLManagedTensor* tensor, bool transient_handle);
 
   /*!
    * \brief Update ndarray chunk storage handles using existing ndarray storage handles

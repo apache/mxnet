@@ -728,6 +728,23 @@ def test_arange():
 
 
 @with_seed()
+def test_linspace():
+    for i in range(5):
+        start = np.random.rand() * 100
+        stop = np.random.rand() * 100
+        num = np.random.randint(20)
+        gt = np.linspace(start, stop, num)
+        pred = mx.nd.linspace(start, stop, num).asnumpy()
+        assert_almost_equal(pred, gt)
+        gt = np.linspace(start, stop, num, endpoint=False)
+        pred = mx.nd.linspace(start, stop, num, endpoint=False).asnumpy()
+        assert_almost_equal(pred, gt)
+        gt = np.linspace(start, stop, num, dtype="int32")
+        pred = mx.nd.linspace(start, stop, num, dtype="int32").asnumpy()
+        assert_almost_equal(pred, gt)
+
+
+@with_seed()
 def test_order():
     ctx = default_context()
     dat_size = 5
@@ -1667,8 +1684,8 @@ def test_zero_from_numpy():
             mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
     np_array = arrays[0]
     mx_array = mx.nd.from_numpy(np_array)
-    np_array[2, 1] = 0
-    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    assertRaises(ValueError, np_array.__setitem__, (2, 1), 0)
+
     mx_array[2, 1] = 100
     mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
     np_array = np.array([[1, 2], [3, 4], [5, 6]]).transpose()

@@ -94,7 +94,6 @@ context = mx.cpu(hvd.local_rank()) if args.no_cuda else mx.gpu(hvd.local_rank())
 # Step 2: load data
 train_iter, val_iter = get_mnist_iterator(hvd.rank())
 
-
 # Step 3: define network
 def conv_net():
     # placeholder for data
@@ -119,17 +118,10 @@ def conv_net():
     loss = mx.sym.SoftmaxOutput(data=fc2, name='softmax')
     return loss
 
-
-# Step 4: fit the model
 net = conv_net()
 model = mx.mod.Module(symbol=net, context=context)
-optimizer_params = {'learning_rate': args.lr * hvd.size(),
-                    'rescale_grad': 1.0 / args.batch_size}
-opt = mx.optimizer.create('sgd', **optimizer_params)
 
-# Horovod: wrap optimizer with DistributedOptimizer
-opt = hvd.DistributedOptimizer(opt)
-
+# Step 4: initialize parameters
 initializer = mx.init.Xavier(rnd_type='gaussian', factor_type="in",
                              magnitude=2)
 model.bind(data_shapes=train_iter.provide_data,
@@ -144,15 +136,27 @@ if aux_params is not None:
     hvd.broadcast_parameters(aux_params, root_rank=0)
 model.set_params(arg_params=arg_params, aux_params=aux_params)
 
+# Step 5: create optimizer
+optimizer_params = {'learning_rate': args.lr * hvd.size(),
+                    'rescale_grad': 1.0 / args.batch_size}
+opt = mx.optimizer.create('sgd', **optimizer_params)
+
+# Horovod: wrap optimizer with DistributedOptimizer
+opt = hvd.DistributedOptimizer(opt)
+
+# Step 6: fit and train model
+batch_cb = None
+if hvd.rank() == 0:
+    batch_cb = mx.callback.Speedometer(args.batch_size * hvd.size())
 model.fit(train_iter,  # train data
           kvstore=None,  # no kvstore
           eval_data=val_iter,  # validation data
           optimizer=opt,  # use SGD to train
           eval_metric='acc',  # report accuracy during training
-          batch_end_callback=mx.callback.Speedometer(args.batch_size),
+          batch_end_callback=batch_cb,  # report training speed
           num_epoch=args.epochs)  # train for at most 10 dataset passes
 
-# Step 5: evaluate model accuracy
+# Step 7: evaluate model accuracy
 acc = mx.metric.Accuracy()
 model.score(val_iter, acc)
 

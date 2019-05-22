@@ -63,12 +63,17 @@ struct LayerNormParam : public dmlc::Parameter<LayerNormParam> {
   }
 };
 
-
 template<typename xpu>
 void LayerNormCompute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx, const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
+                      const std::vector<TBlob>& outputs);
+
+template<typename xpu>
+void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx, const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
@@ -146,6 +151,12 @@ void LayerNormCompute(const nnvm::NodeAttrs& attrs,
                                                    {kWriteTo}, {outputs[0]});
 }
 
+template<typename xpu>
+void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx, const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs);
+
 /*
 Calculate the gradient of layer normalization.
 We have the following gradient for gamma, beta and x:
@@ -157,10 +168,10 @@ grad_beta = sum(og, exclude_axis)
 grad_x = w - mean(w, axis) - \bar{x} * mean(w * \bar{x}, axis)
 */
 template<typename xpu>
-void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
-                          const OpContext& ctx, const std::vector<TBlob>& inputs,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<TBlob>& outputs) {
+void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx, const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   CHECK_EQ(inputs.size(), 5U);
@@ -203,14 +214,14 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_src_shape,
-                                                             kAddTo, red_dst_shape));
+                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_dst_shape,
+                                                             kAddTo, red_src_shape));
     });
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_exclude_src_shape, kAddTo,
-                                                             red_exclude_dst_shape));
+                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_exclude_dst_shape, kAddTo,
+                                                             red_exclude_src_shape));
     });
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(

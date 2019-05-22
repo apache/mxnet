@@ -118,7 +118,7 @@ CachedOp::CachedOp(
         if (_copy->attr_parser != nullptr) {
           _copy->attr_parser(&(copy_node->attrs));
         }
-        fwd_graph_.outputs.push_back(NodeEntry{copy_node, 0, 0});
+        fwd_graph_.outputs.emplace_back(copy_node, 0, 0);
       } else {
         dedup_out.insert({i, 0});
         fwd_graph_.outputs.push_back(i);
@@ -705,7 +705,7 @@ void CachedOp::StaticRunOps(
           arg_shapes.emplace_back(ndinput->shape());
           arg_dtypes.emplace_back(ndinput->dtype());
         }
-        if (!state.op_states[i]) {
+        if (!config_.static_shape) {
           state.op_states[i] =
               createop[node.source->op()](node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
         }

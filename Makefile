@@ -94,7 +94,7 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -D_GLIBCXX_ASSERTIONS
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
@@ -104,6 +104,11 @@ LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
         LDFLAGS += --coverage
+endif
+
+ifeq ($(USE_NVTX), 1)
+        CFLAGS += -DMXNET_USE_NVTX=1
+        LDFLAGS += -lnvToolsExt
 endif
 
 ifeq ($(USE_TENSORRT), 1)

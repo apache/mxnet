@@ -363,7 +363,7 @@ std::vector<NDArray*> Imperative::Backward(
       auto node = Node::Create();
       node->attrs.op = copy_op;
       node->inputs.push_back(e);
-      graph.outputs.push_back(NodeEntry{node, 0, 0});
+      graph.outputs.emplace_back(node, 0, 0);
     } else {
       graph.outputs.push_back(e);
     }

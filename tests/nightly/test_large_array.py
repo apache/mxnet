@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+from mxnet.test_utils import rand_ndarray, assert_almost_equal
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 
@@ -63,10 +64,10 @@ def test_ndarray_random_randint():
     # check if randint can generate value greater than 2**32 (large)
     low_large_value = 2**32
     high_large_value = 2**34
-    a = nd.random.randint(low_large_value,high_large_value)
+    a = nd.random.randint(low_large_value,high_large_value, dtype=np.int64)
     low = mx.nd.array([low_large_value], dtype='int64')
     high = mx.nd.array([high_large_value], dtype='int64')
-    assert a.__gt__(low) & a.__lt__(high)
+    assert a.__gt__(low) and a.__lt__(high)
 
 
 def test_ndarray_empty():
@@ -86,20 +87,20 @@ def test_elementwise():
 
 
 def test_reduce():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
     assert nd.sum(a).asnumpy() == a.shape[0] * a.shape[1]
 
 
 def test_dot():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
     b = nd.ones(shape=(SMALL_Y, SMALL_Y))
     res = nd.dot(a, b)
     assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
 
 def test_FullyConnected():
-    a = nd.ones(shape=(LARGE_X, SMALL_Y)) 
-    b = nd.ones(shape=(SMALL_Y, SMALL_Y)) 
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.ones(shape=(SMALL_Y, SMALL_Y))
     res = nd.FullyConnected(a, b, num_hidden=b.shape[1], no_bias=True)
     assert np.sum(res[-1].asnumpy() == SMALL_Y) == b.shape[1]
 
@@ -186,6 +187,35 @@ def test_pick():
     res = mx.nd.pick(a,b)
     assert res.shape == b.shape
 
+def test_depthtospace():
+    def numpy_depth_to_space(x, blocksize):
+        b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
+        tmp = np.reshape(x, [b, blocksize, blocksize, c // (blocksize**2), h, w])
+        tmp = np.transpose(tmp, [0, 3, 4, 1, 5, 2])
+        y = np.reshape(tmp, [b, c // (blocksize**2), h * blocksize, w * blocksize])
+        return y
+
+    shape_inp = (LARGE_X, 8, 4, 2)
+    data = rand_ndarray(shape_inp, 'default')
+    data_np = data.asnumpy()
+    expected = numpy_depth_to_space(data_np, 2)
+    output = mx.nd.depth_to_space(data, 2)
+    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
+
+def test_spacetodepth():
+    def numpy_space_to_depth(x, blocksize):
+        b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
+        tmp = np.reshape(x, [b, c, h // blocksize, blocksize, w // blocksize, blocksize])
+        tmp = np.transpose(tmp, [0, 3, 5, 1, 2, 4])
+        y = np.reshape(tmp, [b, c * (blocksize**2), h // blocksize, w // blocksize])
+        return y
+
+    shape_inp = (LARGE_X, 2, 8, 4)
+    data = rand_ndarray(shape_inp, 'default')
+    data_np = data.asnumpy()
+    expected = numpy_space_to_depth(data_np, 2)
+    output = mx.nd.space_to_depth(data, 2)
+    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
 if __name__ == '__main__':
     import nose

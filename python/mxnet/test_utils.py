@@ -81,6 +81,11 @@ def get_rtol(rtol=None):
     # be needed for different device and dtype
     return 1e-5 if rtol is None else rtol
 
+def get_etol(etol=None):
+    """Get default numerical threshold for regression test."""
+    # _TODO: get from env variable, different threshold might
+    # be needed for different device and dtype
+    return 0 if etol is None else etol
 
 def random_arrays(*shapes):
     """Generate some random numpy arrays."""
@@ -266,7 +271,7 @@ def assign_each2(input1, input2, function):
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
-                        shuffle_csr_indices=False):
+                        shuffle_csr_indices=False, ctx=None):
     """Generate a random sparse ndarray. Returns the ndarray, value(np) and indices(np)
 
     Parameters
@@ -307,6 +312,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     >>> assert(row4nnz == 2*row3nnz)
 
     """
+    ctx = ctx if ctx else default_context()
     density = rnd.rand() if density is None else density
     dtype = default_dtype() if dtype is None else dtype
     distribution = "uniform" if distribution is None else distribution
@@ -321,7 +327,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
             idx_sample = rnd.rand(shape[0])
             indices = np.argwhere(idx_sample < density).flatten()
         if indices.shape[0] == 0:
-            result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype)
+            result = mx.nd.zeros(shape, stype='row_sparse', dtype=dtype, ctx=ctx)
             return result, (np.array([], dtype=dtype), np.array([]))
         # generate random values
         val = rnd.rand(indices.shape[0], *shape[1:]).astype(dtype)
@@ -332,17 +338,17 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         if modifier_func is not None:
             val = assign_each(val, modifier_func)
 
-        arr = mx.nd.sparse.row_sparse_array((val, indices), shape=shape, dtype=dtype)
+        arr = mx.nd.sparse.row_sparse_array((val, indices), shape=shape, dtype=dtype, ctx=ctx)
         return arr, (val, indices)
     elif stype == 'csr':
         assert len(shape) == 2
         if distribution == "uniform":
             csr = _get_uniform_dataset_csr(shape[0], shape[1], density,
                                            data_init=data_init,
-                                           shuffle_csr_indices=shuffle_csr_indices, dtype=dtype)
+                                           shuffle_csr_indices=shuffle_csr_indices, dtype=dtype).as_in_context(ctx)
             return csr, (csr.indptr, csr.indices, csr.data)
         elif distribution == "powerlaw":
-            csr = _get_powerlaw_dataset_csr(shape[0], shape[1], density=density, dtype=dtype)
+            csr = _get_powerlaw_dataset_csr(shape[0], shape[1], density=density, dtype=dtype).as_in_context(ctx)
             return csr, (csr.indptr, csr.indices, csr.data)
         else:
             assert(False), "Distribution not supported: %s" % (distribution)
@@ -351,15 +357,17 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         assert(False), "unknown storage type"
         return False
 
-def rand_ndarray(shape, stype='default', density=None, dtype=None,
-                 modifier_func=None, shuffle_csr_indices=False, distribution=None):
+def rand_ndarray(shape, stype='default', density=None, dtype=None, modifier_func=None,
+                 shuffle_csr_indices=False, distribution=None, ctx=None):
+    """Generate a random sparse ndarray. Returns the generated ndarray."""
+    ctx = ctx if ctx else default_context()
     if stype == 'default':
-        arr = mx.nd.array(random_arrays(shape), dtype=dtype)
+        arr = mx.nd.array(random_arrays(shape), dtype=dtype, ctx=ctx)
     else:
         arr, _ = rand_sparse_ndarray(shape, stype, density=density,
                                      modifier_func=modifier_func, dtype=dtype,
                                      shuffle_csr_indices=shuffle_csr_indices,
-                                     distribution=distribution)
+                                     distribution=distribution, ctx=ctx)
     return arr
 
 
@@ -571,8 +579,55 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
 
     raise AssertionError(msg)
 
+
 def assert_allclose(a, b, rtol=1e-07, atol=0, equal_nan=True):
     assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+
+
+def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False):
+    """Test that two numpy arrays are almost equal within given error rate. Raise exception message if not.
+
+    Parameters
+    ----------
+    a : np.ndarray
+    b : np.ndarray
+    threshold : None or float
+        The checking threshold. Default threshold will be used if set to ``None``.
+    etol : None or float
+        The error rate threshold. If etol is float, return true if error_rate < etol even if
+        any error is found.
+    """
+    rtol = get_rtol(rtol)
+    atol = get_atol(atol)
+    etol = get_etol(etol)
+    if etol:
+        equals = np.isclose(a, b, rtol=rtol, atol=atol)
+        err = 1 - np.count_nonzero(equals) / equals.size
+        if err > etol:
+            #if True:
+            index, rel = find_max_violation(a, b, rtol, atol)
+            np.set_printoptions(threshold=4, suppress=True)
+            msg = npt.build_err_msg([a, b],
+                                    err_msg="Error %f exceeds tolerance rtol=%f, atol=%f, etol=%f."
+                                            " Error_rate=%f. Location of maximum error:%s, a=%f, b=%f"
+                                    % (rel, rtol, atol, etol, err, str(index), a[index], b[index]),
+                                    names=names)
+            raise AssertionError(msg)
+
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            return
+    else:
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            return
+        index, rel = find_max_violation(a, b, rtol, atol)
+        np.set_printoptions(threshold=4, suppress=True)
+        msg = npt.build_err_msg([a, b],
+                                err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
+                                        " Location of maximum error:%s, a=%f, b=%f"
+                                % (rel, rtol, atol, str(index), a[index], b[index]),
+                                names=names)
+        raise AssertionError(msg)
+
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     """Test that two NumPy arrays are almost equal (ignoring NaN in either array).

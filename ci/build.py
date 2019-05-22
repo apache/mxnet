@@ -331,6 +331,7 @@ def container_run(platform: str,
                 ret = wait_result.get('StatusCode', 200)
                 if ret != 0:
                     logging.error("Container exited with an error 😞")
+                    logging.info("Executed command for reproduction:\n\n%s\n", " ".join(sys.argv))
                 else:
                     logging.info("Container exited with success 👍")
             except Exception as e:
