@@ -157,9 +157,11 @@ def np_compat(active=True):
 
 
 def use_np_compat(func):
-    """Wraps a function with an activated NumPy-compatibility scope. This ensures
-    that the execution of the function is guaranteed with NumPy compatible semantics,
-    such as zero-dim and zero size tensors.
+    """A decorator wrapping a function or class with an activated NumPy-compatibility scope.
+    When `func` is a function, this ensures that the execution of the function is scoped with NumPy
+    compatible-semantics, such as the support for zero-dim and zero size tensors. When
+    `func` is a class, it ensures that all the methods, static functions, and properties
+    of the class are executed with the NumPy-compatible semantics.
 
     Example::
         import mxnet as mx
@@ -168,14 +170,40 @@ def use_np_compat(func):
             return mx.nd.ones(())
         print(scalar_one())
 
+        @np.use_np_compat
+        class ScalarTensor(object):
+            def __init__(self, val=None):
+                if val is None:
+                    val = ScalarTensor.random().value
+                self._scalar = mx.nd.ones(()) * val
+
+            def __repr__(self):
+                print("Is __repr__ numpy compatible? {}!".format(str(np.is_np_compat())))
+                return str(self._scalar.asnumpy())
+
+            @staticmethod
+            def random():
+                val = mx.nd.random.uniform().asnumpy().item()
+                return ScalarTensor(val)
+
+            @property
+            def value(self):
+                print("Is value property numpy compatible? {}!".format(str(np.is_np_compat())))
+                return self._scalar.asnumpy().item()
+
+
+        print("Is global scope numpy compatible? {}!".format(str(np.is_np_compat())))
+        scalar_tensor = ScalarTensor()
+        print(scalar_tensor)
+
     Parameters
     ----------
-    func : a user-provided callable function to be scoped by the NumPy compatibility state.
+    func : a user-provided callable function or class to be scoped by the NumPy compatibility state.
 
     Returns
     -------
-    Function
-        A function for wrapping the user functions in the NumPy compatibility scope.
+    Function or class
+        A function or class wrapped in the NumPy compatibility scope.
     """
 
     if inspect.isclass(func):

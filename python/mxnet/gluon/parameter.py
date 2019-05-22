@@ -31,6 +31,7 @@ from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
 from .utils import _indent, _brief_print_list
+from ..util import is_np_compat
 from .. import numpy as _mx_np
 
 # pylint: disable= invalid-name
@@ -102,8 +103,7 @@ class Parameter(object):
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
-                 differentiable=True, stype='default', grad_stype='default',
-                 is_np_compat=False):
+                 differentiable=True, stype='default', grad_stype='default'):
         self._var = None
         self._data = None
         self._grad = None
@@ -131,7 +131,6 @@ class Parameter(object):
             "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, stype)
         self._grad_stype = grad_stype
         self._stype = stype
-        self._is_np_compat = is_np_compat
 
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
@@ -284,7 +283,7 @@ class Parameter(object):
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
                 # TODO(junwu): use np random operators when available
-                if self._is_np_compat:
+                if is_np_compat():
                     data = data.as_np_ndarray()  # convert to np.ndarray
 
             self._init_impl(data, ctx)
@@ -311,7 +310,7 @@ class Parameter(object):
         self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
                                     stype=self._grad_stype) for i in self._data]
         # TODO(junwu): use np.zeros
-        if self._is_np_compat:
+        if is_np_compat():
             self._grad = [arr.as_np_ndarray() for arr in self._grad]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
@@ -560,7 +559,7 @@ class Parameter(object):
             self._var = symbol.var(self.name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init, stype=self._stype)
-            if self._is_np_compat:
+            if is_np_compat():
                 self._var = self._var.as_np_ndarray()
         return self._var
 
