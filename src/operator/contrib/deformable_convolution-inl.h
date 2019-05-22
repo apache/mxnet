@@ -61,9 +61,9 @@ struct DeformableConvolutionParam : public dmlc::Parameter<DeformableConvolution
   mxnet::TShape stride;
   mxnet::TShape dilate;
   mxnet::TShape pad;
-  uint32_t num_filter;
-  uint32_t num_group;
-  uint32_t num_deformable_group;
+  index_t num_filter;
+  index_t num_group;
+  index_t num_deformable_group;
   uint64_t workspace;
   bool no_bias;
   dmlc::optional<int> layout;
@@ -232,7 +232,7 @@ class DeformableConvolutionOp : public Operator {
                               in_grad[conv::kData].shape_, col_buffer.shape_,
                               param_.kernel, param_.pad, param_.stride,
                               param_.dilate, param_.num_deformable_group,
-                              in_grad[conv::kOffset].dptr<DType>() + n*input_offset_dim_);
+                              in_grad[conv::kOffset].dptr<DType>() + n * input_offset_dim_);
 
       // gradient w.r.t. input data
       deformable_col2im(s, col_buffer.dptr<DType>(),
