@@ -29,7 +29,7 @@ DEPS_PATH=$2
 >&2 echo "Setting CUDA versions for $VARIANT"
 if [[ $VARIANT == cu101* ]]; then
     CUDA_VERSION='10.1.105-1'
-    CUDA_PATCH_VERSION='10.1.105-1'
+    CUDA_PATCH_VERSION='10.1.0.105-1'
     LIBCUDA_VERSION='418.39-0ubuntu1'
     LIBCUDNN_VERSION='7.5.1.10-1+cuda10.1'
     LIBNCCL_VERSION='2.4.2-1+cuda10.1'
