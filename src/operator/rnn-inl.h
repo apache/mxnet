@@ -969,9 +969,10 @@ class RNNOp {
                                     hy_ptr,
                                     cy_ptr,
                                     param_.mode);
-      #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
+        #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
+        }
+        #endif
       }
-      #endif
     }
   }
 
