@@ -112,34 +112,13 @@ MXNET_MKL_BINARY_MATH_FUNC(mul, Mul);
 MXNET_MKL_BINARY_MATH_FUNC(pow, Pow);
 MXNET_MKL_BINARY_MATH_FUNC(hypot, Hypot);
 
-
-template <typename DType>
-MSHADOW_XINLINE static void sub_(index_t n, DType *in, DType b, DType *dst) {
-  for (index_t i = 0; i < n; i++)
-    dst[i] = in[i] - b;
-}
-
-template <typename DType>
-MSHADOW_XINLINE static void div_(index_t n, DType *in, DType b, DType *dst) {
-  for (index_t i = 0; i < n; i++)
-    dst[i] = in[i] / b;
-}
-
 template <typename DType>
 MSHADOW_XINLINE static void sum_(index_t n, DType *in, DType *dst) {
-  // dst[0] = cblas_sasum(n, in, 1);
   DType sum = 0.0f;
   for (index_t i = 0; i < n; i++)
     sum += in[i];
 
   dst[0] = sum;
-}
-
-template <typename DType>
-MSHADOW_XINLINE static void max_(index_t n, DType *in, DType *dst) {
-  dst[0] = in[0];
-  for (index_t i = 1; i < n; i++)
-    dst[0] = (dst[0] < in[i]) ? in[i] : dst[0];
 }
 
 // LayerNorm on the last dimension
@@ -165,7 +144,7 @@ MSHADOW_XINLINE static void LayerNormLastDim(index_t m,
 #if !defined(_MSC_VER)
 #pragma omp simd
 #endif
-    for (int j = 0; j < n; j++) {
+    for (index_t j = 0; j < n; j++) {
       out_offset[j] = in_offset[j] - mean[i];
       var[i] += out_offset[j] * out_offset[j];
     }
@@ -173,30 +152,9 @@ MSHADOW_XINLINE static void LayerNormLastDim(index_t m,
 #if !defined(_MSC_VER)
 #pragma omp simd
 #endif
-    for (int j = 0; j < n; j++) {
+    for (index_t j = 0; j < n; j++) {
       out_offset[j] = out_offset[j] * gamma[j] / var[i] + beta[j];
     }
-  }
-}
-
-template <typename DType>
-MSHADOW_XINLINE static void LogSoftmaxLastDim(index_t m,
-                                              index_t n,
-                                              DType *a,
-                                              DType *b) {
-  auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-#pragma omp parallel for num_threads(nthreads)
-  for (index_t i = 0; i < m; i++) {
-    DType* in_offset = a + i * n;
-    DType* out_offset = b + i * n;
-
-    DType b, logsum;
-    max_(n, in_offset, &b);
-    sub_(n, in_offset, b, out_offset);
-    exp::Vectorize(n, out_offset, out_offset);
-    sum_(n, out_offset, &logsum);
-    logsum = b + logf(logsum);
-    sub_(n, in_offset, logsum, out_offset);
   }
 }
 
