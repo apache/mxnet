@@ -125,6 +125,8 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .add_argument("rhs_max", "NDArray-or-Symbol", "6th input");
 
 
+// TODO(zhangrong): remove below comment once the accuracy issue of this op is addressed.
+#if 0
 NNVM_REGISTER_OP(elemwise_add)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
   nnvm::NodePtr node = nnvm::Node::Create();
@@ -136,6 +138,7 @@ NNVM_REGISTER_OP(elemwise_add)
   }
   return node;
 });
+#endif
 
 }  // namespace op
 }  // namespace mxnet

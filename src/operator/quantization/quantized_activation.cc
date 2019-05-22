@@ -115,6 +115,8 @@ the float32 data into int8.
 .add_argument("max_data", "NDArray-or-Symbol", "Maximum value of data.")
 .add_arguments(ActivationParam::__FIELDS__());
 
+// TODO(zhiyuan): remove below comment once the accuracy issue of this op is addressed.
+#if 0
 NNVM_REGISTER_OP(Activation)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
   ActivationParam param;
@@ -133,6 +135,7 @@ NNVM_REGISTER_OP(Activation)
   }
   return node;
 });
+#endif
 
 }  // namespace op
 }  // namespace mxnet
