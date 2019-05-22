@@ -279,6 +279,7 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.03})
 
 ```python
 # Use Accuracy as the evaluation metric.
+epoch = 10
 metric = mx.metric.Accuracy()
 softmax_cross_entropy_loss = gluon.loss.SoftmaxCrossEntropyLoss()
 

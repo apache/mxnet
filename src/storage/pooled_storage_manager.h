@@ -84,6 +84,7 @@ class GPUPooledStorageManager final : public StorageManager {
 
  private:
   void DirectFreeNoLock(Storage::Handle handle) {
+    mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
     cudaError_t err = cudaFree(handle.dptr);
     size_t size = RoundAllocSize(handle.size);
     // ignore unloading error, as memory has already been recycled
@@ -128,10 +129,17 @@ class GPUPooledStorageManager final : public StorageManager {
 };  // class GPUPooledStorageManager
 
 void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
+  // Set dptr to nullptr when handle size is 0.
+  if (handle->size == 0) {
+    handle->dptr = nullptr;
+    return;
+  }
+
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = RoundAllocSize(handle->size);
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
+    mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
     size_t free, total;
     cudaMemGetInfo(&free, &total);
     if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
@@ -153,6 +161,10 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
 }
 
 void GPUPooledStorageManager::Free(Storage::Handle handle) {
+  // Do nothing if dptr is nullptr. Otherwise, nullptr may be reused
+  // which can cause illegal memory access error.
+  if (handle.dptr == nullptr) return;
+
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   size_t size = RoundAllocSize(handle.size);
   auto&& reuse_pool = memory_pool_[size];
@@ -252,6 +264,7 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   }
 
   void DirectFreeNoLock(Storage::Handle handle) {
+    mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
     cudaError_t err = cudaFree(handle.dptr);
     size_t size = get_size(get_bucket(handle.size));
     // ignore unloading error, as memory has already been recycled
@@ -283,11 +296,18 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
 };  // class GPUPooledRoundedStorageManager
 
 void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
+  // Set dptr to nullptr when handle size is 0.
+  if (handle->size == 0) {
+    handle->dptr = nullptr;
+    return;
+  }
+
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   int bucket = get_bucket(handle->size);
   size_t size = get_size(bucket);
   auto&& reuse_pool = memory_pool_[bucket];
   if (reuse_pool.size() == 0) {
+    mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
     size_t free, total;
     cudaMemGetInfo(&free, &total);
     if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
@@ -308,6 +328,10 @@ void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
 }
 
 void GPUPooledRoundedStorageManager::Free(Storage::Handle handle) {
+  // Do nothing if dptr is nullptr. Otherwise, nullptr may be reused
+  // which can cause illegal memory access error.
+  if (handle.dptr == nullptr) return;
+
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
   int bucket = get_bucket(handle.size);
   auto&& reuse_pool = memory_pool_[bucket];
