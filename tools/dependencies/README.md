@@ -49,38 +49,38 @@ MXNet is built on top of many dependencies. Managing those dependencies could be
 
 ## Overview
 
-The dependencies could be categorized by several groups: BLAS libraries, CPU-based performance boost library i.e. MKLDNN and GPU-based performance boost library including CUDA, cuDNN, NCCL. and others including OpenCV, Numpy, S3-related, PS-lite dependencies. The list below shows all the dependencies and their version. Except for CUDA, cuDNN, NCCL, we statically link those dependencies into libmxnet.so when we build PyPi package. The user doesn't need to worry about it.
-
+The dependencies could be categorized by several groups: BLAS libraries, CPU-based performance boost library, i.e. MKLDNN and GPU-based performance boosting library including CUDA, cuDNN, NCCL. and others including OpenCV, Numpy, S3-related, PS-lite dependencies. The list below shows all the dependencies and their version. Except for CUDA, cuDNN, NCCL which the user is required to install on their environments, we statically link those dependencies into libmxnet.so when we build PyPi package. By doing this, the user can take advantage of these dependencies without being worry about it.
 
 | Dependencies  | MXNet Version |
 | :------------: |:-------------:| 
-|MKLDNN| 0.19      | 
-|CUDA| 10.1      |
-|cuDNN| 7.5.1     |
-|NCCL| 2.4.2     |
+|OpenBLAS| 0.3.3 |
+|MKLDNN| 0.19 | 
+|CUDA| 10.1 |
+|cuDNN| 7.5.1 |
+|NCCL| 2.4.2 |
 |numpy| >1.16.0,<2.0.0 |
 |request| >=2.20.0,< 3.0.0 |
 |graphviz| <0.9.0,>=0.8.1 |
-|OpenCV|3.4.2|
-|zlib|1.2.6|
-|libjpeg-turbo|1.5.90|
-|libpng|1.6.35|
-|libjpeg-turbo|2.0.2|
-|libtiff|4-0-10|
-|eigen|3.3.4|
-|libcurl|7.61.0|
-|libssl-dev|1.0.2l|
-|zmq|4.2.2|
-|protobuf|3.5.1|
-|lz4|r130|
-|cityhash|1.1.1|
-|openssl|1.1.1b|
+|OpenCV| 3.4.2 |
+|zlib| 1.2.6 |
+|libjpeg-turbo| 2.0.2 |
+|libpng| 1.6.35 |
+|libtiff| 4-0-10 |
+|eigen| 3.3.4 |
+|libcurl| 7.61.0 |
+|libssl-dev| 1.1.1b |
+|zmq| 4.2.2 |
+|protobuf| 3.5.1 |
+|lz4| r130 |
+|cityhash| 1.1.1 |
 
-# MKL, MKLDNN
+## How to update them?
 
-@pengzhao-intel (https://github.com/apache/incubator-mxnet/commits?author=pengzhao-intel) and his team are tracking and updating these versions.
+### MKL, MKLDNN
 
-# CUDA, cuDNN, NCCL
+@pengzhao-intel (https://github.com/apache/incubator-mxnet/commits?author=pengzhao-intel) and his team are tracking and updating these versions. Kudos to them!
+
+### CUDA, cuDNN, NCCL
 #### 1. Environment Setup
 ```
 # Take Ubuntu 16.04 for example
@@ -109,7 +109,7 @@ sudo apt-get install -y git \
     openjdk-8-jdk
     
 # CUDA installation 
-# take CUDA 10 for example
+# Take CUDA 10 for example
 wget https://developer.nvidia.com/compute/cuda/10.0/Prod/local_installers/cuda_10.0.130_410.48_linux
 chmod +x cuda_10.0.130_410.48_linux && sudo ./cuda_10.0.130_410.48_linux
 # Installation except:
@@ -145,7 +145,7 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 nvidia-smi
 
 # cuDNN Setup 
-# take cuDNN 7.5.0 with CUDA 10 for example
+# Take cuDNN 7.5.0 with CUDA 10 for example
 # https://developer.nvidia.com/rdp/cudnn-download
 # Register with NVIDIA and download cudnn-10.0-linux-x64-v7.5.0.56.tgz
 # scp it to your instance
@@ -154,7 +154,7 @@ tar -xvzf cudnn-10.0-linux-x64-v7.5.0.56.tgz
 sudo cp cuda/include/cudnn.h /usr/local/cuda/include
 sudo cp cuda/lib64/libcudnn* /usr/local/cuda/lib64
 sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
-# check cuDNN version
+# Check cuDNN version
 cat /usr/local/cuda/include/cudnn.h | grep CUDNN_MAJOR -A 2 
 # #define CUDNN_MAJOR 7
 # #define CUDNN_MINOR 5
@@ -171,35 +171,37 @@ cat /usr/local/cuda/include/cudnn.h | grep CUDNN_MAJOR -A 2
 sudo dpkg -i nccl-repo-ubuntu1604-2.4.2-ga-cuda10.0_1-1_amd64.deb
 sudo apt-key add /var/nccl-repo-2.4.2-ga-cuda10.0/7fa2af80.pub
 sudo apt update
-# we will check the nccl version later
 sudo apt install libnccl2 libnccl-dev
+# we will check the NCCL version later
 ```
 #### 2. Build 
 ```
-# clone MXNet repo
+# Clone MXNet repo
 git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd incubator-mxnet
-# make sure you pin to specific commit for all the performance sanity check to make fair comparison
-# make change on tools/setup_gpu_build_tools.sh
-# to upgrade CUDA version, please refer to PR #14887, make sure you add new makefile and right debs CUDA uses on the website http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/
+# Make sure you pin to specific commit for all the performance sanity check to make fair comparison
+# Make corresponding change on tools/setup_gpu_build_tools.sh
+# to upgrade CUDA version, please refer to PR #14887.
+# Make sure you add new makefile and right debs CUDA uses on the website
+# http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/
 
-# build PyPi package
+# Build PyPi package
 tools/staticbuild/build.sh cu100mkl pip
 
-# wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
+# Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
-# install python frontend
+# Install python frontend
 cd python
 pip install -e . --pre
-# test MXNet
+# Test MXNet
 >>> import mxnet as mx
 >>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
 >>> exit()
 
-# test nccl version
+# Test NCCL version
 export NCCL_DEBUG=VERSION
 vim tests/python/gpu/test_nccl.py
-# remove @unittest.skip("Test requires NCCL library installed and enabled during build") then run
+# Remove @unittest.skip("Test requires NCCL library installed and enabled during build") then run
 nosetests --verbose tests/python/gpu/test_nccl.py
 # test_nccl.test_nccl_pushpull ... NCCL version 2.4.2+cuda10.0
 # ok
@@ -209,54 +211,53 @@ nosetests --verbose tests/python/gpu/test_nccl.py
 OK
 ```
 #### 3. Performance Sanity Check
-We will test 3 basic models
+We will test against 3 basic models
 ###### ResNet50 with ImageNet
 ```
-# please configure aws client before this
-aws s3 sync s3://aws-ml-platform-datasets/imagenet/pass-through/ ~/data/
-# install prerequisite package
+# Download the ImageNet on http://image-net.org/download and make record file
+# Install prerequisite package
 pip2 install psutil --user
 pip2 install pandas --upgrade --user
-pip install gluoncv==0.2.0b20180625 --user
-# clone the testing script
+pip install gluoncv==0.2.0b20180625
+# Clone the testing script
 git clone https://github.com/rahul003/deep-learning-benchmark-mirror.git
 # command 
-python2 benchmark_runner.py --framework mxnet --metrics-policy metrics_parameters_images_top_1 --task-name metrics_parameters_images_top_1 --metrics-suffix test --num-gpus 8 --command-to-execute 'python mxnet_benchmark/train_imagenet.py --use-rec --batch-size 128 --dtype float32 --num-data-workers 40 --num-epochs 3 --gpus 0,1,2,3,4,5,6,7 --lr 0.4 --warmup-epochs 5 --last-gamma --mode symbolic --model resnet50_v1b --rec-train /home/ubuntu/data/train-passthrough.rec --rec-train-idx /home/ubuntu/data/train-passthrough.idx --rec-val /home/ubuntu/data/val-passthrough.rec --rec-val-idx /home/ubuntu/data/val-passthrough.idx' --data-set MNIST
+python2 benchmark_runner.py --framework mxnet --metrics-policy metrics_parameters_images_top_1 --task-name metrics_parameters_images_top_1 --metrics-suffix test --num-gpus 8 --command-to-execute 'python mxnet_benchmark/train_imagenet.py --use-rec --batch-size 128 --dtype float32 --num-data-workers 40 --num-epochs 3 --gpus 0,1,2,3,4,5,6,7 --lr 0.4 --warmup-epochs 5 --last-gamma --mode symbolic --model resnet50_v1b --rec-train /home/ubuntu/data/train-passthrough.rec --rec-train-idx /home/ubuntu/data/train-passthrough.idx --rec-val /home/ubuntu/data/val-passthrough.rec --rec-val-idx /home/ubuntu/data/val-passthrough.idx' --data-set data
 # if you want to run above command multiple times, remember to delete log file
 rm metrics_parameters_images_top_1.log
 ```
 The throughput should be around `2800`
 ###### LSTM training with PTB
 ```
-# make sure you install prerequisite package: psutil, pandas
-# download testing script
+# Make sure you install prerequisite package: psutil, pandas
+# Download testing script
 git clone https://github.com/awslabs/deeplearning-benchmark.git
 # command
-python2 benchmark_driver.py --framework mxnet --task-name mkl_lstm_ptb_symbolic —num-gpus 1 --epochs 10 --metrics-suffix test --kvstore local
-# if you want to run above command twice, remember to delete log file
+python2 benchmark_driver.py --framework mxnet --task-name mkl_lstm_ptb_symbolic --num-gpus 1 --epochs 10 --metrics-suffix test --kvstore local
+# If you want to run above command twice, remember to delete log file
 rm mkl_lstm_ptb_symbolic.log
 ```
 The throughput should be around `1000`
 ###### MLP with MNIST
 ```
-# make sure you install prerequisite package: psutil, pandas
-# download testing script
+# Make sure you install prerequisite package: psutil, pandas
+# Download testing script
 git clone https://github.com/awslabs/deeplearning-benchmark.git
-# command
+# Command
 python2 benchmark_driver.py --framework mxnet --task-name dependency_update_mlp --num-gpus 1 --epochs 10 --metrics-suffix test
-# if you want to run above command twice, remember to delete log file
+# If you want to run above command twice, remember to delete log file
 rm dependency_update_mlp.log
 ```
 The throughput should be around `4400`
 
 #### 4. Raise a PR
-1. update the tools/setup_gpu_build_tools.sh please refer to PR [#14988](https://github.com/apache/incubator-mxnet/pull/14988), [#14887](https://github.com/apache/incubator-mxnet/pull/14887/files)
-2. (optional) update the CI-related configuration/shell script/Dockerfile. Please refer to PR [#14986](https://github.com/apache/incubator-mxnet/pull/14986/files), [#14950](https://github.com/apache/incubator-mxnet/pull/14950/files)
+1. Update the tools/setup_gpu_build_tools.sh please refer to PR [#14988](https://github.com/apache/incubator-mxnet/pull/14988), [#14887](https://github.com/apache/incubator-mxnet/pull/14887/files)
+2. (optional) Update the CI-related configuration/shell script/Dockerfile. Please refer to PR [#14986](https://github.com/apache/incubator-mxnet/pull/14986/files), [#14950](https://github.com/apache/incubator-mxnet/pull/14950/files)
 
 #### 5. CI Test
 1. Our CI would test PyPi and Scala publish of latest CUDA version i.e. mxnet-cu101mkl
 
-# numpy, requests, graphviz (python dependencies)
+### numpy, requests, graphviz (python dependencies)
 1. Please refer to [#14588](https://github.com/apache/incubator-mxnet/pull/14588/files) and make sure the version have both of upper bound and lower bound
 #### Checklist
 - [ ] Python/setup.py
@@ -267,9 +268,9 @@ The throughput should be around `4400`
 - [ ] ci/qemu/mxnet_requirements.txt
 - [ ] docs/install/requirements.txt 
 
-2. build from source to do sanity check
+2. Build from source to do sanity check
 ```
-# compile mxnet to get libmxnet.so
+# Compile mxnet to get libmxnet.so
 pip install -e . --pre
 python
 >>> import mxnet as mx
@@ -278,7 +279,7 @@ python
 <NDArray 1x2 @cpu(0)>
 ```
 
-# OpenCV and its dependencies: zlib, libjpeg-turbo, libpng, libtiff, eigen
+### OpenCV and its dependencies: zlib, libjpeg-turbo, libpng, libtiff, eigen
 
 #### Update the build script
 1. Find the library under `tools/dependencies` and update the version.
@@ -313,12 +314,12 @@ sudo apt-get install -y git \
 ```
 2. Build PyPi package
 ```
-# update the dependency under tools/dependencies, then
+# Update the dependency under tools/dependencies, then
 tools/staticbuild/build.sh mkl pip
 
-# wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
+# Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
-# install python frontend
+# Install python frontend
 cd python
 pip3 install -e . --pre
 # test MXNet
@@ -337,7 +338,7 @@ pip3 install -e . --pre
 # time the performance of for loop and compare it to original version
 ```
 
-# Other dependencies under tools/dependencies
+### Other dependencies under tools/dependencies
 
 #### Update the build script
 1. Find the library under `tools/dependencies` and update the version.
@@ -372,15 +373,15 @@ sudo apt-get install -y git \
 ```
 2. Build PyPi package
 ```
-# update the dependency under tools/dependencies, then
+# Update the dependency under tools/dependencies, then
 tools/staticbuild/build.sh mkl pip
 
-# wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
+# Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
-# install python frontend
+# Install python frontend
 cd python
 pip3 install -e . --pre
-# test MXNet
+# Test MXNet
 >>> import mxnet as mx
 >>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
 >>> exit()
