@@ -864,9 +864,12 @@ def test_shuffle():
     testSmall(mx.nd.arange(0, 3), 100, 40000)
     testSmall(mx.nd.arange(0, 9).reshape((3, 3)), 100, 40000)
     testSmall(mx.nd.arange(0, 18).reshape((3, 2, 3)), 100, 40000)
+    testSmall(mx.nd.arange(0, 10), 100, 40000)
     # Test larger arrays
     testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
     testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
+    testLarge(mx.nd.arange(0, 100000), 10)
+
 
 @with_seed()
 def test_randint():
