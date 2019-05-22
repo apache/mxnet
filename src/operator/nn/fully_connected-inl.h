@@ -180,8 +180,8 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
       small = ReduceAxesShapeImpl(grad_blob.shape_, dmlc::optional<mxnet::TShape>(x), true, false);
     }
     ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false,
-                          mshadow_op::identity>(ctx, {grad_blob}, req,
-                                                {gbias_blob}, small);
+                          mshadow_op::identity>(ctx, {grad_blob}, {req[fullc::kBias]},
+                                                {in_grad[fullc::kBias]}, small);
   }
   // gradient of data
   // Legacy approach shown here for comparison:
