@@ -125,7 +125,8 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .add_argument("rhs_max", "NDArray-or-Symbol", "6th input");
 
 
-// TODO(zhangrong): remove below comment once the accuracy issue of this op is addressed.
+// TODO(zhangrong): need extra condition check if there's benefited if it's switched on
+// Since it's not compute-intensive.
 #if 0
 NNVM_REGISTER_OP(elemwise_add)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {

@@ -115,7 +115,8 @@ the float32 data into int8.
 .add_argument("max_data", "NDArray-or-Symbol", "Maximum value of data.")
 .add_arguments(ActivationParam::__FIELDS__());
 
-// TODO(zhiyuan): remove below comment once the accuracy issue of this op is addressed.
+// TODO(zhiyuan): need extra condition check if there's benefited if it's switched on
+// Since it's not compute-intensive.
 #if 0
 NNVM_REGISTER_OP(Activation)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
