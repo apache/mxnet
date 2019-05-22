@@ -308,4 +308,54 @@ def main_wrapper(args) {
     }
   }
 }
+
+// pushes artifact to repository
+def push_artifact(libmxnet_path, variant, is_dynamic = true, license_paths = '', dependency_paths = '') {
+  if(license_paths == null) license_paths = ''
+  if(dependency_paths == null) dependency_paths = ''
+  def libtype = is_dynamic ? 'dynamic' : 'static'
+  sh "./ci/cd/utils/artifact_repository.py --push --verbose --${libtype} --variant ${variant} --libmxnet ${libmxnet_path} --licenses ${license_paths} --dependencies ${dependency_paths}"
+}
+
+// pull artifact from repository
+def pull_artifact(variant, is_dynamic = true, destination = '') {
+  def libtype = is_dynamic ? 'dynamic' : 'static'
+  sh "./ci/cd/utils/artifact_repository.py --pull --verbose --${libtype} --variant ${variant} --destination ${destination}"
+}
+
+// pulls artifact from repository and places files in the appropriate directories
+def restore_artifact(variant, is_dynamic = false) {
+  pull_artifact(variant, is_dynamic, 'mxnet_artifact')
+  // move libraries to lib directory
+
+  dir('lib') {
+    sh "mv ../mxnet_artifact/libmxnet.so ."
+    if (fileExists('../mxnet_artifact/dependencies')) {
+      sh """find "../mxnet_artifact/dependencies" -type f -name "*.so*" -exec mv {} . \\;"""
+      sh "ls ."
+    }
+  }
+
+  dir('cd_misc') {
+    if (fileExists('../mxnet_artifact/dependencies')) {
+      // All library files (*.so*) should have be moved
+      // to the lib directory. If anything is left, it will be
+      // other supporting files (header files, etc.)
+      sh """find "../mxnet_artifact/dependencies" -type f -exec mv {} . \\;"""
+      sh "ls ."
+    }
+  }
+
+  dir('licenses') {
+    if (fileExists('../mxnet_artifact/licenses')) {
+      sh """find "../mxnet_artifact/licenses" -type f -exec mv {} . \\;"""
+      sh "ls ."
+    }
+  }
+
+  dir('mxnet_artifact') {
+    deleteDir()
+  }
+}
+
 return this
