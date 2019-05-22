@@ -28,10 +28,11 @@
 #include "../operator_common.h"
 #include "mxnet/op_attr_types.h"
 
-namespace {
 
-using namespace mxnet;
-using namespace mxnet::op;
+
+namespace mxnet {
+namespace op {
+
 OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
                                      const Context ctx,
                                      const mxnet::ShapeVector &in_shapes,
@@ -49,12 +50,6 @@ OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
   LOG(FATAL) << "should never reach here";
   return OpStatePtr();  // should never reach here
 }
-
-}  // anonymous namespace
-
-
-namespace mxnet {
-namespace op {
 
 struct DropoutGrad {
   const char *op_name;
