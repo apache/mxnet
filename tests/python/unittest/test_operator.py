@@ -713,7 +713,7 @@ def test_fully_connected():
     check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np}, {'fc_output': res})
     check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np},
                            numeric_eps=1e-2, rtol=1e-4, atol=1e-2)
-    # TODO: Fix Bug when bias has ndim > 1
+    # TODO: Fix Bug #15032 when bias has ndim > 1
     #check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias2.asnumpy()}, {'fc_output': res})
 
 
