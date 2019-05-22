@@ -631,7 +631,7 @@ def test_static_python_gpu() {
         ws('workspace/ut-publish-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run("publish.ubuntu1404_gpu", 'build_static_python_cu101mkl', true)
+            utils.docker_run("publish.ubuntu1404_gpu", 'build_static_python_cu101mkl', false)
           }
         }
     }
