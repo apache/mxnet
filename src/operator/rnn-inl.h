@@ -903,7 +903,7 @@ class RNNOp {
                                   param_.mode);
       } else {
         #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
-        if (param_.mode != rnn_enum::kGru) {
+        if (dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
           // TODO(zixuanweeei): MKLDNN GRU has precision issue. A stable one
           //   will be added to MXNet when we figure out the issue.
           int dtype = in_data[rnn_enum::kData].type_flag_;
@@ -937,8 +937,7 @@ class RNNOp {
                                            ctx.is_train,
                                            param_.mode);
         } else {
-          //  Before integrating MKLDNN GRU fp32 inference
-          //  using below code for keep func being OK
+        #endif
           const size_t work_cpu_space_size =
               GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
                                 param_.state_size, direction, param_.mode);
@@ -954,57 +953,25 @@ class RNNOp {
           }
           DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
           RNNForwardInference<DType>(work_cpu_space,
-                                     param_.state_outputs,
-                                     param_.num_layers,
-                                     direction,
-                                     param_.seq_length_,
-                                     param_.batch_size_,
-                                     param_.input_size_,
-                                     param_.state_size,
-                                     x.dptr_,
-                                     hx.dptr_,
-                                     cx_ptr,
-                                     w.dptr_,
-                                     b_ptr,
-                                     y.dptr_,
-                                     hy_ptr,
-                                     cy_ptr,
-                                     param_.mode);
-        }
-        #else
-        const size_t work_cpu_space_size =
-            GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                              param_.state_size, direction, param_.mode);
-        if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
-            Storage::Get()->Free(temp_cpu_space_);
-            temp_init_space_ = false;
-        }
-        if (!temp_init_space_) {
-          temp_cpu_space_ = Storage::Get()->Alloc
-              (work_cpu_space_size * sizeof(DType), Context::CPU());
-          temp_cpu_space_size_ = work_cpu_space_size;
-          temp_init_space_ = true;
-        }
-        DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
-        RNNForwardInference<DType>(work_cpu_space,
-                                   param_.state_outputs,
-                                   param_.num_layers,
-                                   direction,
-                                   param_.seq_length_,
-                                   param_.batch_size_,
-                                   param_.input_size_,
-                                   param_.state_size,
-                                   x.dptr_,
-                                   hx.dptr_,
-                                   cx_ptr,
-                                   w.dptr_,
-                                   b_ptr,
-                                   y.dptr_,
-                                   hy_ptr,
-                                   cy_ptr,
-                                   param_.mode);
-        #endif
+                                    param_.state_outputs,
+                                    param_.num_layers,
+                                    direction,
+                                    param_.seq_length_,
+                                    param_.batch_size_,
+                                    param_.input_size_,
+                                    param_.state_size,
+                                    x.dptr_,
+                                    hx.dptr_,
+                                    cx_ptr,
+                                    w.dptr_,
+                                    b_ptr,
+                                    y.dptr_,
+                                    hy_ptr,
+                                    cy_ptr,
+                                    param_.mode);
+      #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
       }
+      #endif
     }
   }
 
