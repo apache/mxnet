@@ -249,11 +249,18 @@ class Trainer(object):
 
     @property
     def learning_rate(self):
-        if not isinstance(self._optimizer, opt.Optimizer):
+        if not isinstance(self._optimizer, opt.Optimizer): # pylint: disable=no-else-raise
             raise UserWarning("Optimizer has to be defined before its learning "
                               "rate can be accessed.")
         else:
             return self._optimizer.learning_rate
+
+    @property
+    def optimizer(self):
+        if isinstance(self._optimizer, opt.Optimizer):
+            return self._optimizer
+        else:
+            raise UserWarning("Optimizer has not been initialized yet")
 
     def set_learning_rate(self, lr):
         """Sets a new learning rate of the optimizer.
@@ -263,7 +270,7 @@ class Trainer(object):
         lr : float
             The new learning rate of the optimizer.
         """
-        if not isinstance(self._optimizer, opt.Optimizer):
+        if not isinstance(self._optimizer, opt.Optimizer): # pylint: disable=no-else-raise
             raise UserWarning("Optimizer has to be defined before its learning "
                               "rate is mutated.")
         else:

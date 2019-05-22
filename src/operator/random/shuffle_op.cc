@@ -33,6 +33,7 @@
 #include <vector>
 #include <cstring>
 #ifdef USE_GNU_PARALLEL_SHUFFLE
+  #include <unistd.h>
   #include <parallel/algorithm>
 #endif
 #include "../elemwise_op_common.h"

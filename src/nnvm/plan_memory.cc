@@ -240,10 +240,16 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
         bool ignore_all_inputs = (fignore_inputs.count(inode.source->op()) != 0 &&
                                   fignore_inputs[inode.source->op()](
                                       inode.source->attrs).size() == inode.source->num_inputs());
+        // Identity should only be true if shape.Size() and types match
+        bool real_identity = identity[ipair] &&
+                             ndim_is_known(shape_vec[eid_out]) &&
+                             ndim_is_known(shape_vec[eid_in]) &&
+                             shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
+                             dtype_vec[eid_out] == dtype_vec[eid_in];
         if (taken[kv.first] == false &&
             sid_out == GraphAllocator::kBadStorageID &&
             sid_in >= 0 &&
-            ((storage_ref_count[sid_in] == 1 && !ignore_all_inputs) || identity[ipair]) &&
+            ((storage_ref_count[sid_in] == 1 && !ignore_all_inputs) || real_identity) &&
             entry_ref_count[eid_out] > 0 &&
             shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
              (dtype_vec[eid_out] == dtype_vec[eid_in] ||
@@ -268,7 +274,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
       // only request memory for kBadStorageID
       if (storage[eid] == GraphAllocator::kBadStorageID) {
         auto &eshape = shape_vec[eid];
-        size_t esize = eshape.Size();
+        size_t esize = ndim_is_known(shape_vec[eid]) ? eshape.Size() : 0;
         eids.insert(std::make_pair(esize, eid));
       }
     }

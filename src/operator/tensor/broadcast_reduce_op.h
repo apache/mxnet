@@ -304,12 +304,12 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!shape_is_known((*in_attrs)[0])) return false;
+  if (!ndim_is_known((*in_attrs)[0])) return false;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
                                          param.keepdims, param.exclude));
-  return true;
+  return shape_is_known((*out_attrs)[0]);
 }
 
 inline bool ReduceMinMaxAxesShape(const nnvm::NodeAttrs& attrs,
@@ -1183,12 +1183,23 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
+
   if (param.ord == 1) {
-    ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
+    if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
         ctx, inputs, req, outputs, small);
+    } else {
+      ReduceAxesComputeImpl<xpu, mshadow_op::sum, false, false, mshadow_op::abs>(
+        ctx, inputs, req, outputs, small);
+    }
   } else if (param.ord == 2) {
-    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, true, false, mshadow_op::identity>(
+    if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+      ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, true, false, mshadow_op::identity>(
         ctx, inputs, req, outputs, small);
+    } else {
+      ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
+        ctx, inputs, req, outputs, small);
+    }
   }
 }
 
@@ -1362,7 +1373,7 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
   const mxnet::TShape& ishape = (*in_attrs)[0];
-  if (ishape.ndim() == 0) return false;
+  if (!ndim_is_known(ishape)) return false;
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
   if (!param.axis) LOG(FATAL)
     << "axis=None is not supported by pick yet. Must specify an axis.";
@@ -1376,7 +1387,7 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_attrs, 1,
                        ReduceAxisShapeImpl(ishape, param.axis, false));
   }
-  return true;
+  return shape_is_known((*out_attrs)[0]);
 }
 
 inline bool PickOpType(const nnvm::NodeAttrs& attrs,

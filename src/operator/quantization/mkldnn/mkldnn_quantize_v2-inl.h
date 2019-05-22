@@ -108,7 +108,7 @@ void SgMKLDNNQuantizeOperator::Forward(const OpContext &ctx, const std::vector<N
     }
 
     // Write output min/max
-    auto out_type = GetOutputType(param_);
+    auto out_type = GetQuantizeOutputType(param_);
     if (out_type == mshadow::kUint8) {
       quantized_range = kUint8Range;
       *outputs[1].data().dptr<float>() = data_min;

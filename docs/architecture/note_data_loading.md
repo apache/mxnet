@@ -83,7 +83,7 @@ In MXNet, we rely on the binary recordIO format implemented in dmlc-core.
 In MXNet's binary RecordIO, we store each data instance as a record.
 **kMagic** is a *magic number* indicating the start of a record.
 **Lrecord** encodes length and a continue flag.
-In lrecord,  
+In lrecord,
 - cflag == 0: this is a complete record
 - cflag == 1: start of a multiple-records
 - cflag == 2: middle of multiple-records
@@ -228,7 +228,11 @@ dataiter = mx.io.ImageRecordIter(
     # Backend Parameter, preprocessing thread number
     preprocess_threads=4,
     # Backend Parameter, prefetch buffer size
-    prefetch_buffer=1)
+    prefetch_buffer=1,
+    # Optional, the device context which data loader optimized for, could be 'gpu' or 'cpu'
+    ctx="gpu",
+    # The out data type, could be 'float32' 'int8' or 'uint8'
+    dtype="float32")
 ```
 
 Generally, to create a data iterator, you need to provide five kinds of parameters:

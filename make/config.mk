@@ -80,6 +80,9 @@ ENABLE_CUDA_RTC = 1
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
+# whether to use NVTX when profiling
+USE_NVTX = 0
+
 #whether to use NCCL library
 USE_NCCL = 0
 #add the path to NCCL library

@@ -339,8 +339,8 @@ NDArray NDArray::data_ndarray() const {
 }
 
 struct NDArrayDLManager {
-    NDArray handle;  // ref NDArray
-    DLManagedTensor tensor;
+  NDArray handle;  // ref NDArray
+  DLManagedTensor tensor;
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {
@@ -355,14 +355,19 @@ DLManagedTensor* NDArray::ToDLPack() const {
   return &(dlmanager->tensor);
 }
 
-NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
-  const DLTensor &dl_tensor = tensor->dl_tensor;
-  auto deleter = [tensor](){
-    if (tensor->deleter != nullptr) {
-      tensor->deleter(const_cast<DLManagedTensor*>(tensor));
+NDArray NDArray::FromDLPack(const DLManagedTensor* tensor, bool transient_handle) {
+  DLManagedTensor *tensor_copy = transient_handle
+                               ? new DLManagedTensor(*tensor)
+                               : const_cast<DLManagedTensor*>(tensor);
+  auto deleter = [tensor_copy, transient_handle](){
+    if (tensor_copy->deleter != nullptr) {
+      tensor_copy->deleter(tensor_copy);
+    }
+    if (transient_handle) {
+      delete tensor_copy;
     }
   };
-  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id, deleter);
+  return NDArray(TBlob(tensor_copy->dl_tensor), tensor_copy->dl_tensor.ctx.device_id, deleter);
 }
 
 bool NDArray::fresh_out_grad() const {
