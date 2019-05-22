@@ -178,11 +178,17 @@ template<typename xpu, typename DType>
 class PoolingOp {
  public:
   void Init(PoolingParam p) {
-    if (p.global_pool && (p.pad[0] ||  p.pad[1])) {
-        LOG(WARNING) << "Using global pooling with padding leads to incorrect results "
-                     << "and is only supported for backwards compatibility.\n"
-                     << "If you are training a new network it is recommended "
-                     << "that you set padding to 0.";
+    if (p.global_pool) {
+        has_padding = 0;
+        for (index_t i = 0; i < p.pad.ndim(); i++) {
+            has_padding += p.pad[i];
+        }
+        if (has_padding) {
+            LOG(WARNING) << "Using global pooling with padding leads to incorrect results "
+                         << "and is only supported for backwards compatibility.\n"
+                         << "If you are training a new network it is recommended "
+                         << "that you set padding to 0.";
+                         }
     }
     this->param_ = p;
   }
@@ -205,10 +211,6 @@ class PoolingOp {
       } else {
         kernel = mxnet::TShape(ishape.data() + 2,
                         ishape.data() + ishape.ndim());
-      }
-      padding = mxnet::TShape(ishape.ndim() - 2, 0);
-      for (index_t i = 0; i < ishape.ndim() - 2; i++) {
-        padding[i] = 0;
       }
       stride = mxnet::TShape(ishape.ndim() - 2, 1);
     }
@@ -262,10 +264,6 @@ class PoolingOp {
       } else {
         kernel = mxnet::TShape(ishape.data() + 2,
                         ishape.data() + ishape.ndim());
-      }
-      padding = mxnet::TShape(ishape.ndim() - 2, 0);
-      for (index_t i = 0; i < ishape.ndim() - 2; i++) {
-        padding[i] = 0;
       }
       stride = mxnet::TShape(ishape.ndim() - 2, 1);
     }
