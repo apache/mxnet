@@ -1467,10 +1467,10 @@ build_static_python_mkl() {
     popd
 }
 
-build_static_python_cu100mkl() {
+build_static_python_cu101mkl() {
     set -ex
     pushd .
-    export mxnet_variant=cu100mkl
+    export mxnet_variant=cu101mkl
     ./ci/publish/python/build.sh
     popd
 }
