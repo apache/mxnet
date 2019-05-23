@@ -23,7 +23,7 @@ namespace mxnet {
 namespace op {
 
 
-NNVM_REGISTER_OP(_slice_sum)
+NNVM_REGISTER_OP(slice_sum)
 .set_attr<FCompute>("FCompute<gpu>", SliceSumOpForwardEx<gpu>);
 
 }

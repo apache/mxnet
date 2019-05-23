@@ -8519,11 +8519,11 @@ def test_slice_sum():
 
             X = mx.symbol.Variable('X')
             Y = mx.symbol.Variable('Y')
-            Z = mx.symbol._internal._slice_sum(X, Y, axis=1, begin=4, end=12)
+            Z = mx.symbol.slice_sum(X, Y, axis=1, begin=4, end=12)
             exec1 = Z.bind(ctx, args = [x, y])
             exec1.forward(is_train=False)
             z_sym = exec1.outputs[0].asnumpy()
-            z_nd = mx.nd._internal._slice_sum(x, y, axis=1, begin=4, end=12).asnumpy() 
+            z_nd = mx.nd.slice_sum(x, y, axis=1, begin=4, end=12).asnumpy() 
             ref = y.asnumpy()[:,4:12,:] + x.asnumpy()
 
             for z in [z_sym, z_nd]:

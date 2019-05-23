@@ -28,7 +28,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(SliceSumParam);
 
-NNVM_REGISTER_OP(_slice_sum)
+NNVM_REGISTER_OP(slice_sum)
 .describe(R"code(Computes the sum
 of two tensors after slicing the second
 tensor according to the axis, begin and end parameters.
@@ -44,14 +44,14 @@ Example:: see test_slice_sum in tests/python/unittest/test_operator.py
 .set_attr_parser(ParamParser<SliceSumParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", SliceSumOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FCompute>("FCompute<cpu>", SliceSumOpForwardEx<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", SliceSumOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_slice_sum"})
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_argument("data2", "NDArray-or-Symbol", "Source input2")
 .add_arguments(SliceSumParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_slice_sum)
-.set_attr<FCompute>("FCompute<cpu>", SliceSumOpBackwardEx<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", SliceSumOpBackward<cpu>)
 .set_num_inputs(3)
 .set_num_outputs(2);
 

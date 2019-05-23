@@ -53,12 +53,12 @@ inline bool SliceSumOpShape(const nnvm::NodeAttrs& attrs,
                          mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const mxnet::TShape& dshape = (*in_attrs)[0];
-  if (dshape.ndim() == 0) return false;
-  mxnet::TShape oshape = dshape;
+  const mxnet::TShape& d1_shape = (*in_attrs)[0];
+  const mxnet::TShape& d2_shape = (*in_attrs)[1];
+  mxnet::TShape oshape = d1_shape;
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return !shape_is_none(dshape) && !shape_is_none(oshape);
+  return !shape_is_none (d1_shape) && !shape_is_none(d2_shape);
 }
 
 template<int ndim, int req>
@@ -112,7 +112,7 @@ void SliceSumImpl(const nnvm::NodeAttrs& attrs,
   CHECK_LT (axis, ndim_);
   CHECK_GE (begin, 0);
   CHECK_GE (end, begin);
-  CHECK_LE (end, in1_data.shape_[axis]);
+  CHECK_LE (end, in2_data.shape_[axis]);
   CHECK_EQ (end-begin, in1_data.shape_[axis]);
 
   CHECK_EQ (in2_data.ndim(), ndim_);
@@ -173,7 +173,7 @@ void SliceSumImpl(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
-void SliceSumOpForwardEx(const nnvm::NodeAttrs& attrs,
+void SliceSumOpForward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<TBlob>& inputs,
                           const std::vector<OpReqType>& req,
@@ -186,7 +186,7 @@ void SliceSumOpForwardEx(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename xpu>
-void SliceSumOpBackwardEx(const nnvm::NodeAttrs& attrs,
+void SliceSumOpBackward(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<TBlob>& inputs,
                           const std::vector<OpReqType>& req,
