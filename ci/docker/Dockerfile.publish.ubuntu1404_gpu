@@ -25,10 +25,6 @@ WORKDIR /work/deps
 COPY install/ubuntu_publish.sh /work/
 RUN /work/ubuntu_publish.sh
 
-ENV CUDNN_VERSION=7.5.1.10
-COPY install/ubuntu_cudnn.sh /work/
-RUN /work/ubuntu_cudnn.sh
-
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
