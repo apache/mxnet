@@ -53,7 +53,15 @@ pipeline {
     stage("MXNet Release") {
       steps {
         script {
-          // Add CD Pipeline
+          cd_utils.error_checked_parallel([
+
+            "Static libmxnet based Release": {
+              stage("Build") {
+                cd_utils.trigger_release_job("Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)    
+              }
+            }
+            
+          ])
         }
       }
     }
