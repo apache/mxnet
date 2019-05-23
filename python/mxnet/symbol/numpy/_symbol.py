@@ -1271,8 +1271,7 @@ def split(ary, indices_or_sections, axis=0):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
-    ret = _npi.split(ary, indices, axis, False, sections)
-    return ret
+    return _npi.split(ary, indices, axis, sections)
 
 
 _set_np_symbol_class(_Symbol)
