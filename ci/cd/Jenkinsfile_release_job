@@ -36,7 +36,6 @@ pipeline {
 
   parameters {
     // Release parameters
-    string(defaultValue: "", description: 'Optional commit id within specified branch to use for build', name: "MXNET_SHA")
     string(defaultValue: "Generic release job", description: "Optional Job name", name: "RELEASE_JOB_NAME")
     string(defaultValue: "", description: "Job Type e.g. binary_release/static, python/docker, runtime_images, etc.", name: 'RELEASE_JOB_TYPE')
     string(defaultValue: "cpu,mkl,cu80,cu80mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
@@ -58,16 +57,13 @@ pipeline {
             windows_gpu: 'restricted-mxnetwindows-gpu'
           )
 
-          // initialize the MXNET_SHA variable to the current GIT_COMMIT if not set
-          env.MXNET_SHA = env.MXNET_SHA ?: env.GIT_COMMIT
-          echo "MXNET_SHA: ${env.MXNET_SHA}"
-
           echo """\
-            |Job Name: ${params.RELEASE_JOB_NAME}
-            |Job Type: ${params.RELEASE_JOB_TYPE}
+            |Job Name: ${env.RELEASE_JOB_NAME}
+            |Job Type: ${env.RELEASE_JOB_TYPE}
             |Release Build: ${params.RELEASE_BUILD}
-            |Commit Id: ${params.MXNET_SHA}
-            |Variants: ${MXNET_VARIANTS}""".stripMargin()
+            |Commit Id: ${env.GIT_COMMIT}
+            |Branch: ${env.GIT_BRANCH}
+            |Variants: ${env.MXNET_VARIANTS}""".stripMargin()
         }
       }
     }

@@ -43,7 +43,7 @@ libmxnet_pipeline = load('ci/cd/mxnet_lib/mxnet_lib_pipeline.groovy')
 def build(mxnet_variant) {
   node(NODE_LINUX_CPU) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
-      ci_utils.init_git(env.MXNET_SHA)
+      ci_utils.init_git()
       // Compiling in Ubuntu14.04 due to glibc issues. 
       // This should be updates once we have clarity on this issue.
       ci_utils.docker_run('publish.ubuntu1404_cpu', "build_static_libmxnet ${mxnet_variant}", false)

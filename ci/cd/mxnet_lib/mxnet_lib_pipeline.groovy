@@ -113,7 +113,7 @@ def unittest_py3(mxnet_variant) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
       def use_nvidia_docker = mxnet_variant.startsWith('cu')
-      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_SHA)
+      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
       ci_utils.docker_run(image, "cd_unittest_ubuntu ${mxnet_variant} python3", use_nvidia_docker)
     }
   }
@@ -126,7 +126,7 @@ def unittest_py2(mxnet_variant) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
       def use_nvidia_docker = mxnet_variant.startsWith('cu')
-      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_SHA)
+      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
       ci_utils.docker_run(image, "cd_unittest_ubuntu ${mxnet_variant} python", use_nvidia_docker)
     }
   }
@@ -137,7 +137,7 @@ def test_gpu_quantization_py2(mxnet_variant) {
   node(NODE_LINUX_GPU_P3) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
-      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_SHA)
+      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
       ci_utils.docker_run(image, "unittest_ubuntu_python2_quantization_gpu", true)
     }
   }
@@ -148,7 +148,7 @@ def test_gpu_quantization_py3(mxnet_variant) {
   node(NODE_LINUX_GPU_P3) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def image = get_environment(mxnet_variant)
-      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_SHA)
+      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
       ci_utils.docker_run(image, "unittest_ubuntu_python3_quantization_gpu", true)
     }
   }
@@ -159,7 +159,7 @@ def push(mxnet_variant) {
   node(NODE_LINUX_CPU) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       def deps = (mxnet_variant.endsWith('mkl')? mx_mkldnn_deps : mx_deps).replaceAll(',', '')
-      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false, env.MXNET_SHA)
+      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
       cd_utils.push_artifact(libmxnet, mxnet_variant, libtype, licenses, deps)
     }
   }

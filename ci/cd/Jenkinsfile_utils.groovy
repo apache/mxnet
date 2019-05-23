@@ -34,7 +34,6 @@ def trigger_release_job(job_name, job_type, mxnet_variants) {
   def run = build(
     job: RELEASE_JOB, 
     parameters: [
-      string(name: 'MXNET_SHA', value: "${env.MXNET_SHA}"),
       string(name: 'RELEASE_JOB_NAME', value: "${job_name}"),
       string(name: 'RELEASE_JOB_TYPE', value: "${job_type}"),
       string(name: 'RELEASE_JOB_TYPE', value: "${job_type}"),
