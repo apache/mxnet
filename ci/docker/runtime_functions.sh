@@ -1178,6 +1178,7 @@ integrationtest_ubuntu_gpu_cpp_package() {
 
 integrationtest_ubuntu_cpu_dist_kvstore() {
     set -ex
+    pushd .
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_USE_OPERATOR_TUNING=0
@@ -1191,6 +1192,7 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
     ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
+    popd
 }
 
 integrationtest_ubuntu_cpu_scala() {
@@ -1210,12 +1212,13 @@ integrationtest_ubuntu_gpu_scala() {
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
+    pushd .
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     cd tests/nightly/
     ../../tools/launch.py -n 7 --launcher local python dist_device_sync_kvstore.py
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=init_gpu
-    cd ../../
+    popd
 }
 
 test_ubuntu_cpu_python2() {
