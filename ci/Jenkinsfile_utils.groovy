@@ -18,7 +18,12 @@
 // under the License.
 
 // initialize source codes
-def init_git() {
+def init_git(git_sha = '') {
+
+  git_sha = git_sha ? git_sha.trim() : ''
+
+  echo "Checking out git_sha: ${git_sha}"
+
   deleteDir()
   retry(5) {
     try {
@@ -26,6 +31,11 @@ def init_git() {
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
+
+        if (git_sha) {
+          sh "git checkout ${git_sha}"
+        }
+
         sh 'git clean -xdff'
         sh 'git reset --hard'
         sh 'git submodule update --init --recursive'
@@ -80,8 +90,8 @@ return 0
 }
 
 // unpack libraries saved before
-def unpack_and_init(name, libs, include_gcov_data = false) {
-  init_git()
+def unpack_and_init(name, libs, include_gcov_data = false, git_sha = '') {
+  init_git(git_sha)
   unstash name
   sh returnStatus: true, script: """
 set +e
@@ -295,4 +305,5 @@ def main_wrapper(args) {
     }
   }
 }
+
 return this
