@@ -20,9 +20,8 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-// NOTE: 
-// ci_utils is loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
-// cd_utils is loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
+// To avoid confusion, please note:
+// ci_utils and cd_utils are loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
 
 def get_pipeline(mxnet_variant, build_fn) {
   return {

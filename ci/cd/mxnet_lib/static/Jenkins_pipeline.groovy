@@ -20,7 +20,8 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-// NOTE: ci_utils is loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
+// To avoid confusion, please note:
+// ci_utils is loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
 
 // libmxnet location
 libmxnet = 'lib/libmxnet.so'
