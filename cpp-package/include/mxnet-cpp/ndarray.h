@@ -143,7 +143,8 @@ class NDArray {
   * \param constext context of NDArray
   * \param delay_alloc whether delay the allocation
   */
-  NDArray(const Shape &shape, const Context &context, bool delay_alloc = true);
+  NDArray(const Shape &shape, const Context &context, 
+          bool delay_alloc = true, int dtype = 0);
   NDArray(const mx_float *data, size_t size);
   /*!
   * \brief construct a new dynamic NDArray

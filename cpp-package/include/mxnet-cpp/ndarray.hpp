@@ -54,10 +54,11 @@ inline NDArray::NDArray(const std::vector<mx_uint> &shape, const Context &contex
            0);
   blob_ptr_ = std::make_shared<NDBlob>(handle);
 }
-inline NDArray::NDArray(const Shape &shape, const Context &context, bool delay_alloc) {
+inline NDArray::NDArray(const Shape &shape, const Context &context, 
+                        bool delay_alloc, int dtype) {
   NDArrayHandle handle;
-  CHECK_EQ(MXNDArrayCreate(shape.data(), shape.ndim(), context.GetDeviceType(),
-                           context.GetDeviceId(), delay_alloc, &handle),
+  CHECK_EQ(MXNDArrayCreateEx(shape.data(), shape.ndim(), context.GetDeviceType(),
+                           context.GetDeviceId(), delay_alloc, dtype, &handle),
            0);
   blob_ptr_ = std::make_shared<NDBlob>(handle);
 }
