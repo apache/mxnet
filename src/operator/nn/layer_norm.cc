@@ -181,8 +181,8 @@ axis to be the last item in the input shape.
   heads.push_back(ograds[0]);  // ograd
   heads.push_back(n->inputs[0]);  // data
   heads.push_back(n->inputs[1]);  // gamma
-  heads.emplace_back(nnvm::NodeEntry{n, 1, 0});  // mean
-  heads.emplace_back(nnvm::NodeEntry{ n, 2, 0 });  // std
+  heads.emplace_back(n, 1, 0);  // mean
+  heads.emplace_back(n, 2, 0);  // std
   return MakeGradNode("_backward_LayerNorm", n, heads, n->attrs.dict);
 })
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",

@@ -325,10 +325,9 @@ The storage type of ``make_loss`` output depends upon the input storage type:
   })
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto p = MakeNode("ones_like", n->attrs.name + "_backward",
-                      &(n->inputs), nullptr, &n);
     std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(MakeNode("ones_like", n->attrs.name + "_backward",
+                     &(n->inputs), nullptr, &n));
     return ret;
   });
 
@@ -356,11 +355,10 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
-      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+      std::vector<nnvm::NodeEntry> lhs = MakeGradNode("_backward_copy", n, ograds,
                               std::unordered_map<std::string, std::string>());
-      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
-                         {n->inputs[1]}, nullptr, &n);
-      lhs.emplace_back(ng, 0, 0);
+      lhs.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n));
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
@@ -495,11 +493,10 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
-      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+      std::vector<nnvm::NodeEntry> lhs = MakeGradNode("_backward_copy", n, ograds,
                               std::unordered_map<std::string, std::string>());
-      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
-                         {n->inputs[1]}, nullptr, &n);
-      lhs.emplace_back(ng, 0, 0);
+      lhs.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n));
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
