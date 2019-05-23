@@ -312,8 +312,8 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
             variant = '{}mkl'.format(variant)
         logger.debug('variant is: {}'.format(variant))
         return variant
-    logger.debug('Error determining mxnet variant: Could not retrieve cuda version')
-    return None
+
+    raise RuntimeError('Error determining mxnet variant: Could not retrieve cuda version')
 
 
 def probe_mxnet_variant(limxnet_path: str) -> Optional[str]:
@@ -436,10 +436,9 @@ def push_artifact(args: argparse.Namespace):
     except botocore.exceptions.BotoCoreError as e:
         logger.error('Error uploading artifact')
         logger.error(e)
-        return 1
+        raise e
 
     logger.info('Successfully pushed artifact')
-    return 0
 
 
 def pull_artifact(args: argparse.Namespace):
@@ -462,16 +461,14 @@ def pull_artifact(args: argparse.Namespace):
 
     try:
         if not try_s3_download(args.bucket, get_s3_key_prefix(args), args.destination):
-            logging.error('No artifacts found for this configuration.')
-            return 2
+            raise RuntimeError('No artifacts found for this configuration.')
         write_libmxnet_meta(args=args, destination=args.destination)
     except botocore.exceptions.BotoCoreError as e:
         logger.error('Error downloading artifact')
         logger.error(e)
-        return 1
+        raise e
 
     logger.info('Successfully pulled artifact')
-    return 0
 
 
 def is_file(path: str) -> str:
@@ -611,10 +608,10 @@ def main() -> int:
     args.destination = os.path.abspath(args.destination)
 
     if args.push:
-        return push_artifact(args)
+        push_artifact(args)
 
     elif args.pull:
-        return pull_artifact(args)
+        pull_artifact(args)
 
     return 0
 
