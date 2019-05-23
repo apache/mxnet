@@ -349,7 +349,6 @@ It updates the weights using::
 .add_arguments(MultiSGDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(multi_sgd_mom_update)
-.add_alias("_npe_multi_sgd_mom_update")
 .describe(R"code(Momentum update function for Stochastic Gradient Descent (SGD) optimizer.
 
 Momentum update has better convergence rates on neural networks. Mathematically it looks
