@@ -24,7 +24,7 @@ namespace op {
 
 
 NNVM_REGISTER_OP(_split_bias_act_red)
-.set_attr<FCompute>("FCompute<gpu>", SplitBiasActRedForwardEx<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SplitBiasActRedForward<gpu>);
 
 }
 }

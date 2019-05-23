@@ -30,7 +30,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(SplitBiasActRedParam);
 
-NNVM_REGISTER_OP(_split_bias_act_red)
+NNVM_REGISTER_OP(split_bias_act_red)
 .describe(R"code(Computes a split of the second
 tensor along the axis dimension, adds the first tensor
 to all the split tensors, applies provided activation
@@ -48,14 +48,14 @@ Example:: see test_split_bias_act_red in tests/python/unittest/test_operator.py
 .set_attr_parser(ParamParser<SplitBiasActRedParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", SplitBiasActRedShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FCompute>("FCompute<cpu>", SplitBiasActRedForwardEx<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", SplitBiasActRedForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_split_bias_act_red"})
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_argument("data2", "NDArray-or-Symbol", "Source input2")
 .add_arguments(SplitBiasActRedParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_split_bias_act_red)
-.set_attr<FCompute>("FCompute<cpu>", SplitBiasActRedBackwardEx<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", SplitBiasActRedBackward<cpu>)
 .set_num_inputs(3)
 .set_num_outputs(2);
 

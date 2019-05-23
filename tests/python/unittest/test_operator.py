@@ -8518,11 +8518,11 @@ def test_split_bias_act_red():
 
             X = mx.symbol.Variable('X')
             Y = mx.symbol.Variable('Y')
-            Z = mx.symbol._internal._split_bias_act_red(X, Y, axis=2)
+            Z = mx.symbol.split_bias_act_red(X, Y, axis=2)
             exec1 = Z.bind(ctx, args = [x, y])
             exec1.forward(is_train=False)
             z_sym = exec1.outputs[0].asnumpy()
-            z_nd = mx.nd._internal._split_bias_act_red(x, y, axis=2).asnumpy() 
+            z_nd = mx.nd.split_bias_act_red(x, y, axis=2).asnumpy() 
             y1, y2 = np.split(y.asnumpy(), 2, axis=2)
             x1 = x.asnumpy()
             one = np.array(1).astype(dtype)
