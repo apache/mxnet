@@ -39,9 +39,6 @@ pipeline {
       steps {
         script {
           cd_utils = load('ci/cd/Jenkinsfile_utils.groovy')
-
-          // The address of the release job on Jenkins
-          cd_utils.set_release_job_name('restricted-mxnet-cd/mxnet-cd-release-job')
         }
       }
     }
