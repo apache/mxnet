@@ -2201,6 +2201,54 @@ def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0
 
+def math_log(shape, dtype, check_value):
+    np_x = np.random.rand(*tuple(shape))
+    x = mx.nd.array(np_x, dtype=dtype)
+    y = mx.nd.log(data=x)
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        y_ = mx.nd.log(data=x_)
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def math_erf(shape, dtype, check_value):
+    np_x = np.random.rand(*tuple(shape))
+    x = mx.nd.array(np_x, dtype=dtype)
+    y = mx.nd.erf(data=x)
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        y_ = mx.nd.erf(data=x_)
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def math_square(shape, dtype, check_value):
+    np_x = np.random.rand(*tuple(shape))
+    x = mx.nd.array(np_x, dtype=dtype)
+    y = mx.nd.square(data=x)
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        y_ = mx.nd.square(data=x_)
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def run_math(op, shape, dtype="float32", check_value=True):
+    run_num = 10
+    for i in range(run_num):
+        if op == 'log':
+            math_log(shape=shape, dtype=dtype, check_value=check_value)
+        elif op == 'erf':
+            math_erf(shape=shape, dtype=dtype, check_value=check_value)
+        elif op == 'square':
+            math_square(shape=shape, dtype=dtype, check_value=check_value)
+
+@with_seed()
+def test_math():
+    ops = ['log', 'erf', 'square']
+    check_value= True
+    shape_lst = [[1000], [100,1000], [10,100,100], [10,100,100,100]] 
+    dtypes = ["float32", "float64"]
+    for shape in shape_lst:
+        for dtype in dtypes:
+            for op in ops:
+                run_math(op, shape, dtype, check_value=check_value)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

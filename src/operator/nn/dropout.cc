@@ -36,7 +36,7 @@ struct DropoutGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(ograds[0]);
-    heads.emplace_back(nnvm::NodeEntry{n, dropout::kMask, 0});
+    heads.emplace_back(n, dropout::kMask, 0);
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
