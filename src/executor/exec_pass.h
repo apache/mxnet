@@ -38,6 +38,15 @@
 namespace mxnet {
 namespace exec {
 
+template <typename Attr>
+using FAccessSubgraphAttr = std::function<std::pair<std::vector<Attr>, std::vector<Attr>>
+                              (const NodeAttrs& attrs)>;
+
+using FAccessSubgraphShape = FAccessSubgraphAttr<mxnet::TShape>;
+using FAccessSubgraphType = FAccessSubgraphAttr<int>;
+using FAccessSubgraphStorageType = FAccessSubgraphAttr<int>;
+using TIsFusion = bool;
+
 /*! \brief reuse graph definition */
 using nnvm::Graph;
 

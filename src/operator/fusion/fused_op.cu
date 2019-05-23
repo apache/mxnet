@@ -401,6 +401,35 @@ bool FusedOp::InferType<gpu>(const nnvm::NodeAttrs &attrs,
   return inferred;
 }
 
+template <typename Attr>
+std::pair<std::vector<Attr>, std::vector<Attr>> FusedOp::GetAttrs(const std::string& attr_name,
+                                                                  const uint32_t node_id) {
+  const auto& g = this->symbol_.indexed_graph();
+  const std::vector<Attr> attrs = this->symbol_.GetAttr<std::vector<Attr>>(attr_name);
+  const auto& node = g[node_id];
+  std::vector<Attr> inputs, outputs;
+  for (const auto& e : node.inputs) {
+    inputs.emplace_back(attrs[g.entry_id(e)]);
+  }
+  outputs.resize(node.source->num_outputs());
+  for (size_t i = 0; i < g.num_nodes(); ++i) {
+    if (i == node_id) continue;
+    const auto& other_node = g[i];
+    for (const auto& e : other_node.inputs) {
+      if (e.node_id == node_id) {
+        outputs[e.index] = attrs[g.entry_id(e)];
+      }
+    }
+  }
+  for (const auto& e : g.outputs()) {
+    if (e.node_id == node_id) {
+      outputs[e.index] = attrs[g.entry_id(e)];
+    }
+  }
+
+  return {inputs, outputs};
+}
+
 void FusedOpForwardGPU(const nnvm::NodeAttrs& attrs,
                     const OpContext &ctx,
                     const std::vector<TBlob> &inputs,
@@ -428,5 +457,28 @@ NNVM_REGISTER_OP(FusedOp)
 .set_attr<mxnet::FInferShape>("FInferShape", FusedOpInferShape)
 .set_attr<nnvm::FInferType>("FInferType", FusedOpInferType)
 .set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);
+
+std::pair<std::vector<mxnet::TShape>, std::vector<mxnet::TShape>>
+FusedOpHelperShape(const NodeAttrs& attrs) {
+  const auto& p = nnvm::get<FusedOpHelperParamPtr>(attrs.parsed);
+  const auto& op = p->op;
+  const auto& node_id = p->node_id;
+  return op->GetAttrs<mxnet::TShape>("shape", node_id);
+}
+
+std::pair<std::vector<int>, std::vector<int>>
+FusedOpHelperType(const NodeAttrs& attrs) {
+  const auto& p = nnvm::get<FusedOpHelperParamPtr>(attrs.parsed);
+  const auto& op = p->op;
+  const auto& node_id = p->node_id;
+  return op->GetAttrs<int>("dtype", node_id);
+}
+
+NNVM_REGISTER_OP(_FusedOpHelper)
+.set_num_inputs(0)
+.set_num_outputs(0)
+.set_attr<exec::TIsFusion>("TIsFusion", true)
+.set_attr<exec::FAccessSubgraphShape>("FAccessSubgraphShape", FusedOpHelperShape)
+.set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpHelperType);
 
 }  // namespace mxnet

@@ -19,6 +19,7 @@
 
 #include "./fused_op.h"
 #include "../operator_common.h"
+#include "../../executor/exec_pass.h"
 
 namespace mxnet {
 

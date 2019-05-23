@@ -76,6 +76,10 @@ class FusedOp {
                  std::vector<int> *in_attrs,
                  std::vector<int> *out_attrs);
 
+  template <typename Attr>
+  std::pair<std::vector<Attr>, std::vector<Attr>> GetAttrs(const std::string& attr_name,
+                                                           const uint32_t node_id);
+
  private:
   void GenerateCode();
 
@@ -93,6 +97,17 @@ class FusedOp {
 };
 
 using FusedOpPtr = std::shared_ptr<FusedOp>;
+
+struct FusedOpHelperParam {
+  FusedOpPtr op;
+  uint32_t node_id;
+
+  FusedOpHelperParam(FusedOpPtr op, uint32_t node_id) :
+    op(op),
+    node_id(node_id) {}
+};
+
+using FusedOpHelperParamPtr = std::shared_ptr<FusedOpHelperParam>;
 
 }  // namespace mxnet
 
