@@ -44,7 +44,7 @@
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
 #include "./rnn_impl.h"
-#if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
+#if MXNET_USE_MKLDNN == 1
 #include "./nn/mkldnn/mkldnn_rnn_impl.h"
 #endif
 
@@ -426,8 +426,8 @@ class RNNOp {
     // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
     cudnn_tensor_core_ = false;
     // When fp16 RNN tests are introduced, we can enable TensorCore as follows:
-//    cudnn_tensor_core =
-//        mshadow::DataType<DType>::kFlag == mshadow::kFloat16 && GetEnvAllowTensorCore();
+    // cudnn_tensor_core =
+    //     mshadow::DataType<DType>::kFlag == mshadow::kFloat16 && GetEnvAllowTensorCore();
     // Defaults
     input_mode_ = CUDNN_LINEAR_INPUT;  // Don't support this yet
     // RNN Mode
@@ -938,12 +938,14 @@ class RNNOp {
                                            param_.mode);
         } else {
         #endif
+          //  Before integrating MKLDNN GRU fp32 inference
+          //  using below code for keep func being OK
           const size_t work_cpu_space_size =
               GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                                param_.state_size, direction, param_.mode);
+                                  param_.state_size, direction, param_.mode);
           if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
-              Storage::Get()->Free(temp_cpu_space_);
-              temp_init_space_ = false;
+            Storage::Get()->Free(temp_cpu_space_);
+            temp_init_space_ = false;
           }
           if (!temp_init_space_) {
             temp_cpu_space_ = Storage::Get()->Alloc
@@ -953,22 +955,22 @@ class RNNOp {
           }
           DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
           RNNForwardInference<DType>(work_cpu_space,
-                                    param_.state_outputs,
-                                    param_.num_layers,
-                                    direction,
-                                    param_.seq_length_,
-                                    param_.batch_size_,
-                                    param_.input_size_,
-                                    param_.state_size,
-                                    x.dptr_,
-                                    hx.dptr_,
-                                    cx_ptr,
-                                    w.dptr_,
-                                    b_ptr,
-                                    y.dptr_,
-                                    hy_ptr,
-                                    cy_ptr,
-                                    param_.mode);
+                                     param_.state_outputs,
+                                     param_.num_layers,
+                                     direction,
+                                     param_.seq_length_,
+                                     param_.batch_size_,
+                                     param_.input_size_,
+                                     param_.state_size,
+                                     x.dptr_,
+                                     hx.dptr_,
+                                     cx_ptr,
+                                     w.dptr_,
+                                     b_ptr,
+                                     y.dptr_,
+                                     hy_ptr,
+                                     cy_ptr,
+                                     param_.mode);
         #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
         }
         #endif
@@ -1610,7 +1612,7 @@ void RNNStatefulCompute(const OpStatePtr& state,
     });
 }
 
-#if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
+#if MXNET_USE_MKLDNN == 1
 static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
                                   const OpContext& ctx,
                                   const std::vector<NDArray>& inputs,
@@ -2019,8 +2021,8 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
     });
   });
 }
-
 #endif
+
 /*
 index description
 0: x

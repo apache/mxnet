@@ -174,7 +174,7 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int> *out_attrs) {
   DispatchMode wanted_mode = DispatchMode::kFCompute;
 
-  #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
+  #if MXNET_USE_MKLDNN == 1
     wanted_mode = DispatchMode::kFComputeEx;
   #endif
 
@@ -287,7 +287,7 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr<FInferStorageType>("FInferStorageType", RNNStorageType)
 .set_attr<FCreateOpState>("FCreateOpState", CreateRNNState)
 .set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulCompute<cpu>)
-#if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
+#if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeCPU)
 #endif

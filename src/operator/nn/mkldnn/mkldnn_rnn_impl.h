@@ -39,9 +39,9 @@
 namespace mxnet {
 namespace op {
 
-algorithm GetMKLDNNRNNAlgo(int mode,
-                           int* ngates,
-                           int* nstates) {
+static algorithm GetMKLDNNRNNAlgo(int mode,
+                                  int* ngates,
+                                  int* nstates) {
   algorithm algo = algorithm::vanilla_rnn;
   switch (mode) {
     case rnn_enum::kLstm:
@@ -67,14 +67,14 @@ algorithm GetMKLDNNRNNAlgo(int mode,
   return algo;
 }
 
-void ConcatData(mkldnn::memory::format src_format,
-                mkldnn::memory::format dst_format,
-                std::vector<mkldnn::memory::dims> srcs_cds,
-                mkldnn::memory::dims dst_cds,
-                mkldnn::memory::data_type mkldnn_dtype,
-                int concat_dimension,
-                std::vector<void*> srcs_data,
-                const mkldnn::memory &dst) {
+static void ConcatData(mkldnn::memory::format src_format,
+                       mkldnn::memory::format dst_format,
+                       std::vector<mkldnn::memory::dims> srcs_cds,
+                       mkldnn::memory::dims dst_cds,
+                       mkldnn::memory::data_type mkldnn_dtype,
+                       int concat_dimension,
+                       std::vector<void*> srcs_data,
+                       const mkldnn::memory &dst) {
   auto cpu_engine = CpuEngine::Get()->get_engine();
   std::vector<mkldnn::memory::primitive_desc> srcs_pd;
   std::vector<mkldnn::memory> srcs;
@@ -102,7 +102,7 @@ void ConcatData(mkldnn::memory::format src_format,
 //  for unidirectional, it will fused as dim like 1  + (L - 1) when I != H.
 //  for bidirectional, it will fused as data + back_data (weight, bias, iter etc),
 //  also need to identify first layer and next layers
-inline size_t GetMKLDNNRNNCacheMemorySize(int L,
+static size_t GetMKLDNNRNNCacheMemorySize(int L,
                                           int D,
                                           int T,
                                           int N,
@@ -135,9 +135,9 @@ inline size_t GetMKLDNNRNNCacheMemorySize(int L,
 }
 
 template <typename DType>
-void AdjustGruWeightGateOrder(DType* weight,
-                              const int I,
-                              const int H) {
+static void AdjustGruWeightGateOrder(DType* weight,
+                                     const int I,
+                                     const int H) {
   // mxnet gru gate order is reset, update and new gates
   // mkldnn gru gate order is update, reset and new gates
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
@@ -152,8 +152,8 @@ void AdjustGruWeightGateOrder(DType* weight,
 }
 
 template <typename DType>
-void AdjustGruBiasGateOrder(DType* bias,
-                            const int H) {
+static void AdjustGruBiasGateOrder(DType* bias,
+                                   const int H) {
   // mxnet gru gate order is reset, update and new gates
   // mkldnn gru gate order is update, reset and new gates
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
@@ -171,36 +171,36 @@ void AdjustGruBiasGateOrder(DType* bias,
 // unidirectional will be done by fused 1 + fused (L - 1) layers or fused L layers(when I = H)
 
 template <typename DType>
-void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
-                                   const int T,
-                                   const int N,
-                                   const int I,
-                                   const int H,
-                                   DType* x_ptr,
-                                   mkldnn::memory *user_src_layer_memory,
-                                   DType* hx_ptr,
-                                   DType* cx_ptr,
-                                   DType* w_ptr,
-                                   DType* b_ptr,
-                                   DType* y_ptr,
-                                   DType* hy_ptr,
-                                   DType* cy_ptr,
-                                   std::vector<mkldnn::memory> *concat_weight_memory,
-                                   std::vector<mkldnn::memory> *concat_iter_memory,
-                                   std::vector<mkldnn::memory> *x_memory,
-                                   std::vector<mkldnn::memory> *hcx_memory,
-                                   std::vector<mkldnn::memory> *wx_memory,
-                                   std::vector<mkldnn::memory> *wh_memory,
-                                   std::vector<mkldnn::memory> *bias_memory,
-                                   std::vector<mkldnn::memory> *y_memory,
-                                   std::vector<mkldnn::memory> *hcy_memory,
-                                   std::vector<primitive> *rnn_forward_prim,
-                                   int layer_index,
-                                   bool *has_cache,
-                                   int lvalue,
-                                   int dtype,
-                                   bool is_train,
-                                   int mode) {
+static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
+                                          const int T,
+                                          const int N,
+                                          const int I,
+                                          const int H,
+                                          DType* x_ptr,
+                                          mkldnn::memory *user_src_layer_memory,
+                                          DType* hx_ptr,
+                                          DType* cx_ptr,
+                                          DType* w_ptr,
+                                          DType* b_ptr,
+                                          DType* y_ptr,
+                                          DType* hy_ptr,
+                                          DType* cy_ptr,
+                                          std::vector<mkldnn::memory> *concat_weight_memory,
+                                          std::vector<mkldnn::memory> *concat_iter_memory,
+                                          std::vector<mkldnn::memory> *x_memory,
+                                          std::vector<mkldnn::memory> *hcx_memory,
+                                          std::vector<mkldnn::memory> *wx_memory,
+                                          std::vector<mkldnn::memory> *wh_memory,
+                                          std::vector<mkldnn::memory> *bias_memory,
+                                          std::vector<mkldnn::memory> *y_memory,
+                                          std::vector<mkldnn::memory> *hcy_memory,
+                                          std::vector<primitive> *rnn_forward_prim,
+                                          int layer_index,
+                                          bool *has_cache,
+                                          int lvalue,
+                                          int dtype,
+                                          bool is_train,
+                                          int mode) {
   int ngates = 0, nstates = 0;
   algorithm nalgorithm = GetMKLDNNRNNAlgo(mode, &ngates, &nstates);
   mkldnn::memory::data_type mkldnn_dtype = get_mkldnn_type(dtype);
@@ -369,36 +369,36 @@ void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
 
 
 template <typename DType>
-void MKLDNNRNNForwardUnidi(bool state_outputs,
-                           const int L,
-                           const int T,
-                           const int N,
-                           const int I,
-                           const int H,
-                           DType* x_ptr,
-                           mkldnn::memory *user_src_layer_memory,
-                           DType* hx_ptr,
-                           DType* cx_ptr,
-                           DType* w_ptr,
-                           DType* b_ptr,
-                           DType* y_ptr,
-                           DType* hy_ptr,
-                           DType* cy_ptr,
-                           std::vector<mkldnn::memory> *concat_weight_memory,
-                           std::vector<mkldnn::memory> *concat_iter_memory,
-                           std::vector<mkldnn::memory> *x_memory,
-                           std::vector<mkldnn::memory> *hcx_memory,
-                           std::vector<mkldnn::memory> *wx_memory,
-                           std::vector<mkldnn::memory> *wh_memory,
-                           std::vector<mkldnn::memory> *bias_memory,
-                           std::vector<mkldnn::memory> *y_memory,
-                           std::vector<mkldnn::memory> *hcy_memory,
-                           std::vector<primitive> *rnn_forward_prim,
-                           int layer_index,
-                           bool *has_cache,
-                           int dtype,
-                           bool is_train,
-                           int mode) {
+static void MKLDNNRNNForwardUnidi(bool state_outputs,
+                                  const int L,
+                                  const int T,
+                                  const int N,
+                                  const int I,
+                                  const int H,
+                                  DType* x_ptr,
+                                  mkldnn::memory *user_src_layer_memory,
+                                  DType* hx_ptr,
+                                  DType* cx_ptr,
+                                  DType* w_ptr,
+                                  DType* b_ptr,
+                                  DType* y_ptr,
+                                  DType* hy_ptr,
+                                  DType* cy_ptr,
+                                  std::vector<mkldnn::memory> *concat_weight_memory,
+                                  std::vector<mkldnn::memory> *concat_iter_memory,
+                                  std::vector<mkldnn::memory> *x_memory,
+                                  std::vector<mkldnn::memory> *hcx_memory,
+                                  std::vector<mkldnn::memory> *wx_memory,
+                                  std::vector<mkldnn::memory> *wh_memory,
+                                  std::vector<mkldnn::memory> *bias_memory,
+                                  std::vector<mkldnn::memory> *y_memory,
+                                  std::vector<mkldnn::memory> *hcy_memory,
+                                  std::vector<primitive> *rnn_forward_prim,
+                                  int layer_index,
+                                  bool *has_cache,
+                                  int dtype,
+                                  bool is_train,
+                                  int mode) {
   int ngates = 0, nstates = 0;
   algorithm nalgorithm = GetMKLDNNRNNAlgo(mode, &ngates, &nstates);
   mkldnn::memory::data_type mkldnn_dtype = get_mkldnn_type(dtype);
@@ -576,35 +576,35 @@ void MKLDNNRNNForwardUnidi(bool state_outputs,
 }
 
 template <typename DType>
-void MKLDNNRNNForward(bool state_outputs,
-                      const int L,
-                      const int D,
-                      const int T,
-                      const int N,
-                      const int I,
-                      const int H,
-                      DType* x_ptr,
-                      DType* hx_ptr,
-                      DType* cx_ptr,
-                      DType* w_ptr,
-                      DType* b_ptr,
-                      DType* y_ptr,
-                      DType* hy_ptr,
-                      DType* cy_ptr,
-                      std::vector<mkldnn::memory> *concat_weight_memory,
-                      std::vector<mkldnn::memory> *concat_iter_memory,
-                      std::vector<mkldnn::memory> *x_memory,
-                      std::vector<mkldnn::memory> *hcx_memory,
-                      std::vector<mkldnn::memory> *wx_memory,
-                      std::vector<mkldnn::memory> *wh_memory,
-                      std::vector<mkldnn::memory> *bias_memory,
-                      std::vector<mkldnn::memory> *y_memory,
-                      std::vector<mkldnn::memory> *hcy_memory,
-                      std::vector<primitive> *rnn_forward_prim,
-                      bool *has_cache,
-                      int dtype,
-                      bool is_train,
-                      int mode) {
+static void MKLDNNRNNForward(bool state_outputs,
+                             const int L,
+                             const int D,
+                             const int T,
+                             const int N,
+                             const int I,
+                             const int H,
+                             DType* x_ptr,
+                             DType* hx_ptr,
+                             DType* cx_ptr,
+                             DType* w_ptr,
+                             DType* b_ptr,
+                             DType* y_ptr,
+                             DType* hy_ptr,
+                             DType* cy_ptr,
+                             std::vector<mkldnn::memory> *concat_weight_memory,
+                             std::vector<mkldnn::memory> *concat_iter_memory,
+                             std::vector<mkldnn::memory> *x_memory,
+                             std::vector<mkldnn::memory> *hcx_memory,
+                             std::vector<mkldnn::memory> *wx_memory,
+                             std::vector<mkldnn::memory> *wh_memory,
+                             std::vector<mkldnn::memory> *bias_memory,
+                             std::vector<mkldnn::memory> *y_memory,
+                             std::vector<mkldnn::memory> *hcy_memory,
+                             std::vector<primitive> *rnn_forward_prim,
+                             bool *has_cache,
+                             int dtype,
+                             bool is_train,
+                             int mode) {
   int ngates = 0, nstates = 0;
   GetMKLDNNRNNAlgo(mode, &ngates, &nstates);
   const int b_size = 2 * H * ngates * D;
@@ -686,35 +686,35 @@ void MKLDNNRNNForward(bool state_outputs,
 }
 
 template <typename DType>
-void MKLDNNRNNForwardInference(bool state_outputs,
-                               const int num_layers,
-                               const int direction,
-                               const int seq_length,
-                               const int batch_size,
-                               const int input_size,
-                               const int state_size,
-                               DType* x_ptr,
-                               DType* hx_ptr,
-                               DType* cx_ptr,
-                               DType* w_ptr,
-                               DType* b_ptr,
-                               DType* y_ptr,
-                               DType* hy_ptr,
-                               DType* cy_ptr,
-                               std::vector<mkldnn::memory>* concat_weight_memory,
-                               std::vector<mkldnn::memory>* concat_iter_memory,
-                               std::vector<mkldnn::memory> *x_memory,
-                               std::vector<mkldnn::memory> *hcx_memory,
-                               std::vector<mkldnn::memory> *wx_memory,
-                               std::vector<mkldnn::memory> *wh_memory,
-                               std::vector<mkldnn::memory> *bias_memory,
-                               std::vector<mkldnn::memory> *y_memory,
-                               std::vector<mkldnn::memory> *hcy_memory,
-                               std::vector<primitive> *rnn_forward_prim,
-                               bool *has_cache,
-                               int dtype,
-                               bool is_train,
-                               int mode) {
+static void MKLDNNRNNForwardInference(bool state_outputs,
+                                      const int num_layers,
+                                      const int direction,
+                                      const int seq_length,
+                                      const int batch_size,
+                                      const int input_size,
+                                      const int state_size,
+                                      DType* x_ptr,
+                                      DType* hx_ptr,
+                                      DType* cx_ptr,
+                                      DType* w_ptr,
+                                      DType* b_ptr,
+                                      DType* y_ptr,
+                                      DType* hy_ptr,
+                                      DType* cy_ptr,
+                                      std::vector<mkldnn::memory>* concat_weight_memory,
+                                      std::vector<mkldnn::memory>* concat_iter_memory,
+                                      std::vector<mkldnn::memory> *x_memory,
+                                      std::vector<mkldnn::memory> *hcx_memory,
+                                      std::vector<mkldnn::memory> *wx_memory,
+                                      std::vector<mkldnn::memory> *wh_memory,
+                                      std::vector<mkldnn::memory> *bias_memory,
+                                      std::vector<mkldnn::memory> *y_memory,
+                                      std::vector<mkldnn::memory> *hcy_memory,
+                                      std::vector<primitive> *rnn_forward_prim,
+                                      bool *has_cache,
+                                      int dtype,
+                                      bool is_train,
+                                      int mode) {
   switch (mode) {
     case rnn_enum::kLstm:
     case rnn_enum::kGru:
