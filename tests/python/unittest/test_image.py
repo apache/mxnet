@@ -356,6 +356,7 @@ class TestImage(unittest.TestCase):
             pass
 
     @with_seed()
+    @unittest.skip('Flaky test. Skipping until a solution can be found. Tracked by https://github.com/apache/incubator-mxnet/issues/14718')
     def test_random_size_crop(self):
         # test aspect ratio within bounds
         width = np.random.randint(100, 500)

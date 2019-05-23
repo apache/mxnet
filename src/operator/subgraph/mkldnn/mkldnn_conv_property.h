@@ -188,7 +188,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
     nnvm::Symbol new_sym;
-    new_sym.outputs.emplace_back(nnvm::NodeEntry{last_node, 0, 0});
+    new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
     node_name << "sg_mkldnn_";
     bool _with_sum = false;
