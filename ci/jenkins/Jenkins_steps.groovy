@@ -605,7 +605,7 @@ def test_static_scala_cpu() {
         ws('workspace/ut-publish-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run("publish.ubuntu1404_cpu", 'build_static_scala_mkl', false)
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_static_scala_mkl', true)
           }
         }
     }
