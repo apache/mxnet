@@ -36,29 +36,43 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& a_shape = in_attrs->at(0);
   const mxnet::TShape& b_shape = in_attrs->at(1);
 
-  if (!shape_is_known(a_shape) || !shape_is_known(b_shape)) {
+  if (!ndim_is_known(a_shape) || !ndim_is_known(b_shape)) {
     return false;
   }
 
   if (a_shape.ndim() == 1 && b_shape.ndim() == 1) {
     // Case 1: both 1-D arrays, inner product of vectors
-    CHECK_EQ(a_shape[0], b_shape[0]);
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, in_attrs->at(1));
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, in_attrs->at(0));
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, 0));
   } else if (a_shape.ndim() == 2 && b_shape.ndim() == 2) {
     // Case 2: both 2-D arrays, matrix multiplication
-    CHECK_EQ(a_shape[1], b_shape[0]);
-    mxnet::TShape mm_shape(2, 0);
-    mm_shape[0] = a_shape[0];
-    mm_shape[1] = b_shape[1];
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mm_shape);
+    mxnet::TShape tmp_shape(2, -1);
+    tmp_shape[1] = b_shape[0];
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, tmp_shape);
+
+    tmp_shape[0] = a_shape[1];
+    tmp_shape[1] = -1;
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, tmp_shape);
+
+    tmp_shape[0] = a_shape[0];
+    tmp_shape[1] = b_shape[1];
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, tmp_shape);
   } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
     // Case 3 + 3.5: either of them is a scalar, just scale by one of them
     mxnet::TShape oshape = (a_shape.ndim() == 0) ? b_shape : a_shape;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   } else if (b_shape.ndim() == 1) {
     // Case 4: a is N-D array and b is 1-D array, sum product over the last axis
-    CHECK_EQ(a_shape[a_shape.ndim() - 1], b_shape[0]);
-    mxnet::TShape out_shape(a_shape.ndim() - 1, 0);
+    TShape tmp_shape(a_shape.ndim(), -1);
+    tmp_shape[a_shape.ndim() - 1] = b_shape[0];
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, tmp_shape);
+
+    tmp_shape = TShape(1, -1);
+    tmp_shape[0] = a_shape[a_shape.ndim() - 1];
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, tmp_shape);
+
+    mxnet::TShape out_shape(a_shape.ndim() - 1, -1);
     for (int i = 0; i < a_shape.ndim() - 1; ++i) {
       out_shape[i] = a_shape[i];
     }
@@ -68,7 +82,7 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
     //         of a and the 2nd-to-last axis of b
     LOG(FATAL) << "Case 5 not implemented yet...";
   }
-  return true;
+  return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
 
 NNVM_REGISTER_OP(_np_dot)

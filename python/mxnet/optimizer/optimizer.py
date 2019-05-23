@@ -34,7 +34,6 @@ from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, 
                        multi_mp_sgd_mom_update)
 from ..ndarray import sparse
 from ..random import normal
-from .. import numpy_extension as npe
 
 __all__ = [
     'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LBSGD',
@@ -96,7 +95,7 @@ class Optimizer(object):
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
                  lr_scheduler=None, sym=None, begin_num_update=0,
-                 multi_precision=False, param_dict=None, is_np_compat=True):
+                 multi_precision=False, param_dict=None, allow_np=False):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -121,10 +120,10 @@ class Optimizer(object):
         self.idx2name = param_idx2name.copy()
         self.sym_info = (sym.attr_dict(), sym.list_arguments()) if sym is not None else ()
         self.param_dict = param_dict if param_dict else {}
+        self.allow_np = allow_np
 
         self.set_lr_mult({})
         self.set_wd_mult({})
-        self._is_np_compat = is_np_compat
 
     opt_registry = {}
 
@@ -585,8 +584,6 @@ class SGD(Optimizer):
         if self.momentum != 0.0:
             stype = weight.stype if self.lazy_update else 'default'
             momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype)
-            if self._is_np_compat:
-                momentum = momentum.as_np_ndarray()
         return momentum
 
     def _update_impl(self, indices, weights, grads, states, multi_precision=False):
@@ -615,10 +612,8 @@ class SGD(Optimizer):
         if aggregate:
             if not multi_precision:
                 if self.momentum > 0:
-                    updater =\
-                        npe.multi_sgd_mom_update if self._is_np_compat else multi_sgd_mom_update
-                    updater(*_flatten_list(zip(weights, grads, states)), out=weights,
-                            num_weights=len(weights), lrs=lrs, wds=wds, **kwargs)
+                    multi_sgd_mom_update(*_flatten_list(zip(weights, grads, states)), out=weights,
+                                         num_weights=len(weights), lrs=lrs, wds=wds, **kwargs)
                 else:
                     multi_sgd_update(*_flatten_list(zip(weights, grads)), out=weights,
                                      num_weights=len(weights), lrs=lrs, wds=wds, **kwargs)
@@ -1625,6 +1620,27 @@ class Test(Optimizer):
 # backward compatibility wrapper for Optimizer.CreateOptimizer
 create = Optimizer.create_optimizer  # pylint: disable=invalid-name
 
+
+def _as_classic(a, allow_np):
+    from ..numpy import ndarray as np_ndarray
+    if not a:
+        return a
+    if isinstance(a, (tuple, list)):
+        if any(isinstance(x, np_ndarray) for x in a):
+            if allow_np:
+                return [x.as_classic_ndarray() for x in a]
+            else:
+                raise ValueError('Converting np.ndarray to mx.nd.NDArray is not allowed')
+    else:
+        if isinstance(a, np_ndarray):
+            if allow_np:
+                return a.as_classic_ndarray()
+            else:
+                raise ValueError('Converting np.ndarray to mx.nd.NDArray is not allowed')
+    return a
+
+
+
 class Updater(object):
     """Updater for kvstore."""
     def __init__(self, optimizer):
@@ -1635,14 +1651,15 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
+        allow_np = self.optimizer.allow_np
         if not isinstance(index, (list, tuple)):
             indices = [index]
-            grads = [grad]
-            weights = [weight]
+            grads = [_as_classic(grad, allow_np)]
+            weights = [_as_classic(weight, allow_np)]
         else:
             indices = index
-            grads = grad
-            weights = weight
+            grads = _as_classic(grad, allow_np)
+            weights = _as_classic(weight, allow_np)
         if weights:
             self.optimizer._set_current_context(weights[0].context.device_id)
         for i, idx in enumerate(indices):

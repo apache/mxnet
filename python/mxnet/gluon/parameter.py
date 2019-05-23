@@ -30,7 +30,7 @@ from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent, _brief_print_list
+from .utils import _indent, _brief_print_list, shape_is_known
 from ..util import is_np_compat
 from .. import numpy as _mx_np
 
@@ -164,9 +164,9 @@ class Parameter(object):
         if self._shape is None:
             self._shape = new_shape
             return
-
+        unknown_dim_size = -1 if is_np_compat() else 0
         assert len(self._shape) == len(new_shape) and \
-            all(j in (0, i) for i, j in zip(new_shape, self._shape)), \
+            all(j in (unknown_dim_size, i) for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
                 str(new_shape), str(self._shape))
 
@@ -270,7 +270,7 @@ class Parameter(object):
             return
         init, ctx, default_init, data = self._deferred_init
         self._deferred_init = ()
-        assert self.shape is not None and np.prod(self.shape) > 0, \
+        assert shape_is_known(self.shape), \
             "Cannot initialize Parameter '%s' because it has " \
             "invalid shape: %s. Please specify in_units, " \
             "in_channels, etc for `Block`s."%(
@@ -387,7 +387,7 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
-        if not self.shape or np.prod(self.shape) <= 0:
+        if not shape_is_known(self.shape):
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init, None)
                 return

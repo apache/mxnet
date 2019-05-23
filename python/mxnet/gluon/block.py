@@ -32,8 +32,9 @@ from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
-from .utils import _indent, _brief_print_list, HookHandle, _check_same_symbol_type
-from .. import numpy as _mx_np
+from .utils import _indent, _brief_print_list, HookHandle
+from .utils import _check_same_symbol_type, _check_all_np_ndarrays
+from .. import numpy as _mx_np, is_np_compat
 
 
 class _BlockScope(object):
@@ -542,7 +543,8 @@ class Block(object):
 
         for hook in self._forward_hooks.values():
             hook(self, args, out)
-
+        if _mx_np.is_np_compat():
+            _check_all_np_ndarrays(_flatten(out, "output")[0])
         return out
 
     def forward(self, *args):
