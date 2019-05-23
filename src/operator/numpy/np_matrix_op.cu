@@ -23,6 +23,7 @@
  * \brief GPU Implementation of numpy matrix operations
  */
 #include "./np_matrix_op-inl.h"
+#include "../nn/concat-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -35,6 +36,9 @@ NNVM_REGISTER_OP(_np_reshape)
 
 NNVM_REGISTER_OP(_npi_stack)
 .set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
+
+NNVM_REGISTER_OP(_npi_concatenate)
+.set_attr<FCompute>("FCompute<gpu>", ConcatCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
