@@ -67,6 +67,7 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
     return percentage
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14978")
 def test_tensorrt_inference():
     """Run LeNet-5 inference comparison between MXNet and TensorRT."""
     check_tensorrt_installation()
