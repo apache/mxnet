@@ -51,6 +51,7 @@ int main(int argc, char** argv) {
     NDArray dst1, dst2;
     dst1 = src1.Copy(context);
     dst2 = src2.Copy(context);
+    NDArray::WaitAll();
     CHECK_EQ(src1.GetDType(), dst1.GetDType());
     CHECK_EQ(src2.GetDType(), dst2.GetDType());
     return 0;
