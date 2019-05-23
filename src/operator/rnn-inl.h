@@ -902,7 +902,7 @@ class RNNOp {
                                   param_.p,
                                   param_.mode);
       } else {
-        #if MXNET_USE_MKLDNN == 1 && !defined(__CUDACC__)
+        #if MXNET_USE_MKLDNN == 1
         if (dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1) && param_.mode != rnn_enum::kGru) {
           // TODO(zixuanweeei): MKLDNN GRU has precision issue. A stable one
           //   will be added to MXNet when we figure out the issue.
