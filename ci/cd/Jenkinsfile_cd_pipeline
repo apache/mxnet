@@ -30,7 +30,6 @@ pipeline {
 
   parameters {
     // Release parameters
-    string(defaultValue: "", description: 'Optional commit id to use for release', name: "MXNET_SHA")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
     string(defaultValue: "cpu,mkl,cu80,cu80mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
   }
@@ -43,9 +42,6 @@ pipeline {
 
           // The address of the release job on Jenkins
           cd_utils.set_release_job_name('restricted-mxnet-cd/mxnet-cd-release-job')
-
-          // initialize the MXNET_SHA variable to the current GIT_COMMIT if not set
-          env.MXNET_SHA = env.MXNET_SHA ?: env.GIT_COMMIT
         }
       }
     }

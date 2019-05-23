@@ -19,11 +19,6 @@
 
 // initialize source codes
 def init_git(git_sha = '') {
-
-  git_sha = git_sha ? git_sha.trim() : ''
-
-  echo "Checking out git_sha: ${git_sha}"
-
   deleteDir()
   retry(5) {
     try {
@@ -31,11 +26,6 @@ def init_git(git_sha = '') {
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-
-        if (git_sha) {
-          sh "git checkout ${git_sha}"
-        }
-
         sh 'git clean -xdff'
         sh 'git reset --hard'
         sh 'git submodule update --init --recursive'

@@ -31,7 +31,6 @@ Currently, 10 variants are supported:
 
 The [CD pipeline job](Jenkinsfile_cd_pipeline) take three parameters:
 
- * **MXNET_SHA**: Commit ID from which to run the CD process (Optional). Defaults to the HEAD commit ID.
  * **RELEASE_BUILD**: Flags the run as a *release build*. The underlying jobs can then use this environment variable to disambiguate between nightly and release builds. Defaults to *false*.
  * **MXNET_VARIANTS**: A comma separated list of variants to build. Defaults to *all* variants.
 
@@ -41,7 +40,6 @@ This job defines and executes the CD pipeline. For example, first publish the MX
 
 The [release job](Jenkinsfile_release_job) takes five parameters:
 
- * **MXNET_SHA**: Commit ID from which to run the CD process (Optional). Defaults to the HEAD commit ID.
  * **RELEASE_BUILD**: Flags the run as a *release build*. The underlying jobs can then use this environment variable to disambiguate between nightly and release builds. Defaults to *false*.
  * **MXNET_VARIANTS**: A comma separated list of variants to build. Defaults to *all* variants.
  * **RELEASE\_JOB\_NAME**: A name for this release job (Optional). Defaults to "Generic release job". It is used for debug output purposes.
@@ -164,8 +162,3 @@ def test(mxnet_variant) {
   }
 }
 ```
-
-##### MXNET_SHA
-
-Be mindful of this parameter as it defines the state of the repository that you are building. When checking out the project to execute your step, use `ci_utils.init_git(env.MXNET_SHA)`. You should ensure that what is being built is consistent across the variants.
-
