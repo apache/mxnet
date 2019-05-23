@@ -100,11 +100,11 @@ def error_checked_parallel(variant_pipelines) {
 }
 
 // pushes artifact to repository
-def push_artifact(libmxnet_path, variant, is_dynamic = true, license_paths = '', dependency_paths = '') {
+def push_artifact(libmxnet_path, variant, libtype, license_paths = '', dependency_paths = '') {
   if(license_paths == null) license_paths = ''
   if(dependency_paths == null) dependency_paths = ''
-  def libtype = is_dynamic ? 'dynamic' : 'static'
-  sh "./ci/cd/utils/artifact_repository.py --push --verbose --${libtype} --variant ${variant} --libmxnet ${libmxnet_path} --licenses ${license_paths} --dependencies ${dependency_paths}"
+
+  sh "./ci/cd/utils/artifact_repository.py --push --verbose --libtype ${libtype} --variant ${variant} --libmxnet ${libmxnet_path} --licenses ${license_paths} --dependencies ${dependency_paths}"
 }
 
 return this
