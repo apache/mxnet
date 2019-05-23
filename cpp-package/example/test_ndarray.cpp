@@ -16,9 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  * 
- * The file is used for testing if there exist type inconsistency 
- * when using Copy API to create a new NDArray.
- * By running: build/test_ndarray.
  */
 #include <vector>
 #include "mxnet/c_api.h"
@@ -32,24 +29,28 @@ enum TypeFlag {
   kInt8 = 2
 };
 
-int main(int argc, char** argv){
+/*
+ * The file is used for testing if there exist type inconsistency
+ * when using Copy API to create a new NDArray.
+ * By running: build/test_ndarray.
+ */
+int main(int argc, char** argv) {
     std::vector<mx_uint> shape1{128, 2, 32};
     Shape shape2(32, 8, 64);
 
     int gpu_count = 0;
-    if(MXGetGPUCount(&gpu_count) != 0){
+    if (MXGetGPUCount(&gpu_count) != 0) {
       LOG(ERROR) << "MXGetGPUCount failed";
       return -1;
     }
 
     Context context = (gpu_count > 0) ? Context::gpu() : Context::cpu();
-    
+
     NDArray src1(shape1, context, true, kFloat16);
     NDArray src2(shape2, context, false, kInt8);
     NDArray dst1, dst2;
     dst1 = src1.Copy(context);
     dst2 = src2.Copy(context);
-
     CHECK_EQ(src1.GetDType(), dst1.GetDType());
     CHECK_EQ(src2.GetDType(), dst2.GetDType());
     return 0;
