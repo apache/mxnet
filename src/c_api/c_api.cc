@@ -562,10 +562,12 @@ int MXNDArrayToDLPack(NDArrayHandle handle,
 }
 
 int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                        const bool transient_handle,
                         NDArrayHandle *out_handle) {
   API_BEGIN();
   *out_handle = new NDArray(NDArray::FromDLPack(
-              static_cast<DLManagedTensor*>(dlpack)));
+              static_cast<DLManagedTensor*>(dlpack),
+              transient_handle));
   API_END();
 }
 

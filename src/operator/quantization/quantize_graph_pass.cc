@@ -59,7 +59,7 @@ NodePtr InsertNode(std::string op_name,
     std::string node_name, NodePtr current, NodeEntry previous) {
   NodePtr node = CreateNode(op_name, node_name);
   node->inputs.emplace_back(previous);
-  current->inputs.emplace_back(NodeEntry{node, 0, 0});
+  current->inputs.emplace_back(node);
   return node;
 }
 
@@ -191,7 +191,7 @@ Graph QuantizeGraph(Graph &&src) {
             mirror_entry_map[e] = NodeEntry{quantize_node, 0, e.version};
           }
         } else if (mirror_node->op() == Op::Get("_contrib_dequantize")) {
-          new_node->inputs.emplace_back(NodeEntry{mirror_node->inputs[0].node, e.index, e.version});
+          new_node->inputs.emplace_back(mirror_node->inputs[0].node, e.index, e.version);
         } else {
           // If the entry e's node needs quantization, or mirror_entry is from a quantize op,
           // simply add mirror_entry to the input of the new_node.
@@ -232,11 +232,11 @@ Graph QuantizeGraph(Graph &&src) {
         }
         if (mirror_entry_map.count(e)) {
           auto quantize_entry = mirror_entry_map[e];
-          new_node->inputs.emplace_back(NodeEntry{quantize_entry.node, min_index, 0});
-          new_node->inputs.emplace_back(NodeEntry{quantize_entry.node, max_index, 0});
+          new_node->inputs.emplace_back(quantize_entry.node, min_index, 0);
+          new_node->inputs.emplace_back(quantize_entry.node, max_index, 0);
         } else {
-          new_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-          new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
+          new_node->inputs.emplace_back(mirror_node, min_index, 0);
+          new_node->inputs.emplace_back(mirror_node, max_index, 0);
         }
       }
 
@@ -253,8 +253,7 @@ Graph QuantizeGraph(Graph &&src) {
           requantize_node->op()->attr_parser(&(requantize_node->attrs));
         }
         for (size_t i = 0; i < 3; ++i) {
-          requantize_node->inputs.emplace_back(
-              NodeEntry{new_node, static_cast<uint32_t>(i), 0});
+          requantize_node->inputs.emplace_back(new_node, static_cast<uint32_t>(i), 0);
         }
         new_node = requantize_node;
       }
@@ -283,18 +282,17 @@ Graph QuantizeGraph(Graph &&src) {
           NodePtr dequantize_node = CreateNode("_contrib_dequantize",
             e.node->attrs.name + "_dequantize");
           dequantize_node->inputs.emplace_back(mirror_entry);
-          dequantize_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-          dequantize_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
+          dequantize_node->inputs.emplace_back(mirror_node, min_index, 0);
+          dequantize_node->inputs.emplace_back(mirror_node, max_index, 0);
           dequantize_node->op()->attr_parser(&(dequantize_node->attrs));
 
-          new_node->inputs.emplace_back(NodeEntry{dequantize_node, 0, 0});
+          new_node->inputs.emplace_back(dequantize_node, 0, 0);
           mirror_map[e.node.get()] = std::move(dequantize_node);
         } else if (mirror_entry_map.count(e)) {
           new_node->inputs.emplace_back(
-              NodeEntry{mirror_entry_map[e].node->inputs[0].node, e.index, e.version});
+              mirror_entry_map[e].node->inputs[0].node, e.index, e.version);
         } else {
-          new_node->inputs.emplace_back(
-              NodeEntry{mirror_node, e.index, e.version});
+          new_node->inputs.emplace_back(mirror_node, e.index, e.version);
         }
       }
     }
@@ -318,12 +316,12 @@ Graph QuantizeGraph(Graph &&src) {
       NodePtr dequantize_node = CreateNode("_contrib_dequantize",
           e.node->attrs.name + "_dequantize");
       dequantize_node->inputs.emplace_back(mirror_entry);
-      dequantize_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-      dequantize_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
+      dequantize_node->inputs.emplace_back(mirror_node, min_index, 0);
+      dequantize_node->inputs.emplace_back(mirror_node, max_index, 0);
       dequantize_node->op()->attr_parser(&(dequantize_node->attrs));
-      outputs.emplace_back(NodeEntry{dequantize_node, 0, 0});
+      outputs.emplace_back(dequantize_node, 0, 0);
     } else {
-      outputs.emplace_back(NodeEntry{mirror_map.at(e.node.get()), e.index, e.version});
+      outputs.emplace_back(mirror_map.at(e.node.get()), e.index, e.version);
     }
   }
 

@@ -344,7 +344,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 6U) << "Transpose support at most 6 dimensions";
+  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   mxnet::TShape ret(shp.ndim(), -1);
   if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {

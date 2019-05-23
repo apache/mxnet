@@ -189,16 +189,16 @@ struct RNNGrad {
     const RNNParam& params = nnvm::get<RNNParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> heads{ n->inputs[rnn_enum::kData],
       n->inputs[rnn_enum::kParams], n->inputs[rnn_enum::kState] };
-    heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kOut, 0});
+    heads.emplace_back(n, rnn_enum::kOut, 0);
     heads.push_back(ograd[rnn_enum::kOut]);
     if (params.state_outputs) {
-      heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kStateOut, 0});
+      heads.emplace_back(n, rnn_enum::kStateOut, 0);
       heads.push_back(ograd[rnn_enum::kStateOut]);
     }
     if (params.mode == rnn_enum::kLstm) {
       heads.push_back(n->inputs[rnn_enum::kStateCell]);
       if (params.state_outputs) {
-        heads.emplace_back(nnvm::NodeEntry{n, rnn_enum::kStateCellOut, 0});
+        heads.emplace_back(n, rnn_enum::kStateCellOut, 0);
         heads.push_back(ograd[rnn_enum::kStateCellOut]);
       }
     }
