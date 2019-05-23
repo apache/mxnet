@@ -1183,9 +1183,14 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
-
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
+                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "for more details.");
+  }
   if (param.ord == 1) {
-    if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+    if (safe_acc) {
       ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
         ctx, inputs, req, outputs, small);
     } else {
@@ -1193,7 +1198,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
         ctx, inputs, req, outputs, small);
     }
   } else if (param.ord == 2) {
-    if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+    if (safe_acc) {
       ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, true, false, mshadow_op::identity>(
         ctx, inputs, req, outputs, small);
     } else {

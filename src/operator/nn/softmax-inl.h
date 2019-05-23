@@ -411,6 +411,11 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
     param.temperature.value() : 1.0;
   mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for softmax with float16 inputs. "
+                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "for more details.");
+  }
 
   MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, DType, AType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
