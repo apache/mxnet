@@ -17,12 +17,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// Sets the name of the release job in Jenkins.
-// That is the release job that has been created in Jenkins based
-// on the Jenkinsfile_release_job definition.
-def set_release_job_name(release_job) {
-  RELEASE_JOB = release_job
-}
+RELEASE_JOB = "restricted-mxnet-cd/mxnet-cd-release-job"
 
 // Triggers a downstream jenkins job responsible for building, testing
 // and publishing all the variants for a particular 'job_type'.
@@ -35,7 +30,6 @@ def trigger_release_job(job_name, job_type, mxnet_variants) {
     job: RELEASE_JOB, 
     parameters: [
       string(name: 'RELEASE_JOB_NAME', value: "${job_name}"),
-      string(name: 'RELEASE_JOB_TYPE', value: "${job_type}"),
       string(name: 'RELEASE_JOB_TYPE', value: "${job_type}"),
       string(name: 'MXNET_VARIANTS', value: "${mxnet_variants}"),
       booleanParam(name: 'RELEASE_BUILD', value: "${env.RELEASE_BUILD}")
