@@ -26,9 +26,30 @@
 
 #include "./dropout-inl.h"
 #include "../operator_common.h"
+#include "mxnet/op_attr_types.h"
+
+
 
 namespace mxnet {
 namespace op {
+
+OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
+                                     const Context ctx,
+                                     const mxnet::ShapeVector &in_shapes,
+                                     const std::vector<int> &in_types) {
+  const auto& param = nnvm::get<DropoutParam>(attrs.parsed);
+  OpStatePtr state;
+  MSHADOW_REAL_TYPE_SWITCH(in_types[dropout::kData], DType, {
+    if (ctx.dev_type == kGPU) {
+      state = OpStatePtr::Create<DropoutOp<mxnet::gpu, DType>>(param, ctx);
+    } else {
+      state = OpStatePtr::Create<DropoutOp<mxnet::cpu, DType>>(param, ctx);
+    }
+    return state;
+  });
+  LOG(FATAL) << "should never reach here";
+  return OpStatePtr();  // should never reach here
+}
 
 struct DropoutGrad {
   const char *op_name;
