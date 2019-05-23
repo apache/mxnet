@@ -187,11 +187,12 @@ class TestArtifactRepositoryTool(unittest.TestCase):
     @patch('artifact_repository.get_cuda_version')
     def test_probe_variant_cuda_mkl(self, mock_cuda_version, mock_features):
         """
-        Tests None is returned if CUDA feature is ON but cuda version could not be determined
+        Tests exception is raised if CUDA feature is ON but cuda version could not be determined
         """
         mock_features.return_value = {'MKLDNN': True, 'CUDA': True}
         mock_cuda_version.return_value = None
-        self.assertIsNone(probe_mxnet_variant('libmxnet.so'))
+        with self.assertRaises(RuntimeError):
+            probe_mxnet_variant('libmxnet.so')
 
     def test_probe_artifact_repository_bucket(self):
         """
