@@ -1074,18 +1074,18 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // For g(x) -> g = log
     // g''(x) = -1 * (g'(x) * g'(x))
-    auto gx = nnvm::NodeEntry{n, 0, 0};
+    auto gx = nnvm::NodeEntry{n};
     auto ggx_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_mid_grad_grad",
                             {gx, gx}, nullptr, &n);
     auto ggx = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                        {nnvm::NodeEntry{ggx_mid, 0, 0}}, nullptr, &n);
+                        {nnvm::NodeEntry{ggx_mid}}, nullptr, &n);
 
     std::vector<nnvm::NodeEntry> ret;
 
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
                              {ograds[0], gx}, nullptr, &n));
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{ggx, 0, 0}}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
     return ret;
   });
 
@@ -1100,16 +1100,16 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
     auto g_lx = MakeNode("reciprocal", n->attrs.name + "_backward_log_grad",
                             {n->inputs[1]}, nullptr, &n);
     auto ggx_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_mid_grad_grad",
-                            {gx, nnvm::NodeEntry{g_lx, 0, 0}}, nullptr, &n);
+                            {gx, nnvm::NodeEntry{g_lx}}, nullptr, &n);
     auto ggx = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                        {nnvm::NodeEntry{ggx_mid, 0, 0}}, nullptr, &n);
+                        {nnvm::NodeEntry{ggx_mid}}, nullptr, &n);
 
     std::vector<nnvm::NodeEntry> ret;
 
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
                              {ograds[0], gx}, nullptr, &n));
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{ggx, 0, 0}}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
     return ret;
   });
 
@@ -1120,19 +1120,20 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
     // For g(x) -> g = log2
     // g'(x) = 1 / (log(2) * x)
     // g''(x) = -1 * (g'(x) * 1/x)
-    auto gx = nnvm::NodeEntry{n, 0, 0};
+    auto gx = nnvm::NodeEntry{n};
     auto g_lx = MakeNode("reciprocal", n->attrs.name + "_backward_log_grad",
                             {n->inputs[1]}, nullptr, &n);
     auto ggx_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_mid_grad_grad",
-                            {gx, nnvm::NodeEntry{g_lx, 0, 0}}, nullptr, &n);
+                            {gx, nnvm::NodeEntry{g_lx}}, nullptr, &n);
     auto ggx = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                        {nnvm::NodeEntry{ggx_mid, 0, 0}}, nullptr, &n);
+                        {nnvm::NodeEntry{ggx_mid}}, nullptr, &n);
 
     std::vector<nnvm::NodeEntry> ret;
+
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
                              {ograds[0], gx}, nullptr, &n));
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{ggx, 0, 0}}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
     return ret;
   });
 
