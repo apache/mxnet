@@ -80,7 +80,7 @@ def write_libmxnet_meta(args: argparse.Namespace, destination: str):
             "variant": args.variant,
             "os": args.os,
             "commit_id": args.git_sha,
-            "dependency_linking": args.lib_type,
+            "dependency_linking": args.libtype,
         }))
 
 
@@ -392,7 +392,7 @@ def get_s3_key_prefix(args: argparse.Namespace, subdir: str = '') -> str:
     :param subdir: An optional subdirectory in which to store the files. Post-pended to the end of the prefix.
     :return: A string containing the S3 key prefix to be used to uploading and downloading files to the artifact repository
     """
-    prefix = "{git_sha}/{lib_type}/{os}/{variant}/".format(**vars(args))
+    prefix = "{git_sha}/{libtype}/{os}/{variant}/".format(**vars(args))
     if subdir:
         return "{}{}/".format(prefix, subdir)
     return prefix
@@ -542,15 +542,11 @@ def main() -> int:
                         required=False,
                         type=str)
 
-    parser.add_argument("--static",
-                        help="libmxnet library static dependency linking",
-                        required=False,
-                        action='store_true')
-
-    parser.add_argument("--dynamic",
-                        help="libmxnet library with dynamic dependency linking",
-                        required=False,
-                        action='store_true')
+    parser.add_argument("--libtype",
+                        help="libmxnet dependency linking type",
+                        choices=['static', 'dynamic'],
+                        default='dynamic',
+                        required=False)
 
     parser.add_argument('--bucket',
                         help="S3 bucket to store files",
@@ -586,18 +582,11 @@ def main() -> int:
         logger.info('''Mode not specified. Using 'push' by default.''')
         args.push = True
 
-    if not args.static and not args.dynamic:
-        logger.info('''Library type not specified. Using 'dynamic' by default.''')
-        args.dynamic = True
-
     # libmxnet argument is required for push mode
     if args.push and not args.libmxnet:
         logger.error('Path to libmxnet library must be specified when in push mode. '
                      'Please specify it with --libmxnet.')
         return 1
-
-    # store string version of library type - used to facilitate S3 object prefix calculation
-    args.lib_type = 'static' if args.static else 'dynamic'
 
     # sanitize license and dependency arrays
     # Remove empty or directory entries
@@ -607,11 +596,15 @@ def main() -> int:
     # expand destination path
     args.destination = os.path.abspath(args.destination)
 
-    if args.push:
-        push_artifact(args)
+    try:
+        if args.push:
+            push_artifact(args)
 
-    elif args.pull:
-        pull_artifact(args)
+        elif args.pull:
+            pull_artifact(args)
+    except RuntimeError as err:
+        logger.error(err)
+        return 1
 
     return 0
 

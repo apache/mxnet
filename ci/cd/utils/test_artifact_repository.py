@@ -11,7 +11,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
                                   git_sha: Optional[str] = 'abc123',
                                   variant: Optional[str] = 'cpu',
                                   operating_system: Optional[str] = 'linux',
-                                  lib_type: Optional[str] = 'static',
+                                  libtype: Optional[str] = 'static',
                                   bucket: Optional[str] = 's3bucket',
                                   licenses: Optional[List[str]] = [],
                                   dependencies: Optional[List[str]] = []) -> argparse.Namespace:
@@ -23,7 +23,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
         ns.git_sha = git_sha
         ns.variant = variant
         ns.os = operating_system
-        ns.lib_type = lib_type
+        ns.libtype = libtype
         ns.bucket = bucket
         ns.licenses = licenses
         ns.dependencies = dependencies
@@ -293,7 +293,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
         fake_args = TestArtifactRepositoryTool.create_argparse_namespace(git_sha="abc123",
                                                                          operating_system='linux',
                                                                          variant='cpu',
-                                                                         lib_type='static')
+                                                                         libtype='static')
 
         self.assertEqual(get_s3_key_prefix(fake_args), 'abc123/static/linux/cpu/')
 
@@ -304,7 +304,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
         fake_args = TestArtifactRepositoryTool.create_argparse_namespace(git_sha="abc123",
                                                                          operating_system='linux',
                                                                          variant='cpu',
-                                                                         lib_type='static')
+                                                                         libtype='static')
 
         self.assertEqual(get_s3_key_prefix(fake_args, subdir='subdir'), 'abc123/static/linux/cpu/subdir/')
 
@@ -488,7 +488,7 @@ class TestArtifactRepositoryTool(unittest.TestCase):
             fake_args = TestArtifactRepositoryTool.create_argparse_namespace(git_sha='abcd1234',
                                                                              variant='gpu',
                                                                              operating_system='lunix',
-                                                                             lib_type='stynamic')
+                                                                             libtype='stynamic')
             write_libmxnet_meta(args=fake_args, destination='dest')
             mock_fopen.assert_called_once_with(os.path.join('dest', 'libmxnet.meta'), 'w')
             mock_fopen().write.called_with(
