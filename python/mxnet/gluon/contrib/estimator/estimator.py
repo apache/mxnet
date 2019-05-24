@@ -193,6 +193,51 @@ class Estimator(object):
                 self.val_metrics.append(val_metric)
         return self.train_metrics, self.val_metrics
 
+    def train_epoch(self,
+              train_data,
+              estimator_ref,
+              batch_begin,
+              batch_end,
+              batch_axis=0):
+        """Train model on train data for 1 epoch
+
+         Parameters
+         ----------
+         train_data : DataLoader
+             Train data loader with data and labels.
+         estimator_ref : reference to :py:class:`Estimator`
+         batch_begin : list of event handlers for batch_begin
+         batch_end : list of event handlers for batch_end
+         batch_axis : int, default 0
+             Batch axis to split the validation data into devices.
+        """
+        for i, batch in enumerate(train_data):
+            data, label = self._get_data_and_label(batch, self.context, batch_axis)
+
+            batch_size = batch[0].shape[0]
+
+            # batch begin
+            for handler in batch_begin:
+                handler.batch_begin(estimator_ref, batch=batch)
+
+            with autograd.record():
+                pred = [self.net(x) for x in data]
+                loss = [self.loss[0](y_hat, y) for y_hat, y in zip(pred, label)]
+
+            for l in loss:
+                l.backward()
+
+            self.trainer.step(batch_size)
+            # batch end
+
+            batch_end_result = []
+            for handler in batch_end:
+                batch_end_result.append(handler.batch_end(estimator_ref, batch=batch,
+                                                          pred=pred, label=label, loss=loss))
+            # if any handler signaled to stop
+            if any(batch_end_result):
+                break
+
     def evaluate(self,
                  val_data,
                  val_metrics,
@@ -286,32 +331,7 @@ class Estimator(object):
             for handler in epoch_begin:
                 handler.epoch_begin(estimator_ref)
 
-            for i, batch in enumerate(train_data):
-                data, label = self._get_data_and_label(batch, self.context, batch_axis)
-
-                batch_size = batch[0].shape[0]
-
-                # batch begin
-                for handler in batch_begin:
-                    handler.batch_begin(estimator_ref, batch=batch)
-
-                with autograd.record():
-                    pred = [self.net(x) for x in data]
-                    loss = [self.loss[0](y_hat, y) for y_hat, y in zip(pred, label)]
-
-                for l in loss:
-                    l.backward()
-
-                self.trainer.step(batch_size)
-                # batch end
-
-                batch_end_result = []
-                for handler in batch_end:
-                    batch_end_result.append(handler.batch_end(estimator_ref, batch=batch,
-                                                              pred=pred, label=label, loss=loss))
-                # if any handler signaled to stop
-                if any(batch_end_result):
-                    break
+            self.train_epoch(train_data, estimator_ref, batch_begin, batch_end, batch_axis)
 
             # epoch end
             epoch_end_result = []
