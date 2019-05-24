@@ -56,11 +56,11 @@ GetInception <- function() {
     dir.create("model/")
   }
   if (!file.exists("model/Inception-BN-0126.params")) {
-    download.file("http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-0126.params", 
+    download.file("http://data.mxnet.io/models/imagenet/inception-bn/Inception-BN-0126.params", 
       destfile = "model/Inception-BN-0126.params")
   }
   if (!file.exists("model/Inception-BN-symbol.json")) {
-    download.file("http://data.dmlc.ml/models/imagenet/inception-bn/Inception-BN-symbol.json", 
+    download.file("http://data.mxnet.io/models/imagenet/inception-bn/Inception-BN-symbol.json", 
       destfile = "model/Inception-BN-symbol.json")
   }
 }

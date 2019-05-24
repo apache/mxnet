@@ -17,7 +17,7 @@
 
 # Downloading the data and model
 mkdir -p model
-wget -nc http://data.dmlc.ml/mxnet/models/imagenet/inception-bn.tar.gz
+wget -nc http://data.mxnet.io/mxnet/models/imagenet/inception-bn.tar.gz
 wget -nc -O model/dog.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/dog.jpg?raw=true
 wget -nc -O model/mean_224.nd https://github.com/dmlc/web-data/raw/master/mxnet/example/feature_extract/mean_224.nd
 tar -xvzf inception-bn.tar.gz -C model
