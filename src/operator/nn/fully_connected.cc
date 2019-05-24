@@ -184,7 +184,7 @@ std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(
   for (const auto& x : n->inputs) {
     std::ostringstream os;
     os << n->attrs.name << "_backward_" << i;
-    ret.emplace_back(nnvm::NodeEntry{MakeNode("zeros_like", os.str(), {x}, nullptr, &n), 0, 0});
+    ret.emplace_back(MakeNode("zeros_like", os.str(), {x}, nullptr, &n));
     ++i;
   }
   return ret;
