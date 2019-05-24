@@ -179,6 +179,8 @@ struct FullyConnectedGrad {
 std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(
     const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
+  // Note this is not strictly correct but we don't expect inputs to depend on weights at the
+  // moment. If you find such a case, please contribute a more elaborate implementation.   
   std::vector<nnvm::NodeEntry> ret;
   size_t i = 0;
   for (const auto& x : n->inputs) {
