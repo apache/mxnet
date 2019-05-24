@@ -1072,8 +1072,8 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
                                                   unary_bwd<mshadow_op::log_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // For g(x) -> g = log
-    // g''(x) = -1 * (g'(x) * g'(x))
+    // For f(x) -> f = log
+    // f''(x) = -1 * (f'(x) * f'(x))
     auto gx = nnvm::NodeEntry{n};
     auto ggx_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_mid_grad_grad",
                             {gx, gx}, nullptr, &n);
@@ -1093,9 +1093,9 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
                                                   unary_bwd<mshadow_op::log10_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // For g(x) -> g = log10
-    // g'(x) = 1 / (log(10) * x)
-    // g''(x) = -1 * (g'(x) * 1/x)
+    // For f(x) -> f = log10
+    // f'(x) = 1 / (log(10) * x)
+    // f''(x) = -1 * (f'(x) * 1/x)
     auto gx = nnvm::NodeEntry{n, 0, 0};
     auto g_lx = MakeNode("reciprocal", n->attrs.name + "_backward_log_grad",
                             {n->inputs[1]}, nullptr, &n);
@@ -1117,9 +1117,9 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
                                                   unary_bwd<mshadow_op::log2_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // For g(x) -> g = log2
-    // g'(x) = 1 / (log(2) * x)
-    // g''(x) = -1 * (g'(x) * 1/x)
+    // For f(x) -> f = log2
+    // f'(x) = 1 / (log(2) * x)
+    // f''(x) = -1 * (f'(x) * 1/x)
     auto gx = nnvm::NodeEntry{n};
     auto g_lx = MakeNode("reciprocal", n->attrs.name + "_backward_log_grad",
                             {n->inputs[1]}, nullptr, &n);
