@@ -884,7 +884,7 @@ struct inverse_backward {
   }
 };
 
-// Here we set grad to zero if det = 0 as a temporary method
+// Here we set grad to zero if det = 0
 struct StopZeroDetGrad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, int grad_step, DType *grad, DType *det, DType zero_det) {
@@ -897,8 +897,7 @@ struct StopZeroDetGrad {
 
 // Backward of det(A) is derived from Jacobi's formula.
 // The closed form solution is pretty easy when A is invertible.
-// For non-invertible A, grad is not backwarded now.
-// TODO(arcadiaphy) add implementation for non-invertible case
+// For non-invertible A, grad is not backwarded.
 struct det_backward {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 1, DType>& ddet,
@@ -924,9 +923,8 @@ struct det_backward {
 
 // Backward of slogdet(A) is derived from Jacobi's formula.
 // The closed form solution is pretty easy when A is invertible.
-// For non-invertible A, grad is not backwarded now.
+// For non-invertible A, grad is not backwarded.
 // Grad is not properly defined on sign, so it's not backwarded either.
-// TODO(arcadiaphy) add implementation for non-invertible case
 struct slogdet_backward {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 1, DType>& dlogabsdet,
@@ -945,7 +943,7 @@ struct slogdet_backward {
       Shape3(logabsdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    // stop grad for zero det temporarily
+    // stop grad for zero det
     Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
                                          dA.dptr_, logabsdet.dptr_, DType(-INFINITY));
   }

@@ -952,6 +952,10 @@ If *n>2*, *det* is performed separately on the trailing two dimensions
 for all inputs (batch mode).
 
 .. note:: The operator supports float32 and float64 data types only.
+.. note:: There is no gradient backwarded when det(A) == 0 because it's
+          rarely hit upon in float point computation and the Jacobi's
+          formula on determinant gradient is not computationally efficient
+          when A is non-invertible.
 
 Examples::
 
