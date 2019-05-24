@@ -67,7 +67,8 @@ namespace mshadow {
                                             const bool no_trans, const DType trans_std,
                                             const index_t sample_per_part, const index_t output_dim,
                                             const index_t group_size, const index_t part_size,
-                                            const index_t num_classes, const index_t channels_each_class,
+                                            const index_t num_classes,
+                                            const index_t channels_each_class,
                                             DType* top_data, DType* top_count) {
     const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 #pragma omp parallel for num_threads(omp_threads)
