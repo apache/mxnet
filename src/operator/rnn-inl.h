@@ -44,16 +44,12 @@
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
 #include "./rnn_impl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "./nn/mkldnn/mkldnn_rnn_impl.h"
+#endif
 
 namespace mxnet {
 namespace op {
-
-namespace rnn_enum {
-  enum RNNOpInputs {kData, kParams, kState, kStateCell, kSequenceLength};
-  enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
-  enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
-  enum RNNOpResource {kTempSpace, kCuDNNDropoutDescSpace};
-}
 
 inline int GetRnnParamSize(int num_layer,
                            int input_size,
@@ -400,9 +396,29 @@ class RNNOp {
  public:
   RNNParam param_;
   Context ctx_;
+  #if MXNET_USE_MKLDNN == 1
+  std::vector<mkldnn::memory> concat_weight_memory;
+  std::vector<mkldnn::memory> concat_iter_memory;
+  std::vector<primitive> rnn_forward_prim;
+  std::vector<mkldnn::memory> x_memory;
+  std::vector<mkldnn::memory> hcx_memory;
+  std::vector<mkldnn::memory> wx_memory;
+  std::vector<mkldnn::memory> wh_memory;
+  std::vector<mkldnn::memory> bias_memory;
+  std::vector<mkldnn::memory> y_memory;
+  std::vector<mkldnn::memory> hcy_memory;
+  bool has_cache;
+  bool init_mem_;
+  size_t reserve_mem_size_;
+  Storage::Handle mem_space_;
+  #endif
   explicit RNNOp(RNNParam param, Context ctx) {
     this->param_ = param;
     this->ctx_ = ctx;
+    #if MXNET_USE_MKLDNN == 1
+    init_mem_ = false;
+    reserve_mem_size_ = 0;
+    #endif
     #if MXNET_USE_CUDNN_RNN
     init_cudnn_ = false;
     dtype_ = mshadow::DataType<DType>::kCudnnFlag;
@@ -410,8 +426,8 @@ class RNNOp {
     // No tests in place for fp16 RNNs, so leave TensorCore disabled for now.
     cudnn_tensor_core_ = false;
     // When fp16 RNN tests are introduced, we can enable TensorCore as follows:
-//    cudnn_tensor_core =
-//        mshadow::DataType<DType>::kFlag == mshadow::kFloat16 && GetEnvAllowTensorCore();
+    // cudnn_tensor_core =
+    //     mshadow::DataType<DType>::kFlag == mshadow::kFloat16 && GetEnvAllowTensorCore();
     // Defaults
     input_mode_ = CUDNN_LINEAR_INPUT;  // Don't support this yet
     // RNN Mode
@@ -492,7 +508,6 @@ class RNNOp {
       this->temp_init_space_ = false;
       this->reserve_cpu_space_size_ = 0;
       this->temp_cpu_space_size_ = 0;
-
       if (param_.projection_size.has_value()) {
         LOG(FATAL) <<
             "hidden layer projection is only supported for GPU with CuDNN later than 7.1.1";
@@ -505,6 +520,12 @@ class RNNOp {
   }
 
   ~RNNOp() {
+    #if MXNET_USE_MKLDNN == 1
+    if (init_mem_) {
+      Storage::Get()->Free(mem_space_);
+      init_mem_ = false;
+    }
+    #endif
     #if MXNET_USE_CUDNN_RNN
     CUDNN_CALL(cudnnDestroyTensorDescriptor(hx_desc_));
     CUDNN_CALL(cudnnDestroyTensorDescriptor(cx_desc_));
@@ -829,22 +850,23 @@ class RNNOp {
 #endif
 
     if (ctx_.dev_type == kCPU) {
-      // allocate temp space
-      const size_t work_cpu_space_size =
-        GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                            param_.state_size, direction, param_.mode);
-      if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
-        Storage::Get()->Free(temp_cpu_space_);
-        temp_init_space_ = false;
-      }
-      if (!temp_init_space_) {
-        temp_cpu_space_ = Storage::Get()->Alloc
-          (work_cpu_space_size * sizeof(DType), Context::CPU());
-        temp_cpu_space_size_ = work_cpu_space_size;
-        temp_init_space_ = true;
-      }
-      DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
       if (ctx.is_train) {
+        // allocate temp space
+        const size_t work_cpu_space_size =
+            GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+                              param_.state_size, direction, param_.mode);
+        if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
+            Storage::Get()->Free(temp_cpu_space_);
+            temp_init_space_ = false;
+        }
+        if (!temp_init_space_) {
+          temp_cpu_space_ = Storage::Get()->Alloc
+              (work_cpu_space_size * sizeof(DType), Context::CPU());
+          temp_cpu_space_size_ = work_cpu_space_size;
+          temp_init_space_ = true;
+        }
+        DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
+
         const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                      param_.seq_length_, param_.batch_size_,
                                                      param_.state_size, param_.mode);
@@ -880,23 +902,78 @@ class RNNOp {
                                   param_.p,
                                   param_.mode);
       } else {
-        RNNForwardInference<DType>(work_cpu_space,
-                                   param_.state_outputs,
-                                   param_.num_layers,
-                                   direction,
-                                   param_.seq_length_,
-                                   param_.batch_size_,
-                                   param_.input_size_,
-                                   param_.state_size,
-                                   x.dptr_,
-                                   hx.dptr_,
-                                   cx_ptr,
-                                   w.dptr_,
-                                   b_ptr,
-                                   y.dptr_,
-                                   hy_ptr,
-                                   cy_ptr,
-                                   param_.mode);
+        #if MXNET_USE_MKLDNN == 1
+        if (dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1) && param_.mode != rnn_enum::kGru) {
+          // TODO(zixuanweeei): MKLDNN GRU has precision issue. A stable one
+          //   will be added to MXNet when we figure out the issue.
+          int dtype = in_data[rnn_enum::kData].type_flag_;
+          MKLDNNRNNForwardInference<DType>(param_.state_outputs,
+                                           param_.num_layers,
+                                           direction,
+                                           param_.seq_length_,
+                                           param_.batch_size_,
+                                           param_.input_size_,
+                                           param_.state_size,
+                                           x.dptr_,
+                                           hx.dptr_,
+                                           cx_ptr,
+                                           w.dptr_,
+                                           b_ptr,
+                                           y.dptr_,
+                                           hy_ptr,
+                                           cy_ptr,
+                                           &concat_weight_memory,
+                                           &concat_iter_memory,
+                                           &x_memory,
+                                           &hcx_memory,
+                                           &wx_memory,
+                                           &wh_memory,
+                                           &bias_memory,
+                                           &y_memory,
+                                           &hcy_memory,
+                                           &rnn_forward_prim,
+                                           &has_cache,
+                                           dtype,
+                                           ctx.is_train,
+                                           param_.mode);
+        } else {
+        #endif
+          //  Before integrating MKLDNN GRU fp32 inference
+          //  using below code for keep func being OK
+          const size_t work_cpu_space_size =
+              GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+                                  param_.state_size, direction, param_.mode);
+          if (temp_init_space_ && temp_cpu_space_size_ < work_cpu_space_size) {
+            Storage::Get()->Free(temp_cpu_space_);
+            temp_init_space_ = false;
+          }
+          if (!temp_init_space_) {
+            temp_cpu_space_ = Storage::Get()->Alloc
+                (work_cpu_space_size * sizeof(DType), Context::CPU());
+            temp_cpu_space_size_ = work_cpu_space_size;
+            temp_init_space_ = true;
+          }
+          DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.dptr);
+          RNNForwardInference<DType>(work_cpu_space,
+                                     param_.state_outputs,
+                                     param_.num_layers,
+                                     direction,
+                                     param_.seq_length_,
+                                     param_.batch_size_,
+                                     param_.input_size_,
+                                     param_.state_size,
+                                     x.dptr_,
+                                     hx.dptr_,
+                                     cx_ptr,
+                                     w.dptr_,
+                                     b_ptr,
+                                     y.dptr_,
+                                     hy_ptr,
+                                     cy_ptr,
+                                     param_.mode);
+        #if MXNET_USE_MKLDNN == 1
+        }
+        #endif
       }
     }
   }
