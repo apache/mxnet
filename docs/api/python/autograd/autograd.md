@@ -52,6 +52,12 @@ and do some computation. Finally, call `backward()` on the result:
 <NDArray 4 @cpu(0)>
 ```
 
+Gradient recording is enabled during the scope of the `with mx.autograd.record():` statement, then
+disabled when we go out of that scope.
+
+It can be also set manually by executing `mx.autograd.set_recording(True)`, and turning it off after
+we no longer want to record operations with `mx.autograd.set_recording(False)`.
+
 
 ## Train mode and Predict Mode
 
@@ -76,6 +82,38 @@ Detailed tutorials are available in Part 1 of
 [the MXNet gluon book](http://gluon.mxnet.io/).
 
 
+# Higher order gradient
+
+Some operators support higher order gradients. Meaning that you calculate the gradient of the
+gradient. For this the operator's backward must be as well differentiable. Some operators support
+differentiating multiple times, and others two, most just once.
+
+For calculating higher order gradients, we can use the `mx.autograd.grad` function while recording
+and then call backward, or call `mx.autograd.grad` two times. If we do the later is important that
+the first call uses `create_graph=True` and `retain_graph=True` and the second call uses
+`create_graph=False` and `retain_graph=True`. Otherwise we will not get the results that we want. If
+we would be to recreate the graph in the second call, we would end up with a graph of just the
+backward nodes, not the full initial graph that includes the forward nodes.
+
+The idiom to calculate higher order gradients is the following:
+
+```python
+import mxnet autograd as ag
+with ag.record():
+    y = f(x)
+    y_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
+    y_grad_grad = ag.grad(y_grad, x, create_graph=False, retain_graph=True)[0]
+```
+
+or
+
+```python
+import mxnet autograd as ag
+with ag.record():
+    y = f(x)
+    y_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
+y_grad_grad = y_grad.backward()
+```
 
 
 
