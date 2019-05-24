@@ -521,7 +521,7 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     mxnet::TShape s = arr->shape();
-    if (!Imperative::Get()->is_np_comp()) {
+    if (!Imperative::Get()->is_np_shape()) {
       common::ConvertToLegacyShape(&s);
     }
     *out_dim = s.ndim();
@@ -532,7 +532,7 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
       *out_pdata = buffer.data();
     }
   } else {
-    if (Imperative::Get()->is_np_comp()) {
+    if (Imperative::Get()->is_np_shape()) {
       *out_dim = -1;
     } else {
       *out_dim = 0;

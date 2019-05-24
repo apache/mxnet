@@ -556,7 +556,7 @@ int MXSymbolInferShape(SymbolHandle sym,
 
   // if use legacy shape definition, need to convert numpy shape to legacy shape
   mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  if (!Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToLegacyShape(&shapes);
   }
 
@@ -629,7 +629,7 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
 
   // if use legacy shape definition, need to convert numpy shape to legacy shape
   mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  if (!Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToLegacyShape(&shapes);
   }
 
