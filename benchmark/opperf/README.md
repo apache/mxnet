@@ -72,35 +72,33 @@ python incubator-mxnet/benchmark/opperf/opperf.py --output-format json --output-
 
 ## Usecase 2 - Run benchmarks for all the operators in a specific category
 
-For example, you want to run benchmarks for all NDArray Arithmetic Operators, you just run the following python script.
+For example, you want to run benchmarks for all NDArray Broadcast Binary Operators, Ex: broadcast_add, broadcast_mod, broadcast_pow etc., You just run the following python script.
 
 ```
 #!/usr/bin/python
-from benchmark.opperf.tensor_operations.arithmetic_operations import run_arithmetic_operators_benchmarks
+from benchmark.opperf.tensor_operations.binary_broadcast_operators import run_mx_binary_broadcast_operators_benchmarks
 
-# Run all Arithmetic operations benchmarks with default input values
-print(run_arithmetic_operators_benchmarks())
+# Run all Binary Broadcast operations benchmarks with default input values
+print(run_mx_binary_broadcast_operators_benchmarks())
 ```
 
 Output for the above benchmark run, on a CPU machine, would look something like below:
 
 ```
-{'subtract': [{'avg_time_forward_broadcast_sub': 5.5137, 
-               'avg_time_mem_alloc_cpu/0': 207618.0469,
-               'avg_time_backward_broadcast_sub': 7.2976, 
-               'inputs': {'lhs': (1024, 1024), 'rhs': (1024, 1024)}}
-             ],
- 'add': [{'avg_time_mem_alloc_cpu/0': 207618.0469,
-          'avg_time_forward_broadcast_add': 4.309,
-          'avg_time_backward_broadcast_add': 5.6063,
-          'inputs': {'lhs': (1024, 1024), 'rhs': (1024, 1024)}},
-        ],
- 'multiply': [{'avg_time_backward_broadcast_mul': 19.1712,
-               'avg_time_mem_alloc_cpu/0': 207618.0469,
-               'avg_time_forward_broadcast_mul': 6.4855, 
-               'inputs': {'lhs': (1024, 1024), 'rhs': (1024, 1024)}},
-             ]
-}
+{'broadcast_mod': [{'avg_time_forward_broadcast_mod': 28.7063, 'avg_time_mem_alloc_cpu/0': 4194.3042,
+                    'avg_time_backward_broadcast_mod': 12.0954, 'inputs': {'lhs': (1024, 1024), 'rhs': (1024, 1024)}},
+                   {'avg_time_forward_broadcast_mod': 2.7332, 'avg_time_mem_alloc_cpu/0': 400.0,
+                    'avg_time_backward_broadcast_mod': 1.1288, 'inputs': {'lhs': (10000, 10), 'rhs': (10000, 10)}},
+                   {'avg_time_forward_broadcast_mod': 30.5322, 'avg_time_mem_alloc_cpu/0': 4000.0,
+                    'avg_time_backward_broadcast_mod': 225.0255, 'inputs': {'lhs': (10000, 1), 'rhs': (10000, 100)}}],
+ 'broadcast_power': [{'avg_time_backward_broadcast_power': 49.5871, 'avg_time_forward_broadcast_power': 18.0954,
+                      'avg_time_mem_alloc_cpu/0': 4194.3042, 'inputs': {'lhs': (1024, 1024), 'rhs': (1024, 1024)}},
+                     {'avg_time_backward_broadcast_power': 4.6623, 'avg_time_forward_broadcast_power': 1.8283,
+                      'avg_time_mem_alloc_cpu/0': 400.0, 'inputs': {'lhs': (10000, 10), 'rhs': (10000, 10)}},
+                     {'avg_time_backward_broadcast_power': 279.922, 'avg_time_forward_broadcast_power': 24.4621,
+                      'avg_time_mem_alloc_cpu/0': 4000.0, 'inputs': {'lhs': (10000, 1), 'rhs': (10000, 100)}}],
+.....
+.....                      
 ```
 
 ## Usecase 3 - Run benchmarks for specific operator
@@ -166,6 +164,12 @@ Under the hood, executes NDArray operator using randomly generated data. Use MXN
 2. Computation time (forward, backward)
 
 See the design proposal document for more details - https://cwiki.apache.org/confluence/display/MXNET/MXNet+Operator+Benchmarks 
+
+**NOTE:**
+
+This utility queries MXNet operator registry to fetch all operators registered with MXNet, generate inputs and run benchmarks.
+However, fully automated tests are enabled only for simpler operators such as - broadcast operators, element_wise operators etc... For the purpose of readability and giving more control to the users, complex operators such as convolution (2D, 3D), Pooling, Recurrent are not fully automated but expressed as default rules.
+See `utils/op_registry_utils.py` for more details.
 
 # TODO
 

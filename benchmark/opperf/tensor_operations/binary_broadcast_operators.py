@@ -36,7 +36,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_broadcast_binary_op
 from benchmark.opperf.rules.input_shapes import DEFAULT_BINARY_BROADCAST_OP_INPUTS
 
 
-def run_mx_binary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
     """Runs benchmarks with the given context and precision (dtype)for all the binary
     broadcast operators in MXNet.
 
@@ -62,6 +62,9 @@ def run_mx_binary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10,
                                           warmup=warmup, runs=runs)
         mx_binary_op_results += cur_op_res
 
-    # Prepare combined results for Arithmetic operators
+    # Prepare combined results for Binary Broadcast operators
     mx_binary_op_results = merge_map_list(mx_binary_op_results)
     return mx_binary_op_results
+
+
+print(run_mx_binary_broadcast_operators_benchmarks())

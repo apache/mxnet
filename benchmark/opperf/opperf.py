@@ -18,9 +18,7 @@
 import argparse
 
 import mxnet as mx
-from benchmark.opperf.tensor_operations.arithmetic_operations import run_arithmetic_operators_benchmarks
-from benchmark.opperf.tensor_operations.comparison_operations import run_comparison_operators_benchmarks
-from benchmark.opperf.tensor_operations.logical_operations import run_logical_operators_benchmarks
+from benchmark.opperf.tensor_operations.binary_broadcast_operators import run_mx_binary_broadcast_operators_benchmarks
 from benchmark.opperf.tensor_operations.gemm_operations import run_gemm_operators_benchmarks
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 
@@ -34,15 +32,11 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
 
     # *************************MXNET TENSOR OPERATOR BENCHMARKS*****************************
 
-    # Run all Arithmetic operations benchmarks with default input values
-    mxnet_operator_benchmark_results.append(run_arithmetic_operators_benchmarks(ctx=ctx,
-                                                                                dtype=dtype))
-    mxnet_operator_benchmark_results.append(run_comparison_operators_benchmarks(ctx=ctx,
-                                                                                dtype=dtype))
+    # Run all Binary Broadcast operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_mx_binary_broadcast_operators_benchmarks(ctx=ctx,
+                                                                                         dtype=dtype))
     mxnet_operator_benchmark_results.append(run_gemm_operators_benchmarks(ctx=ctx,
                                                                           dtype=dtype))
-    mxnet_operator_benchmark_results.append(run_logical_operators_benchmarks(ctx=ctx,
-                                                                             dtype=dtype))
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
 
     # ****************************** PREPARE FINAL RESULTS ********************************
