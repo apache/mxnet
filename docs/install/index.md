@@ -1408,7 +1408,16 @@ then running:
   free -m # to verify the swapfile size has been increased
 ```
 
-**Step 2** Install MXNet Python Bindings
+**Step 2** Build cython modules (optional)
+
+```bash
+$ pip install Cython
+$ make cython # You can set the python executable with `PYTHON` flag, e.g., make cython PYTHON=python3
+```
+*MXNet* tries to use the cython modules unless the environment variable `MXNET_ENABLE_CYTHON` is set to `0`. If loading the cython modules fails, the default behavior is falling back to ctypes without any warning. To raise an exception at the failure, set the environment variable `MXNET_ENFORCE_CYTHON` to `1`. See [here](/faq/env_var.html) for more details.
+
+
+**Step 3** Install MXNet Python Bindings
 
 To install Python bindings run the following commands in the MXNet directory:
 
