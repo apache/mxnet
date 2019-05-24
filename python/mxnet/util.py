@@ -20,6 +20,7 @@ import ctypes
 import os
 import sys
 import functools
+import itertools
 import inspect
 
 from .base import _LIB, check_call
@@ -156,6 +157,18 @@ def np_compat(active=True):
     return _NumpyCompatibilityStateScope(active)
 
 
+def wraps_safely(wrapped, assigned=functools.WRAPPER_ASSIGNMENTS):
+    """This function is safe version of `functools.wraps` in Python2 which skips wrapping functions
+    for the attributes that do not exist."""
+    import sys
+    if sys.version_info[0] > 2:
+        return functools.wraps(wrapped)
+    else:
+        return functools.wraps(wrapped,
+                               assigned=itertools.ifilter(
+                                   functools.partial(hasattr, wrapped), assigned))
+
+
 def use_np_compat(func):
     """A decorator wrapping a function or class with an activated NumPy-compatibility scope.
     When `func` is a function, this ensures that the execution of the function is scoped with NumPy
@@ -220,7 +233,7 @@ def use_np_compat(func):
                 setattr(func, name, use_np_compat(method))
         return func
     elif callable(func):
-        @functools.wraps(func)
+        @wraps_safely(func)
         def _with_np_compat(*args, **kwargs):
             with np_compat(active=True):
                 return func(*args, **kwargs)
