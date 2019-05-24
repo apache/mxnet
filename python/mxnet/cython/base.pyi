@@ -90,20 +90,25 @@ cdef extern from "mxnet/c_api.h":
     int MXSymbolSetAttr(SymbolHandle symbol,
                         const char* key,
                         const char* value);
-    int MXImperativeInvoke(OpHandle creator,
+    int MXImperativeInvokeEx(OpHandle creator,
+                             int num_inputs,
+                             NDArrayHandle *inputs,
+                             int *num_outputs,
+                             NDArrayHandle **outputs,
+                             int num_params,
+                             const char **param_keys,
+                             const char **param_vals,
+                             const int **out_stypes);
+    int MXNDArrayFree(NDArrayHandle handle);
+    int MXCreateCachedOpEx(SymbolHandle handle,
+                            int num_flags,
+                            const char** keys,
+                            const char** vals,
+                            CachedOpHandle *out);
+    int MXFreeCachedOp(CachedOpHandle handle);
+    int MXInvokeCachedOpEx(CachedOpHandle handle,
                            int num_inputs,
                            NDArrayHandle *inputs,
                            int *num_outputs,
                            NDArrayHandle **outputs,
-                           int num_params,
-                           const char **param_keys,
-                           const char **param_vals);
-    int MXNDArrayFree(NDArrayHandle handle);
-    int MXCreateCachedOp(SymbolHandle handle,
-                         CachedOpHandle *out);
-    int MXFreeCachedOp(CachedOpHandle handle);
-    int MXInvokeCachedOp(CachedOpHandle handle,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs);
+                           const int **out_stypes);
