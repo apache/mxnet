@@ -202,7 +202,6 @@ class BidirectionalGraph {
   std::vector<Node> nodes;
   std::unordered_map<nnvm::Node*, uint32_t> nnvm2nid;
   std::vector<Node*> outputs;
- 
 };  // class BidirectionalGraph
 
 using NodeEntrySet = std::unordered_set<nnvm::NodeEntry, nnvm::NodeEntryHash,
@@ -213,7 +212,6 @@ using NodeRawPtrSet = std::unordered_set<nnvm::Node*>;
  * \brief get the output nodes of the subgraph in the main graph
  * \return a map between the node in the main graph and the output index of the subgraph node
 */
-// std::vector<nnvm::NodeEntry>
 nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_set) {
   //std::vector<nnvm::NodeEntry> outputs;
   //NodeEntrySet _outputs;
@@ -243,6 +241,7 @@ nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_
 */
 std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_set) {
   std::vector<nnvm::NodeEntry> inputs;
+  const auto &idx = g.indexed_graph();
   nnvm::NodeEntryMap<nnvm::NodeEntry> entry_map;
   DFSVisit(g.outputs, [&subgraph_set, &inputs, &entry_map](const nnvm::NodePtr &node){
     if (subgraph_set.count(node.get())) {
@@ -262,6 +261,11 @@ std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_s
       }
     }
   });
+  // Fix ordering of w.r.t to topology
+  std::sort(inputs.begin(), inputs.end(),
+      [&idx](const nnvm::NodeEntry lhs, const nnvm::NodeEntry rhs) {
+        return idx.entry_id(lhs) < idx.entry_id(rhs);
+      });
   return inputs;
 }
 
