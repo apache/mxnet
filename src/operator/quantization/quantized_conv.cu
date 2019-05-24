@@ -62,8 +62,8 @@ class QuantizedCuDNNConvOp {
 
   void Init(const ConvolutionParam& param,
             const OpContext& ctx,
-            const std::vector<TShape>& in_shape,
-            const std::vector<TShape>& out_shape) {
+            const mxnet::ShapeVector& in_shape,
+            const mxnet::ShapeVector& out_shape) {
     param_ = param;
     CHECK_EQ(param_.kernel.ndim(), 2U)
       << "QuantizedCuDNNConvOp only supports 2D convolution for now";
@@ -106,9 +106,9 @@ class QuantizedCuDNNConvOp {
     const TBlob& data   = in_data[0];
     const TBlob& filter = in_data[1];
     const TBlob& out    = out_data[0];
-    const TShape& dshape = data.shape_;
-    const TShape& fshape = filter.shape_;
-    const TShape& oshape = out.shape_;
+    const mxnet::TShape& dshape = data.shape_;
+    const mxnet::TShape& fshape = filter.shape_;
+    const mxnet::TShape& oshape = out.shape_;
 
     // allocate workspace
     const int dev_id = ctx.run_ctx.ctx.dev_id;
@@ -123,24 +123,24 @@ class QuantizedCuDNNConvOp {
         ctx.requested[0].get_space_typed<gpu, 1, char>(mshadow::Shape1(total_temp_bytes), s);
       char* temp_dptr = temp_space.dptr_;
       TBlob data_(reinterpret_cast<SrcType*>(temp_dptr),
-                  TShape({dshape[N], dshape[H], dshape[W], dshape[C]}),
+                  mxnet::TShape({dshape[N], dshape[H], dshape[W], dshape[C]}),
                   dev_mask, DataType<SrcType>::kFlag, dev_id);
       temp_dptr += data_size * sizeof(SrcType);
       TBlob filter_(reinterpret_cast<SrcType*>(temp_dptr),
-                    TShape({fshape[N], fshape[H], fshape[W], fshape[C]}),
+                    mxnet::TShape({fshape[N], fshape[H], fshape[W], fshape[C]}),
                     dev_mask, DataType<SrcType>::kFlag, dev_id);
       temp_dptr += weight_size * sizeof(SrcType);
 
       // input:  [NCHW] => [NHWC](batch, in_height, in_width, in_channels)
       // filter: [NCHW] => [NHWC](out_channels, filter_height, filter_width, in_channels)
-      TransposeImpl<gpu>(ctx.run_ctx, data,   data_,   TShape({N, H, W, C}));
-      TransposeImpl<gpu>(ctx.run_ctx, filter, filter_, TShape({N, H, W, C}));
+      TransposeImpl<gpu>(ctx.run_ctx, data,   data_,   mxnet::TShape({N, H, W, C}));
+      TransposeImpl<gpu>(ctx.run_ctx, filter, filter_, mxnet::TShape({N, H, W, C}));
       TBlob out_(reinterpret_cast<DstType*>(temp_dptr),
-                 TShape({oshape[N], oshape[H], oshape[W], oshape[C]}),
+                 mxnet::TShape({oshape[N], oshape[H], oshape[W], oshape[C]}),
                  dev_mask, DataType<DstType>::kFlag, dev_id);
       temp_dptr += output_size * sizeof(DstType);
       TBlob out_tcast(reinterpret_cast<int32_t*>(temp_dptr),
-                      TShape({oshape[N], oshape[H], oshape[W], oshape[C]}),
+                      mxnet::TShape({oshape[N], oshape[H], oshape[W], oshape[C]}),
                       dev_mask, DataType<int32_t>::kFlag, dev_id);
       temp_dptr += output_size * sizeof(int32_t);
       // input:  [NHWC](batch, in_height, in_width, in_channels)
@@ -165,7 +165,7 @@ class QuantizedCuDNNConvOp {
       Tensor<gpu, 1, int32_t> out_tcast_tensor = out_tcast.FlatTo1D<gpu, int32_t>(s);
       Assign(out_tcast_tensor, kWriteTo, mshadow::expr::tcast<int32_t>(out_tensor));
       // output: [NHWC](batch, out_height, out_width, out_channels) => [NCHW]
-      TransposeImpl<gpu>(ctx.run_ctx, out_tcast, out, TShape({0, 3, 1, 2}));
+      TransposeImpl<gpu>(ctx.run_ctx, out_tcast, out, mxnet::TShape({0, 3, 1, 2}));
     } else {
       LOG(FATAL) << "quantized_conv only supports NCHW for now";
     }
@@ -174,7 +174,7 @@ class QuantizedCuDNNConvOp {
     // of in_data[0] and in_data[1]. Need to rescale the min/max range of out_data
     // based on the min/max ranges of in_data[0] and in_data[1].
     const size_t num_inputs = param_.no_bias ? 2 : 3;
-    mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, gpu>::Launch(s, 1,
+    mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, gpu>::Launch(s, 1,
       out_data[1].dptr<float>(), out_data[2].dptr<float>(),
        in_data[num_inputs].dptr<float>(),  in_data[num_inputs+1].dptr<float>(),
        in_data[num_inputs+2].dptr<float>(),  in_data[num_inputs+3].dptr<float>());
@@ -193,11 +193,11 @@ class QuantizedCuDNNConvOp {
     }
   }
 
-  void InitDescriptors(const std::vector<TShape>& in_shape,
-                       const std::vector<TShape>& out_shape) {
-    const TShape& dshape =  in_shape[0];
-    const TShape& kshape =  in_shape[1];
-    const TShape& oshape = out_shape[0];
+  void InitDescriptors(const mxnet::ShapeVector& in_shape,
+                       const mxnet::ShapeVector& out_shape) {
+    const mxnet::TShape& dshape =  in_shape[0];
+    const mxnet::TShape& kshape =  in_shape[1];
+    const mxnet::TShape& oshape = out_shape[0];
     CUDNN_CALL(cudnnSetConvolution2dDescriptor(conv_desc_,
                                                param_.pad[0],
                                                param_.pad[1],

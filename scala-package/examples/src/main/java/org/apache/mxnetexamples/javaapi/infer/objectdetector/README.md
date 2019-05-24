@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Single Shot Multi Object Detection using Java Inference API
 
 In this example, you will learn how to use Java Inference API to run Inference on pre-trained Single Shot Multi Object Detection (SSD) MXNet model.
@@ -17,8 +34,8 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 
 ## Prerequisites
 
-1. MXNet
-2. MXNet Scala Package
+1. [Build MXNet](http://mxnet.incubator.apache.org/install/scala_setup.html)
+2. [Build MXNet Scala/Java Package](http://mxnet.incubator.apache.org/install/scala_setup.html)
 3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/java/mxnet_java_on_intellij.html) with the MXNet Scala/Java Package
 4. wget
 
@@ -64,10 +81,10 @@ The followings is the parameters defined for this example, you can find more inf
 ## How to Run Inference
 After the previous steps, you should be able to run the code using the following script that will pass all of the required parameters to the Infer API.
 
-From the `scala-package/examples/scripts/inferexample/objectdetector/` folder run:
+From the `scala-package/examples/scripts/infer/objectdetector/` folder run:
 
 ```bash
-./run_ssd_example.sh ../models/resnet50_ssd/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images
+./run_ssd_java_example.sh ../models/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images
 ```
 
 **Notes**:

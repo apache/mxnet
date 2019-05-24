@@ -28,10 +28,14 @@ whitelist = ['basic/index.md',
              'c++/basics.md',
              'c++/index.md',
              'c++/subgraphAPI.md',
+             'c++/mxnet_cpp_inference_tutorial.md',
              'control_flow/index.md',
              'embedded/index.md',
              'embedded/wine_detector.md',
              'gluon/index.md',
+             'mkldnn/index.md',
+             'mkldnn/MKLDNN_README.md',
+             'mkldnn/operator_list.md',
              'nlp/index.md',
              'onnx/index.md',
              'python/index.md',
@@ -59,7 +63,8 @@ whitelist = ['basic/index.md',
              'tensorrt/inference_with_trt.md',
              'java/index.md',
              'java/mxnet_java_on_intellij.md',
-             'java/ssd_inference.md']
+             'java/ssd_inference.md',
+             'amp/index.md']
 whitelist_set = set(whitelist)
 
 def test_tutorial_downloadable():

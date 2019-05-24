@@ -25,12 +25,13 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import org.apache.commons.io.FileUtils
-import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, Executor, NDArray, NDArrayCollector, Shape, Symbol, Xavier}
+import org.apache.mxnet.{Context, DataBatch, DataDesc, DataIter, EvalMetric, Executor, NDArray, ResourceScope, Shape, Symbol, Xavier}
 import org.apache.mxnet.DType.DType
 import org.apache.mxnet.optimizer.RMSProp
 import org.apache.mxnetexamples.Util
 
 import scala.collection.immutable.ListMap
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 /**
@@ -65,7 +66,7 @@ object ExampleMultiTask {
         new DataBatch(batch.data,
           IndexedSeq(label, label),
           batch.index,
-          batch.pad, null, null, null)
+          batch.pad)
       } else {
         throw new NoSuchElementException
       }
@@ -100,7 +101,7 @@ object ExampleMultiTask {
     override def getIndex(): IndexedSeq[Long] = this.dataIter.getIndex()
 
     // The name and shape of label provided by this iterator
-    @deprecated
+    @deprecated("Use provideLabelDesc instead", "1.3.0")
     override def provideLabel: ListMap[String, Shape] = {
       val provideLabel = this.dataIter.provideLabel.toArray
       // Different labels should be used here for actual application
@@ -126,7 +127,7 @@ object ExampleMultiTask {
     override def getPad(): Int = this.dataIter.getPad()
 
     // The name and shape of data provided by this iterator
-    @deprecated
+    @deprecated("Use provideDataDesc instead", "1.3.0")
     override def provideData: ListMap[String, Shape] = this.dataIter.provideData
 
     override def provideDataDesc: IndexedSeq[DataDesc] = this.dataIter.provideDataDesc
@@ -221,7 +222,7 @@ object ExampleMultiTask {
 
   def train(batchSize: Int, numEpoch: Int, ctx: Context, modelDirPath: String):
   (Executor, MultiAccuracy) = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val lr = 0.001f
       val network = ExampleMultiTask.buildNetwork()
       val (trainIter, valIter) =
@@ -229,10 +230,10 @@ object ExampleMultiTask {
       val trainMultiIt = new MultiMnistIterator(trainIter)
       val valMultiIter = new MultiMnistIterator(valIter)
 
-      val datasAndLabels = trainMultiIt.provideData ++ trainMultiIt.provideLabel
+      val datasAndLabels = trainMultiIt.provideDataDesc ++ trainMultiIt.provideLabelDesc
 
       val (argShapes, outputShapes, auxShapes)
-      = network.inferShape(trainMultiIt.provideData("data"))
+      = network.inferShape(trainMultiIt.provideDataDesc.filter(_.name == "data"))
       val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
 
       val argNames = network.listArguments

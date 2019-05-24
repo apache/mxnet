@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 Environment Variables
 =====================
 MXNet has several settings that you can change with environment variables.
@@ -63,16 +80,20 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_GPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```
   - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
-  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.  
+  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.
+
 * MXNET_GPU_MEM_POOL_TYPE
   - Values: String ```(default=Naive)```
   - The type of memory pool.
   - Choices:
     - Naive: A simple memory pool that allocates memory for the exact requested size and cache memory buffers. If a buffered memory chunk matches the size of a new request, the chunk from the memory pool will be returned and reused.
     - Round: A memory pool that always rounds the requested memory size and allocates memory of the rounded size. MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF defines how to round up a memory size. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - Unpooled: No memory pool is used.
+
 * MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
   - Values: Int ```(default=24)```
   - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+
 * MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE
   - Values: Int ```(default=2097152)```
   - When using the naive pool type, memory allocations larger than this threshhold are rounded up to a multiple of this value.
@@ -98,7 +119,13 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - If set to `1`, during training MXNet executes the computation graph as several subgraphs in bulk mode.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN
   - Values: Int ```(default=15)```
-  - The maximum number of nodes in the subgraph executed in bulk during training(not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
+* MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the forward pass.
+* MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the backward pass.
 
 ## Control the Data Communication
 
@@ -145,6 +172,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - If true, MXNet tries to use GPU peer-to-peer communication, if available on your device,
     when kvstore's type is `device`.
 
+* MXNET_UPDATE_ON_KVSTORE
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If true, weight updates are performed during the communication step, if possible.
+
 ## Memonger
 
 * MXNET_BACKWARD_DO_MIRROR
@@ -169,6 +200,12 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 	- If set to '1', profiler records the events of all operators.
 
 ## Other Environment Variables
+
+* MXNET_GPU_WORKER_NSTREAMS
+  - Values: 1, or 2 ```(default=1)```
+  - Determines the number of GPU streams available to operators for their functions.
+  - Setting this to 2 may yield a modest performance increase, since ops like the cuDNN convolution op can then calculate their data- and weight-gradients in parallel.
+  - Setting this to 2 may also increase a model's demand for GPU global memory.
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
   - Values: 0, 1, or 2 ```(default=1)```
@@ -217,6 +254,44 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - The minimum size to call parallel copy by OpenMP in CPU2CPU mode.
   - When the array size is bigger than or equal to  this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
   - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by memcpy in single thread.
+
+* MXNET_OPTIMIZER_AGGREGATION_SIZE
+  - Values: Int ```(default=4)```
+  - Maximum value is 60.
+  - This variable controls how many weights will be updated in a single call to optimizer (for optimizers that support aggregation, currently limited to SGD).
+
+* MXNET_CPU_TEMP_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many temporary memory resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_TEMP_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many temporary memory resources to create for each GPU context for use in operator.
+
+* MXNET_CPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many parallel random number generator resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many parallel random number generator resources to create for each GPU context for use in operator.
+
+* MXNET_GPU_CUDNN_DROPOUT_STATE_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
+
+* MXNET_SUBGRAPH_BACKEND
+  - Values: String ```(default="")```
+  - This variable controls the subgraph partitioning in MXNet.
+  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+
+* MXNET_SAFE_ACCUMULATION
+  - Values: Values: 0(false) or 1(true) ```(default=0)```
+  - If this variable is set, the accumulation will enter the safe mode, meaning accumulation is done in a data type of higher precision than
+    the input data type, leading to more accurate accumulation results with a possible performance loss and backward compatibility loss.
+    For example, when the variable is set to 1(true), if the input data type is float16, then the accumulation will be done
+    with float32.
+  - Model accuracies do not necessarily improve with this environment variable turned on.
 
 Settings for Minimum Memory Usage
 ---------------------------------

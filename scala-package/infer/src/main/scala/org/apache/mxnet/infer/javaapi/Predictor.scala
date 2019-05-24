@@ -25,23 +25,27 @@ import scala.collection.JavaConverters._
 /**
   * Implementation of prediction routines.
   *
-  * @param modelPathPrefix     Path prefix from where to load the model artifacts.
-  *                            These include the symbol, parameters, and synset.txt
-  *                            Example: file://model-dir/resnet-152 (containing
-  *                            resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
-  * @param inputDescriptors    Descriptors defining the input node names, shape,
-  *                            layout and type parameters
-  *                            <p>Note: If the input Descriptors is missing batchSize
-  *                            ('N' in layout), a batchSize of 1 is assumed for the model.
-  * @param contexts            Device contexts on which you want to run inference; defaults to CPU
-  * @param epoch               Model epoch to load; defaults to 0
-
+  * @param predictor The underlying Scala predictor
   */
 
 // JavaDoc description of class to be updated in https://issues.apache.org/jira/browse/MXNET-1178
 class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor){
-  def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc],
-           contexts: java.util.List[Context], epoch: Int)
+
+  /**
+    *
+    * @param modelPathPrefix     Path prefix from where to load the model artifacts.
+    *                            These include the symbol, parameters, and synset.txt
+    *                            Example: file://model-dir/resnet-152 (containing
+    *                            resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
+    * @param inputDescriptors    Descriptors defining the input node names, shape,
+    *                            layout and type parameters
+    *                            <p>Note: If the input Descriptors is missing batchSize
+    *                            ('N' in layout), a batchSize of 1 is assumed for the model.
+    * @param contexts            Device contexts on which you want to run inference; defaults to CPU
+    * @param epoch               Model epoch to load; defaults to 0
+    */
+  def this(modelPathPrefix: String, inputDescriptors: java.lang.Iterable[DataDesc],
+           contexts: java.lang.Iterable[Context], epoch: Int)
   = this {
     val informationDesc = JavaConverters.asScalaIteratorConverter(inputDescriptors.iterator)
       .asScala.toIndexedSeq map {a => a: org.apache.mxnet.DataDesc}
@@ -53,19 +57,17 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
     * Takes input as Array of one dimensional arrays and creates the NDArray needed for inference
     * The array will be reshaped based on the input descriptors. Example of calling in Java:
     *
-    * <pre>
-    * {@code
+    * {{{
     * float tmp[][] = new float[1][224];
     * for (int x = 0; x < 1; x++)
     *   for (int y = 0; y < 224; y++)
     *     tmp[x][y] = (int)(Math.random()*10);
     * predictor.predict(tmp);
-    * }
-    * </pre>
+    * }}}
     *
-    * @param input:            An Array of a one-dimensional array.
-                              An extra Array is needed for when the model has more than one input.
-    * @return                  Indexed sequence array of outputs
+    * @param input An Array of a one-dimensional array.
+    *              An extra Array is needed for when the model has more than one input.
+    * @return Indexed sequence array of outputs
     */
   def predict(input: Array[Array[Float]]):
   Array[Array[Float]] = {
@@ -73,11 +75,33 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
   }
 
   /**
-    * Takes input as List of one dimensional arrays and creates the NDArray needed for inference
+    * Takes input as Array of one dimensional arrays and creates the NDArray needed for inference
+    * The array will be reshaped based on the input descriptors. Example of calling in Java:
+    *
+    * {{{
+    * double tmp[][] = new double[1][224];
+    * for (int x = 0; x < 1; x++)
+    *   for (int y = 0; y < 224; y++)
+    *     tmp[x][y] = (int)(Math.random()*10);
+    * predictor.predict(tmp);
+    * }}}
+    *
+    * @param input            An Array of a one-dimensional array.
+    *                         An extra Array is needed for when the model has more than one input.
+    * @return                  Indexed sequence array of outputs
+    */
+
+  def predict(input: Array[Array[Double]]):
+  Array[Array[Double]] = {
+    predictor.predict(input).toArray
+  }
+
+  /**
+    * Takes input as List of one dimensional iterables and creates the NDArray needed for inference
     * The array will be reshaped based on the input descriptors.
     *
-    * @param input:            A List of a one-dimensional array.
-                              An extra List is needed for when the model has more than one input.
+    * @param input            A List of a one-dimensional iterables of DType Float.
+    *                         An extra List is needed for when the model has more than one input.
     * @return                  Indexed sequence array of outputs
     */
   def predict(input: java.util.List[java.util.List[java.lang.Float]]):
@@ -94,10 +118,10 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
     * This method is useful when the input is a batch of data
     * Note: User is responsible for managing allocation/deallocation of input/output NDArrays.
     *
-    * @param input             List of NDArrays
+    * @param input             Iterable of NDArrays
     * @return                  Output of predictions as NDArrays
     */
-  def predictWithNDArray(input: java.util.List[NDArray]):
+  def predictWithNDArray(input: java.lang.Iterable[NDArray]):
   java.util.List[NDArray] = {
     val ret = predictor.predictWithNDArray(convert(JavaConverters
       .asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq))

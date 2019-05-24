@@ -70,8 +70,9 @@ class Monitor {
   /*!
   * \brief install callback to executor. Supports installing to multiple executors.
   * \param exe The executor to install to.
+  * \param monitor_all If true, monitor both input and output, otherwise monitor output only.
   */
-  void install(Executor *exe);
+  void install(Executor *exe, bool monitor_all = false);
 
   /*!
   * \brief Start collecting stats for current batch. Call before calling forward.

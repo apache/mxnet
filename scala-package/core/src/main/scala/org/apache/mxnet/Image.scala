@@ -17,6 +17,7 @@
 
 package org.apache.mxnet
 // scalastyle:off
+import java.awt.{BasicStroke, Color, Graphics2D}
 import java.awt.image.BufferedImage
 // scalastyle:on
 import java.io.InputStream
@@ -37,7 +38,8 @@ object Image {
     * @param flag   Convert decoded image to grayscale (0) or color (1).
     * @param to_rgb Whether to convert decoded image
     *               to mxnet's default RGB format (instead of opencv's default BGR).
-    * @return NDArray in HWC format
+    * @param out    NDArray to store the output
+    * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imDecode(buf: Array[Byte], flag: Int,
                to_rgb: Boolean,
@@ -56,7 +58,11 @@ object Image {
   /**
     * Same imageDecode with InputStream
     * @param inputStream the inputStream of the image
-    * @return NDArray in HWC format
+    * @param flag   Convert decoded image to grayscale (0) or color (1).
+    * @param to_rgb Whether to convert decoded image
+    *               to mxnet's default RGB format (instead of opencv's default BGR).
+    * @param out    NDArray to store the output
+    * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imDecode(inputStream: InputStream, flag: Int = 1,
                to_rgb: Boolean = true,
@@ -78,7 +84,8 @@ object Image {
     * @param flag     Convert decoded image to grayscale (0) or color (1).
     * @param to_rgb   Whether to convert decoded image to mxnet's default RGB format
     *                 (instead of opencv's default BGR).
-    * @return org.apache.mxnet.NDArray in HWC format
+    * @param out    NDArray to store the output
+    * @return org.apache.mxnet.NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imRead(filename: String, flag: Option[Int] = None,
              to_rgb: Option[Boolean] = None,
@@ -98,6 +105,7 @@ object Image {
     * @param w       Width of resized image.
     * @param h       Height of resized image.
     * @param interp  Interpolation method (default=cv2.INTER_LINEAR).
+    * @param out    NDArray to store the output
     * @return org.apache.mxnet.NDArray
     */
   def imResize(src: org.apache.mxnet.NDArray, w: Int, h: Int,
@@ -123,6 +131,7 @@ object Image {
     * @param typeOf Filling type (default=cv2.BORDER_CONSTANT).
     * @param value  (Deprecated! Use ``values`` instead.) Fill with single value.
     * @param values Fill with value(RGB[A] or gray), up to 4 channels.
+    * @param out    NDArray to store the output
     * @return org.apache.mxnet.NDArray
     */
   def copyMakeBorder(src: org.apache.mxnet.NDArray, top: Int, bot: Int,
@@ -180,6 +189,59 @@ object Image {
       })
     })
     img
+  }
+
+  /**
+    * Helper function to generate ramdom colors
+    * @param transparency The transparency level
+    * @return Color
+    */
+  private def randomColor(transparency: Option[Float] = Some(1.0f)) : Color = {
+    new Color(
+      Math.random().toFloat, Math.random().toFloat, Math.random().toFloat,
+      transparency.get
+    )
+  }
+
+  /**
+    * Method to draw bounding boxes for an image
+    * @param src Source of the buffered image
+    * @param coordinate Contains Map of xmin, xmax, ymin, ymax
+    *                   corresponding to top-left and down-right points
+    * @param names The name set of the bounding box
+    * @param stroke Thickness of the bounding box
+    * @param fontSizeMult Font size multiplier
+    * @param transparency Transparency of the bounding box
+    */
+  def drawBoundingBox(src: BufferedImage, coordinate: Array[Map[String, Int]],
+                      names: Option[Array[String]] = None,
+                      stroke : Option[Int] = Some(3),
+                      fontSizeMult : Option[Float] = Some(1.0f),
+                      transparency: Option[Float] = Some(1.0f)): Unit = {
+    val g2d : Graphics2D = src.createGraphics()
+    g2d.setStroke(new BasicStroke(stroke.get))
+    // Increase the size of font
+    val currentFont = g2d.getFont
+    val newFont = currentFont.deriveFont(currentFont.getSize * fontSizeMult.get)
+    g2d.setFont(newFont)
+    // Get font metrics to draw the font box
+    val fm = g2d.getFontMetrics(newFont)
+    for (idx <- coordinate.indices) {
+      val map = coordinate(idx)
+      g2d.setColor(randomColor(transparency).darker())
+      g2d.drawRect(map("xmin"), map("ymin"), map("xmax") - map("xmin"), map("ymax") - map("ymin"))
+      // Write the name of the bounding box
+      if (names.isDefined) {
+        val x = map("xmin") - stroke.get
+        val y = map("ymin")
+        val h = fm.getHeight
+        val w = fm.charsWidth(names.get(idx).toCharArray, 0, names.get(idx).length())
+        g2d.fillRect(x, y - h, w, h)
+        g2d.setColor(Color.WHITE)
+        g2d.drawString(names.get(idx), x, y)
+      }
+    }
+    g2d.dispose()
   }
 
 }

@@ -44,8 +44,8 @@ bool InferSubgraphDataType(const nnvm::Symbol &subgraph, std::vector<int> *in_ty
  * subgraph.
  */
 bool InferSubgraphShape(const nnvm::Symbol &subgraph,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape);
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape);
 
 /*
  * Infer the storage types of inputs and outputs of an operator that contains a
@@ -59,7 +59,7 @@ bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
 
 bool as_bool_scalar(const NDArray &a);
 
-bool is_shape_udf(const TShape &x);
+bool is_shape_udf(const mxnet::TShape &x);
 
 bool is_stype_udf(const int &x);
 
@@ -67,7 +67,7 @@ bool is_type_udf(const int &x);
 
 template <typename T>
 void extract_by_loc(const std::vector<T> &array,
-                    const nnvm::Tuple<dim_t> input_locs,
+                    const mxnet::Tuple<dim_t> input_locs,
                     std::vector<T> *out) {
   out->clear();
   out->reserve(input_locs.ndim());
@@ -94,11 +94,11 @@ bool fill_value(T *x, T *y, bool x_empty, bool y_empty) {
 }
 
 template <typename T>
-bool sync_in_in(const nnvm::Tuple<dim_t> &input_locs,
-                         std::vector<T> *in,
-                         std::vector<T> *subg_in,
-                         std::function<bool(const T &)> is_empty) {
-  for (size_t i = 0; i < input_locs.ndim(); ++i) {
+bool sync_in_in(const mxnet::Tuple<dim_t> &input_locs,
+                std::vector<T> *in,
+                std::vector<T> *subg_in,
+                std::function<bool(const T &)> is_empty) {
+  for (int i = 0; i < input_locs.ndim(); ++i) {
     T &x = in->at(input_locs[i]);
     T &y = subg_in->at(i);
     fill_value(&x, &y, is_empty(x), is_empty(y));
@@ -161,7 +161,8 @@ class LoopState {
     // only static_alloc supports nested call of CachedOp.
     std::vector<std::pair<std::string, std::string> > kwargs = {
       {"inline_limit", "0"},
-      {"static_alloc", "1"}
+      {"static_alloc", "1"},
+      {"is_dynamic", "1"}
     };
     return std::make_shared<CachedOp>(sym, kwargs);
   }

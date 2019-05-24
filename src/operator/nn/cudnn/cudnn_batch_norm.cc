@@ -32,16 +32,16 @@ namespace mxnet {
 namespace op {
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 4
 
-static bool BatchNormShape(const nnvm::NodeAttrs& attrs, std::vector<TShape> *in_shape,
-    std::vector<TShape> *out_shape) {
+static bool BatchNormShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector *in_shape,
+    mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, moving_mean, moving_var]";
-  const TShape &dshape = in_shape->at(0);
-  if (dshape.ndim() == 0) return false;
-  in_shape->at(1) = TShape(Shape1(dshape[1]));
-  in_shape->at(2) = TShape(Shape1(dshape[1]));
-  in_shape->at(3) = TShape(Shape1(dshape[1]));
-  in_shape->at(4) = TShape(Shape1(dshape[1]));
+  const mxnet::TShape &dshape = in_shape->at(0);
+  if (!mxnet::ndim_is_known(dshape)) return false;
+  in_shape->at(1) = mxnet::TShape(Shape1(dshape[1]));
+  in_shape->at(2) = mxnet::TShape(Shape1(dshape[1]));
+  in_shape->at(3) = mxnet::TShape(Shape1(dshape[1]));
+  in_shape->at(4) = mxnet::TShape(Shape1(dshape[1]));
 
   out_shape->clear();
   out_shape->push_back(dshape);
@@ -85,7 +85,7 @@ NNVM_REGISTER_OP(CuDNNBatchNorm)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs", [](const nnvm::NodeAttrs& attrs) {
   return std::vector<uint32_t>{3, 4};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", BatchNormShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BatchNormShape)
 .set_attr<FCompute>("FCompute<cpu>", BatchNormCompute_CPU)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_CuDNNBatchNorm"})
 .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")

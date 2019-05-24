@@ -44,6 +44,7 @@
 #include "../common/utils.h"
 
 namespace mxnet {
+
 namespace io {
 // parser to parse image recordio
 template<typename DType>
@@ -87,7 +88,7 @@ class ImageRecordIOParser2 {
   ImageRecordParam record_param_;
   BatchParam batch_param_;
   ImageNormalizeParam normalize_param_;
-  PrefetcherParam prefetch_param_;
+
   #if MXNET_USE_OPENCV
   /*! \brief augmenters */
   std::vector<std::vector<std::unique_ptr<ImageAugmenter> > > augmenters_;
@@ -133,7 +134,6 @@ inline void ImageRecordIOParser2<DType>::Init(
   record_param_.InitAllowUnknown(kwargs);
   batch_param_.InitAllowUnknown(kwargs);
   normalize_param_.InitAllowUnknown(kwargs);
-  prefetch_param_.InitAllowUnknown(kwargs);
   n_parsed_ = 0;
   overflow = false;
   rnd_.seed(kRandMagic + record_param_.seed);
@@ -141,7 +141,7 @@ inline void ImageRecordIOParser2<DType>::Init(
   #pragma omp parallel
   {
     // be conservative, set number of real cores
-    maxthread = std::max(omp_get_num_procs() / 2 - 1, 1);
+    maxthread = std::max(omp_get_num_procs(), 1);
   }
   param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
   #pragma omp parallel num_threads(param_.preprocess_threads)
@@ -278,16 +278,21 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     for (index_t dim = 0; dim < param_.data_shape.ndim(); ++dim) {
       shape_vec.push_back(param_.data_shape[dim]);
     }
-    TShape data_shape(shape_vec.begin(), shape_vec.end());
+    mxnet::TShape data_shape(shape_vec.begin(), shape_vec.end());
 
     shape_vec.clear();
     shape_vec.push_back(batch_param_.batch_size);
     shape_vec.push_back(param_.label_width);
-    TShape label_shape(shape_vec.begin(), shape_vec.end());
+    mxnet::TShape label_shape(shape_vec.begin(), shape_vec.end());
 
-    out->data.at(0) = NDArray(data_shape, Context::CPU(0), false,
+    auto ctx = Context::CPU(0);
+    auto dev_id = param_.device_id;
+    if (dev_id != -1) {
+      ctx = Context::CPUPinned(dev_id);
+    }
+    out->data.at(0) = NDArray(data_shape, ctx, false,
       mshadow::DataType<DType>::kFlag);
-    out->data.at(1) = NDArray(label_shape, Context::CPU(0), false,
+    out->data.at(1) = NDArray(label_shape, ctx, false,
       mshadow::DataType<real_t>::kFlag);
     unit_size_[0] = param_.data_shape.Size();
     unit_size_[1] = param_.label_width;
@@ -367,6 +372,7 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
   float RGBA_MULT[4] = { 0 };
   float RGBA_BIAS[4] = { 0 };
   float RGBA_MEAN[4] = { 0 };
+  int16_t RGBA_MEAN_INT[4] = {0};
   mshadow::Tensor<cpu, 3, DType>& data = (*data_ptr);
   if (!std::is_same<DType, uint8_t>::value) {
     RGBA_MULT[0] = contrast_scaled / normalize_param_.std_r;
@@ -382,6 +388,10 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
       RGBA_MEAN[1] = normalize_param_.mean_g;
       RGBA_MEAN[2] = normalize_param_.mean_b;
       RGBA_MEAN[3] = normalize_param_.mean_a;
+      RGBA_MEAN_INT[0] = std::round(normalize_param_.mean_r);
+      RGBA_MEAN_INT[1] = std::round(normalize_param_.mean_g);
+      RGBA_MEAN_INT[2] = std::round(normalize_param_.mean_b);
+      RGBA_MEAN_INT[3] = std::round(normalize_param_.mean_a);
     }
   }
 
@@ -403,17 +413,30 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
   for (int i = 0; i < res.rows; ++i) {
     const uchar* im_data = res.ptr<uchar>(i);
     for (int j = 0; j < res.cols; ++j) {
-      for (int k = 0; k < n_channels; ++k) {
-        RGBA[k] = im_data[swap_indices[k]];
-      }
-      if (!std::is_same<DType, uint8_t>::value) {
-        // normalize/mirror here to avoid memory copies
-        // logic from iter_normalize.h, function SetOutImg
+      if (std::is_same<DType, int8_t>::value) {
+        if (meanfile_ready_) {
+          for (int k = 0; k < n_channels; ++k) {
+            RGBA[k] = cv::saturate_cast<int8_t>(im_data[swap_indices[k]] -
+                                    static_cast<int16_t>(std::round(meanimg_[k][i][j])));
+          }
+        } else {
+          for (int k = 0; k < n_channels; ++k) {
+            RGBA[k] = cv::saturate_cast<int8_t>(im_data[swap_indices[k]] - RGBA_MEAN_INT[k]);
+          }
+        }
+      } else {
         for (int k = 0; k < n_channels; ++k) {
-          if (meanfile_ready_) {
-            RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * RGBA_MULT[k] + RGBA_BIAS[k];
-          } else {
-            RGBA[k] = (RGBA[k] - RGBA_MEAN[k]) * RGBA_MULT[k] + RGBA_BIAS[k];
+          RGBA[k] = im_data[swap_indices[k]];
+        }
+        if (!std::is_same<DType, uint8_t>::value) {
+          // normalize/mirror here to avoid memory copies
+          // logic from iter_normalize.h, function SetOutImg
+          for (int k = 0; k < n_channels; ++k) {
+            if (meanfile_ready_) {
+              RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * RGBA_MULT[k] + RGBA_BIAS[k];
+            } else {
+              RGBA[k] = (RGBA[k] - RGBA_MEAN[k]) * RGBA_MULT[k] + RGBA_BIAS[k];
+            }
           }
         }
       }
@@ -519,6 +542,13 @@ inline size_t ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t* 
       cv::Mat res;
       rec.Load(blob.dptr, blob.size);
       cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
+
+      // If augmentation seed is supplied
+      // Re-seed RNG to guarantee reproducible results
+      if (param_.seed_aug.has_value()) {
+        prnds_[tid]->seed(idx + param_.seed_aug.value() + kRandMagic);
+      }
+
       switch (param_.data_shape[0]) {
        case 1:
 #if MXNET_USE_LIBJPEG_TURBO
@@ -733,6 +763,113 @@ class ImageRecordIter2 : public IIterator<DataBatch> {
     ImageRecordIOParser2<DType> parser_;
 };
 
+template<typename DType = real_t>
+class ImageRecordIter2CPU : public IIterator<DataBatch> {
+ public:
+  ImageRecordIter2CPU() {
+    out_ = new DataBatch();
+    var_ = Engine::Get()->NewVariable();
+  }
+
+  virtual ~ImageRecordIter2CPU(void) {
+    Engine::Get()->DeleteVariable([](mxnet::RunContext ctx) {}, Context::CPU(), var_);
+    delete out_;
+  }
+
+  virtual void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) {
+    parser_.Init(kwargs);
+  }
+
+  virtual void BeforeFirst(void) { parser_.BeforeFirst(); }
+
+  // From iter_prefetcher.h
+  virtual bool Next(void) {
+    bool result = false;
+    const auto engine = Engine::Get();
+    engine->PushSync(
+        [this, &result](RunContext ctx) {
+          result = this->parser_.ParseNext(out_);
+        },
+        Context::CPU(), {}, {var_}, FnProperty::kNormal, 0, "DataLoader");
+    engine->WaitForVar(var_);
+    return result;
+  }
+
+  virtual const DataBatch& Value(void) const { return *out_; }
+
+ private:
+  /*! \brief Backend thread */
+  dmlc::ThreadedIter<DataBatch> iter_;
+  /*! \brief output data */
+  DataBatch* out_;
+  Engine::VarHandle var_;
+  /*! \brief queue to be recycled */
+  std::queue<DataBatch*> recycle_queue_;
+  /* \brief parser */
+  ImageRecordIOParser2<DType> parser_;
+};
+
+class ImageRecordIter2Wrapper : public IIterator<DataBatch> {
+ public:
+  ~ImageRecordIter2Wrapper(void) override {
+    if (record_iter_) delete record_iter_;
+  }
+  void Init(const std::vector<std::pair<std::string, std::string>>& kwargs) override {
+    PrefetcherParam prefetch_param;
+    prefetch_param.InitAllowUnknown(kwargs);
+    int dtype = mshadow::kFloat32;
+    if (prefetch_param.dtype.has_value()) {
+      dtype = prefetch_param.dtype.value();
+    }
+    if (prefetch_param.ctx == PrefetcherParam::CtxType::kCPU) {
+      LOG(INFO) << "Create ImageRecordIter2 optimized for CPU backend.";
+      switch (dtype) {
+        case mshadow::kFloat32:
+          record_iter_ = new ImageRecordIter2CPU<float>();
+          break;
+        case mshadow::kUint8:
+          record_iter_ = new ImageRecordIter2CPU<uint8_t>();
+          break;
+        case mshadow::kInt8:
+          record_iter_ = new ImageRecordIter2CPU<int8_t>();
+          break;
+        default:
+          LOG(FATAL) << "unknown dtype for ImageRecordIter2.";
+      }
+    } else {
+      // For gpu
+      switch (dtype) {
+        case mshadow::kFloat32:
+          record_iter_ = new ImageRecordIter2<float>();
+          break;
+        case mshadow::kUint8:
+          record_iter_ = new ImageRecordIter2<uint8_t>();
+          break;
+        case mshadow::kInt8:
+          record_iter_ = new ImageRecordIter2<int8_t>();
+          break;
+        default:
+          LOG(FATAL) << "unknown dtype for ImageRecordIter2.";
+      }
+    }
+    record_iter_->Init(kwargs);
+    }
+
+    void BeforeFirst(void) override {
+      record_iter_->BeforeFirst();
+    }
+
+    // From iter_prefetcher.h
+    bool Next(void) override { return record_iter_->Next(); }
+
+    const DataBatch &Value(void) const override {
+      return record_iter_->Value();
+    }
+
+ private:
+  IIterator<DataBatch>* record_iter_ = nullptr;
+};
+
 MXNET_REGISTER_IO_ITER(ImageRecordIter)
 .describe(R"code(Iterates on image RecordIO files
 
@@ -765,11 +902,13 @@ Example::
 .add_arguments(ListDefaultAugParams())
 .add_arguments(ImageNormalizeParam::__FIELDS__())
 .set_body([]() {
-    return new ImageRecordIter2<real_t>();
+    return new ImageRecordIter2Wrapper();
     });
 
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter)
 .describe(R"code(Iterating on image RecordIO files
+
+.. note:: ImageRecordUInt8Iter is deprecated. Use ImageRecordIter(dtype='uint8') instead.
 
 This iterator is identical to ``ImageRecordIter`` except for using ``uint8`` as
 the data type instead of ``float``.
@@ -783,5 +922,24 @@ the data type instead of ``float``.
 .set_body([]() {
     return new ImageRecordIter2<uint8_t>();
   });
+
+MXNET_REGISTER_IO_ITER(ImageRecordInt8Iter)
+.describe(R"code(Iterating on image RecordIO files
+
+.. note:: ``ImageRecordInt8Iter`` is deprecated. Use ImageRecordIter(dtype='int8') instead.
+
+This iterator is identical to ``ImageRecordIter`` except for using ``int8`` as
+the data type instead of ``float``.
+
+)code" ADD_FILELINE)
+.add_arguments(ImageRecParserParam::__FIELDS__())
+.add_arguments(ImageRecordParam::__FIELDS__())
+.add_arguments(BatchParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
+.add_arguments(ListDefaultAugParams())
+.set_body([]() {
+    return new ImageRecordIter2<int8_t>();
+  });
+
 }  // namespace io
 }  // namespace mxnet

@@ -22,12 +22,15 @@ import logging
 import math
 import pickle
 import warnings
+import os
 import numpy
 from ..base import py_str
 from ..ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs, array, multiply)
 from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                        mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
-                       signsgd_update, signum_update)
+                       signsgd_update, signum_update,
+                       multi_sgd_update, multi_sgd_mom_update, multi_mp_sgd_update,
+                       multi_mp_sgd_mom_update)
 from ..ndarray import sparse
 from ..random import normal
 
@@ -37,45 +40,50 @@ __all__ = [
     'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register'
 ]
 
+def _flatten_list(nested_list):
+    return [item for sublist in nested_list for item in sublist]
 
 class Optimizer(object):
     """The base class inherited by all optimizers.
 
     Parameters
     ----------
-    rescale_grad : float, optional
+    rescale_grad : float, optional, default 1.0
         Multiply the gradient with `rescale_grad` before updating. Often
         choose to be ``1.0/batch_size``.
 
-    param_idx2name : dict from int to string, optional
+    param_idx2name : dict from int to string, optional, default None
         A dictionary that maps int index to string name.
 
-    clip_gradient : float, optional
+    clip_gradient : float, optional, default None
         Clip the gradient by projecting onto the box ``[-clip_gradient, clip_gradient]``.
 
-    learning_rate : float, optional
+    learning_rate : float, optional, default 0.01
         The initial learning rate.
 
-    lr_scheduler : LRScheduler, optional
+    lr_scheduler : LRScheduler, optional, default None
         The learning rate scheduler.
 
-    wd : float, optional
+    wd : float, optional, default 0.0
         The weight decay (or L2 regularization) coefficient. Modifies objective
         by adding a penalty for having large weights.
 
-    sym: Symbol, optional
+    sym: Symbol, optional, default None
         The Symbol this optimizer is applying to.
 
-    begin_num_update : int, optional
+    begin_num_update : int, optional, default 0
         The initial number of updates.
 
-    multi_precision : bool, optional
-       Flag to control the internal precision of the optimizer.::
+    multi_precision : bool, optional, default False
+       Flag to control the internal precision of the optimizer.
+       False: results in using the same precision as the weights (default),
+       True: makes internal 32-bit copy of the weights and applies gradients
+       in 32-bit precision even if actual weights used in the model have lower precision.
+       Turning this on can improve convergence and accuracy when training with float16.
 
-           False: results in using the same precision as the weights (default),
-           True: makes internal 32-bit copy of the weights and applies gradients
-           in 32-bit precision even if actual weights used in the model have lower precision.
-           Turning this on can improve convergence and accuracy when training with float16.
+    param_dict : dict of int -> gluon.Parameter, default None
+        Dictionary of parameter index to gluon.Parameter, used to lookup parameter attributes
+        such as lr_mult, wd_mult, etc. param_dict shall not be deep copied.
 
     Properties
     ----------
@@ -98,9 +106,11 @@ class Optimizer(object):
         self.wd_mult = {}
         self.begin_num_update = begin_num_update
         self.num_update = begin_num_update
-        self._index_update_count = {}
+        self._all_index_update_counts = {0 : {}}
+        self._index_update_count = self._all_index_update_counts[0]
         self.clip_gradient = clip_gradient
         self.multi_precision = multi_precision
+        self.aggregate_num = 0
 
         if param_idx2name is None:
             param_idx2name = {}
@@ -288,7 +298,7 @@ class Optimizer(object):
         lr : float
             The new learning rate of the optimizer.
         """
-        if self.lr_scheduler is not None:
+        if self.lr_scheduler is not None: # pylint: disable=no-else-raise
             raise UserWarning("LRScheduler of the optimizer has already been "
                               "defined. Note that set_learning_rate can mutate "
                               "the value of the learning rate of the optimizer "
@@ -371,18 +381,61 @@ class Optimizer(object):
                     self.wd_mult[name] = float(attr[name]['__wd_mult__'])
         self.wd_mult.update(args_wd_mult)
 
+    def _set_current_context(self, device_id):
+        """Sets the number of the currently handled device.
+
+        Parameters
+        ----------
+        device_id : int
+            The number of current device.
+        """
+        if device_id not in self._all_index_update_counts:
+            self._all_index_update_counts[device_id] = {}
+        self._index_update_count = self._all_index_update_counts[device_id]
+
     def _update_count(self, index):
         """Updates num_update.
 
         Parameters
         ----------
-        index : int
+        index : int or list of int
             The index to be updated.
         """
-        if index not in self._index_update_count:
-            self._index_update_count[index] = self.begin_num_update
-        self._index_update_count[index] += 1
-        self.num_update = max(self._index_update_count[index], self.num_update)
+        if not isinstance(index, (list, tuple)):
+            index = [index]
+        for idx in index:
+            if idx not in self._index_update_count:
+                self._index_update_count[idx] = self.begin_num_update
+            self._index_update_count[idx] += 1
+            self.num_update = max(self._index_update_count[idx], self.num_update)
+
+    def _get_lrs(self, indices):
+        """Gets the learning rates given the indices of the weights.
+
+        Parameters
+        ----------
+        indices : list of int
+            Indices corresponding to weights.
+
+        Returns
+        -------
+        lrs : list of float
+            Learning rates for those indices.
+        """
+        if self.lr_scheduler is not None:
+            lr = self.lr_scheduler(self.num_update)
+        else:
+            lr = self.lr
+
+        lrs = [lr for _ in indices]
+        for i, index in enumerate(indices):
+            if index in self.param_dict:
+                lrs[i] *= self.param_dict[index].lr_mult
+            elif index in self.lr_mult:
+                lrs[i] *= self.lr_mult[index]
+            elif index in self.idx2name:
+                lrs[i] *= self.lr_mult.get(self.idx2name[index], 1.0)
+        return lrs
 
     def _get_lr(self, index):
         """Gets the learning rate given the index of the weight.
@@ -397,18 +450,31 @@ class Optimizer(object):
         lr : float
             Learning rate for this index.
         """
-        if self.lr_scheduler is not None:
-            lr = self.lr_scheduler(self.num_update)
-        else:
-            lr = self.lr
+        return self._get_lrs([index])[0]
 
-        if index in self.param_dict:
-            lr *= self.param_dict[index].lr_mult
-        elif index in self.lr_mult:
-            lr *= self.lr_mult[index]
-        elif index in self.idx2name:
-            lr *= self.lr_mult.get(self.idx2name[index], 1.0)
-        return lr
+    def _get_wds(self, indices):
+        """Gets weight decays for indices.
+        Returns 0 for non-weights if the name of weights are provided for `__init__`.
+
+        Parameters
+        ----------
+        indices : list of int
+            Indices of weights.
+
+        Returns
+        -------
+        wds : list of float
+            Weight decays for those indices.
+        """
+        wds = [self.wd for _ in indices]
+        for i, index in enumerate(indices):
+            if index in self.param_dict:
+                wds[i] *= self.param_dict[index].wd_mult
+            elif index in self.wd_mult:
+                wds[i] *= self.wd_mult[index]
+            elif index in self.idx2name:
+                wds[i] *= self.wd_mult.get(self.idx2name[index], 1.0)
+        return wds
 
     def _get_wd(self, index):
         """Gets weight decay for index.
@@ -417,21 +483,14 @@ class Optimizer(object):
         Parameters
         ----------
         index : int
-            The index for weight.
+            The index of weight.
 
         Returns
         -------
         wd : float
             Weight decay for this index.
         """
-        wd = self.wd
-        if index in self.param_dict:
-            wd *= self.param_dict[index].wd_mult
-        elif index in self.wd_mult:
-            wd *= self.wd_mult[index]
-        elif index in self.idx2name:
-            wd *= self.wd_mult.get(self.idx2name[index], 1.0)
-        return wd
+        return self._get_wds([index])[0]
 
     def __getstate__(self):
         ret = self.__dict__.copy()
@@ -467,6 +526,13 @@ class SGD(Optimizer):
     provides slightly different semantics than the original update, and
     may lead to different empirical results.
 
+    In the case when ``update_on_kvstore`` is set to False (either globally via
+    MXNET_UPDATE_ON_KVSTORE=0 environment variable or as a parameter in
+    :class:`~mxnet.gluon.Trainer`) SGD optimizer can perform aggregated update
+    of parameters, which may lead to improved performance. The aggregation size
+    is controlled by MXNET_OPTIMIZER_AGGREGATION_SIZE environment variable and
+    defaults to 4.
+
     Otherwise, **standard updates** are applied by::
 
         rescaled_grad = lr * (rescale_grad * clip(grad, clip_gradient) + wd * weight)
@@ -487,17 +553,17 @@ class SGD(Optimizer):
         Default is True. If True, lazy updates are applied \
         if the storage types of weight and grad are both ``row_sparse``.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, lazy_update=True, **kwargs):
         super(SGD, self).__init__(**kwargs)
         self.momentum = momentum
         self.lazy_update = lazy_update
+        self.aggregate_num = int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', "4"))
 
     def create_state_multi_precision(self, index, weight):
         weight_master_copy = None
@@ -518,12 +584,22 @@ class SGD(Optimizer):
             momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype)
         return momentum
 
-    def _update_impl(self, index, weight, grad, state, multi_precision=False):
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
-        self._update_count(index)
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
+    def _update_impl(self, indices, weights, grads, states, multi_precision=False):
+        aggregate = True
+        if not isinstance(indices, (tuple, list)):
+            indices = [indices]
+            weights = [weights]
+            grads = [grads]
+            states = [states]
+        for weight, grad in zip(weights, grads):
+            assert(isinstance(weight, NDArray))
+            assert(isinstance(grad, NDArray))
+            aggregate = (aggregate and
+                         weight.stype == 'default' and
+                         grad.stype == 'default')
+        self._update_count(indices)
+        lrs = self._get_lrs(indices)
+        wds = self._get_wds(indices)
 
         kwargs = {'rescale_grad': self.rescale_grad}
         if self.momentum > 0:
@@ -531,26 +607,49 @@ class SGD(Optimizer):
         if self.clip_gradient:
             kwargs['clip_gradient'] = self.clip_gradient
 
-        if not multi_precision:
-            if state is not None:
-                sgd_mom_update(weight, grad, state, out=weight,
-                               lazy_update=self.lazy_update, lr=lr, wd=wd, **kwargs)
+        if aggregate:
+            if not multi_precision:
+                if self.momentum > 0:
+                    multi_sgd_mom_update(*_flatten_list(zip(weights, grads, states)), out=weights,
+                                         num_weights=len(weights), lrs=lrs, wds=wds, **kwargs)
+                else:
+                    multi_sgd_update(*_flatten_list(zip(weights, grads)), out=weights,
+                                     num_weights=len(weights), lrs=lrs, wds=wds, **kwargs)
             else:
-                sgd_update(weight, grad, out=weight, lazy_update=self.lazy_update,
-                           lr=lr, wd=wd, **kwargs)
+                if self.momentum > 0:
+                    multi_mp_sgd_mom_update(*_flatten_list(zip(weights, grads, *zip(*states))),
+                                            out=weights, num_weights=len(weights),
+                                            lrs=lrs, wds=wds, **kwargs)
+                else:
+                    multi_mp_sgd_update(*_flatten_list(zip(weights, grads,
+                                                           list(zip(*states))[1])),
+                                        out=weights, num_weights=len(weights),
+                                        lrs=lrs, wds=wds, **kwargs)
         else:
-            if state[0] is not None:
-                mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
-                                  lr=lr, wd=wd, **kwargs)
-            else:
-                mp_sgd_update(weight, grad, state[1], out=weight,
-                              lr=lr, wd=wd, **kwargs)
+            for weight, grad, state, lr, wd in zip(weights, grads, states, lrs, wds):
+                if not multi_precision:
+                    if state is not None:
+                        sgd_mom_update(weight, grad, state, out=weight,
+                                       lazy_update=self.lazy_update, lr=lr, wd=wd, **kwargs)
+                    else:
+                        sgd_update(weight, grad, out=weight, lazy_update=self.lazy_update,
+                                   lr=lr, wd=wd, **kwargs)
+                else:
+                    if state[0] is not None:
+                        mp_sgd_mom_update(weight, grad, state[0], state[1], out=weight,
+                                          lr=lr, wd=wd, **kwargs)
+                    else:
+                        mp_sgd_update(weight, grad, state[1], out=weight,
+                                      lr=lr, wd=wd, **kwargs)
 
     def update(self, index, weight, grad, state):
         self._update_impl(index, weight, grad, state, multi_precision=False)
 
     def update_multi_precision(self, index, weight, grad, state):
-        use_multi_precision = self.multi_precision and weight.dtype == numpy.float16
+        if not isinstance(index, (tuple, list)):
+            use_multi_precision = self.multi_precision and weight.dtype == numpy.float16
+        else:
+            use_multi_precision = self.multi_precision and weight[0].dtype == numpy.float16
         self._update_impl(index, weight, grad, state,
                           multi_precision=use_multi_precision)
 
@@ -702,12 +801,11 @@ class LBSGD(Optimizer):
     momentum : float, optional
         The momentum value.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
 
     warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
     warmup_epochs: unsigned, default: 5
@@ -943,12 +1041,11 @@ class NAG(Optimizer):
     momentum : float, optional
        The momentum value.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, **kwargs):
         super(NAG, self).__init__(**kwargs)
@@ -974,10 +1071,10 @@ class NAG(Optimizer):
         if state is not None:
             mom = state
             mom[:] *= self.momentum
-            grad += wd * weight
             mom[:] += grad
+            mom[:] += wd * weight
             grad[:] += self.momentum * mom
-            weight[:] += -lr * grad
+            weight[:] -= lr * grad
         else:
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + wd * weight)
@@ -1007,8 +1104,9 @@ class SGLD(Optimizer):
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
-        weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr), shape=weight.shape,
-                                                            dtype=weight.dtype, ctx=weight.context)
+        weight[:] += - lr/2 * (grad + wd * weight)
+        weight[:] += normal(0, math.sqrt(lr), shape=weight.shape,
+                            dtype=weight.dtype, ctx=weight.context)
 
 
 
@@ -1026,13 +1124,14 @@ class Adam(Optimizer):
     Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980.
 
     If the storage types of grad is ``row_sparse``, and ``lazy_update`` is True, \
-    **lazy updates** are applied by::
+    **lazy updates** at step t are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
             m[row] = beta1 * m[row] + (1 - beta1) * rescaled_grad[row]
             v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
-            w[row] = w[row] - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
+            lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
+            w[row] = w[row] - lr * m[row] / (sqrt(v[row]) + epsilon)
 
     The lazy update only updates the mean and var for the weights whose row_sparse
     gradient indices appear in the current batch, rather than updating it for all indices.
@@ -1040,12 +1139,13 @@ class Adam(Optimizer):
     throughput for some applications. However, it provides slightly different semantics than
     the original update, and may lead to different empirical results.
 
-    Otherwise, **standard updates** are applied by::
+    Otherwise, **standard updates** at step t are applied by::
 
         rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
         m = beta1 * m + (1 - beta1) * rescaled_grad
         v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
-        w = w - learning_rate * m / (sqrt(v) + epsilon)
+        lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
+        w = w - lr * m / (sqrt(v) + epsilon)
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -1286,9 +1386,11 @@ class AdaDelta(Optimizer):
         acc_g, acc_delta = state
 
         # update g, delta
-        acc_g[:] = self.rho * acc_g + (1. - self.rho) * grad * grad
+        acc_g[:] *= self.rho
+        acc_g[:] += (1. - self.rho) * grad * grad
         current_delta = sqrt(acc_delta + self.epsilon) / sqrt(acc_g + self.epsilon) * grad
-        acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta * current_delta
+        acc_delta[:] *= self.rho
+        acc_delta[:] += (1. - self.rho) * current_delta * current_delta
 
         # update weight
         weight[:] -= current_delta + wd * weight
@@ -1421,7 +1523,8 @@ class Adamax(Optimizer):
 
         # update m_t and u_t
         m_t, u_t = state
-        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
+        m_t[:] *= self.beta1
+        m_t[:] += (1. - self.beta1) * grad
         u_t[:] = maximum(self.beta2 * u_t, NDabs(grad))
 
         # update weight
@@ -1484,8 +1587,10 @@ class Nadam(Optimizer):
 
         # update m_t and v_t
         m_t, v_t = state
-        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
-        v_t[:] = self.beta2 * v_t + (1. - self.beta2) * grad * grad
+        m_t[:] *= self.beta1
+        m_t[:] += (1. - self.beta1) * grad
+        v_t[:] *= self.beta2
+        v_t[:] += (1. - self.beta2) * grad * grad
 
         grad_prime = grad / (1. - self.m_schedule)
         m_t_prime = m_t / (1. - m_schedule_next)
@@ -1519,20 +1624,57 @@ class Updater(object):
         self.optimizer = optimizer
         self.states = {}
         self.states_synced = {}
+        self.aggregate_updates = optimizer.aggregate_num > 0
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
-        # convert ctypes.char_p.value back to python str if needed
-        if isinstance(index, bytes):
-            index = py_str(index)
-        if index not in self.states:
-            self.states[index] = self.optimizer.create_state_multi_precision(index, weight)
-            self.states_synced[index] = True
-        elif not self.states_synced[index]:
-            self.states[index] = \
-                self.sync_state_context(self.states[index], weight.context)
-            self.states_synced[index] = True
-        self.optimizer.update_multi_precision(index, weight, grad, self.states[index])
+        if not isinstance(index, (list, tuple)):
+            indices = [index]
+            grads = [grad]
+            weights = [weight]
+        else:
+            indices = index
+            grads = grad
+            weights = weight
+        if weights:
+            self.optimizer._set_current_context(weights[0].context.device_id)
+        for i, idx in enumerate(indices):
+            # convert ctypes.char_p.value back to python str if needed
+            if isinstance(idx, bytes):
+                indices[i] = py_str(idx)
+                idx = indices[i]
+            if idx not in self.states:
+                self.states[idx] = self.optimizer.create_state_multi_precision(idx, weights[i])
+                self.states_synced[idx] = True
+            elif not self.states_synced[idx]:
+                self.states[idx] = \
+                    self.sync_state_context(self.states[idx], weights[i].context)
+                self.states_synced[idx] = True
+        if self.aggregate_updates:
+            # segregate values based on type
+            type_map = {}
+            for i, w, g in zip(indices, weights, grads):
+                if w.dtype in type_map:
+                    type_map[w.dtype].append((i, w, g))
+                else:
+                    type_map[w.dtype] = [(i, w, g)]
+            for idx in type_map:
+                current_index = 0
+                indices, weights, grads = zip(*type_map[idx])
+                while current_index < len(indices):
+                    states = []
+                    step = min(self.optimizer.aggregate_num, len(indices) - current_index)
+                    for j in range(step):
+                        states.append(self.states[indices[current_index + j]])
+                    self.optimizer.update_multi_precision(
+                        indices[current_index:current_index + self.optimizer.aggregate_num],
+                        weights[current_index:current_index + self.optimizer.aggregate_num],
+                        grads[current_index:current_index + self.optimizer.aggregate_num],
+                        states)
+                    current_index += self.optimizer.aggregate_num
+        else:
+            for i, w, g in zip(indices, weights, grads):
+                self.optimizer.update_multi_precision(i, w, g, self.states[i])
 
     def sync_state_context(self, state, context):
         """sync state context."""

@@ -146,7 +146,7 @@ class MXNetGraph(object):
             if name.endswith('_output'):
                 out_names.append(name[:-len('_output')])
             else:
-                logging.warning("output '%s' does not end with '_output'", name)
+                logging.info("output '%s' does not end with '_output'", name)
                 out_names.append(name)
 
         assert len(out_shapes) == len(out_names)
@@ -262,17 +262,20 @@ class MXNetGraph(object):
                     # If converted node is NodeProto, add it in processed nodes list
                     elif isinstance(converted_node, NodeProto):
                         onnx_processed_nodes.append(converted_node)
-                        node_name = converted_node.name if converted_node.name else converted_node.output[0]
-                        if node_name in graph_outputs:
-                            onnx_processed_outputs.append(
-                                make_tensor_value_info(
-                                    name=node_name,
-                                    elem_type=in_type,
-                                    shape=graph_outputs[node_name]
+                        # some operators have multiple outputs,
+                        # therefore, check all output node names
+                        node_names = list(converted_node.output)
+                        for nodename in node_names:
+                            if nodename in graph_outputs:
+                                onnx_processed_outputs.append(
+                                    make_tensor_value_info(
+                                        name=nodename,
+                                        elem_type=in_type,
+                                        shape=graph_outputs[nodename]
+                                    )
                                 )
-                            )
-                            if verbose:
-                                logging.info("Output node is: %s", converted_node.name)
+                                if verbose:
+                                    logging.info("Output node is: %s", nodename)
                     elif isinstance(converted_node, TensorProto):
                         raise ValueError("Did not expect TensorProto")
                     else:

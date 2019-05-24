@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # How to Create New Operators (Layers)
 
 This tutorials walks you through the process of creating new MXNet operators (or layers).
@@ -241,7 +258,7 @@ can add argument descriptions in bulk with `.add_arguments(ActivationParam::__FI
 
 #### FInferShape or TIsBackward (for Backward Only Ops)
 
-Normally operators need to have `FInferShape` with prototype `bool(const nnvm::NodeAttrs& attrs, std::vector<TShape> *in_attrs, std::vector<TShape> *out_attrs)`. `FInferShape` fills unknown shapes (`shape.ndim() == 0`) in in_attrs/out_attrs based on known shapes in in_attrs/out_attrs. Use `ElemwiseShape<n_in, n_out>` for simple operators with uniform shapes.
+Normally operators need to have `FInferShape` with prototype `bool(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector *in_attrs, mxnet::ShapeVector *out_attrs)`. `FInferShape` fills unknown shapes (`shape.ndim() == 0`) in in_attrs/out_attrs based on known shapes in in_attrs/out_attrs. Use `ElemwiseShape<n_in, n_out>` for simple operators with uniform shapes.
 
 Operators that are only used for a backward pass can instead register `.set_attr<nnvm::TIsBackward>("TIsBackward", true)`
 and their shapes with be copied from the corresponding forward operators.
@@ -274,6 +291,28 @@ output or nothing to calculating gradient.
 
 For more complicated patterns, use `MakeGradNode(op_name, n, heads, dict)` to create gradient entries,
 where heads are input entries to the backward op, composed from ograds and n->inputs.
+
+When assembling a return vector of `std::vector<nnvm::NodeEntry> ret;` a common pattern would be to
+either create nodes in place as in:
+
+```
+ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_xyz_backward",
+    {n->inputs[1]}, nullptr, &n))
+```
+
+Or create the node, modify and then move into NodeEntry's constructor if this node is not to be used
+again. This avoids uneccessary copies of the shared_ptr.
+
+```
+for (size_t i = 0; i < n->inputs.size(); ++i) {
+  nnvm::NodePtr node = nnvm::Node::Create();
+  node->attrs.op = copy_op;
+  node->inputs = {ograds[0]};
+  ret.emplace_back(std::move(node));
+}
+```
+
+The first case uses RVO and the second in place construction.
 
 #### FCompute\<xpu\>
 

@@ -61,11 +61,11 @@ struct DiagParam : public dmlc::Parameter<DiagParam> {
   }
 };
 
-inline TShape DiagShapeImpl(const TShape& ishape, const int k,
+inline mxnet::TShape DiagShapeImpl(const mxnet::TShape& ishape, const int k,
                             const int32_t axis1, const int32_t axis2) {
   if (ishape.ndim() == 1) {
     auto s = ishape[0] + std::abs(k);
-    return TShape({s, s});
+    return mxnet::TShape({s, s});
   }
 
   int32_t x1 = CheckAxis(axis1, ishape.ndim());
@@ -84,19 +84,19 @@ inline TShape DiagShapeImpl(const TShape& ishape, const int k,
 
   auto s = std::min(h, w);
   if (s < 0) {
-    s = 0;
+    s = -1;
   }
 
   if (x1 > x2) {
     std::swap(x1, x2);
   }
 
-  int32_t n_dim = static_cast<int32_t>(ishape.ndim()) - 1;
-  TShape oshape(n_dim);
+  int32_t n_dim = ishape.ndim() - 1;
+  mxnet::TShape oshape(n_dim, -1);
 
   // remove axis1 and axis2 and append the new axis to the end
   uint32_t idx = 0;
-  for (int32_t i = 0; i <= n_dim; ++i) {
+  for (int i = 0; i <= n_dim; ++i) {
     if (i != x1 && i != x2) {
       oshape[idx++] = ishape[i];
     }
@@ -108,19 +108,19 @@ inline TShape DiagShapeImpl(const TShape& ishape, const int k,
 }
 
 inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape>* in_attrs,
-                             std::vector<TShape>* out_attrs) {
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
     CHECK_EQ(in_attrs->size(), 1U);
     CHECK_EQ(out_attrs->size(), 1U);
 
-    const TShape& ishape = (*in_attrs)[0];
-    if (ishape.ndim() == 0) {
+    const mxnet::TShape& ishape = (*in_attrs)[0];
+    if (!mxnet::ndim_is_known(ishape)) {
       return false;
     }
 
     const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
 
-    TShape oshape = DiagShapeImpl(ishape,
+    mxnet::TShape oshape = DiagShapeImpl(ishape,
                                   param.k,
                                   param.axis1,
                                   param.axis2);
@@ -129,7 +129,7 @@ inline bool DiagOpShape(const nnvm::NodeAttrs& attrs,
     }
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
 
-    return out_attrs->at(0).ndim() != 0U;
+    return shape_is_known(out_attrs->at(0));
 }
 
 inline bool DiagOpType(const nnvm::NodeAttrs& attrs,
@@ -186,8 +186,8 @@ struct diag_gen {
 template<typename xpu, bool back>
 void DiagOpProcess(const TBlob& in_data,
                    const TBlob& out_data,
-                   const TShape& ishape,
-                   const TShape& oshape,
+                   const mxnet::TShape& ishape,
+                   const mxnet::TShape& oshape,
                    index_t dsize,
                    const DiagParam& param,
                    mxnet_op::Stream<xpu> *s,
@@ -296,8 +296,8 @@ void DiagOpForward(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  const TShape& ishape = inputs[0].shape_;
-  const TShape& oshape = outputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[0].shape_;
+  const mxnet::TShape& oshape = outputs[0].shape_;
   const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
 
   DiagOpProcess<xpu, false>(in_data, out_data, ishape, oshape, out_data.Size(), param, s, req);
@@ -317,8 +317,8 @@ void DiagOpBackward(const nnvm::NodeAttrs& attrs,
 
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  const TShape& ishape = inputs[0].shape_;
-  const TShape& oshape = outputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[0].shape_;
+  const mxnet::TShape& oshape = outputs[0].shape_;
   const DiagParam& param = nnvm::get<DiagParam>(attrs.parsed);
 
   DiagOpProcess<xpu, true>(in_data, out_data, oshape, ishape, in_data.Size(), param, s, req);

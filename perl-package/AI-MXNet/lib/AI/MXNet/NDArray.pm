@@ -535,7 +535,7 @@ method wait_to_read()
 
 method shape()
 {
-    return scalar(check_call(AI::MXNetCAPI::NDArrayGetShape($self->handle)));
+    return scalar(check_call(AI::MXNetCAPI::NDArrayGetShapeEx($self->handle)));
 }
 
 =head2 size
@@ -1226,6 +1226,9 @@ method concatenate(ArrayRef[AI::MXNet::NDArray] $arrays, Index :$axis=0, :$alway
     :$repeat=1 : number, optional
         The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    :$infer_range=0 : Bool
+        When set to 1, infer stop position from start, step, repeat, and
+        output tensor size.
     :$ctx : Context, optional
         The context of the NDArray, defaultw to current default context.
     :$dtype : data type, optional
@@ -1237,7 +1240,7 @@ method concatenate(ArrayRef[AI::MXNet::NDArray] $arrays, Index :$axis=0, :$alway
         The created NDArray
 =cut
 
-method arange(Index :$start=0, Maybe[Index] :$stop=, Index :$step=1, Index :$repeat=1,
+method arange(Index :$start=0, Maybe[Index] :$stop=, Index :$step=1, Index :$repeat=1, Bool :$infer_range=0,
               AI::MXNet::Context :$ctx=AI::MXNet::Context->current_ctx, Dtype :$dtype='float32')
 {
     return __PACKAGE__->_arange({
@@ -1246,6 +1249,7 @@ method arange(Index :$start=0, Maybe[Index] :$stop=, Index :$step=1, Index :$rep
                 step => $step,
                 repeat => $repeat,
                 dtype => $dtype,
+                infer_range => $infer_range,
                 ctx => "$ctx"
     });
 }
@@ -1456,7 +1460,7 @@ func _new_alloc_handle($shape, $ctx, $delay_alloc, $dtype)
 method _new_from_shared_mem($shared_pid, $shared_id, $shape, $dtype)
 {
     my $hdl = check_call(
-        AI::MXNetCAPI::NDArrayCreateFromSharedMem(
+        AI::MXNetCAPI::NDArrayCreateFromSharedMemEx(
             $shared_pid,
             $shared_id,
             $shape,

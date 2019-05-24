@@ -20,11 +20,37 @@
 # This is a convenience script for calling the build scripts of all dependency libraries.
 # Environment variables should be set beforehand.
 
+set -ex
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
+download () {
+    local URL=$1
+    local OUT_FILE=$2
+
+    if [[ -f "${OUT_FILE}" ]]; then
+        echo "File ${OUT_FILE} already downloaded."
+        return 0
+    fi
+
+    echo "Downloading ${URL} ..."
+    local CURL_OPTIONS="--connect-timeout 10 \
+              --max-time 300 \
+              --retry-delay 10 \
+              --retry 3 \
+              --retry-delay 0 \
+              --location \
+              --silent"
+    curl ${CURL_OPTIONS} ${URL} -o ${OUT_FILE}
+
+    if [[ ! -f "${OUT_FILE}" ]]; then
+        echo "File ${URL} couldn't be downloaded!"
+        exit 1
+    fi
+}
 
 if [[ ! $PLATFORM == 'darwin' ]]; then
-    source $DIR/openblas.sh
+    source ${DIR}/openblas.sh
 fi
 source $DIR/libz.sh
 source $DIR/libturbojpeg.sh
@@ -38,3 +64,5 @@ source $DIR/protobuf.sh
 source $DIR/cityhash.sh
 source $DIR/zmq.sh
 source $DIR/lz4.sh
+
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(dirname $(find $DEPS_PATH -type f -name 'libprotoc*' | grep protobuf | head -n 1)):$DEPS_PATH/lib

@@ -34,7 +34,7 @@
 namespace mxnet {
 namespace io {
 
-using nnvm::Tuple;
+using mxnet::Tuple;
 
 namespace image_det_aug_default_enum {
 enum ImageDetAugDefaultCropEmitMode {kCenter, kOverlap};
@@ -104,7 +104,7 @@ struct DefaultImageDetAugmentParam : public dmlc::Parameter<DefaultImageDetAugme
   /*! \brief interpolation method 0-NN 1-bilinear 2-cubic 3-area 4-lanczos4 9-auto 10-rand  */
   int inter_method;
   /*! \brief shape of the image data */
-  TShape data_shape;
+  mxnet::TShape data_shape;
   /*! \brief resize mode, 0-force
    * 1-Shrink to data_shape, preserve ratio,
    * 2-fit to data_shape, preserve ratio
@@ -203,6 +203,7 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultDetAugParams() {
 }
 
 #if MXNET_USE_OPENCV
+#include "./opencv_compatibility.h"
 using Rect = cv::Rect_<float>;
 
 #ifdef _MSC_VER
@@ -461,7 +462,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
 
   /*! \brief Check number of crop samplers and given parameters */
   template<typename DType>
-  void ValidateCropParameters(nnvm::Tuple<DType> *param, const int num_sampler) {
+  void ValidateCropParameters(mxnet::Tuple<DType> *param, const int num_sampler) {
     if (num_sampler == 1) {
       CHECK_EQ(param->ndim(), 1);
     } else if (num_sampler > 1) {

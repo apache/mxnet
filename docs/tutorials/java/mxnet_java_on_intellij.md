@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Run MXNet Java Examples Using the IntelliJ IDE (macOS)
 
 This tutorial guides you through setting up a simple Java project in IntelliJ IDE on macOS and demonstrates usage of the MXNet Java APIs.
@@ -26,16 +43,10 @@ brew install opencv
 
 Run the following commands to install the prerequisites on Ubuntu.
 
-```bash
-wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_core.sh
-sudo ./ubuntu_core.sh
-wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_scala.sh
-sudo ./ubuntu_scala.sh
+```
+sudo apt-get install openjdk-8-java maven
 ```
 
-Note : You might need to run `chmod u+x ubuntu_core.sh` and `chmod u+x ubuntu_scala` before running the scripts.
-
-The `ubuntu_scala.sh` installs the common dependencies required for both MXNet Scala and MXNet Java packages.
 
 ## Set Up Your Project
 
@@ -85,27 +96,16 @@ Set the project's location. The rest of the settings can be left as their defaul
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
-**Step 3.** The Java packages are currently available as nightly builds on Maven. Add the following Maven repository to your `pom.xml` to fetch the Java packages :
- 
-```html
-<repositories>
-    <repository>
-      <id>Apache Snapshot</id>
-      <url>https://repository.apache.org/content/groups/snapshots</url>
-    </repository>
-</repositories>
-```
-
-Also, add this under the `dependencies` tag :
+**Step 3.** The Java packages are currently available on Maven. Add the following under the `dependencies` tag :
 
 ```html
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.4.0-SNAPSHOT</version>
+  <version>1.4.0</version>
 </dependency>
 ```
-The official Java Packages will be released with the release of MXNet 1.4 and will be available on  [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
+The official Java Packages have been released as part of MXNet 1.4 and are available on the [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
 
 Note :
 - Change the osx-x86_64 to linux-x86_64 if your platform is linux.

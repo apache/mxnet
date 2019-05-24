@@ -17,9 +17,10 @@
 
 package org.apache.mxnet.infer
 
-import org.apache.mxnet.{Context, DataDesc, NDArray}
+import org.apache.mxnet._
 import java.io.File
 
+import org.apache.mxnet.MX_PRIMITIVES.MX_PRIMITIVE_TYPE
 import org.slf4j.LoggerFactory
 
 import scala.io
@@ -30,13 +31,14 @@ trait ClassifierBase {
 
   /**
     * Takes an array of floats and returns corresponding (Label, Score) tuples
-    * @param input            Indexed sequence one-dimensional array of floats
+    * @tparam T The Scala equivalent of the DType used for the input array and return value
+    * @param input            Indexed sequence one-dimensional array of floats/doubles
     * @param topK             (Optional) How many result (sorting based on the last axis)
     *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
     */
-  def classify(input: IndexedSeq[Array[Float]],
-               topK: Option[Int] = None): IndexedSeq[(String, Float)]
+  def classify[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]],
+               topK: Option[Int] = None): IndexedSeq[(String, T)]
 
   /**
     * Takes a sequence of NDArrays and returns (Label, Score) tuples
@@ -78,17 +80,35 @@ class Classifier(modelPathPrefix: String,
 
   /**
     * Takes flat arrays as input and returns (Label, Score) tuples.
-    * @param input            Indexed sequence one-dimensional array of floats
+    * @param input            Indexed sequence one-dimensional array of floats/doubles
     * @param topK             (Optional) How many result (sorting based on the last axis)
     *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
     */
-  override def classify(input: IndexedSeq[Array[Float]],
-                        topK: Option[Int] = None): IndexedSeq[(String, Float)] = {
+  override def classify[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]],
+                        topK: Option[Int] = None): IndexedSeq[(String, T)] = {
+
+    // considering only the first output
+    val result = input(0)(0) match {
+      case d: Double => {
+        classifyImpl(input.asInstanceOf[IndexedSeq[Array[Double]]], topK)
+      }
+      case _ => {
+        classifyImpl(input.asInstanceOf[IndexedSeq[Array[Float]]], topK)
+      }
+    }
+
+    result.asInstanceOf[IndexedSeq[(String, T)]]
+  }
+
+  private def classifyImpl[B, A <: MX_PRIMITIVE_TYPE]
+  (input: IndexedSeq[Array[B]], topK: Option[Int] = None)(implicit ev: B => A)
+  : IndexedSeq[(String, B)] = {
 
     // considering only the first output
     val predictResult = predictor.predict(input)(0)
-    var result: IndexedSeq[(String, Float)] = IndexedSeq.empty
+
+    var result: IndexedSeq[(String, B)] = IndexedSeq.empty
 
     if (topK.isDefined) {
       val sortedIndex = predictResult.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
@@ -105,7 +125,7 @@ class Classifier(modelPathPrefix: String,
     * @param input            Indexed sequence of NDArrays
     * @param topK             (Optional) How many result (sorting based on the last axis)
     *                         elements to return. Default returns unsorted output.
-    * @return                 Traversable sequence of (Label, Score) tuples
+    * @return                 Traversable sequence of (Label, Score) tuples.
     */
   override def classifyWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int] = None)
   : IndexedSeq[IndexedSeq[(String, Float)]] = {
@@ -113,7 +133,7 @@ class Classifier(modelPathPrefix: String,
     // considering only the first output
     // Copy NDArray to CPU to avoid frequent GPU to CPU copying
     val predictResultND: NDArray =
-      predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
+    predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
     // Parallel Execution with ParArray for better performance
     val predictResultPar: ParArray[Array[Float]] =
       new ParArray[Array[Float]](predictResultND.shape(0))
@@ -126,7 +146,6 @@ class Classifier(modelPathPrefix: String,
     })
 
     val predictResult = predictResultPar.toArray
-
     var result: ListBuffer[IndexedSeq[(String, Float)]] =
       ListBuffer.empty[IndexedSeq[(String, Float)]]
 
@@ -149,6 +168,12 @@ class Classifier(modelPathPrefix: String,
     result.toIndexedSeq
   }
 
+  /**
+    * Gives the path to the standard location of the synset.txt file
+    * @throws IllegalArgumentException Thrown when the file does not exist
+    * @param modelPathPrefix The path to the model directory
+    * @return The path to the synset.txt file
+    */
   private[infer] def getSynsetFilePath(modelPathPrefix: String): String = {
     val dirPath = modelPathPrefix.substring(0, 1 + modelPathPrefix.lastIndexOf(File.separator))
     val d = new File(dirPath)
@@ -161,6 +186,11 @@ class Classifier(modelPathPrefix: String,
     s.getCanonicalPath
   }
 
+  /**
+    * Parses the labels from a synset file
+    * @param synsetFilePath The path to the synset file. Can be gotten from getSynsetFilePath
+    * @return A IndexedSeq of each element in the file
+    */
   private[infer]  def readSynsetFile(synsetFilePath: String): IndexedSeq[String] = {
     val f = io.Source.fromFile(synsetFilePath)
     try {
@@ -170,6 +200,11 @@ class Classifier(modelPathPrefix: String,
     }
   }
 
+  /**
+    * Creates a predictor with the same modelPath, inputDescriptors, contexts,
+    * and epoch as the classifier
+    * @return The new Predictor
+    */
   private[infer] def getPredictor(): PredictBase = {
       new Predictor(modelPathPrefix, inputDescriptors, contexts, epoch)
   }

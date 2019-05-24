@@ -19,6 +19,7 @@
   (:require [clojure.spec.alpha :as s]
             [t6.from-scala.core :refer [$ $$] :as $]
             [clojure.string :as string]
+            [org.apache.clojure-mxnet.primitives :as primitives]
             [org.apache.clojure-mxnet.shape :as mx-shape])
   (:import (org.apache.mxnet NDArray)
            (scala Product Tuple2 Tuple3)
@@ -34,9 +35,9 @@
                            "int<>" "vec-of-ints"
                            "float<>" "vec-of-floats"
                            "byte<>" "byte-array"
-                           "java.lang.String<>" "vec-or-strings"
                            "org.apache.mxnet.NDArray" "ndarray"
-                           "org.apache.mxnet.Symbol" "sym"})
+                           "org.apache.mxnet.Symbol" "sym"
+                           "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE" "double-or-float"})
 
 (def symbol-param-coerce {"java.lang.String" "sym-name"
                           "float" "num"
@@ -47,7 +48,7 @@
                           "int<>" "vec-of-ints"
                           "float<>" "vec-of-floats"
                           "byte<>" "byte-array"
-                          "java.lang.String<>" "vec-or-strings"
+                          "java.lang.String<>" "vec-of-strings"
                           "org.apache.mxnet.Symbol" "sym"
                           "java.lang.Object" "object"})
 
@@ -66,11 +67,23 @@
 (defn ->option [v]
   ($ Option v))
 
+(defn ->int-option [v]
+  (->option (when v (int v))))
+
 (defn option->value [opt]
   ($/view opt))
 
-(defn keyword->snake-case [vals]
-  (mapv (fn [v] (if (keyword? v) (string/replace (name v) "-" "_") v)) vals))
+(defn keyword->snake-case
+  "Transforms a keyword `kw` into a snake-case string.
+  `kw`: keyword
+  returns: string
+  Ex:
+    (keyword->snake-case :foo-bar) ;\"foo_bar\"
+    (keyword->snake-case :foo)     ;\"foo\""
+  [kw]
+  (if (keyword? kw)
+    (string/replace (name kw) "-" "_")
+    kw))
 
 (defn convert-tuple [param]
   (apply $/tuple param))
@@ -106,8 +119,8 @@
     (empty-map)
     (apply $/immutable-map (->> param
                                 (into [])
-                                flatten
-                                keyword->snake-case))))
+                                (flatten)
+                                (mapv keyword->snake-case)))))
 
 (defn convert-symbol-map [param]
   (convert-map (tuple-convert-by-param-name param)))
@@ -138,9 +151,14 @@
     (and (get targets "scala.collection.Seq") (instance? org.apache.mxnet.Symbol param)) ($/immutable-list param)
     (and (get targets "scala.collection.Seq") (and (or (vector? param) (seq? param)) (empty? param))) (empty-list)
     (and (get targets "scala.collection.Seq") (or (vector? param) (seq? param))) (apply $/immutable-list param)
+    (and (get targets "org.apache.mxnet.Shape") (or (vector? param) (seq? param) (empty? param))) (mx-shape/->shape param)
     (and (get targets "int<>") (vector? param)) (int-array param)
     (and (get targets "float<>") (vector? param)) (float-array param)
     (and (get targets "java.lang.String<>") (vector? param)) (into-array param)
+    (and (get targets "org.apache.mxnet.NDArray<>") (vector? param)) (into-array param)
+    (and (get targets "org.apache.mxnet.Symbol<>") (vector? param)) (into-array param)
+    (and (get targets "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE") (instance? Float param)) (primitives/mx-float param)
+    (and (get targets "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE") (number? param)) (primitives/mx-double param)
     :else param))
 
 (defn nil-or-coerce-param [param targets]
@@ -174,7 +192,14 @@
     (instance? Map return-val) (scala-map->map return-val)
     (instance? Tuple2 return-val) (tuple->vec return-val)
     (instance? Tuple3 return-val) (tuple->vec return-val)
+    (primitives/primitive? return-val) (primitives/->num return-val)
     :else return-val))
+
+(defn coerce-return-recursive [return-val]
+  (let [coerced-val (coerce-return return-val)]
+    (if (vector? coerced-val)
+      (into [] (map coerce-return-recursive coerced-val))
+      coerced-val)))
 
 (defmacro scala-fn
   "Creates a scala fn from an anonymous clojure fn of the form (fn [x] body)"
@@ -204,8 +229,28 @@
     (throw (ex-info error-msg
                     (s/explain-data spec value)))))
 
+(s/def ::non-empty-seq (s/and sequential? not-empty))
+(defn to-array-nd
+  "Converts any N-D sequential structure to an array
+   with the same dimensions."
+  [nd-seq]
+  (validate! ::non-empty-seq nd-seq "Invalid N-D sequence")
+  (if (sequential? (first nd-seq))
+    (to-array (mapv to-array-nd nd-seq))
+    (to-array nd-seq)))
+
+(defn nd-seq-shape
+  "Computes the shape of a n-dimensional sequential structure"
+  [nd-seq]
+  (validate! ::non-empty-seq nd-seq "Invalid N-D sequence")
+  (loop [s nd-seq
+         shape [(count s)]]
+    (if (sequential? (first s))
+      (recur (first s) (conj shape (count (first s))))
+      shape)))
+
 (defn map->scala-tuple-seq
-  "* Convert a map to a scala-Seq of scala-Tubple.
+  "* Convert a map to a scala-Seq of scala-Tuple.
    * Should also work if a seq of seq of 2 things passed.
    * Otherwise passed through unchanged."
   [map-or-tuple-seq]
@@ -225,3 +270,9 @@
            (apply $/immutable-list))
       ;; pass-through
       map-or-tuple-seq)))
+
+(defmacro forms->scala-fn
+  "Creates a scala fn of zero args from forms"
+  [& forms]
+  `($/fn []
+     (do ~@forms)))

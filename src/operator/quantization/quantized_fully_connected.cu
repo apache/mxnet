@@ -70,11 +70,16 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
   const TBlob& data   =  inputs[0];
   const TBlob& weight =  inputs[1];
   const TBlob& out    = outputs[0];
-  TShape dshape = data.shape_;
-  TShape wshape = weight.shape_;
-  TShape oshape = out.shape_;
+  mxnet::TShape dshape = data.shape_;
+  mxnet::TShape wshape = weight.shape_;
+  mxnet::TShape oshape = out.shape_;
   // (m, n) * (k, n).T = (m, k)
   // A * B.T = C
+  if (dshape.ndim() != 2) {
+    CHECK(param.flatten)
+      << "Currently, QuantizedFullyConnected Op only supports flatten=true "
+      << "when ishape.ndim()!=2 for GPU.";
+  }
 
   // row_C = col_C(T) = cublas(col_B * col_A(T)) = cublas(row_B(T), row_A)
   // row_C = col_C(T) = cublas(col_B(T) * col_A(T)) = cublas(row_B, row_A)
@@ -104,7 +109,7 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
                            cmp_type,
                            CUBLAS_GEMM_DFALT));
 
-  Kernel<QuantizationRangeForMultiplicationStruct, gpu>::Launch(s, 1,
+  Kernel<QuantizationRangeForS8S8MultiplicationStruct, gpu>::Launch(s, 1,
     outputs[1].dptr<float>(), outputs[2].dptr<float>(),
      inputs[num_inputs].dptr<float>(),   inputs[num_inputs+1].dptr<float>(),
      inputs[num_inputs+2].dptr<float>(), inputs[num_inputs+3].dptr<float>());

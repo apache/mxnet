@@ -22,7 +22,7 @@
 from __future__ import absolute_import
 
 import ctypes
-from .base import _LIB, check_call
+from .base import _LIB, check_call, integer_types
 from .ndarray.random import *
 from .context import Context
 
@@ -90,9 +90,9 @@ def seed(seed_state, ctx="all"):
     [[ 2.5020072 -1.6884501]
      [-0.7931333 -1.4218881]]
     """
-    if not isinstance(seed_state, int):
+    if not isinstance(seed_state, integer_types):
         raise ValueError('seed_state must be int')
-    seed_state = ctypes.c_int(seed_state)
+    seed_state = ctypes.c_int(int(seed_state))
     if ctx == "all":
         check_call(_LIB.MXRandomSeed(seed_state))
     else:

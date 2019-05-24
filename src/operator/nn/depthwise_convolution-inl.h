@@ -42,8 +42,8 @@ template<typename DType>
 class DepthwiseConvolutionOp {
  public:
   void Init(const ConvolutionParam& param,
-            const std::vector<TShape>& in_shape,
-            const std::vector<TShape>& out_shape) {
+            const mxnet::ShapeVector& in_shape,
+            const mxnet::ShapeVector& out_shape) {
     args_.batch = in_shape[conv::kData][0];
     args_.in_channel = in_shape[conv::kData][1];
     args_.in_height = in_shape[conv::kData][2];

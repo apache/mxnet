@@ -46,7 +46,7 @@ struct MXAPIPredictor {
   // auxiliary arrays
   std::vector<NDArray> aux_arrays;
   // output shapes
-  std::vector<TShape> out_shapes;
+  mxnet::ShapeVector out_shapes;
   // uint32_t buffer for output shapes
   std::vector<uint32_t> out_shapes_buffer;
   // key to arguments
@@ -61,7 +61,7 @@ struct MXAPIPredictor {
 
 struct MXAPINDList {
   std::vector<std::string> keys;
-  std::vector<TShape> shapes;
+  mxnet::ShapeVector shapes;
   std::vector<uint32_t> shapes_buffer;
   std::vector<size_t> indptr;
   std::vector<mx_float> data;
@@ -168,17 +168,17 @@ int _CreatePartialOut(const char* symbol_json_str,
   }
 
   // shape inference and bind
-  std::unordered_map<std::string, TShape> known_shape;
+  std::unordered_map<std::string, mxnet::TShape> known_shape;
   for (mx_uint i = 0; i < num_input_nodes; ++i) {
     known_shape[std::string(input_keys[i])] =
-        TShape(input_shape_data + input_shape_indptr[i],
+        mxnet::TShape(input_shape_data + input_shape_indptr[i],
                input_shape_data + input_shape_indptr[i + 1]);
   }
   std::vector<std::string> arg_names = sym.ListInputNames(Symbol::kReadOnlyArgs);
   std::vector<std::string> aux_names = sym.ListInputNames(Symbol::kAuxiliaryStates);
-  std::vector<TShape> out_shapes(sym.ListOutputNames().size());
-  std::vector<TShape> aux_shapes(aux_names.size());
-  std::vector<TShape> arg_shapes;
+  mxnet::ShapeVector out_shapes(sym.ListOutputNames().size());
+  mxnet::ShapeVector aux_shapes(aux_names.size());
+  mxnet::ShapeVector arg_shapes;
   std::unordered_map<std::string, size_t> key2arg;
   for (size_t i = 0; i < arg_names.size(); ++i) {
     std::string key = arg_names[i];
@@ -186,7 +186,7 @@ int _CreatePartialOut(const char* symbol_json_str,
   }
 
   try {
-    std::vector<TShape> in_shapes;
+    mxnet::ShapeVector in_shapes;
     for (std::string key : sym.ListInputNames(Symbol::kAll)) {
       if (known_shape.count(key) != 0) {
         in_shapes.push_back(known_shape[key]);
@@ -200,7 +200,7 @@ int _CreatePartialOut(const char* symbol_json_str,
     CHECK(infer_complete)
       << "The shape information of is not enough to get the shapes";
     CopyAttr(g.indexed_graph(),
-             g.GetAttr<nnvm::ShapeVector>("shape"),
+             g.GetAttr<mxnet::ShapeVector>("shape"),
              &arg_shapes, &out_shapes, &aux_shapes);
   } catch (const mxnet::op::InferShapeError &err) {
     throw dmlc::Error(err.msg);
@@ -348,22 +348,22 @@ int MXPredReshape(mx_uint num_input_nodes,
 
   API_BEGIN();
   // shape inference
-  std::unordered_map<std::string, TShape> new_shape;
+  std::unordered_map<std::string, mxnet::TShape> new_shape;
   for (mx_uint i = 0; i < num_input_nodes; ++i) {
     new_shape[std::string(input_keys[i])] =
-        TShape(input_shape_data + input_shape_indptr[i],
+        mxnet::TShape(input_shape_data + input_shape_indptr[i],
             input_shape_data + input_shape_indptr[i + 1]);
   }
   ret->sym = p->sym;
   std::vector<std::string> arg_names = ret->sym.ListInputNames(Symbol::kReadOnlyArgs);
   std::vector<std::string> aux_names = ret->sym.ListInputNames(Symbol::kAuxiliaryStates);
-  std::vector<TShape> out_shapes(ret->sym.ListOutputNames().size());
-  std::vector<TShape> aux_shapes(aux_names.size());
-  std::vector<TShape> arg_shapes;
+  mxnet::ShapeVector out_shapes(ret->sym.ListOutputNames().size());
+  mxnet::ShapeVector aux_shapes(aux_names.size());
+  mxnet::ShapeVector arg_shapes;
   ret->key2arg = p->key2arg;
 
   try {
-    std::vector<TShape> in_shapes;
+    mxnet::ShapeVector in_shapes;
     in_shapes.reserve(arg_names.size());
     for (std::string key : ret->sym.ListInputNames(Symbol::kAll)) {
       if (new_shape.count(key) != 0) {
@@ -378,7 +378,7 @@ int MXPredReshape(mx_uint num_input_nodes,
     CHECK(infer_complete)
       << "The shape information of is not enough to get the shapes";
     CopyAttr(g.indexed_graph(),
-             g.GetAttr<nnvm::ShapeVector>("shape"),
+             g.GetAttr<mxnet::ShapeVector>("shape"),
              &arg_shapes, &out_shapes, &aux_shapes);
   } catch (const mxnet::op::InferShapeError &err) {
     throw dmlc::Error(err.msg);
@@ -387,7 +387,7 @@ int MXPredReshape(mx_uint num_input_nodes,
   ret->arg_arrays = p->arg_arrays;
   ret->ctx = p->ctx;
   for (size_t i=0; i < arg_names.size(); ++i) {
-    TShape newShape = arg_shapes[i];
+    mxnet::TShape newShape = arg_shapes[i];
     NDArray &arr = p->arg_arrays[i];
     if (new_shape.count(arg_names[i]) != 0) {
       ret->arg_arrays[i].ReshapeAndAlloc(newShape);
@@ -399,7 +399,7 @@ int MXPredReshape(mx_uint num_input_nodes,
   }
 
   for (size_t i=0; i < aux_names.size(); ++i) {
-    TShape newShape = aux_shapes[i];
+    mxnet::TShape newShape = aux_shapes[i];
     NDArray &arr = p->aux_arrays[i];
     CHECK_EQ(newShape.Size(), arr.shape().Size())
       << "aux " << aux_names[i]
@@ -435,7 +435,8 @@ int MXPredGetOutputShape(PredictorHandle handle,
   CHECK_LT(out_index, p->out_arrays.size())
       << "Index exceed number of outputs";
 
-  const TShape& s = p->out_shapes[out_index];
+  const mxnet::TShape& s = p->out_shapes[out_index];
+  CHECK_GE(s.ndim(), 0);
   p->out_shapes_buffer.resize(s.ndim());
   nnvm::ShapeTypeCast(s.begin(), s.end(), p->out_shapes_buffer.data());
   *shape_data = p->out_shapes_buffer.data();
@@ -509,7 +510,7 @@ int MXNDListCreate(const char* nd_file_bytes,
   }
   ret->indptr.push_back(0);
   for (auto &array : arrays) {
-    TShape shape = array.shape();
+    mxnet::TShape shape = array.shape();
     size_t begin = ret->data.size();
     size_t size = shape.Size();
     ret->shapes.push_back(shape);
@@ -534,7 +535,7 @@ int MXNDListGet(NDListHandle handle,
       << "Index out of range";
   *out_key = p->keys[index].c_str();
   *out_data = dmlc::BeginPtr(p->data) + p->indptr[index];
-  const TShape& s = p->shapes[index];
+  const mxnet::TShape& s = p->shapes[index];
   p->shapes_buffer.resize(s.ndim());
   nnvm::ShapeTypeCast(s.begin(), s.end(), p->shapes_buffer.data());
   *out_shape = p->shapes_buffer.data();

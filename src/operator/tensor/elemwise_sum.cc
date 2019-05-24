@@ -49,22 +49,21 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
       nnvm::Op::Get("identity");
   CHECK_EQ(ograds.size(), 1);
   std::vector<nnvm::NodeEntry> ret;
-  nnvm::NodeEntry n_out{n, 0, 0};
-  for (size_t i = 0; i < n->inputs.size(); i++) {
-    nnvm::NodePtr id_node = nnvm::Node::Create();
-    id_node->attrs.op = copy_op;
-    id_node->inputs = {ograds[0]};
-    ret.push_back(nnvm::NodeEntry{id_node, 0, 0});
+  for (size_t i = 0; i < n->inputs.size(); ++i) {
+    nnvm::NodePtr node = nnvm::Node::Create();
+    node->attrs.op = copy_op;
+    node->inputs = {ograds[0]};
+    ret.emplace_back(std::move(node));
   }
   return ret;
 }
 
 bool ElementWiseSumShape(const nnvm::NodeAttrs& attrs,
-                         std::vector<TShape> *in_attrs,
-                         std::vector<TShape> *out_attrs) {
+                         mxnet::ShapeVector *in_attrs,
+                         mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(out_attrs->size(), 1);
-  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true, shape_string>(
-    attrs, in_attrs, out_attrs, TShape());
+  return ElemwiseAttr<mxnet::TShape, shape_is_none, shape_assign, true, shape_string>(
+    attrs, in_attrs, out_attrs, mxnet::TShape());
 }
 
 bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
@@ -182,7 +181,7 @@ The storage type of ``add_n`` output depends on storage types of inputs
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
-.set_attr<nnvm::FInferShape>("FInferShape", ElementWiseSumShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ElementWiseSumShape)
 .set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)
 .set_attr<FInferStorageType>("FInferStorageType", ElementWiseSumForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElementWiseSumGrad)

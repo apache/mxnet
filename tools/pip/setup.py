@@ -52,7 +52,7 @@ class BinaryDistribution(Distribution):
 
 
 DEPENDENCIES = [
-    'numpy<1.15.0,>=1.8.2',
+    'numpy>1.16.0,<2.0.0',
     'requests>=2.20.0',
     'graphviz<0.9.0,>=0.8.1'
 ]
@@ -64,6 +64,10 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/python/mxnet'),
 shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/dmlc-core/tracker/dmlc_tracker'),
                 os.path.join(CURRENT_DIR, 'dmlc_tracker'))
 shutil.copy(LIB_PATH[0], os.path.join(CURRENT_DIR, 'mxnet'))
+
+# copy license and notice
+shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/licenses'),
+            os.path.join(CURRENT_DIR, 'mxnet/licenses'))
 
 # copy tools to mxnet package
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet/tools'), ignore_errors=True)
@@ -112,7 +116,9 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU92'):
+    if variant.startswith('CU100'):
+        libraries.append('CUDA-10.0')
+    elif variant.startswith('CU92'):
         libraries.append('CUDA-9.2')
     elif variant.startswith('CU91'):
         libraries.append('CUDA-9.1')
@@ -144,13 +150,17 @@ if variant.endswith('MKL'):
         package_data['mxnet'].append('mxnet/libmklml_intel.so')
         package_data['mxnet'].append('mxnet/libiomp5.so')
         package_data['mxnet'].append('mxnet/libmkldnn.so.0')
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), '../MKLML_LICENSE'), os.path.join(CURRENT_DIR, 'mxnet'))
-    package_data['mxnet'].append('mxnet/MKLML_LICENSE')
+    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
+                    os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))
     package_data['mxnet'].append('mxnet/libgfortran.so.3')
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libquadmath.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
     package_data['mxnet'].append('mxnet/libquadmath.so.0')
+
+# Copy licenses and notice
+for f in os.listdir('mxnet/licenses'):
+  package_data['mxnet'].append('mxnet/licenses/{}'.format(f))
 
 from mxnet.base import _generate_op_module_signature
 from mxnet.ndarray.register import _generate_ndarray_function_code

@@ -31,6 +31,7 @@
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
 #include "./operator_tune.h"
+#include "./contrib/erfinv-inl.h"
 
 #ifdef __CUDACC__
 #include <cuda_fp16.h>
@@ -44,10 +45,12 @@ namespace mshadow_op {
 __constant__ const float PI = 3.14159265358979323846;
 __constant__ const float SELU_ALPHA = 1.6732632423543772848170429916717;
 __constant__ const float SELU_LAMBDA = 1.0507009873554804934193349852946;
+__constant__ const float SQRT_2 = 1.4142135623730950488016887242096;
 #else
 const float PI = 3.14159265358979323846;
 const float SELU_ALPHA = 1.6732632423543772848170429916717;
 const float SELU_LAMBDA = 1.0507009873554804934193349852946;
+const float SQRT_2 = 1.4142135623730950488016887242096;
 using std::isnan;
 #endif
 using std::enable_if;
@@ -126,10 +129,6 @@ MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
 MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
 
-MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
-
-MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
-
 MXNET_UNARY_MATH_OP_NC(selu, DType(SELU_LAMBDA) *
                          (a > DType(0) ? a : DType(math::id(SELU_ALPHA) * math::expm1(a))));
 
@@ -169,9 +168,18 @@ struct softrelu : public mxnet_op::tunable {
 
 MXNET_UNARY_MATH_OP(softrelu_grad, -math::expm1(-a));
 
+MXNET_UNARY_MATH_OP(erfinv_grad, 0.5 * math::sqrt(PI) * math::exp(math::sqr(erfinv::Map(a))));
+
 MXNET_UNARY_MATH_OP(erf_grad, 2.0 / math::sqrt(PI) * math::exp(-(a * a)));
 
 MXNET_SIMPLE_UNARY_MATH_OP(erf);
+
+MXNET_UNARY_MATH_OP(gelu,
+  DType(0.5f * static_cast<float>(a) * (1.0f + math::erf(static_cast<float>(a) / SQRT_2))));
+
+MXNET_BINARY_MATH_OP_NC(gelu_grad,
+  DType(0.5f * (1.0f + math::erf(static_cast<float>(a) / SQRT_2) +
+                static_cast<float>(a) * erf_grad::Map(static_cast<float>(a) / SQRT_2) / SQRT_2)));
 
 MXNET_SIMPLE_UNARY_MATH_OP(exp);
 
@@ -314,12 +322,6 @@ MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 
 MXNET_BINARY_MATH_OP(rpower_grad, math::id(a) * math::log(b));
 
-/*! \brief used for generate element of maximum */
-MXNET_BINARY_MATH_OP(maximum, a > b ? a : b);
-
-/*! \brief used for generate element of minimum */
-MXNET_BINARY_MATH_OP_NC(minimum, a < b ? a : b);
-
 MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
 
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
@@ -343,7 +345,6 @@ MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
 MXNET_UNARY_MATH_OP(square_root_grad, 0.5f / math::id(a));
-
 MXNET_UNARY_MATH_OP(reciprocal_square_root, 1.0f / math::sqrt(a));
 
 MXNET_UNARY_MATH_OP(reciprocal_square_root_grad, -0.5f / (math::sqrt(a) * math::id(a)));
@@ -785,6 +786,44 @@ namespace isnan_typed {
   }
 };  // namespace isnan_typed
 
+MXNET_UNARY_MATH_OP_NC(relu, isnan_typed::IsNan(a) || (a > DType(0)) ? a : DType(0));
+
+/*! \brief used for computing gradient of relu operator */
+struct relu_grad : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return a > DType(0) ? DType(1) : DType(0);
+    }
+  }
+};
+
+/*! \brief used for computing binary operator maximum */
+struct maximum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return (a > b ? a : b);
+    }
+  }
+};
+
+/*! \brief used for computing binary operator minimum */
+struct minimum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return DType(a < b ? a : b);
+    }
+  }
+};
+
 /*! \brief sum reducer that ignores NaN values in the input */
 struct nansum {
   /*! \brief do reduction into dst */
@@ -895,13 +934,13 @@ struct nanprod {
 /*! \brief compute l2 norm */
 struct nrm2 {
   /*! \brief do reduction into dst */
-  template<typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares, volatile DType src) { // NOLINT(*)
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares, volatile DType src) { // NOLINT(*)
     sum_of_squares += src * src;
   }
   /*! \brief do stable reduction into dst */
-  template<typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares,  volatile DType src, volatile DType& scale) { // NOLINT(*)
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares,  volatile DType src, volatile DType& scale) { // NOLINT(*)
     if (src != 0) {
       DType abs = mshadow_op::abs::Map(src);
       if (scale < abs) {
@@ -959,6 +998,66 @@ struct nrm2 {
   MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares, DType &scale) { // NOLINT(*)
     SetInitValue(sum_of_squares);
     scale = 0;
+  }
+};
+
+/*! \brief sum reducer */
+struct sum {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
+    dst += src;
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
+    DType y = src - residual;
+    DType t = dst + y;
+    residual = (t - dst) - y;
+    dst = t;
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    DType t1 = dst_val + src_val;
+    DType e = t1 - dst_val;
+    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+    dst_val = t1 + t2;
+    dst_residual = t2 - (dst_val - t1);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return 1;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    SetInitValue(initv);
+    residual = 0;
   }
 };
 

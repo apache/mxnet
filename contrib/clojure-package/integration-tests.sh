@@ -19,10 +19,14 @@
 set -evx
 
 MXNET_HOME=${PWD}
+cd ${MXNET_HOME}/contrib/clojure-package
+# first build the package and install it
+lein install
+
+# then run through the examples 
 EXAMPLES_HOME=${MXNET_HOME}/contrib/clojure-package/examples
-#cd ${MXNET_HOME}/contrib/clojure-package
-#lein test
-#lein cloverage --codecov
-for i in `find ${EXAMPLES_HOME} -name test` ; do
-cd ${i} && lein test
+# use AWK pattern for blacklisting
+TEST_CASES=`find ${EXAMPLES_HOME} -name test | awk '!/dontselect1|cnn-text-classification|gan|neural-style|pre-trained-models/'`
+for i in $TEST_CASES ; do
+ cd ${i} && lein test
 done

@@ -29,37 +29,29 @@
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
 #include <mxnet/c_api.h>
+#include <mxnet/c_api_error.h>
 #include <mxnet/base.h>
 #include <nnvm/graph.h>
 #include <vector>
 #include <string>
 
-/*! \brief  macro to guard beginning and end section of all functions */
-#define API_BEGIN() try { on_enter_api(__FUNCTION__);
-/*! \brief every function starts with API_BEGIN();
-     and finishes with API_END() or API_END_HANDLE_ERROR */
-#define API_END() } catch(dmlc::Error &_except_) { on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0;  // NOLINT(*)
 /*!
- * \brief every function starts with API_BEGIN();
- *   and finishes with API_END() or API_END_HANDLE_ERROR
- *   The finally clause contains procedure to cleanup states when an error happens.
+ * \brief Macros to guard beginning and end section of all functions
+ * every function starts with API_BEGIN()
+ * and finishes with API_END() or API_END_HANDLE_ERROR()
+ * The finally clause contains procedure to cleanup states when an error happens.
  */
-#define API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &_except_) { Finalize; on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0; // NOLINT(*)
+#ifndef API_BEGIN
+#define API_BEGIN MX_API_BEGIN
+#endif
 
-/*!
- * \brief Set the last error message needed by C API
- * \param msg The error message to set.
- */
-void MXAPISetLastError(const char* msg);
-/*!
- * \brief handle exception throwed out
- * \param e the exception
- * \return the return value of API after exception is handled
- */
-inline int MXAPIHandleException(const dmlc::Error &e) {
-  MXAPISetLastError(e.what());
-  return -1;
-}
+#ifndef API_END
+#define API_END MX_API_END
+#endif
+
+#ifndef API_END_HANDLE_ERROR
+#define API_END_HANDLE_ERROR MX_API_END_HANDLE_ERROR
+#endif
 
 using namespace mxnet;
 
@@ -76,22 +68,29 @@ struct MXAPIThreadLocalEntry {
   /*! \brief holder for NDArray handles */
   std::vector<NDArray*> ndinputs, ndoutputs;
   /*! \brief result holder for returning shapes */
-  std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
+  mxnet::ShapeVector arg_shapes, out_shapes, aux_shapes;
   /*! \brief result holder for returning type flags */
   std::vector<int> arg_types, out_types, aux_types;
   /*! \brief result holder for returning storage types */
   std::vector<int> arg_storage_types, out_storage_types, aux_storage_types;
   /*! \brief result holder for returning shape dimensions */
   std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
+  /*! \brief result holder for returning shape dimensions */
+  std::vector<int> arg_shape_ndim_ex, out_shape_ndim_ex, aux_shape_ndim_ex;
   /*! \brief result holder for returning shape pointer */
   std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
+  /*! \brief result holder for returning shape pointer */
+  std::vector<const int*> arg_shape_data_ex, out_shape_data_ex, aux_shape_data_ex;
   /*! \brief uint32_t buffer for returning shape pointer */
   std::vector<uint32_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
+  /*! \brief uint32_t buffer for returning shape pointer */
+  std::vector<int> arg_shape_buffer_ex, out_shape_buffer_ex, aux_shape_buffer_ex;
   /*! \brief bool buffer */
   std::vector<bool> save_inputs, save_outputs;
+  // DEPRECATED. Use SetupShapeArrayReturnWithBufferEx instead.
   // helper function to setup return value of shape array
   inline static void SetupShapeArrayReturnWithBuffer(
-      const std::vector<TShape> &shapes,
+      const mxnet::ShapeVector &shapes,
       std::vector<mx_uint> *ndim,
       std::vector<const mx_uint*> *data,
       std::vector<uint32_t> *buffer) {
@@ -105,6 +104,30 @@ struct MXAPIThreadLocalEntry {
       ndim->at(i) = shapes[i].ndim();
       data->at(i) = ptr;
       ptr = nnvm::ShapeTypeCast(shapes[i].begin(), shapes[i].end(), ptr);
+    }
+  }
+  // helper function to setup return value of shape array
+  inline static void SetupShapeArrayReturnWithBufferEx(
+      const mxnet::ShapeVector &shapes,
+      std::vector<int> *ndim,
+      std::vector<const int*> *data,
+      std::vector<int> *buffer) {
+    ndim->resize(shapes.size());
+    data->resize(shapes.size());
+    size_t size = 0;
+    for (const auto& s : shapes) {
+      if (s.ndim() > 0) {
+        size += s.ndim();
+      }
+    }
+    buffer->resize(size);
+    int *ptr = buffer->data();
+    for (size_t i = 0; i < shapes.size(); ++i) {
+      ndim->at(i) = shapes[i].ndim();
+      data->at(i) = ptr;
+      if (shapes[i].ndim() > 0) {
+        ptr = mxnet::ShapeTypeCast(shapes[i].begin(), shapes[i].end(), ptr);
+      }
     }
   }
 };
@@ -137,10 +160,6 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
 
 // stores keys that will be converted to __key__
 extern const std::vector<std::string> kHiddenKeys;
-
-extern void on_enter_api(const char *function);
-extern void on_exit_api();
-
 }  // namespace mxnet
 
 #endif  // MXNET_C_API_C_API_COMMON_H_

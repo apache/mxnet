@@ -62,6 +62,8 @@ class NaiveEngine final : public Engine {
   };
 
   NaiveEngine() {
+    objpool_opr_ref_ = common::ObjectPool<NaiveOpr>::_GetSharedRef();
+    objpool_var_ref_ = common::ObjectPool<NaiveVar>::_GetSharedRef();
   }
   // virtual destructor
   virtual ~NaiveEngine() {
@@ -72,6 +74,12 @@ class NaiveEngine final : public Engine {
         // Catch exception for CUDA driver shutdown
         MSHADOW_CATCH_ERROR(mshadow::DeleteStream(streams_[i]));
         streams_[i] = nullptr;
+      }
+    }
+    for (size_t i = 0; i < aux_streams_.size(); ++i) {
+      if (aux_streams_[i] != nullptr) {
+        delete aux_streams_[i];
+        aux_streams_[i] = nullptr;
       }
     }
 #endif
@@ -169,16 +177,18 @@ class NaiveEngine final : public Engine {
       MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(exec_ctx.dev_id));
       if (streams_.size() <= dev_id) {
         streams_.resize(dev_id + 1, nullptr);
+        aux_streams_.resize(dev_id + 1, nullptr);
       }
       if (streams_[dev_id] == nullptr) {
         streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
+        aux_streams_[dev_id] = new GPUAuxStream(streams_[dev_id]);
       }
-      exec_fun(RunContext{exec_ctx, streams_[dev_id]}, callback);
+      exec_fun(RunContext{exec_ctx, streams_[dev_id], aux_streams_[dev_id], false}, callback);
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
     } else {
-      exec_fun(RunContext{exec_ctx, &cpu_stream_}, callback);
+      exec_fun(RunContext{exec_ctx, &cpu_stream_, nullptr, false}, callback);
     }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";
@@ -202,13 +212,17 @@ class NaiveEngine final : public Engine {
   void WaitForAll() override {
   }
 
+  void Throw(VarHandle var) override {
+  }
+
   void NotifyShutdown() override {
     shutdown_phase_.store(true);
   }
 
  private:
   // callback to oncomplete
-  static void OnComplete(Engine *engine, void *param) {
+  static void OnComplete(Engine *engine, void *param,
+                         const dmlc::Error* error) {
     static_cast<NaiveEngine*>(engine)->req_completed_ = true;
   }
   // whether action is completed
@@ -219,6 +233,17 @@ class NaiveEngine final : public Engine {
   mshadow::Stream<cpu> cpu_stream_;
   // GPU streams
   std::vector<mshadow::Stream<gpu>*> streams_;
+#if MXNET_USE_CUDA
+  // GPU auxiliary streams
+  std::vector<GPUAuxStream*> aux_streams_;
+#endif
+/*!
+ * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
+ * See also #309 (https://github.com/dmlc/mxnet/issues/309) and similar fix in threaded_engine.h.
+ * Without this, segfaults seen on CentOS7 in test_operator_gpu.py:test_convolution_multiple_streams
+ */
+  std::shared_ptr<common::ObjectPool<NaiveOpr> > objpool_opr_ref_;
+  std::shared_ptr<common::ObjectPool<NaiveVar> > objpool_var_ref_;
 };  // class NaiveEngine
 
 Engine *CreateNaiveEngine() {

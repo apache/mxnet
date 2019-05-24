@@ -40,7 +40,7 @@ def load_module(sym_filepath, params_filepath):
     params : params object
         Model weights including both arg and aux params.
     """
-    if not (os.path.isfile(sym_filepath) and os.path.isfile(params_filepath)):
+    if not (os.path.isfile(sym_filepath) and os.path.isfile(params_filepath)): # pylint: disable=no-else-raise
         raise ValueError("Symbol and params files provided are invalid")
     else:
         try:

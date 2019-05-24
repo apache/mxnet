@@ -46,7 +46,7 @@ def imread(filename, *args, **kwargs):
     """Read and decode an image to an NDArray.
 
     .. note:: `imread` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+       MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
     ----------
@@ -87,7 +87,7 @@ def imresize(src, w, h, *args, **kwargs):
     r"""Resize image with OpenCV.
 
     .. note:: `imresize` uses OpenCV (not the CV2 Python library). MXNet must have been built
-    with USE_OPENCV=1 for `imresize` to work.
+       with USE_OPENCV=1 for `imresize` to work.
 
     Parameters
     ----------
@@ -144,7 +144,7 @@ def imdecode(buf, *args, **kwargs):
     """Decode an image to an NDArray.
 
     .. note:: `imdecode` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+       MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
     ----------
@@ -345,7 +345,7 @@ def resize_short(src, size, interp=2):
     """Resizes shorter edge to size.
 
     .. note:: `resize_short` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with OpenCV for `resize_short` to work.
+       MXNet must have been built with OpenCV for `resize_short` to work.
 
     Resizes the original image by setting the shorter edge to size
     and setting the longer edge accordingly.
@@ -428,7 +428,7 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
     NDArray
         An `NDArray` containing the cropped image.
     """
-    out = nd.crop(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
+    out = nd.slice(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
     if size is not None and (w, h) != size:
         sizes = (h, w, size[1], size[0])
         out = imresize(out, *size, interp=_get_interp_method(interp, sizes))
@@ -585,13 +585,11 @@ def random_size_crop(src, size, area, ratio, interp=2, **kwargs):
         area = (area, 1.0)
     for _ in range(10):
         target_area = random.uniform(area[0], area[1]) * src_area
-        new_ratio = random.uniform(*ratio)
+        log_ratio = (np.log(ratio[0]), np.log(ratio[1]))
+        new_ratio = np.exp(random.uniform(*log_ratio))
 
         new_w = int(round(np.sqrt(target_area * new_ratio)))
         new_h = int(round(np.sqrt(target_area / new_ratio)))
-
-        if random.random() < 0.5:
-            new_h, new_w = new_w, new_h
 
         if new_w <= w and new_h <= h:
             x0 = random.randint(0, w - new_w)
@@ -1376,7 +1374,7 @@ class ImageIter(io.DataIter):
         pad = batch_size - i
         # handle padding for the last batch
         if pad != 0:
-            if self.last_batch_handle == 'discard':
+            if self.last_batch_handle == 'discard': # pylint: disable=no-else-raise
                 raise StopIteration
             # if the option is 'roll_over', throw StopIteration and cache the data
             elif self.last_batch_handle == 'roll_over' and \

@@ -48,8 +48,10 @@ class ResourceScope extends AutoCloseable {
     */
   override def close(): Unit = {
     ResourceScope.removeFromThreadLocal(this)
-    resourceQ.foreach(resource => if (resource != null) resource.dispose(false) )
-    resourceQ.clear()
+    if (!ResourceScope.threadLocalScopes.get().contains(this)) {
+      resourceQ.foreach(resource => if (resource != null) resource.dispose(false))
+      resourceQ.clear()
+    }
   }
 
   /**
@@ -59,6 +61,14 @@ class ResourceScope extends AutoCloseable {
   def add(resource: NativeResource): Unit = {
     resourceQ.+=(resource)
     resource.scope = Some(this)
+  }
+
+  /**
+    * Check if a NativeResource is in the scope
+    * @param resource
+    */
+  def contains(resource: NativeResource): Boolean = {
+    resourceQ.contains(resource)
   }
 
   /**
@@ -78,8 +88,10 @@ class ResourceScope extends AutoCloseable {
   def moveToOuterScope(resource: NativeResource): Unit = {
     val prevScope: Option[ResourceScope] = ResourceScope.getPrevScope()
     if (prevScope.isDefined) {
-      this.remove(resource)
-      prevScope.get.add(resource)
+      if (contains(resource)) {
+        this.remove(resource)
+        prevScope.get.add(resource)
+      }
     } else this.remove(resource)
   }
 
@@ -107,20 +119,16 @@ object ResourceScope {
 
     val curScope = if (scope != null) scope else new ResourceScope()
 
-    @inline def resourceInGeneric(g: scala.collection.Iterable[_]) = {
-      g.foreach( n =>
-        n match {
-          case nRes: NativeResource => {
-            curScope.moveToOuterScope(nRes)
-          }
-          case kv: scala.Tuple2[_, _] => {
-            if (kv._1.isInstanceOf[NativeResource]) curScope.moveToOuterScope(
-              kv._1.asInstanceOf[NativeResource])
-            if (kv._2.isInstanceOf[NativeResource]) curScope.moveToOuterScope(
-              kv._2.asInstanceOf[NativeResource])
-          }
-        }
-      )
+    def recursiveMoveToOuterScope(resource: Any): Unit = {
+      resource match {
+        case nRes: NativeResource => curScope.moveToOuterScope(nRes)
+        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => curScope.moveToOuterScope(nd) )
+        case resInGeneric: scala.collection.Traversable[_] =>
+          resInGeneric.foreach(recursiveMoveToOuterScope)
+        case resProduct: scala.Product =>
+          resProduct.productIterator.foreach(recursiveMoveToOuterScope)
+        case _ => // do nothing
+      }
     }
 
     @inline def safeAddSuppressed(t: Throwable, suppressed: Throwable): Unit = {
@@ -131,13 +139,7 @@ object ResourceScope {
 
     try {
       val ret = body
-       ret match {
-          // don't de-allocate if returning any collection that contains NativeResource.
-        case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
-        case nRes: NativeResource => curScope.moveToOuterScope(nRes)
-        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => curScope.moveToOuterScope(nd) )
-        case _ => // do nothing
-      }
+      recursiveMoveToOuterScope(ret)
       ret
     } catch {
       case t: Throwable =>
@@ -145,7 +147,7 @@ object ResourceScope {
         null.asInstanceOf[A] // we'll throw in finally
     } finally {
       var toThrow: Throwable = retThrowable
-      if (retThrowable eq null) curScope.close()
+      if (retThrowable eq null) curScope.close
       else {
         try {
           curScope.close
@@ -156,6 +158,17 @@ object ResourceScope {
         } finally {
           throw toThrow
         }
+      }
+    }
+  }
+
+  private[mxnet] def usingIfScopeExists[A](scope: Option[ResourceScope])(body: => A): A = {
+    if (scope == None) {
+      body
+    } else {
+      ResourceScope.addToThreadLocal(scope.get)
+      ResourceScope.using(scope.get){
+        body
       }
     }
   }
@@ -179,7 +192,7 @@ object ResourceScope {
     * @param r ResourceScope to remove
     */
   private[mxnet] def removeFromThreadLocal(r: ResourceScope): Unit = {
-    threadLocalScopes.get() -= r
+    threadLocalScopes.get().remove(threadLocalScopes.get().lastIndexOf(r))
   }
 
   /**

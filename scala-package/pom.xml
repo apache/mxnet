@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -6,11 +22,12 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-     <version>19</version>
+    <version>19</version>
   </parent>
+
   <groupId>org.apache.mxnet</groupId>
-  <artifactId>mxnet-parent_2.11</artifactId>
-  <version>1.5.0-SNAPSHOT</version>
+  <artifactId>mxnet-parent</artifactId>
+  <version>INTERNAL</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/apache/incubator-mxnet/tree/master/scala-package</url>
   <description>
@@ -36,11 +53,16 @@
   </scm>
 
   <properties>
+    <java.version>1.7</java.version>
     <scala.version>2.11.8</scala.version>
+    <build.platform/>
     <scala.binary.version>2.11</scala.binary.version>
     <build.platform />
     <cxx>g++</cxx>
     <dollar>$</dollar>
+    <MXNET_DIR>${project.basedir}/..</MXNET_DIR>
+    <skipJavaTests>true</skipJavaTests>
+    <repo_url>file://${project.build.directory}/repo</repo_url>
   </properties>
 
   <packaging>pom</packaging>
@@ -48,46 +70,18 @@
     <module>init</module>
     <module>init-native</module>
     <module>macros</module>
-    <module>core</module>
     <module>native</module>
+    <module>core</module>
     <module>infer</module>
     <module>examples</module>
     <module>spark</module>
     <module>assembly</module>
+    <module>deploy</module>
   </modules>
 
   <profiles>
     <profile>
-      <id>release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>add-source</goal>
-                </goals>
-                <configuration>
-                  <sources>
-                    <source>${project.build.directory}/genjavadoc</source>
-                  </sources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <profile>
       <id>scala-2.11</id>
-      <properties>
-        <scala.version>2.11.8</scala.version>
-        <scala.binary.version>2.11</scala.binary.version>
-      </properties>
       <build>
         <plugins>
           <plugin>
@@ -117,34 +111,97 @@
     </profile>
 
     <profile>
-      <id>scala-2.12</id>
+      <id>osx-x86_64</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
       <properties>
-        <scala.version>2.12.4</scala.version>
-        <scala.binary.version>2.12</scala.binary.version>
+        <platform>osx-x86_64</platform>
+        <libtype>jnilib</libtype>
+        <flavor>cpu</flavor>
       </properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <name>Linux</name>
+        </os>
+      </activation>
+      <properties>
+        <platform>linux-x86_64</platform>
+        <libtype>so</libtype>
+      </properties>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.6.0</version>
+            <executions>
+              <execution>
+                <id>init-build-flavor</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>bash</executable>
+                  <commandlineArgs>-c 'mkdir -p ${project.build.directory}; if [[ $(ldd ${MXNET_DIR}/lib/libmxnet.so | grep libcuda | wc -l) == "0" ]]; then echo flavor=cpu &gt; ${project.build.directory}/flavor.properties; else echo flavor=gpu &gt; ${project.build.directory}/flavor.properties; fi'</commandlineArgs>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>properties-maven-plugin</artifactId>
+            <version>1.0.0</version>
+            <executions>
+              <execution>
+                <id>read-properties</id>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>read-project-properties</goal>
+                </goals>
+                <configuration>
+                  <files>
+                    <file>${project.build.directory}/flavor.properties</file>
+                  </files>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>staging</id>
       <build>
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-enforcer-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>enforce-versions</id>
-                <goals>
-                  <goal>enforce</goal>
-                </goals>
-                <configuration>
-                  <rules>
-                    <bannedDependencies>
-                      <excludes combine.children="append">
-                        <exclude>*:*_2.11</exclude>
-                        <exclude>*:*_2.10</exclude>
-                      </excludes>
-                    </bannedDependencies>
-                  </rules>
-                </configuration>
-              </execution>
-            </executions>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>nightly</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
           </plugin>
         </plugins>
       </build>
@@ -154,19 +211,25 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-        <configuration>
-          <localCheckout>true</localCheckout>
-          <pushChanges>false</pushChanges>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
+        <groupId>org.commonjava.maven.plugins</groupId>
+        <artifactId>directory-maven-plugin</artifactId>
+        <version>0.1</version>
+        <executions>
+          <execution>
+            <id>directories</id>
+            <goals>
+              <goal>directory-of</goal>
+            </goals>
+            <phase>initialize</phase>
+            <configuration>
+              <property>rootdir</property>
+              <project>
+                <groupId>org.apache.mxnet</groupId>
+                <artifactId>mxnet-parent</artifactId>
+              </project>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -192,9 +255,11 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.3</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
           <encoding>UTF-8</encoding>
+          <skipMain>true</skipMain>
+          <skip>true</skip>
         </configuration>
       </plugin>
       <plugin>
@@ -209,14 +274,17 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.5.5</version>
+        <version>3.1.0</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.19</version>
+        <version>2.22.0</version>
         <configuration>
-          <skipTests>true</skipTests>
+          <skipTests>${skipJavaTests}</skipTests>
+            <argLine>
+              -Djava.library.path=${project.parent.basedir}/native/target
+            </argLine>
           <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
       </plugin>
@@ -231,7 +299,6 @@
         <artifactId>scalatest-maven-plugin</artifactId>
         <version>1.0</version>
         <configuration>
-          <skipTests>${skipTests}</skipTests>
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <junitxml>.</junitxml>
           <stdout>F</stdout>
@@ -256,7 +323,7 @@
       <plugin>
         <groupId>org.scalastyle</groupId>
         <artifactId>scalastyle-maven-plugin</artifactId>
-        <version>0.8.0</version>
+        <version>1.0.0</version>
         <configuration>
           <verbose>false</verbose>
           <failOnViolation>true</failOnViolation>
@@ -264,7 +331,7 @@
           <failOnWarning>false</failOnWarning>
           <sourceDirectory>${basedir}/src/main/scala</sourceDirectory>
           <testSourceDirectory>${basedir}/src/test/scala</testSourceDirectory>
-          <configLocation>scalastyle-config.xml</configLocation>
+          <configLocation>${rootdir}/scalastyle-config.xml</configLocation>
           <outputFile>${basedir}/target/scalastyle-output.xml</outputFile>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
@@ -277,11 +344,12 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.4.4</version>
         <configuration>
-          <recompileMode>incremental</recompileMode>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
           <compilerPlugins>
             <compilerPlugin>
               <groupId>org.scalamacros</groupId>
@@ -289,49 +357,52 @@
               <version>2.1.0</version>
             </compilerPlugin>
           </compilerPlugins>
+          <args>
+            <arg>-feature</arg>
+            <arg>-deprecation</arg>
+          </args>
         </configuration>
         <executions>
           <execution>
+            <id>compile</id>
             <goals>
+              <goal>add-source</goal>
               <goal>compile</goal>
               <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-        <version>3.3.2</version>
-        <configuration>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <id>attach-javadocs</id>
-            <goals>
               <goal>doc-jar</goal>
             </goals>
           </execution>
+          <execution>
+            <id>presite</id>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+          </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>false</skip>
+          <altDeploymentRepository>deployrepo::default::${repo_url}</altDeploymentRepository>
+        </configuration>
       </plugin>
     </plugins>
   </build>
+
   <dependencies>
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-      <version>${scala.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-reflect</artifactId>
-      <version>${scala.version}</version>
-    </dependency>
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.10</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
@@ -352,8 +423,8 @@
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_${scala.binary.version}</artifactId>
-      <version>3.0.4</version>
+      <artifactId>scalatest_2.11</artifactId>
+      <version>3.0.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -363,14 +434,37 @@
     </dependency>
     <dependency>
       <groupId>org.scalacheck</groupId>
-      <artifactId>scalacheck_${scala.binary.version}</artifactId>
+      <artifactId>scalacheck_2.11</artifactId>
       <version>1.13.5</version>
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Following libraries are required by running javah, they should be excluded from .jar -->
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>${scala.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-reflect</artifactId>
+      <version>${scala.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.scala-lang.modules</groupId>
-      <artifactId>scala-parser-combinators_${scala.binary.version}</artifactId>
-      <version>1.0.4</version>
+      <artifactId>scala-parser-combinators_2.11</artifactId>
+      <version>1.0.5</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-xml_2.11</artifactId>
+      <version>1.0.6</version>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>

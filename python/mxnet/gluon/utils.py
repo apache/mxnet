@@ -63,10 +63,6 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
         Return value is a list even if `num_slice` is 1.
     """
     size = data.shape[batch_axis]
-    if size < num_slice:
-        raise ValueError(
-            "Too many slices for data with shape %s. Arguments are " \
-            "num_slice=%d and batch_axis=%d."%(str(data.shape), num_slice, batch_axis))
     if even_split and size % num_slice != 0:
         raise ValueError(
             "data with shape %s cannot be evenly split into %d slices along axis %d. " \
@@ -75,6 +71,12 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
                 str(data.shape), num_slice, batch_axis, num_slice))
 
     step = size // num_slice
+
+    # If size < num_slice, make fewer slices
+    if not even_split and size < num_slice:
+        step = 1
+        num_slice = size
+
     if batch_axis == 0:
         slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
                   for i in range(num_slice)]
@@ -222,7 +224,7 @@ else:
     _MOVEFILE_WRITE_THROUGH = 0x8
     _windows_default_flags = _MOVEFILE_WRITE_THROUGH
 
-    text_type = unicode if sys.version_info[0] == 2 else str  # noqa
+    text_type = unicode if sys.version_info[0] == 2 else str  # pylint: disable=undefined-variable
 
     def _str_to_unicode(x):
         """Handle text decoding. Internal use only"""
@@ -338,7 +340,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 break
             except Exception as e:
                 retries -= 1
-                if retries <= 0:
+                if retries <= 0: # pylint: disable=no-else-raise
                     raise e
                 else:
                     print('download failed due to {}, retrying, {} attempt{} left'

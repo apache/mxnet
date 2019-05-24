@@ -17,7 +17,7 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import org.apache.mxnet.{Context, NDArrayCollector, Shape}
+import org.apache.mxnet.{Context, ResourceScope, Shape}
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
@@ -29,7 +29,7 @@ object BoostInference {
 
   def runInference(modelPath: String, outputPath: String, guassianRadius : Int,
                    inputImage : String, ctx : Context): Unit = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val dShape = Shape(1, 3, 480, 640)
       val clipNorm = 1.0f * dShape.product
       // generator
@@ -47,7 +47,7 @@ object BoostInference {
         DataProcessing.preprocessContentImage(s"$inputImage", dShape, ctx)
       var data = Array(contentNp)
       for (i <- 0 until gens.length) {
-        NDArrayCollector.auto().withScope {
+        ResourceScope.using() {
           gens(i).forward(data.takeRight(1))
           val newImg = gens(i).getOutputs()(0)
           data :+= newImg

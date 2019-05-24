@@ -124,6 +124,7 @@ int main(int argc, char const *argv[]) {
   ctx = Context::cpu();;
 #endif
 
+  TRY
   auto googlenet = GoogleNetSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
@@ -139,10 +140,14 @@ int main(int argc, char const *argv[]) {
                                         };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(&train_iter, "Train", data_files, batch_size);
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(&val_iter, "Label", data_files, batch_size);
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
 
   Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("momentum", 0.9)
@@ -186,6 +191,8 @@ int main(int argc, char const *argv[]) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

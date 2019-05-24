@@ -41,12 +41,12 @@ namespace op {
 
 struct SampleUniqueZifpianParam : public dmlc::Parameter<SampleUniqueZifpianParam> {
   int range_max;
-  TShape shape;
+  mxnet::TShape shape;
   DMLC_DECLARE_PARAMETER(SampleUniqueZifpianParam) {
     DMLC_DECLARE_FIELD(range_max)
     .describe("The number of possible classes.");
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("2-D shape of the output, where shape[0] is the batch size, and shape[1] "
               "is the number of candidates to sample for each batch.");
   }
@@ -54,13 +54,13 @@ struct SampleUniqueZifpianParam : public dmlc::Parameter<SampleUniqueZifpianPara
 
 template<typename ParamType>
 inline bool SampleUniqueShape(const nnvm::NodeAttrs& attrs,
-                              std::vector<TShape> *in_attrs,
-                              std::vector<TShape> *out_attrs) {
+                              mxnet::ShapeVector *in_attrs,
+                              mxnet::ShapeVector *out_attrs) {
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 2U);
   // output shape is known
-  if ((*out_attrs)[0].ndim() == 2 && param.shape.ndim() == 0) {
+  if ((*out_attrs)[0].ndim() == 2 && !mxnet::ndim_is_known(param.shape)) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::Shape1((*out_attrs)[0][0]));
     return true;
   }

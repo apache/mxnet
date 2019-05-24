@@ -74,15 +74,15 @@ class CallbackOnComplete {
  public:
   // use implicit copy and assign
   /*! \brief involve the callback */
-  inline void operator()() const {
-    (*callback_)(engine_, param_);
+  inline void operator()(const dmlc::Error* error = nullptr) const {
+    (*callback_)(engine_, param_, error);
   }
 
  private:
   /*! \brief engine can see content of callback */
   friend class ::mxnet::Engine;
   /*! \brief the real callback */
-  void (*callback_)(Engine *, void *);
+  void (*callback_)(Engine *, void *, const dmlc::Error *);
   /*! \brief the engine class passed to callback */
   Engine* engine_;
   /*! \brief the parameter set on callback */
@@ -106,7 +106,9 @@ enum class FnProperty {
   /*! \brief Delete variable call */
   kDeleteVar,
   /*! \brief Prioritized sync operation on GPU */
-  kGPUPrioritized
+  kGPUPrioritized,
+  /*! \brief Operation not to be skipped even with associated exception */
+  kNoSkip
 };  // enum class FnProperty
 
 /*!
@@ -230,6 +232,8 @@ class MXNET_API Engine {
    * \brief Wait until all the activity of engine finishes.
    */
   virtual void WaitForAll() = 0;
+  /*!\brief Throw if threre are associated exception with var */
+  virtual void Throw(VarHandle var) = 0;
   /*!\brief virtual destructor */
   virtual ~Engine() noexcept(false) {}
   /*!
@@ -275,7 +279,7 @@ class MXNET_API Engine {
    * \param param the paramter passed to callback.
    */
   inline CallbackOnComplete CreateCallback(
-      void (*callback)(Engine *, void *), void *param) {
+      void (*callback)(Engine *, void *, const dmlc::Error *), void *param) {
     CallbackOnComplete ret;
     ret.callback_ = callback;
     ret.engine_ = this;

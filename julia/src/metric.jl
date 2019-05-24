@@ -47,16 +47,16 @@ Update and accumulate metrics.
 * `labels::Vector{NDArray}`: the labels from the data provider.
 * `preds::Vector{NDArray}`: the outputs (predictions) of the network.
 """
-function update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray) where T <: AbstractEvalMetric
+update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray) where T<:AbstractEvalMetric =
   _update!(metric, labels, preds, hasNDArraySupport(metric))
-end
 
 function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
-                  ::Val{true}) where T<: AbstractEvalMetric
+                  ::Val{true}) where T<:AbstractEvalMetric
   if length(labels) != length(preds)
-    Base.warn_once(
-      "The number of labels ($(length(labels))) does not correspond to the\
-      number of outputs ($(length(preds))). The calculated metric might not be accuracte.")
+    @warn(
+      "The number of labels ($(length(labels))) does not correspond to the " *
+      "number of outputs ($(length(preds))). The calculated metric might not be accuracte.",
+      maxlog = 1)
   end
   for (label, pred) in zip(labels, preds)
     _update_single_output(metric, label, pred)
@@ -64,11 +64,12 @@ function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
 end
 
 function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
-                  ::Val{false}) where T<: AbstractEvalMetric
+                  ::Val{false}) where {T<:AbstractEvalMetric}
   if length(labels) != length(preds)
-    Base.warn_once(
-      "The number of labels ($(length(labels))) does not correspond to the\
-      number of outputs ($(length(preds))). The calculated metric might not be accuracte.")
+    @warn(
+      "The number of labels ($(length(labels))) does not correspond to the " *
+      "number of outputs ($(length(preds))). The calculated metric might not be accuracte.",
+      maxlog = 1)
   end
   for (label, pred) in zip(labels, preds)
      @nd_as_jl ro=(label, pred) begin
@@ -124,19 +125,19 @@ To calculate both mean-squared error [`Accuracy`](@ref) and log-loss [`ACE`](@re
 ```
 """
 mutable struct MultiMetric <: AbstractEvalMetric
-    metrics :: Vector{mx.AbstractEvalMetric}
+  metrics :: Vector{mx.AbstractEvalMetric}
 end
 
 function update!(metric :: MultiMetric, labels :: Vector{<:NDArray}, preds :: Vector{<:NDArray})
-    for m in metric.metrics
-        update!(m, labels, preds)
-    end
-    nothing
+  for m in metric.metrics
+    update!(m, labels, preds)
+  end
+  nothing
 end
 
 function reset!(metric :: MultiMetric)
-    map(reset!, metric.metrics)
-    nothing
+  map(reset!, metric.metrics)
+  nothing
 end
 
 get(metric::MultiMetric) = mapreduce(get, append!, metric.metrics)
@@ -154,21 +155,21 @@ and log-loss [`ACE`](@ref) for the second output:
 ```
 """
 mutable struct SeqMetric <: AbstractEvalMetric
-    metrics :: Vector{AbstractEvalMetric}
+  metrics :: Vector{AbstractEvalMetric}
 end
 
 function update!(metric::SeqMetric, labels::VecOfNDArray, preds::VecOfNDArray)
-    @assert length(metric.metrics) == length(labels)
-    @assert length(metric.metrics) == length(preds)
-    for (m, l, p) in zip(metric.metrics, labels, preds)
-        update!(m, [l], [p])
-    end
-    nothing
+  @assert length(metric.metrics) == length(labels)
+  @assert length(metric.metrics) == length(preds)
+  for (m, l, p) in zip(metric.metrics, labels, preds)
+    update!(m, [l], [p])
+  end
+  nothing
 end
 
 function reset!(metric::SeqMetric)
-    map(reset!, metric.metrics)
-    nothing
+  map(reset!, metric.metrics)
+  nothing
 end
 
 get(metric::SeqMetric) = mapreduce(get, append!, metric.metrics)
@@ -204,7 +205,7 @@ function _update_single_output(metric::Accuracy, label::Array, pred::Array)
         for i in 1:size(labels, 1)
           label = labels[i, j, 1, sample]
           klasses = view(pred, i, j, :, sample)
-          klass = indmax(klasses) - 1 # Classes start at 0...k-1
+          klass = argmax(klasses) - 1 # Classes start at 0...k-1
 
           metric.acc_sum += klass == label
           metric.n_sample += 1
@@ -213,7 +214,7 @@ function _update_single_output(metric::Accuracy, label::Array, pred::Array)
     end
   elseif ndims(pred) == 2 # 1-dimensional case
     for sample in 1:size(label, 1)
-      klass = indmax(view(pred, :, sample)) - 1
+      klass = argmax(view(pred, :, sample)) - 1
       metric.acc_sum += klass == label[sample]
       metric.n_sample += 1
     end
@@ -237,7 +238,6 @@ Mean Squared Error.
 Calculates the mean squared error regression loss.
 Requires that label and prediction have the same shape.
 """
-
 mutable struct MSE{N} <: AbstractEvalMetric
   mse_sum  :: Vector{NDArray{MX_float,N}}
   n_sample :: Int
@@ -269,7 +269,7 @@ function reset!(metric::MSE{N}) where N
   metric.n_sample = 0
 end
 
-doc"""
+@doc doc"""
     NMSE
 
 Normalized Mean Squared Error

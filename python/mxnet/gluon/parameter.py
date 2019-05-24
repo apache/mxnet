@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=
+# pylint: disable=unnecessary-pass
 """Neural network parameter."""
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
@@ -900,8 +900,9 @@ class ParameterDict(object):
                     "restore_prefix is '%s' but Parameters name '%s' does not start " \
                     "with '%s'"%(restore_prefix, name, restore_prefix)
         lprefix = len(restore_prefix)
+        ndarray_load = ndarray.load(filename)
         loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
-                  for k, v in ndarray.load(filename).items()]
+                  for k, v in ndarray_load.items()] if isinstance(ndarray_load, dict) else ndarray_load
         arg_dict = {restore_prefix+k: v for k, v in loaded}
         if not allow_missing:
             for name in self.keys():

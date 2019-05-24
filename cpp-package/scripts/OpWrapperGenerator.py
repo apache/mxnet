@@ -97,7 +97,8 @@ class Arg:
         'double':'double',\
         'double or None':'dmlc::optional<double>',\
         'Shape or None':'dmlc::optional<Shape>',\
-        'string':'const std::string&'}
+        'string':'const std::string&',\
+        'tuple of <float>':'nnvm::Tuple<mx_float>'}
     name = ''
     type = ''
     description = ''
@@ -223,14 +224,14 @@ class Op:
             if arg.isEnum and use_name:
                 # comments
                 ret = ret + self.GenDescription(arg.description, \
-                                        '/*! \\breif ', \
+                                        '/*! \\brief ', \
                                         ' *        ')
                 ret = ret + " */\n"
                 # definition
                 ret = ret + arg.enum.GetDefinitionString(indent) + '\n'
         # create function comments
         ret = ret + self.GenDescription(self.description, \
-                                        '/*!\n * \\breif ', \
+                                        '/*!\n * \\brief ', \
                                         ' *        ')
         for arg in self.args:
             if arg.name != 'symbol_name' or use_name:
@@ -407,6 +408,7 @@ if __name__ == "__main__":
                       "#include \"mxnet-cpp/op_util.h\"\n"
                       "#include \"mxnet-cpp/operator.h\"\n"
                       "#include \"dmlc/optional.h\"\n"
+                      "#include \"nnvm/tuple.h\"\n"
                       "\n"
                       "namespace mxnet {\n"
                       "namespace cpp {\n"

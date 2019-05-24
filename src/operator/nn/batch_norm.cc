@@ -317,13 +317,13 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
 DMLC_REGISTER_PARAMETER(BatchNormParam);
 
 static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_shape,
-                           std::vector<TShape> *out_shape) {
+                           mxnet::ShapeVector *in_shape,
+                           mxnet::ShapeVector *out_shape) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
   CHECK_EQ(out_shape->size(), 3U);
-  const TShape &dshape = in_shape->at(batchnorm::kData);
+  const mxnet::TShape &dshape = in_shape->at(batchnorm::kData);
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
       ? static_cast<int>(dshape.ndim()) + param.axis
@@ -332,14 +332,14 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
 
   const int channelCount = dshape[channelAxis];
 
-  if (dshape.ndim() == 0) {
+  if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
 
-  in_shape->at(batchnorm::kGamma) = TShape(Shape1(channelCount));
-  in_shape->at(batchnorm::kBeta) = TShape(Shape1(channelCount));
-  in_shape->at(batchnorm::kInMovingMean) = TShape(Shape1(channelCount));  // kMovingMean
-  in_shape->at(batchnorm::kInMovingVar) = TShape(Shape1(channelCount));  // kMovingVar
+  in_shape->at(batchnorm::kGamma) = mxnet::TShape(Shape1(channelCount));
+  in_shape->at(batchnorm::kBeta) = mxnet::TShape(Shape1(channelCount));
+  in_shape->at(batchnorm::kInMovingMean) = mxnet::TShape(Shape1(channelCount));  // kMovingMean
+  in_shape->at(batchnorm::kInMovingVar) = mxnet::TShape(Shape1(channelCount));  // kMovingVar
 
   out_shape->clear();
   out_shape->push_back(dshape);                // kOut
@@ -381,7 +381,7 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
-  TShape shape = input.shape();
+  mxnet::TShape shape = input.shape();
   return SupportMKLDNN(input) && shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
       && shape[param.axis] % 8 == 0
@@ -418,7 +418,7 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 8U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
 
-  TShape shape = inputs[0].shape();
+  mxnet::TShape shape = inputs[0].shape();
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
   if (SupportMKLDNNBN(inputs[0], param)
       && (inputs[3].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
@@ -483,20 +483,20 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
 
 std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
-  std::vector<nnvm::NodeEntry> out_data(n->num_outputs());
-  for (uint32_t i = 0; i < out_data.size(); ++i) {
-    out_data[i] = nnvm::NodeEntry{n, i, 0};
-  }
+  std::vector<nnvm::NodeEntry> out_data;
+  out_data.reserve(n->num_outputs());
+  for (size_t i = 0; i < n->num_outputs(); ++i)
+    out_data.emplace_back(n, i, 0);
   std::vector<nnvm::NodeEntry> heads;
   heads.reserve(8);
-  heads.push_back(ograds[0]);
-  heads.push_back(out_data[batchnorm::kMean]);
-  heads.push_back(out_data[batchnorm::kVar]);
-  heads.push_back(n->inputs[batchnorm::kData]);
-  heads.push_back(n->inputs[batchnorm::kGamma]);
-  heads.push_back(n->inputs[batchnorm::kBeta]);
-  heads.push_back(n->inputs[batchnorm::kInMovingMean]);
-  heads.push_back(n->inputs[batchnorm::kInMovingVar]);
+  heads.emplace_back(ograds.at(0));
+  heads.emplace_back(out_data.at(batchnorm::kMean));
+  heads.emplace_back(out_data.at(batchnorm::kVar));
+  heads.emplace_back(n->inputs.at(batchnorm::kData));
+  heads.emplace_back(n->inputs.at(batchnorm::kGamma));
+  heads.emplace_back(n->inputs.at(batchnorm::kBeta));
+  heads.emplace_back(n->inputs.at(batchnorm::kInMovingMean));
+  heads.emplace_back(n->inputs.at(batchnorm::kInMovingVar));
 
   nnvm::NodePtr gnode = nnvm::Node::Create();
   gnode->inputs = std::move(heads);
@@ -505,19 +505,17 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
   gnode->attrs.op = nnvm::Op::Get("_backward_BatchNorm");
   gnode->attrs.name = n->attrs.name + "_backward";
   // The input of batchnorm
-  std::vector<nnvm::NodeEntry> in_grad(5);
-  for (uint32_t i = 0; i < 3; ++i) {
-    in_grad[i] = nnvm::NodeEntry{gnode, i, 0};
-  }
-
+  std::vector<nnvm::NodeEntry> in_grad;
+  in_grad.reserve(5);
+  for (size_t i = 0; i < 3; ++i)
+    in_grad.emplace_back(gnode, i, 0);
   // attach no gradient node to forbid gradient on aux_state
   nnvm::NodePtr ng = nnvm::Node::Create();
   ng->attrs.op = Op::Get("_NoGradient");
   ng->attrs.name = "NoGradient";
   // the aux state of batchnorm
-  for (uint32_t i = 0; i < 2; ++i) {
-    in_grad[i + 3] = nnvm::NodeEntry{ng, 0, 0};
-  }
+  for (size_t i = 3; i < 5; ++i)
+    in_grad.emplace_back(ng);
   return in_grad;
 }
 
@@ -591,7 +589,7 @@ then set ``gamma`` to 1 and its gradient to 0.
 .set_attr<nnvm::FMutateInputs>("FMutateInputs", [](const nnvm::NodeAttrs& attrs) {
   return std::vector<uint32_t>{3, 4};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", BatchNormShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BatchNormShape)
 .set_attr<nnvm::FInferType>("FInferType", BatchNormType)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BatchNormCompute<cpu>)

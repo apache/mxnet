@@ -205,10 +205,10 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             print('=' * line_length)
         else:
             print('_' * line_length)
-    print('Total params: %s' % total_params)
+    print("Total params: {params}".format(params=total_params))
     print('_' * line_length)
 
-def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
+def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None, node_attrs={},
                  hide_weights=True):
     """Creates a visualization (Graphviz digraph object) of the given computation graph.
     Graphviz must be installed for this function to work.
@@ -224,6 +224,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         Specifies the shape of the input tensors. If specified, the visualization will include
         the shape of the tensors between the nodes. `shape` is a dictionary mapping
         input symbol names (str) to the corresponding tensor shape (tuple).
+    dtype: dict, optional
+        Specifies the type of the input tensors. If specified, the visualization will include
+        the type of the tensors between the nodes. `dtype` is a dictionary mapping
+        input symbol names (str) to the corresponding tensor type (e.g. `numpy.float32`).
     node_attrs: dict, optional
         Specifies the attributes for nodes in the generated visualization. `node_attrs` is
         a dictionary of Graphviz attribute names and values. For example::
@@ -271,14 +275,19 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         raise ImportError("Draw network requires graphviz library")
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be a Symbol")
-    draw_shape = False
-    if shape is not None:
-        draw_shape = True
-        interals = symbol.get_internals()
-        _, out_shapes, _ = interals.infer_shape(**shape)
+    internals = symbol.get_internals()
+    draw_shape = shape is not None
+    if draw_shape:
+        _, out_shapes, _ = internals.infer_shape(**shape)
         if out_shapes is None:
             raise ValueError("Input shape is incomplete")
-        shape_dict = dict(zip(interals.list_outputs(), out_shapes))
+        shape_dict = dict(zip(internals.list_outputs(), out_shapes))
+    draw_type = dtype is not None
+    if draw_type:
+        _, out_types, _ = internals.infer_type(**dtype)
+        if out_types is None:
+            raise ValueError("Input type is incomplete")
+        type_dict = dict(zip(internals.list_outputs(), out_types))
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
     # check if multiple nodes have the same name
@@ -328,24 +337,33 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = node["name"]
             attr["fillcolor"] = cm[0]
         elif op == "Convolution":
-            label = r"Convolution\n%s/%s, %s" % ("x".join(_str2tuple(node["attrs"]["kernel"])),
-                                                 "x".join(_str2tuple(node["attrs"]["stride"]))
-                                                 if "stride" in node["attrs"] else "1",
-                                                 node["attrs"]["num_filter"])
+            label = "Convolution\n{kernel}/{stride}, {filter}".format(
+                kernel="x".join(_str2tuple(node["attrs"]["kernel"])),
+                stride="x".join(_str2tuple(node["attrs"]["stride"]))
+                if "stride" in node["attrs"] else "1",
+                filter=node["attrs"]["num_filter"]
+            )
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
-            label = r"FullyConnected\n%s" % node["attrs"]["num_hidden"]
+            label = "FullyConnected\n{hidden}".format(hidden=node["attrs"]["num_hidden"])
             attr["fillcolor"] = cm[1]
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
-        elif op in ('Activation', 'LeakyReLU'):
-            label = r"%s\n%s" % (op, node["attrs"]["act_type"])
+        elif op == 'Activation':
+            act_type = node["attrs"]["act_type"]
+            label = 'Activation\n{activation}'.format(activation=act_type)
+            attr["fillcolor"] = cm[2]
+        elif op == 'LeakyReLU':
+            attrs = node.get("attrs")
+            act_type = attrs.get("act_type", "Leaky") if attrs else "Leaky"
+            label = 'LeakyReLU\n{activation}'.format(activation=act_type)
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
-            label = r"Pooling\n%s, %s/%s" % (node["attrs"]["pool_type"],
-                                             "x".join(_str2tuple(node["attrs"]["kernel"])),
-                                             "x".join(_str2tuple(node["attrs"]["stride"]))
-                                             if "stride" in node["attrs"] else "1")
+            label = "Pooling\n{pooltype}, {kernel}/{stride}".format(pooltype=node["attrs"]["pool_type"],
+                                                                    kernel="x".join(_str2tuple(node["attrs"]["kernel"]))
+                                                                    if "kernel" in node["attrs"] else "[]",
+                                                                    stride="x".join(_str2tuple(node["attrs"]["stride"]))
+                                                                    if "stride" in node["attrs"] else "1")
             attr["fillcolor"] = cm[4]
         elif op in ("Concat", "Flatten", "Reshape"):
             attr["fillcolor"] = cm[5]
@@ -366,11 +384,15 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             continue
         else:
             inputs = node["inputs"]
+
+            if node['op'] == '_contrib_BilinearResize2D':
+                inputs = [inputs[0]]
+
             for item in inputs:
                 input_node = nodes[item[0]]
                 input_name = input_node["name"]
                 if input_name not in hidden_nodes:
-                    attr = {"dir": "back", 'arrowtail':'open'}
+                    attr = {"dir": "back", 'arrowtail':'open', 'label': ''}
                     # add shapes
                     if draw_shape:
                         if input_node["op"] != "null":
@@ -387,6 +409,19 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                             shape = shape_dict[key][1:]
                             label = "x".join([str(x) for x in shape])
                             attr["label"] = label
+                    if draw_type:
+                        if input_node["op"] != "null":
+                            key = input_name + "_output"
+                            if "attrs" in input_node:
+                                params = input_node["attrs"]
+                                if "num_outputs" in params:
+                                    key += str(int(params["num_outputs"]) - 1)
+                            dtype = type_dict[key]
+                            attr["label"] += '(' + dtype.__name__ + ')'
+                        else:
+                            key = input_name
+                            dtype = type_dict[key]
+                            attr["label"] += '(' + dtype.__name__ + ')'
                     dot.edge(tail_name=name, head_name=input_name, **attr)
 
     return dot

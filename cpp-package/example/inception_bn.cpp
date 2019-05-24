@@ -142,23 +142,45 @@ Symbol InceptionSymbol(int num_classes) {
   return SoftmaxOutput("softmax", fc1, data_label);
 }
 
+NDArray ResizeInput(NDArray data, const Shape new_shape) {
+  NDArray pic = data.Reshape(Shape(0, 1, 28, 28));
+  NDArray pic_1channel;
+  Operator("_contrib_BilinearResize2D")
+    .SetParam("height", new_shape[2])
+    .SetParam("width", new_shape[3])
+    (pic).Invoke(pic_1channel);
+  NDArray output;
+  Operator("tile")
+    .SetParam("reps", Shape(1, 3, 1, 1))
+    (pic_1channel).Invoke(output);
+  return output;
+}
+
 int main(int argc, char const *argv[]) {
   int batch_size = 40;
   int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-2;
   float weight_decay = 1e-4;
 
-  auto ctx = Context::gpu();
-#if MXNET_USE_CPU
-  ctx = Context::cpu();
+  /*context*/
+  auto ctx = Context::cpu();
+  int num_gpu;
+  MXGetGPUCount(&num_gpu);
+#if !MXNET_USE_CPU
+  if (num_gpu > 0) {
+    ctx = Context::gpu();
+  }
 #endif
 
+  TRY
   auto inception_bn_net = InceptionSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 3, 224, 224), ctx);
-  args_map["data_label"] = NDArray(Shape(batch_size), ctx);
+  const Shape data_shape = Shape(batch_size, 3, 224, 224),
+              label_shape = Shape(batch_size);
+  args_map["data"] = NDArray(data_shape, ctx);
+  args_map["data_label"] = NDArray(label_shape, ctx);
   inception_bn_net.InferArgsMap(ctx, &args_map, args_map);
 
   std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
@@ -168,10 +190,14 @@ int main(int argc, char const *argv[]) {
                                         };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(&train_iter, "Train", data_files, batch_size);
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(&val_iter, "Label", data_files, batch_size);
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
 
   // initialize parameters
   Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2);
@@ -197,7 +223,7 @@ int main(int argc, char const *argv[]) {
     train_acc.Reset();
     while (train_iter.Next()) {
       auto data_batch = train_iter.GetDataBatch();
-      data_batch.data.CopyTo(&args_map["data"]);
+      ResizeInput(data_batch.data, data_shape).CopyTo(&args_map["data"]);
       data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
 
@@ -217,7 +243,7 @@ int main(int argc, char const *argv[]) {
     val_acc.Reset();
     while (val_iter.Next()) {
       auto data_batch = val_iter.GetDataBatch();
-      data_batch.data.CopyTo(&args_map["data"]);
+      ResizeInput(data_batch.data, data_shape).CopyTo(&args_map["data"]);
       data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
       exec->Forward(false);
@@ -228,6 +254,8 @@ int main(int argc, char const *argv[]) {
     LG << "Validation Accuracy: " << val_acc.Get();
   }
   delete exec;
+  delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

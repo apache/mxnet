@@ -21,7 +21,7 @@
 module MNISTTest
 
 using MXNet
-using Base.Test
+using Test
 
 include("mnist-data.jl")
 
@@ -56,7 +56,7 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
   end
   mlp_load = mx.load("$cp_prefix-symbol.json", mx.SymbolicNode)
   @test mx.to_json(mlp_load) == mx.to_json(mlp)
-  mlp_load = mx.from_json(readstring("$cp_prefix-symbol.json"), mx.SymbolicNode)
+  mlp_load = mx.from_json(read("$cp_prefix-symbol.json", String), mx.SymbolicNode)
   @test mx.to_json(mlp_load) == mx.to_json(mlp)
 
   #--------------------------------------------------------------------------------
@@ -68,13 +68,13 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
   for batch in eval_provider
     push!(labels, copy(mx.get(eval_provider, batch, :softmax_label)))
   end
-  labels = cat(1, labels...)
+  labels = cat(labels..., dims = 1)
 
   # Now we use compute the accuracy
   correct = 0
   for i = 1:length(labels)
     # labels are 0...9
-    if indmax(probs[:,i]) == labels[i]+1
+    if argmax(probs[:,i]) == labels[i]+1
       correct += 1
     end
   end
@@ -88,32 +88,32 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
 end
 
 function test_mnist_mlp()
-  info("MNIST::SGD")
+  @info("MNIST::SGD")
   @test mnist_fit_and_predict(mx.SGD(η=.2), mx.UniformInitializer(.01), 2) > 90
 
-  info("MNIST::SGD::η scheduler")
+  @info("MNIST::SGD::η scheduler")
   @test mnist_fit_and_predict(mx.SGD(η_sched=mx.LearningRate.Inv(.25)),
                               mx.UniformInitializer(.01), 2) > 90
 
-  info("MNIST::SGD::momentum μ")
+  @info("MNIST::SGD::momentum μ")
   @test mnist_fit_and_predict(mx.SGD(η=.1, μ=.9), mx.UniformInitializer(.01), 2) > 90
 
-  info("MNIST::ADAM")
+  @info("MNIST::ADAM")
   @test mnist_fit_and_predict(mx.ADAM(), mx.NormalInitializer(), 2) > 90
 
-  info("MNIST::AdaGrad")
+  @info("MNIST::AdaGrad")
   @test mnist_fit_and_predict(mx.AdaGrad(), mx.NormalInitializer(), 2) > 90
 
-  info("MNIST::AdaDelta")
+  @info("MNIST::AdaDelta")
   @test mnist_fit_and_predict(mx.AdaDelta(), mx.NormalInitializer(), 2) > 90
 
-  info("MNIST::AdaMax")
+  @info("MNIST::AdaMax")
   @test mnist_fit_and_predict(mx.AdaMax(), mx.NormalInitializer(), 2) > 90
 
-  info("MNIST::RMSProp")
+  @info("MNIST::RMSProp")
   @test mnist_fit_and_predict(mx.RMSProp(), mx.NormalInitializer(), 2) > 90
 
-  info("MNIST::Nadam")
+  @info("MNIST::Nadam")
   @test mnist_fit_and_predict(mx.Nadam(), mx.NormalInitializer(), 2) > 90
 end
 

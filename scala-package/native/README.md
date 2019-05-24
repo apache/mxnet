@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet Scala JNI
 
 MXNet Scala JNI is a thin wrapper layer of underlying libmxnet.so.
@@ -6,7 +23,11 @@ MXNet Scala JNI is a thin wrapper layer of underlying libmxnet.so.
 JNI native code requires a header file that matches the java/scala interface,
 this file is usually generated with javah.
 
-In our case, jni_helper_func.h is generated and will be used to compile native code.
+In our case, org_apache_mxnet_native_c.h is generated and will be used to compile native code.
+
+To improve build performance, we check in generated org_apache_mxnet_native_c.h file.
+And we added a check to detect mismatch with Scala code and generated header. The checker will
+make sure we won't forget to update org_apache_mxnet_native_c.h file.
 
 
 ## Linker options

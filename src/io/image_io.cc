@@ -32,15 +32,16 @@
 #include <mshadow/base.h>
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
-#include <nnvm/tuple.h>
 
 #include <fstream>
 #include <cstring>
 
 #include "../operator/elemwise_op_common.h"
+#include "../operator/image/resize-inl.h"
 
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
+  #include "./opencv_compatibility.h"
 #endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
@@ -188,7 +189,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
   size_t len = inputs[0].shape().Size();
   CHECK(len > 0) << "Input cannot be an empty buffer";
 
-  TShape oshape(3);
+  mxnet::TShape oshape(3, 1);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {
   } else if (get_png_size(str_img, len, &oshape[1], &oshape[0])) {
@@ -228,7 +229,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
   CHECK(file.good()) << "Failed reading image file: '" << param.filename << "' "
             << strerror(errno);
 
-  TShape oshape(3);
+  mxnet::TShape oshape(3, 1);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
   } else if (get_png_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
@@ -270,8 +271,8 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
 DMLC_REGISTER_PARAMETER(ResizeParam);
 
 inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *ishape,
-                        std::vector<TShape> *oshape) {
+                        mxnet::ShapeVector *ishape,
+                        mxnet::ShapeVector *oshape) {
   const auto& param = nnvm::get<ResizeParam>(attrs.parsed);
   if (ishape->size() != 1 || (*ishape)[0].ndim() != 3) return false;
 
@@ -285,19 +286,8 @@ inline void Imresize(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob> &inputs,
                      const std::vector<OpReqType> &req,
                      const std::vector<TBlob> &outputs) {
-#if MXNET_USE_OPENCV
-  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "imresize doesn't support fp16";
-  const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
-  int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
   const auto& param = nnvm::get<ResizeParam>(attrs.parsed);
-  cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
-  cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
-  cv::resize(buf, dst, cv::Size(param.w, param.h), 0, 0, param.interp);
-  CHECK(!dst.empty());
-  CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
-#else
-  LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
-#endif  // MXNET_USE_OPENCV
+  op::image::ResizeImpl(inputs, outputs, param.h, param.w, param.interp);
 }
 
 
@@ -305,7 +295,7 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
   int top, bot, left, right;
   int type;
   double value;
-  nnvm::Tuple<double> values;
+  mxnet::Tuple<double> values;
   DMLC_DECLARE_PARAMETER(MakeBorderParam) {
     DMLC_DECLARE_FIELD(top)
     .describe("Top margin.");
@@ -329,8 +319,8 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
 DMLC_REGISTER_PARAMETER(MakeBorderParam);
 
 inline bool MakeBorderShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *ishape,
-                        std::vector<TShape> *oshape) {
+                        mxnet::ShapeVector *ishape,
+                        mxnet::ShapeVector *oshape) {
   const auto& param = nnvm::get<MakeBorderParam>(attrs.parsed);
   if (ishape->size() != 1 || (*ishape)[0].ndim() != 3) return false;
 
@@ -392,7 +382,7 @@ NNVM_REGISTER_OP(_cvimresize)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<ResizeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ResizeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ResizeShape)
 .set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Imresize)
 .add_argument("src", "NDArray", "source image")
@@ -403,7 +393,7 @@ NNVM_REGISTER_OP(_cvcopyMakeBorder)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<MakeBorderParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", MakeBorderShape)
+.set_attr<mxnet::FInferShape>("FInferShape", MakeBorderShape)
 .set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", copyMakeBorder)
 .add_argument("src", "NDArray", "source image")

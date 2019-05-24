@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 MXNet Package for Scala/Java
 =====
 
@@ -10,7 +27,7 @@ The MXNet Scala/Java Package brings flexible and efficient GPU/CPU computing and
 - The Scala/Java Inferece APIs provides an easy out of the box solution for loading pre-trained MXNet models and running inference on them.
   
 Pre-Built Maven Packages
-------------
+------------------------
 
 ### Stable ###
 
@@ -84,7 +101,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-  <version>[1.5.0,)</version>
+  <version>[1.5.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
@@ -96,7 +113,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-  <version>[1.5.0,)</version>
+  <version>[1.5.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
@@ -107,40 +124,92 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>[1.5.0,)</version>
+  <version>[1.5.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
-**Note:** ```<version>[1.5.0,)<\version>``` indicates that we will fetch packages with version 1.5.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
+**Note:** ```<version>[1.5.0-SNAPSHOT,)</version>``` indicates that we will fetch packages with version 1.5.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
 
 Build From Source
-------------
+-----------------
 
-Checkout the [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet package and build it from source.
-If you have built MXNet from source and are looking to setup Scala from that point, you may simply run the following from the MXNet source root:
+Checkout the [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet package and build it from source. Scala maven build assume you already have a ``lib/libmxnet.so`` file.
+If you have built MXNet from source and are looking to setup Scala from that point, you may simply run the following from the MXNet source root, Scala build will detect your platform (OSX/Linux) and libmxnet.so flavor (CPU/GPU):
 
 ```bash
-make scalapkg
+cd scala-package
+mvn install
 ```
 
 You can also run the unit tests and integration tests on the Scala Package by :
 
 ```bash
-make scalaunittest
-make scalaintegrationtest
+cd scala-package
+mvn integration-test -DskipTests=false
 ```
 
 Or run a subset of unit tests, for e.g.,
 
 ```bash
-make SCALA_TEST_ARGS=-Dsuites=org.apache.mxnet.NDArraySuite scalaunittest
+cd scala-package
+mvn -Dsuites=org.apache.mxnet.NDArraySuite integration-test
 ```
 
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
-Also it produces the native library in `native/{your-architecture}/target`, which you can use to cooperate with the `core` module.
+Also it produces the native library in `native/target`, which you can use to cooperate with the `core` module.
+
+Deploy to repository
+--------------------
+
+By default, `maven deploy` will deploy artifacts to local file system, you can file then in: ``scala-package/deploy/target/repo`` folder.
+
+For nightly build in CI, a snapshot build will be uploaded to apache repository with follow command:
+
+```bash
+cd scala-package
+mvn deploy -Pnightly
+```
+
+Use following command to deploy release build (push artifacts to apache staging repository):
+
+```bash
+cd scala-package
+mvn deploy -Pstaging
+```
 
 Examples & Usage
 -------
+Assuming you use `mvn install`, you can find the `mxnet-full_scala_version-INTERNAL.jar` e.g. `mxnet-full_2.11-INTERNAL.jar` under the path `incubator-mxnet/scala-package/assembly/target`.
+
+Adding the following configuration in `pom.xml`
+```HTML
+<dependency>
+  <groupId>org.apache.mxnet</groupId>
+  <artifactId>mxnet-full_2.11-INTERNAL</artifactId>
+  <version>1.5.0</version>
+  <scope>system</scope>
+  <systemPath>path_to_jar/mxnet-full_2.11-INTERNAL.jar</systemPath>
+</dependency>
+```
+If you have following error message
+```
+Error: A JNI error has occurred, please check your installation and try again
+Exception in thread "main" java.lang.NoClassDefFoundError: org/apache/mxnet/NDArray
+        at java.lang.Class.getDeclaredMethods0(Native Method)
+        at java.lang.Class.privateGetDeclaredMethods(Class.java:2701)
+        at java.lang.Class.privateGetMethodRecursive(Class.java:3048)
+        at java.lang.Class.getMethod0(Class.java:3018)
+        at java.lang.Class.getMethod(Class.java:1784)
+        at sun.launcher.LauncherHelper.validateMainClass(LauncherHelper.java:544)
+        at sun.launcher.LauncherHelper.checkAndLoadMain(LauncherHelper.java:526)
+Caused by: java.lang.ClassNotFoundException: org.apache.mxnet.NDArray
+        at java.net.URLClassLoader.findClass(URLClassLoader.java:381)
+        at java.lang.ClassLoader.loadClass(ClassLoader.java:424)
+        at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:331)
+        at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
+```
+Please make sure your $CLASSPATH is able to find `mxnet-full_scala_version-INTERNAL.jar`.
+
 - To set up the Scala Project using IntelliJ IDE on macOS follow the instructions [here](https://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html).
 - Several examples on using the Scala APIs are provided in the [Scala Examples Folder](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
 
@@ -175,3 +244,7 @@ More details about JVM Memory Management are available [here](https://github.com
 License
 -------
 MXNet Scala Package is licensed under [Apache-2](https://github.com/apache/incubator-mxnet/blob/master/scala-package/LICENSE) license.
+
+MXNet uses some 3rd party softwares. Following 3rd party license files are bundled inside Scala jar file:
+* cub/LICENSE.TXT
+* mkldnn/external/mklml_mac_2019.0.1.20180928/license.txt

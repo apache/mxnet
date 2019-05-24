@@ -51,33 +51,16 @@
         (is (= out-grad grad))))))
 
 (deftest test-concat
-  (let [shape-vecs [[2 2] [3 2]]
-        x (sym/variable "x")
-        y (sym/variable "y")
-        out (sym/concat "conc" nil [x y] {:dim 0})
-        arr (mapv #(ndarray/empty %) shape-vecs)
-        arr-np (mapv #(ndarray/copy %) arr)
-        arr-grad (map #(ndarray/empty %) shape-vecs)
-        arg-names (sym/list-arguments out)
-        grad-map (zipmap arg-names arr-grad)
-        args (sym/list-arguments out)
-        [arg-shapes out-shapes aux-shapes] (sym/infer-shape out (zipmap args shape-vecs))
-        out-shape-vec (first out-shapes)
-        out-grad (ndarray/empty out-shape-vec)
-        exec1 (sym/bind out (context/default-context) arr grad-map)
-        out1 (-> (executor/forward exec1)
+  (let [a (sym/variable "a")
+      b (sym/variable "b")
+      c (sym/concat "conc" nil [a b] {:dim 0})
+      exec (sym/bind c (context/default-context) {"a" (ndarray/array [1 2] [2 1])
+                                                  "b" (ndarray/array [3 4] [2 1])})
+      output (-> (executor/forward exec)
                  (executor/outputs)
-                 (first))
-        ret (ndarray/concatenate arr)]
-    (is (= out1 ret))
-
-    ;;backward
-    (ndarray/copy-to out1 out-grad)
-    (ndarray/+= out-grad 1)
-    (executor/backward exec1 out-grad)
-    (let [grads arr-grad
-          np-grads arr-np]
-      (is (= grads (mapv #(ndarray/+ % 1) np-grads))))))
+                 (first))]
+    (is (= [1.0 2.0 3.0 4.0] (ndarray/->vec output)))
+    (is (= [4 1] (ndarray/shape-vec output)))))
 
 (defn check-regression [model forward-fn backward-fn]
   (let [shape-vec [3 1]
@@ -281,9 +264,9 @@
         _ (executor/set-arg exec "datas" data-vec)
         output (-> (executor/forward exec) (executor/outputs) first)]
     (is (approx= 1e-5 expected output))
-    (is (= [0 0 0 0]) (-> (executor/backward exec (ndarray/ones shape-vec))
+    (is (= [0 0 0 0] (-> (executor/backward exec (ndarray/ones shape-vec))
                           (executor/get-grad "datas")
-                          (ndarray/->vec)))))
+                          (ndarray/->int-vec))))))
 
 (defn check-symbol-operation
   [operator data-vec-1 data-vec-2 expected]
@@ -297,8 +280,8 @@
         output (-> (executor/forward exec) (executor/outputs) first)]
     (is (approx= 1e-5 expected output))
     _ (executor/backward exec (ndarray/ones shape-vec))
-    (is (= [0 0 0 0]) (-> (executor/get-grad exec "datas") (ndarray/->vec)))
-    (is (= [0 0 0 0]) (-> (executor/get-grad exec "datas2") (ndarray/->vec)))))
+    (is (= [0 0 0 0] (-> (executor/get-grad exec "datas") (ndarray/->int-vec))))
+    (is (= [0 0 0 0] (-> (executor/get-grad exec "datas2") (ndarray/->int-vec))))))
 
 (defn check-scalar-2-operation
   [operator data-vec expected]
@@ -309,9 +292,9 @@
         _ (executor/set-arg exec "datas" data-vec)
         output (-> (executor/forward exec) (executor/outputs) first)]
     (is (approx= 1e-5 expected output))
-    (is (= [0 0 0 0]) (-> (executor/backward exec (ndarray/ones shape-vec))
+    (is (= [0 0 0 0] (-> (executor/backward exec (ndarray/ones shape-vec))
                           (executor/get-grad "datas")
-                          (ndarray/->vec)))))
+                          (ndarray/->int-vec))))))
 
 (deftest test-scalar-equal
   (check-scalar-operation sym/equal [1 2 3 4] 2 [0 1 0 0]))

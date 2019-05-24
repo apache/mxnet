@@ -27,43 +27,103 @@
 #include <nnvm/op_attr_types.h>
 #include "../elemwise_op_common.h"
 
+#if MSHADOW_USE_MKL == 1
+#include "../mkl_functions-inl.h"
+#endif
+
 namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(LayerNormParam);
 
 static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_shape,
-                           std::vector<TShape> *out_shape) {
+                           mxnet::ShapeVector *in_shape,
+                           mxnet::ShapeVector *out_shape) {
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
-  const TShape &dshape = in_shape->at(layernorm::kData);
-  int axis = param.axis;
-  if (axis < 0) {
-    axis += static_cast<int>(dshape.ndim());
-  }
-  CHECK(axis >= 0 && axis < static_cast<int>(dshape.ndim()))
+  const mxnet::TShape &dshape = in_shape->at(layernorm::kData);
+  int axis = GetRealAxis(param.axis, dshape.ndim());
+  CHECK(axis >= 0 && axis < dshape.ndim())
     << "Channel axis out of range: axis=" << param.axis;
 
   const int channelCount = dshape[axis];
 
-  if (dshape.ndim() == 0) {
+  if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
 
-  in_shape->at(layernorm::kGamma) = TShape(Shape1(channelCount));
-  in_shape->at(layernorm::kBeta) = TShape(Shape1(channelCount));
+  in_shape->at(layernorm::kGamma) = mxnet::TShape(Shape1(channelCount));
+  in_shape->at(layernorm::kBeta) = mxnet::TShape(Shape1(channelCount));
 
   out_shape->clear();
   out_shape->push_back(dshape);                // kOut
-  TShape moments_shape(dshape.begin(), dshape.end());
+  mxnet::TShape moments_shape(dshape.begin(), dshape.end());
   moments_shape[axis] = 1;
   out_shape->push_back(moments_shape);  // kMean
   out_shape->push_back(moments_shape);  // kInvstd
   return true;
 }
 
+template<>
+void LayerNormCompute<cpu>(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx, const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  return LayerNormComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
+}
+
+#if MSHADOW_USE_MKL == 1
+void LayerNormComputeMKL(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
+  if (req[0] == kNullOp) return;
+  CHECK_NE(req[0], kAddTo);
+  CHECK_EQ(inputs.size(), 3U);
+  int axis = GetRealAxis(param.axis, inputs[0].ndim());
+
+  if (axis == (inputs[layernorm::kData].ndim() - 1) ||
+      (inputs[0].type_flag_ != kFloat32 && inputs[0].type_flag_ != kFloat64)) {
+    // Compute necessary data for the reduce operation.
+    mxnet::TShape red_src_shape, red_dst_shape;
+    BroadcastReduceShapeCompact(inputs[layernorm::kData].shape_, outputs[layernorm::kMean].shape_,
+                                &red_src_shape, &red_dst_shape);
+    const TBlob in_data = inputs[layernorm::kData].reshape(red_src_shape);
+    const TBlob mean_data = outputs[layernorm::kMean].reshape(red_dst_shape);
+    const TBlob std_data = outputs[layernorm::kStd].reshape(red_dst_shape);
+    const int outter_size = red_dst_shape.Size();
+    const int channel_size = red_src_shape.Size() / red_dst_shape.Size();
+
+    // call
+    MSHADOW_SGL_DBL_TYPE_SWITCH(in_data.type_flag_, DType, {
+      mkl_func::LayerNormLastDim(outter_size, channel_size,
+                                 in_data.dptr<DType>(),
+                                 outputs[layernorm::kOut].dptr<DType>(),
+                                 inputs[layernorm::kGamma].dptr<DType>(),
+                                 inputs[layernorm::kBeta].dptr<DType>(),
+                                 outputs[layernorm::kMean].dptr<DType>(),
+                                 outputs[layernorm::kStd].dptr<DType>(),
+                                 static_cast<DType>(param.eps));
+    });
+  } else {
+    // fallback
+    LayerNormCompute<cpu>(attrs, ctx, inputs, req, outputs);
+  }
+}
+#endif
+
+
+template<>
+void LayerNormGradCompute<cpu>(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx, const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
+  return LayerNormGradComputeGeneral<cpu>(attrs, ctx, inputs, req, outputs);
+}
 
 NNVM_REGISTER_OP(LayerNorm)
 .describe(R"code(Layer normalization.
@@ -108,17 +168,21 @@ axis to be the last item in the input shape.
   const LayerNormParam& param = nnvm::get<LayerNormParam>(attrs.parsed);
   return param.output_mean_var ? 3 : 1;
 })
-.set_attr<nnvm::FInferShape>("FInferShape", LayerNormShape)
+.set_attr<mxnet::FInferShape>("FInferShape", LayerNormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 3>)
+#if MSHADOW_USE_MKL == 1
+.set_attr<FCompute>("FCompute<cpu>", LayerNormComputeMKL)
+#else
 .set_attr<FCompute>("FCompute<cpu>", LayerNormCompute<cpu>)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", [](const nnvm::NodePtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> heads;
   heads.push_back(ograds[0]);  // ograd
   heads.push_back(n->inputs[0]);  // data
   heads.push_back(n->inputs[1]);  // gamma
-  heads.emplace_back(nnvm::NodeEntry{n, 1, 0});  // mean
-  heads.emplace_back(nnvm::NodeEntry{ n, 2, 0 });  // std
+  heads.emplace_back(n, 1, 0);  // mean
+  heads.emplace_back(n, 2, 0);  // std
   return MakeGradNode("_backward_LayerNorm", n, heads, n->attrs.dict);
 })
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",

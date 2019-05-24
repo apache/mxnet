@@ -54,8 +54,8 @@ struct ProposalParam : public dmlc::Parameter<ProposalParam> {
   int rpn_post_nms_top_n;
   float threshold;
   int rpn_min_size;
-  nnvm::Tuple<float> scales;
-  nnvm::Tuple<float> ratios;
+  mxnet::Tuple<float> scales;
+  mxnet::Tuple<float> ratios;
   int feature_stride;
   bool output_score;
   bool iou_loss;
@@ -71,10 +71,10 @@ struct ProposalParam : public dmlc::Parameter<ProposalParam> {
     DMLC_DECLARE_FIELD(rpn_min_size).set_default(16)
     .describe("Minimum height or width in proposal");
     tmp[0] = 4.0f; tmp[1] = 8.0f; tmp[2] = 16.0f; tmp[3] = 32.0f;
-    DMLC_DECLARE_FIELD(scales).set_default(nnvm::Tuple<float>(tmp, tmp + 4))
+    DMLC_DECLARE_FIELD(scales).set_default(mxnet::Tuple<float>(tmp, tmp + 4))
     .describe("Used to generate anchor windows by enumerating scales");
     tmp[0] = 0.5f; tmp[1] = 1.0f; tmp[2] = 2.0f;
-    DMLC_DECLARE_FIELD(ratios).set_default(nnvm::Tuple<float>(tmp, tmp + 3))
+    DMLC_DECLARE_FIELD(ratios).set_default(mxnet::Tuple<float>(tmp, tmp + 3))
     .describe("Used to generate anchor windows by enumerating ratios");
     DMLC_DECLARE_FIELD(feature_stride).set_default(16)
     .describe("The size of the receptive field each unit in the convolution layer of the rpn,"
@@ -100,13 +100,13 @@ class ProposalProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 3) << "Input:[cls_prob, bbox_pred, im_info]";
-    const TShape &dshape = in_shape->at(proposal::kClsProb);
-    if (dshape.ndim() == 0) return false;
+    const mxnet::TShape &dshape = in_shape->at(proposal::kClsProb);
+    if (mxnet::op::shape_is_none(dshape)) return false;
     Shape<4> bbox_pred_shape;
     bbox_pred_shape = Shape4(dshape[0], dshape[1] * 2, dshape[2], dshape[3]);
     SHAPE_ASSIGN_CHECK(*in_shape, proposal::kBBoxPred,
@@ -133,7 +133,7 @@ class ProposalProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -212,11 +212,11 @@ inline void _Transform(float scale,
 
 // out_anchors must have shape (n, 5), where n is ratios.size() * scales.size()
 inline void GenerateAnchors(const std::vector<float>& base_anchor,
-                            const nnvm::Tuple<float>& ratios,
-                            const nnvm::Tuple<float>& scales,
+                            const mxnet::Tuple<float>& ratios,
+                            const mxnet::Tuple<float>& scales,
                             std::vector<float> *out_anchors) {
-  for (size_t j = 0; j < ratios.ndim(); ++j) {
-    for (size_t k = 0; k < scales.ndim(); ++k) {
+  for (int j = 0; j < ratios.ndim(); ++j) {
+    for (int k = 0; k < scales.ndim(); ++k) {
       _Transform(scales[k], ratios[j], base_anchor, out_anchors);
     }
   }

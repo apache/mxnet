@@ -43,39 +43,42 @@ class GPUDeviceStorage {
  public:
   /*!
    * \brief Allocation.
-   * \param size Size to allocate.
-   * \return Pointer to the storage.
+   * \param handle Handle struct.
    */
-  inline static void* Alloc(size_t size);
+  inline static void Alloc(Storage::Handle* handle);
   /*!
    * \brief Deallocation.
-   * \param ptr Pointer to deallocate.
+   * \param handle Handle struct.
    */
-  inline static void Free(void* ptr);
+  inline static void Free(Storage::Handle handle);
 };  // class GPUDeviceStorage
 
-inline void* GPUDeviceStorage::Alloc(size_t size) {
-  void* ret = nullptr;
+inline void GPUDeviceStorage::Alloc(Storage::Handle* handle) {
+  handle->dptr = nullptr;
+  const size_t size = handle->size;
+  if (size == 0) return;
+
 #if MXNET_USE_CUDA
+  mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
-  cudaError_t e = cudaMalloc(&ret, size);
+  cudaError_t e = cudaMalloc(&handle->dptr, size);
   if (e != cudaSuccess && e != cudaErrorCudartUnloading)
     LOG(FATAL) << "CUDA: " << cudaGetErrorString(e);
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
-  return ret;
 }
 
-inline void GPUDeviceStorage::Free(void* ptr) {
+inline void GPUDeviceStorage::Free(Storage::Handle handle) {
 #if MXNET_USE_CUDA
+  mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
   // throw special exception for caller to catch.
-  cudaError_t err = cudaFree(ptr);
+  cudaError_t err = cudaFree(handle.dptr);
   // ignore unloading error, as memory has already been recycled
   if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
     LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);

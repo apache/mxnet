@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet - Perl API
 
 MXNet supports the Perl programming language. The MXNet Perl package brings flexible and efficient GPU
@@ -13,7 +30,7 @@ In addition please refer to [excellent metacpan doc interface](https://metacpan.
 [MXNet Python API Documentation](http://mxnet.io/api/python/index.html).
 
 AI::MXNet supports new imperative PyTorch like Gluon MXNet interface. Please get acquainted with this new interface
-at [Deep Learning - The Straight Dope](http://gluon.mxnet.io/).
+at [Dive into Deep Learning](https://www.d2l.ai/).
 
 For specific Perl Gluon usage please refer to Perl examples and tests directories on github, but be assured that the Python and Perl usage
 are extremely close in order to make the use of the Python Gluon docs and examples as easy as possible.

@@ -25,6 +25,7 @@ run_models() {
 	echo '=========================='
 	echo "Running training files and preparing models"
 	echo '=========================='
+  export MXNET_ENFORCE_DETERMINISM=1
 	python model_backwards_compat_train.py
 	echo '=========================='
 }

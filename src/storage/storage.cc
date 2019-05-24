@@ -26,6 +26,7 @@
 #include "./pooled_storage_manager.h"
 #include "./cpu_shared_storage_manager.h"
 #include "./cpu_device_storage.h"
+#include "./gpu_device_storage.h"
 #include "./pinned_memory_storage.h"
 #include "../common/lazy_alloc_array.h"
 #include "../profiler/storage_profiler.h"
@@ -48,35 +49,6 @@ class StorageImpl : public Storage {
   static int num_gpu_device;
 #endif  // MXNET_USE_CUDA
 
-  static void ActivateDevice(Context ctx) {
-    switch (ctx.dev_type) {
-      case Context::kCPU:
-        break;
-      case Context::kCPUPinned:
-#if MXNET_USE_CUDA
-        if (num_gpu_device > 0) {
-          CUDA_CALL(cudaSetDevice(ctx.real_dev_id()));
-        }
-#endif  // MXNET_USE_CUDA
-        break;
-      case Context::kCPUShared: {
-#if defined(ANDROID) || defined(__ANDROID__)
-        LOG(FATAL) << "Unimplemented device";
-#endif  // defined(ANDROID) || defined(__ANDROID__)
-      }
-        break;
-      case Context::kGPU: {
-#if MXNET_USE_CUDA
-          if (num_gpu_device > 0) {
-            CUDA_CALL(cudaSetDevice(ctx.real_dev_id()));
-          }
-#endif  // MXNET_USE_CUDA
-          break;
-        }
-      default:
-        LOG(FATAL) << "Unimplemented device";
-    }
-  }
   // internal storage managers
   std::array<common::LazyAllocArray<storage::StorageManager>,
              kMaxNumberOfDevices> storage_managers_;
@@ -100,6 +72,8 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
           case Context::kCPUShared: {
 #if !defined(ANDROID) && !defined(__ANDROID__)
             ptr = new storage::CPUSharedStorageManager();
+#else
+            LOG(FATAL) << "Unimplemented device";
 #endif  // !defined(ANDROID) && !defined(__ANDROID__)
             break;
           }
@@ -131,13 +105,14 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
             std::string strategy = type;
 
             if (strategy == "Round") {
-              ptr = new storage::GPUPooledRoundedStorageManager();
+              ptr = new storage::GPUPooledRoundedStorageManager(handle->ctx);
               LOG(INFO) << "Using GPUPooledRoundedStorageManager.";
+            } else if (strategy == "Naive") {
+              ptr = new storage::GPUPooledStorageManager(handle->ctx);
+            } else if (strategy == "Unpooled") {
+              ptr = new storage::NaiveStorageManager<storage::GPUDeviceStorage>();
             } else {
-              if (strategy != "Naive") {
-                LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
-              }
-              ptr = new storage::GPUPooledStorageManager();
+              LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
             }
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
@@ -149,18 +124,15 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
         return ptr;
       });
 
-#if MXNET_USE_CUDA
-  // Will restore gpu device to before ActivateDevice if necessary
-  bool restore = handle->ctx.dev_type == Context::kCPUPinned ||
-                 handle->ctx.dev_type == Context::kGPU;
-  mxnet::common::cuda::DeviceStore device_store(restore);
-#endif
-  this->ActivateDevice(handle->ctx);
   manager->Alloc(handle);
   profiler_.OnAlloc(*handle);
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
+  // Do nothing if dtpr is nullptr because the handle may have already
+  // been freed or have not been allocated memory yet.
+  if (handle.dptr == nullptr) return;
+
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
@@ -169,17 +141,15 @@ void StorageImpl::Free(Storage::Handle handle) {
         return nullptr;
       });
 
-#if MXNET_USE_CUDA
-  // Will restore gpu device to before ActivateDevice if necessary
-  bool restore = ctx.dev_type == Context::kCPUPinned || ctx.dev_type == Context::kGPU;
-  mxnet::common::cuda::DeviceStore device_store(restore);
-#endif
-  this->ActivateDevice(ctx);
   manager->Free(handle);
   profiler_.OnFree(handle);
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
+  // Do nothing if dtpr is nullptr because the handle may have already
+  // been freed or have not been allocated memory yet.
+  if (handle.dptr == nullptr) return;
+
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
@@ -188,12 +158,6 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
         return nullptr;
       });
 
-#if MXNET_USE_CUDA
-  // Will restore gpu device to before ActivateDevice if necessary
-  bool restore = ctx.dev_type == Context::kCPUPinned || ctx.dev_type == Context::kGPU;
-  mxnet::common::cuda::DeviceStore device_store(restore);
-#endif
-  this->ActivateDevice(ctx);
   manager->DirectFree(handle);
   profiler_.OnFree(handle);
 }

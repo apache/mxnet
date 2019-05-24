@@ -17,6 +17,8 @@
 
 package org.apache.mxnet.init
 
+import java.io.File
+
 object Base {
   tryLoadInitLibrary()
   val _LIB = new LibInfo
@@ -27,28 +29,55 @@ object Base {
   class RefFloat(val value: Float = 0)
   class RefString(val value: String = null)
 
+  /**
+    * This C Pointer Address point to the
+    * actual memory piece created in MXNet Engine
+    */
   type CPtrAddress = Long
 
+  /**
+    * NDArrayHandle is the C pointer to
+    * the NDArray
+    */
   type NDArrayHandle = CPtrAddress
+  /**
+    * FunctionHandle is the C pointer to
+    * the ids of the operators
+    */
   type FunctionHandle = CPtrAddress
+  /**
+    * KVStoreHandle is the C pointer to
+    * the KVStore
+    */
   type KVStoreHandle = CPtrAddress
+  /**
+    * ExecutorHandle is the C pointer to
+    * the Executor
+    */
   type ExecutorHandle = CPtrAddress
+  /**
+    * SymbolHandle is the C pointer to
+    * the Symbol
+    */
   type SymbolHandle = CPtrAddress
 
   @throws(classOf[UnsatisfiedLinkError])
   private def tryLoadInitLibrary(): Unit = {
-    var baseDir = System.getProperty("user.dir") + "/init-native"
-    // TODO(lanKing520) Update this to use relative path to the MXNet director.
-    // TODO(lanking520) baseDir = sys.env("MXNET_BASEDIR") + "/scala-package/init-native"
-    if (System.getenv().containsKey("MXNET_BASEDIR")) {
-      baseDir = sys.env("MXNET_BASEDIR")
+    val userDir : File = new File(System.getProperty("user.dir"))
+    var nativeDir : File = new File(userDir, "init-native")
+    if (!nativeDir.exists()) {
+      nativeDir = new File(userDir.getParent, "init-native")
+      if (!nativeDir.exists()) {
+        throw new IllegalStateException("scala-init should be executed inside scala-package folder")
+      }
     }
+    val baseDir = nativeDir.getAbsolutePath
+
     val os = System.getProperty("os.name")
-    // ref: http://lopica.sourceforge.net/os.html
     if (os.startsWith("Linux")) {
-      System.load(s"$baseDir/linux-x86_64/target/libmxnet-init-scala-linux-x86_64.so")
+      System.load(s"$baseDir/target/libmxnet-init-scala.so")
     } else if (os.startsWith("Mac")) {
-      System.load(s"$baseDir/osx-x86_64/target/libmxnet-init-scala-osx-x86_64.jnilib")
+      System.load(s"$baseDir/target/libmxnet-init-scala.jnilib")
     } else {
       // TODO(yizhi) support windows later
       throw new UnsatisfiedLinkError()

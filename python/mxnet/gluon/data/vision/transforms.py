@@ -82,10 +82,10 @@ class Cast(HybridBlock):
 
 
     Inputs:
-        - **data**: input tensor with arbitrary shape.
+        - **data**: input tensor with arbitrary shape and dtype.
 
     Outputs:
-        - **out**: output tensor with the same shape as `data`.
+        - **out**: output tensor with the same shape as `data` and data type as dtype.
     """
     def __init__(self, dtype='float32'):
         super(Cast, self).__init__()
@@ -96,17 +96,20 @@ class Cast(HybridBlock):
 
 
 class ToTensor(HybridBlock):
-    """Converts an image NDArray to a tensor NDArray.
+    """Converts an image NDArray or batch of image NDArray to a tensor NDArray.
 
     Converts an image NDArray of shape (H x W x C) in the range
     [0, 255] to a float32 tensor NDArray of shape (C x H x W) in
     the range [0, 1).
 
+    If batch input, converts a batch image NDArray of shape (N x H x W x C) in the
+    range [0, 255] to a float32 tensor NDArray of shape (N x C x H x W).
+
     Inputs:
-        - **data**: input tensor with (H x W x C) shape and uint8 type.
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape and uint8 type.
 
     Outputs:
-        - **out**: output tensor with (C x H x W) shape and float32 type.
+        - **out**: output tensor with (C x H x W) or (N x H x W x C) shape and float32 type.
 
     Examples
     --------
@@ -135,7 +138,7 @@ class ToTensor(HybridBlock):
 
 
 class Normalize(HybridBlock):
-    """Normalize an tensor of shape (C x H x W) with mean and
+    """Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
     standard deviation.
 
     Given mean `(m1, ..., mn)` and std `(s1, ..., sn)` for `n` channels,
@@ -154,12 +157,31 @@ class Normalize(HybridBlock):
 
 
     Inputs:
-        - **data**: input tensor with (C x H x W) shape.
+        - **data**: input tensor with (C x H x W) or (N x C x H x W) shape.
 
     Outputs:
         - **out**: output tensor with the shape as `data`.
+
+    Examples
+    --------
+    >>> transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
+    >>> image = mx.nd.random.uniform(0, 1, (3, 4, 2))
+    >>> transformer(image)
+    [[[ 0.18293785  0.19761486]
+      [ 0.23839645  0.28142193]
+      [ 0.20092112  0.28598186]
+      [ 0.18162774  0.28241724]]
+     [[-0.2881726  -0.18821815]
+      [-0.17705294 -0.30780914]
+      [-0.2812064  -0.3512327 ]
+      [-0.05411351 -0.4716435 ]]
+     [[-1.0363373  -1.7273437 ]
+      [-1.6165586  -1.5223348 ]
+      [-1.208275   -1.1878313 ]
+      [-1.4711051  -1.5200229 ]]]
+    <NDArray 3x4x2 @cpu(0)>
     """
-    def __init__(self, mean, std):
+    def __init__(self, mean=0.0, std=1.0):
         super(Normalize, self).__init__()
         self._mean = mean
         self._std = std
@@ -206,6 +228,67 @@ class RandomResizedCrop(Block):
         return image.random_size_crop(x, *self._args)[0]
 
 
+class CropResize(HybridBlock):
+    r"""Crop the input image with and optionally resize it.
+
+    Makes a crop of the original image then optionally resize it to the specified size.
+
+    Parameters
+    ----------
+    x : int
+        Left boundary of the cropping area
+    y : int
+        Top boundary of the cropping area
+    w : int
+        Width of the cropping area
+    h : int
+        Height of the cropping area
+    size : int or tuple of (w, h)
+        Optional, resize to new size after cropping
+    interpolation : int, optional
+        Interpolation method for resizing. By default uses bilinear
+        interpolation. See OpenCV's resize function for available choices.
+        https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=resize#resize
+        Note that the Resize on gpu use contrib.bilinearResize2D operator
+        which only support bilinear interpolation(1). The result would be slightly
+        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
+        use algorithm which aligns corner.
+
+
+    Inputs:
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape.
+
+    Outputs:
+        - **out**: input tensor with (H x W x C) or (N x H x W x C) shape.
+
+    Examples
+    --------
+    >>> transformer = vision.transforms.CropResize(x=0, y=0, width=100, height=100)
+    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 100x100x3 @cpu(0)>
+    >>> image = mx.nd.random.uniform(0, 255, (3, 224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 3x100x100x3 @cpu(0)>
+    >>> transformer = vision.transforms.CropResize(x=0, y=0, width=100, height=100, size=(50, 50), interpolation=1)
+    >>> transformer(image)
+    <NDArray 3x50x50 @cpu(0)>
+    """
+    def __init__(self, x, y, width, height, size=None, interpolation=None):
+        super(CropResize, self).__init__()
+        self._x = x
+        self._y = y
+        self._width = width
+        self._height = height
+        self._size = size
+        self._interpolation = interpolation
+
+    def hybrid_forward(self, F, x):
+        out = F.image.crop(x, self._x, self._y, self._width, self._height)
+        if self._size:
+            out = F.image.resize(out, self._size, False, self._interpolation)
+        return out
+
 class CenterCrop(Block):
     """Crops the image `src` to the given `size` by trimming on all four
     sides and preserving the center of the image. Upsamples if `src` is
@@ -243,8 +326,8 @@ class CenterCrop(Block):
         return image.center_crop(x, *self._args)[0]
 
 
-class Resize(Block):
-    """Resize an image to the given size.
+class Resize(HybridBlock):
+    """Resize an image or a batch of image NDArray to the given size.
     Should be applied before `mxnet.gluon.data.vision.transforms.ToTensor`.
 
     Parameters
@@ -257,13 +340,17 @@ class Resize(Block):
     interpolation : int
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
+        Note that the Resize on gpu use contrib.bilinearResize2D operator
+        which only support bilinear interpolation(1). The result would be slightly
+        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
+        use algorithm which aligns corner.
 
 
     Inputs:
-        - **data**: input tensor with (Hi x Wi x C) shape.
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape.
 
     Outputs:
-        - **out**: output tensor with (H x W x C) shape.
+        - **out**: output tensor with (H x W x C) or (N x H x W x C) shape.
 
     Examples
     --------
@@ -271,6 +358,9 @@ class Resize(Block):
     >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
     >>> transformer(image)
     <NDArray 500x1000x3 @cpu(0)>
+    >>> image = mx.nd.random.uniform(0, 255, (3, 224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 3x500x1000x3 @cpu(0)>
     """
     def __init__(self, size, keep_ratio=False, interpolation=1):
         super(Resize, self).__init__()
@@ -278,23 +368,8 @@ class Resize(Block):
         self._size = size
         self._interpolation = interpolation
 
-    def forward(self, x):
-        if isinstance(self._size, numeric_types):
-            if not self._keep:
-                wsize = self._size
-                hsize = self._size
-            else:
-                h, w, _ = x.shape
-                if h > w:
-                    wsize = self._size
-                    hsize = int(h * wsize / w)
-                else:
-                    hsize = self._size
-                    wsize = int(w * hsize / h)
-        else:
-            wsize, hsize = self._size
-        return image.imresize(x, wsize, hsize, self._interpolation)
-
+    def hybrid_forward(self, F, x):
+        return F.image.resize(x, self._size, self._keep, self._interpolation)
 
 class RandomFlipLeftRight(HybridBlock):
     """Randomly flip the input image left to right with a probability

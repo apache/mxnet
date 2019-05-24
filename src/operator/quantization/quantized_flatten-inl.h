@@ -80,24 +80,24 @@ void QuantizedFlattenCompute(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool QuantizedFlattenShape(const nnvm::NodeAttrs& attrs,
-                                  std::vector<TShape> *in_attrs,
-                                  std::vector<TShape> *out_attrs) {
+                                  mxnet::ShapeVector *in_attrs,
+                                  mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 3U);
 
-  const TShape &dshape = (*in_attrs)[0];
-  if (shape_is_none(dshape)) return false;
+  const mxnet::TShape &dshape = (*in_attrs)[0];
+  if (!shape_is_known(dshape)) return false;
 
-  uint32_t target_dim = 1;
-  for (uint32_t i = 1; i < dshape.ndim(); ++i) {
+  dim_t target_dim = 1;
+  for (int i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
   }
 
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, TShape{1});
-  SHAPE_ASSIGN_CHECK(*in_attrs, 2, TShape{1});
+  SHAPE_ASSIGN_CHECK(*in_attrs, 1, mxnet::TShape{1});
+  SHAPE_ASSIGN_CHECK(*in_attrs, 2, mxnet::TShape{1});
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(dshape[0], target_dim));
-  SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape{1});
-  SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape{1});
   return true;
 }
 

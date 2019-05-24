@@ -90,9 +90,9 @@ static mkldnn::convolution_backward_data::primitive_desc GetDeconvFwdImpl(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
-  CHECK_GE(param.stride.ndim(), 2U);
-  CHECK_GE(param.pad.ndim(), 2U);
-  CHECK_GE(param.dilate.ndim(), 2U);
+  CHECK_GE(param.stride.ndim(), 2);
+  CHECK_GE(param.pad.ndim(), 2);
+  CHECK_GE(param.dilate.ndim(), 2);
   mkldnn::memory::dims strides{0, 0};
   strides[0] = param.stride[0];
   strides[1] = param.stride[1];
@@ -128,9 +128,9 @@ static mkldnn::convolution_forward::primitive_desc GetDeconvBwdDataImpl(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
-  CHECK_GE(param.stride.ndim(), 2U);
-  CHECK_GE(param.pad.ndim(), 2U);
-  CHECK_GE(param.dilate.ndim(), 2U);
+  CHECK_GE(param.stride.ndim(), 2);
+  CHECK_GE(param.pad.ndim(), 2);
+  CHECK_GE(param.dilate.ndim(), 2);
   mkldnn::memory::dims strides{0, 0};
   strides[0] = param.stride[0];
   strides[1] = param.stride[1];
@@ -153,9 +153,9 @@ GetDeconvBwdWeightsImpl(
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
-  CHECK_GE(param.stride.ndim(), 2U);
-  CHECK_GE(param.pad.ndim(), 2U);
-  CHECK_GE(param.dilate.ndim(), 2U);
+  CHECK_GE(param.stride.ndim(), 2);
+  CHECK_GE(param.pad.ndim(), 2);
+  CHECK_GE(param.dilate.ndim(), 2);
   mkldnn::memory::dims strides{0, 0};
   strides[0] = param.stride[0];
   strides[1] = param.stride[1];
