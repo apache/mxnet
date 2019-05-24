@@ -25,8 +25,12 @@ using namespace mxnet::cpp;
 
 enum TypeFlag {
   kFloat32 = 0,
-  kFloat16 = 1,
-  kInt8 = 2
+  kFloat64 = 1,
+  kFloat16 = 2,
+  kUint8 = 3,
+  kInt32 = 4,
+  kInt8  = 5,
+  kInt64 = 6,
 };
 
 /*
