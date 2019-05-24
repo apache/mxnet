@@ -51,7 +51,7 @@ namespace {
       return true;
     return false;
   }
-  
+
   nnvm::NodePtr CreateSubgraphNode(const Graph& subgraph) {
     nnvm::Symbol subgraph_sym;
     auto node = nnvm::Node::Create();
@@ -97,7 +97,7 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     for (auto p : sub_outputs_in_main) {
       subgraph.outputs[p.second] = p.first;
     }
-    // To generate a subgraph an input have to be replace by data node (no op)
+    // To generate a subgraph an input have to be replaced by data node (no op)
     // and it have to be agnostic to the node from which it's an output
     // (For exemple even if two inputs are two different outputs from the same node)
     auto inputs = GetSubgraphInputs(subgraph, subgraph_set);
@@ -164,14 +164,16 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
 }
 
 Graph FusePointwise(Graph &&g) {
+  Graph ret;
+  const auto& idx = g.indexed_graph();
   const auto & num_forward_output = g.GetAttr<size_t>("num_forward_outputs");
   Graph fg;
   fg.outputs.insert(fg.outputs.begin(), g.outputs.begin(),
                     g.outputs.begin() + num_forward_output);
   auto subsets = GetCompatibleSubsets(fg, IsFusionCompatible);
   g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode);
-
-  return g;
+  ret.outputs = g.outputs;
+  return ret;
 }
 
 }
