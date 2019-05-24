@@ -16,9 +16,19 @@
 # under the License.
 
 """Default Input Tensor shapes to use for benchmarking"""
+
+# For Binary broadcast operators like - broadcast_add/sub/mode/logical_and etc..
 DEFAULT_BINARY_BROADCAST_OP_INPUTS = [{"lhs": (1024, 1024),
                                        "rhs": (1024, 1024)},
                                       {"lhs": (10000, 10),
                                        "rhs": (10000, 10)},
                                       {"lhs": (10000, 1),
                                        "rhs": (10000, 100)}]
+
+# For Binary element_wise operators like - element_wise_add/sub/mode/logical_and etc..
+DEFAULT_BINARY_ELEMENT_WISE_OP_INPUTS = [{"lhs": (1024, 1024),
+                                          "rhs": (1024, 1024)},
+                                         {"lhs": (10000, 10),
+                                          "rhs": (10000, 10)},
+                                         {"lhs": (10000, 1),
+                                          "rhs": (10000, 1)}]

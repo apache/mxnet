@@ -28,7 +28,7 @@ def _get_all_registered_ops(filters=("_backward", "_contrib", "_")):
     """Get all registered MXNet operators.
 
     By default, filter out all backward operators that starts with  '_backward',
-    Contrib operators that starts with '_contrib' and internal operators that 
+    Contrib operators that starts with '_contrib' and internal operators that
     starts with '_'.
 
     Parameters
@@ -36,7 +36,7 @@ def _get_all_registered_ops(filters=("_backward", "_contrib", "_")):
     filters: tuple(str)
         List of operator name prefix to ignore from benchmarking.
         Default - ("_backward", "_contrib", "_")
-    
+
     Returns
     -------
     {"operator_name": {"has_backward", "nd_op_handle"}}
@@ -89,10 +89,10 @@ def _get_op_arguments(op_name, op_handle):
     ----------
     op_name: str
         Name of the operator
-    
+
     op_handle: OpHandle
         Handle for the operator
-    
+
     Returns
     -------
     (narg, arg_names, arg_types)
@@ -133,6 +133,15 @@ def _set_op_arguments(mx_operators):
                                            "arg_types": arg_types}
 
 
+def _get_all_mxnet_operators():
+    # Step 1 - Get all registered op names
+    mx_operators = _get_all_registered_ops()
+
+    # Step 2 - Get all parameters for the operators
+    _set_op_arguments(mx_operators)
+    return mx_operators
+
+
 def prepare_op_inputs(arg_params, arg_values):
     # For each default value combination, prepare inputs
     inputs = []
@@ -145,21 +154,40 @@ def prepare_op_inputs(arg_params, arg_values):
 
 
 def get_all_broadcast_binary_operators():
-    """Gets all binary operators registered with MXNet.
+    """Gets all binary broadcast operators registered with MXNet.
 
     Returns
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    # Step 1 - Get all registered op names
-    mx_operators = _get_all_registered_ops()
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
 
-    # Step 2 - Get all parameters for the operators
-    _set_op_arguments(mx_operators)
-    binary_mx_operators = {}
+    # Filter for binary broadcast operators
+    binary_broadcast_mx_operators = {}
     for op_name, op_params in mx_operators.items():
         if op_name.startswith("broadcast_") and op_params["params"]["narg"] == 2 and \
                 "lhs" in op_params["params"]["arg_names"] and \
-                "lhs" in op_params["params"]["arg_names"]:
-            binary_mx_operators[op_name] = mx_operators[op_name]
-    return binary_mx_operators
+                "rhs" in op_params["params"]["arg_names"]:
+            binary_broadcast_mx_operators[op_name] = mx_operators[op_name]
+    return binary_broadcast_mx_operators
+
+
+def get_all_element_wise_binary_operators():
+    """Gets all binary element_wise operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for binary element_wise operators
+    binary_element_wise_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name.startswith("elemwise_") and op_params["params"]["narg"] == 2 and \
+                "lhs" in op_params["params"]["arg_names"] and \
+                "rhs" in op_params["params"]["arg_names"]:
+            binary_element_wise_mx_operators[op_name] = mx_operators[op_name]
+    return binary_element_wise_mx_operators
