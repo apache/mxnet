@@ -930,7 +930,7 @@ struct det_backward {
     using namespace mshadow::expr;
     using namespace mxnet_op;
     // compute inverse(A) and stores it to LU
-    linalg_batch_det_helper(LU, pivot, det, dA, DType(0), ctx);
+    linalg_batch_det_backward_helper(LU, pivot, det, dA, DType(0), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
       Shape3(det.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
@@ -957,7 +957,7 @@ struct logdet_backward {
     using namespace mshadow::expr;
     using namespace mxnet_op;
     // compute inverse(A) and stores it to LU
-    linalg_batch_det_helper(LU, pivot, logdet, dA, DType(-INFINITY), ctx);
+    linalg_batch_det_backward_helper(LU, pivot, logdet, dA, DType(-INFINITY), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogdet, \
       Shape3(logdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
@@ -986,7 +986,7 @@ struct slogdet_backward {
     using namespace mshadow::expr;
     using namespace mxnet_op;
     // compute inverse(A) and stores it to LU
-    linalg_batch_det_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
+    linalg_batch_det_backward_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogabsdet, \
       Shape3(logabsdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));

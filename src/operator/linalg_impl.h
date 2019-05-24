@@ -1502,11 +1502,11 @@ LINALG_GPU_BATCH_INVERSE(gpu, double)
 
 //////////////////////////////// DET ////////////////////////////////////////////
 
-// CPU/GPU-versions of helper functions to compute matrix determinant
+// CPU/GPU-versions of helper functions used in matrix determinant operators
 
 #define LINALG_CPU_BATCH_DET_HELPER(xpu, DType) \
 template<> inline \
-void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
+void linalg_batch_det_backward_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
                                          const Tensor<xpu, 2, int>& pivot, \
                                          const Tensor<xpu, 1, DType>& det, \
                                          const Tensor<xpu, 3, DType>& temp, \
@@ -1531,7 +1531,7 @@ LINALG_CPU_BATCH_DET_HELPER(cpu, double)
 
 #define LINALG_GPU_BATCH_DET_HELPER(xpu, DType) \
 template<> inline \
-void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
+void linalg_batch_det_backward_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
                                          const Tensor<xpu, 2, int>& pivot, \
                                          const Tensor<xpu, 1, DType>& det, \
                                          const Tensor<xpu, 3, DType>& temp, \
@@ -1546,7 +1546,7 @@ void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
 
 #define LINALG_GPU_BATCH_DET_HELPER(xpu, DType) \
 template<> inline \
-void linalg_batch_det_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
+void linalg_batch_det_backward_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
                                          const Tensor<xpu, 2, int>& pivot, \
                                          const Tensor<xpu, 1, DType>& det, \
                                          const Tensor<xpu, 3, DType>& temp, \

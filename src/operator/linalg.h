@@ -246,16 +246,17 @@ void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
 
 //////////////////////////////// DET ////////////////////////////////////////////
 
-// CPU/GPU-versions of helper functions to compute matrix determinant
-// Compute matrix inversion with LU and pivot using temp workspace,
-// the result stores back to LU
+// CPU/GPU-versions of helper functions used in matrix determinant operators
+
+// Helper function in determinant backward computation: compute matrix inverse
+// from LU and pivot using temp workspace, the result is stored back to LU
 template<typename xpu, typename DType>
-void linalg_batch_det_helper(const Tensor<xpu, 3, DType>& LU,
-                             const Tensor<xpu, 2, int>& pivot,
-                             const Tensor<xpu, 1, DType>& det,
-                             const Tensor<xpu, 3, DType>& temp,
-                             const DType zero_det,
-                             const mxnet::OpContext& ctx);
+void linalg_batch_det_backward_helper(const Tensor<xpu, 3, DType>& LU,
+                                      const Tensor<xpu, 2, int>& pivot,
+                                      const Tensor<xpu, 1, DType>& det,
+                                      const Tensor<xpu, 3, DType>& temp,
+                                      const DType zero_det,
+                                      const mxnet::OpContext& ctx);
 
 #include "linalg_impl.h"
 
