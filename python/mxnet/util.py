@@ -49,7 +49,7 @@ def get_gpu_memory(gpu_dev_id):
 
 def set_np_shape(active):
     """
-    Turns on/off NumPy shape semantics.  This is turned off by default for
+    Turns on/off NumPy shape semantics. This is turned off by default for
     keeping backward compatibility.
 
     Please note that this is designed as an infrastructure for the incoming
@@ -60,11 +60,20 @@ def set_np_shape(active):
     Parameters
     ----------
     active : bool
-        Indicates whether to turn on/off NumPy compatibility.
+        Indicates whether to turn on/off NumPy shape semantics.
 
     Returns
     -------
-        A bool value indicating the previous state of NumPy compatibility.
+        A bool value indicating the previous state of NumPy shape semantics.
+
+    Example
+    -------
+    >>> import mxnet as mx
+    >>> prev_state = mx.set_np_shape(True)
+    >>> print(prev_state)
+    False
+    >>> print(mx.is_np_shape())
+    True
     """
     prev = ctypes.c_int()
     check_call(_LIB.MXSetIsNumpyShape(ctypes.c_int(active), ctypes.byref(prev)))
@@ -83,7 +92,16 @@ def is_np_shape():
 
     Returns
     -------
-        A bool value indicating whether the NumPy compatibility is currently on.
+        A bool value indicating whether the NumPy shape semantics is currently on.
+
+    Example
+    -------
+    >>> import mxnet as mx
+    >>> prev_state = mx.set_np_shape(True)
+    >>> print(prev_state)
+    False
+    >>> print(mx.is_np_shape())
+    True
     """
     curr = ctypes.c_bool()
     check_call(_LIB.MXIsNumpyShape(ctypes.byref(curr)))
@@ -131,21 +149,22 @@ def np_shape(active=True):
             scalar = mx.nd.ones(shape=())
             assert scalar.shape == ()
 
-            # In NumPy compatible mode, 0 in a shape means that dimension contains zero elements.
+            # If NumPy shape semantics is enabled, 0 in a shape means that
+            # dimension contains zero elements.
             data = mx.sym.var("data", shape=(0, 2, 3))
             ret = mx.sym.sin(data)
             arg_shapes, out_shapes, _ = ret.infer_shape()
             assert arg_shapes[0] == (0, 2, 3)
             assert out_shapes[0] == (0, 2, 3)
 
-            # -1 means unknown shape dimension size in the new NumPy-compatible shape definition
+            # -1 means unknown shape dimension size in the new NumPy shape definition
             data = mx.sym.var("data", shape=(-1, 2, 3))
             ret = mx.sym.sin(data)
             arg_shapes, out_shapes, _ = ret.infer_shape_partial()
             assert arg_shapes[0] == (-1, 2, 3)
             assert out_shapes[0] == (-1, 2, 3)
 
-            # When a shape is completely unknown in NumPy-compatible mode, it is
+            # When a shape is completely unknown when NumPy shape semantics is on, it is
             # represented as `None` in Python.
             data = mx.sym.var("data")
             ret = mx.sym.sin(data)
@@ -191,12 +210,12 @@ def use_np_shape(func):
 
     Parameters
     ----------
-    func : a user-provided callable function to be scoped by the NumPy compatibility state.
+    func : a user-provided callable function to be scoped by the NumPy-shape semantics.
 
     Returns
     -------
     Function
-        A function for wrapping the user functions in the NumPy compatibility scope.
+        A function for wrapping the user functions in the NumPy-shape semantics.
     """
     @functools.wraps(func)
     def _with_np_shape(*args, **kwargs):
