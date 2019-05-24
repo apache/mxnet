@@ -129,8 +129,8 @@ namespace cuda {
       index_t count = 0;
       index_t gw = floor(static_cast<DType>(pw) * group_size / pooled_width);
       index_t gh = floor(static_cast<DType>(ph) * group_size / pooled_height);
-      gw = min(max(gw, 0), group_size - 1);
-      gh = min(max(gh, 0), group_size - 1);
+      gw = min(max(gw, static_cast<index_t>(0)), group_size - 1);
+      gh = min(max(gh, static_cast<index_t>(0)), group_size - 1);
 
       const DType* offset_bottom_data = bottom_data + (roi_batch_ind * channels) * height * width;
       for (index_t ih = 0; ih < sample_per_part; ih++) {
@@ -266,8 +266,8 @@ namespace cuda {
       DType* offset_bottom_data_diff = bottom_data_diff + roi_batch_ind * channels * height * width;
       index_t gw = floor(static_cast<DType>(pw) * group_size / pooled_width);
       index_t gh = floor(static_cast<DType>(ph) * group_size / pooled_height);
-      gw = min(max(gw, 0), group_size - 1);
-      gh = min(max(gh, 0), group_size - 1);
+      gw = min(max(gw, static_cast<index_t>(0)), group_size - 1);
+      gh = min(max(gh, static_cast<index_t>(0)), group_size - 1);
 
       for (index_t ih = 0; ih < sample_per_part; ih++) {
         for (index_t iw = 0; iw < sample_per_part; iw++) {
