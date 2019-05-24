@@ -51,11 +51,11 @@ namespace deformablepsroipool {
 struct DeformablePSROIPoolingParam : public dmlc::Parameter<DeformablePSROIPoolingParam> {
   // mxnet::TShape pooled_size;
   float spatial_scale;
-  int output_dim;
-  int group_size;
-  int pooled_size;
-  int part_size;
-  int sample_per_part;
+  index_t output_dim;
+  index_t group_size;
+  index_t pooled_size;
+  index_t part_size;
+  index_t sample_per_part;
   float trans_std;
   bool no_trans;
   DMLC_DECLARE_PARAMETER(DeformablePSROIPoolingParam) {
