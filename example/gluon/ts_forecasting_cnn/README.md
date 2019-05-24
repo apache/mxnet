@@ -18,7 +18,6 @@ http://www.apache.org/licenses/LICENSE-2.0
 ### End to end one step ahead time series prediction Gluon code for the article:
 
 'Conditional Time Series Forecasting with Convolutional Neural Networks'
-
 https://arxiv.org/abs/1703.04691
 
 and
