@@ -1429,7 +1429,7 @@ LINALG_GPU_BATCH_GETRI(DgetriBatched, double)
 
 //////////////////////////////// INVERSE ////////////////////////////////////////////
 
-// CPU/GPU-versions of matrix inversion combining LAPACK function "getrf" and "getri"
+// CPU/GPU-versions of matrix inverse combining LAPACK function "getrf" and "getri"
 
 // Note A = inverse(B)
 #define LINALG_CPU_BATCH_INVERSE(xpu, DType) \
@@ -1490,7 +1490,7 @@ template<> inline \
 void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
                                       const Tensor<xpu, 3, DType>& B, \
                                       const mxnet::OpContext& ctx) { \
-  LOG(FATAL) << "gpu matrix inversion requires CUDA version >= 8.0!"; \
+  LOG(FATAL) << "gpu matrix inverse requires CUDA version >= 8.0!"; \
 }
 
 #endif  // CUDA_VERSION >= 8000
@@ -1552,7 +1552,7 @@ void linalg_batch_det_backward_helper<xpu, DType>(const Tensor<xpu, 3, DType>& L
                                          const Tensor<xpu, 3, DType>& temp, \
                                          const DType zero_det, \
                                          const mxnet::OpContext& ctx) { \
-  LOG(FATAL) << "gpu matrix inversion requires CUDA version >= 8.0!"; \
+  LOG(FATAL) << "gpu matrix inverse requires CUDA version >= 8.0!"; \
 }
 
 #endif  // CUDA_VERSION >= 8000

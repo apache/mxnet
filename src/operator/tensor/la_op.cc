@@ -952,18 +952,18 @@ If *n>2*, *det* is performed separately on the trailing two dimensions
 for all inputs (batch mode).
 
 .. note:: The operator supports float32 and float64 data types only.
-.. note:: There is no gradient backwarded when det(A) == 0 because it's
-          rarely hit upon in float point computation and the Jacobi's
-          formula on determinant gradient is not computationally efficient
-          when A is non-invertible.
+.. note:: There is no gradient backwarded when A is non-invertible (which is
+          equivalent to det(A) = 0) because zero is rarely hit upon in float
+          point computation and the Jacobi's formula on determinant gradient
+          is not computationally efficient when A is non-invertible.
 
 Examples::
 
-   Single matrix inversion
+   Single matrix determinant
    A = [[1., 4.], [2., 3.]]
    det(A) = [-5.]
 
-   Batch matrix inversion
+   Batch matrix determinant
    A = [[[1., 4.], [2., 3.]],
         [[2., 3.], [1., 4.]]]
    det(A) = [-5., 5.]
@@ -1006,16 +1006,18 @@ for all inputs (batch mode).
 .. note:: The operator supports float32 and float64 data types only.
 .. note:: The gradient is not properly defined on sign, so the gradient of
           it is not backwarded.
+.. note:: No gradient is backwarded when A is non-invertible. Please see
+          the docs of operator det for detail.
 
 Examples::
 
-   Single matrix inversion
+   Single matrix signed log determinant
    A = [[2., 3.], [1., 4.]]
    sign, logabsdet = slogdet(A)
    sign = [1.]
    logabsdet = [1.609438]
 
-   Batch matrix inversion
+   Batch matrix signed log determinant
    A = [[[2., 3.], [1., 4.]],
         [[1., 2.], [2., 4.]],
         [[1., 2.], [4., 3.]]]
