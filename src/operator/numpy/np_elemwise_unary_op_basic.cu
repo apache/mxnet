@@ -66,7 +66,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_cbrt, mshadow_op::cube_root);
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_exp, mshadow_op::exp);
 
 NNVM_REGISTER_OP(_np_log)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::LogCompute<gpu, mshadow_op::log>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::log>);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_log10, mshadow_op::log10);
 

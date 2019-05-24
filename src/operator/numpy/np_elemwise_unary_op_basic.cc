@@ -100,7 +100,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_reciprocal, "x", mshadow_op::reciprocal)
 Example::
     reciprocal([-2, 1, 3, 1.6, 0.2]) = [-0.5, 1.0, 0.33333334, 0.625, 5.0]
 )code")
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reciprocal"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_reciprocal"});
 
 // abs
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_absolute, "x", mshadow_op::abs)
@@ -211,7 +211,11 @@ The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::LogCompute<cpu, mshadow_op::log>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"x"};
+  })
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::log>)
 .add_argument("x", "NDArray-or-Symbol", "The input array.")
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
