@@ -160,7 +160,6 @@ def np_compat(active=True):
 def wraps_safely(wrapped, assigned=functools.WRAPPER_ASSIGNMENTS):
     """This function is safe version of `functools.wraps` in Python2 which skips wrapping functions
     for the attributes that do not exist."""
-    import sys
     if sys.version_info[0] > 2:
         return functools.wraps(wrapped)
     else:
