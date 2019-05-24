@@ -905,11 +905,11 @@ for all inputs (batch mode).
 
 Examples::
 
-   Single matrix inversion
+   Single matrix inverse
    A = [[1., 4.], [2., 3.]]
    inverse(A) = [[-0.6, 0.8], [0.4, -0.2]]
 
-   Batch matrix inversion
+   Batch matrix inverse
    A = [[[1., 4.], [2., 3.]],
         [[1., 3.], [2., 4.]]]
    inverse(A) = [[[-0.6, 0.8], [0.4, -0.2]],

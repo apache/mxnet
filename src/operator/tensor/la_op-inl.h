@@ -464,9 +464,7 @@ struct inverse {
   }
 };
 
-// partial pivoting LU decomposition: A = PLU, so det(A) = det(P)det(L)det(U)
-// det(P) depends on number of row changes in P, det(L) = 1, det(U) = prod(diag(U))
-// this kernel computes sign(det(A)), log(abs(det(A)))
+// this kernel computes sign(det(A)), log(abs(det(A))) from LU decomposition
 struct SignedLogDet {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, int N, int* pivot,
@@ -487,8 +485,12 @@ struct SignedLogDet {
   }
 };
 
-// det = det(A), LU and pivot store the LU decomposition output which will be
-// used in computing gradient
+// det = det(A), the computation method is based on partial pivoting LU decomposition:
+//     A = PLU, so det(A) = det(P) * det(L) * det(U),
+//     det(P) depends on number of row changes in P
+//     det(L) = 1 since L has unit diagnal elemements
+//     det(U) = prod(diag(U))
+// LU and pivot store the LU decomposition output which will be used in computing gradient
 struct det {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& det,
