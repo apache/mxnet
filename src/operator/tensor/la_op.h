@@ -406,11 +406,12 @@ inline bool InverseShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   const mxnet::TShape& in = (*in_attrs)[0];
+  if (!ndim_is_known(in)) return false;
   const int ndim(in.ndim());
   CHECK_GE(ndim, 2) << "Input A's dimension must be >= 2";
   CHECK_EQ(in[ndim-2], in[ndim-1]) << "Input A's last two dimension must be equal";
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in);
-  return true;
+  return shape_is_known(in);
 }
 
 // Shape inference function for det functions in linalg
@@ -421,6 +422,7 @@ inline bool DetShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), onum + 2);
   const mxnet::TShape& in = (*in_attrs)[0];
+  if (!ndim_is_known(in)) return false;
   const int ndim(in.ndim());
   CHECK_GE(ndim, 2) << "Input A's dimension must be >= 2";
   CHECK_EQ(in[ndim-2], in[ndim-1]) << "Input A's last two dimension must be equal";
@@ -435,7 +437,7 @@ inline bool DetShape(const nnvm::NodeAttrs& attrs,
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, onum, in); /* LU */
   SHAPE_ASSIGN_CHECK(*out_attrs, onum + 1, mxnet::TShape(in.begin(), in.end() - 1)); /* pivot */
-  return true;
+  return shape_is_known(in);
 }
 
 // Type inference function for det functions in linalg
@@ -444,16 +446,17 @@ inline bool DetType(const nnvm::NodeAttrs& attrs,
                     std::vector<int>* in_type,
                     std::vector<int>* out_type) {
   using namespace mshadow;
-  CHECK_EQ(in_type->size(), 1U);
-  int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "Input must have specified type";
-
-  out_type->clear();
+  CHECK_EQ(in_type->size(), 1);
+  CHECK_EQ(out_type->size(), onum + 2);
+  const int dtype = (*in_type)[0];
+  if (dtype == -1) return false;
+  CHECK(dtype == kFloat32 || dtype == kFloat64)
+    << "This operation only supports 32-bit and 64-bit floating point";
   for (int i = 0; i < onum; ++i) {
-    out_type->push_back(dtype); /* sign or det or logdet */
+    TYPE_ASSIGN_CHECK(*out_type, i, dtype);  /* sign or det or logdet */
   }
-  out_type->push_back(dtype); /* LU */
-  out_type->push_back(mshadow::kInt32); /* pivot */
+  TYPE_ASSIGN_CHECK(*out_type, onum, dtype);  /* LU */
+  TYPE_ASSIGN_CHECK(*out_type, onum + 1, kInt32);  /* pivot */
   return true;
 }
 
