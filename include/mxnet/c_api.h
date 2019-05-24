@@ -1070,11 +1070,11 @@ MXNET_DLL int MXAutogradIsTraining(bool* curr);
 MXNET_DLL int MXIsNumpyShape(bool* curr);
 /*!
  * \brief set numpy compatibility switch
- * \param is_np_comp 1 when numpy compatibility is on, 0 when off
+ * \param is_np_shape 1 when numpy shape semantics is on, 0 when off
  * \param prev returns the previous status before this set
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSetIsNumpyShape(int is_np_comp, int* prev);
+MXNET_DLL int MXSetIsNumpyShape(int is_np_shape, int* prev);
 /*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
