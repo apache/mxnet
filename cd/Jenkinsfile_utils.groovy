@@ -121,14 +121,15 @@ def push_artifact(libmxnet_path, variant, libtype, license_paths = '', dependenc
 
 // pull artifact from repository
 def pull_artifact(variant, libtype, destination = '') {
-  sh "./ci/cd/utils/artifact_repository.py --pull --verbose --libtype ${libtype} --variant ${variant} --destination ${destination}"
+  sh "./cd/utils/artifact_repository.py --pull --verbose --libtype ${libtype} --variant ${variant} --destination ${destination}"
 }
 
 // pulls artifact from repository and places files in the appropriate directories
 def restore_artifact(variant, libtype) {
-  pull_artifact(variant, libtype, 'mxnet_artifact')
-  // move libraries to lib directory
 
+  pull_artifact(variant, libtype, 'mxnet_artifact')
+
+  // move libraries to lib directory
   dir('lib') {
     sh "mv ../mxnet_artifact/libmxnet.so ."
     if (fileExists('../mxnet_artifact/dependencies')) {
@@ -160,13 +161,13 @@ def restore_artifact(variant, libtype) {
 }
 
 // A generic pipeline that can be used by *most* CD jobs
-// It can use used when implementing the pipeline steps in the Jenkins_steps.groovy
-// script for the particular delivery channel. However, it should also implemente the
+// It can be used when implementing the pipeline steps in the Jenkins_steps.groovy
+// script for a particular delivery channel. However, it should also implement the
 // build, test, and push steps.
 // NOTE: Be mindful of the expected time that a step should take. If it will take a long time,
 // and it can be done in a CPU node, do it in a CPU node. We should avoid using GPU instances unless
 // we *have* to.
-// However, if it is only packaging libmxnet and that doesn't take long. The the pipeline can 
+// However, if it is only packaging libmxnet and that doesn't take long. Then, the pipeline can 
 // just run on a single node. As is done bellow.
 // For examples of multi-node CD pipelines, see the the binary_release/static and binary_release/dynamic
 // pipeline.
