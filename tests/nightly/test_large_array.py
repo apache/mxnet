@@ -292,6 +292,33 @@ def test_unravel_index():
     assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
 
 
+def create_2d_tensor(rows, columns):
+    a = np.arange(0, rows).reshape(rows, 1)
+    b = np.broadcast_to(a, shape=(a.shape[0], columns))
+    return nd.array(b, dtype=np.int64)
+
+
+def test_transpose():
+    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
+    t = b.T
+    assert t.shape == (SMALL_Y, LARGE_X)
+    assert np.sum(t[:, -1].asnumpy() == (LARGE_X - 1)) == b.shape[1]
+
+
+def test_swapaxes():
+    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
+    t = nd.swapaxes(b, dim1=0, dim2=1)
+    assert t.shape == (SMALL_Y, LARGE_X)
+    assert np.sum(t[:, -1].asnumpy() == (LARGE_X - 1)) == b.shape[1]
+
+
+def test_flip():
+    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
+    t = nd.flip(b, axis=0)
+    assert t.shape == (LARGE_X, SMALL_Y)
+    assert np.sum(t[-1, :].asnumpy() == 0) == b.shape[1]
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
