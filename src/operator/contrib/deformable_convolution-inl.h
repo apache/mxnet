@@ -61,9 +61,9 @@ struct DeformableConvolutionParam : public dmlc::Parameter<DeformableConvolution
   mxnet::TShape stride;
   mxnet::TShape dilate;
   mxnet::TShape pad;
-  uint32_t num_filter;
-  uint32_t num_group;
-  uint32_t num_deformable_group;
+  index_t num_filter;
+  index_t num_group;
+  index_t num_deformable_group;
   uint64_t workspace;
   bool no_bias;
   dmlc::optional<int> layout;
@@ -109,10 +109,10 @@ class DeformableConvolutionOp : public Operator {
   }
 
   virtual void Forward(const OpContext &ctx,
-    const std::vector<TBlob> &in_data,
-    const std::vector<OpReqType> &req,
-    const std::vector<TBlob> &out_data,
-    const std::vector<TBlob> &aux_args) {
+                       const std::vector<TBlob> &in_data,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &out_data,
+                       const std::vector<TBlob> &aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(req[conv::kOut], kWriteTo);
@@ -147,10 +147,11 @@ class DeformableConvolutionOp : public Operator {
       Shape4(num_, group_, M, N), s);
     for (index_t n = 0; n < num_; ++n) {
       // transform image to col_buffer in order to use gemm
-      deformable_im2col(s, in_data[conv::kData].dptr<DType>() + n*input_dim_,
-        in_data[conv::kOffset].dptr<DType>() + n*input_offset_dim_, in_data[conv::kData].shape_,
-        col_buffer.shape_, param_.kernel, param_.pad, param_.stride, param_.dilate,
-        param_.num_deformable_group, col_buffer.dptr<DType>());
+      deformable_im2col(s, in_data[conv::kData].dptr<DType>() + n * input_dim_,
+                        in_data[conv::kOffset].dptr<DType>() + n * input_offset_dim_,
+                        in_data[conv::kData].shape_, col_buffer.shape_,
+                        param_.kernel, param_.pad, param_.stride, param_.dilate,
+                        param_.num_deformable_group, col_buffer.dptr<DType>());
       Tensor<xpu, 3, DType> output_3d = output_4d[n];
       for (index_t g = 0; g < group_; ++g) {
         // Legacy approach shown here for comparison:
@@ -168,12 +169,12 @@ class DeformableConvolutionOp : public Operator {
   }
 
   virtual void Backward(const OpContext &ctx,
-    const std::vector<TBlob>& out_grad,
-    const std::vector<TBlob>& in_data,
-    const std::vector<TBlob>& out_data,
-    const std::vector<OpReqType>& req,
-    const std::vector<TBlob>& in_grad,
-    const std::vector<TBlob>& aux_args) {
+                        const std::vector<TBlob>& out_grad,
+                        const std::vector<TBlob>& in_data,
+                        const std::vector<TBlob>& out_data,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& in_grad,
+                        const std::vector<TBlob>& aux_args) {
     using namespace mshadow;
     using namespace mshadow::expr;
     CHECK_EQ(out_grad.size(), 1U);
@@ -226,26 +227,27 @@ class DeformableConvolutionOp : public Operator {
 
       // gradient w.r.t. input coordinate data
       deformable_col2im_coord(s, col_buffer.dptr<DType>(),
-        in_data[conv::kData].dptr<DType>() + n*input_dim_,
-        in_data[conv::kOffset].dptr<DType>() + n*input_offset_dim_,
-        in_grad[conv::kData].shape_, col_buffer.shape_,
-        param_.kernel, param_.pad, param_.stride, param_.dilate, param_.num_deformable_group,
-        in_grad[conv::kOffset].dptr<DType>() + n*input_offset_dim_,
-        req[conv::kOffset]);
+                              in_data[conv::kData].dptr<DType>() + n * input_dim_,
+                              in_data[conv::kOffset].dptr<DType>() + n * input_offset_dim_,
+                              in_grad[conv::kData].shape_, col_buffer.shape_,
+                              param_.kernel, param_.pad, param_.stride,
+                              param_.dilate, param_.num_deformable_group,
+                              in_grad[conv::kOffset].dptr<DType>() + n * input_offset_dim_);
 
       // gradient w.r.t. input data
       deformable_col2im(s, col_buffer.dptr<DType>(),
-        in_data[conv::kOffset].dptr<DType>() + n*input_offset_dim_,
-        in_grad[conv::kData].shape_, col_buffer.shape_,
-        param_.kernel, param_.pad, param_.stride, param_.dilate, param_.num_deformable_group,
-        in_grad[conv::kData].dptr<DType>() + n*input_dim_,
-        req[conv::kData]);
+                        in_data[conv::kOffset].dptr<DType>() + n * input_offset_dim_,
+                        in_grad[conv::kData].shape_, col_buffer.shape_,
+                        param_.kernel, param_.pad, param_.stride,
+                        param_.dilate, param_.num_deformable_group,
+                        in_grad[conv::kData].dptr<DType>() + n * input_dim_);
 
       // gradient w.r.t. weight, dWeight should accumulate across the batch and group
-      deformable_im2col(s, in_data[conv::kData].dptr<DType>() + n*input_dim_,
-        in_data[conv::kOffset].dptr<DType>() + n*input_offset_dim_, in_data[conv::kData].shape_,
-        col_buffer.shape_, param_.kernel, param_.pad, param_.stride, param_.dilate,
-        param_.num_deformable_group, col_buffer.dptr<DType>());
+      deformable_im2col(s, in_data[conv::kData].dptr<DType>() + n * input_dim_,
+                        in_data[conv::kOffset].dptr<DType>() + n * input_offset_dim_,
+                        in_data[conv::kData].shape_, col_buffer.shape_, param_.kernel,
+                        param_.pad, param_.stride, param_.dilate,
+                        param_.num_deformable_group, col_buffer.dptr<DType>());
 
       for (index_t g = 0; g < group_; ++g) {
         auto request = (n == 0) ? req[conv::kWeight] : kAddTo;
@@ -327,9 +329,9 @@ class DeformableConvolutionOp : public Operator {
 
 template<typename xpu>
 Operator* CreateOp(DeformableConvolutionParam param, int dtype,
-  mxnet::ShapeVector *in_shape,
-  mxnet::ShapeVector *out_shape,
-  Context ctx);
+                   mxnet::ShapeVector *in_shape,
+                   mxnet::ShapeVector *out_shape,
+                   Context ctx);
 
 #if DMLC_USE_CXX11
 class DeformableConvolutionProp : public OperatorProperty {
@@ -360,8 +362,8 @@ class DeformableConvolutionProp : public OperatorProperty {
   }
 
   bool InferShape(mxnet::ShapeVector *in_shape,
-    mxnet::ShapeVector *out_shape,
-    mxnet::ShapeVector *aux_shape) const override {
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 4U) << "Input:[data, offset, weight, bias]";
@@ -411,8 +413,6 @@ class DeformableConvolutionProp : public OperatorProperty {
       oshape[3] = (dshape[3] + 2 * param_.pad[1] -
         (param_.dilate[1] * (ksize_x - 1) + 1)) / param_.stride[1] + 1;
       SHAPE_ASSIGN_CHECK(*out_shape, 0, ConvertLayout(oshape, kNCHW, param_.layout.value()));
-      CHECK_EQ(oshape[1] % param_.num_deformable_group, 0U) \
-        << "output num_filter must divide deformable group size";
       CHECK_EQ(oshape[2], offsetshape[2]) \
         << "output height must equal to offset map height";
       CHECK_EQ(oshape[3], offsetshape[3]) \
@@ -450,8 +450,8 @@ class DeformableConvolutionProp : public OperatorProperty {
   }
 
   bool InferType(std::vector<int> *in_type,
-    std::vector<int> *out_type,
-    std::vector<int> *aux_type) const override {
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const override {
     CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
@@ -477,10 +477,9 @@ class DeformableConvolutionProp : public OperatorProperty {
     return "_contrib_DeformableConvolution";
   }
 
-  std::vector<int> DeclareBackwardDependency(
-    const std::vector<int> &out_grad,
-    const std::vector<int> &in_data,
-    const std::vector<int> &out_data) const override {
+  std::vector<int> DeclareBackwardDependency(const std::vector<int> &out_grad,
+                                             const std::vector<int> &in_data,
+                                             const std::vector<int> &out_data) const override {
     return{ out_grad[conv::kOut], in_data[conv::kData],
             in_data[conv::kOffset], in_data[conv::kWeight] };
   }
@@ -501,7 +500,7 @@ class DeformableConvolutionProp : public OperatorProperty {
   }
 
   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
-    std::vector<int> *in_type) const override;
+                             std::vector<int> *in_type) const override;
 
  private:
   DeformableConvolutionParam param_;
