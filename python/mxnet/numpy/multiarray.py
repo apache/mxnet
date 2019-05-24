@@ -74,8 +74,8 @@ def _np_ndarray_cls(handle, writable=True, stype=0):
 _set_np_ndarray_class(_np_ndarray_cls)
 
 
-@set_module('mxnet.numpy')
-@use_np_compat  # pylint: disable=invalid-name
+@set_module('mxnet.numpy')  # pylint: disable=invalid-name
+@use_np_compat
 class ndarray(NDArray):
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array

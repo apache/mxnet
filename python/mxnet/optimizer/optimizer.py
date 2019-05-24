@@ -1623,8 +1623,6 @@ create = Optimizer.create_optimizer  # pylint: disable=invalid-name
 
 def _as_classic(a, allow_np):
     from ..numpy import ndarray as np_ndarray
-    if not a:
-        return a
     if isinstance(a, (tuple, list)):
         if any(isinstance(x, np_ndarray) for x in a):
             if allow_np:

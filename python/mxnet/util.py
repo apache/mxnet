@@ -207,10 +207,10 @@ def use_np_compat(func):
     """
 
     if inspect.isclass(func):
-        for name, method in inspect.getmembers(func,
-                                               predicate=lambda f: inspect.isfunction(f)
-                                                                   or inspect.ismethod(f)
-                                                                   or isinstance(f, property)):
+        for name, method in inspect.getmembers(
+                func,
+                predicate=
+                lambda f: inspect.isfunction(f) or inspect.ismethod(f) or isinstance(f, property)):
             if isinstance(method, property):
                 setattr(func, name, property(use_np_compat(method.__get__),
                                              method.__set__,

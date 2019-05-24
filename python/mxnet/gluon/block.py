@@ -34,7 +34,7 @@ from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
-from .. import numpy as _mx_np, is_np_compat
+from .. import numpy as _mx_np
 
 
 class _BlockScope(object):

@@ -32,7 +32,6 @@ from ..context import Context, cpu
 from .. import autograd
 from .utils import _indent, _brief_print_list, shape_is_known
 from ..util import is_np_compat
-from .. import numpy as _mx_np
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)

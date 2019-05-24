@@ -450,6 +450,7 @@ def _check_all_np_ndarrays(out):
 
 
 def shape_is_known(shape):
+    """Check whether a shape is completely known w/ or w/o np semantics."""
     if shape is None:
         return False
     unknown_dim_size = -1 if is_np_compat() else 0
@@ -461,4 +462,3 @@ def shape_is_known(shape):
         assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
                                             "received {}".format(unknown_dim_size, dim_size)
     return True
-
