@@ -6536,11 +6536,6 @@ def test_laop_6():
     test_det = mx.sym.linalg.det(data)
     check_fw(test_det, [a], [r])
     check_grad(test_det, [a])
-    # logdet
-    r = np.log(np.linalg.det(a))
-    test_logdet = mx.sym.linalg.logdet(data)
-    check_fw(test_logdet, [a], [r])
-    check_grad(test_logdet, [a])
     # test slogdet
     r1 = np.array([1., 1., 1.])
     r2 = np.log(np.abs(np.linalg.det(a)))

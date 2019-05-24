@@ -510,25 +510,6 @@ struct det {
   }
 };
 
-// logdet = log(det(A))
-struct logdet {
-  template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& logdet,
-                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, int>& pivot,
-                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    Tensor<xpu, 1, DType> sign = ctx.requested[0]
-      .get_space_typed<xpu, 1, DType>(logdet.shape_, s);
-    Copy(LU, A, s);
-    linalg_batch_getrf(LU, pivot, false, s);
-    using namespace mxnet_op;
-    using namespace mshadow::expr;
-    Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
-                                      LU.dptr_, sign.dptr_, logdet.dptr_);
-    const_cast<Tensor<xpu, 1, DType>&>(logdet) = F<mshadow_op::log>(sign) + logdet;
-  }
-};
-
 // sign = sign(det(A))
 // logabsdet = log(abs(det(A)))
 struct slogdet {
@@ -938,33 +919,6 @@ struct det_backward {
     // stop grad for zero det temporarily
     Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
                                          dA.dptr_, det.dptr_, DType(0));
-  }
-};
-
-// Backward of logdet(A) is derived from Jacobi's formula.
-// The closed form solution is pretty easy when A is invertible.
-// For non-invertible A, grad is not backwarded now.
-// TODO(arcadiaphy) add implementation for non-invertible case
-struct logdet_backward {
-  template<typename xpu, typename DType>
-  static void op(const Tensor<xpu, 1, DType>& dlogdet,
-                 const Tensor<xpu, 1, DType>& logdet,
-                 const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, int>& pivot,
-                 const Tensor<xpu, 3, DType>& dA,
-                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
-    using namespace mshadow;
-    using namespace mshadow::expr;
-    using namespace mxnet_op;
-    // compute inverse(A) and stores it to LU
-    linalg_batch_det_backward_helper(LU, pivot, logdet, dA, DType(-INFINITY), ctx);
-    const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogdet, \
-      Shape3(logdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
-      transpose(LU, Shape3(0, 2, 1));
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    // stop grad for zero det temporarily
-    Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
-                                         dA.dptr_, logdet.dptr_, DType(-INFINITY));
   }
 };
 
