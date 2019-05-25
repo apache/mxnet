@@ -46,7 +46,7 @@ pipeline {
     stage("Init") {
       steps {
         script{
-          cd_utils = load('ci/cd/Jenkinsfile_utils.groovy')
+          cd_utils = load('cd/Jenkinsfile_utils.groovy')
           ci_utils = load('ci/Jenkinsfile_utils.groovy')
           ci_utils.assign_node_labels(
             utility: 'restricted-utility',
@@ -77,7 +77,7 @@ pipeline {
           }
 
           // Load script for the supplied job type
-          def custom_steps = load("ci/cd/${params.RELEASE_JOB_TYPE}/Jenkins_pipeline.groovy")
+          def custom_steps = load("cd/${params.RELEASE_JOB_TYPE}/Jenkins_pipeline.groovy")
 
           // Extract the pipelines for the variants
           def pipelines = [:]

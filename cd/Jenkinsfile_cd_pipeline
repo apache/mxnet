@@ -38,7 +38,7 @@ pipeline {
     stage("Init") {
       steps {
         script {
-          cd_utils = load('ci/cd/Jenkinsfile_utils.groovy')
+          cd_utils = load('cd/Jenkinsfile_utils.groovy')
         }
       }
     }
