@@ -2083,13 +2083,13 @@ class Symbol(SymbolBase):
         """
         return op.sign(self, *args, **kwargs)
 
-    def flatten(self, *args, **kwargs):
+    def flatten(self, inplace=False, **kwargs): # pylint: disable=unused-argument
         """Convenience fluent method for :py:func:`flatten`.
 
         The arguments are the same as for :py:func:`flatten`, with
         this array as data.
         """
-        return op.flatten(self, *args, **kwargs)
+        return op.flatten(self, **kwargs)
 
     def shape_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`shape_array`.
@@ -2107,13 +2107,13 @@ class Symbol(SymbolBase):
         """
         return op.size_array(self, *args, **kwargs)
 
-    def expand_dims(self, *args, **kwargs):
+    def expand_dims(self, axis, inplace=False, **kwargs): # pylint: disable=unused-argument
         """Convenience fluent method for :py:func:`expand_dims`.
 
         The arguments are the same as for :py:func:`expand_dims`, with
         this array as data.
         """
-        return op.expand_dims(self, *args, **kwargs)
+        return op.expand_dims(self, axis=axis, **kwargs)
 
     def broadcast_to(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`broadcast_to`.
@@ -2539,13 +2539,13 @@ class Symbol(SymbolBase):
         """
         return op.softmin(self, *args, **kwargs)
 
-    def squeeze(self, *args, **kwargs):
+    def squeeze(self, axis, inplace=False, **kwargs): # pylint: disable=unused-argument
         """Convenience fluent method for :py:func:`squeeze`.
 
         The arguments are the same as for :py:func:`squeeze`, with
         this array as data.
         """
-        return op.squeeze(self, *args, **kwargs)
+        return op.squeeze(self, axis=axis, **kwargs)
 
     def get_backend_symbol(self, backend):
         """Return symbol for target backend.
