@@ -1582,7 +1582,7 @@ static const uint32_t NDARRAY_V2_MAGIC = 0xF993fac9;
 
 void NDArray::Save(dmlc::Stream *strm) const {
   // TODO(junwu): Support this after NumPy operators are merged
-  CHECK(!Imperative::Get()->is_np_comp())
+  CHECK(!Imperative::Get()->is_np_shape())
       << "Saving ndarray within the scope of np_shape is not supported.";
   // write magic number to mark this version
   // for storage type
@@ -1702,7 +1702,7 @@ bool NDArray::LegacyLoad(dmlc::Stream *strm, const uint32_t magic) {
 
 bool NDArray::Load(dmlc::Stream *strm) {
   // TODO(junwu): Support this after NumPy operators are merged
-  CHECK(!Imperative::Get()->is_np_comp())
+  CHECK(!Imperative::Get()->is_np_shape())
       << "Loading ndarray within the scope of np_shape is not supported.";
   uint32_t magic;
   if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
