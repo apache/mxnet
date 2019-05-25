@@ -167,6 +167,22 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const int dev_mask,
+                                                  const DispatchMode dispatch_mode) {
+  std::vector<ResourceRequest> request;
+  if (dev_mask == kGPU) {
+#if MXNET_USE_CUDNN_RNN
+    request.emplace_back(ResourceRequest::kTempSpace);
+
+    const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
+    if (param.p != 0 && 1.0f - param.p > 0) {
+      request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
+    }
+#endif
+  }
+  return request;
+}
+
 inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   const int dev_mask,
                                   DispatchMode* dispatch_mode,
@@ -703,21 +719,7 @@ The definition of GRU here is slightly different from paper but compatible with 
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", RNNStatefulComputeCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", RNNGrad{"_backward_RNN"})
-.set_attr<FResourceRequestEx>("FResourceRequestEx",
-  [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
-    std::vector<ResourceRequest> request;
-    if (dev_mask == kGPU) {
-#if MXNET_USE_CUDNN_RNN
-      request.emplace_back(ResourceRequest::kTempSpace);
-
-      const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-      if (param.p != 0 && 1.0f - param.p > 0) {
-        request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
-      }
-#endif
-    }
-    return request;
-})
+.set_attr<FResourceRequestEx>("FResourceRequestEx", RNNResourceEx)
 .add_argument("data", "NDArray-or-Symbol", "Input data to RNN")
 .add_argument("parameters", "NDArray-or-Symbol",
               "Vector of all RNN trainable parameters concatenated")
@@ -737,6 +739,7 @@ NNVM_REGISTER_OP(_backward_RNN)
 .set_attr_parser(ParamParser<RNNParam>)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulGradCompute<cpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", RNNStatefulGradCompute<cpu>)
+.set_attr<FResourceRequestEx>("FResourceRequestEx", RNNResourceEx);
 }  // namespace op
 }  // namespace mxnet

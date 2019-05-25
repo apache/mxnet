@@ -549,7 +549,6 @@ class RNNOp {
         CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_vec_[i]));
       }
       init_cudnn_ = false;
-      Storage::Get()->Free(temp_space_);
       Storage::Get()->Free(reserve_space_);
     }
     #if MXNET_USE_CUDNN_GE_7200
@@ -677,6 +676,12 @@ class RNNOp {
       Init(ctx, s, in_data, out_data);
     }
 
+    // Get temp space
+    int temp_size = workspace_size_;
+    Tensor<gpu, 1, DType> temp_space =
+        ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
+            mshadow::Shape1(temp_size), s);
+
 #if MXNET_USE_CUDNN_GE_7200
 
     cudnnRNNDataLayout_t layout_t;
@@ -770,7 +775,7 @@ class RNNOp {
                                            nullptr,
                                            nullptr,
                                            nullptr,
-                                           temp_space_.dptr,
+                                           temp_space.dptr_,
                                            workspace_byte_,
                                            reserve_space_.dptr,
                                            reserve_space_byte_));
@@ -792,7 +797,7 @@ class RNNOp {
                                          hy_ptr,
                                          cy_desc_,
                                          cy_ptr,
-                                         temp_space_.dptr,
+                                         temp_space.dptr_,
                                          workspace_byte_,
                                          reserve_space_.dptr,
                                          reserve_space_byte_));
@@ -823,7 +828,7 @@ class RNNOp {
                                             nullptr,
                                             nullptr,
                                             nullptr,
-                                            temp_space_.dptr,
+                                            temp_space.dptr_,
                                             workspace_byte_));
 #else
       CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
@@ -843,7 +848,7 @@ class RNNOp {
                                           hy_ptr,
                                           cy_desc_,
                                           cy_ptr,
-                                          temp_space_.dptr,
+                                          temp_space.dptr_,
                                           workspace_byte_));
 #endif
     }
@@ -1061,6 +1066,12 @@ class RNNOp {
       Init(ctx, s, in_data, out_data);
     }
 
+    // Get temp space
+    int temp_size = workspace_size_;
+    Tensor<gpu, 1, DType> temp_space =
+        ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
+            mshadow::Shape1(temp_size), s);
+
     #if MXNET_USE_CUDNN_GE_7200
     CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
                                       rnn_desc_,
@@ -1088,7 +1099,7 @@ class RNNOp {
                                       dcx_ptr,
                                       nullptr,
                                       nullptr,
-                                      temp_space_.dptr,
+                                      temp_space.dptr_,
                                       workspace_byte_,
                                       reserve_space_.dptr,
                                       reserve_space_byte_));
@@ -1100,7 +1111,7 @@ class RNNOp {
                                          hx.dptr_,
                                          y_data_desc_,
                                          y.dptr_,
-                                         temp_space_.dptr,
+                                         temp_space.dptr_,
                                          workspace_byte_,
                                          dw_desc_,
                                          dw.dptr_,
@@ -1130,7 +1141,7 @@ class RNNOp {
                                     dhx.dptr_,
                                     dcx_desc_,
                                     dcx_ptr,
-                                    temp_space_.dptr,
+                                    temp_space.dptr_,
                                     workspace_byte_,
                                     reserve_space_.dptr,
                                     reserve_space_byte_));
@@ -1143,7 +1154,7 @@ class RNNOp {
                                        hx.dptr_,
                                        y_desc_vec_.data(),
                                        y.dptr_,
-                                       temp_space_.dptr,
+                                       temp_space.dptr_,
                                        workspace_byte_,
                                        dw_desc_,
                                        dw.dptr_,
@@ -1378,17 +1389,16 @@ class RNNOp {
                                             strideA));
 
       // Create Dropout descriptors
-      DType* dropout_states_ = NULL;
       if (param_.p > 0) {
          ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
             (&dropout_desc_, s, 1.0f - param_.p, seed_);
-      } else {
-        dropout_byte_ = 0;
       }
-
+      // Only update the probability by passing in a null dropout_states ptr
+      DType* dropout_states = NULL;
+      size_t dropout_bytes = 0;
       CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
                                            param_.p,  // discard probability
-                                           dropout_states_, dropout_byte_,
+                                           dropout_states, dropout_bytes,
                                            seed_));
 
       // RNN descriptors
@@ -1469,8 +1479,6 @@ class RNNOp {
       workspace_size_ = workspace_byte_ / sizeof(DType);
       // Allocate the reserve space
       reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU(s->dev_id));
-      // Allocate the temp space
-      temp_space_ = Storage::Get()->Alloc(workspace_byte_, Context::GPU(s->dev_id));
       // Check that number of params are correct
       size_t cudnn_param_size;
       CUDNN_CALL(cudnnGetRNNParamsSize(s->dnn_handle_,
@@ -1539,9 +1547,9 @@ class RNNOp {
   cudnnDirectionMode_t direction_;
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  Storage::Handle reserve_space_, temp_space_;
+  Storage::Handle reserve_space_;
   uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
-  size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
+  size_t workspace_byte_, reserve_space_byte_;
   int workspace_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
   #if MXNET_USE_CUDNN_GE_7200
