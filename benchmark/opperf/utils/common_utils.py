@@ -20,6 +20,9 @@ import json
 
 from collections import ChainMap
 
+import logging
+logging.basicConfig(level=logging.INFO)
+
 
 def merge_map_list(map_list):
     """Merge all the Map in map_list into one final Map.
@@ -78,7 +81,7 @@ def _prepare_op_benchmark_result(op, op_bench_result):
             avg_forward_time = value
         elif "avg_time_backward" in key:
             avg_backward_time = value
-        elif "max_mem_usage" in key:
+        elif "max_storage_mem_alloc_" in key:
             max_mem_usage = value
         elif "inputs" in key:
             inputs = value
@@ -88,7 +91,7 @@ def _prepare_op_benchmark_result(op, op_bench_result):
 
 def _prepare_markdown(results):
     results_markdown = [
-        "| Operator | Avg Forward Time (ms) | Avg. Backward Time (ms) | Max Mem Usage (Bytes)"
+        "| Operator | Avg Forward Time (ms) | Avg. Backward Time (ms) | Max Mem Usage (Storage) (Bytes)"
         " | Inputs |",
         "| :---: | :---: | :---: | :---:| :--- |"]
 

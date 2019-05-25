@@ -35,7 +35,7 @@ def _get_memory_profile(memory_profile_results):
         if line.startswith("Memory:"):
             device_id = line.split()[1]
             avg_time_memory_alloc = float(line.split()[-1])
-            memory_profile["avg_time_mem_alloc_" + device_id] = avg_time_memory_alloc
+            memory_profile["max_storage_mem_alloc_" + device_id] = avg_time_memory_alloc
 
     return memory_profile
 

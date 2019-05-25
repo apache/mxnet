@@ -16,6 +16,7 @@
 # under the License.
 
 import argparse
+import logging
 
 import mxnet as mx
 from benchmark.opperf.tensor_operations.binary_operators import run_mx_binary_broadcast_operators_benchmarks, \
@@ -82,8 +83,7 @@ if __name__ == '__main__':
                              'output file.')
 
     user_options = parser.parse_args()
-    print("Running MXNet operator benchmarks with the following options: ")
-    print(user_options)
+    logging.info(f"Running MXNet operator benchmarks with the following options: {user_options}")
 
     # 2. RUN BENCHMARKS
     ctx = _parse_mxnet_context(user_options.ctx)

@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import logging
+
 import mxnet as mx
 from mxnet import nd
 
@@ -50,14 +52,14 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kw
 
     # Run Benchmarks
     op_benchmark_result = {op.__name__: []}
-    print("Begin Benchmark - ", op.__name__)
+    logging.info(f"Begin Benchmark - {op.__name__}")
     for idx, kwargs in enumerate(kwargs_list):
         _, profiler_output = benchmark_helper_func(op, runs, **kwargs)
 
         # Add inputs used for profiling this operator into result
         profiler_output["inputs"] = inputs[idx]
         op_benchmark_result[op.__name__].append(profiler_output)
-    print("Complete Benchmark - ", op.__name__)
+    logging.info(f"Complete Benchmark - {op.__name__}")
     return op_benchmark_result
 
 
