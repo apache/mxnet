@@ -1422,4 +1422,15 @@ def sanity_rat_license() {
     }]
 }
 
+def test_artifact_repository() {
+    return ['Test Artifact Repository Client': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/artifact-repo-client') {
+          utils.init_git()
+          utils.docker_run('ubuntu_cpu', 'test_artifact_repository', false)
+        }
+      }
+    }]
+}
+
 return this
