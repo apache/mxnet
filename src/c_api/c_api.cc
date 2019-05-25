@@ -1528,3 +1528,10 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
 
   API_END();
 }
+
+int MXStorageEmptyCache(int dev_type, int dev_id) {
+  API_BEGIN();
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  Storage::Get()->ReleaseAll(ctx);
+  API_END();
+}
