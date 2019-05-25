@@ -142,6 +142,16 @@ def np_shape(active=True):
     `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
     in NumPy even within this scope.
 
+    Parameters
+    ----------
+    active : bool
+        Indicates whether to activate NumPy-shape semantics.
+
+    Returns
+    -------
+    _NumpyShapeScope
+        A scope object for wrapping the code w/ or w/o NumPy-shape semantics.
+
     Example::
 
         with mx.np_shape(active=True):
@@ -201,12 +211,6 @@ def use_np_shape(func):
     `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
     in NumPy even within this scope.
 
-    Example::
-        import mxnet as mx
-        @mx.use_np_shape
-        def scalar_one():
-            return mx.nd.ones(())
-        print(scalar_one())
 
     Parameters
     ----------
@@ -216,6 +220,16 @@ def use_np_shape(func):
     -------
     Function
         A function for wrapping the user functions in the NumPy-shape semantics.
+
+
+    Examples
+    --------
+    >>> import mxnet as mx
+    >>> @mx.use_np_shape
+    ... def scalar_one():
+    ...     return mx.nd.ones(())
+    ...
+    >>> print(scalar_one())
     """
     @functools.wraps(func)
     def _with_np_shape(*args, **kwargs):
