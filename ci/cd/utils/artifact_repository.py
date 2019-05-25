@@ -416,17 +416,19 @@ def push_artifact(args: argparse.Namespace):
     logger.info("DEPENDENCIES: {}".format(args.dependencies))
     logger.info("")
 
+    if not args.licenses:
+        raise RuntimeError('No licenses defined. Please submit the licenses to be shipped with the binary.')
+
     # Upload mxnet
     try:
         logger.info('Uploading libmxnet library...')
         s3_upload(args.bucket, get_s3_key_prefix(args), [args.libmxnet])
         logger.info("")
 
-        # Upload licenses, if necessary
-        if args.licenses:
-            logger.info('Uploading licenses...')
-            s3_upload(args.bucket, get_s3_key_prefix(args, subdir='licenses'), args.licenses)
-            logger.info("")
+        # Upload licenses
+        logger.info('Uploading licenses...')
+        s3_upload(args.bucket, get_s3_key_prefix(args, subdir='licenses'), args.licenses)
+        logger.info("")
 
         # Upload dependencies, if necessary
         if args.dependencies:

@@ -1556,6 +1556,15 @@ broken_link_checker() {
     ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
+# artifact repository unit tets
+test_artifact_repository() {
+    set -ex
+    pushd .
+    cd ci/cd/utils/
+    pytest test_artifact_repository.py
+    popd
+}
+
 ##############################################################
 # MAIN
 #

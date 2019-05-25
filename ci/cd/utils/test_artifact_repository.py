@@ -512,3 +512,19 @@ class TestArtifactRepositoryTool(unittest.TestCase):
             mock_fopen.assert_called_once_with(os.path.join('dest', 'libmxnet.meta'), 'w')
             mock_fopen().write.called_with(
                 'commit_id: abcd1234\ndependency_linking: stynamic\nos: lunix\nvariant: gpu\n')
+
+    def test_push_artifact_throws_no_license_error(self):
+        """
+        Tests push artifact throwns error if no licenses are defined
+        """
+        args = TestArtifactRepositoryTool.create_argparse_namespace(licenses=[])
+        with self.assertRaises(RuntimeError) as ctx:
+            push_artifact(args)
+        self.assertEqual(str(ctx.exception),
+                          "No licenses defined. Please submit the licenses to be shipped with the binary.")
+
+        args = args = TestArtifactRepositoryTool.create_argparse_namespace(licenses=None)
+        with self.assertRaises(RuntimeError) as ctx:
+            push_artifact(args)
+        self.assertEqual(str(ctx.exception),
+                          "No licenses defined. Please submit the licenses to be shipped with the binary.")
