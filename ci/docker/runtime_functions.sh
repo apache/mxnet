@@ -1560,7 +1560,7 @@ broken_link_checker() {
 test_artifact_repository() {
     set -ex
     pushd .
-    cd ci/cd/utils/
+    cd cd/utils/
     pytest test_artifact_repository.py
     popd
 }

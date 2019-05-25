@@ -37,7 +37,7 @@ mx_mkldnn_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0, lib/libiomp5.so, l
 // either static or dynamic - depending on how it links to its dependencies
 libtype = 'static'
 
-libmxnet_pipeline = load('ci/cd/mxnet_lib/mxnet_lib_pipeline.groovy')
+libmxnet_pipeline = load('cd/mxnet_lib/mxnet_lib_pipeline.groovy')
 
 // Builds the static binary for the specified mxnet variant
 def build(mxnet_variant) {

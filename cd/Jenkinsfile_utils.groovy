@@ -97,7 +97,7 @@ def push_artifact(libmxnet_path, variant, libtype, license_paths = '', dependenc
   if(license_paths == null) license_paths = ''
   if(dependency_paths == null) dependency_paths = ''
 
-  sh "./ci/cd/utils/artifact_repository.py --push --verbose --libtype ${libtype} --variant ${variant} --libmxnet ${libmxnet_path} --licenses ${license_paths} --dependencies ${dependency_paths}"
+  sh "./cd/utils/artifact_repository.py --push --verbose --libtype ${libtype} --variant ${variant} --libmxnet ${libmxnet_path} --licenses ${license_paths} --dependencies ${dependency_paths}"
 }
 
 return this
