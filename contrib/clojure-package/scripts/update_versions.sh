@@ -19,7 +19,7 @@
 
 # Run this from the main Clojure project directory with 2 arguments
 # old-version and new-version
-# Ex: scripts/update_version 1.5.0-SNAPSHOT 1.5.0-SNAPSHOT
+# Ex: scripts/update_version 1.6.0-SNAPSHOT 1.6.0-SNAPSHOT
 
 set -evx
 echo "Replacing  $2  with  $2  in the directory  $PWD "

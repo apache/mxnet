@@ -55,7 +55,7 @@ You are able to run unit tests, integration tests, or both using this utility. T
 
 For running on GPU, add the flag `USE_CUDA=1`.
 
-An additional option, you can specify the mxnet version with `MXNET_VERSION=1.3.1-SNAPSHOT`.
+An additional option, you can specify the mxnet version with `MXNET_VERSION=1.4.0-SNAPSHOT`.
 
 ## Cleaning Up
 
