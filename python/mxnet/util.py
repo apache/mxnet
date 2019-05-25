@@ -49,8 +49,9 @@ def get_gpu_memory(gpu_dev_id):
 
 def set_np_shape(active):
     """
-    Turns on/off NumPy shape semantics. This is turned off by default for
-    keeping backward compatibility.
+    Turns on/off NumPy shape semantics, in which `()` represents the shape of scalar tensors,
+    and tuples with `0` elements, for example, `(0,)`, `(1, 0, 2)`, represent the shapes
+    of zero-size tensors. This is turned off by default for keeping backward compatibility.
 
     Please note that this is designed as an infrastructure for the incoming
     MXNet-NumPy operators. Legacy operators registered in the modules
@@ -83,7 +84,10 @@ def set_np_shape(active):
 def is_np_shape():
     """
     Checks whether the NumPy shape semantics is currently turned on.
-    This is turned off by default for keeping backward compatibility.
+    In NumPy shape semantics, `()` represents the shape of scalar tensors,
+    and tuples with `0` elements, for example, `(0,)`, `(1, 0, 2)`, represent
+    the shapes of zero-size tensors. This is turned off by default for keeping
+    backward compatibility.
 
     Please note that this is designed as an infrastructure for the incoming
     MXNet-NumPy operators. Legacy operators registered in the modules
@@ -109,7 +113,11 @@ def is_np_shape():
 
 
 class _NumpyShapeScope(object):
-    """Scope for managing numpy shape semantics.
+    """Scope for managing NumPy shape semantics.
+    In NumPy shape semantics, `()` represents the shape of scalar tensors,
+    and tuples with `0` elements, for example, `(0,)`, `(1, 0, 2)`, represent
+    the shapes of zero-size tensors.
+
     Do not use this class directly. Use `np_shape(active)` instead.
 
     Example::
