@@ -57,7 +57,6 @@ GetInception <- function() {
   }
 
   if (!file.exists("model/Inception-BN-0126.params")) {
-
     download.file(
         "http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-0126.params?raw=true",
         destfile = "model/Inception-BN-0126.params")
