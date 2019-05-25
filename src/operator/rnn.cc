@@ -181,6 +181,7 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
 #endif
   }
   return request;
+}
 
 inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   const int dev_mask,
