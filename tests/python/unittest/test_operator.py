@@ -4610,7 +4610,7 @@ def test_tile():
         assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
 
     test_normal_case()
-    with mx.np_compat():
+    with mx.np_shape():
         test_empty_tensor()
     test_empty_reps()
     test_tile_backward()
@@ -4671,7 +4671,7 @@ def test_one_hot():
     test_normal_case(index_type=np.float64)
     test_normal_case(index_type=np.float32)
     test_normal_case(index_type=np.float16)
-    with mx.np_compat():
+    with mx.np_shape():
         test_empty_indices()
     test_zero_depth()
 
@@ -7222,7 +7222,7 @@ def test_slice_partial_infer():
     check_slice_axis_partial_infer(var1, 0, 0, 5, (5, 0))
     check_slice_axis_partial_infer(var1, 1, 0, 5, (10, 0))
 
-    with mx.np_compat():
+    with mx.np_shape():
         var1 = mx.sym.var(name="data", shape=(-1, 20))
         check_slice_partial_infer(var1, (None, None), (None, 10), [], (-1, 10))
         check_slice_partial_infer(var1, (None, None), (None, 10), (None, 2), (-1, 5))
@@ -7247,7 +7247,7 @@ def test_float16_min_max():
 
 
 @with_seed()
-@mx.use_np_compat
+@mx.use_np_shape
 def test_zero_size_min_max():
     def min():
         a = mx.nd.zeros(shape=(5, 0))
@@ -8457,7 +8457,7 @@ def test_index_array():
             check_symbolic_forward(index_array, [input_array], [expected])
             check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
-    @mx.use_np_compat
+    @mx.use_np_shape
     def test_index_array_default_zero_dim():
         data  = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data)
@@ -8468,7 +8468,7 @@ def test_index_array():
         check_symbolic_forward(index_array, [input_array], [expected])
         check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
-    @mx.use_np_compat
+    @mx.use_np_shape
     def test_index_array_default_zero_size():
         data  = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data)
@@ -8492,7 +8492,7 @@ def test_index_array():
             check_symbolic_forward(index_array, [input_array], [expected])
             check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
 
-    @mx.use_np_compat
+    @mx.use_np_shape
     def test_index_array_select_axes_zero_size():
         data  = mx.symbol.Variable("data")
         index_array = mx.sym.contrib.index_array(data, axes=(2, 1))
@@ -8502,7 +8502,7 @@ def test_index_array():
 
         check_symbolic_forward(index_array, [input_array], [expected])
         check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
-    
+
     test_index_array_default()
     test_index_array_default_zero_dim()
     test_index_array_default_zero_size()
@@ -8514,7 +8514,7 @@ def test_index_array():
 def test_scalar_tensor_creation():
     assertRaises(MXNetError, mx.nd.zeros, shape=())
     assertRaises(MXNetError, mx.nd.ones, shape=())
-    with mx.np_compat():
+    with mx.np_shape():
         data_mx = mx.nd.ones(shape=())
         data_np = np.ones((), dtype=data_mx.dtype)
         assert same(data_mx.asnumpy(), data_np)
@@ -8524,7 +8524,7 @@ def test_scalar_tensor_creation():
 def test_zero_size_tensor_creation():
     assertRaises(MXNetError, mx.nd.zeros, shape=(0, 1, 3, 0))
     assertRaises(MXNetError, mx.nd.ones, shape=(0, 1, 3, 0))
-    with mx.np_compat():
+    with mx.np_shape():
         data_mx = mx.nd.ones(shape=(0, 1, 0, 4))
         data_np = np.ones(shape=data_mx.shape, dtype=data_mx.dtype)
         assert same(data_mx.asnumpy(), data_np)
@@ -8532,7 +8532,7 @@ def test_zero_size_tensor_creation():
 
 @with_seed()
 def test_concat_with_zero_size_tensor():
-    with mx.np_compat():
+    with mx.np_shape():
         data1 = mx.nd.ones((0, 8, 12))
         data2 = mx.nd.ones((3, 8, 12))
         data3 = mx.nd.ones((0, 8, 12))
@@ -8547,8 +8547,8 @@ def test_concat_with_zero_size_tensor():
 
 
 @with_seed()
-def test_np_compat_decorator():
-    @mx.use_np_compat
+def test_np_shape_decorator():
+    @mx.use_np_shape
     def check_scalar_one():
         """Generate scalar one tensor"""
         return mx.nd.ones(shape=())
@@ -8556,12 +8556,12 @@ def test_np_compat_decorator():
     assert check_scalar_one.__doc__ == "Generate scalar one tensor"
     assert check_scalar_one().shape == ()
     for active in [True, False]:
-        with mx.np_compat(active=active):
+        with mx.np_shape(active=active):
             assert check_scalar_one.__name__ == "check_scalar_one"
             assert check_scalar_one.__doc__ == "Generate scalar one tensor"
             assert check_scalar_one().shape == ()
 
-    @mx.use_np_compat
+    @mx.use_np_shape
     def check_concat(shape1, shape2, axis):
         data1 = mx.nd.ones(shape1)
         data2 = mx.nd.ones(shape2)
