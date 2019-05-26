@@ -17,8 +17,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-RELEASE_JOB = "restricted-mxnet-cd/mxnet-cd-release-job"
-
 // Triggers a downstream jenkins job responsible for building, testing
 // and publishing all the variants for a particular 'job_type'.
 // The 'job_type' should be the name of the directory that contains the 
@@ -27,7 +25,7 @@ RELEASE_JOB = "restricted-mxnet-cd/mxnet-cd-release-job"
 // be published.
 def trigger_release_job(job_name, job_type, mxnet_variants) {
   def run = build(
-    job: RELEASE_JOB, 
+    job: env.CD_RELEASE_JOB_NAME, 
     parameters: [
       string(name: 'RELEASE_JOB_NAME', value: "${job_name}"),
       string(name: 'RELEASE_JOB_TYPE', value: "${job_type}"),
