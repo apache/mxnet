@@ -31,7 +31,7 @@ from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
 from .utils import _indent, _brief_print_list, shape_is_known
-from .. import is_np_shape
+from ..util import is_np_shape
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -188,7 +188,7 @@ class Parameter(object):
         if self._shape is None:
             self._shape = new_shape
             return
-        unknown_dim_size = -1 if is_np_compat() else 0
+        unknown_dim_size = -1 if is_np_shape() else 0
         assert len(self._shape) == len(new_shape) and \
             all(j in (unknown_dim_size, i) for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
@@ -330,7 +330,7 @@ class Parameter(object):
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
                 # TODO(junwu): use np random operators when available
-                if is_np_compat():
+                if is_np_shape():
                     data = data.as_np_ndarray()  # convert to np.ndarray
 
             self._init_impl(data, ctx)
@@ -357,7 +357,7 @@ class Parameter(object):
         self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
                                     stype=self._grad_stype) for i in self._data]
         # TODO(junwu): use np.zeros
-        if is_np_compat():
+        if is_np_shape():
             self._grad = [arr.as_np_ndarray() for arr in self._grad]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
@@ -606,7 +606,7 @@ class Parameter(object):
             self._var = symbol.var(self.name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init, stype=self._stype)
-            if is_np_compat():
+            if is_np_shape():
                 self._var = self._var.as_np_ndarray()
         return self._var
 

@@ -551,7 +551,7 @@ class Block(object):
 
         for hook in self._forward_hooks.values():
             hook(self, args, out)
-        if _mx_np.is_np_compat():
+        if _mx_np.is_np_shape():
             _check_all_np_ndarrays(_flatten(out, "output")[0])
         return out
 

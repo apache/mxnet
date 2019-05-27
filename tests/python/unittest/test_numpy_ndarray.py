@@ -47,7 +47,7 @@ def test_array_creation():
 @with_seed()
 def test_zeros():
     # test np.zeros in Gluon
-    @np.use_np_compat
+    @np.use_np_shape
     class TestZeros(HybridBlock):
         def __init__(self, shape, dtype=None):
             super(TestZeros, self).__init__()
@@ -57,13 +57,13 @@ def test_zeros():
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x + F.np.zeros(shape, dtype)
 
-    @np.use_np_compat
+    @np.use_np_shape
     class TestZerosOutputType(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x, F.np.zeros(shape=())
 
     # test np.zeros in imperative
-    @np.use_np_compat
+    @np.use_np_shape
     def check_zero_array_creation(shape, dtype):
         np_out = _np.zeros(shape=shape, dtype=dtype)
         mx_out = np.zeros(shape=shape, dtype=dtype)
@@ -97,7 +97,7 @@ def test_zeros():
 @with_seed()
 def test_ones():
     # test np.ones in Gluon
-    @np.use_np_compat
+    @np.use_np_shape
     class TestOnes(HybridBlock):
         def __init__(self, shape, dtype=None):
             super(TestOnes, self).__init__()
@@ -107,13 +107,13 @@ def test_ones():
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x * F.np.ones(shape, dtype)
 
-    @np.use_np_compat
+    @np.use_np_shape
     class TestOnesOutputType(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x, F.np.ones(shape=())
 
     # test np.ones in imperative
-    @np.use_np_compat
+    @np.use_np_shape
     def check_ones_array_creation(shape, dtype):
         np_out = _np.ones(shape=shape, dtype=dtype)
         mx_out = np.ones(shape=shape, dtype=dtype)
@@ -156,7 +156,7 @@ def test_ndarray_binary_element_wise_ops():
     def get_np_ret(x1, x2, op):
         return np_op_map[op](x1, x2)
 
-    @np.use_np_compat
+    @np.use_np_shape
     class TestBinaryElementWiseOp(HybridBlock):
         def __init__(self, op, scalar=None, reverse=False):
             super(TestBinaryElementWiseOp, self).__init__()
@@ -219,7 +219,7 @@ def test_ndarray_binary_element_wise_ops():
                 print(self._op)
                 assert False
 
-    @np.use_np_compat
+    @np.use_np_shape
     def check_binary_op_result(shape1, shape2, op, dtype=None):
         if shape1 is None:
             mx_input1 = abs(_np.random.uniform()) + 1
@@ -289,7 +289,7 @@ def test_ndarray_binary_element_wise_ops():
 
 @with_seed()
 def test_hybrid_block_multiple_outputs():
-    @np.use_np_compat
+    @np.use_np_shape
     class TestAllNumpyOutputs(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
             return F.npe.relu(x), F.np.sum(x)
@@ -309,7 +309,7 @@ def test_hybrid_block_multiple_outputs():
             assert type(out1) is expected_out_type
             assert type(out2) is expected_out_type
 
-    @np.use_np_compat
+    @np.use_np_shape
     class TestMixedTypeOutputsFailure(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
             return F.relu(x.as_classic_ndarray()), F.np.sum(x)
