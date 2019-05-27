@@ -40,6 +40,7 @@ import numpy as np
 from .. import ndarray
 from ..util import is_np_shape
 
+
 def split_data(data, num_slice, batch_axis=0, even_split=True):
     """Splits an NDArray into `num_slice` slices along `batch_axis`.
     Usually used for data parallelism where each slices is sent

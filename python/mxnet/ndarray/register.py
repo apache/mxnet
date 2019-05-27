@@ -25,7 +25,7 @@ from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-
 from ..ndarray_doc import _build_doc
 
 from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null, _is_np_op  # pylint: disable=unused-import
-from ..util import use_np_compat  # pylint: disable=unused-import
+from ..util import use_np_shape  # pylint: disable=unused-import
 
 
 def _verify_all_np_ndarrays(op_name, func_name, args, out):
@@ -176,7 +176,7 @@ def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=F
     if is_np_op:
         doc_str_idx = 2
         code.append("""
-@use_np_compat""")
+@use_np_shape""")
     if arr_name:
         code.append("""
 def %s(*%s, **kwargs):"""%(func_name, arr_name))

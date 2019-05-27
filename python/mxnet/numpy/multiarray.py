@@ -30,7 +30,7 @@ from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types
-from ..util import _sanity_check_params, set_module, use_np_compat
+from ..util import _sanity_check_params, set_module, use_np_shape
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
@@ -75,7 +75,7 @@ _set_np_ndarray_class(_np_ndarray_cls)
 
 
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
-@use_np_compat
+@use_np_shape
 class ndarray(NDArray):
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
@@ -1140,7 +1140,6 @@ class ndarray(NDArray):
         return len(self.shape)
 
     @property
-    @use_np_compat
     def size(self):
         """Number of elements in the array."""
         return super(ndarray, self).size
@@ -1150,7 +1149,6 @@ class ndarray(NDArray):
 
 
 @set_module('mxnet.numpy')
-@use_np_compat
 def empty(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, without initializing entries.
 
@@ -1183,7 +1181,7 @@ def empty(shape, dtype=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-@use_np_compat
+@use_np_shape
 def array(object, dtype=None, **kwargs):
     """
     Create an array.
