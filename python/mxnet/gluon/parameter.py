@@ -131,7 +131,6 @@ class Parameter(object):
         self._grad_stype = grad_stype
         self._stype = stype
 
-
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
         return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
@@ -189,9 +188,9 @@ class Parameter(object):
         if self._shape is None:
             self._shape = new_shape
             return
-
+        unknown_dim_size = -1 if is_np_compat() else 0
         assert len(self._shape) == len(new_shape) and \
-            all(j in (0, i) for i, j in zip(new_shape, self._shape)), \
+            all(j in (unknown_dim_size, i) for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
                 str(new_shape), str(self._shape))
 
@@ -330,6 +329,9 @@ class Parameter(object):
                                      ctx=context.cpu(), stype=self._stype)
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
+                # TODO(junwu): use np random operators when available
+                if is_np_compat():
+                    data = data.as_np_ndarray()  # convert to np.ndarray
 
             self._init_impl(data, ctx)
 
@@ -354,6 +356,9 @@ class Parameter(object):
 
         self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
                                     stype=self._grad_stype) for i in self._data]
+        # TODO(junwu): use np.zeros
+        if is_np_compat():
+            self._grad = [arr.as_np_ndarray() for arr in self._grad]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
                                 self._grad, self.grad_req)
@@ -462,7 +467,6 @@ class Parameter(object):
         else:
             raise ValueError("Cannot reset context for Parameter '%s' because it "
                              "has not been initialized."%self.name)
-
 
     def set_data(self, data):
         """Sets this parameter's value on all contexts."""
@@ -602,6 +606,8 @@ class Parameter(object):
             self._var = symbol.var(self.name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init, stype=self._stype)
+            if is_np_compat():
+                self._var = self._var.as_np_ndarray()
         return self._var
 
     def cast(self, dtype):
