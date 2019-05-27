@@ -985,7 +985,8 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
 
   g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
   if (dmlc::GetEnv("MXNET_USE_FUSION", true)) {
-    g = FusePointwise(std::move(g));
+    g = FusePointwiseForward(std::move(g));
+    g = FusePointwiseBackward(std::move(g));
   }
   // create "device" and "context" attrs for the graph
   g = AssignContext(g, default_ctx, ctx_map,

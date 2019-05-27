@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <algorithm>
 #include <nvrtc.h>
 #include <cuda.h>
 #include "./fused_op.h"
@@ -55,10 +56,12 @@ inline std::string mshadowTypeToString(int type) {
 
 }  // namespace detail
 
-FusedOp::FusedOp(const FusedOpConfig& config) {
+FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
   this->inputs_ = std::vector<FusedOpEntry>(config.num_inputs);
   this->outputs_ = std::vector<FusedOpEntry>(config.num_outputs);
-  this->symbol_ = nnvm::pass::LoadJSON(config.symbol_json);
+  //this->symbol_ = nnvm::pass::LoadJSON(config.symbol_json);
+  this->symbol_ = nnvm::Graph();
+  this->symbol_.outputs = attrs->subgraphs[0]->outputs;
   this->initialized_ = false;
   this->cc_major_ = -1;
   this->cc_minor_ = -1;
@@ -90,7 +93,8 @@ void FusedOp::GenerateCode() {
     if (source != nullptr) {
       std::string var_name = "temp" + std::to_string(temp_name_counter++);
       if (source->is_variable()) {
-        code += "const auto " + var_name + " = load(" + source->attrs.name + ", i);\n";
+        code += "const auto " + var_name + " = load(input_" + source->attrs.name + ", i);\n";
+        code += "printf(\"%d: %f\\n\", i, " + var_name + ");\n";
         CHECK_EQ(outputs[i], 1);
         variables[{i, 0}] = var_name;
       } else {
@@ -167,6 +171,21 @@ void FusedOp::GenerateCode() {
           }
           continue;
         }
+
+        // Special cases with variable number
+        // of inputs/outputs, listed in
+        // detail::fused_op_variable_io_ops
+        if (op_name == "add_n") {
+          CHECK_EQ(outputs[i], 1);
+          const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          code += "auto " + var_name + " = " + arg + ";\n";
+          for (size_t inp = 1; inp < node.inputs.size(); ++inp) {
+            const auto& temp_arg = variables[{node.inputs[inp].node_id, node.inputs[inp].index}];
+            code += var_name + " = add(" + var_name + ", " + temp_arg + ");\n";
+          }
+          variables[{i,0}] = var_name;
+          continue;
+        }
         LOG(FATAL) << "Unrecognized op " + op_name;
       }
     } else {
@@ -229,12 +248,15 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     nnvm::Symbol sym;
     sym.outputs = this->symbol_.outputs;
     const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
+    for (const auto& name : input_names) {
+      LOG(INFO) << name;
+    }
     size_t num_params = in_dtypes.size() + out_dtypes.size();
     size_t i = 0;
     for (const auto &type : in_dtypes) {
       std::string type_name = detail::mshadowTypeToString(type);
       aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      kernel_params += "DType" + std::to_string(i) + "* " +input_names[i];
+      kernel_params += "DType" + std::to_string(i) + "* input_" +input_names[i];
       ++i;
       if (i < num_params) {
         kernel_params += ", ";
@@ -341,16 +363,54 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
         &(args[0]), 0));           // arguments
 }
 
+inline void PrintFullGraph(const nnvm::Graph& g) {
+  const auto& index = g.indexed_graph();
+
+  for (size_t i = 0; i < index.num_nodes(); ++i) {
+    const auto& node = index[i];
+    std::cout << "Node " << i << std::endl;
+    const auto* source = node.source;
+    if (source != nullptr) {
+      std::cout << source->attrs.name << std::endl;
+      if (source->is_variable()) {
+        std::cout << "Variable!" << std::endl;
+      }
+      std::cout << "Inputs: " << node.inputs.size() << std::endl;
+      for (size_t j = 0; j < node.inputs.size(); ++j) {
+        std::cout << node.inputs[j].node_id << " (" <<
+          index[node.inputs[j].node_id].source->attrs.name << ") " <<
+          node.inputs[j].index << ". Entry id: " <<
+          index.entry_id(node.inputs[j]) << std::endl;
+      }
+      std::cout << "Outputs: " << source->num_outputs() << std::endl;
+    } else {
+      std::cout << "NULLPTR in source" << std::endl;
+    }
+  }
+
+  std::cout << "Graph outputs" << std::endl;
+  for (const auto& entry : index.outputs()) {
+    std::cout << entry.node_id << " (" <<
+      index[entry.node_id].source->attrs.name << ") " <<
+      entry.index << ". Entry id: " <<
+      index.entry_id(entry) << std::endl;
+  }
+}
+
 template <>
 bool FusedOp::InferShape<gpu>(const nnvm::NodeAttrs &attrs,
                               std::vector<mxnet::TShape> *in_attrs,
                               std::vector<mxnet::TShape> *out_attrs) {
   std::vector<mxnet::TShape> input_shapes(*in_attrs);
+  std::cout << "InferShape in FusedOp! " << attrs.name  << std::endl;
+  PrintFullGraph(this->symbol_);
   this->symbol_ = mxnet::exec::InferShape(std::move(this->symbol_),
                                           std::move(input_shapes),
                                           "__shape__");
+  std::cout << "End of infershape in FusedOp " << attrs.name << std::endl;
 
   const auto& g = this->symbol_.indexed_graph();
+  const auto& input_nids = g.input_nodes();
 
   std::vector<mxnet::TShape> out_shapes;
   const std::vector<mxnet::TShape> shapes = this->symbol_.GetAttr<mxnet::ShapeVector>("shape");
@@ -361,6 +421,13 @@ bool FusedOp::InferShape<gpu>(const nnvm::NodeAttrs &attrs,
   for (size_t i = 0; i < out_attrs->size(); ++i) {
     op::shape_assign(&(out_attrs->at(i)), out_shapes[i]);
   }
+
+  // assign to in_attrs
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    const auto eid = g.entry_id(input_nids[i], 0);
+    SHAPE_ASSIGN_CHECK(*in_attrs, i, shapes[eid]);
+  }
+
   bool inferred = true;
   for (const auto& attr : *in_attrs) {
     inferred = inferred && !op::shape_is_none(attr);
@@ -381,6 +448,7 @@ bool FusedOp::InferType<gpu>(const nnvm::NodeAttrs &attrs,
                                          "__dtype__");
 
   const auto& g = this->symbol_.indexed_graph();
+  const auto& input_nids = g.input_nodes();
 
   std::vector<int> out_types;
   const std::vector<int> types = this->symbol_.GetAttr<nnvm::DTypeVector>("dtype");
@@ -391,6 +459,13 @@ bool FusedOp::InferType<gpu>(const nnvm::NodeAttrs &attrs,
   for (size_t i = 0; i < out_attrs->size(); ++i) {
     op::type_assign(&(out_attrs->at(i)), out_types[i]);
   }
+
+  // assign to in_attrs
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    const auto eid = g.entry_id(input_nids[i], 0);
+    TYPE_ASSIGN_CHECK(*in_attrs, i, types[eid]);
+  }
+
   bool inferred = true;
   for (const auto& attr : *in_attrs) {
     inferred = inferred && !op::type_is_none(attr);

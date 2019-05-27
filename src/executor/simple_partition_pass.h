@@ -83,6 +83,7 @@ class BidirectionalGraph {
     std::unordered_set<Node*> all_set(nodes.size());
     std::vector<PairSet> separation_sets;
     for (Node& node : nodes) {
+      std::cout << "Looking at " << node.nnvmptr->attrs.name << std::endl;
       if (!is_compatible(node.nnvmptr)) {
         incomp_set.insert(&node);
         std::unordered_set<Node*> in_graph;
@@ -128,10 +129,13 @@ class BidirectionalGraph {
     std::deque<Node*> stack(outputs.begin(), outputs.end());
     while (!stack.empty()) {
       Node* vertex = stack.front();
+      std::cout << "Checking " << vertex->nnvmptr->attrs.name << std::endl;
       stack.pop_front();
       if (!visited.count(vertex)) {
+        std::cout << "Not visited!" << std::endl;
         visited.insert(vertex);
         if (unused_set.count(vertex)) {
+          std::cout << "Adding to subgraphs!" << std::endl;
           subgraphs.emplace_back(naive_grow_subgraph(vertex, &unused_set, &incomp_map));
         }
         for (Node* input : vertex->inputs) {
@@ -175,11 +179,16 @@ class BidirectionalGraph {
     std::unordered_set<Node*> incomp_set;
     std::deque<Node*> stack;
     stack.emplace_back(head);
+    std::cout << "naive grow subgraph" << std::endl;
     while (!stack.empty()) {
       Node* vertex = stack.back();
+      std::cout << "Naive sees " << vertex->nnvmptr->attrs.name << std::endl;
       stack.pop_back();
+      std::cout << "Unused: " << unused_set->count(vertex) << std::endl;
+      std::cout << "Compatible: " << !incomp_set.count(vertex) << std::endl;
       if (unused_set->count(vertex) && !incomp_set.count(vertex)) {
         unused_set->erase(vertex);
+        std::cout << "Put into subgraph!" << std::endl;
         subgraph.insert(vertex);
         incomp_set.insert((*incomp_map)[vertex].begin(), (*incomp_map)[vertex].end());
         for (Node* input : vertex->inputs) {

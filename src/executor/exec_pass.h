@@ -186,7 +186,8 @@ using NodeEntryMapCounter =
  */
 NodeEntryMapCounter GetNodeEntryCount(const Graph& g);
 
-Graph FusePointwise(Graph&& g);
+Graph FusePointwiseForward(Graph&& g);
+Graph FusePointwiseBackward(Graph&& g);
 
 /*!
  * \brief Infer shapes in the graph given the information.

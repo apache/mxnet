@@ -23,6 +23,7 @@
  * \brief
  * \author Clement Fuji Tsang
  */
+#include <algorithm>
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
@@ -41,6 +42,7 @@ namespace {
     if (n->op() == nullptr)
       return false;
     std::string op_name = n->op()->name;
+    std::cout << "Visiting " << op_name << std::endl;
     if (fused_op_binary_ops.count(op_name))
       return true;
     if (fused_op_unary_ops.count(op_name))
@@ -49,6 +51,12 @@ namespace {
       return true;
     if (fused_op_mimo_ops.count(op_name))
       return true;
+    if (std::find(fused_op_variable_io_ops.begin(),
+                  fused_op_variable_io_ops.end(),
+                  op_name) !=
+        fused_op_variable_io_ops.end())
+      return true;
+    std::cout << "It was not in any list" << std::endl;
     return false;
   }
 
@@ -89,6 +97,7 @@ namespace {
 template<typename FCreateNode>
 Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_sets,
                                 FCreateNode create_subgraph_node) {
+  std::cout << "Fusion sets: " << subgraph_sets.size() << std::endl;
   for (auto subgraph_set : subgraph_sets) {
     // Create MXNet subgraph
     Graph subgraph;
@@ -153,7 +162,8 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
           ++it;
         } else {
           subgraph_node->control_deps.push_back(*it);
-          it = node->control_deps.erase(it);
+          //it = node->control_deps.erase(it);
+          ++it;
         }
       }
     });
@@ -163,14 +173,23 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
   return new_graph;
 }
 
-Graph FusePointwise(Graph &&g) {
+Graph FusePointwiseForward(Graph &&g) {
   Graph ret;
-  const auto& idx = g.indexed_graph();
+  g.indexed_graph();
   const auto & num_forward_output = g.GetAttr<size_t>("num_forward_outputs");
   Graph fg;
   fg.outputs.insert(fg.outputs.begin(), g.outputs.begin(),
                     g.outputs.begin() + num_forward_output);
   auto subsets = GetCompatibleSubsets(fg, IsFusionCompatible);
+  g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode);
+  ret.outputs = g.outputs;
+  return ret;
+}
+
+Graph FusePointwiseBackward(Graph &&g) {
+  Graph ret;
+  g.indexed_graph();
+  auto subsets = GetCompatibleSubsets(g, IsFusionCompatible);
   g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode);
   ret.outputs = g.outputs;
   return ret;

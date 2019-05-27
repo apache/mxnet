@@ -50,7 +50,7 @@ class FusedOp {
  public:
   static const int NTHREADS = 512;
 
-  explicit FusedOp(const FusedOpConfig& config);
+  explicit FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config);
   ~FusedOp() {}
   uint32_t num_inputs() const {
     return inputs_.size();

@@ -381,6 +381,41 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   return ret;
 }
 
+
+inline void PrintFullGraph(const nnvm::Graph& g) {
+  const auto& index = g.indexed_graph();
+
+  for (size_t i = 0; i < index.num_nodes(); ++i) {
+    const auto& node = index[i];
+    std::cout << "Node " << i << std::endl;
+    const auto* source = node.source;
+    if (source != nullptr) {
+      std::cout << source->attrs.name << std::endl;
+      if (source->is_variable()) {
+        std::cout << "Variable!" << std::endl;
+      }
+      std::cout << "Inputs: " << node.inputs.size() << std::endl;
+      for (size_t j = 0; j < node.inputs.size(); ++j) {
+        std::cout << node.inputs[j].node_id << " (" <<
+          index[node.inputs[j].node_id].source->attrs.name << ") " <<
+          node.inputs[j].index << ". Entry id: " <<
+          index.entry_id(node.inputs[j]) << std::endl;
+      }
+      std::cout << "Outputs: " << source->num_outputs() << std::endl;
+    } else {
+      std::cout << "NULLPTR in source" << std::endl;
+    }
+  }
+
+  std::cout << "Graph outputs" << std::endl;
+  for (const auto& entry : index.outputs()) {
+    std::cout << entry.node_id << " (" <<
+      index[entry.node_id].source->attrs.name << ") " <<
+      entry.index << ". Entry id: " <<
+      index.entry_id(entry) << std::endl;
+  }
+}
+
 /*!\brief
  * This is a version of the InferAttr function specifically for shape inference.
  *
@@ -516,9 +551,11 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   auto infer_step = [&](uint32_t nid, bool last_iter) {
     const auto& inode = idx[nid];
     const std::string name = inode.source->attrs.name;
+    std::cout << "InferStep: " << nid << " " << name << std::endl;
     const uint32_t num_inputs = inode.inputs.size();
     const uint32_t num_outputs = inode.source->num_outputs();
     if (inode.source->is_variable()) {
+      std::cout << "InferStep: Variable!" << std::endl;
       // Variable node. No operator. Only one output entry.
       CHECK(inode.source->op() == nullptr);
       CHECK_EQ(num_outputs, 1U);
@@ -539,6 +576,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       }
     } else if (is_backward.get(inode.source->op(), false) &&
                inode.source->control_deps.size() && bwd_identity_assign) {
+      std::cout << "InferStep: Backward!" << std::endl;
       CHECK(dispatch_mode_name == nullptr)
         << "Backward inference for node attributes is not available";
       CHECK_GE(inode.source->control_deps.size(), 1U)
@@ -549,7 +587,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       static auto& is_fusion = Op::GetAttr<exec::TIsFusion>("TIsFusion");
       if (!is_fusion.get(fwd_ptr->op(), false)) {
         const IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
-        std::cout << inode.source->attrs.name << ": No fusion!" << std::endl;
+        LOG(INFO) << inode.source->attrs.name << ": No fusion!" << std::endl;
         // use gradient function to find out the correspondence.
         std::vector<nnvm::NodeEntry> ograd(fwd_ptr->num_outputs());
         for (size_t i = 0; i < ograd.size(); ++i) {
@@ -632,6 +670,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
         }
       }
     } else {
+      std::cout << "InferStep: Dispatch!" << std::endl;
       DispatchMode* dispatch_mode = nullptr;
       bool forward_known = true;
       // Forward operator inference.
@@ -704,6 +743,8 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
     }
     last_num_unknown = num_unknown;
     num_unknown = 0;
+    std::cout << "Will be checking entries." << std::endl;
+    PrintFullGraph(ret);
     for (size_t j = entry_start; j < entry_end; ++j) {
       std::cout << "Checking entry " << j << std::endl;
       if (fis_none(rshape[j])) {
@@ -735,6 +776,7 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
                        mxnet::ShapeVector&& shape_inputs,
                        const std::string& shape_attr_key) {
   using dmlc::any;
+  std::cout << "Calling InferShape!" << std::endl;
   if (shape_inputs.size() != 0) {
     graph.attrs["shape_inputs"] = std::make_shared<any>(std::move(shape_inputs));
   }
