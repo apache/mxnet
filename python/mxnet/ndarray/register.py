@@ -25,9 +25,10 @@ from ._internal import NDArrayBase, _imperative_invoke # pylint: disable=unused-
 from ..ndarray_doc import _build_doc
 
 from ..base import mx_uint, check_call, _LIB, py_str, _init_op_module, _Null, _is_np_op  # pylint: disable=unused-import
+from ..util import use_np_compat  # pylint: disable=unused-import
 
 
-def _verify_all_np_ndarrays(op_name, func_name, *array_list):
+def _verify_all_np_ndarrays(op_name, func_name, args, out):
     """Verify if all the arrays are numpy ndarrays.
 
     Parameters
@@ -37,11 +38,14 @@ def _verify_all_np_ndarrays(op_name, func_name, *array_list):
     func_name : str
         Operator name exposed to users. This is usually the name by stripping off
         the prefix of the full operator names registered in backend.
-    array_list : list of arrays
+    args : list of arrays
+        Input ndarray arguments to be checked.
+    out : ndarray or None or list of ndarrays
+        User-provided output ndarrays.
     """
     from ..numpy import ndarray as np_ndarray
-    for array in array_list:
-        if (array is not None) and (not isinstance(array, np_ndarray)):
+    for arr in args:
+        if (arr is not None) and (not isinstance(arr, np_ndarray)):
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                             'This is a numpy operator which can only accept '
                             'MXNet numpy ndarrays, while received a classic ndarray. '
@@ -49,9 +53,22 @@ def _verify_all_np_ndarrays(op_name, func_name, *array_list):
                             'convert it to an MXNet numpy ndarray, and then feed the converted '
                             'array to this operator.'
                             .format(op_name, func_name))
+    if out is None:
+        return
+    if not isinstance(out, (list, tuple)):
+        out = [out]
+    for arr in out:
+        if (arr is not None) and (not isinstance(arr, np_ndarray)):
+            raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
+                            'This is a numpy operator which can only write to MXNet numpy '
+                            'ndarrays, while received a classic ndarray. '
+                            'Please call `as_np_ndarray()` upon the classic ndarray to '
+                            'convert it to an MXNet numpy ndarray, and then feed the converted '
+                            'array to this operator.'
+                            .format(op_name, func_name))
 
 
-def _verify_all_classic_ndarrays(op_name, func_name, *array_list):
+def _verify_all_classic_ndarrays(op_name, func_name, args, out):
     """Verify if all the arrays are classic ndarrays.
 
     Parameters
@@ -61,13 +78,29 @@ def _verify_all_classic_ndarrays(op_name, func_name, *array_list):
     func_name : str
         Operator name exposed to users. This is usually the name by stripping off
         the prefix of the full operator names registered in backend.
-    array_list : list of arrays
+    args : list of arrays
+        Input ndarray arguments to be checked.
+    out : ndarray or None or list of ndarrays
+        User-provided output ndarrays.
     """
     from ..numpy import ndarray as np_ndarray
-    for array in array_list:
-        if (array is not None) and (isinstance(array, np_ndarray)):
+    for arr in args:
+        if (arr is not None) and (isinstance(arr, np_ndarray)):
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                             'This is a classic operator which can only accept '
+                            'classic ndarrays, while received an MXNet numpy ndarray. '
+                            'Please call `as_classic_ndarray()` upon the numpy ndarray to '
+                            'convert it to a classic ndarray, and then feed the converted '
+                            'array to this operator.'
+                            .format(op_name, func_name))
+    if out is None:
+        return
+    if not isinstance(out, (list, tuple)):
+        out = [out]
+    for arr in out:
+        if (arr is not None) and (isinstance(arr, np_ndarray)):
+            raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
+                            'This is a classic operator which can only write to '
                             'classic ndarrays, while received an MXNet numpy ndarray. '
                             'Please call `as_classic_ndarray()` upon the numpy ndarray to '
                             'convert it to a classic ndarray, and then feed the converted '
@@ -138,6 +171,12 @@ def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=F
     signature = ndsignature + signature
 
     code = []
+    is_np_op = _is_np_op(op_name)
+    doc_str_idx = 1
+    if is_np_op:
+        doc_str_idx = 2
+        code.append("""
+@use_np_compat""")
     if arr_name:
         code.append("""
 def %s(*%s, **kwargs):"""%(func_name, arr_name))
@@ -187,13 +226,12 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         keys.append('%s')
         vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
-    is_np_op = _is_np_op(op_name)
     verify_ndarrays_fn =\
         _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_classic_ndarrays.__name__
     if not signature_only:
         code.append("""
-    {}("{}", "{}", out, *ndargs)
-        """.format(verify_ndarrays_fn, op_name, func_name))
+    {verify_fn}("{op_name}", "{func_name}", ndargs, out)
+        """.format(verify_fn=verify_ndarrays_fn, op_name=op_name, func_name=func_name))
         code.append("""
     return _imperative_invoke(%d, ndargs, keys, vals, out, %s)"""%(
         handle.value, str(is_np_op)))
@@ -204,7 +242,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
     doc_str_lines = _os.linesep+''.join(['    '+s if s.strip() else s
                                          for s in 'r"""{doc_str}"""'.format(doc_str=doc_str)
                                          .splitlines(True)])
-    code.insert(1, doc_str_lines)
+    code.insert(doc_str_idx, doc_str_lines)
     return ''.join(code), doc_str
 
 
