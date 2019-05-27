@@ -19,16 +19,15 @@
 
 from __future__ import absolute_import
 import numpy as _np
-from ...base import _sanity_check_params, use_np_compat, numeric_types, set_module
+from ...base import numeric_types
+from ...util import _sanity_check_params, use_np_compat, set_module
 from ...context import current_context
 from . import _internal as _npi
-from ..ndarray import NDArray
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum']
 
 
 @set_module('mxnet.ndarray.numpy')
-@use_np_compat
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
@@ -60,7 +59,6 @@ def zeros(shape, dtype=_np.float32, **kwargs):
 
 
 @set_module('mxnet.ndarray.numpy')
-@use_np_compat
 def ones(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
@@ -92,6 +90,7 @@ def ones(shape, dtype=None, **kwargs):
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
+@use_np_compat
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, out=None):
     """ Helper function for element-wise operation.
     The function will perform numpy-like broadcasting if needed and call different functions.
@@ -122,6 +121,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
     mxnet.numpy.ndarray
         result array
     """
+    from ...numpy import ndarray
     if isinstance(lhs, numeric_types):
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
@@ -133,7 +133,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
                 return rfn_scalar(rhs, float(lhs), out=out)
     elif isinstance(rhs, numeric_types):
         return lfn_scalar(lhs, float(rhs), out=out)
-    elif isinstance(rhs, NDArray):
+    elif isinstance(rhs, ndarray):
         return fn_array(lhs, rhs, out=out)
     else:
         raise TypeError('type %s not supported' % str(type(rhs)))
@@ -141,7 +141,6 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
 
 
 @set_module('mxnet.ndarray.numpy')
-@use_np_compat
 def maximum(x1, x2, out=None):
     """Returns element-wise maximum of the input arrays with broadcasting.
 
@@ -159,7 +158,6 @@ def maximum(x1, x2, out=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-@use_np_compat
 def minimum(x1, x2, out=None):
     """Returns element-wise minimum of the input arrays with broadcasting.
 

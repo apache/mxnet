@@ -27,7 +27,6 @@ from common import with_seed
 import random
 
 
-@np.use_np_compat
 @with_seed()
 def test_np_sum():
     class TestSum(HybridBlock):
@@ -88,8 +87,8 @@ def test_np_sum():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@np.use_np_compat
 @with_seed()
+@np.use_np_compat
 def test_np_dot():
     shapes = [
         ((3, 0), (0, 4)),
@@ -131,9 +130,9 @@ def test_np_dot():
         assert False
 
 
-@np.use_np_compat
 @with_seed()
 def test_np_mean():
+    @np.use_np_compat
     class TestMean(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
             super(TestMean, self).__init__()

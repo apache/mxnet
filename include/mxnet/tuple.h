@@ -661,6 +661,13 @@ inline bool shape_is_known(const TShape& x) {
   return true;
 }
 
+inline bool shape_is_known(const std::vector<TShape>& shapes) {
+  for (const TShape& shape : shapes) {
+    if (!shape_is_known(shape)) return false;
+  }
+  return true;
+}
+
 /*! \brief helper function to cast type of container elements */
 template<typename SrcIter, typename DstIter>
 inline DstIter ShapeTypeCast(const SrcIter begin,
