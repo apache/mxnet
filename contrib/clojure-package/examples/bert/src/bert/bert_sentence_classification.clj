@@ -211,62 +211,14 @@
                                                   (ndarray/array (slice-inputs-data processed-test-data 2) [1])])]
       (ndarray/->vec (first prediction))))
 
+  ;; Modify an existing sentence pair to test:
+  ;; ["1"
+  ;;  "69773"
+  ;;  "69792"
+  ;;  "Cisco pared spending to compensate for sluggish sales ."
+  ;;  "In response to sluggish sales , Cisco pared spending ."]
   (predict-equivalence fine-tuned-predictor
-                         "With MXNet , you can use Clojure to explore BERT ."
-                         "MXNet allows you to explore BERT using Clojure .")
-  ;; [0.289691 0.710309]
-  
-  (predict-equivalence fine-tuned-predictor
-                         "With MXNet , you can use Clojure to explore BERT ."
-                         "With MXNet , you can use Clojure to explore BERT .")
-  ;; [0.115873486 0.8841265]
-  
-  ;; Notice that our threshold may not be 0.5:
-  (predict-equivalence fine-tuned-predictor
-                         "No one understands machine learning ."
-                         "Machine learning is easy for anyone to comprehend .")
-  ;; [0.45926097 0.54073906]
-  
-  ;; I'm able to get some odd results:
-  (predict-equivalence fine-tuned-predictor
-                         "It is a lovely spring day , the sun is shining and birds are chirping ."
-                         "Godzilla is trampling city hall ! Run for your lives ! The end is nigh !")
-  ;; [0.0871596 0.9128404]
-  ;; !?!?!
+                       "The company cut spending to compensate for weak sales ."
+                       "In response to poor sales results, the company cut spending .")  
 
-  ;; Maybe it doesn't do so well with words not in the vocabulary?
-  (predict-equivalence fine-tuned-predictor
-                         "Barack Obama will win the nomination tomorrow ."
-                         "Russia annexed Crimea on Thursday , sending in tanks and bombers .")
-  ;; [0.32593858 0.6740614]
-
-  ;; The threshold seems to be ~0.6, but 0.67 seems relatively high for that pair.
-
-  
-  ;; What is the threshold?
-  (def train-data-inferences
-    (->> (get-raw-data)
-         rest                    ; ignore labels
-         (map #(vals (select-keys % [3 4 0])))
-         (map (juxt #(Integer/parseInt (nth % 2))
-                    #(predict-equivalence fine-tuned-predictor (first %) (second %))))))
-  
-  (take 5 train-data-inferences)
-
-  (reduce (fn [acc [true-label [p0 p1 :as prediction]]]
-            (let [threshold 0.55]
-              (if (= true-label (if (> p1 threshold) 1 0))
-                (update acc :agree inc)
-                (update acc :disagree inc))))
-          {:agree 0 :disagree 0}
-          train-data-inferences)
-
-  ;; my results:
-  {:agree 306, :disagree 102} ;; threshold 0.5
-  {:agree 315, :disagree 93} ;; threshold 0.55
-  {:agree 314, :disagree 94} ;; threshold 0.6
-  {:agree 313, :disagree 95} ;; threshold 0.65
-  {:agree 310, :disagree 98} ;; threshold 0.7
-  
- 
   )
