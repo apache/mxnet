@@ -88,7 +88,7 @@ def test_np_sum():
 
 
 @with_seed()
-@np.use_np_compat
+@np.use_np_shape
 def test_np_dot():
     shapes = [
         ((3, 0), (0, 4)),
@@ -132,7 +132,7 @@ def test_np_dot():
 
 @with_seed()
 def test_np_mean():
-    @np.use_np_compat
+    @np.use_np_shape
     class TestMean(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
             super(TestMean, self).__init__()
@@ -194,7 +194,7 @@ def test_np_mean():
 
 
 @with_seed()
-@np.use_np_compat
+@np.use_np_shape
 def test_np_transpose():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
@@ -224,7 +224,7 @@ def test_np_transpose():
 
 
 @with_seed()
-@np.use_np_compat
+@np.use_np_shape
 def test_relu():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('data').as_np_ndarray()
@@ -240,7 +240,7 @@ def test_relu():
 
 
 @with_seed()
-@np.use_np_compat
+@np.use_np_shape
 def test_sigmoid():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('data').as_np_ndarray()
@@ -256,7 +256,7 @@ def test_sigmoid():
 
 
 @with_seed()
-@np.use_np_compat
+@np.use_np_shape
 def test_np_reshape():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
@@ -272,7 +272,7 @@ def test_np_reshape():
 
 
 @with_seed()
-@np.use_np_compat
+@np.use_np_shape
 def test_np_maximum():
     # TODO(junwu): Add more test cases
     x1, x2 = mx.sym.var('x1').as_np_ndarray(), mx.sym.var('x2').as_np_ndarray()
@@ -293,7 +293,7 @@ def test_np_maximum():
 
 
 @with_seed()
-@np.use_np_compat
+@np.use_np_shape
 def test_np_minimum():
     # TODO(junwu): Add more test cases
     x1, x2 = mx.sym.var('x1').as_np_ndarray(), mx.sym.var('x2').as_np_ndarray()
