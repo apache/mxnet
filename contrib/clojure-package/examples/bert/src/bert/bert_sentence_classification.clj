@@ -162,14 +162,14 @@
                                         {:label {label-desc (ndarray/array labels [train-num]
                                                                            {:ctx dev})}
                                          :data-batch-size batch-size})
-        model (m/module model-sym {:contexts [dev]
-                                   :data-names ["data0" "data1" "data2"]})
-        fitted-model (m/fit model {:train-data train-data  :num-epoch num-epoch
-                                   :fit-params (m/fit-params {:allow-missing true
-                                                              :arg-params (m/arg-params bert-base)
-                                                              :aux-params (m/aux-params bert-base)
-                                                              :optimizer (optimizer/adam {:learning-rate 5e-6 :epsilon 1e-9})
-                                                              :batch-end-callback (callback/speedometer batch-size 1)})})]
+        fitted-model (m/fit (m/module model-sym {:contexts [dev]
+                                                 :data-names ["data0" "data1" "data2"]})
+                            {:train-data train-data  :num-epoch num-epoch
+                             :fit-params (m/fit-params {:allow-missing true
+                                                        :arg-params (m/arg-params bert-base)
+                                                        :aux-params (m/aux-params bert-base)
+                                                        :optimizer (optimizer/adam {:learning-rate 5e-6 :epsilon 1e-9})
+                                                        :batch-end-callback (callback/speedometer batch-size 1)})})]
     (m/save-checkpoint fitted-model {:prefix fine-tuned-prefix :epoch num-epoch})
     fitted-model))
 
@@ -199,7 +199,7 @@
                             {:epoch 3}))
   
   ;; Get the fine-tuned model's opinion on whether two sentences are equivalent:
-  (defn equivalence-inference
+  (defn predict-equivalence
     [predictor sentence1 sentence2]
     (let [vocab (bert.util/get-vocab)
           processed-test-data (mapv #(pre-processing (:idx->token vocab)
@@ -211,31 +211,31 @@
                                                   (ndarray/array (slice-inputs-data processed-test-data 2) [1])])]
       (ndarray/->vec (first prediction))))
 
-  (equivalence-inference fine-tuned-predictor
+  (predict-equivalence fine-tuned-predictor
                          "With MXNet , you can use Clojure to explore BERT ."
                          "MXNet allows you to explore BERT using Clojure .")
   ;; [0.289691 0.710309]
   
-  (equivalence-inference fine-tuned-predictor
+  (predict-equivalence fine-tuned-predictor
                          "With MXNet , you can use Clojure to explore BERT ."
                          "With MXNet , you can use Clojure to explore BERT .")
   ;; [0.115873486 0.8841265]
   
   ;; Notice that our threshold may not be 0.5:
-  (equivalence-inference fine-tuned-predictor
+  (predict-equivalence fine-tuned-predictor
                          "No one understands machine learning ."
                          "Machine learning is easy for anyone to comprehend .")
   ;; [0.45926097 0.54073906]
   
   ;; I'm able to get some odd results:
-  (equivalence-inference fine-tuned-predictor
+  (predict-equivalence fine-tuned-predictor
                          "It is a lovely spring day , the sun is shining and birds are chirping ."
                          "Godzilla is trampling city hall ! Run for your lives ! The end is nigh !")
   ;; [0.0871596 0.9128404]
   ;; !?!?!
 
   ;; Maybe it doesn't do so well with words not in the vocabulary?
-  (equivalence-inference fine-tuned-predictor
+  (predict-equivalence fine-tuned-predictor
                          "Barack Obama will win the nomination tomorrow ."
                          "Russia annexed Crimea on Thursday , sending in tanks and bombers .")
   ;; [0.32593858 0.6740614]
@@ -249,7 +249,7 @@
          rest                    ; ignore labels
          (map #(vals (select-keys % [3 4 0])))
          (map (juxt #(Integer/parseInt (nth % 2))
-                    #(equivalence-inference fine-tuned-predictor (first %) (second %))))))
+                    #(predict-equivalence fine-tuned-predictor (first %) (second %))))))
   
   (take 5 train-data-inferences)
 
