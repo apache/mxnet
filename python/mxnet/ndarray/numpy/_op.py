@@ -20,7 +20,7 @@
 from __future__ import absolute_import
 import numpy as _np
 from ...base import numeric_types
-from ...util import _sanity_check_params, use_np_compat, set_module
+from ...util import _sanity_check_params, set_module
 from ...context import current_context
 from . import _internal as _npi
 
@@ -90,7 +90,6 @@ def ones(shape, dtype=None, **kwargs):
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
-@use_np_compat
 def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, out=None):
     """ Helper function for element-wise operation.
     The function will perform numpy-like broadcasting if needed and call different functions.

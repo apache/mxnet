@@ -38,7 +38,7 @@ except ImportError:
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_compat
+from ..util import is_np_shape
 
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
@@ -453,7 +453,7 @@ def shape_is_known(shape):
     """Check whether a shape is completely known w/ or w/o np semantics."""
     if shape is None:
         return False
-    unknown_dim_size = -1 if is_np_compat() else 0
+    unknown_dim_size = -1 if is_np_shape() else 0
     if len(shape) == 0:
         return unknown_dim_size == -1
     for dim_size in shape:
