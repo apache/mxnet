@@ -44,7 +44,7 @@ def test_create_np_param():
         def hybrid_forward(self, F, x, w):
             return F.dot(x, w)
 
-    @np.use_np_compat
+    @np.use_np_shape
     class TestBlock2(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock2, self).__init__()
@@ -62,7 +62,7 @@ def test_create_np_param():
 
 
 def test_optimizer_with_np_ndarrays():
-    @np.use_np_compat
+    @np.use_np_shape
     class LinearRegression(gluon.HybridBlock):
         def __init__(self, num_input_dim=-1, num_hidden_dim=100, num_output_dim=10):
             super(LinearRegression, self).__init__()
@@ -78,7 +78,7 @@ def test_optimizer_with_np_ndarrays():
             y_pred = h_relu.dot(w2)  # equivalent to F.np.dot(h_relu, w2)
             return y_pred
 
-    @np.use_np_compat
+    @np.use_np_shape
     class TotalLoss(gluon.HybridBlock):
         def hybrid_forward(self, F, pred, label):
             return ((pred - label) ** 2).sum()  # equivalent to F.np.sum(F.np.square(pred - label))
