@@ -745,13 +745,6 @@ if Features().is_enabled("TVM_OP"):
     check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
 
 
-def _sanity_check_params(func_name, unsupported_params, param_dict):
-    for param_name in unsupported_params:
-        if param_name in param_dict:
-            raise NotImplementedError("function {} does not support parameter {}"
-                                      .format(func_name, param_name))
-
-
 _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
 
@@ -851,21 +844,3 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
         function.__module__ = module_name_local
         setattr(cur_module, function.__name__, function)
         cur_module.__all__.append(function.__name__)
-
-
-def set_module(module):
-    """Decorator for overriding __module__ on a function or class.
-
-    Example usage::
-
-        @set_module('mxnet.numpy')
-        def example():
-            pass
-
-        assert example.__module__ == 'numpy'
-    """
-    def decorator(func):
-        if module is not None:
-            func.__module__ = module
-        return func
-    return decorator
