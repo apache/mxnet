@@ -452,3 +452,28 @@ def _check_same_symbol_type(symbols):
                             'computation graph, please convert all the numpy symbols in the list '
                             'to classic symbols by calling `as_classic_ndarray()` on each of them.')
     return np_symbol if is_np_sym else classic_symbol
+
+
+def _check_all_np_ndarrays(out):
+    """Check if ndarrays in out are all np.ndarray"""
+    from ..numpy import ndarray as np_ndarray
+    assert isinstance(out, (list, tuple))
+    for array in out:
+        if not isinstance(array, np_ndarray):
+            raise TypeError('Expected np.ndarray type in output, while received type '
+                            '{}'.format(str(type(array))))
+
+
+def shape_is_known(shape):
+    """Check whether a shape is completely known w/ or w/o np semantics."""
+    if shape is None:
+        return False
+    unknown_dim_size = -1 if is_np_shape() else 0
+    if len(shape) == 0:
+        return unknown_dim_size == -1
+    for dim_size in shape:
+        if dim_size == unknown_dim_size:
+            return False
+        assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
+                                            "received {}".format(unknown_dim_size, dim_size)
+    return True
