@@ -20,6 +20,8 @@ import ctypes
 import os
 import sys
 import functools
+import itertools
+import inspect
 
 from .base import _LIB, check_call
 
@@ -213,39 +215,111 @@ def np_shape(active=True):
     return _NumpyShapeScope(active)
 
 
+def wraps_safely(wrapped, assigned=functools.WRAPPER_ASSIGNMENTS):
+    """This function is safe version of `functools.wraps` in Python2 which skips wrapping functions
+    for the attributes that do not exist."""
+    if sys.version_info[0] > 2:
+        return functools.wraps(wrapped)
+    else:
+        return functools.wraps(wrapped,
+                               assigned=itertools.ifilter(
+                                   functools.partial(hasattr, wrapped), assigned))
+
+
 def use_np_shape(func):
-    """Wraps a function with an activated NumPy-shape scope. This ensures
-    that the execution of the function is guaranteed with the support of
-    scalar and zero-size tensors as in NumPy.
+    """A decorator wrapping a function or class with activated NumPy-shape semantics.
+    When `func` is a function, this ensures that the execution of the function is scoped with NumPy
+    shape semantics, such as the support for zero-dim and zero size tensors. When
+    `func` is a class, it ensures that all the methods, static functions, and properties
+    of the class are executed with the NumPy shape semantics.
 
-    Please note that this is designed as an infrastructure for the incoming
-    MXNet-NumPy operators. Legacy operators registered in the modules
-    `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
-    in NumPy even within this scope.
+    Example::
+        import mxnet as mx
+        @mx.use_np_shape
+        def scalar_one():
+            return mx.nd.ones(())
+        print(scalar_one())
 
+        @np.use_np_shape
+        class ScalarTensor(object):
+            def __init__(self, val=None):
+                if val is None:
+                    val = ScalarTensor.random().value
+                self._scalar = mx.nd.ones(()) * val
+
+            def __repr__(self):
+                print("Is __repr__ in np_shape semantics? {}!".format(str(np.is_np_shape())))
+                return str(self._scalar.asnumpy())
+
+            @staticmethod
+            def random():
+                val = mx.nd.random.uniform().asnumpy().item()
+                return ScalarTensor(val)
+
+            @property
+            def value(self):
+                print("Is value property in np_shape semantics? {}!".format(str(np.is_np_shape())))
+                return self._scalar.asnumpy().item()
+
+
+        print("Is global scope of np_shape activated? {}!".format(str(np.is_np_shape())))
+        scalar_tensor = ScalarTensor()
+        print(scalar_tensor)
 
     Parameters
     ----------
-    func : a user-provided callable function to be scoped by the NumPy-shape semantics.
+    func : a user-provided callable function or class to be scoped by the NumPy compatibility state.
 
     Returns
     -------
-    Function
-        A function for wrapping the user functions in the NumPy-shape semantics.
-
-
-    Examples
-    --------
-    >>> import mxnet as mx
-    >>> @mx.use_np_shape
-    ... def scalar_one():
-    ...     return mx.nd.ones(())
-    ...
-    >>> print(scalar_one())
+    Function or class
+        A function or class wrapped in the NumPy compatibility scope.
     """
-    @functools.wraps(func)
-    def _with_np_shape(*args, **kwargs):
-        with np_shape(active=True):
-            return func(*args, **kwargs)
 
-    return _with_np_shape
+    if inspect.isclass(func):
+        for name, method in inspect.getmembers(
+                func,
+                predicate=
+                lambda f: inspect.isfunction(f) or inspect.ismethod(f) or isinstance(f, property)):
+            if isinstance(method, property):
+                setattr(func, name, property(use_np_shape(method.__get__),
+                                             method.__set__,
+                                             method.__delattr__,
+                                             method.__doc__))
+            else:
+                setattr(func, name, use_np_shape(method))
+        return func
+    elif callable(func):
+        @wraps_safely(func)
+        def _with_np_shape(*args, **kwargs):
+            with np_shape(active=True):
+                return func(*args, **kwargs)
+        return _with_np_shape
+    else:
+        raise TypeError('use_np_shape can only decorate classes and callable objects, '
+                        'while received a {}'.format(str(type(func))))
+
+
+def _sanity_check_params(func_name, unsupported_params, param_dict):
+    for param_name in unsupported_params:
+        if param_name in param_dict:
+            raise NotImplementedError("function {} does not support parameter {}"
+                                      .format(func_name, param_name))
+
+
+def set_module(module):
+    """Decorator for overriding __module__ on a function or class.
+
+    Example usage::
+
+        @set_module('mxnet.numpy')
+        def example():
+            pass
+
+        assert example.__module__ == 'numpy'
+    """
+    def decorator(func):
+        if module is not None:
+            func.__module__ = module
+        return func
+    return decorator

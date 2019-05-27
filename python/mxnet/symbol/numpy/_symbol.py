@@ -22,8 +22,8 @@ from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
-from ...base import _sanity_check_params, use_np_compat, check_call, _LIB, SymbolHandle
-from ...base import numeric_types, set_module
+from ...base import _LIB, SymbolHandle, numeric_types
+from ...util import _sanity_check_params, check_call, set_module
 from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
@@ -43,7 +43,6 @@ class _Symbol(Symbol):
     def __iter__(self):
         raise AttributeError('_Symbol object has no attribute __iter__')
 
-    @use_np_compat
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
         if isinstance(other, _Symbol):
@@ -54,7 +53,6 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
         if isinstance(other, _Symbol):
@@ -65,7 +63,6 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
         if isinstance(other, _Symbol):
@@ -76,7 +73,6 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
         if isinstance(other, _Symbol):
@@ -87,7 +83,6 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __rmul__(self, other):
         """x.__rmul__(y) <=> y * x"""
         if isinstance(other, _Symbol):
@@ -112,7 +107,6 @@ class _Symbol(Symbol):
                              ' module. If you are using Python3, this error should not have'
                              ' been encountered.')
 
-    @use_np_compat
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
         if isinstance(other, _Symbol):
@@ -123,7 +117,6 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
         if isinstance(other, _Symbol):
@@ -134,11 +127,9 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __idiv__(self, other):
         raise NotImplementedError
 
-    @use_np_compat
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
         if isinstance(other, _Symbol):
@@ -149,7 +140,6 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as divisor"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
         if isinstance(other, _Symbol):
@@ -160,11 +150,9 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as dividend"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __itruediv__(self, other):
         raise NotImplementedError
 
-    @use_np_compat
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
         if isinstance(other, _Symbol):
@@ -175,7 +163,6 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
         if isinstance(other, _Symbol):
@@ -186,41 +173,33 @@ class _Symbol(Symbol):
             raise TypeError("_Symbol does not support type {} as operand"
                             .format(str(type(other))))
 
-    @use_np_compat
     def __neg__(self):
         """x.__neg__() <=> - x"""
         return self.__mul__(-1.0)
 
-    @use_np_compat
     def __deepcopy__(self, _):
         return super(_Symbol, self).as_np_ndarray()
 
-    @use_np_compat
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
         raise NotImplementedError
 
-    @use_np_compat
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
         raise NotImplementedError
@@ -241,15 +220,12 @@ class _Symbol(Symbol):
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
-    @use_np_compat
     def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ
         raise NotImplementedError
 
-    @use_np_compat
     def dot(self, b, out=None):
         return _mx_np_op.dot(self, b, out=out)
 
-    @use_np_compat
     def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
         if order != 'C':
             raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
@@ -288,7 +264,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute broadcast_like')
 
-    @use_np_compat
     def repeat(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`repeat`.
 
@@ -305,7 +280,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute pad')
 
-    @use_np_compat
     def swapaxes(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`swapaxes`.
 
@@ -354,7 +328,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute slice_like')
 
-    @use_np_compat
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
 
@@ -379,7 +352,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute pick')
 
-    @use_np_compat
     def sort(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sort`.
 
@@ -396,7 +368,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute topk')
 
-    @use_np_compat
     def argsort(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argsort`.
 
@@ -405,7 +376,6 @@ class _Symbol(Symbol):
         """
         raise NotImplementedError
 
-    @use_np_compat
     def argmax(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax`.
 
@@ -422,7 +392,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute argmax_channel')
 
-    @use_np_compat
     def argmin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmin`.
 
@@ -431,7 +400,6 @@ class _Symbol(Symbol):
         """
         raise NotImplementedError
 
-    @use_np_compat
     def clip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`clip`.
 
@@ -456,7 +424,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute abs')
 
-    @use_np_compat
     def flatten(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flatten`.
 
@@ -497,7 +464,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute tile')
 
-    @use_np_compat
     def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`transpose`.
 
@@ -538,7 +504,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute diag')
 
-    @use_np_compat
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sum`.
 
@@ -555,7 +520,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute nansum')
 
-    @use_np_compat
     def prod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`prod`.
 
@@ -572,7 +536,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute nanprod')
 
-    @use_np_compat
     def mean(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`mean`.
 
@@ -581,7 +544,6 @@ class _Symbol(Symbol):
         """
         raise NotImplementedError
 
-    @use_np_compat
     def max(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`max`.
 
@@ -590,7 +552,6 @@ class _Symbol(Symbol):
         """
         raise NotImplementedError
 
-    @use_np_compat
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
 
@@ -607,7 +568,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute norm')
 
-    @use_np_compat
     def round(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`round`.
 
@@ -904,7 +864,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute softmin')
 
-    @use_np_compat
     def squeeze(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`squeeze`.
 
@@ -921,7 +880,6 @@ class _Symbol(Symbol):
 
 
 @set_module('mxnet.symbol.numpy')
-@use_np_compat
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
@@ -953,7 +911,6 @@ def zeros(shape, dtype=_np.float32, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
-@use_np_compat
 def ones(shape, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
@@ -1034,13 +991,11 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
 
 
 @set_module('mxnet.symbol.numpy')
-@use_np_compat
 def maximum(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.maximum, _np.maximum, _npi.maximum_scalar, None, out)
 
 
 @set_module('mxnet.symbol.numpy')
-@use_np_compat
 def minimum(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
 
