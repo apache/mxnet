@@ -196,6 +196,12 @@ fixed-size items.
         check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
         return ndarray(handle=hdl, writable=self.writable)
 
+    def as_classic_ndarray(self):
+        """A convenience function for creating a classic ndarray from the current
+        ndarray with zero copy. For this class, it just returns itself since it is
+        already a classic ndarray."""
+        return self
+
     @property
     def _tvm_handle(self):
         return self.handle.value
