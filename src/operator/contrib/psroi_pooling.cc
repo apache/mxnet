@@ -51,7 +51,8 @@ template <typename DType>
   const int output_dim,
   const int group_size,
   DType* top_data) {
-  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads =
+     mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 #pragma omp parallel for num_threads(omp_threads)
   for (int index = 0; index < count; index++) {
     // The output is in order (n, ctop, ph, pw)

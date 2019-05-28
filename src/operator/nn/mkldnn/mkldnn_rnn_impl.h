@@ -140,7 +140,8 @@ static void AdjustGruWeightGateOrder(DType* weight,
                                      const int H) {
   // mxnet gru gate order is reset, update and new gates
   // mkldnn gru gate order is update, reset and new gates
-  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads =
+     mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   DType* weight_reset = weight;
   DType* weight_update = weight + I * H;
   #pragma omp parallel for num_threads(omp_threads)
@@ -156,7 +157,8 @@ static void AdjustGruBiasGateOrder(DType* bias,
                                    const int H) {
   // mxnet gru gate order is reset, update and new gates
   // mkldnn gru gate order is update, reset and new gates
-  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads =
+     mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   DType* bias_reset = bias;
   DType* bias_update = bias + H;
   #pragma omp parallel for num_threads(omp_threads)
@@ -214,7 +216,8 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   DType* bh = b_ptr + H * ngates;
   DType* back_bx = b_ptr + single_b_size * 2;
   DType* back_bh = back_bx + H * ngates;
-  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads =
+     mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   auto cpu_engine = CpuEngine::Get()->get_engine();
   auto null_memory_ = null_memory(cpu_engine);
   int offset1 = 0, offset2 = 0;
@@ -406,7 +409,8 @@ static void MKLDNNRNNForwardUnidi(bool state_outputs,
   const int single_cell_size = N * H;
   const int single_b_size = ngates * H;
   int w_size = (I + H) * H * ngates;
-  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads =
+     mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   auto cpu_engine = CpuEngine::Get()->get_engine();
   auto null_memory_ = null_memory(cpu_engine);
   int offset1 = 0, offset2 = 0;

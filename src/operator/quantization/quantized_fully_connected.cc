@@ -209,7 +209,8 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
   auto data_temp = data.dptr_;
   auto weight_temp = weight.dptr_;
   auto output_temp = out.dptr_;
-  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads =
+     mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   const float alpha = 1.0f;
   const float beta  = 1.0f;
   const CBLAS_OFFSET offsetc = CblasFixOffset;

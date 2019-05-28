@@ -70,7 +70,8 @@ namespace mshadow {
                                             const index_t num_classes,
                                             const index_t channels_each_class,
                                             DType* top_data, DType* top_count) {
-    const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    const int DMLC_ATTRIBUTE_UNUSED omp_threads =
+        mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 #pragma omp parallel for num_threads(omp_threads)
     for (index_t index = 0; index < count; index++) {
       // The output is in order (n, ctop, ph, pw)
