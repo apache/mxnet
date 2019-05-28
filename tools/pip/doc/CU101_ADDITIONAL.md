@@ -27,10 +27,10 @@ This package supports Linux and Windows platforms. You may also want to check:
 - [mxnet-cu90mkl](https://pypi.python.org/pypi/mxnet-cu90mkl/) with CUDA-9.0 support and MKLDNN support.
 - [mxnet-cu80](https://pypi.python.org/pypi/mxnet-cu80/) with CUDA-8.0 support.
 - [mxnet-cu80mkl](https://pypi.python.org/pypi/mxnet-cu80mkl/) with CUDA-8.0 support and MKLDNN support.
-- [mxnet-cu75](https://pypi.python.org/pypi/mxnet-cu75/) with CUDA-7.5 support.
-- [mxnet-cu75mkl](https://pypi.python.org/pypi/mxnet-cu75mkl/) with CUDA-7.5 support and MKLDNN support.
+- [mxnet-cu75](https://pypi.python.org/pypi/mxnet-cu75/) with CUDA-7.5 support. Note that we doesn't maintain CUDA 7.5 anymore.
+- [mxnet-cu75mkl](https://pypi.python.org/pypi/mxnet-cu75mkl/) with CUDA-7.5 support and MKLDNN support. Note that we doesn't maintain CUDA 7.5 anymore.
 - [mxnet-mkl](https://pypi.python.org/pypi/mxnet-mkl/) with MKLDNN support.
-- [mxnet](https://pypi.python.org/pypi/mxnet/).
+- [mxnet](https://pypi.python.org/pypi/mxnet/) without MKLDNN and CUDA support.
 
 To download CUDA, check [CUDA download](https://developer.nvidia.com/cuda-downloads). For more instructions, check [CUDA Toolkit online documentation](http://docs.nvidia.com/cuda/index.html).
 
