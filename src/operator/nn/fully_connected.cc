@@ -176,22 +176,6 @@ struct FullyConnectedGrad {
   }
 };
 
-std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(
-    const nnvm::NodePtr& n,
-    const std::vector<nnvm::NodeEntry>& ograds) {
-  // Note this is not strictly correct but we don't expect inputs to depend on weights at the
-  // moment. If you find such a case, please contribute a more elaborate implementation.   
-  std::vector<nnvm::NodeEntry> ret;
-  size_t i = 0;
-  for (const auto& x : n->inputs) {
-    std::ostringstream os;
-    os << n->attrs.name << "_backward_" << i;
-    ret.emplace_back(MakeNode("zeros_like", os.str(), {x}, nullptr, &n));
-    ++i;
-  }
-  return ret;
-}
-
 inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
                                  const int dev_mask,
                                  DispatchMode* dispatch_mode,
@@ -340,7 +324,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{1, 0}};
 })
-.set_attr<nnvm::FGradient>("FGradient", FullyConnectedBackwardGrad)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 #if MXNET_USE_MKLDNN == 1
