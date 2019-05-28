@@ -30,5 +30,4 @@ using namespace mxnet::features;
 TEST(RuntimeTest, RuntimeTestAll) {
   EXPECT_EQ(EnumNames::names.size(), MAX_FEATURES);
   const auto& features = LibInfo::getInstance()->getFeatures();
-  EXPECT_GE(features.size(), 0);
 }

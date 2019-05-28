@@ -96,10 +96,8 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
   const int num_anchors = cls_prob.size(2);
   const int num_batches = cls_prob.size(0);
   const DType *p_anchor = anchors.dptr_;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
+
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-#pragma GCC diagnostic pop
   std::vector<DType> outputs;
   outputs.reserve(num_anchors * 6);
   for (int nbatch = 0; nbatch < num_batches; ++nbatch) {
