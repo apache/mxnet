@@ -734,3 +734,7 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+
+libtvmop = libinfo.find_lib_path("libtvmop")
+check_call(_LIB.MXLoadTVMOp(c_str(libtvmop[0])))
+

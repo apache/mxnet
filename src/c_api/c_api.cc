@@ -48,6 +48,7 @@
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
+#include "../operator/tvmop/tvm_op_module.h"
 #include "../common/utils.h"
 
 using namespace mxnet;
@@ -156,6 +157,12 @@ int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t *total_mem
 int MXGetVersion(int *out) {
   API_BEGIN();
   *out = static_cast<int>(MXNET_VERSION);
+  API_END();
+}
+
+int MXLoadTVMOp(const char *libpath) {
+  API_BEGIN();
+  tvm::runtime::TVMOpModule::Get()->Load(libpath);
   API_END();
 }
 
