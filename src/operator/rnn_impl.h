@@ -98,7 +98,7 @@ void LstmForwardTrainingSingleLayer(DType* ws,
   const int cell_size = N * H;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
 
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = 0; i < T; ++i) {
     int t = bid ? T - 1 - i : i;
     linalg_gemm(i ? h : hx, wh, yh_flat, alpha, beta, false, true);
@@ -158,7 +158,7 @@ void LstmForwardTraining(DType* ws,
   const int cell_size = N * H;
   unsigned int seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   int idx = 0;  // state & cell state's idx;
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = 0; i < L; ++i) {
     const int input_size = i ? H * D : I;
     const int w_size = (input_size + H) * H * 4;
@@ -241,7 +241,7 @@ void LstmForwardInferenceSingleLayer(DType* ws,
   const int cell_size = N * H;
   linalg_gemm(x, wx, yx_flat, alpha, beta, false, true);
 
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = 0; i < T; ++i) {
     int t = bid ? T - 1 - i : i;
     linalg_gemm(i ? h : hx, wh, yh_flat, alpha, beta, false, true);
@@ -367,7 +367,7 @@ void LstmBackwardSingleLayer(DType* ws,
   DType *c_ptr = bid ? rs + T * N * H * 7 : rs;
   const Tensor<cpu, 3, DType> c(c_ptr, Shape3(T, N, H));
   const Tensor<cpu, 4, DType> ifgo(c_ptr + T * N * H, Shape4(T, N, H, 4));
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (req_params != kNullOp && req_params != kAddTo) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < H * 4 * H; ++i) {
@@ -577,7 +577,7 @@ void LstmBackward(DType* ws,
     }
     if (dropout > 0.0f && i > 0 && req_data != kNullOp) {
       dropout_random = dropout_random - T * N * D * H;
-      const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+      const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
       #pragma omp parallel for num_threads(omp_threads)
       for (int j = 0; j < T * N * D * H; j++) {
         if (dropout_random[j] == 0) {
@@ -632,7 +632,7 @@ void GruForwardInferenceSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 3, H));
   const Tensor<cpu, 2, DType> back_bx(back_bx_ptr, Shape2(3, H));
   const Tensor<cpu, 2, DType> back_bh(back_bh_ptr, Shape2(3, H));
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (D == 1) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
@@ -844,7 +844,7 @@ void GruForwardTrainingSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 3, H));
   const Tensor<cpu, 2, DType> back_bx(back_bx_ptr, Shape2(3, H));
   const Tensor<cpu, 2, DType> back_bh(back_bh_ptr, Shape2(3, H));
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (D == 1) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
@@ -1008,7 +1008,7 @@ void GruForwardTraining(DType* ws,
       y_l = y_l + T * N * H * D;
     }
     if (dropout > 0.0f && l > 0) {
-      const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+      const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
       #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < T * N * I; i++) {
         int rand_data = rand_r(&seed_);
@@ -1040,7 +1040,7 @@ void GruForwardTraining(DType* ws,
     }
     wh_l = wx_l + I * 3 * H;
   }
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   #pragma omp parallel for num_threads(omp_threads)
   for (int i = 0; i < T * N * H * D; ++i) {
     y_ptr[i] = y_l[i];
@@ -1106,7 +1106,7 @@ void GruBackwardSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> wh(wh_ptr, Shape2(H * 3, H));
   const Tensor<cpu, 2, DType> back_wx(back_wx_ptr, Shape2(H * 3, I));
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 3, H));
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (req_params != kNullOp && req_params != kAddTo) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < D * H * 3 * H; ++i) {
@@ -1451,7 +1451,7 @@ void GruBackward(DType* ws,
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, D * N, H));
   int inputsize = I;
   DType* y_tmp = y_l - T * N * H * D;
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int l = L - 1; l >= 0; --l) {
     if (l == 0) {
       I = inputsize;
@@ -1546,7 +1546,7 @@ void VanillaRNNForwardInferenceSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H, H));
   const Tensor<cpu, 2, DType> back_bx(back_bx_ptr, Shape2(1, H));
   const Tensor<cpu, 2, DType> back_bh(back_bh_ptr, Shape2(1, H));
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (D == 1) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
@@ -1747,7 +1747,7 @@ void VanillaRNNForwardTrainingSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H * 1, H));
   const Tensor<cpu, 2, DType> back_bx(back_bx_ptr, Shape2(1, H));
   const Tensor<cpu, 2, DType> back_bh(back_bh_ptr, Shape2(1, H));
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (D == 1) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < N; i++)
@@ -1887,7 +1887,7 @@ void VanillaRNNForwardTraining(DType* ws,
   DType* bx_l = bx;
   DType* bh_l = bh;
   DType* y_tmp = x_ptr;
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   unsigned int seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   for (int l = 0; l < L; l++) {
     if (l != 0) {
@@ -1979,7 +1979,7 @@ void VanillaRNNBackwardSingleLayer(DType* ws,
   const Tensor<cpu, 2, DType> wh(wh_ptr, Shape2(H, H));
   const Tensor<cpu, 2, DType> back_wx(back_wx_ptr, Shape2(H, I));
   const Tensor<cpu, 2, DType> back_wh(back_wh_ptr, Shape2(H, H));
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   if (req_params != kNullOp && req_params != kAddTo) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < D * H * H; ++i) {
@@ -2306,7 +2306,7 @@ void VanillaRNNBackward(DType* ws,
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(L, D * N, H));
   int inputsize = I;
   DType* y_tmp = y_l - T * N * H * D;
-  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  const int DMLC_ATTRIBUTE_UNUSED omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int l = L - 1; l >= 0; --l) {
     if (l == 0) {
       I = inputsize;
