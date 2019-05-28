@@ -81,6 +81,7 @@ DMLC_REGISTER_PARAMETER(SampleGenNegBinomialLikeParam);
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_uniform, SampleUniformParam)
 .add_alias("uniform")
 .add_alias("random_uniform")
+.add_alias("_npi_random_uniform")
 .describe(R"code(Draw random samples from a uniform distribution.
 
 .. note:: The existing alias ``uniform`` is deprecated.
@@ -99,6 +100,7 @@ Example::
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_normal, SampleNormalParam)
 .add_alias("normal")
 .add_alias("random_normal")
+.add_alias("_npi_random_normal")
 .describe(R"code(Draw random samples from a normal (Gaussian) distribution.
 
 .. note:: The existing alias ``normal`` is deprecated.

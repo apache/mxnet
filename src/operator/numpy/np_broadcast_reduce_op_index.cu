@@ -19,29 +19,16 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_init_op.cu
- * \brief GPU Implementation of numpy init op
+ * \file np_broadcast_reduce_op_index.cu
+ * \brief GPU Implementation of reduce functions.
  */
-
-#include "../tensor/init_op.h"
+#include "np_broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_zeros)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
-
-NNVM_REGISTER_OP(_npi_ones)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
-
-NNVM_REGISTER_OP(_np_zeros_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);
-
-NNVM_REGISTER_OP(_np_ones_like)
-.set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
-
-NNVM_REGISTER_OP(_npi_arange)
-.set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu>);
+NNVM_REGISTER_OP(_npi_argmax)
+.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);
 
 }  // namespace op
 }  // namespace mxnet
