@@ -23,19 +23,6 @@ from tests.python.unittest.common import with_seed
 
 
 @with_seed()
-def test_elemwise_mul():
-    x = nd.array([1, 2, 3])
-    y = nd.zeros(3)
-    x.attach_grad()
-    with autograd.record():
-        y = nd.elemwise_mul(x, x) 
-        y_grad = autograd.grad(y, x, create_graph=True, retain_graph=True)[0]
-    y_grad.backward()
-    expect_grad = nd.array([2, 2, 2])
-    assert_almost_equal(expect_grad.asnumpy(), x.grad.asnumpy())
-
-
-@with_seed()
 def test_sin():
     def sin(x):
         return nd.sin(x)
