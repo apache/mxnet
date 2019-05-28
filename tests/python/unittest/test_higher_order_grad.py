@@ -15,13 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-<<<<<<< HEAD
-import mxnet as mx
-import numpy as np
-from mxnet import gluon, nd, autograd
-from mxnet.test_utils import assert_almost_equal
-from tests.python.unittest.common import with_seed
 
+import math
+import numpy as np
+import mxnet as mx
+from mxnet import gluon, nd, autograd
+from mxnet.test_utils import assert_almost_equal, random_arrays
+from common import with_seed
 
 @with_seed()
 def test_sin():
@@ -63,13 +63,6 @@ def test_relu():
     check_second_order_unary(x, relu, expect_grad)
 
 
-def check_second_order_unary(x, op, expect_grad):
-=======
-import math
-
-from mxnet import nd, autograd
-from mxnet.test_utils import assert_almost_equal, random_arrays
-from common import with_seed
 
 
 @with_seed()
