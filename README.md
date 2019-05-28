@@ -5,17 +5,20 @@ A fork of the deep learning framework [mxnet](http://mxnet.io) to study and impl
 This project is based on the [first version of BMXNet](https://github.com/hpi-xnor/BMXNet), but is different in that it reuses more of the original MXNet operators.
 This aim was to have only minimal changes to C++ code to get better maintainability with future versions of mxnet.
 
+## mxnet version
+
+This version of BMXNet 2 is based on: *mxnet v1.4.1*
+
 ## News
 
-- **May 21, 2019** - Upgraded to MXNet v1.4.0
-    - Model converter released ([Test & Example](tests/binary/test_converter.py))
-    - All changes: [Changelog](CHANGELOG.md)
-- **Sep 01, 2018** - MXNet v1.3.0
-    - We are currently rebuilding BMXNet to utilize the new Gluon API for better maintainability
+See all BMXNet changes: [Changelog](CHANGELOG.md).
+
+- **May 21, 2019**
+    - Model converter for deployment released ([Test & Example](tests/binary/test_converter.py))
+- **Sep 01, 2018**
+    - We rebuilt BMXNet to utilize the new Gluon API for better maintainability
     - To build binary neural networks, you can use drop in replacements of convolution and dense layers (see [Usage](#usage)):
-    - Changes are now documented in the [Changelog](CHANGELOG.md)
     - Note that this project is still in beta and changes might be frequent
-    - We do not yet support deployment and inference with binary operations and models (please use the [first version of BMXNet](https://github.com/hpi-xnor/BMXNet) instead if you need this).
 
 # Setup
 
