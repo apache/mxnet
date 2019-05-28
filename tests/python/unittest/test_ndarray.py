@@ -123,7 +123,7 @@ def test_ndarray_setitem():
     # numpy assignment for empty axis
     for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
         if trivial_shape == tuple():
-            with mx.np_compat():
+            with mx.np_shape():
                 x = mx.nd.zeros(trivial_shape)
         else:
             x = mx.nd.zeros(trivial_shape)
@@ -1699,6 +1699,20 @@ def test_zero_from_numpy():
         pass
     else:
         assert False
+
+
+@with_seed()
+def test_save_load_zero_size_ndarrays():
+    shapes = [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)]
+    array_list = [np.random.randint(0, 10, size=shape) for shape in shapes]
+    array_list = [mx.nd.array(arr) for arr in array_list]
+    with TemporaryDirectory() as work_dir:
+        fname = os.path.join(work_dir, 'dataset')
+        mx.nd.save(fname, array_list)
+        array_list_loaded = mx.nd.load(fname)
+        assert len(array_list) == len(array_list_loaded)
+        for a1, a2 in zip(array_list, array_list_loaded):
+            assert np.array_equal(a1.asnumpy(), a2.asnumpy())
 
 
 if __name__ == '__main__':

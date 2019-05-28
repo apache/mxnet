@@ -131,18 +131,21 @@ class NDArray {
   /*!
   * \brief construct a new dynamic NDArray
   * \param shape the shape of array
-  * \param constext context of NDArray
+  * \param context context of NDArray
   * \param delay_alloc whether delay the allocation
+  * \param dtype data type of NDArray
   */
   NDArray(const std::vector<mx_uint> &shape, const Context &context,
-          bool delay_alloc = true);
+          bool delay_alloc = true, int dtype = 0);
   /*!
   * \brief construct a new dynamic NDArray
   * \param shape the shape of array
   * \param constext context of NDArray
   * \param delay_alloc whether delay the allocation
+  * \param dtype data type of NDArray
   */
-  NDArray(const Shape &shape, const Context &context, bool delay_alloc = true);
+  NDArray(const Shape &shape, const Context &context,
+          bool delay_alloc = true, int dtype = 0);
   NDArray(const mx_float *data, size_t size);
   /*!
   * \brief construct a new dynamic NDArray

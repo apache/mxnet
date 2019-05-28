@@ -470,7 +470,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   std::vector<int> is_dynamic(rshape.size(), 0);
 
   // convert to numpy compatible shape to use operator's infer shape function
-  if (!Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToNumpyShape(&rshape);
   }
 
@@ -490,7 +490,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
         if (it != inode.source->attrs.dict.end()) {
           std::istringstream is(it->second);
           CHECK(is >> rshape[out_ent_id]) << "Invalid attribute";
-          if (!Imperative::Get()->is_np_comp()) {
+          if (!Imperative::Get()->is_np_shape()) {
             common::ConvertToNumpyShape(&rshape[out_ent_id]);
           }
         }

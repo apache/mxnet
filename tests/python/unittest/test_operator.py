@@ -697,6 +697,27 @@ def test_symbol_pow():
 
 
 @with_seed()
+def test_fully_connected():
+    data = mx.sym.var("data")
+    fc_weight = mx.sym.var("weight")
+    fc_bias = mx.sym.var("bias")
+    fc = mx.sym.FullyConnected(data=data, weight=fc_weight, bias=fc_bias, num_hidden=10, no_bias=False, name='fc')
+    data = mx.nd.random.uniform(shape=(5, 5, 5, 13), dtype=np.float32)
+    fc_weight = mx.nd.random.uniform(shape=(10, 325), dtype=np.float32)
+    fc_bias = mx.nd.random.uniform(shape=(10), dtype=np.float32)
+    fc_bias2 = mx.nd.random.uniform(shape=(10, 1), dtype=np.float32)
+    data_np = data.asnumpy().reshape(5, 325)
+    fc_weight_np = np.transpose(fc_weight.asnumpy())
+    fc_bias_np = fc_bias.asnumpy()
+    res = np.dot(data_np, fc_weight_np) + fc_bias.asnumpy()
+    check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np}, {'fc_output': res})
+    check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np},
+                           numeric_eps=1e-2, rtol=1e-4, atol=1e-2)
+    # TODO: Fix Bug #15032 when bias has ndim > 1
+    #check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias2.asnumpy()}, {'fc_output': res})
+
+
+@with_seed()
 def test_pow_fn():
     shape = (3, 4)
     exp = mx.symbol.Variable("exp")
@@ -2535,19 +2556,27 @@ def test_broadcast():
         size = tuple([shape[ele] for ele in axis])
         for ele in axis:
             shape[ele] = 1
+        target_shape_with_zero = list(target_shape)
+        for idx in range(len(target_shape_with_zero)):
+            if idx not in axis:
+                target_shape_with_zero[idx] = 0
+                break
+
         a = mx.symbol.Variable('a')
         sym_bcast_axis = mx.symbol.broadcast_axis(a, axis=axis, size=size)
         sym_bcast_to = mx.symbol.broadcast_to(a, shape=tuple(target_shape))
+        sym_bcast_to_with_zero = mx.symbol.broadcast_to(a, shape=tuple(target_shape_with_zero))
         sym_bcast_like = mx.symbol.broadcast_like(a, sym_bcast_to)
+
         def test_broadcasting_ele(sym_bcast):
             dat_npy = np.random.rand(*shape)
             groundtruth = dat_npy
             grad_nd = mx.nd.empty(shape)
             outgrad_npy = np.random.rand(*target_shape)
             grad_groundtruth = np_reduce(outgrad_npy, axis=axis, keepdims=True,
-                                          numpy_reduce_func=np.sum)
+                                         numpy_reduce_func=np.sum)
             net = sym_bcast.bind(default_context(), args={'a': mx.nd.array(dat_npy)},
-                                                 args_grad={'a': grad_nd})
+                                 args_grad={'a': grad_nd})
             net.forward(is_train=True)
             assert (net.outputs[0].shape == target_shape).all()
             assert_almost_equal(net.outputs[0].asnumpy(), groundtruth, rtol=1e-4)
@@ -2555,6 +2584,7 @@ def test_broadcast():
             assert_almost_equal(grad_nd.asnumpy(), grad_groundtruth, rtol=1e-4)
         test_broadcasting_ele(sym_bcast_axis)
         test_broadcasting_ele(sym_bcast_to)
+        test_broadcasting_ele(sym_bcast_to_with_zero)
         test_broadcasting_ele(sym_bcast_like)
 
 
@@ -4601,7 +4631,7 @@ def test_tile():
         assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
 
     test_normal_case()
-    with mx.np_compat():
+    with mx.np_shape():
         test_empty_tensor()
     test_empty_reps()
     test_tile_backward()
@@ -4662,7 +4692,7 @@ def test_one_hot():
     test_normal_case(index_type=np.float64)
     test_normal_case(index_type=np.float32)
     test_normal_case(index_type=np.float16)
-    with mx.np_compat():
+    with mx.np_shape():
         test_empty_indices()
     test_zero_depth()
 
@@ -7213,7 +7243,7 @@ def test_slice_partial_infer():
     check_slice_axis_partial_infer(var1, 0, 0, 5, (5, 0))
     check_slice_axis_partial_infer(var1, 1, 0, 5, (10, 0))
 
-    with mx.np_compat():
+    with mx.np_shape():
         var1 = mx.sym.var(name="data", shape=(-1, 20))
         check_slice_partial_infer(var1, (None, None), (None, 10), [], (-1, 10))
         check_slice_partial_infer(var1, (None, None), (None, 10), (None, 2), (-1, 5))
@@ -7238,7 +7268,7 @@ def test_float16_min_max():
 
 
 @with_seed()
-@mx.use_np_compat
+@mx.use_np_shape
 def test_zero_size_min_max():
     def min():
         a = mx.nd.zeros(shape=(5, 0))
@@ -8434,12 +8464,78 @@ def test_image_normalize():
     # check backward using finite difference
     check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
 
+@with_seed()
+def test_index_array():
+    def test_index_array_default():
+        for shape in [(10,), (7, 5, 29), (5, 7, 11, 13, 17, 19)]:
+            data  = mx.symbol.Variable("data")
+            index_array = mx.sym.contrib.index_array(data)
+
+            input_array = np.ones(shape)
+            mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
+            expected = np.stack(mgrid, axis=-1)
+
+            check_symbolic_forward(index_array, [input_array], [expected])
+            check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+
+    @mx.use_np_shape
+    def test_index_array_default_zero_dim():
+        data  = mx.symbol.Variable("data")
+        index_array = mx.sym.contrib.index_array(data)
+
+        input_array = np.ones(())
+        expected = np.zeros((0,))
+
+        check_symbolic_forward(index_array, [input_array], [expected])
+        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+
+    @mx.use_np_shape
+    def test_index_array_default_zero_size():
+        data  = mx.symbol.Variable("data")
+        index_array = mx.sym.contrib.index_array(data)
+
+        input_array = np.ones((0, 0, 0))
+        expected = np.zeros((0, 0, 0, 3))
+
+        check_symbolic_forward(index_array, [input_array], [expected])
+        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+
+    def test_index_array_select_axes():
+        shape = (5, 7, 11, 13, 17, 19)
+        for axes in [(3,), (4, 1), (5, 1, 3), (-1,), (-5, -1, -3)]:
+            data  = mx.symbol.Variable("data")
+            index_array = mx.sym.contrib.index_array(data, axes=axes)
+
+            input_array = np.ones(shape)
+            mgrid = np.mgrid[tuple(slice(0, x) for x in shape)]
+            expected = np.stack(mgrid, axis=-1)[..., axes]
+
+            check_symbolic_forward(index_array, [input_array], [expected])
+            check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+
+    @mx.use_np_shape
+    def test_index_array_select_axes_zero_size():
+        data  = mx.symbol.Variable("data")
+        index_array = mx.sym.contrib.index_array(data, axes=(2, 1))
+
+        input_array = np.ones((0, 0, 0, 0))
+        expected = np.zeros((0, 0, 2))
+
+        check_symbolic_forward(index_array, [input_array], [expected])
+        check_symbolic_backward(index_array, [input_array], [np.ones(expected.shape)], [np.zeros_like(input_array)])
+
+    test_index_array_default()
+    test_index_array_default_zero_dim()
+    test_index_array_default_zero_size()
+    test_index_array_select_axes()
+    test_index_array_select_axes_zero_size()
+
 
 @with_seed()
 def test_scalar_tensor_creation():
     assertRaises(MXNetError, mx.nd.zeros, shape=())
     assertRaises(MXNetError, mx.nd.ones, shape=())
-    with mx.np_compat():
+    with mx.np_shape():
         data_mx = mx.nd.ones(shape=())
         data_np = np.ones((), dtype=data_mx.dtype)
         assert same(data_mx.asnumpy(), data_np)
@@ -8449,7 +8545,7 @@ def test_scalar_tensor_creation():
 def test_zero_size_tensor_creation():
     assertRaises(MXNetError, mx.nd.zeros, shape=(0, 1, 3, 0))
     assertRaises(MXNetError, mx.nd.ones, shape=(0, 1, 3, 0))
-    with mx.np_compat():
+    with mx.np_shape():
         data_mx = mx.nd.ones(shape=(0, 1, 0, 4))
         data_np = np.ones(shape=data_mx.shape, dtype=data_mx.dtype)
         assert same(data_mx.asnumpy(), data_np)
@@ -8457,7 +8553,7 @@ def test_zero_size_tensor_creation():
 
 @with_seed()
 def test_concat_with_zero_size_tensor():
-    with mx.np_compat():
+    with mx.np_shape():
         data1 = mx.nd.ones((0, 8, 12))
         data2 = mx.nd.ones((3, 8, 12))
         data3 = mx.nd.ones((0, 8, 12))
@@ -8472,8 +8568,8 @@ def test_concat_with_zero_size_tensor():
 
 
 @with_seed()
-def test_np_compat_decorator():
-    @mx.use_np_compat
+def test_np_shape_decorator():
+    @mx.use_np_shape
     def check_scalar_one():
         """Generate scalar one tensor"""
         return mx.nd.ones(shape=())
@@ -8481,12 +8577,12 @@ def test_np_compat_decorator():
     assert check_scalar_one.__doc__ == "Generate scalar one tensor"
     assert check_scalar_one().shape == ()
     for active in [True, False]:
-        with mx.np_compat(active=active):
+        with mx.np_shape(active=active):
             assert check_scalar_one.__name__ == "check_scalar_one"
             assert check_scalar_one.__doc__ == "Generate scalar one tensor"
             assert check_scalar_one().shape == ()
 
-    @mx.use_np_compat
+    @mx.use_np_shape
     def check_concat(shape1, shape2, axis):
         data1 = mx.nd.ones(shape1)
         data2 = mx.nd.ones(shape2)
