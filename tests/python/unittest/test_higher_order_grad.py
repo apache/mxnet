@@ -17,11 +17,10 @@
 
 
 import math
-import numpy as np
-import mxnet as mx
-from mxnet import gluon, nd, autograd
+from mxnet import nd, autograd
 from mxnet.test_utils import assert_almost_equal, random_arrays
 from common import with_seed
+
 
 @with_seed()
 def test_sin():
