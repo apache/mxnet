@@ -28,6 +28,8 @@
 
 #include <dmlc/base.h>
 #include <vector>
+#include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <map>
 #include <string>

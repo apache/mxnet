@@ -25,6 +25,7 @@
 
 #if MXNET_USE_MKLDNN == 1
 #include "mkldnn_concat-inl.h"
+#include <memory>
 
 namespace mxnet {
 namespace op {
