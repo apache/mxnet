@@ -94,7 +94,6 @@ void FusedOp::GenerateCode() {
       std::string var_name = "temp" + std::to_string(temp_name_counter++);
       if (source->is_variable()) {
         code += "const auto " + var_name + " = load(input_" + source->attrs.name + ", i);\n";
-        code += "printf(\"%d: %f\\n\", i, " + var_name + ");\n";
         CHECK_EQ(outputs[i], 1);
         variables[{i, 0}] = var_name;
       } else {

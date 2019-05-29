@@ -90,11 +90,13 @@ class BidirectionalGraph {
         std::unordered_set<Node*> out_graph;
         std::vector<Node*> dummy_head;
         dummy_head.emplace_back(&node);
-        DFS(dummy_head, false, [&out_graph](Node* node) {
-          out_graph.insert(node);
+        DFS(dummy_head, false, [&out_graph, &is_compatible](Node* node) {
+          if (is_compatible(node->nnvmptr))
+            out_graph.insert(node);
         });
-        DFS(dummy_head, true, [&in_graph](Node* node) {
-          in_graph.insert(node);
+        DFS(dummy_head, true, [&in_graph, is_compatible](Node* node) {
+          if (is_compatible(node->nnvmptr))
+            in_graph.insert(node);
         });
         if (!(in_graph.empty() || out_graph.empty()))
           separation_sets.push_back(std::make_pair(in_graph, out_graph));

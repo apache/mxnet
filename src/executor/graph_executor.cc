@@ -983,9 +983,10 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
 
-  g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
   if (dmlc::GetEnv("MXNET_USE_FUSION", true)) {
+    g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
     g = FusePointwiseForward(std::move(g));
+    g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
     g = FusePointwiseBackward(std::move(g));
   }
   // create "device" and "context" attrs for the graph

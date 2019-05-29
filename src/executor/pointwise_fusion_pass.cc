@@ -176,10 +176,10 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
 Graph FusePointwiseForward(Graph &&g) {
   Graph ret;
   g.indexed_graph();
-  const auto & num_forward_output = g.GetAttr<size_t>("num_forward_outputs");
+  const auto& num_forward_outputs = g.GetAttr<size_t>("num_forward_outputs");
   Graph fg;
   fg.outputs.insert(fg.outputs.begin(), g.outputs.begin(),
-                    g.outputs.begin() + num_forward_output);
+                    g.outputs.begin() + num_forward_outputs);
   auto subsets = GetCompatibleSubsets(fg, IsFusionCompatible);
   g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode);
   ret.outputs = g.outputs;
@@ -189,7 +189,19 @@ Graph FusePointwiseForward(Graph &&g) {
 Graph FusePointwiseBackward(Graph &&g) {
   Graph ret;
   g.indexed_graph();
-  auto subsets = GetCompatibleSubsets(g, IsFusionCompatible);
+  const auto& num_forward_outputs = g.GetAttr<size_t>("num_forward_outputs");
+  Graph fg;
+  fg.outputs.insert(fg.outputs.begin(), g.outputs.begin(),
+                    g.outputs.begin() + num_forward_outputs);
+  std::unordered_set<nnvm::Node*> exclusion_set;
+  DFSVisit(fg.outputs, [&exclusion_set](const nnvm::NodePtr& n) {
+    exclusion_set.insert(n.get());
+  });
+  auto subsets = GetCompatibleSubsets(g, [&exclusion_set](nnvm::Node* n) {
+    if (exclusion_set.count(n))
+      return false;
+    return IsFusionCompatible(n);
+  });
   g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode);
   ret.outputs = g.outputs;
   return ret;
