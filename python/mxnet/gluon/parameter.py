@@ -157,7 +157,9 @@ class Parameter(object):
 
     @property
     def shape(self):
-        if is_np_shape():
+        if self._shape is None:
+            return None
+        elif is_np_shape():
             return tuple(i if i != 0 else -1 for i in self._shape)
         else:
             return self._shape
