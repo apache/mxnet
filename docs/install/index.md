@@ -28,7 +28,6 @@
    download.md
    java_setup.md
    osx_setup.md
-   raspbian_setup.md
    scala_setup.md
    ubuntu_setup.md
    validate_mxnet.md

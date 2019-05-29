@@ -60,8 +60,8 @@ You may jump to those, but it is recommended that you continue reading to unders
 
 * [Amazon Linux / CentOS / RHEL](centos_setup.md)
 * [macOS](osx_setup.md)
-* [Raspbian](raspian_setup.md)
-* [TX2](tx2_setup.md)
+* [Raspbian](https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU)
+* [TX2](index.md#nvidia-jetson-tx-family)
 * [Ubuntu](ubuntu_setup.md)
 * [Windows](windows_setup.md)
 
