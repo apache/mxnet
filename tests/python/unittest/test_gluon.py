@@ -2735,13 +2735,12 @@ def test_np_shape_parameters():
         def forward(self, x):
             return self.dense(x)
 
-    mx.set_np_shape(True)
-    z = mx.nd.zeros((2,2016))
-    print(z.shape)
-    foo = Foo()
-    foo.initialize()
-    print(foo(z).shape)
-    mx.set_np_shape(False)
+    with mx.np_shape(True):
+        z = mx.nd.zeros((2,2016))
+        print(z.shape)
+        foo = Foo()
+        foo.initialize()
+        print(foo(z).shape)
 
 if __name__ == '__main__':
     import nose
