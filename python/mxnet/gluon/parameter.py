@@ -30,7 +30,7 @@ from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent, _brief_print_list
+from .utils import _indent, _brief_print_list, shape_is_known
 from .. import is_np_shape
 
 # pylint: disable= invalid-name
@@ -273,7 +273,7 @@ class Parameter(object):
             return
         init, ctx, default_init, data = self._deferred_init
         self._deferred_init = ()
-        assert self.shape is not None and np.prod(self.shape) > 0, \
+        assert shape_is_known(self.shape), \
             "Cannot initialize Parameter '%s' because it has " \
             "invalid shape: %s. Please specify in_units, " \
             "in_channels, etc for `Block`s."%(
@@ -384,7 +384,7 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
-        if not self.shape or np.prod(self.shape) <= 0:
+        if not shape_is_known(self.shape):
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init, None)
                 return

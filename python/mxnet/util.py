@@ -245,3 +245,17 @@ def use_np_shape(func):
             return func(*args, **kwargs)
 
     return _with_np_shape
+
+def shape_is_known(shape):
+    """Check whether a shape is completely known w/ or w/o np semantics."""
+    if shape is None:
+        return False
+    unknown_dim_size = -1 if is_np_shape() else 0
+    if len(shape) == 0:
+        return unknown_dim_size == -1
+    for dim_size in shape:
+        if dim_size == unknown_dim_size:
+            return False
+        assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
+                                            "received {}".format(unknown_dim_size, dim_size)
+    return True
