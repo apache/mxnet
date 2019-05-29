@@ -26,7 +26,7 @@
 
 #if MXNET_USE_MKLDNN == 1
 #include "mkldnn_fully_connected-inl.h"
-#include <unoreded_map>
+#include <unordered_map>
 
 namespace mxnet {
 namespace op {
