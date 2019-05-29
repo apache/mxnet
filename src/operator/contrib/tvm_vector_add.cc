@@ -15,17 +15,17 @@ void TVMVectorAddCompute(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
-  tvm::runtime::TVMOpModule::Get()->Call("myadd", {inputs[0], inputs[1], outputs[0]});
+  tvm::runtime::TVMOpModule::Get()->Call("vadd", {inputs[0], inputs[1], outputs[0]});
 }
+
+NNVM_REGISTER_OP(tvm_vector_add)
+    .set_num_inputs(2)
+    .set_num_outputs(1)
+    .add_argument("a", "NDArray-or-Symbol", "first input")
+    .add_argument("b", "NDArray-or-Symbol", "second input")
+    .set_attr<mxnet::FInferShape>("FInferShape", mxnet::op::ElemwiseShape<2, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
+    .set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMVectorAddCompute);
 
 }  // namespace op
 }  // namespace mxnet
-
-NNVM_REGISTER_OP(tvm_vector_add)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.add_argument("a", "NDArray-or-Symbol", "first input")
-.add_argument("b", "NDArray-or-Symbol", "second input")
-.set_attr<mxnet::FInferShape>("FInferShape", mxnet::op::ElemwiseShape<2, 1>)
-.set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
-.set_attr<mxnet::FCompute>("FCompute<cpu>", mxnet::op::TVMVectorAddCompute);
