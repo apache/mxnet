@@ -1,0 +1,21 @@
+diff --git nnvm/src/core/graph.cc nnvm/src/core/graph.cc
+index b8bcae7..af7bb4a 100644
+--- nnvm/src/core/graph.cc
++++ nnvm/src/core/graph.cc
+@@ -57,6 +57,8 @@ IndexedGraph::IndexedGraph(const Graph &g) {
+ 
+   DFSVisit(g.outputs, [this, &inputs_rptr, &control_rptr, &subgraphs]
+              (const NodePtr& n) {
++      const auto& is_fusion = Op::GetAttr<bool>("TIsFusion");
++      if (!n->is_variable() && is_fusion.get(n->op(), false)) return;
+       CHECK_LT(nodes_.size(), std::numeric_limits<uint32_t>::max());
+       uint32_t nid = static_cast<uint32_t>(nodes_.size());
+       for (const auto &subgraph : n->attrs.subgraphs)
+@@ -83,6 +85,7 @@ IndexedGraph::IndexedGraph(const Graph &g) {
+       inputs_rptr.push_back(input_entries_.size());
+       // control deps
+       for (const auto& nptr : n->control_deps) {
++        if (!nptr->is_variable() && is_fusion.get(nptr->op(), false)) continue;
+         auto it = node2index_.find(nptr.get());
+         CHECK(it != node2index_.end() && it->first == nptr.get());
+         control_deps_.push_back(it->second);

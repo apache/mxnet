@@ -250,7 +250,6 @@ nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_
 */
 std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_set) {
   std::vector<nnvm::NodeEntry> inputs;
-  const auto &idx = g.indexed_graph();
   nnvm::NodeEntryMap<nnvm::NodeEntry> entry_map;
   DFSVisit(g.outputs, [&subgraph_set, &inputs, &entry_map](const nnvm::NodePtr &node){
     if (subgraph_set.count(node.get())) {
@@ -271,9 +270,12 @@ std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_s
     }
   });
   // Fix ordering of w.r.t to topology
+  Graph _g;
+  _g.outputs = g.outputs;
+  const auto &idx = _g.indexed_graph();
   std::sort(inputs.begin(), inputs.end(),
-      [&idx](const nnvm::NodeEntry lhs, const nnvm::NodeEntry rhs) {
-        return idx.entry_id(lhs) < idx.entry_id(rhs);
+      [&idx, &entry_map](const nnvm::NodeEntry lhs, const nnvm::NodeEntry rhs) {
+        return idx.entry_id(entry_map.at(lhs)) < idx.entry_id(entry_map.at(rhs));
       });
   return inputs;
 }
