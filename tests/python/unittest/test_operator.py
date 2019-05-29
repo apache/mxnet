@@ -1533,6 +1533,28 @@ def test_deconvolution():
         pad = (3,)
     )
 
+@with_seed()
+def test_deconvolution_forward_with_bias():
+    """Check if deconvolution forward can work well with bias=True
+    """
+    def check_deconvolution_forward_with_bias(shape=(1, 16, 5, 5), num_filter=32, num_group=1, kernel=(3, 3), pad=(1, 1)):
+        x = mx.sym.Variable('x')
+        w = mx.sym.Variable('w')
+        input_data = mx.random.uniform(-5, 5, shape, ctx=mx.cpu())
+        y = mx.sym.Deconvolution(data=x, weight=w, num_filter=num_filter, num_group=num_group, kernel=kernel, no_bias=False, pad=pad)
+        exe = y.simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
+
+        exe.arg_arrays[0][:] = np.random.normal(size=exe.arg_arrays[0].shape)
+        exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
+
+        exe.forward(is_train=False)
+        o = exe.outputs[0]
+        t = o.asnumpy()
+    check_deconvolution_forward_with_bias((1, 16, 5), 32, 1, (3,), (1,))
+    check_deconvolution_forward_with_bias((32, 16, 5), 32, 1, (3,), (1,))
+    check_deconvolution_forward_with_bias((1, 16, 5, 5), 32, 1, (3, 3), (1, 1))
+    check_deconvolution_forward_with_bias((32, 16, 5, 5), 32, 1, (3, 3), (1, 1))
+
 
 def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
     arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_context()) for i, shape in zip(range(len(shapes)), shapes)}
