@@ -31,6 +31,7 @@ from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
 from .utils import _indent, _brief_print_list
+from .. import is_np_shape
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -156,7 +157,10 @@ class Parameter(object):
 
     @property
     def shape(self):
-        return self._shape
+        if is_np_shape():
+            return tuple(i if i != 0 else -1 for i in self._shape)
+        else:
+            return self._shape
 
     @shape.setter
     def shape(self, new_shape):
