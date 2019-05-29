@@ -1703,16 +1703,25 @@ def test_zero_from_numpy():
 
 @with_seed()
 def test_save_load_zero_size_ndarrays():
-    shapes = [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)]
-    array_list = [np.random.randint(0, 10, size=shape) for shape in shapes]
-    array_list = [mx.nd.array(arr) for arr in array_list]
-    with TemporaryDirectory() as work_dir:
-        fname = os.path.join(work_dir, 'dataset')
-        mx.nd.save(fname, array_list)
-        array_list_loaded = mx.nd.load(fname)
-        assert len(array_list) == len(array_list_loaded)
-        for a1, a2 in zip(array_list, array_list_loaded):
-            assert np.array_equal(a1.asnumpy(), a2.asnumpy())
+    def check_save_load(is_np_shape, shapes, throw_exception):
+        with mx.np_shape(is_np_shape):
+            array_list = [np.random.randint(0, 10, size=shape) for shape in shapes]
+            array_list = [mx.nd.array(arr) for arr in array_list]
+            with TemporaryDirectory() as work_dir:
+                fname = os.path.join(work_dir, 'dataset')
+                if throw_exception:
+                    assert_exception(mx.nd.save, mx.MXNetError, fname, array_list)
+                else:
+                    mx.nd.save(fname, array_list)
+                    array_list_loaded = mx.nd.load(fname)
+                    assert len(array_list) == len(array_list_loaded)
+                    for a1, a2 in zip(array_list, array_list_loaded):
+                        assert np.array_equal(a1.asnumpy(), a2.asnumpy())
+
+    check_save_load(False, [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False)  # legacy mode
+    check_save_load(True, [(2, 1), (3, 5)], False)  # np_shape semantics, no zero-size, should succeed
+    check_save_load(True, [(2, 1), (3, 0)], True)  # np_shape semantics, zero-size, should fail
+    check_save_load(True, [(2, 1), ()], True)  # np_shape semantics, scalar tensor, should fail
 
 
 if __name__ == '__main__':

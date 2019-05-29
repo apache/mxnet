@@ -1582,8 +1582,14 @@ static const uint32_t NDARRAY_V2_MAGIC = 0xF993fac9;
 
 void NDArray::Save(dmlc::Stream *strm) const {
   // TODO(junwu): Support this after NumPy operators are merged
-  CHECK(!Imperative::Get()->is_np_shape())
-      << "Saving ndarray within the scope of np_shape is not supported.";
+  if (Imperative::Get()->is_np_shape()) {
+    CHECK_EQ(storage_type(), kDefaultStorage)
+        << "only allow serializing ndarray of default storage type within the scope of np_shape";
+    CHECK_NE(shape_.Size(), 0U)
+        << "serializing zero-size ndarray within the scope of np_shape is not supported";
+    CHECK_NE(shape_.ndim(), 0)
+        << "serializing scalar ndarray within the scope of np_shape is not supported";
+  }
   // write magic number to mark this version
   // for storage type
   strm->Write(NDARRAY_V2_MAGIC);
@@ -1701,9 +1707,6 @@ bool NDArray::LegacyLoad(dmlc::Stream *strm, const uint32_t magic) {
 }
 
 bool NDArray::Load(dmlc::Stream *strm) {
-  // TODO(junwu): Support this after NumPy operators are merged
-  CHECK(!Imperative::Get()->is_np_shape())
-      << "Loading ndarray within the scope of np_shape is not supported.";
   uint32_t magic;
   if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
   if (magic != NDARRAY_V2_MAGIC) {
@@ -1724,6 +1727,15 @@ bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   mxnet::TShape shape;
   if (!shape.Load(strm)) return false;
+  // TODO(junwu): Support this after NumPy operators are merged
+  if (Imperative::Get()->is_np_shape()) {
+    CHECK_EQ(stype, kDefaultStorage)
+        << "only allow deserializing ndarray of default storage type within the scope of np_shape";
+    CHECK_NE(shape.Size(), 0U)
+        << "deserializing zero-size ndarray within the scope of np_shape is not supported";
+    CHECK_NE(shape.ndim(), 0)
+        << "deserializing scalar ndarray within the scope of np_shape is not supported";
+  }
   if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
