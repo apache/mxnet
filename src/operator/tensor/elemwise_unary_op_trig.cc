@@ -44,15 +44,28 @@ The storage type of ``sin`` output depends upon the input storage type:
    - sin(csr) = csr
 
 )code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sin" });
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshadow_op::sin_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto x_grad = MakeNode("cos", n->attrs.name + "_mid_x_grad", {n->inputs[0]}, nullptr, &n);
-    auto in_grad = MakeNode("elemwise_mul", n->attrs.name + "_backward",
-                            {ograds[0], nnvm::NodeEntry{x_grad, 0, 0}}, nullptr, &n);
-    std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(nnvm::NodeEntry{in_grad, 0, 0});
-    return ret;
-  });
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // f(x) = sin(x)
+      // f'(x) = cos(x)
+      // f''(x) = -sin(x)
+      auto grad_x = nnvm::NodeEntry(n);
+      auto grad_grad_x_mid = MakeNode("sin", n->attrs.name + "_mid_grad_grad",
+                                      {n->inputs[1]}, nullptr, &n);
+      auto grad_grad_x = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
+                                  {nnvm::NodeEntry(grad_grad_x_mid)}, nullptr, &n);
+      std::vector<nnvm::NodeEntry> ret;
+      // for the backward of the _backward_sin node
+      // first input is the ograd and second input is x (because ElemwiseUseIn)
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], grad_x}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry(grad_grad_x)}, nullptr, &n));
+      return ret;
+    });
 
 // cos
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(cos, cpu, mshadow_op::cos)
@@ -67,17 +80,29 @@ The input should be in radians (:math:`2\pi` rad equals 360 degrees).
 The storage type of ``cos`` output is always dense
 
 )code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_cos"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_op::cos_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto x_grad = MakeNode("sin", n->attrs.name + "_mid_x_grad", {n->inputs[0]}, nullptr, &n);
-    auto neg_x_grad = MakeNode("negative", n->attrs.name + "_mid_neg_x_grad",
-                               {nnvm::NodeEntry{x_grad, 0, 0}}, nullptr, &n);
-    auto in_grad = MakeNode("elemwise_mul", n->attrs.name + "_backward",
-                            {ograds[0], nnvm::NodeEntry{neg_x_grad, 0, 0}}, nullptr, &n);
-    std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(nnvm::NodeEntry{in_grad, 0, 0});
-    return ret;
-  });
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // f(x) = cos(x)
+      // f'(x) = -sin(x)
+      // f''(x) = -cos(x)
+      auto grad_x = nnvm::NodeEntry(n);
+      auto grad_grad_x_mid = MakeNode("cos", n->attrs.name + "_mid_grad_grad",
+                                      {n->inputs[1]}, nullptr, &n);
+      auto grad_grad_x = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
+                                  {nnvm::NodeEntry(grad_grad_x_mid)}, nullptr, &n);
+      std::vector<nnvm::NodeEntry> ret;
+      // for the backward of the _backward_cos node
+      // first input is the ograd and second input is x (because ElemwiseUseIn)
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], grad_x}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry(grad_grad_x)}, nullptr, &n));
+      return ret;
+    });
+
 
 // tan
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(tan, cpu, mshadow_op::tan)
