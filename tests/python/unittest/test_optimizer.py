@@ -346,7 +346,7 @@ class PyNAG(PySGD):
             if self.momentum != 0.0:
                 momentum = mx.nd.zeros(weight.shape, weight.context, dtype=np.float32)
             weight_master_copy = array(weight, ctx=weight.context, dtype=np.float32)
-            return (weight_master_copy, momentum)
+            return (momentum, weight_master_copy)
         else:
             if self.momentum != 0.0:
                 momentum = mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype)
@@ -394,8 +394,8 @@ class PyNAG(PySGD):
             grad32 = grad32 * self.rescale_grad
             if self.clip_gradient is not None:
                 grad32 = mx.nd.clip(grad32, -self.clip_gradient, self.clip_gradient)
-            mom = state[1]
-            weight32 = state[0]
+            mom = state[0]
+            weight32 = state[1]
             if self.momentum == 0.0:
                 weight32[:] += -lr * (grad32 + wd * weight32)
             else:
@@ -417,23 +417,15 @@ def test_nag():
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
     mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+
     for dtype in [np.float16, np.float32, np.float64]:
-        for mom_option in mom_options:
-            for cg_option in cg_options:
-                for rg_option in rg_options:
-                    for wd_option in wd_options:
-                        for mp_option in mp_options:
-                            kwarg = {}
-                            kwarg.update(mom_option)
-                            kwarg.update(cg_option)
-                            kwarg.update(rg_option)
-                            kwarg.update(wd_option)
-                            kwarg.update(mp_option)
-                            if (dtype == np.float16 and
-                                    ('multi_precision' not in kwarg or
+        for params in itertools.product(mom_options, cg_options, rg_options,
+                                        wd_options, mp_options):
+            kwarg = {k: v for param in params for k, v in param.items()}
+            if (dtype == np.float16 and ('multi_precision' not in kwarg or
                                         not kwarg['multi_precision'])):
-                                continue
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+                continue
+            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype, rtol=1e-3, atol=1e-4)
 
 #SGLD
 class PySGLD(mx.optimizer.Optimizer):
