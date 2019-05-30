@@ -1,7 +1,7 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information 
+ * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
@@ -500,7 +500,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
   const auto& mutable_nodes = idx.mutable_input_nodes();
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     // get name from input names vector, and lookup new index of graph input node
-    const std::string arg_name = in_names->at(i);
+    const std::string& arg_name = in_names->at(i);
     const uint32_t nid = inv_name_map[arg_name];
     const uint32_t eid = idx.entry_id(nid, 0);
     const mxnet::TShape& inferred_shape = inferred_shapes[eid];

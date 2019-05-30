@@ -20,16 +20,18 @@ from __future__ import print_function
 import numpy as np
 import mxnet as mx
 import copy
+import os
 import math
 import ctypes
 import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from mxnet.base import py_str, MXNetError, _as_list, SymbolHandle, check_call, _LIB, c_handle_array, mx_uint
+from mxnet.base import py_str, MXNetError, _as_list, SymbolHandle, check_call, _LIB, c_handle_array, mx_uint, c_str, c_str_array
 from common import setup_module, with_seed, teardown
 import unittest
 from mxnet.gluon.model_zoo.vision import get_model
+from collections import namedtuple
 
 def make_subgraph(subg, *args):
     js = subg.tojson()
@@ -143,7 +145,66 @@ def test_make_subgraph():
                 assert_almost_equal(e1.grad_arrays[i].asnumpy(), e2.grad_arrays[i].asnumpy(),
                         rtol=0.001, atol=0.0001)
 
+# this test checks for the problem reported in #14727
+def test_input_order():
+    Batch = namedtuple('Batch', ['data'])
+
+    # setup whitelist
+    op_names = ['elemwise_mul']
+    check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str("default"),
+                                                 mx_uint(len(op_names)),
+                                                 c_str_array(op_names)))
+    os.environ['MXNET_SUBGRAPH_BACKEND'] = 'default'
+
+    # setup graph
+    e = mx.sym.var('e')
+    f = mx.sym.var('f')
+    c = mx.sym.var('c')
+    h = mx.sym.var('h')
+    k = mx.sym.var('k')
+
+    d = e * f
+    b = c * d
+    g = h * d
+    j = k + g
+    a = b + j
+
+    # bind data
+    ctx = mx.cpu()
+    c_data = mx.nd.ones((1),ctx=ctx)
+    e_data = mx.nd.ones((2),ctx=ctx)
+    f_data = mx.nd.ones((3),ctx=ctx)
+    h_data = mx.nd.ones((4),ctx=ctx)
+    k_data = mx.nd.ones((5),ctx=ctx)
+
+    args = {'c': c_data, 'e': e_data, 'h': h_data, 'k': k_data}
+    aux = {}
+
+    print(a.list_inputs())
+    
+    mod = mx.mod.Module(symbol=a,data_names=['f'],label_names=None,context=mx.cpu())
+    mod.bind(for_training=False, data_shapes=[('f',(3,))], label_shapes=mod._label_shapes)
+    mod.set_params(args,aux)
+
+    # export to symbol/params files
+    mod.save_checkpoint('test',0)
+
+    # reload from files
+    sym, arg_params, aux_params = mx.model.load_checkpoint('test', 0)
+    mod = mx.mod.Module(symbol=sym, context=ctx, label_names=None, data_names=['f'])
+    mod.bind(for_training=False, data_shapes=[('f', (3,))],
+                  label_shapes=mod._label_shapes)
+    # if shape mismatch problem occurs, it happens here in set_params
+    mod.set_params(arg_params, aux_params, allow_missing=True)
+
+    # infer
+    mod.forward(Batch([mx.nd.ones((3,))]))
+    
+    # wait for all outputs to be ready
+    for o in mod.get_outputs():
+        o.wait_to_read()
 
 if __name__ == '__main__':
     import nose
-    nose.runmodule()
+    #nose.runmodule()
+    test_input_order()
