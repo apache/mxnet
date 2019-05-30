@@ -19,6 +19,7 @@
 
 # -*- coding: utf-8 -*-
 
+import logging
 import pandas as pd
 import numpy as np
 
@@ -45,6 +46,12 @@ df3 = df.groupby("utterance_id")["POS_tag"].apply(lambda x: np.array(x)).to_fram
 
 #join the results on utterance id
 df = df1.merge(df2.merge(df3, how = "left", on = "utterance_id"), how = "left", on = "utterance_id")
+pd.option_context('display.max_colwidth', None)
+pd.option_context('display.max_rowwidth', None)
+
+logging.info("preprocess: 1st sentence:")
+logging.info(df['token'].iloc[0].tolist())
+logging.info(df['BILOU_tag'].iloc[0].tolist())
 
 #save the dataframe to a csv file
 df.to_pickle("../data/ner_data.pkl")

@@ -19,6 +19,7 @@
 
 # -*- coding: utf-8 -*-
 
+import logging
 import mxnet as mx
 import numpy as np
 import pickle
@@ -43,17 +44,17 @@ def classifer_metrics(label, pred):
     corr_pred = (prediction == label) == (pred_is_entity == True)
 
     #how many entities are there?
-    num_entities = np.sum(label_is_entity)
-    entity_preds = np.sum(pred_is_entity)
-
+    # better to cast to float for safer further ratio computations
+    num_entities = float(np.sum(label_is_entity))
+    entity_preds = float(np.sum(pred_is_entity)) 
     #how many times did we correctly predict an entity?
-    correct_entitites = np.sum(corr_pred[pred_is_entity])
+    correct_entitites = float(np.sum(corr_pred[pred_is_entity]))
 
     #precision: when we predict entity, how often are we right?
     if entity_preds == 0:
         precision = np.nan
     else:
-        precision = correct_entitites/entity_preds
+        precision = correct_entitites / entity_preds
 
     #recall: of the things that were an entity, how many did we catch?
     recall = correct_entitites / num_entities
@@ -64,6 +65,8 @@ def classifer_metrics(label, pred):
         f1 = 0
     else:
         f1 = 2 * precision * recall / (precision + recall)
+
+    logging.debug("Metrics results: precision=%f recall=%f f1=%f", precision, recall, f1)
     return precision, recall, f1
 
 def entity_precision(label, pred):
