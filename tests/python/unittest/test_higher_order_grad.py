@@ -27,9 +27,12 @@ def test_sin():
     def sin(x):
         return nd.sin(x)
 
-    x = nd.array([1, 2, 3])
-    expect_grad = -nd.sin(x)
-    check_second_order_unary(x, sin, expect_grad)
+    def grad_grad_op(x):
+        return -nd.sin(x)
+
+    arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
+    for array in arrays:
+        check_second_order_unary(array, sin, grad_grad_op)
 
 
 @with_seed()
@@ -37,9 +40,12 @@ def test_cos():
     def cos(x):
         return nd.cos(x)
 
-    x = nd.array([1, 2, 3])
-    expect_grad = -nd.cos(x)
-    check_second_order_unary(x, cos, expect_grad)
+    def grad_grad_op(x):
+        return -nd.cos(x)
+
+    arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
+    for array in arrays:
+        check_second_order_unary(array, cos, grad_grad_op)
 
 
 @with_seed()
@@ -47,9 +53,12 @@ def test_negative():
     def negative(x):
         return nd.negative(x)
 
-    x = nd.array([1, 2, 3])
-    expect_grad = nd.zeros_like(x)
-    check_second_order_unary(x, negative, expect_grad)
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
+    for array in arrays:
+        check_second_order_unary(array, negative, grad_grad_op)
 
 
 @with_seed()
@@ -57,11 +66,12 @@ def test_relu():
     def relu(x):
         return nd.relu(x)
 
-    x = nd.array([1, 2, 3])
-    expect_grad = nd.zeros_like(x)
-    check_second_order_unary(x, relu, expect_grad)
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
 
-
+    arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
+    for array in arrays:
+        check_second_order_unary(array, relu, grad_grad_op)
 
 
 @with_seed()
