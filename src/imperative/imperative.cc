@@ -350,7 +350,7 @@ std::vector<NDArray*> Imperative::Backward(
       info.fresh_out_grad = true;
     }
     CHECK_GT(xs.size(), 0)
-      << "There are no inputs in computation graph that require gradients.";
+        << "There are no inputs in computation graph that require gradients.";
   }
 
   Graph g_graph = pass::MXGradient(
