@@ -54,8 +54,6 @@ The storage type of ``sin`` output depends upon the input storage type:
     return ret;
   });
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshadow_op::sin_grad>);
-
 // cos
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(cos, cpu, mshadow_op::cos)
 MXNET_ADD_SPARSE_OP_ALIAS(cos)
@@ -80,8 +78,6 @@ The storage type of ``cos`` output is always dense
     ret.emplace_back(nnvm::NodeEntry{in_grad, 0, 0});
     return ret;
   });
-
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_op::cos_grad>);
 
 // tan
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(tan, cpu, mshadow_op::tan)
