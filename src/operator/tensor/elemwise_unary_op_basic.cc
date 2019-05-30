@@ -92,7 +92,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu, unary_bwd<mshadow
       // f(x) -> f = relu
       // f'(x) = 1 if x > 0 else 0
       // f''(x) = 0
-      auto gx = nnvm::NodeEntry{n}; // f'(x)
+      auto gx = nnvm::NodeEntry{n};  // f'(x)
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
                                 {ograds[0], gx}, nullptr, &n));
       ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_grad_in",
