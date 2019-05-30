@@ -32,6 +32,7 @@ from common import setup_module, with_seed, teardown
 import unittest
 from mxnet.gluon.model_zoo.vision import get_model
 from collections import namedtuple
+import gluoncv
 
 def make_subgraph(subg, *args):
     js = subg.tojson()
@@ -147,58 +148,157 @@ def test_make_subgraph():
 
 # this test checks for the problem reported in #14727
 def test_input_order():
-    Batch = namedtuple('Batch', ['data'])
-
-    # setup whitelist
-    op_names = ['elemwise_mul']
+    # get model from model-zoo
+    model = gluoncv.model_zoo.faster_rcnn_resnet50_v1b_coco(pretrained=True)
+    im_fname = gluoncv.utils.download('https://github.com/dmlc/web-data/blob/master/gluoncv/detection/biking.jpg?raw=true', path='biking.jpg')
+    # hybridize and export
+    x, orig_img = gluoncv.data.transforms.presets.rcnn.load_test(im_fname)
+    model.hybridize()
+    box_ids, scores, bboxes = model(x)
+    model.export('faster-rcnn')
+    
+    # set partitioning config
+    op_names = [
+        "_add",
+        "_contrib_MultiBoxDetection",
+        "_contrib_MultiBoxPrior",
+        "_contrib_MultiBoxTarget",
+        "_copy",
+        "_div_scalar",
+        "_DivScalar",
+        "_minus",
+        "_Minus",
+        "_minus_scalar",
+        "_MinusScalar",
+        "_mul",
+        "_Mul",
+        "_mul_scalar",
+        "_MulScalar",
+        "_plus",
+        "_Plus",
+        "_plus_scalar",
+        "_PlusScalar",
+        "_rdiv_scalar",
+        "_RDivScalar",
+        "_rminus_scalar",
+        "_RMinusScalar",
+        "_rnn_param_concat",
+        "_sub",
+        "abs",
+        "Activation",
+        "arccos",
+        "arccosh",
+        "arcsin",
+        "arcsinh",
+        "arctan",
+        "arctanh",
+        "argmax",
+        "argmin",
+        "BatchNorm",
+        "BatchNorm_v1",
+        "BlockGrad",
+        "broadcast_add",
+        "broadcast_equal",
+        "broadcast_greater",
+        "broadcast_greater_equal",
+        "broadcast_lesser",
+        "broadcast_lesser_equal",
+        "broadcast_mul",
+        "broadcast_not_equal",
+        "broadcast_plus",
+        "cast",
+        "Cast",
+        "clip",
+        "concat",
+        "Concat",
+        "Convolution",
+        "Convolution_v1",
+        "cos",
+        "cosh",
+        "crop",
+        "Deconvolution",
+        "Dropout",
+        "elemwise_add",
+        "elemwise_mul",
+        "elemwise_sub",
+        "Embedding",
+        "exp",
+        "expand_dims",
+        "flatten",
+        "Flatten",
+        "flip",
+        "FullyConnected",
+        "identity",
+        "identity",
+        "LeakyReLU",
+        "LinearRegressionOutput",
+        "log",
+        "log_softmax",
+        "LRN",
+        "make_loss",
+        "MakeLoss",
+        "max",
+        "max_axis",
+        "mean",
+        "min",
+        "min_axis",
+        "negative",
+        "one_hot",
+        "pad",
+        "Pad",
+        "pick",
+        "Pooling",
+        "Pooling_v1",
+        "prod",
+        "reciprocal",
+        "relu",
+        "repeat",
+        "reshape",
+        "Reshape",
+        "reverse",
+        "RNN",
+        "rsqrt",
+        "sigmoid",
+        "sin",
+        "sinh",
+        "slice",
+        "SliceChannel",
+        "softmax",
+        "SoftmaxActivation",
+        "SoftmaxOutput",
+        "softmin",
+        "split",
+        "sqrt",
+        "sum",
+        "sum_axis",
+        "tan",
+        "tanh",
+        "tile",
+        "topk",
+        "transpose",
+        "zeros_like"
+    ]
     check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str("default"),
                                                  mx_uint(len(op_names)),
                                                  c_str_array(op_names)))
     os.environ['MXNET_SUBGRAPH_BACKEND'] = 'default'
 
-    # setup graph
-    e = mx.sym.var('e')
-    f = mx.sym.var('f')
-    c = mx.sym.var('c')
-    h = mx.sym.var('h')
-    k = mx.sym.var('k')
-
-    d = e * f
-    b = c * d
-    g = h * d
-    j = k + g
-    a = b + j
-
-    # bind data
-    ctx = mx.cpu()
-    c_data = mx.nd.ones((1),ctx=ctx)
-    e_data = mx.nd.ones((2),ctx=ctx)
-    f_data = mx.nd.ones((3),ctx=ctx)
-    h_data = mx.nd.ones((4),ctx=ctx)
-    k_data = mx.nd.ones((5),ctx=ctx)
-
-    args = {'c': c_data, 'e': e_data, 'h': h_data, 'k': k_data}
-    aux = {}
-
-    print(a.list_inputs())
-    
-    mod = mx.mod.Module(symbol=a,data_names=['f'],label_names=None,context=mx.cpu())
-    mod.bind(for_training=False, data_shapes=[('f',(3,))], label_shapes=mod._label_shapes)
-    mod.set_params(args,aux)
-
-    # export to symbol/params files
-    mod.save_checkpoint('test',0)
-
-    # reload from files
-    sym, arg_params, aux_params = mx.model.load_checkpoint('test', 0)
-    mod = mx.mod.Module(symbol=sym, context=ctx, label_names=None, data_names=['f'])
-    mod.bind(for_training=False, data_shapes=[('f', (3,))],
-                  label_shapes=mod._label_shapes)
-    # if shape mismatch problem occurs, it happens here in set_params
+    # load model in module API
+    sym, arg_params, aux_params = mx.model.load_checkpoint('faster-rcnn', 0)
+    mod = mx.mod.Module(symbol=sym, context=mx.cpu(), label_names=None)
+    mod.bind(for_training=False, data_shapes=[('data', (1,3,224,224))],label_shapes=mod._label_shapes)
     mod.set_params(arg_params, aux_params, allow_missing=True)
 
-    # infer
-    mod.forward(Batch([mx.nd.ones((3,))]))
+    fname = mx.test_utils.download('https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true')
+    img = mx.image.imread(fname)
+
+    # convert into format (batch, RGB, width, height)
+    img = mx.image.imresize(img, 224, 224) # resize
+    img = img.transpose((2, 0, 1)) # Channel first
+    img = img.expand_dims(axis=0) # batchify
+
+    Batch = namedtuple('Batch', ['data'])
+    mod.forward(Batch([img]))
     
     # wait for all outputs to be ready
     for o in mod.get_outputs():
@@ -206,5 +306,4 @@ def test_input_order():
 
 if __name__ == '__main__':
     import nose
-    #nose.runmodule()
-    test_input_order()
+    nose.runmodule()
