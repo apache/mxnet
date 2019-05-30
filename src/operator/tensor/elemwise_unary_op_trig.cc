@@ -52,7 +52,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshad
       // f(x) = sin(x)
       // f'(x) = cos(x)
       // f''(x) = -sin(x)
-      auto grad_x = nnvm::NodeEntry(n);
+      auto grad_x = nnvm::NodeEntry{n};
       auto grad_grad_x_mid = MakeNode("sin", n->attrs.name + "_mid_grad_grad",
                                       {n->inputs[1]}, nullptr, &n);
       auto grad_grad_x = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
@@ -63,7 +63,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshad
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
                                 {ograds[0], grad_x}, nullptr, &n));
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
-                                {ograds[0], nnvm::NodeEntry(grad_grad_x)}, nullptr, &n));
+                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
       return ret;
     });
 
@@ -88,7 +88,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_
       // f(x) = cos(x)
       // f'(x) = -sin(x)
       // f''(x) = -cos(x)
-      auto grad_x = nnvm::NodeEntry(n);
+      auto grad_x = nnvm::NodeEntry{n};
       auto grad_grad_x_mid = MakeNode("cos", n->attrs.name + "_mid_grad_grad",
                                       {n->inputs[1]}, nullptr, &n);
       auto grad_grad_x = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
@@ -99,7 +99,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
                                 {ograds[0], grad_x}, nullptr, &n));
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
-                                {ograds[0], nnvm::NodeEntry(grad_grad_x)}, nullptr, &n));
+                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
       return ret;
     });
 
