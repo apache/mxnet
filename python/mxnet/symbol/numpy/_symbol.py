@@ -30,7 +30,7 @@ from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
-           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'spilt', 'swapaxes',
+           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims']
 
 
@@ -1271,7 +1271,8 @@ def split(ary, indices_or_sections, axis=0):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
-    return _npi.split(ary, indices, axis, sections)
+    ret = _npi.split(ary, indices, axis, False, sections)
+    return ret
 
 
 _set_np_symbol_class(_Symbol)

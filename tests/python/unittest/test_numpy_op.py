@@ -765,7 +765,7 @@ def test_np_squeeze():
 
 
 @with_seed()
-@np.use_np_shape
+@npx.use_np_shape
 def test_np_split():
     class TestSplit(HybridBlock):
         def __init__(self, indices_or_sections, axis=None):
