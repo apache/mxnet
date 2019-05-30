@@ -49,19 +49,6 @@ def test_cos():
 
 
 @with_seed()
-def test_negative():
-    def negative(x):
-        return nd.negative(x)
-
-    def grad_grad_op(x):
-        return nd.zeros_like(x)
-
-    arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
-    for array in arrays:
-        check_second_order_unary(array, negative, grad_grad_op)
-
-
-@with_seed()
 def test_relu():
     def relu(x):
         return nd.relu(x)

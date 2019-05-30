@@ -349,9 +349,8 @@ std::vector<NDArray*> Imperative::Backward(
       x_reqs.push_back(info.grad_req);
       info.fresh_out_grad = true;
     }
-    if (xs.empty()) {
-      LOG(WARNING) << "There are no inputs in computation graph that require gradients.";
-    }
+    CHECK_GT(xs.size(), 0)
+      << "There are no inputs in computation graph that require gradients.";
   }
 
   Graph g_graph = pass::MXGradient(
