@@ -57,9 +57,9 @@ values and then push the aggregated value:
 
 ```python
 # The numbers used below assume 4 GPUs
-gpus = mx.test_utils.list_gpus()
-if len(gpus) > 1:
-    contexts = [mx.gpu(i) for i in gpus]
+gpus = mx.context.num_gpus()
+if gpus > 0:
+    contexts = [mx.gpu(i) for i in range(gpus)]
 else:
     contexts = [mx.cpu(i) for i in range(4)]
 b = [mx.nd.ones(shape, ctx) for ctx in contexts]

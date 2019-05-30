@@ -35,6 +35,8 @@ DMLC_REGISTER_PARAMETER(MultiSGDParam);
 DMLC_REGISTER_PARAMETER(MultiSGDMomParam);
 DMLC_REGISTER_PARAMETER(FTMLParam);
 DMLC_REGISTER_PARAMETER(AdamParam);
+DMLC_REGISTER_PARAMETER(NAGParam);
+DMLC_REGISTER_PARAMETER(NAGMomParam);
 DMLC_REGISTER_PARAMETER(RMSPropParam);
 DMLC_REGISTER_PARAMETER(RMSPropAlexParam);
 DMLC_REGISTER_PARAMETER(FtrlParam);
@@ -590,7 +592,7 @@ NNVM_REGISTER_OP(mp_sgd_update)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
-.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 3>)
+.set_attr<nnvm::FInferType>("FInferType", MP_InferType<2, 1, 3>)
 .set_attr<FCompute>("FCompute<cpu>", MP_SGDUpdate<cpu>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
@@ -607,7 +609,7 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDMomParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
-.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 4>)
+.set_attr<nnvm::FInferType>("FInferType", MP_InferType<2, 1, 4>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     return std::vector<uint32_t>{2, 3};
@@ -703,6 +705,57 @@ only the row slices whose indices appear in grad.indices are updated (for w, m a
 .add_argument("mean", "NDArray-or-Symbol", "Moving mean")
 .add_argument("var", "NDArray-or-Symbol", "Moving variance")
 .add_arguments(AdamParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(nag_mom_update)
+.describe(R"code(Update function for Nesterov Accelerated Gradient( NAG) optimizer.
+It updates the weights using the following formula,
+
+.. math::
+  v_t = \gamma v_{t-1} + \eta * \nabla J(W_{t-1} - \gamma v_{t-1})\\
+  W_t = W_{t-1} - v_t
+
+Where 
+:math:`\eta` is the learning rate of the optimizer
+:math:`\gamma` is the decay rate of the momentum estimate
+:math:`\v_t` is the update vector at time step `t`
+:math:`\W_t` is the weight vector at time step `t`
+
+)code" ADD_FILELINE)
+.set_num_inputs(3)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NAGMomParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2};
+  })
+.set_attr<FCompute>("FCompute<cpu>", NAGMomUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mom", "NDArray-or-Symbol", "Momentum")
+.add_arguments(NAGMomParam::__FIELDS__());
+
+
+NNVM_REGISTER_OP(mp_nag_mom_update)
+.describe(R"code(Update function for multi-precision Nesterov Accelerated Gradient( NAG) optimizer.
+)code" ADD_FILELINE)
+.set_num_inputs(4)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NAGMomParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<nnvm::FInferType>("FInferType", MP_InferType<2, 1, 4>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3};
+  })
+.set_attr<FCompute>("FCompute<cpu>", MP_NAGMomUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mom", "NDArray-or-Symbol", "Momentum")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(NAGMomParam::__FIELDS__());
 
 
 NNVM_REGISTER_OP(rmsprop_update)
