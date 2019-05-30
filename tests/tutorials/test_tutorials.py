@@ -198,3 +198,6 @@ def test_vision_cnn_visualization():
 
 def test_control_flow():
     assert _test_tutorial_nb('control_flow/ControlFlowTutorial')
+
+def test_amp():
+    assert _test_tutorial_nb('amp/amp_tutorial')

@@ -123,7 +123,7 @@ def test_ndarray_setitem():
     # numpy assignment for empty axis
     for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
         if trivial_shape == tuple():
-            with mx.np_compat():
+            with mx.np_shape():
                 x = mx.nd.zeros(trivial_shape)
         else:
             x = mx.nd.zeros(trivial_shape)
@@ -724,6 +724,23 @@ def test_arange():
     pred = mx.nd.arange(start=0, stop=10000**2, step=10001,
                         dtype="int32").asnumpy()
     assert_almost_equal(pred, gt)
+
+
+@with_seed()
+def test_linspace():
+    for i in range(5):
+        start = np.random.rand() * 100
+        stop = np.random.rand() * 100
+        num = np.random.randint(20)
+        gt = np.linspace(start, stop, num)
+        pred = mx.nd.linspace(start, stop, num).asnumpy()
+        assert_almost_equal(pred, gt)
+        gt = np.linspace(start, stop, num, endpoint=False)
+        pred = mx.nd.linspace(start, stop, num, endpoint=False).asnumpy()
+        assert_almost_equal(pred, gt)
+        gt = np.linspace(start, stop, num, dtype="int32")
+        pred = mx.nd.linspace(start, stop, num, dtype="int32").asnumpy()
+        assert_almost_equal(pred, gt)
 
 
 @with_seed()
@@ -1652,6 +1669,51 @@ def test_ndarray_nan_comparison():
     data1_grad = data1.grad.asnumpy()
     for i in (np.isnan(data1_grad))[1][0].flatten():
         assert i == True
+
+
+def test_zero_from_numpy():
+    # Test zero_copy
+    arrays = [
+        # ordinary numpy array
+        np.array([[1, 2], [3, 4], [5, 6]], dtype="float32"),
+        # 0-dim
+        np.array((1, )).reshape(()),
+        # 0-size
+        np.array(()).reshape((1, 0, 2)),
+    ]
+    for zero_copy in [False, True]:
+        for np_array in arrays:
+            mx_array = mx.nd.from_numpy(np_array, zero_copy=zero_copy)
+            mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    np_array = arrays[0]
+    mx_array = mx.nd.from_numpy(np_array)
+    assertRaises(ValueError, np_array.__setitem__, (2, 1), 0)
+
+    mx_array[2, 1] = 100
+    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    np_array = np.array([[1, 2], [3, 4], [5, 6]]).transpose()
+    assert not np_array.flags["C_CONTIGUOUS"]
+    try:
+        mx_array = mx.nd.from_numpy(np_array)
+    except ValueError:
+        pass
+    else:
+        assert False
+
+
+@with_seed()
+def test_save_load_zero_size_ndarrays():
+    shapes = [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)]
+    array_list = [np.random.randint(0, 10, size=shape) for shape in shapes]
+    array_list = [mx.nd.array(arr) for arr in array_list]
+    with TemporaryDirectory() as work_dir:
+        fname = os.path.join(work_dir, 'dataset')
+        mx.nd.save(fname, array_list)
+        array_list_loaded = mx.nd.load(fname)
+        assert len(array_list) == len(array_list_loaded)
+        for a1, a2 in zip(array_list, array_list_loaded):
+            assert np.array_equal(a1.asnumpy(), a2.asnumpy())
+
 
 if __name__ == '__main__':
     import nose

@@ -21,7 +21,7 @@
 # package generation, requiring the actual CUDA library to be
 # present
 
-FROM nvidia/cuda:9.1-cudnn7-devel
+FROM nvidia/cuda:10.0-devel-ubuntu16.04
 
 WORKDIR /work/deps
 
@@ -44,6 +44,10 @@ RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
 
+ENV CUDNN_VERSION=7.5.1.10
+COPY install/ubuntu_cudnn.sh /work/
+RUN /work/ubuntu_cudnn.sh
+
 # Special case because the CPP-Package requires the CUDA runtime libs
 # and not only stubs (which are provided by the base image)
 COPY install/ubuntu_nvidia.sh /work/
@@ -58,4 +62,3 @@ RUN /work/ubuntu_adduser.sh
 COPY runtime_functions.sh /work/
 
 WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib

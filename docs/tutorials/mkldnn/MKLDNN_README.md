@@ -20,6 +20,8 @@
 A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
 In the following sections, you will find build instructions for MXNet with Intel MKL-DNN on Linux, MacOS and Windows.
 
+Please find MKL-DNN optimized operators and other features in the [MKL-DNN operator list](../mkldnn/operator_list.md).
+
 The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel MKL-DNN can be found [here](https://mxnet.incubator.apache.org/faq/perf.html#intel-cpu).
 
 
@@ -101,118 +103,76 @@ LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew -
 <h2 id="3">Windows</h2>
 
 On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNet with Intel MKL-DNN.
-[Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is recommended.
+[Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is recommended.  
 
 **Visual Studio 2015**
 
 To build and install MXNet yourself, you need the following dependencies. Install the required dependencies:
 
 1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Download and Install [CMake 3](https://cmake.org/) if it is not already installed.
-3. Download and install [OpenCV 3](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
-4. Unzip the OpenCV package.
-5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (```C:\opencv\build\x64\vc14``` for example). Also, you need to add the OpenCV bin directory (```C:\opencv\build\x64\vc14\bin``` for example) to the ``PATH`` variable.
-6. If you have Intel Math Kernel Library (MKL) installed, set ```MKL_ROOT``` to point to ```MKL``` directory that contains the ```include``` and ```lib```. If you want to use MKL blas, you should set ```-DUSE_BLAS=mkl``` when cmake. Typically, you can find the directory in
-```C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2018\windows\mkl```.
-7. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBLAS](http://sourceforge.net/projects/openblas/files/v0.2.14/). Note that you should also download ```mingw64.dll.zip`` along with openBLAS and add them to PATH.
-8. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```. 
+2. Download and Install [CMake 3](https://cmake.org/files/v3.14/cmake-3.14.0-win64-x64.msi) if it is not already installed.
+3. Download [OpenCV 3](https://sourceforge.net/projects/opencvlibrary/files/3.4.5/opencv-3.4.5-vc14_vc15.exe/download), and unzip the OpenCV package, set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (e.g.,```OpenCV_DIR = C:\opencv\build ```). Also, add the OpenCV bin directory (```C:\opencv\build\x64\vc14\bin``` for example) to the ``PATH`` variable.
+4. If you have Intel Math Kernel Library (Intel MKL) installed, set ```MKL_ROOT``` to point to ```MKL``` directory that contains the ```include``` and ```lib```. If you want to use MKL blas, you should set ```-DUSE_BLAS=mkl``` when cmake. Typically, you can find the directory in ```C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl```.
+5. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBLAS](http://sourceforge.net/projects/openblas/files/v0.2.14/), or build the latest version of OpenBLAS from source. Note that you should also download ```mingw64.dll.zip``` along with openBLAS and add them to PATH. 
+6. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Downloads\OpenBLAS\```. 
 
 After you have installed all of the required dependencies, build the MXNet source code:
 
-1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet). Don't forget to pull the submodules:
+1. Start a Visual Studio command prompt by click windows Start menu>>Visual Studio 2015>>VS2015 X64 Native Tools Command Prompt, and download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet) by the command:
 ```
 git clone --recursive https://github.com/apache/incubator-mxnet.git
+cd C:\incubator-mxent
 ```
-
-2. Copy file `3rdparty/mkldnn/config_template.vcxproj` to incubator-mxnet root.
-
-3. Start a Visual Studio command prompt.
-
-4. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build``` or some other directory. Make sure to specify the architecture in the 
-[CMake 3](https://cmake.org/) command:
+2. Enable Intel MKL-DNN by -DUSE_MKLDNN=1. Use [CMake 3](https://cmake.org/) to create a Visual Studio solution in ```./build```. Make sure to specify the architecture in the 
+command:
 ```
-mkdir build
-cd build
-cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release
+>mkdir build
+>cd build
+>cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release
 ```
-
-5. In Visual Studio, open the solution file,```.sln```, and compile it.
-These commands produce a library called ```libmxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
-Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/mkldnn/src/Release/```
-
-6. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml.dll`, `libiomp5.dll`, `libopenblas.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
-
-**Visual Studio 2017**
-
-To build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/), you need the following dependencies. Install the required dependencies:
-
-1. If [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-2. Download and install [CMake 3](https://cmake.org/files/v3.11/cmake-3.11.0-rc4-win64-x64.msi) if it is not already installed.
-3. Download and install [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download).
-4. Unzip the OpenCV package.
-5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (e.g., ```OpenCV_DIR = C:\utils\opencv\build```).
-6. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.20/OpenBLAS%200.2.20%20version.zip/download).
-7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories (e.g., ```OpenBLAS_HOME = C:\utils\OpenBLAS```).
-
-After you have installed all of the required dependencies, build the MXNet source code:
-
-1. Start ```cmd``` in windows.
-
-2. Download the MXNet source code from GitHub by using following command:
-
-```r
-cd C:\
-git clone --recursive https://github.com/apache/incubator-mxnet.git
+3. Enable Intel MKL-DNN and Intel MKL as BLAS library by the command:  
 ```
-
-3. Copy file `3rdparty/mkldnn/config_template.vcxproj` to incubator-mxnet root.
-
-4. Follow [this link](https://docs.microsoft.com/en-us/visualstudio/install/modify-visual-studio) to modify ```Individual components```, and check ```VC++ 2017 version 15.4 v14.11 toolset```, and click ```Modify```.
-
-5. Change the version of the Visual studio 2017 to v14.11 using the following command (by default the VS2017 is installed in the following path):
-
-```r
-"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11
+>"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64
+>cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release -DMKL_ROOT="C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl" 
 ```
-
-6. Create a build dir using the following command and go to the directory, for example:
-
-```r
-mkdir C:\build
-cd C:\build
-```
-
-7. CMake the MXNet source code by using following command:
-
-```r
-cmake -G "Visual Studio 15 2017 Win64" .. -T host=x64 -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release
-```
-
-8. After the CMake successfully completed, compile the the MXNet source code by using following command:
-
+4. After the CMake successfully completed, in Visual Studio, open the solution file ```.sln``` and compile it, or compile the the MXNet source code by using following command:
 ```r
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
+   These commands produce mxnet library called ```libmxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder. Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/mkldnn/src/Release/```
 
-9. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml.dll`, `libiomp5.dll`, `libopenblas.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
+5. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml*.dll`, `libiomp5.dll`, `libopenblas*.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
+
+**Visual Studio 2017**
+
+User can follow the same steps of Visual Studio 2015 to build MXNET with MKL-DNN, but change the version related command, for example,```C:\opencv\build\x64\vc15\bin``` and build command is as below:
+
+```
+>cmake -G "Visual Studio 15 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release -DMKL_ROOT="C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl"
+
+```
 
 <h2 id="4">Verify MXNet with python</h2>
 
+Preinstall python and some dependent modules: 
+```
+pip install numpy graphviz
+set PYTHONPATH=[workdir]\incubator-mxnet\python
+```
+or install mxnet
 ```
 cd python
 sudo python setup.py install
 python -c "import mxnet as mx;print((mx.nd.ones((2, 3))*2).asnumpy());"
-
+```
 Expected Output:
-
+```
 [[ 2.  2.  2.]
  [ 2.  2.  2.]]
 ```
-
 ### Verify whether MKL-DNN works
 
 After MXNet is installed, you can verify if MKL-DNN backend works well with a single Convolution layer.
-
 ```
 import mxnet as mx
 import numpy as np
@@ -295,7 +255,7 @@ Then by running above code snippet, you probably will get the following output m
 Numpy + Intel(R) MKL: THREADING LAYER: (null)
 Numpy + Intel(R) MKL: setting Intel(R) MKL to use INTEL OpenMP runtime
 Numpy + Intel(R) MKL: preloading libiomp5.so runtime
-MKL_VERBOSE Intel(R) MKL 2018.0 Update 1 Product build 20171007 for Intel(R) 64 architecture Intel(R) Advanced Vector Extensions 512 (Intel(R) AVX-512) enabled processors, Lnx 2.40GHz lp64 intel_thread NMICDev:0
+MKL_VERBOSE Intel(R) MKL 2019.0 Update 3 Product build 20190125 for Intel(R) 64 architecture Intel(R) Advanced Vector Extensions 512 (Intel(R) AVX-512) enabled processors, Lnx 2.40GHz lp64 intel_thread NMICDev:0
 MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1380,0x7f7f7400a280,12) 8.93ms CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:40 WDiv:HOST:+0.000
 ```
 
@@ -307,27 +267,20 @@ Graph optimization by subgraph feature are available in master branch. You can b
 export MXNET_SUBGRAPH_BACKEND=MKLDNN
 ```
 
-When `MKLDNN` backend is enabled, advanced control options are avaliable:
-
-```
-export MXNET_DISABLE_MKLDNN_CONV_OPT=1 # disable MKLDNN convolution optimization pass
-export MXNET_DISABLE_MKLDNN_FC_OPT=1 # disable MKLDNN FullyConnected optimization pass
-```
-
-
 This limitations of this experimental feature are:
 
 - Use this feature only for inference. When training, be sure to turn the feature off by unsetting the `MXNET_SUBGRAPH_BACKEND` environment variable.
 
 - This feature will only run on the CPU, even if you're using a GPU-enabled build of MXNet. 
 
-- [MXNet Graph Optimization and Quantization Technical Information and Performance Details](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
 
 <h2 id="7">Quantization and Inference with INT8</h2>
 
 Benefiting from Intel MKL-DNN, MXNet built with Intel MKL-DNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
 
 - [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
+
+- [Model Quantization for Production-Level Neural Network Inference](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
 
 <h2 id="8">Next Steps and Support</h2>
 
