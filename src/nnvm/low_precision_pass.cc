@@ -117,6 +117,37 @@ void AddMultiCastNode(const std::vector<NodeEntry> &inputs,
     return;
 }
 
+bool CheckConditionalFP32(
+    const std::unordered_map<
+        std::string, std::unordered_map<std::string, std::vector<std::string>>>
+        &conditional_fp32_ops,
+    const std::unordered_set<std::string> &excluded_syms, NodePtr node) {
+  if (node->is_variable() || (excluded_syms.count(node->attrs.name) > 0) || conditional_fp32_ops.count(node->op()->name) == 0) {
+    return false;
+  } else {
+    // Iterate through all conditional ops
+    auto it = conditional_fp32_ops.find(node->op()->name);
+    if (it != conditional_fp32_ops.end()) {
+      auto it_params = it->second;
+      // For each param name, iterate through param values to check
+      // if the provided param name is equal to any of the values
+      for (auto it_param = it_params.begin(); it_param != it_params.end();
+           it_param++) {
+        auto param_key = node->attrs.dict.find(it_param->first);
+        if (param_key != node->attrs.dict.end()) {
+          auto it_param_vals = it_param->second;
+          if (std::find(it_param_vals.begin(), it_param_vals.end(),
+                        param_key->second) != it_param_vals.end()) {
+            return true;
+          } else {
+            return false;
+          }
+        }
+      }
+    }
+  }
+}
+
 Graph ReducePrecision(Graph &&src) {
   const auto target_dtype_ops =
       src.GetAttr<std::unordered_set<std::string>>("target_dtype_ops");
@@ -125,6 +156,11 @@ Graph ReducePrecision(Graph &&src) {
   const auto widest_dtype_ops =
       src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
   const auto target_dtype = src.GetAttr<int>("target_dtype");
+  const auto excluded_syms = src.GetAttr<std::unordered_set<std::string>>("excluded_syms");
+  const auto conditional_fp32_ops =
+      src.GetAttr<std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>>>(
+      "conditional_fp32_ops");
+
   CHECK(target_dtype == mshadow::kFloat16)
       << "Only float16 target_dtype is supported yet";
 
@@ -139,15 +175,18 @@ Graph ReducePrecision(Graph &&src) {
     *new_node = *node;
     new_node->inputs.clear();
 
-    /* 1. for node which needs to run in FP32 mode, make sure amp_cast operators
+    /* 1. for node which needs to run in FP32 mode, add amp_cast operators
      * (to fp32) after its inputs
-     * 2. for node which needs to run in FP16 mode, make sure amp_cast operators
+     * 2. for node which needs to run in FP16 mode, add amp_cast operators
      * (to target_dtype) after its inputs
-     * 3. for nodes which need to run in widest dtype among its inputs, make
-     * sure amp_multicast operators between op and its inputs
+     * 3. for nodes which need to run in widest dtype among its inputs, add
+     * amp_multicast operators between op and its inputs
+     * 4. for nodes which need to run in FP32 mode, based on a specific condition,
+     * check the condition, and if true add amp_cast (to fp32) after its inputs
      * 4. for other nodes, create copy node and add it to the mirror_map
      */
-    if (!node->is_variable() && fp32_ops.count(node->op()->name) > 0) {
+    if (!node->is_variable() && fp32_ops.count(node->op()->name) > 0 &&
+        excluded_syms.count(node->attrs.name) == 0) {
       for (size_t i = 0; i < node->inputs.size(); ++i) {
         const auto &e = node->inputs[i];
         if (mirror_fp32_map.count(e)) {
@@ -161,7 +200,8 @@ Graph ReducePrecision(Graph &&src) {
         }
       }
     } else if (!node->is_variable() &&
-               target_dtype_ops.count(node->op()->name) > 0) {
+               target_dtype_ops.count(node->op()->name) > 0 &&
+               excluded_syms.count(node->attrs.name) == 0) {
       for (size_t i = 0; i < node->inputs.size(); ++i) {
         const auto &e = node->inputs[i];
         if (mirror_target_dtype_map.count(e)) {
@@ -175,13 +215,27 @@ Graph ReducePrecision(Graph &&src) {
         }
       }
     } else if (!node->is_variable() &&
-               widest_dtype_ops.count(node->op()->name) > 0) {
+               widest_dtype_ops.count(node->op()->name) > 0 &&
+               excluded_syms.count(node->attrs.name) == 0) {
       CHECK(node->inputs.size() > 0)
           << "Please check the symbol. node name: " << node->attrs.name
           << "op name " << node->op()->name << " has no inputs";
       const auto &e = node->inputs[0];
       std::string suffix = GetSuffix(e, mirror_map);
       AddMultiCastNode(node->inputs, suffix, mirror_map, new_node);
+    } else if (CheckConditionalFP32(conditional_fp32_ops, excluded_syms, node)) {
+      for (size_t i = 0; i < node->inputs.size(); ++i) {
+        const auto &e = node->inputs[i];
+        if (mirror_fp32_map.count(e)) {
+          new_node->inputs.emplace_back(mirror_fp32_map[e]);
+        } else {
+          NodePtr mirror_node = mirror_map.at(e.node.get());
+          NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
+          std::string suffix = GetSuffix(e, mirror_map);
+          AddCastNode(e, suffix, mirror_entry, "float32", &mirror_fp32_map,
+                      new_node);
+        }
+      }
     } else {
       for (size_t i = 0; i < node->inputs.size(); ++i) {
         const auto &e = node->inputs[i];

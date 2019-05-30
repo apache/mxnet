@@ -814,6 +814,8 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             SymbolHandle *ret_sym_handle,
                             mx_uint num_args,
                             const int *arg_type_data,
+                            mx_uint num_ind_ptr,
+                            const int* ind_ptr,
                             const int *target_dtype,
                             const mx_uint num_target_dtype_op_names,
                             const mx_uint num_fp32_op_names,
@@ -825,7 +827,9 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             const char **widest_dtype_op_names,
                             const char **conditional_fp32_op_names,
                             const char **excluded_symbols,
-                            const char **keys) {
+                            const char **param_names,
+                            const char **param_vals,
+                            const char **arg_names) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
@@ -833,8 +837,9 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   std::unordered_set<std::string> target_dtype_ops;
   std::unordered_set<std::string> fp32_ops;
   std::unordered_set<std::string> widest_dtype_ops;
-  std::unordered_set<std::string> conditional_fp32_ops;
   std::unordered_set<std::string> excluded_syms;
+  std::unordered_map<std::string,
+                     std::unordered_map<std::string, std::vector<std::string>>> conditional_fp32_ops;
   int target_dt = *target_dtype;
 
   for (size_t i = 0; i < num_target_dtype_op_names; ++i) {
@@ -846,21 +851,23 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   for (size_t i = 0; i < num_widest_dtype_op_names; ++i) {
     widest_dtype_ops.emplace(widest_dtype_op_names[i]);
   }
-  for (size_t i = 0; i < num_conditional_fp32_op_names; ++i) {
-    conditional_fp32_ops.emplace(conditional_fp32_op_names[i]);
-  }
   for (size_t i = 0; i < num_excluded_symbols; ++i) {
     excluded_syms.emplace(excluded_symbols[i]);
+  }
+
+  for (size_t i = 0; i < num_ind_ptr - 1; ++i) {
+    for (size_t j = ind_ptr[i]; j < ind_ptr[i + 1]; ++j) {
+      conditional_fp32_ops[conditional_fp32_op_names[i]][param_names[i]]
+          .emplace_back(std::string(param_vals[j]));
+    }
   }
 
   std::unordered_map<std::string, int> kwargs;
   std::unordered_map<std::string, int> node_name_dtype_map;
   nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
   for (mx_uint i = 0; i < num_args; ++i) {
-    kwargs[keys[i]] = arg_type_data[i];
-    node_name_dtype_map[keys[i]] = arg_type_data[i];
-    LOG(INFO) << keys[i];
-    LOG(INFO) << arg_type_data[i];
+    kwargs[arg_names[i]] = arg_type_data[i];
+    node_name_dtype_map[arg_names[i]] = arg_type_data[i];
   }
   mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_types, "InferType");
 
@@ -887,14 +894,14 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
     if (it != node->attrs.dict.end()) {
       if (idx.mutable_input_nodes().count(nid) == 0) {
         if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
-          node_name_dtype_map[node->attrs.name] = 2;
+          node_name_dtype_map[node->attrs.name] = 0;
         } else {
           node_name_dtype_map[node->attrs.name] =
               inferred_dtypes[idx.entry_id(nid, 0)];
         }
       } else {
         if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
-          node_name_dtype_map[node->attrs.name] = 2;
+          node_name_dtype_map[node->attrs.name] = 0;
         } else {
           node_name_dtype_map[node->attrs.name] =
               inferred_dtypes[idx.entry_id(nid, 0)];

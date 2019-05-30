@@ -20,6 +20,8 @@
 __all__ = ['init', 'init_trainer', 'scale_loss', 'unscale']
 
 from types import MethodType
+from array import array
+import ctypes
 import logging
 import contextlib
 import numpy as np
@@ -28,10 +30,11 @@ from ... import symbol
 from ...symbol import Symbol
 from ...symbol import contrib as symbol_contrib
 from ... import ndarray
-from ...ndarray import NDArray
+from ...ndarray import NDArray, _DTYPE_NP_TO_MX
 from . import lists
 from ...gluon import trainer
 from ... import base
+from ...base import c_str_array, SymbolHandle, check_call, _LIB, mx_uint, c_array_buf
 from ... import optimizer as opt
 from .loss_scaler import LossScaler
 
@@ -344,11 +347,11 @@ def unscale(optimizer_or_trainer):
                         "an optimizer, instead is %s" % type(optimizer_or_trainer))
 
 def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
-                   fp32_ops=None, widest_dtype_ops=None, conditional_fp32_ops=None,
-                   excluded_sym_names=None, input_names=["data"]):
+                   fp32_ops=None, conditional_fp32_ops=None,
+                   excluded_sym_names=None):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
     add cast layers according to the op lists (target_dtype_ops, fp32_ops,
-    widest_dtype_ops, conditional_fp32_ops) if provided, otherwise use the default
+    conditional_fp32_ops) if provided, otherwise use the default
     lists provided by the framework.
 
     Parameters
@@ -364,10 +367,6 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     fp32_ops : list of strs
         Override the list of operator names casted to FP32.
         If None, uses the framework's default list to be casted to FP32.
-    widest_dtype_ops : list of strs
-        Override the list of operator names which should run in widest precision among its
-        input arguments.
-        If None, uses the framework's default list of widest_dtype_ops.
     conditional_fp32_ops : list of (string, string, list of string)
         Override the list of functions to be casted to FP32.
         The format of the list is
@@ -375,48 +374,55 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
          list of values of the parameter that make the operator to be casted to FP32)
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
-        from being casted.
-    input_names : list of strs
-        A list of strings containing input variable names
+        from being casted to FP16 or FP32.
     """
     if target_dtype != "float16":
         raise ValueError("Only target_dtype float16 is supported currently")
-    num_target_dtype_ops = 0
-    num_fp32_ops = 0
-    num_widest_dtype_ops = 0
-    num_conditional_fp32_ops = 0
-    num_excluded_syms = 0
-
-    if (input_names is None or len(input_names) <= 0):
-        raise ValueError("input_names cannot be None or empty list")
 
     if target_dtype_ops is not None:
-        assert isinstance(target_dtype_ops, list)
-        num_target_dtype_ops = len(target_dtype_ops)
+        assert isinstance(target_dtype_ops, list), "target_dtype_ops should be a list of strs"
     else:
-        target_dtype_ops = []
+        target_dtype_ops = lists.symbol.FP16_FUNCS
 
     if fp32_ops is not None:
-        assert isinstance(fp32_ops, list)
-        num_fp32_ops = len(fp32_ops)
+        assert isinstance(fp32_ops, list), "fp32_ops should be a list of strs"
     else:
-        fp32_ops = []
+        fp32_ops = lists.symbol.FP32_FUNCS
 
-    if widest_dtype_ops is not None:
-        assert isinstance(widest_dtype_ops, list)
-        num_widest_dtype_ops = len(widest_dtype_ops)
-    else:
-        widest_dtype_ops = []
+    common_ops = set(target_dtype_ops) & set(fp32_ops)
+    assert len(common_ops) == 0, "Ops cannot be in both FP16 list and FP32 list {}".format(common_ops)
+
+    original_combined_ops = set(lists.symbol.FP16_FUNCS + lists.symbol.FP32_FUNCS)
+    original_fp16_fp32_ops = set(lists.symbol.FP16_FP32_FUNCS)
+    combined_ops = set(target_dtype_ops + fp32_ops)
+    all_fp16_fp32_ops = set(lists.symbol.FP16_FUNCS + lists.symbol.FP32_FUNCS + lists.symbol.FP16_FP32_FUNCS)
+
+    assert combined_ops.issubset(all_fp16_fp32_ops), "Can only choose ops from one of the three lists for fp16_ops and fp32_ops" \
+                                                     " 1. amp.list_fp16_ops()" \
+                                                     " 2. amp.list_fp32_ops()" \
+                                                     " 3. amp.list_fp16_fp32_ops()"
+
+    widest_dtype_ops = lists.symbol.WIDEST_TYPE_CASTS
 
     if conditional_fp32_ops is not None:
-        assert isinstance(conditional_fp32_ops, list)
-        num_conditional_fp32_ops = len(conditional_fp32_ops)
+        assert isinstance(conditional_fp32_ops, list) << "conditional_fp32_ops should be a list"
     else:
-        conditional_fp32_ops = []
+        conditional_fp32_ops = lists.symbol.CONDITIONAL_FP32_FUNCS
+
+    conditional_op_names = []
+    param_names = []
+    param_vals = []
+    indptr = [0]
+    for conditional_fp32_op in conditional_fp32_ops:
+        assert isinstance(conditional_fp32_op[0], str) and isinstance(conditional_fp32_op[1], str) \
+            and isinstance(conditional_fp32_op[2], list), "conditional_fp32_ops should be a list of (str, str, list of str)"
+        param_vals += conditional_fp32_op[2]
+        indptr.append(len(param_vals))
+        param_names.append(conditional_fp32_op[1])
+        conditional_op_names.append(conditional_fp32_op[0])
 
     if excluded_sym_names is not None:
         assert isinstance(excluded_sym_names, list)
-        num_excluded_syms = len(excluded_sym_names)
     else:
         excluded_sym_names = []
 
@@ -424,15 +430,12 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
 
     attr_dict = sym.attr_dict()
     data_names = []
-    print(attr_dict)
     for sym_name in sym.list_arguments():
         if not sym_name in attr_dict:
             data_names.append(sym_name)
             continue
         if not "__dtype__" in attr_dict[sym_name]:
             data_names.append(sym_name)
-    print("data_names is ")
-    print(data_names)
 
     str_keys = []
     sdata = []
@@ -446,23 +449,26 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                                             ctypes.byref(out),
                                             mx_uint(len(sdata)),
                                             c_array_buf(ctypes.c_int, array('i', sdata)),
+                                            mx_uint(len(indptr)),
+                                            c_array_buf(ctypes.c_int, array('i', indptr)),
                                             ctypes.byref(ctypes.c_int(target_dtype)),
-                                            mx_uint(num_target_dtype_ops),
-                                            mx_uint(num_fp32_ops),
-                                            mx_uint(num_widest_dtype_ops),
-                                            mx_uint(num_conditional_fp32_ops),
-                                            mx_uint(num_excluded_syms),
+                                            mx_uint(len(target_dtype_ops)),
+                                            mx_uint(len(fp32_ops)),
+                                            mx_uint(len(widest_dtype_ops)),
+                                            mx_uint(len(conditional_op_names)),
+                                            mx_uint(len(excluded_sym_names)),
                                             c_str_array(target_dtype_ops),
                                             c_str_array(fp32_ops),
                                             c_str_array(widest_dtype_ops),
-                                            c_str_array(conditional_fp32_ops),
+                                            c_str_array(conditional_op_names),
                                             c_str_array(excluded_sym_names),
+                                            c_str_array(param_names),
+                                            c_str_array(param_vals),
                                             keys))
     return Symbol(out)
 
 def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dtype_ops=None,
-                  fp32_ops=None, widest_dtype_ops=None,
-                  conditional_fp32_ops=None, excluded_sym_names=None, input_names=['data']):
+                  fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=None):
     """API for converting a model from FP32 model to a mixed precision model.
     MXNet tries to convert the FP32 model to mixed precision model by adding
     cast layers using amp_cast and amp_multicast operators. The decision on
@@ -495,8 +501,6 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
         from being quantized.
-    input_names : list of strs
-        A list of strings containing input variable names
     """
     if excluded_sym_names is None:
         excluded_sym_names = []
@@ -509,6 +513,15 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
         raise ValueError("Only target_dtype float16 is supported currently")
 
     sym = convert_symbol(sym, target_dtype, target_dtype_ops,
-                         fp32_ops, widest_dtype_ops, conditional_fp32_ops,
+                         fp32_ops, conditional_fp32_ops,
                          excluded_sym_names)
     return sym, arg_params, aux_params
+
+def list_fp16_ops():
+    return lists.symbol.FP16_FUNCS
+
+def list_fp32_ops():
+    return lists.symbol.FP32_FUNCS
+
+def list_fp16_fp32_ops():
+    return lists.symbol.FP16_FP32_FUNCS
