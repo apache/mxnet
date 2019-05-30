@@ -697,27 +697,6 @@ def test_symbol_pow():
 
 
 @with_seed()
-def test_fully_connected():
-    data = mx.sym.var("data")
-    fc_weight = mx.sym.var("weight")
-    fc_bias = mx.sym.var("bias")
-    fc = mx.sym.FullyConnected(data=data, weight=fc_weight, bias=fc_bias, num_hidden=10, no_bias=False, name='fc')
-    data = mx.nd.random.uniform(shape=(5, 5, 5, 13), dtype=np.float32)
-    fc_weight = mx.nd.random.uniform(shape=(10, 325), dtype=np.float32)
-    fc_bias = mx.nd.random.uniform(shape=(10), dtype=np.float32)
-    fc_bias2 = mx.nd.random.uniform(shape=(10, 1), dtype=np.float32)
-    data_np = data.asnumpy().reshape(5, 325)
-    fc_weight_np = np.transpose(fc_weight.asnumpy())
-    fc_bias_np = fc_bias.asnumpy()
-    res = np.dot(data_np, fc_weight_np) + fc_bias.asnumpy()
-    check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np}, {'fc_output': res})
-    check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np},
-                           numeric_eps=1e-2, rtol=1e-4, atol=1e-2)
-    # TODO: Fix Bug #15032 when bias has ndim > 1
-    #check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias2.asnumpy()}, {'fc_output': res})
-
-
-@with_seed()
 def test_pow_fn():
     shape = (3, 4)
     exp = mx.symbol.Variable("exp")
@@ -1532,6 +1511,28 @@ def test_deconvolution():
         num_filter = 3,
         pad = (3,)
     )
+
+@with_seed()
+def test_deconvolution_forward_with_bias():
+    """Check if deconvolution forward can work well with bias=True
+    """
+    def check_deconvolution_forward_with_bias(shape=(1, 16, 5, 5), num_filter=32, num_group=1, kernel=(3, 3), pad=(1, 1)):
+        x = mx.sym.Variable('x')
+        w = mx.sym.Variable('w')
+        input_data = mx.random.uniform(-5, 5, shape, ctx=mx.cpu())
+        y = mx.sym.Deconvolution(data=x, weight=w, num_filter=num_filter, num_group=num_group, kernel=kernel, no_bias=False, pad=pad)
+        exe = y.simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
+
+        exe.arg_arrays[0][:] = np.random.normal(size=exe.arg_arrays[0].shape)
+        exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
+
+        exe.forward(is_train=False)
+        o = exe.outputs[0]
+        t = o.asnumpy()
+    check_deconvolution_forward_with_bias((1, 16, 5), 32, 1, (3,), (1,))
+    check_deconvolution_forward_with_bias((32, 16, 5), 32, 1, (3,), (1,))
+    check_deconvolution_forward_with_bias((1, 16, 5, 5), 32, 1, (3, 3), (1, 1))
+    check_deconvolution_forward_with_bias((32, 16, 5, 5), 32, 1, (3, 3), (1, 1))
 
 
 def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
