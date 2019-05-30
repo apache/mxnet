@@ -209,7 +209,7 @@ def compile_unix_mkldnn_gpu() {
         ws('workspace/build-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
+            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false, '8G')
             utils.pack_lib('mkldnn_gpu', mx_mkldnn_lib, true)
           }
         }
