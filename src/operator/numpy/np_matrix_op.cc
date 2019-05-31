@@ -212,5 +212,45 @@ NNVM_REGISTER_OP(_np_reshape)
 .add_argument("a", "NDArray-or-Symbol", "Array to be reshaped.")
 .add_arguments(NumpyReshapeParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_npi_stack)
+.describe(R"code(Join a sequence of arrays along a new axis.
+
+The axis parameter specifies the index of the new axis in the dimensions of the
+result. For example, if axis=0 it will be the first dimension and if axis=-1 it
+will be the last dimension.
+
+Examples::
+
+  x = [1, 2]
+  y = [3, 4]
+
+  stack(x, y) = [[1, 2],
+                 [3, 4]]
+  stack(x, y, axis=1) = [[1, 3],
+                         [2, 4]]
+)code")
+.set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+    const StackParam& param = dmlc::get<StackParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_args);
+  })
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<StackParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    uint32_t num_args = dmlc::get<StackParam>(attrs.parsed).num_args;
+    std::vector<std::string> ret;
+    for (uint32_t i = 0; i < num_args; ++i) {
+      ret.push_back(std::string("arg") + std::to_string(i));
+    }
+    return ret;
+  })
+.set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<mxnet::FInferShape>("FInferShape", StackOpShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", StackOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_stack"})
+.add_argument("data", "NDArray-or-Symbol[]", "List of arrays to stack")
+.add_arguments(StackParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet
