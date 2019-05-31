@@ -341,7 +341,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 break
             except Exception as e:
                 retries -= 1
-                if retries <= 0: # pylint: disable=no-else-raise
+                if retries <= 0:
                     raise e
                 else:
                     print('download failed due to {}, retrying, {} attempt{} left'
