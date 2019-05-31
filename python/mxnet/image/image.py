@@ -1198,10 +1198,10 @@ class ImageIter(io.DataIter):
             logging.info('%s: loading recordio %s...',
                          class_name, path_imgrec)
             if path_imgidx:
-                self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')  # pylint: disable=redefined-variable-type
+                self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')
                 self.imgidx = list(self.imgrec.keys)
             else:
-                self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')  # pylint: disable=redefined-variable-type
+                self.imgrec = recordio.MXRecordIO(path_imgrec, 'r')
                 self.imgidx = None
         else:
             self.imgrec = None
@@ -1224,7 +1224,7 @@ class ImageIter(io.DataIter):
             imgkeys = []
             index = 1
             for img in imglist:
-                key = str(index)  # pylint: disable=redefined-variable-type
+                key = str(index)
                 index += 1
                 if len(img) > 2:
                     label = nd.array(img[:-1], dtype=dtype)
@@ -1374,7 +1374,7 @@ class ImageIter(io.DataIter):
         pad = batch_size - i
         # handle padding for the last batch
         if pad != 0:
-            if self.last_batch_handle == 'discard': # pylint: disable=no-else-raise
+            if self.last_batch_handle == 'discard':
                 raise StopIteration
             # if the option is 'roll_over', throw StopIteration and cache the data
             elif self.last_batch_handle == 'roll_over' and \
