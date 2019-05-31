@@ -313,7 +313,9 @@ std::vector<NDArray*> Imperative::Backward(
     } else {
       info.outputs.emplace_back(outputs[i]->shape(), outputs[i]->ctx(),
                                 true, outputs[i]->dtype());
-      info.outputs.back() = static_cast<real_t>(1.0);
+      if (info.outputs.back().shape().Size() != 0) {
+        info.outputs.back() = static_cast<real_t>(1.0);
+      }
     }
   }
 
