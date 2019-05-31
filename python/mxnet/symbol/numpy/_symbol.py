@@ -1001,7 +1001,6 @@ def minimum(x1, x2, out=None):
 
 
 @set_module('mxnet.symbol.numpy')
-@use_np_compat
 def stack(arrays, axis=0, out=None):
     """Join a sequence of arrays along a new axis.
 

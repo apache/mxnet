@@ -314,32 +314,55 @@ def test_np_minimum():
 
 
 @with_seed()
-@mx.use_np_compat
+@mx.use_np_shape
 def test_np_stack():
+    class TestStack(HybridBlock):
+        def __init__(self, axis=None):
+            super(TestStack, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a, *args):
+            return F.np.stack([a] + list(args), axis=self._axis)
+
     a, b, c, d = mx.sym.Variable("a"), mx.sym.Variable("b"), mx.sym.Variable("c"), mx.sym.Variable("d")
     ret = mx.sym.np.stack([a.as_np_ndarray(), b.as_np_ndarray(), c.as_np_ndarray(), d.as_np_ndarray()])
     assert type(ret) == mx.sym.np._Symbol
 
-    ndim = random.randint(0, 3)
-    axis = 0 if ndim == 0 else random.randint(0, ndim-1)
-    if ndim != 0:
-        shape = rand_shape_nd(ndim, dim=5)
-    else:
-        shape = ()
+    for shape in [(0, 0), (2, 3)]:
+        for hybridize in [True, False]:
+            for axis in range(2):
+                test_stack = TestStack(axis=axis)
+                if hybridize:
+                    test_stack.hybridize()
+                np_a = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+                np_b = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+                np_c = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+                np_d = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
 
-    np_a = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
-    np_b = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
-    np_c = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
-    np_d = _np.random.uniform(-1.0, 1.0, shape).astype(_np.float32)
+                mx_a = np.array(np_a)
+                mx_a.attach_grad()
+                mx_b = np.array(np_b)
+                mx_b.attach_grad()
+                mx_c = np.array(np_c)
+                mx_c.attach_grad()
+                mx_d = np.array(np_d)
+                mx_d.attach_grad()
+                expected_ret = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
+                with mx.autograd.record():
+                    y = test_stack(mx_a, mx_b, mx_c, mx_d)
+                assert y.shape == expected_ret.shape
+                assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
 
-    mx_a = np.array(np_a)
-    mx_b = np.array(np_b)
-    mx_c = np.array(np_c)
-    mx_d = np.array(np_d)
+                y.backward()
 
-    np_out = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
-    mx_out = np.stack([mx_a, mx_b, mx_c, mx_d], axis=axis)
-    assert same(mx_out.asnumpy(), np_out)
+                assert_almost_equal(mx_a.grad.asnumpy(), _np.ones(shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(mx_b.grad.asnumpy(), _np.ones(shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(mx_c.grad.asnumpy(), _np.ones(shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(mx_d.grad.asnumpy(), _np.ones(shape), rtol=1e-3, atol=1e-5)
+
+                np_out = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
+                mx_out = np.stack([mx_a, mx_b, mx_c, mx_d], axis=axis)
+                assert same(mx_out.asnumpy(), np_out)
 
 if __name__ == '__main__':
     import nose
