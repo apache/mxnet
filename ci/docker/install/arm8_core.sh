@@ -18,7 +18,6 @@
 # under the License.
 
 set -ex
-apt-get update || true
 
 # Avoid interactive package installers such as tzdata.
 export DEBIAN_FRONTEND=noninteractive
