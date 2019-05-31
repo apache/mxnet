@@ -56,7 +56,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshad
       auto grad_grad_x_mid = MakeNode("sin", n->attrs.name + "_mid_grad_grad",
                                       {n->inputs[1]}, nullptr, &n);
       auto grad_grad_x = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                                  {nnvm::NodeEntry(grad_grad_x_mid)}, nullptr, &n);
+                                  {nnvm::NodeEntry{grad_grad_x_mid}}, nullptr, &n);
       std::vector<nnvm::NodeEntry> ret;
       // for the backward of the _backward_sin node
       // first input is the ograd and second input is x (because ElemwiseUseIn)
@@ -92,7 +92,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_
       auto grad_grad_x_mid = MakeNode("cos", n->attrs.name + "_mid_grad_grad",
                                       {n->inputs[1]}, nullptr, &n);
       auto grad_grad_x = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                                  {nnvm::NodeEntry(grad_grad_x_mid)}, nullptr, &n);
+                                  {nnvm::NodeEntry{grad_grad_x_mid}}, nullptr, &n);
       std::vector<nnvm::NodeEntry> ret;
       // for the backward of the _backward_cos node
       // first input is the ograd and second input is x (because ElemwiseUseIn)
