@@ -262,8 +262,9 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      // We also need to modify the layout on the original weight array. The
-      // data conversion happens after the weight array is used.
+      // We also need to modify the layout on the original weight array.
+      // Don't switch below sequence because naive engine will executes
+      // pushAsync synchronously.
       const_cast<NDArray&>(weight).MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
       weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
     } else {

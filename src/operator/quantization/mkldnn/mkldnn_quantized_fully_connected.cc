@@ -93,6 +93,9 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   const mkldnn::memory *weight_mem = nullptr;
 
   if (weight.IsDefaultData()) {
+    // We also need to modify the layout on the original weight array.
+    // Don't switch below sequence because naive engine will executes
+    // pushAsync synchronously.
     weight.MKLDNNDataReorderAsync(fwd.fwd_pd.weights_primitive_desc());
     weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(), 1);
   } else {
