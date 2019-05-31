@@ -642,7 +642,7 @@ class FeedForward(BASE_ESTIMATOR):
         """Initialize the iterator given input."""
         if isinstance(X, (np.ndarray, nd.NDArray)):
             if y is None:
-                if is_train: # pylint: disable=no-else-raise
+                if is_train:
                     raise ValueError('y must be specified when X is numpy.ndarray')
                 else:
                     y = np.zeros(X.shape[0])
