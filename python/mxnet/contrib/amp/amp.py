@@ -528,7 +528,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
 
 def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
-                         excluded_sym_names=None, input_names=['data'], ctx=gpu(0)):
+                         excluded_sym_names=None, ctx=gpu(0)):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
     return a block with mixed precision support which can be used for inference.
 
@@ -554,8 +554,6 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     from ...gluon import HybridBlock, SymbolBlock
     from ...gluon import block as blk
     if isinstance(block, HybridBlock):
-        if isinstance(input_names, str):
-            input_names = [input_names]
         inputs, sym = block._cached_graph
         converted_sym = convert_symbol(sym, target_dtype, target_dtype_ops,
                                        fp32_ops, conditional_fp32_ops,
