@@ -39,7 +39,7 @@
   [filepath]
   (io/delete-file filepath))
 
-(defn- with-image
+(defn- with-file
   "Provides `src-path` in `dest-path` for the test function `f` to use."
   [src-path dest-path]
   (fn [f]
@@ -47,12 +47,12 @@
     (f)
     (rm dest-path)))
 
-(use-fixtures :once (with-image image-src-path image-path))
+(use-fixtures :once (with-file image-src-path image-path))
 
 (deftest test-decode-image
-  (let [img-arr (image/decode-image 
+  (let [img-arr (image/decode-image
                  (io/input-stream image-path))
-        img-arr-2 (image/decode-image 
+        img-arr-2 (image/decode-image
                    (io/input-stream image-path)
                    {:color-flag image/GRAYSCALE})]
     (is (= [576 1024 3] (ndarray/shape-vec img-arr)))
