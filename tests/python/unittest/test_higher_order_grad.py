@@ -22,57 +22,79 @@ from mxnet.test_utils import assert_almost_equal, random_arrays
 from common import with_seed
 
 
+# @with_seed()
+# def test_log():
+#     def log(x):
+#         return nd.log(x)
+
+#     def grad_grad_op(x):
+#         return -1/(x**2)
+
+#     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
+
+#     for array in arrays:
+#         check_second_order_unary(array, log, grad_grad_op)
+
+
+# @with_seed()
+# def test_log2():
+#     def log2(x):
+#         return nd.log2(x)
+
+#     def grad_grad_op(x):
+#         return -1/((x**2) * math.log(2))
+
+#     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
+
+#     for array in arrays:
+#         check_second_order_unary(array, log2, grad_grad_op)
+
+
+# @with_seed()
+# def test_log10():
+#     def log10(x):
+#         return nd.log10(x)
+
+#     def grad_grad_op(x):
+#         return -1/((x**2) * math.log(10))
+
+#     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
+
+#     for array in arrays:
+#         check_second_order_unary(array, log10, grad_grad_op)
+
+
 @with_seed()
-def test_log():
-    def log(x):
-        return nd.log(x)
+def test_sigmoid():
+    sigmoid = lambda x: nd.sigmoid(x)
+
+    def grad_op(x):
+        return sigmoid(x) * (1 - sigmoid(x))
 
     def grad_grad_op(x):
-        return -1/(x**2)
+        # return grad_op(x) - 2 * grad_op(x) * sigmoid(x)
+        return sigmoid(x) * grad_op(x)
 
     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
 
-    for array in arrays:
-        check_second_order_unary(array, log, grad_grad_op)
-
-
-@with_seed()
-def test_log2():
-    def log2(x):
-        return nd.log2(x)
-
-    def grad_grad_op(x):
-        return -1/((x**2) * math.log(2))
-
-    arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
-
-    for array in arrays:
-        check_second_order_unary(array, log2, grad_grad_op)
-
-
-@with_seed()
-def test_log10():
-    def log10(x):
-        return nd.log10(x)
-
-    def grad_grad_op(x):
-        return -1/((x**2) * math.log(10))
-
-    arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
-
-    for array in arrays:
-        check_second_order_unary(array, log10, grad_grad_op)
+    for array in arrays[:1]:
+        check_second_order_unary(array, sigmoid, grad_grad_op)
 
 
 def check_second_order_unary(x, op, grad_grad_op):
     x = nd.array(x)
-    expect_grad_grad = grad_grad_op(x)
+    grad_grad_x = grad_grad_op(x)
     x.attach_grad()
     with autograd.record():
         y = op(x)
-        y_grad = autograd.grad(y, x, create_graph=True, retain_graph=True)[0]
-    y_grad.backward()
-    assert_almost_equal(expect_grad_grad.asnumpy(), x.grad.asnumpy())
+        # head_grads = nd.random.normal(shape=y.shape)
+        head_grads = nd.ones_like(y)#  * 0.5
+        y_grad = autograd.grad(y, x, head_grads=head_grads,create_graph=True, retain_graph=True)[0]
+    head_grad_grads =  nd.ones_like(y_grad)
+    # head_grad_grads = nd.random.normal(shape=y_grad.shape)
+    y_grad.backward(head_grad_grads)
+    expected_grad_grad = grad_grad_x.asnumpy()  * head_grad_grads.asnumpy() * head_grads.asnumpy() 
+    assert_almost_equal(expected_grad_grad, x.grad.asnumpy())
 
 
 if __name__ == '__main__':
