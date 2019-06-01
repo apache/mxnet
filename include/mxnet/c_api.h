@@ -1743,6 +1743,7 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_ha
  * \param num_widest_dtype_op_names number of ops to be casted to widest dtype
  * \param num_conditional_fp32_op_names number of ops to be casted to FP32 based on a condition
  * \param num_excluded_symbols number of symbols to be excluded from casting
+ * \param num_model_params number of model parameters
  * \param num_widest_dtype_op_names number of ops to be casted to the widest dtype
  * \param num_conditional_fp32_op_names number of ops to be cast to fp32 based on precision
  * \param target_dtype_op_names op names to be casted to target_dtype
@@ -1753,6 +1754,7 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_ha
  * \param param_names param names for conditional FP32 casting
  * \param param_values param values for conditional FP32 casting
  * \param arg_names argument names for which type information is provided
+ * \param model_param_names names for model parameters
  */
 MXNET_DLL int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                                       SymbolHandle *ret_sym_handle,
@@ -1766,6 +1768,7 @@ MXNET_DLL int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                                       const mx_uint num_widest_dtype_op_names,
                                       const mx_uint num_conditional_fp32_op_names,
                                       const mx_uint num_excluded_symbols,
+                                      const mx_uint num_model_params,
                                       const char **target_dtype_op_names,
                                       const char **fp32_op_names,
                                       const char **widest_dtype_op_names,
@@ -1773,6 +1776,7 @@ MXNET_DLL int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                                       const char **excluded_symbols,
                                       const char **conditional_param_names,
                                       const char **conditional_param_vals,
+                                      const char **model_param_names,
                                       const char **arg_names);
 /*!
  * \brief Set calibration table to node attributes in the sym

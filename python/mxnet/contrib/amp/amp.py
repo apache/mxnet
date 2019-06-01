@@ -27,6 +27,7 @@ import contextlib
 import numpy as np
 
 from ... import symbol
+from ...context import gpu
 from ...symbol import Symbol
 from ...symbol import contrib as symbol_contrib
 from ... import ndarray
@@ -348,7 +349,7 @@ def unscale(optimizer_or_trainer):
 
 def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                    fp32_ops=None, conditional_fp32_ops=None,
-                   excluded_sym_names=None):
+                   excluded_sym_names=None, data_names=None):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
     add cast layers according to the op lists (target_dtype_ops, fp32_ops,
     conditional_fp32_ops) if provided, otherwise use the default
@@ -358,23 +359,25 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     ----------
     sym : Symbol
         FP32 neural network symbol
-    target_dtype : str or numpy
+    target_dtype : str or numpy, optional defaults to float16
         currently only supports float16. The target dtype indicates to add cast layers
         when possible so that lower precision computation can be leveraged.
-    target_dtype_ops : list of strs
+    target_dtype_ops : list of strs, optional
         Override the list of operator names casted to the target_dtype.
         If None, uses the framework's default list to be casted to target_dtype.
-    fp32_ops : list of strs
+    fp32_ops : list of strs, optional
         Override the list of operator names casted to FP32.
         If None, uses the framework's default list to be casted to FP32.
-    conditional_fp32_ops : list of (string, string, list of string)
+    conditional_fp32_ops : list of (string, string, list of string), optional
         Override the list of functions to be casted to FP32.
         The format of the list is
         (name of the function, name of the parameter,
          list of values of the parameter that make the operator to be casted to FP32)
-    excluded_sym_names : list of strs
+    excluded_sym_names : list of strs, optional
         A list of strings that represent the names of symbols that users want to exclude
         from being casted to FP16 or FP32.
+    data_names : list of strs, optional
+        A list of strings that represent input data tensor names to the model
     """
     if target_dtype != "float16":
         raise ValueError("Only target_dtype float16 is supported currently")
@@ -422,20 +425,22 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
         conditional_op_names.append(conditional_fp32_op[0])
 
     if excluded_sym_names is not None:
-        assert isinstance(excluded_sym_names, list)
+        assert isinstance(excluded_sym_names, list), "excluded_sym_names should be a list of strs"
     else:
         excluded_sym_names = []
 
     target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
     attr_dict = sym.attr_dict()
-    data_names = []
-    for sym_name in sym.list_arguments():
-        if not sym_name in attr_dict:
-            data_names.append(sym_name)
-            continue
-        if not "__dtype__" in attr_dict[sym_name]:
-            data_names.append(sym_name)
+    if not data_names:
+        data_names = []
+        for sym_name in sym.list_inputs():
+            if not sym_name in attr_dict:
+                data_names.append(sym_name)
+                continue
+            if not "__dtype__" in attr_dict[sym_name]:
+                data_names.append(sym_name)
+    model_param_names = list(set(sym.list_inputs()) - set(data_names))
 
     str_keys = []
     sdata = []
@@ -457,6 +462,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                                             mx_uint(len(widest_dtype_ops)),
                                             mx_uint(len(conditional_op_names)),
                                             mx_uint(len(excluded_sym_names)),
+                                            mx_uint(len(model_param_names)),
                                             c_str_array(target_dtype_ops),
                                             c_str_array(fp32_ops),
                                             c_str_array(widest_dtype_ops),
@@ -464,6 +470,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                                             c_str_array(excluded_sym_names),
                                             c_str_array(param_names),
                                             c_str_array(param_vals),
+                                            c_str_array(model_param_names),
                                             keys))
     return Symbol(out)
 
@@ -511,17 +518,76 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
 
     if target_dtype != "float16":
         raise ValueError("Only target_dtype float16 is supported currently")
+    param_names = arg_params.keys() + aux_params.keys()
+    data_names = list(set(sym.list_inputs()) - set(param_names))
 
     sym = convert_symbol(sym, target_dtype, target_dtype_ops,
                          fp32_ops, conditional_fp32_ops,
-                         excluded_sym_names)
+                         excluded_sym_names, data_names)
     return sym, arg_params, aux_params
 
+def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
+                         fp32_ops=None, conditional_fp32_ops=None,
+                         excluded_sym_names=None, input_names=['data'], ctx=gpu(0)):
+    """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
+    return a block which will add mixed precision support for the block
+
+    Parameters
+    ----------
+    block : HybridBlock or SymbolBlock object
+        FP32 HybridBlock or SymbolBlock object
+    target_dtype : str or numpy
+        currently only supports fp16. The target dtype indicates to add cast layers
+        when possible so that lower precision computation can be leveraged.
+    target_precision_ops : list of strs
+        Override the list of operator names casted to target_dtype.
+        If None, uses the framework's default list to be casted to FP32.
+    conditional_fp32_ops : list of (str, str, list of str)
+        Override the list of functions to be casted to FP32.
+        The format of the list is
+        (name of the function, name of the parameter,
+         list of values of the parameter that make the operator to be casted to FP32
+    excluded_sym_names : list of strs
+        A list of strings that represent the names of symbols that users want to exclude
+        from being quantized
+    """
+    from ...gluon import HybridBlock, SymbolBlock
+    from ...gluon import block as blk
+    if isinstance(block, HybridBlock):
+        if isinstance(input_names, str):
+            input_names = [input_names]
+        inputs, sym = block._cached_graph
+        converted_sym = convert_symbol(sym, target_dtype, target_dtype_ops,
+                                       fp32_ops, conditional_fp32_ops,
+                                       excluded_sym_names)
+
+        arg_names = set(converted_sym.list_arguments())
+        aux_names = set(converted_sym.list_auxiliary_states())
+        arg_dict = {}
+        # collect params
+        for name, param in block.collect_params().items():
+            if name in arg_names:
+                arg_dict['arg:%s'%name] = param._reduce()
+            else:
+                assert name in aux_names
+                arg_dict['aux:%s'%name] = param._reduce()
+
+        ret = SymbolBlock(converted_sym, inputs)
+
+        ret.collect_params().load_dict(arg_dict, ctx=ctx)
+        return ret
+
 def list_fp16_ops():
+    """Get the default list of FP16 ops for AMP
+    """
     return lists.symbol.FP16_FUNCS
 
 def list_fp32_ops():
+    """Get the default list of FP32 ops for AMP
+    """
     return lists.symbol.FP32_FUNCS
 
 def list_fp16_fp32_ops():
+    """Get the default list of ops which run in both FP16 and FP32
+    """
     return lists.symbol.FP16_FP32_FUNCS

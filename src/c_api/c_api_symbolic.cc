@@ -822,6 +822,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             const mx_uint num_widest_dtype_op_names,
                             const mx_uint num_conditional_fp32_op_names,
                             const mx_uint num_excluded_symbols,
+                            const mx_uint num_model_params,
                             const char **target_dtype_op_names,
                             const char **fp32_op_names,
                             const char **widest_dtype_op_names,
@@ -829,6 +830,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             const char **excluded_symbols,
                             const char **param_names,
                             const char **param_vals,
+                            const char **model_param_names,
                             const char **arg_names) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
@@ -838,6 +840,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   std::unordered_set<std::string> fp32_ops;
   std::unordered_set<std::string> widest_dtype_ops;
   std::unordered_set<std::string> excluded_syms;
+  std::unordered_set<std::string> model_params;
   std::unordered_map<std::string,
                      std::unordered_map<std::string, std::vector<std::string>>> conditional_fp32_ops;
   int target_dt = *target_dtype;
@@ -854,6 +857,9 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   for (size_t i = 0; i < num_excluded_symbols; ++i) {
     excluded_syms.emplace(excluded_symbols[i]);
   }
+  for (size_t i = 0; i < num_model_params; ++i) {
+    model_params.emplace(model_param_names[i]);
+  }
 
   for (size_t i = 0; i < num_ind_ptr - 1; ++i) {
     for (size_t j = ind_ptr[i]; j < ind_ptr[i + 1]; ++j) {
@@ -863,7 +869,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   }
 
   std::unordered_map<std::string, int> kwargs;
-  std::unordered_map<std::string, int> node_name_dtype_map;
+  std::unordered_map<std::string, int> node_name_dtype_map, node_without_dtype_map;
   nnvm::DTypeVector arg_types(g.indexed_graph().input_nodes().size(), -1);
   for (mx_uint i = 0; i < num_args; ++i) {
     kwargs[arg_names[i]] = arg_type_data[i];
@@ -883,29 +889,35 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
 
   g = ApplyPass(std::move(g), "ReducePrecision");
+  // Need to run type inference since it is possible that inferred
+  // type of some inputs has changed
   g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "");
   const nnvm::DTypeVector &inferred_dtypes =
       g.GetAttr<nnvm::DTypeVector>("dtype");
   const nnvm::IndexedGraph &idx = g.indexed_graph();
   const std::string dtype_keyword = "__dtype__";
+
   for (uint32_t nid : idx.input_nodes()) {
     auto node = idx[nid].source;
-    auto it = node->attrs.dict.find(dtype_keyword);
-    if (it != node->attrs.dict.end()) {
-      if (idx.mutable_input_nodes().count(nid) == 0) {
-        if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
-          node_name_dtype_map[node->attrs.name] = 0;
-        } else {
-          node_name_dtype_map[node->attrs.name] =
-              inferred_dtypes[idx.entry_id(nid, 0)];
-        }
+    auto node_with_dtype = node->attrs.dict.find(dtype_keyword);
+    // input nodes classified into nodes_with_dtype, nodes_without_dtype
+    // This classification required because if param_names not provided
+    // we want to update dtypes of only those nodes which have dtypes set
+    // inferred_dtypes are obtained for the nodes, if unknown
+    // dtype is set to fp32
+    if (node_with_dtype != node->attrs.dict.end()) {
+      if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
+        node_name_dtype_map[node->attrs.name] = 0;
       } else {
-        if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
-          node_name_dtype_map[node->attrs.name] = 0;
-        } else {
-          node_name_dtype_map[node->attrs.name] =
-              inferred_dtypes[idx.entry_id(nid, 0)];
-        }
+        node_name_dtype_map[node->attrs.name] =
+            inferred_dtypes[idx.entry_id(nid, 0)];
+      }
+    } else {
+      if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
+        node_without_dtype_map[node->attrs.name] = 0;
+      } else {
+        node_without_dtype_map[node->attrs.name] =
+            inferred_dtypes[idx.entry_id(nid, 0)];
       }
     }
   }
@@ -914,14 +926,32 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   *ret_sym_handle = s;
   nnvm::Symbol *ret_sym = static_cast<nnvm::Symbol *>(*ret_sym_handle);
   auto args = ret_sym->ListInputs(nnvm::Symbol::kAll);
-  for (int i = 0; i < args.size(); ++i) {
-    auto it = node_name_dtype_map.find(args[i]->attrs.name);
-    if (it != node_name_dtype_map.end()) {
-      if (args[i]->attrs.dict.find(dtype_keyword) !=
-          args[i]->attrs.dict.end()) {
-        args[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
-      } else {
-        args[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
+  // Update args to have the right dtype attrs
+  if (num_model_params > 0) {
+    // if model params provided, set dtype only for model params
+    for (int i = 0; i < args.size(); ++i) {
+      auto it = model_params.find(args[i]->attrs.name);
+      auto it2 = node_name_dtype_map.find(args[i]->attrs.name);
+      if (it != model_params.end()) {
+        // need to update __dtype__ attribute if already set, else set it
+        if (it2 != node_name_dtype_map.end()) {
+          args[i]->attrs.dict[dtype_keyword] = std::to_string(it2->second);
+        } else {
+          args[i]->attrs.dict[dtype_keyword] =
+              std::to_string(node_without_dtype_map[args[i]->attrs.name]);
+        }
+      }
+    }
+  } else {
+    // if model params not provided, update __dtype__ for all inputs,
+    // which already had it set, don't touch the rest
+    for (int i = 0; i < args.size(); ++i) {
+      auto it = node_name_dtype_map.find(args[i]->attrs.name);
+      if (it != node_name_dtype_map.end()) {
+        if (args[i]->attrs.dict.find(dtype_keyword) !=
+            args[i]->attrs.dict.end()) {
+          args[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
+        }
       }
     }
   }

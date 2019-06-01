@@ -915,8 +915,29 @@ class ParameterDict(object):
                     "with '%s'"%(restore_prefix, name, restore_prefix)
         lprefix = len(restore_prefix)
         ndarray_load = ndarray.load(filename)
+        self.load_dict(ndarray_load, ctx, allow_missing,
+                       ignore_extra, restore_prefix)
+
+    def load_dict(self, param_dict, ctx=None, allow_missing=False,
+                  ignore_extra=False, restore_prefix=''):
+        """Load parameters from dict
+
+        Parameters
+        ----------
+        param_dict : dict
+            Dictionary containing model parameters, preprended with arg: and aux: names
+        ctx : Context or list of Context
+            Context(s) initialize loaded parameters on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represented in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this ParameterDict.
+        restore_prefix : str, default ''
+            prepend prefix to names of stored parameters before loading
+        """
         loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
-                  for k, v in ndarray_load.items()] if isinstance(ndarray_load, dict) else ndarray_load
+                  for k, v in param_dict.items()] if isinstance(param_dict, dict) else param_dict
         arg_dict = {restore_prefix+k: v for k, v in loaded}
         if not allow_missing:
             for name in self.keys():

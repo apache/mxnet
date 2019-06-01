@@ -122,7 +122,8 @@ bool CheckConditionalFP32(
         std::string, std::unordered_map<std::string, std::vector<std::string>>>
         &conditional_fp32_ops,
     const std::unordered_set<std::string> &excluded_syms, NodePtr node) {
-  if (node->is_variable() || (excluded_syms.count(node->attrs.name) > 0) || conditional_fp32_ops.count(node->op()->name) == 0) {
+  if (node->is_variable() || (excluded_syms.count(node->attrs.name) > 0) ||
+      conditional_fp32_ops.count(node->op()->name) == 0) {
     return false;
   } else {
     // Iterate through all conditional ops
