@@ -2,6 +2,7 @@
 #define MXNET_TVM_OP_MODULE_H
 
 #include <mxnet/base.h>
+#include <mxnet/op_attr_types.h>
 #include <mutex>
 
 namespace tvm {
@@ -12,7 +13,9 @@ class TVMOpModule {
  public:
   void Load(const std::string& filepath);
 
-  void Call(const std::string& func_name, const std::vector<mxnet::TBlob>& args);
+  void Call(const std::string& func_name,
+            const mxnet::OpContext& ctx,
+            const std::vector<mxnet::TBlob>& args);
 
   static TVMOpModule *Get() {
     static TVMOpModule inst;
