@@ -39,7 +39,7 @@
 (s/def ::decode-image-opts
   (s/keys :opt-un [::color-flag ::to-rgb ::output]))
 
-(defn decode-image ^:deprecated
+(defn ^:deprecated decode-image
   "DEPRECATED: use `decode` instead.
 
    Decodes an image from an input stream with OpenCV
@@ -91,7 +91,7 @@
 (s/def ::optional-to-rgb
   (s/or :none nil? :some ::to-rgb))
 
-(defn read-image ^:deprecated
+(defn ^:deprecated read-image
   "DEPRECATED: use `read` instead.
 
    Reads an image file and returns an ndarray with OpenCV. It returns image in
@@ -154,7 +154,7 @@
 (s/def ::int int?)
 (s/def ::optional-int (s/or :none nil? :some int?))
 
-(defn resize-image ^:deprecated
+(defn ^:deprecated resize-image
   "DEPRECATED: use `resize` instead.
 
    Resizes the image array to (width, height)
@@ -275,7 +275,7 @@
 (s/def ::to-image-ndarray
   (s/and ::ndarray ::all-bytes ::rgb-array))
 
-(defn to-image ^:deprecated
+(defn ^:deprecated to-image
   "DEPRECATED: user `ndarray->image` instead.
 
    Convert a NDArray image in RGB format to a real image.
