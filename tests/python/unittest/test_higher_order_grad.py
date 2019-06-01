@@ -66,13 +66,19 @@ def test_log10():
 
 def check_second_order_unary(x, op, grad_grad_op):
     x = nd.array(x)
-    expect_grad_grad = grad_grad_op(x)
+    grad_grad_x = grad_grad_op(x)
     x.attach_grad()
     with autograd.record():
         y = op(x)
-        y_grad = autograd.grad(y, x, create_graph=True, retain_graph=True)[0]
-    y_grad.backward()
-    assert_almost_equal(expect_grad_grad.asnumpy(), x.grad.asnumpy())
+        head_grads = nd.random.normal(shape=y.shape)
+        y_grad = autograd.grad(y, x, head_grads=head_grads,
+                               create_graph=True, retain_graph=True)[0]
+    head_grad_grads = nd.random.normal(shape=y.shape)
+    y_grad.backward(head_grad_grads)
+
+    expected_grad_grad = grad_grad_x.asnumpy() * head_grad_grads.asnumpy() * \
+        head_grads.asnumpy()
+    assert_almost_equal(expected_grad_grad, x.grad.asnumpy())
 
 
 if __name__ == '__main__':
