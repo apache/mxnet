@@ -140,12 +140,11 @@ bool CheckConditionalFP32(
           if (std::find(it_param_vals.begin(), it_param_vals.end(),
                         param_key->second) != it_param_vals.end()) {
             return true;
-          } else {
-            return false;
           }
         }
       }
     }
+    return false;
   }
 }
 
