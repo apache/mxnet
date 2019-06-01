@@ -100,7 +100,8 @@ void AddMultiCastNode(const std::vector<NodeEntry> &inputs,
                       const std::string &node_name,
                       const std::unordered_map<Node *, NodePtr> &mirror_map,
                       NodePtr curr_node) {
-    NodePtr node = CreateNode("amp_multicast", inputs[0].node->attrs.name + node_name + "_amp_multicast");
+    NodePtr node = CreateNode("amp_multicast",
+                              inputs[0].node->attrs.name + node_name + "_amp_multicast");
     for (size_t i = 0; i < inputs.size(); ++i) {
     const auto &e = inputs[i];
     NodePtr mirror_node = mirror_map.at(e.node.get());
@@ -157,8 +158,8 @@ Graph ReducePrecision(Graph &&src) {
       src.GetAttr<std::unordered_set<std::string>>("widest_dtype_ops");
   const auto target_dtype = src.GetAttr<int>("target_dtype");
   const auto excluded_syms = src.GetAttr<std::unordered_set<std::string>>("excluded_syms");
-  const auto conditional_fp32_ops =
-      src.GetAttr<std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::string>>>>(
+  const auto conditional_fp32_ops = src.GetAttr<std::unordered_map<
+      std::string, std::unordered_map<std::string, std::vector<std::string>>>>(
       "conditional_fp32_ops");
 
   CHECK(target_dtype == mshadow::kFloat16)

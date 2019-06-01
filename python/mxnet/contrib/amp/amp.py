@@ -395,12 +395,11 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     common_ops = set(target_dtype_ops) & set(fp32_ops)
     assert len(common_ops) == 0, "Ops cannot be in both FP16 list and FP32 list {}".format(common_ops)
 
-    original_combined_ops = set(lists.symbol.FP16_FUNCS + lists.symbol.FP32_FUNCS)
-    original_fp16_fp32_ops = set(lists.symbol.FP16_FP32_FUNCS)
     combined_ops = set(target_dtype_ops + fp32_ops)
     all_fp16_fp32_ops = set(lists.symbol.FP16_FUNCS + lists.symbol.FP32_FUNCS + lists.symbol.FP16_FP32_FUNCS)
 
-    assert combined_ops.issubset(all_fp16_fp32_ops), "Can only choose ops from one of the three lists for fp16_ops and fp32_ops" \
+    assert combined_ops.issubset(all_fp16_fp32_ops), "Can only choose ops from one of the three lists " \
+                                                     "for fp16_ops and fp32_ops" \
                                                      " 1. amp.list_fp16_ops()" \
                                                      " 2. amp.list_fp32_ops()" \
                                                      " 3. amp.list_fp16_fp32_ops()"
@@ -418,7 +417,8 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     indptr = [0]
     for conditional_fp32_op in conditional_fp32_ops:
         assert isinstance(conditional_fp32_op[0], str) and isinstance(conditional_fp32_op[1], str) \
-            and isinstance(conditional_fp32_op[2], list), "conditional_fp32_ops should be a list of (str, str, list of str)"
+            and isinstance(conditional_fp32_op[2], list), "conditional_fp32_ops should be a list of " \
+                                                          "(str, str, list of str)"
         param_vals += conditional_fp32_op[2]
         indptr.append(len(param_vals))
         param_names.append(conditional_fp32_op[1])
@@ -552,7 +552,6 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
         from being quantized
     """
     from ...gluon import HybridBlock, SymbolBlock
-    from ...gluon import block as blk
     if isinstance(block, HybridBlock):
         inputs, sym = block._cached_graph
         converted_sym = convert_symbol(sym, target_dtype, target_dtype_ops,
