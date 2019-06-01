@@ -530,7 +530,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
                          excluded_sym_names=None, input_names=['data'], ctx=gpu(0)):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
-    return a block which will add mixed precision support for the block
+    return a block with mixed precision support which can be used for inference.
 
     Parameters
     ----------
