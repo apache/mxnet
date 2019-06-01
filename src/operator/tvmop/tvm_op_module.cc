@@ -14,18 +14,6 @@ void TVMOpModule::Load(const std::string &filepath) {
   Module module = (*f_load)(filepath, "");
   module_ptr_ = std::make_shared<Module>();
   *module_ptr_ = module;
-  /*
-  size_t pos = filepath.find_last_of("\\/");
-  std::string ptx_path = (std::string::npos == pos)
-      ? "libtvmop.ptx"
-      : filepath.substr(0, pos-1) + "libtvmop.ptx";
-  ptx_path = "file://" + ptx_path;
-  dmlc::io::URI uri(ptx_path.c_str());
-  if (dmlc::io::FileSystem::GetInstance(uri)->Open(uri, "rb", true)) {
-    Module m_ptx = (*f_load)(ptx_path, "");
-    module_ptr_->Import(m_ptx);
-  }
-  */
 }
 
 void TVMOpModule::Call(const std::string &func_name,
