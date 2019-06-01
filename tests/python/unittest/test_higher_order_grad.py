@@ -27,13 +27,16 @@ def test_log():
     def log(x):
         return nd.log(x)
 
+    def grad_op(x):
+        return 1/x
+
     def grad_grad_op(x):
         return -1/(x**2)
 
     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
 
     for array in arrays:
-        check_second_order_unary(array, log, grad_grad_op)
+        check_second_order_unary(array, log, grad_op, grad_grad_op)
 
 
 @with_seed()
@@ -41,13 +44,16 @@ def test_log2():
     def log2(x):
         return nd.log2(x)
 
+    def grad_op(x):
+        return 1/(x * math.log(2))
+
     def grad_grad_op(x):
         return -1/((x**2) * math.log(2))
 
     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
 
     for array in arrays:
-        check_second_order_unary(array, log2, grad_grad_op)
+        check_second_order_unary(array, log2, grad_op, grad_grad_op)
 
 
 @with_seed()
@@ -55,30 +61,45 @@ def test_log10():
     def log10(x):
         return nd.log10(x)
 
+    def grad_op(x):
+        return 1/(x * math.log(10))
+
     def grad_grad_op(x):
         return -1/((x**2) * math.log(10))
 
     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
 
     for array in arrays:
-        check_second_order_unary(array, log10, grad_grad_op)
+        check_second_order_unary(array, log10, grad_op, grad_grad_op)
 
 
-def check_second_order_unary(x, op, grad_grad_op):
+def check_second_order_unary(x, op, grad_op, grad_grad_op):
     x = nd.array(x)
+    grad_x = grad_op(x)
     grad_grad_x = grad_grad_op(x)
     x.attach_grad()
+
+    # Manual head_grads.
+    head_grads = nd.random.normal(shape=x.shape)
+    head_grad_grads = nd.random.normal(shape=x.shape)
+    head_grads.attach_grad()
+
+    # Perform compute.
     with autograd.record():
         y = op(x)
-        head_grads = nd.random.normal(shape=y.shape)
         y_grad = autograd.grad(y, x, head_grads=head_grads,
                                create_graph=True, retain_graph=True)[0]
-    head_grad_grads = nd.random.normal(shape=y.shape)
+
     y_grad.backward(head_grad_grads)
 
+    # Compute expected values.
     expected_grad_grad = grad_grad_x.asnumpy() * head_grad_grads.asnumpy() * \
         head_grads.asnumpy()
+    expected_heads_grad = grad_x.asnumpy()
+
+    # Validate the gradients.
     assert_almost_equal(expected_grad_grad, x.grad.asnumpy())
+    assert_almost_equal(expected_heads_grad, head_grads.grad.asnumpy())
 
 
 if __name__ == '__main__':
