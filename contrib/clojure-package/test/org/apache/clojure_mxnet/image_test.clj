@@ -19,27 +19,35 @@
   (:require [org.apache.clojure-mxnet.image :as image]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [clojure.java.io :as io]
-            [clojure.test :refer :all])
+            [clojure.test :refer [deftest is use-fixtures]])
   (:import (javax.imageio ImageIO)
            (java.io File)))
 
 (def tmp-dir (System/getProperty "java.io.tmpdir"))
 (def image-path (.getAbsolutePath (io/file tmp-dir "Pug-Cookie.jpg")))
+(def image-src-path "test/test-images/Pug-Cookie.jpg")
 
-(defn download-image []
-  (with-open [in (io/input-stream "https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg")
-              out (io/output-stream (io/file image-path))]
+(defn- cp
+  "Copy from filepath `from` to filepath `to`."
+  [from to]
+  (with-open [in (io/input-stream (io/file from))
+              out (io/output-stream (io/file to))]
     (io/copy in out)))
 
-(defn delete-image []
-  (io/delete-file image-path))
+(defn- rm
+  "Removes `filepath`."
+  [filepath]
+  (io/delete-file filepath))
 
-(defn with-downloaded-image [f]
-  (download-image)
-  (f)
-  (delete-image))
+(defn- with-image
+  "Provides `src-path` in `dest-path` for the test function `f` to use."
+  [src-path dest-path]
+  (fn [f]
+    (cp src-path dest-path)
+    (f)
+    (rm dest-path)))
 
-(use-fixtures :once with-downloaded-image)
+(use-fixtures :once (with-image image-src-path image-path))
 
 (deftest test-decode-image
   (let [img-arr (image/decode-image 
