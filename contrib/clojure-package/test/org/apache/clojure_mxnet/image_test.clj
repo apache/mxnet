@@ -44,7 +44,8 @@
   [src-path dest-path]
   (fn [f]
     (cp src-path dest-path)
-    (f)))
+    (f)
+    (rm dest-path)))
 
 (use-fixtures :once (with-file image-src-path image-path))
 
