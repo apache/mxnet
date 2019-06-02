@@ -19,7 +19,7 @@
 from __future__ import absolute_import
 from __future__ import division
 import mxnet as mx
-from mxnet import gluon, autograd, np
+from mxnet import gluon, autograd, np, npx
 
 
 def test_create_np_param():
@@ -44,7 +44,7 @@ def test_create_np_param():
         def hybrid_forward(self, F, x, w):
             return F.dot(x, w)
 
-    @np.use_np_shape
+    @npx.use_np
     class TestBlock2(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock2, self).__init__()
@@ -62,9 +62,9 @@ def test_create_np_param():
 
 
 def test_optimizer_with_np_ndarrays():
-    @np.use_np_shape
+    @npx.use_np
     class LinearRegression(gluon.HybridBlock):
-        def __init__(self, num_input_dim=-1, num_hidden_dim=100, num_output_dim=10):
+        def __init__(self, num_input_dim=0, num_hidden_dim=100, num_output_dim=10):
             super(LinearRegression, self).__init__()
             with self.name_scope():
                 self.w1 = self.params.get('w1', shape=(num_input_dim, num_hidden_dim),
@@ -74,11 +74,11 @@ def test_optimizer_with_np_ndarrays():
 
         def hybrid_forward(self, F, x, w1, w2):
             h = x.dot(w1)  # equivalent to F.np.dot(x, w1)
-            h_relu = F.npe.relu(h)  # equivalent to F.relu(h) but generating np.ndarray
+            h_relu = F.npx.relu(h)  # equivalent to F.relu(h) but generating np.ndarray
             y_pred = h_relu.dot(w2)  # equivalent to F.np.dot(h_relu, w2)
             return y_pred
 
-    @np.use_np_shape
+    @npx.use_np
     class TotalLoss(gluon.HybridBlock):
         def hybrid_forward(self, F, pred, label):
             return ((pred - label) ** 2).sum()  # equivalent to F.np.sum(F.np.square(pred - label))

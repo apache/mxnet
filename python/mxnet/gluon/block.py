@@ -35,6 +35,7 @@ from .. import name as _name
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
+from .. import numpy_extension as _mx_npx
 from .. import numpy as _mx_np
 
 
@@ -551,7 +552,7 @@ class Block(object):
 
         for hook in self._forward_hooks.values():
             hook(self, args, out)
-        if _mx_np.is_np_shape():
+        if _mx_npx.is_np_array():
             _check_all_np_ndarrays(_flatten(out, "output")[0])
         return out
 

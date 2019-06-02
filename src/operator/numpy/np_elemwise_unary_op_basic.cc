@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 
-MXNET_OPERATOR_REGISTER_UNARY(_npe_relu)
+MXNET_OPERATOR_REGISTER_UNARY(_npx_relu)
 .describe(R"code(Computes rectified linear activation.
 
 .. math::
@@ -37,7 +37,7 @@ MXNET_OPERATOR_REGISTER_UNARY(_npe_relu)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::relu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_relu"});
 
-MXNET_OPERATOR_REGISTER_UNARY(_npe_sigmoid)
+MXNET_OPERATOR_REGISTER_UNARY(_npx_sigmoid)
 .describe(R"code(Computes sigmoid of x element-wise.
 
 .. math::
