@@ -94,7 +94,7 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -D_GLIBCXX_ASSERTIONS
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
@@ -612,7 +612,7 @@ doxygen:
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace --with-cython
+	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
 
 cython2:
 	cd python; python2 setup.py build_ext --inplace --with-cython

@@ -30,6 +30,7 @@
 #include <algorithm>
 
 #include "../common/cuda_utils.h"
+#include "mxnet_op.h"
 
 // Convenience functions.
 inline void linalg_check_batch_size(int A, int B, int C) {
@@ -1133,7 +1134,7 @@ void linalg_syevd<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                        A.dptr_, A.stride_, L.dptr_, work.dptr_, -1, &liwork, \
                       -1); \
   int lwork(static_cast<int>(*work.dptr_)); \
-  int *iwork = static_cast<int*>(static_cast<void*>(work.dptr_ + lwork)); \
+  int *iwork = static_cast<int *>(static_cast<void *>(work.dptr_ + lwork)); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
                                A.dptr_, A.stride_, L.dptr_, work.dptr_, \
                                lwork, iwork, liwork)); \
@@ -1230,6 +1231,257 @@ LINALG_GPU_SYEVD(DnDsyevd, double)
 
 LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnSsyevd, float)
 LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnDsyevd, double)
+
+#endif  // __CUDACC__
+
+//////////////////////////////// GETRF ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "getrf"
+
+// The input of this function should be col-major for performance.
+// Tensor work holds space for ipiv in getrf
+#define LINALG_CPU_GETRF(fname, DType) \
+template<> inline \
+void linalg_getrf<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              Stream<cpu> *s) { \
+  int *ipiv = reinterpret_cast<int *>(work.dptr_); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(1), A.size(0), \
+                               A.dptr_, A.stride_, ipiv)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+
+LINALG_CPU_GETRF(sgetrf, float)
+LINALG_CPU_GETRF(dgetrf, double)
+
+#ifdef __CUDACC__
+
+// "getrfBatched" and "getriBatched" in cuBLAS must have DType *matrices[] as input
+// to store the pointers of each batch matrix. This kernel is used to build the
+// pointer array.
+struct set_matrix : public mxnet::op::mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType **p, DType *m, int step) {
+    p[i] = m + i * step;
+  }
+};
+
+// GETRF only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
+// Since there is no "getri" in cuSolver, we are using batched version of
+// "getrf" and "getri" in cuBLAS here. These routines are good for large
+// batches of small matrices, so performance issue may happen when computing
+// large matices. We leave it here until MAGMA which has "getri" is introduced
+// into MXNet.
+#define LINALG_GPU_BATCH_GETRF(fname, DType) \
+template<> inline \
+void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                    const Tensor<gpu, 1, DType>& work, \
+                                    Stream<gpu> *s) { \
+  using namespace mxnet; \
+  using namespace mxnet::op::mxnet_op; \
+  CHECK_NOTNULL(s); \
+  Storage::Handle A_ptr_buf = Storage::Get()->Alloc(sizeof(DType *) * A.size(0), Context::GPU()); \
+  DType **A_ptr = static_cast<DType **>(A_ptr_buf.dptr); \
+  const Tensor<gpu, 3, DType> temp(work.dptr_, A.shape_, s); \
+  int *pivot = reinterpret_cast<int *>(temp.dptr_ + temp.shape_.Size()); \
+  int *info = pivot + A.size(0) * A.size(1); \
+  Copy(temp, A, s); \
+  Kernel<set_matrix, gpu>::Launch(s, temp.size(0), \
+                                  A_ptr, temp.dptr_, \
+                                  temp.size(1) * temp.size(2)); \
+  CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
+                            A.size(1), A_ptr, A.size(2), pivot, \
+                            info, A.size(0))) \
+  Storage::Get()->Free(A_ptr_buf); \
+}
+
+#else
+
+#define LINALG_GPU_BATCH_GETRF(fname, DType) \
+template<> inline \
+void linalg_batch_getrf<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                    const Tensor<gpu, 1, DType>& work, \
+                                    Stream<gpu> *s) { \
+  LOG(FATAL) << "batched getrf requires CUDA version >= 8.0!"; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
+LINALG_GPU_BATCH_GETRF(SgetrfBatched, float)
+LINALG_GPU_BATCH_GETRF(DgetrfBatched, double)
+
+#endif  // __CUDACC__
+
+//////////////////////////////// GETRI ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "getri"
+
+// The input of this function should be col-major for performance.
+// Tensor work holds space for ipiv, work in getri
+#define LINALG_CPU_GETRI(fname, DType) \
+template<> inline \
+void linalg_getri<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              Stream<cpu> *s) { \
+  DType wkopt; \
+  MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
+                       A.stride_, nullptr, &wkopt, -1); \
+  int lwork(static_cast<int>(wkopt)); \
+  int *ipiv = reinterpret_cast<int *>(work.dptr_); \
+  DType *pwork = reinterpret_cast<DType *>(ipiv + A.size(0)); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(0), A.dptr_, \
+                               A.stride_, ipiv, pwork, lwork)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+LINALG_CPU_GETRI(sgetri, float)
+LINALG_CPU_GETRI(dgetri, double)
+
+// Query workspace for the whole batch of matrices.For cpu version, the workspace
+// is re-used, so space for only one matrix is enough.
+#define LINALG_CPU_GETRI_WORKSPACE_QUERY(func, DType) \
+template<> inline \
+int linalg_getri_workspace_query<cpu, DType>(const Tensor<cpu, 3, DType>& A, \
+                                             Stream<cpu> *s) { \
+  const Tensor<cpu, 2, DType>& matrix = A[0]; \
+  DType lwork(0); \
+  MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, matrix.size(0), matrix.dptr_, \
+                      matrix.stride_, nullptr, &lwork, -1); \
+  int ipiv = (sizeof(int) * matrix.size(0) + sizeof(DType) - 1) / sizeof(DType); \
+  return ipiv + static_cast<int>(lwork); \
+}
+LINALG_CPU_GETRI_WORKSPACE_QUERY(sgetri, float)
+LINALG_CPU_GETRI_WORKSPACE_QUERY(dgetri, double)
+
+#ifdef __CUDACC__
+
+// GETRI only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
+// Since there is no "getri" in cuSolver, we are using batched version of
+// "getrf" and "getri" in cuBLAS here. These routines are good for large
+// batches of small matrices, so performance issue may happen when computing
+// large matices. We leave it here until MAGMA which has "getri" is introduced
+// into MXNet.
+#define LINALG_GPU_BATCH_GETRI(fname, DType) \
+template<> inline \
+void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                    const Tensor<gpu, 3, DType>& B, \
+                                    const Tensor<gpu, 1, DType>& work, \
+                                    Stream<gpu> *s) { \
+  using namespace mxnet; \
+  using namespace mxnet::op::mxnet_op; \
+  CHECK_NOTNULL(s); \
+  Storage::Handle A_ptr_buf = Storage::Get()->Alloc(sizeof(DType *) * A.size(0), Context::GPU()); \
+  DType **A_ptr = static_cast<DType **>(A_ptr_buf.dptr); \
+  Storage::Handle B_ptr_buf = Storage::Get()->Alloc(sizeof(DType *) * A.size(0), Context::GPU()); \
+  DType **B_ptr = static_cast<DType **>(B_ptr_buf.dptr); \
+  Tensor<gpu, 3, DType> temp(work.dptr_, A.shape_, s); \
+  int *pivot = reinterpret_cast<int *>(temp.dptr_ + temp.shape_.Size()); \
+  int *info = pivot + A.size(0) * A.size(1); \
+  Kernel<set_matrix, gpu>::Launch(s, A.size(0), \
+                                  A_ptr, A.dptr_, \
+                                  A.size(1) * A.size(2)); \
+  Kernel<set_matrix, gpu>::Launch(s, temp.size(0), \
+                                  B_ptr, temp.dptr_, \
+                                  temp.size(1) * temp.size(2)); \
+  CUBLAS_CALL(cublas##fname(Stream<gpu>::GetBlasHandle(s), \
+                            A.size(1), const_cast<const DType **>(B_ptr), \
+                            B.size(2), const_cast<const int *>(pivot), \
+                            A_ptr, A.size(2), info, A.size(0))) \
+  Storage::Get()->Free(A_ptr_buf); \
+  Storage::Get()->Free(B_ptr_buf); \
+}
+
+#define LINALG_GPU_GETRI_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                             Stream<gpu> *s) { \
+  int pivot_size = sizeof(int) * A.size(0) * A.size(1); \
+  int info_size = sizeof(int) * A.size(0); \
+  int matrix_size = sizeof(DType) * A.shape_.Size(); \
+  return (pivot_size + info_size + matrix_size + sizeof(DType) - 1) / sizeof(DType); \
+}
+
+#else
+
+#define LINALG_GPU_BATCH_GETRI(fname, DType) \
+template<> inline \
+void linalg_batch_getri<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                    const Tensor<gpu, 3, DType>& B, \
+                                    const Tensor<gpu, 1, DType>& work, \
+                                    Stream<gpu> *s) { \
+  LOG(FATAL) << "batched getri requires CUDA version >= 8.0!"; \
+}
+
+#define LINALG_GPU_GETRI_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_getri_workspace_query<gpu, DType>(const Tensor<gpu, 3, DType>& A, \
+                                             Stream<gpu> *s) { \
+  LOG(FATAL) << "batched getri requires CUDA version >= 8.0!"; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
+LINALG_GPU_BATCH_GETRI(SgetriBatched, float)
+LINALG_GPU_BATCH_GETRI(DgetriBatched, double)
+
+LINALG_GPU_GETRI_WORKSPACE_QUERY(SgetriBatched, float)
+LINALG_GPU_GETRI_WORKSPACE_QUERY(DgetriBatched, double)
+
+#endif  // __CUDACC__
+
+//////////////////////////////// INVERSE ////////////////////////////////////////////
+
+// CPU/GPU-versions of matrix inversion combining LAPACK function "getrf" and "getri"
+
+// Note A = inverse(B)
+#define LINALG_CPU_BATCH_INVERSE(xpu, DType) \
+template<> inline \
+void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
+                                      const Tensor<xpu, 3, DType>& B, \
+                                      const Tensor<xpu, 1, DType>& work, \
+                                      Stream<cpu> *s) { \
+  if (A.dptr_ != B.dptr_) Copy(A, B, s); \
+  for (index_t i = 0; i < A.size(0); ++i) { \
+    linalg_getrf(A[i], work, s); \
+    linalg_getri(A[i], work, s); \
+  } \
+}
+LINALG_CPU_BATCH_INVERSE(cpu, float)
+LINALG_CPU_BATCH_INVERSE(cpu, double)
+
+#ifdef __CUDACC__
+
+// GETRF and GETRI only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
+#define LINALG_GPU_BATCH_INVERSE(xpu, DType) \
+template<> inline \
+void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
+                                      const Tensor<xpu, 3, DType>& B, \
+                                      const Tensor<xpu, 1, DType>& work, \
+                                      Stream<gpu> *s) { \
+  linalg_batch_getrf(B, work, s); \
+  linalg_batch_getri(A, B, work, s); \
+}
+
+#else
+
+#define LINALG_GPU_BATCH_INVERSE(xpu, DType) \
+template<> inline \
+void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
+                                      const Tensor<xpu, 3, DType>& B, \
+                                      const Tensor<xpu, 1, DType>& work, \
+                                      Stream<gpu> *s) { \
+  LOG(FATAL) << "batched getrf and getri requires CUDA version >= 8.0!"; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
+LINALG_GPU_BATCH_INVERSE(gpu, float)
+LINALG_GPU_BATCH_INVERSE(gpu, double)
 
 #endif  // __CUDACC__
 

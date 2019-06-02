@@ -441,6 +441,16 @@ int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out) {
   API_END_HANDLE_ERROR(delete s);
 }
 
+int MXSymbolRemoveAmpCast(SymbolHandle sym_handle, SymbolHandle* ret_sym_handle) {
+  nnvm::Symbol* s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *source = static_cast<nnvm::Symbol*>(sym_handle);
+  *s = source->Copy();
+  s->outputs = nnvm::ApplyPass(Symbol2Graph(*s), "RemoveAmpCast").outputs;
+  *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXSymbolSaveToFile(SymbolHandle symbol, const char *fname) {
   nnvm::Symbol *s = static_cast<nnvm::Symbol*>(symbol);
   API_BEGIN();
@@ -546,7 +556,7 @@ int MXSymbolInferShape(SymbolHandle sym,
 
   // if use legacy shape definition, need to convert numpy shape to legacy shape
   mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  if (!Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToLegacyShape(&shapes);
   }
 
@@ -619,7 +629,7 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
 
   // if use legacy shape definition, need to convert numpy shape to legacy shape
   mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  if (!Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToLegacyShape(&shapes);
   }
 
@@ -836,6 +846,20 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
     g = ApplyPass(std::move(g), "BuildSubgraph");
     s->outputs = g.outputs;
   }
+  *ret_sym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *source = static_cast<nnvm::Symbol *>(sym_handle);
+  CHECK_EQ(source->outputs.size(), 1U)
+    << "Generating atomic symbol from other symbol only works for nongrouped symbol.";
+  const auto& node = source->outputs[0];
+  const auto *op = node.node->op();
+  const auto attrs = source->ListAttrs(nnvm::Symbol::ListAttrOption::kShallow);
+  *s = nnvm::Symbol::CreateFunctor(op, attrs);
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }

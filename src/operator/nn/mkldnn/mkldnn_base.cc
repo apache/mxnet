@@ -553,8 +553,8 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
   for (size_t i = 0; i < out_blobs.size(); i++)
     out_blobs[i] = outputs[i].data();
   fn(attrs, ctx, in_blobs, req, out_blobs);
-
-  LOG(INFO) << "test " << attrs.op->name;
+  if (dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false))
+    LOG(INFO) << "test " << attrs.op->name;
   size_t num = std::min(outputs.size(), outputs_.size());
   num = std::min(num_checks, num);
   for (size_t i = 0; i < num; i++) {

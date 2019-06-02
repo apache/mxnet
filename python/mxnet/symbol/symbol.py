@@ -34,7 +34,7 @@ import numpy as _numpy
 
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
-from ..base import mx_uint, py_str, string_types, integer_types, mx_int, is_np_compat
+from ..base import mx_uint, py_str, string_types, integer_types, mx_int
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
@@ -45,6 +45,7 @@ from ..executor import Executor
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
+from ..util import is_np_shape
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
@@ -1078,7 +1079,7 @@ class Symbol(SymbolBase):
                 arg_names = self.list_arguments()
                 unknowns = []
                 for name, shape in zip(arg_names, arg_shapes):
-                    if is_np_compat():
+                    if is_np_shape():
                         shape_is_none = not shape or -1 in shape
                     else:
                         shape_is_none = not shape or 0 in shape
@@ -1275,7 +1276,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-    def save(self, fname):
+    def save(self, fname, remove_amp_cast=True):
         """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
@@ -1292,6 +1293,8 @@ class Symbol(SymbolBase):
             - "s3://my-bucket/path/my-s3-symbol"
             - "hdfs://my-bucket/path/my-hdfs-symbol"
             - "/path-to/my-local-symbol"
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
 
         See Also
         --------
@@ -1299,7 +1302,12 @@ class Symbol(SymbolBase):
         """
         if not isinstance(fname, string_types):
             raise TypeError('fname need to be string')
-        check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
+            check_call(_LIB.MXSymbolSaveToFile(handle, c_str(fname)))
+        else:
+            check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
     def tojson(self):
         """Saves symbol to a JSON string.
@@ -1370,6 +1378,12 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
+
+    def _gen_atomic_symbol(self):
+        handle = SymbolHandle()
+        check_call(_LIB.MXGenAtomicSymbolFromSymbol(self.handle, ctypes.byref(handle)))
+        return Symbol(handle)
+
 
     # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,

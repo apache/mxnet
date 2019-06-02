@@ -300,7 +300,7 @@ import time
 CNNModel = namedtuple("CNNModel", ['cnn_exec', 'symbol', 'data', 'label', 'param_blocks'])
 
 # Define what device to train/test on, use GPU if available
-ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
 
 arg_names = cnn.list_arguments()
 

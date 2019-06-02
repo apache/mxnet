@@ -111,7 +111,7 @@ Let's define a method that will run one training iteration given data and label.
 
 ```python
 # Use GPU if available
-if len(mx.test_utils.list_gpus())!=0:
+if mx.context.num_gpus():
     ctx=mx.gpu()
 else:
     ctx=mx.cpu()

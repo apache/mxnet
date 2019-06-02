@@ -456,6 +456,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
 
 @with_seed()
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking():
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0, 0, True), (1, 1, True), (15, 15, False),

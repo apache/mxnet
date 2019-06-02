@@ -242,7 +242,7 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape param_shape = param.shape;
-  if (!Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_shape()) {
     common::ConvertToNumpyShape(&param_shape);
   }
   if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param_shape)) return true;
