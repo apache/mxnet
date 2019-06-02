@@ -112,7 +112,8 @@ def compile_unix_cpu_openblas() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_lib_cython, true)
+            // utils.pack_lib('cpu', mx_lib_cython, true)
+            utils.pack_lib('cpu', mx_lib, true)
           }
         }
       }
@@ -266,7 +267,8 @@ def compile_unix_cmake_gpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake', false)
-            utils.pack_lib('cmake_gpu', mx_cmake_lib_cython, true)
+            // utils.pack_lib('cmake_gpu', mx_cmake_lib_cython, true)
+            utils.pack_lib('cmake_gpu', mx_cmake_lib, true)
           }
         }
       }
@@ -643,8 +645,10 @@ def test_unix_python2_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python2-cpu') {
           try {
-            utils.unpack_and_init('cpu', mx_lib_cython, true)
-            python2_ut_cython('ubuntu_cpu')
+            // utils.unpack_and_init('cpu', mx_lib_cython, true)
+            // python2_ut_cython('ubuntu_cpu')
+            utils.unpack_and_init('cpu', mx_lib, true)
+            python2_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
@@ -745,8 +749,10 @@ def test_unix_python3_gpu() {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-gpu') {
           try {
-            utils.unpack_and_init('gpu', mx_lib_cython, true)
-            python3_gpu_ut_cython('ubuntu_gpu_cu101')
+            // utils.unpack_and_init('gpu', mx_lib_cython, true)
+            // python3_gpu_ut_cython('ubuntu_gpu_cu100')
+            utils.unpack_and_init('gpu', mx_lib, true)
+            python3_gpu_ut('ubuntu_gpu_cu101')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')

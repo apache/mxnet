@@ -756,7 +756,7 @@ def _sanity_check_params(func_name, unsupported_params, param_dict):
 _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
 
-_NP_EXT_OP_PREFIX = '_npe_'
+_NP_EXT_OP_PREFIX = '_npx_'
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 
@@ -813,14 +813,14 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
             op_names.append(name)
 
     if mx_module_name is None:
-        # register np/npe ops for imperative programming
+        # register np/npx ops for imperative programming
         op_module_name = "%s.%s._op" % (root_module_name, np_module_name)  # e.g. mxnet.numpy._op
         op_submodule_name = "%s.%s" % (root_module_name, np_module_name)  # e.g. mxnet.numpy.random
-    elif mx_module_name == 'ndarray' or mx_module_name == 'symbol':
-        # register numpy internal ops and np/npe ops for use in Gluon
+    elif mx_module_name in ('ndarray', 'symbol'):
+        # register numpy internal ops and np/npx ops for use in Gluon
         # np internal ops are registered in mxnet.ndarray/symbol.numpy._internal
         # np ops are registered in mxnet.ndarray/symbol.numpy._op
-        # npe ops are registered in mxnet.ndarray/symbol.numpy_extension._op
+        # npx ops are registered in mxnet.ndarray/symbol.numpy_extension._op
         op_module_name = "%s.%s.%s" % (root_module_name, mx_module_name, np_module_name)
         if op_name_prefix != _NP_INTERNAL_OP_PREFIX:
             op_module_name += '._op'
