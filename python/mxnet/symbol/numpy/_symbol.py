@@ -1133,7 +1133,7 @@ def argmax(a, axis=None, out=None):
         Array of indices into the array. It has the same shape as `a.shape`
         with the dimension along `axis` removed.
     """
-    return _npi.argmax(a, axis=axis, keepdims=False)
+    return _npi.argmax(a, axis=axis, keepdims=False, out=out)
 
 
 _set_np_symbol_class(_Symbol)

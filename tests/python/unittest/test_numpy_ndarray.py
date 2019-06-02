@@ -376,7 +376,7 @@ def test_np_ndarray_copy():
 
 
 @with_seed()
-def test_ndarray_indexing():
+def test_np_ndarray_indexing():
     def test_getitem(np_array, index):
         """`is_scalar` indicates whether we should expect a scalar for the result.
         If so, the indexed array of NDArray should call asscalar to compare
