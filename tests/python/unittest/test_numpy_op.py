@@ -315,6 +315,83 @@ def test_np_minimum():
 
 @with_seed()
 @mx.use_np_shape
+def test_np_unary_funcs():
+    def check_unary_func(func, ref_grad, shape, low, high):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, *args, **kwargs):
+                return getattr(F.np, self._func)(a)
+
+        print(func)
+        np_func = getattr(_np, func)
+        mx_func = TestUnary(func)
+        np_test_data = _np.random.uniform(low, high, shape).astype(_np.float32)
+        mx_test_data = mx.numpy.array(np_test_data)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            if ref_grad:
+                mx_test_data.attach_grad()
+            np_out = np_func(np_test_data)
+            with mx.autograd.record():
+                y = mx_func(mx_test_data)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            if ref_grad:
+                y.backward()
+                print(mx_test_data.grad.asnumpy())
+                print(ref_grad(np_test_data))
+                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-5, atol=1e-6, equal_nan=True)
+
+    funcs = {
+        'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
+        'cbrt' : (lambda x: 1. / (3. * _np.cbrt(x) ** 2), -1.0, 1.0),
+        'ceil' : (None, -10.0, 10.0),
+        'exp' : (lambda x: _np.exp(x), -1.0, 1.0),
+        'expm1' : (lambda x: _np.exp(x), -1.0, 1.0),
+        'fix' : (None, -10.0, 10.0),
+        'floor' : (None, -10.0, 10.0),
+        'log' : (lambda x: 1.0 / x, 0.1, 5.0),
+        'log10' : (lambda x: 1.0 / (x * _np.log(10)), 0.1, 10.0),
+        'log1p' : (lambda x: 1.0 / (1.0 + x), -0.9, 5.0),
+        'log2' : (lambda x: 1.0 / (x * _np.log(2)), 0.1, 2.0),
+        'logical_not' : (None, -1.0, 1.0),
+        'negative' : (lambda x: -1. * _np.ones(x.shape), -1.0, 1.0),
+        'reciprocal' : (lambda x: -1. / (x ** 2), 0.01, 1.0),
+        'rint' : (None, -5.0, 5.0),
+        'sign' : (None, -1.0, 1.0),
+        'sqrt' : (lambda x: 0.5 / _np.sqrt(x), 0.001, 10.0),
+        'square' : (lambda x: 2.0 * x, -1.0, 1.0),
+        'trunc' : (None, -5.0, 5.0),
+        'sin' : (lambda x: _np.cos(x), -1.0, 1.0),
+        'cos' : (lambda x: -_np.sin(x), -1.0, 1.0),
+        'tan' : (lambda x: _np.tan(x) ** 2 + 1.0, -1.0, 1.0),
+        'arcsin' : (lambda x: 1. / (1. - x ** 2) ** (1. / 2.), -1.0, 1.0),
+        'arccos' : (lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), -1.0, 1.0),
+        'arctan' : (lambda x: 1. / (x ** 2. + 1.), -1.0, 1.0),
+        'degrees' : (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0),
+        'radians' : (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0),
+        'sinh' : (lambda x: _np.cosh(x), -1.0, 1.0),
+        'cosh' : (lambda x: _np.sinh(x), -1.0, 1.0),
+        'tanh' : (lambda x: 1. - _np.tanh(x) ** 2, -1.0, 1.0),
+        'arcsinh' : (lambda x: 1./(x**2 + 1.)**(1./2.), -1.0, 1.0),
+        'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
+        'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
+    }
+    ndim = random.choice([2, 3, 4])
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
+        for func, func_data in funcs.items():
+            ref_grad, low, high = func_data
+            check_unary_func(func, ref_grad, shape, low, high)
+
+
+@with_seed()
+@mx.use_np_shape
 def test_np_stack():
     class TestStack(HybridBlock):
         def __init__(self, axis=None):
@@ -363,6 +440,7 @@ def test_np_stack():
                 np_out = _np.stack([np_a, np_b, np_c, np_d], axis=axis)
                 mx_out = np.stack([mx_a, mx_b, mx_c, mx_d], axis=axis)
                 assert same(mx_out.asnumpy(), np_out)
+
 
 if __name__ == '__main__':
     import nose
