@@ -44,42 +44,33 @@
   [src-path dest-path]
   (fn [f]
     (cp src-path dest-path)
-    (f)
-    (rm dest-path)))
+    (f)))
 
 (use-fixtures :once (with-file image-src-path image-path))
 
 (deftest test-decode-image
-  (let [img-arr (image/decode-image
-                 (io/input-stream image-path))
-        img-arr-2 (image/decode-image
-                   (io/input-stream image-path)
-                   {:color-flag image/GRAYSCALE})]
+  (let [img-arr (image/decode-image (io/input-stream image-path))
+        img-arr-2 (image/decode-image (io/input-stream image-path)
+                                      {:color-flag image/GRAYSCALE})]
     (is (= [576 1024 3] (ndarray/shape-vec img-arr)))
     (is (= [576 1024 1] (ndarray/shape-vec img-arr-2)))))
 
 (deftest test-decode
-  (let [img-arr (image/decode
-                 (io/input-stream image-path))
-        img-arr-2 (image/decode
-                   (io/input-stream image-path)
-                   {:color-flag image/GRAYSCALE})]
+  (let [img-arr (image/decode (io/input-stream image-path))
+        img-arr-2 (image/decode (io/input-stream image-path)
+                                {:color :grayscale})]
     (is (= [576 1024 3] (ndarray/shape-vec img-arr)))
     (is (= [576 1024 1] (ndarray/shape-vec img-arr-2)))))
 
 (deftest test-read-image
   (let [img-arr (image/read-image image-path)
-        img-arr-2 (image/read-image
-                   image-path
-                   {:color-flag image/GRAYSCALE})]
+        img-arr-2 (image/read-image image-path {:color-flag image/GRAYSCALE})]
     (is (= [576 1024 3] (ndarray/shape-vec img-arr)))
     (is (= [576 1024 1] (ndarray/shape-vec img-arr-2)))))
 
 (deftest test-read
   (let [img-arr (image/read image-path)
-        img-arr-2 (image/read
-                   image-path
-                   {:color-flag image/GRAYSCALE})]
+        img-arr-2 (image/read image-path {:color :grayscale})]
     (is (= [576 1024 3] (ndarray/shape-vec img-arr)))
     (is (= [576 1024 1] (ndarray/shape-vec img-arr-2)))))
 

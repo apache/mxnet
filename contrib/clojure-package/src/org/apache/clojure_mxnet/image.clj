@@ -63,10 +63,20 @@
   ([input-stream]
    (decode-image input-stream {})))
 
+(s/def ::color #{:grayscale :color})
+(s/def ::decode-image-opts-2 (s/keys :opt-un [::color ::to-rgb ::output]))
+
+(defn- color->int
+  [color-flag]
+  (case color-flag
+    :grayscale 0
+    :color 1))
+
 (defn decode
   "Decodes an image from an input stream with OpenCV.
     `input-stream`: `InputStream` - Contains the binary encoded image
-    `color-flag`: 0 or 1 - Convert decoded image to grayscale (0) or color (1)
+    `color`: keyword in `#{:color :grayscale}` - Convert decoded image to
+             grayscale or color
     `to-rgb`: boolean - Whether to convert decoded image to mxnet's default RGB
             format (instead of opencv's default BGR)
     `output`: nil or `NDArray`
@@ -74,14 +84,14 @@
 
   Ex:
     (decode input-stream)
-    (decode input-stream {:color-flag 1})
-    (decode input-stream {:color-flag 0 :output nd})"
-  ([input-stream {:keys [color-flag to-rgb output]
-                  :or {color-flag COLOR to-rgb true output nil}
+    (decode input-stream {:color :color})
+    (decode input-stream {:color :grayscale :output nd})"
+  ([input-stream {:keys [color to-rgb output]
+                  :or {color :color to-rgb true output nil}
                   :as opts}]
    (util/validate! ::input-stream input-stream "Invalid input stream")
-   (util/validate! ::decode-image-opts opts "Invalid options for decoding")
-   (Image/imDecode input-stream color-flag to-rgb ($/option output)))
+   (util/validate! ::decode-image-opts-2 opts "Invalid options for decoding")
+   (Image/imDecode input-stream (color->int color) to-rgb ($/option output)))
   ([input-stream]
    (decode input-stream {})))
 
@@ -126,7 +136,8 @@
   "Reads an image file and returns an ndarray with OpenCV. It returns image in
    RGB by default instead of OpenCV's default BGR.
     `filename`: string - Name of the image file to be loaded
-    `color-flag`: 0 or 1 - Convert decoded image to grayscale (0) or color (1)
+    `color`: keyword in `#{:color :grayscale}` - Convert decoded image to
+             grayscale or color
     `to-rgb`: boolean - Whether to convert decoded image to mxnet's default RGB
             format (instead of opencv's default BGR)
     `output`: nil or `NDArray`
@@ -134,18 +145,18 @@
 
    Ex:
      (read \"cat.jpg\")
-     (read \"cat.jpg\" {:color-flag 0})
-     (read \"cat.jpg\" {:color-flag 1 :output nd})"
-  ([filename {:keys [color-flag to-rgb output]
-              :or {color-flag nil to-rgb nil output nil}
+     (read \"cat.jpg\" {:color :grayscale})
+     (read \"cat.jpg\" {:color :color :output nd})"
+  ([filename {:keys [color to-rgb output]
+              :or {color :color to-rgb nil output nil}
               :as opts}]
    (util/validate! ::filename filename "Invalid filename")
-   (util/validate! ::optional-color-flag color-flag "Invalid color flag")
+   (util/validate! ::color color "Invalid color")
    (util/validate! ::optional-to-rgb to-rgb "Invalid conversion flag")
    (util/validate! ::output output "Invalid output")
    (Image/imRead
     filename
-    ($/option color-flag)
+    ($/option (when color (color->int color)))
     ($/option to-rgb)
     ($/option output)))
   ([filename]
