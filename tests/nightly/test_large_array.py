@@ -319,6 +319,13 @@ def test_flip():
     assert np.sum(t[-1, :].asnumpy() == 0) == b.shape[1]
 
 
+def test_softmax():
+    input_data = mx.nd.ones((SMALL_Y, LARGE_X))
+    true_output = np.full((SMALL_Y, LARGE_X), (1 / SMALL_Y))
+    output = nd.softmax(input_data, axis=0)
+    assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
