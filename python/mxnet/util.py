@@ -22,6 +22,7 @@ import sys
 import functools
 import itertools
 import inspect
+import threading
 
 from .base import _LIB, check_call
 
@@ -84,8 +85,7 @@ def set_np_shape(active):
 
 
 def is_np_shape():
-    """
-    Checks whether the NumPy shape semantics is currently turned on.
+    """Checks whether the NumPy shape semantics is currently turned on.
     In NumPy shape semantics, `()` represents the shape of scalar tensors,
     and tuples with `0` elements, for example, `(0,)`, `(1, 0, 2)`, represent
     the shapes of zero-size tensors. This is turned off by default for keeping
@@ -268,12 +268,12 @@ def use_np_shape(func):
 
     Parameters
     ----------
-    func : a user-provided callable function or class to be scoped by the NumPy compatibility state.
+    func : a user-provided callable function or class to be scoped by the NumPy-shape semantics.
 
     Returns
     -------
     Function or class
-        A function or class wrapped in the NumPy compatibility scope.
+        A function or class wrapped in the NumPy-shape scope.
     """
 
     if inspect.isclass(func):
@@ -323,3 +323,225 @@ def set_module(module):
             func.__module__ = module
         return func
     return decorator
+
+
+class _NumpyArrayScope(object):
+    """Scope for managing NumPy array creation. This is often used
+    with `is_np_array=True` in initializer to enforce array creation
+    as type `mxnet.numpy.ndarray`, instead of `mx.nd.NDArray` in Gluon.
+
+    Do not use this class directly. Use `np_array(active)` instead.
+    """
+    _current = threading.local()
+
+    def __init__(self, is_np_array):  #pylint: disable=redefined-outer-name
+        self._old_scope = None
+        self._is_np_array = is_np_array
+
+    def __enter__(self):
+        if not hasattr(_NumpyArrayScope._current, "value"):
+            _NumpyArrayScope._current.value = _NumpyArrayScope(False)
+        self._old_scope = _NumpyArrayScope._current.value
+        _NumpyArrayScope._current.value = self
+        return self
+
+    def __exit__(self, ptype, value, trace):
+        assert self._old_scope
+        _NumpyArrayScope._current.value = self._old_scope
+
+
+def np_array(active=True):
+    """Returns an activated/deactivated NumPy-array scope to be used in 'with' statement
+    and captures code that needs the NumPy-array semantics.
+
+    Currently, this is used in Gluon to enforce array creation in `Block`s as type
+    `mxnet.numpy.ndarray`, instead of `mx.nd.NDArray`.
+
+    It is recommended to use the decorator `use_np_array` to decorate the classes
+    that need this semantics, instead of using this function in a `with` statement
+    unless you know exactly what has been scoped by this semantics.
+
+    Please note that this is designed as an infrastructure for the incoming
+    MXNet-NumPy operators. Legacy operators registered in the modules
+    `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
+    in NumPy even within this scope.
+
+    Parameters
+    ----------
+    active : bool
+        Indicates whether to activate NumPy-array semantics.
+
+    Returns
+    -------
+    _NumpyShapeScope
+        A scope object for wrapping the code w/ or w/o NumPy-shape semantics.
+    """
+    return _NumpyArrayScope(active)
+
+
+def is_np_array():
+    """Checks whether the NumPy-array semantics is currently turned on.
+    This is currently used in Gluon for checking whether an array of type `mxnet.numpy.ndarray`
+    or `mx.nd.NDArray` should be created. For example, at the time when a parameter
+    is created in a `Block`, an `mxnet.numpy.ndarray` is created if this returns true; else
+    an `mx.nd.NDArray` is created.
+
+    Normally, users are not recommended to use this API directly unless you known exactly
+    what is going on under the hood.
+
+    Please note that this is designed as an infrastructure for the incoming
+    MXNet-NumPy operators. Legacy operators registered in the modules
+    `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
+    in NumPy within this semantics.
+
+    Returns
+    -------
+        A bool value indicating whether the NumPy-array semantics is currently on.
+    """
+    return _NumpyArrayScope._current.value._is_np_array if hasattr(
+        _NumpyArrayScope._current, "value") else False
+
+
+def use_np_array(func):
+    """A decorator wrapping Gluon `Block`s and all its methods, properties, and static functions
+    with the semantics of NumPy-array, which means that where ndarrays are created,
+    `mxnet.numpy.ndarray`s should be created, instead of legacy ndarrays of type `mx.nd.NDArray`.
+    For example, at the time when a parameter is created in a `Block`, an `mxnet.numpy.ndarray`
+    is created if it's decorated with this decorator.
+
+    Example::
+        import mxnet as mx
+        from mxnet import gluon, np
+
+
+        class TestHybridBlock1(gluon.HybridBlock):
+            def __init__(self):
+                super(TestHybridBlock1, self).__init__()
+                self.w = self.params.get('w', shape=(2, 2))
+
+            def hybrid_forward(self, F, x, w):
+                return F.dot(x, w)
+
+
+        x = mx.nd.ones((2, 2))
+        net1 = TestHybridBlock1()
+        net1.initialize()
+        out = net1.forward(x)
+        for _, v in net1.collect_params().items():
+            assert type(v.data()) is mx.nd.NDArray
+        assert type(out) is mx.nd.NDArray
+
+
+        @np.use_np_array
+        class TestHybridBlock2(gluon.HybridBlock):
+            def __init__(self):
+                super(TestHybridBlock2, self).__init__()
+                self.w = self.params.get('w', shape=(2, 2))
+
+            def hybrid_forward(self, F, x, w):
+                return F.np.dot(x, w)
+
+
+        x = np.ones((2, 2))
+        net2 = TestHybridBlock2()
+        net2.initialize()
+        out = net2.forward(x)
+        for _, v in net2.collect_params().items():
+            print(type(v.data()))
+            assert type(v.data()) is np.ndarray
+        assert type(out) is np.ndarray
+
+    Parameters
+    ----------
+    func : a user-provided callable function or class to be scoped by the NumPy-array semantics.
+
+    Returns
+    -------
+    Function or class
+        A function or class wrapped in the NumPy-array scope.
+    """
+    if inspect.isclass(func):
+        for name, method in inspect.getmembers(
+                func,
+                predicate=
+                lambda f: inspect.isfunction(f) or inspect.ismethod(f) or isinstance(f, property)):
+            if isinstance(method, property):
+                setattr(func, name, property(use_np_array(method.__get__),
+                                             method.__set__,
+                                             method.__delattr__,
+                                             method.__doc__))
+            else:
+                setattr(func, name, use_np_array(method))
+        return func
+    elif callable(func):
+        @wraps_safely(func)
+        def _with_np_array(*args, **kwargs):
+            with np_array(active=True):
+                return func(*args, **kwargs)
+        return _with_np_array
+    else:
+        raise TypeError('use_np_array can only decorate classes and callable objects, '
+                        'while received a {}'.format(str(type(func))))
+
+
+def use_np(func):
+    """A convenience decorator for wrapping user provided functions and classes in the scope of
+    both NumPy-shape and NumPy-array semantics, which means that (1) empty tuples `()` and tuples
+    with zeros, such as `(0, 1)`, `(1, 0, 2)`, will be treated as scalar tensors' shapes and
+    zero-size tensors' shapes in shape inference functions of operators, instead of as unknown
+    in legacy mode; (2) ndarrays of type `mxnet.numpy.ndarray` should be created instead of
+    `mx.nd.NDArray`.
+
+    Example::
+        import mxnet as mx
+        from mxnet import gluon, np
+
+
+        class TestHybridBlock1(gluon.HybridBlock):
+            def __init__(self):
+                super(TestHybridBlock1, self).__init__()
+                self.w = self.params.get('w', shape=(2, 2))
+
+            def hybrid_forward(self, F, x, w):
+                return F.dot(x, w) + F.ones((1,))
+
+
+        x = mx.nd.ones((2, 2))
+        net1 = TestHybridBlock1()
+        net1.initialize()
+        out = net1.forward(x)
+        for _, v in net1.collect_params().items():
+            assert type(v.data()) is mx.nd.NDArray
+        assert type(out) is mx.nd.NDArray
+
+
+        @np.use_np
+        class TestHybridBlock2(gluon.HybridBlock):
+            def __init__(self):
+                super(TestHybridBlock2, self).__init__()
+                self.w = self.params.get('w', shape=(2, 2))
+
+            def hybrid_forward(self, F, x, w):
+                return F.np.dot(x, w) + F.np.ones(())
+
+
+        x = np.ones((2, 2))
+        net2 = TestHybridBlock2()
+        net2.initialize()
+        out = net2.forward(x)
+        for _, v in net2.collect_params().items():
+            print(type(v.data()))
+            assert type(v.data()) is np.ndarray
+        assert type(out) is np.ndarray
+
+    Parameters
+    ----------
+    func : a user-provided callable function or class to be scoped by the
+    NumPy-shape and NumPy-array semantics.
+
+    Returns
+    -------
+    Function or class
+        A function or class wrapped in the Numpy-shape and NumPy-array scope.
+    """
+    return use_np_array(use_np_shape(func))
