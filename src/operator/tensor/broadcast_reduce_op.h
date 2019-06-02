@@ -168,15 +168,24 @@ struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
   }
 };
 
-inline int CheckAxis(int axis, int ndim) {
-  CHECK(axis < ndim && axis >= -ndim)
-    << "axis " << axis << " exceeds the input dimension of " << ndim;
-  return (axis + ndim)%ndim;
+inline int CheckAxis(const int axis, const int ndim) {
+  if (ndim == 0) {
+    CHECK(axis == 0 || axis == -1) << "axis " << axis << " is out of bounds for array of"
+                                                         " dimension 1";
+    return 0;
+  } else {
+    CHECK(axis < ndim && axis >= -ndim)
+        << "axis " << axis << " exceeds the input dimension of " << ndim;
+    return (axis + ndim) % ndim;
+  }
 }
 
 inline mxnet::TShape AxisShapeCompact(mxnet::TShape shape, int *axis, bool allow_2d) {
   int ndim = shape.ndim();
-  index_t leading = 1, trailing = 1, M = shape[*axis];
+  index_t leading = 1, trailing = 1, M = 1;
+  if (shape.ndim() > *axis) {
+    M = shape[*axis];
+  }
   for (int i = 0; i < *axis; ++i) leading *= shape[i];
   for (int i = *axis + 1; i < ndim; ++i) trailing *= shape[i];
   if (allow_2d && trailing == 1) {
@@ -553,14 +562,37 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  if (!param.axis) LOG(FATAL) << "Global reduction not supported yet";
+  int axis = inputs[0].ndim();
+  TBlob input = inputs[0];
+  if (param.axis.has_value()) {
+    axis = param.axis.value();
+  } else {
+    // If global reduction, reshape the input tensor into 2D shape (1, inputs[0].shape_.Size())
+    // and search on axis = 1.
+    mxnet::TShape shape_2d(2, 1);
+    shape_2d[1] = input.shape_.Size();
+    input = TBlob(input.dptr_, shape_2d, input.dev_mask(), input.type_flag_, input.dev_id());
+    axis = 1;
+  }
 
-  int axis = CheckAxis(param.axis.value(), inputs[0].shape_.ndim());
-  mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, false);
+  axis = CheckAxis(axis, input.shape_.ndim());
+  if (inputs[0].shape_.ndim() != 0) {
+    if (param.axis.has_value()) {
+      // cannot do argmax in an empty dimension
+      CHECK_NE(inputs[0].shape_[axis], 0)
+          << "searching input tensor of shape " << inputs[0].shape_
+          << " along axis = " << axis << " of zero dim-size is not allowed";
+    } else {
+      // cannot do argmax on an empty array
+      CHECK_NE(inputs[0].shape_.Size(), 0U) << "attempt to search an empty sequence";
+    }
+  }
+  if (input.shape_.Size() == 0U) return;  // zero-size tensor
+  mxnet::TShape shape = AxisShapeCompact(input.shape_, &axis, false);
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> out = outputs[0].get_with_shape<xpu, 2, DType>(
       Shape2(shape[0], shape[2]), s);
-    Tensor<xpu, 3, DType> in = inputs[0].get_with_shape<xpu, 3, DType>(
+    Tensor<xpu, 3, DType> in = input.get_with_shape<xpu, 3, DType>(
       shape.get<3>(), s);
     CHECK(req[0] != kAddTo) << "AddTo is not supported";
     ASSIGN_DISPATCH(out, req[0], (reduce_with_axis<reducer, true>(in, 1)));

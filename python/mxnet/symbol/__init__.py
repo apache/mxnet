@@ -28,7 +28,7 @@ from .op import *
 from .symbol import *
 # pylint: enable=wildcard-import
 from . import numpy as np
-from . import numpy_extension as npe
+from . import numpy_extension as npx
 
 __all__ = op.__all__ + symbol.__all__\
           + ['contrib', 'linalg', 'random', 'sparse', 'image', 'numpy', 'numpy_extension']

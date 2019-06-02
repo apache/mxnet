@@ -26,10 +26,10 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npe_relu)
+NNVM_REGISTER_OP(_npx_relu)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::relu>);
 
-NNVM_REGISTER_OP(_npe_sigmoid)
+NNVM_REGISTER_OP(_npx_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sigmoid>);
 
 NNVM_REGISTER_OP(_np_copy)

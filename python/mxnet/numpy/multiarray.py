@@ -23,19 +23,22 @@
 from __future__ import absolute_import
 from __future__ import division
 from array import array as native_array
+import sys
 import ctypes
+import warnings
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle
-from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types
+from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
 from ..util import _sanity_check_params, set_module, use_np_shape
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack']
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
+           'argmax']
 
 
 # This function is copied from ndarray.py since pylint
@@ -74,6 +77,17 @@ def _np_ndarray_cls(handle, writable=True, stype=0):
 _set_np_ndarray_class(_np_ndarray_cls)
 
 
+def _get_index(idx):
+    if isinstance(idx, NDArray) and not isinstance(idx, ndarray):
+        raise TypeError('Cannot have mx.nd.NDArray as index')
+    if isinstance(idx, ndarray):
+        return idx._as_classic_ndarray()
+    elif sys.version_info[0] > 2 and isinstance(idx, range):
+        return arange(idx.start, idx.stop, idx.step, dtype='int32')._as_classic_ndarray()
+    else:
+        return idx
+
+
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
 @use_np_shape
 class ndarray(NDArray):
@@ -83,22 +97,57 @@ class ndarray(NDArray):
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
 
-    def __getitem__(self, item):
-        # TODO(junwu): make output shape of integer indexing correct
-        raise NotImplementedError
-
-    def __setitem__(self, key, value):
-        if self.size == 0:
-            return
+    def __getitem__(self, key):
+        # TODO(junwu): calling base class __setitem__ is a temp solution
         if self.ndim == 0:
             if key != ():
                 raise IndexError('scalar tensor can only accept `()` as index')
-            # TODO(junwu): Better handling of this situation
-            hdl = NDArrayHandle()
-            check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
-            classic_ndarray = NDArray(handle=hdl, writable=self.writable)
-            classic_ndarray.__setitem__(slice(None), value)
+        if isinstance(key, tuple) and len(key) == 0:
+            return self
+        if isinstance(key, integer_types):
+            key = (key,)
+        if isinstance(key, tuple) and len(key) == self.ndim\
+                and all(isinstance(idx, integer_types) for idx in key):
+            out = self._as_classic_ndarray()
+            for idx in key:
+                out = out[idx]
+            return out.reshape(()).as_np_ndarray()
+        if isinstance(key, ndarray):
+            key = key._as_classic_ndarray()
+        elif isinstance(key, tuple):
+            key = [_get_index(idx) for idx in key]
+            key = tuple(key)
+        elif isinstance(key, list):
+            key = [_get_index(idx) for idx in key]
+        elif sys.version_info[0] > 2 and isinstance(key, range):
+            key = _get_index(key)
+        return self._as_classic_ndarray().__getitem__(key).as_np_ndarray()
+
+    def __setitem__(self, key, value):
+        # TODO(junwu): calling base class __setitem__ is a temp solution
+        if isinstance(value, NDArray) and not isinstance(value, ndarray):
+            raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
+        if self.ndim == 0:
+            if not isinstance(key, tuple) or len(key) != 0:
+                raise IndexError('scalar tensor can only accept `()` as index')
+        if isinstance(value, ndarray):
+            value = value._as_classic_ndarray()
+        # TODO(junwu): Better handling of this situation
+        if isinstance(key, tuple) and len(key) == 0:
+            self._as_classic_ndarray().__setitem__(slice(None), value)
             return
+
+        if isinstance(key, integer_types):
+            key = (key,)
+        if isinstance(key, ndarray):
+            key = key._as_classic_ndarray()
+        elif isinstance(key, tuple):
+            key = [_get_index(idx) for idx in key]
+            key = tuple(key)
+        elif isinstance(key, list):
+            key = [_get_index(idx) for idx in key]
+        elif sys.version_info[0] > 2 and isinstance(key, range):
+            key = _get_index(key)
         self._as_classic_ndarray().__setitem__(key, value)
 
     def __add__(self, other):
@@ -248,33 +297,78 @@ class ndarray(NDArray):
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, ndarray):
+            return _npi.equal(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.equal_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     def __hash__(self):
         raise NotImplementedError
 
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, ndarray):
+            return _npi.not_equal(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.not_equal_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, ndarray):
+            return _npi.greater(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.greater_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, ndarray):
+            return _npi.greater_equal(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.greater_equal_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, ndarray):
+            return _npi.less(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.less_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, ndarray):
+            return _npi.less_equal(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.less_equal_scalar(self, float(other))
+        else:
+            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
 
     def __bool__(self):
-        raise NotImplementedError
+        num_elements = self.size
+        if num_elements == 0:
+            warnings.simplefilter('default')
+            warnings.warn('The truth value of an empty array is ambiguous. Returning False, but in'
+                          ' future this will result in an error.', DeprecationWarning)
+            return False
+        elif num_elements == 1:
+            return bool(self.item())
+        else:
+            raise ValueError("The truth value of an ndarray with multiple elements is ambiguous.")
 
     def __len__(self):
         """Number of elements along the first axis."""
@@ -1329,3 +1423,66 @@ def stack(arrays, axis=0, out=None):
     stacked : ndarray
         The stacked array has one more dimension than the input arrays."""
     return _mx_nd_np.stack(arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def arange(start, stop=None, step=1, dtype=None, ctx=None):
+    """Return evenly spaced values within a given interval.
+
+    Values are generated within the half-open interval ``[start, stop)``
+    (in other words, the interval including `start` but excluding `stop`).
+    For integer arguments the function is equivalent to the Python built-in
+    `range` function, but returns an ndarray rather than a list.
+
+    Parameters
+    ----------
+    start : number, optional
+        Start of interval. The interval includes this value.  The default
+        start value is 0.
+    stop : number
+        End of interval. The interval does not include this value, except
+        in some cases where `step` is not an integer and floating point
+        round-off affects the length of `out`.
+    step : number, optional
+        Spacing between values. For any output `out`, this is the distance
+        between two adjacent values, ``out[i+1] - out[i]``.  The default
+        step size is 1.  If `step` is specified as a position argument,
+        `start` must also be given.
+    dtype : dtype
+        The type of the output array. The default is `float32`.
+
+    Returns
+    -------
+    arange : ndarray
+        Array of evenly spaced values.
+
+        For floating point arguments, the length of the result is
+        ``ceil((stop - start)/step)``.  Because of floating point overflow,
+        this rule may result in the last element of `out` being greater
+        than `stop`.
+    """
+    return _mx_nd_np.arange(start, stop, step, dtype, ctx)
+
+
+@set_module('mxnet.numpy')
+def argmax(a, axis=None, out=None):
+    """Returns the indices of the maximum values along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array. Only support ndarrays of dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : array, optional
+        If provided, the result will be inserted into this array. It should
+        be of the appropriate shape and dtype.
+
+    Returns
+    -------
+    index_array : ndarray of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+    """
+    return _mx_nd_np.argmax(a, axis, out)

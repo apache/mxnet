@@ -947,7 +947,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     input_shape = {k: v.shape for k, v in location.items()}
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
-    is_np_sym = True if isinstance(sym, np_symbol) else False
+    is_np_sym = bool(isinstance(sym, np_symbol))
     if is_np_sym:  # convert to np symbol for using element-wise multiplication
         proj = proj.as_np_ndarray()
     out = sym * proj
