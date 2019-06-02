@@ -24,7 +24,7 @@ __all__ = ['norm']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
-    """Matrix or vector norm.
+    r"""Matrix or vector norm.
 
     This function can only support Frobenius norm for now.
     The Frobenius norm is given by [1]_:
