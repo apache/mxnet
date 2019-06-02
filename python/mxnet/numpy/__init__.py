@@ -26,6 +26,5 @@ from .multiarray import *  # pylint: disable=wildcard-import
 from . import _op
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
-from ..util import use_np_shape, set_np_shape, np_shape, is_np_shape
 
 __all__ = []
