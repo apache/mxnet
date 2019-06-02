@@ -415,7 +415,10 @@ class HookHandle(object):
         self.detach()
 
 def shape_is_known(shape):
-    """Check whether a shape is completely known w/ or w/o np semantics."""
+    """Check whether a shape is completely known with or without np semantics.
+
+    Please see the doc of is_np_shape for more details.
+    """
     if shape is None:
         return False
     unknown_dim_size = -1 if is_np_shape() else 0

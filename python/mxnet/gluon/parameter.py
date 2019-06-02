@@ -160,6 +160,9 @@ class Parameter(object):
         if self._shape is None:
             return None
         elif is_np_shape():
+            # Parameters shouldn't be zero-size. If one of its dimension is 0,
+            # it means the parameter isn't initialized. In the NumPy semantics,
+            # the unknown dimension should be marked with -1.
             return tuple(i if i != 0 else -1 for i in self._shape)
         else:
             return self._shape
