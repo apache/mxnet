@@ -28,6 +28,23 @@
 namespace mxnet {
 namespace op {
 
+inline bool NumpyRangeShape(const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector* in_shapes,
+                            mxnet::ShapeVector* out_shapes) {
+  const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
+  CHECK_EQ(in_shapes->size(), 0U);
+  CHECK_EQ(out_shapes->size(), 1U);
+  CHECK_NE(param.step, 0) << "_npi_arange does not support step=0";
+  CHECK_EQ(param.repeat, 1) << "_npi_arange only supports repeat=1, received " << param.repeat;
+  CHECK(param.stop.has_value()) << "_npi_arange requires stop to have a value";
+  double out_size = std::ceil((param.stop.value() - param.start) / param.step);
+  if (out_size < 0) {
+    out_size = 0;
+  }
+  SHAPE_ASSIGN_CHECK(*out_shapes, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
+  return true;
+}
+
 NNVM_REGISTER_OP(_npi_zeros)
 .describe("Return a new array of given shape, type, and context, filled with zeros.")
 .set_num_inputs(0)
@@ -106,6 +123,16 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("a", "NDArray-or-Symbol",
               "The shape and data-type of a define these same attributes of the returned array.");
+
+NNVM_REGISTER_OP(_npi_arange)
+.describe("Return evenly spaced values within a given interval.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(RangeParamParser)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyRangeShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
+.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu>)
+.add_arguments(RangeParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

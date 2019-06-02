@@ -31,7 +31,7 @@ from .utils import load, load_frombuffer, save, zeros, empty, array
 from .sparse import _ndarray_cls
 from .ndarray import _GRAD_REQ_MAP, _DTYPE_MX_TO_NP, _DTYPE_NP_TO_MX, _new_empty_handle
 from . import numpy as np
-from . import numpy_extension as npe
+from . import numpy_extension as npx
 
 __all__ = op.__all__ + ndarray.__all__ + utils.__all__ + \
           ['contrib', 'linalg', 'random', 'sparse', 'image', 'numpy', 'numpy_extension']
