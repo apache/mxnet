@@ -66,9 +66,8 @@
 (s/def ::color #{:grayscale :color})
 (s/def ::decode-image-opts-2 (s/keys :opt-un [::color ::to-rgb ::output]))
 
-(defn- color->int
-  [color-flag]
-  (case color-flag
+(defn- color->int [color]
+  (case color
     :grayscale 0
     :color 1))
 
