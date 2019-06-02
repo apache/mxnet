@@ -35,5 +35,76 @@ NNVM_REGISTER_OP(_npe_sigmoid)
 NNVM_REGISTER_OP(_np_copy)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
+#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(__name$, __kernel$)     \
+NNVM_REGISTER_OP(__name$)                                               \
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, __kernel$>)  \
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_negative, mshadow_op::negation);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_reciprocal, mshadow_op::reciprocal);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_absolute, mshadow_op::abs);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_sign, mshadow_op::sign);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_rint, mshadow_op::rint);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_ceil, mshadow_op::ceil);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_floor, mshadow_op::floor);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_trunc, mshadow_op::trunc);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_fix, mshadow_op::fix);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_square, mshadow_op::square);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_sqrt, mshadow_op::square_root);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_cbrt, mshadow_op::cube_root);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_exp, mshadow_op::exp);
+
+NNVM_REGISTER_OP(_np_log)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::log>);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_log10, mshadow_op::log10);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_log2, mshadow_op::log2);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_log1p, mshadow_op::log1p);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_expm1, mshadow_op::expm1);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_logical_not, mshadow_op::nt);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_sin, mshadow_op::sin);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_cos, mshadow_op::cos);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_tan, mshadow_op::tan);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arcsin, mshadow_op::arcsin);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arccos, mshadow_op::arccos);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arctan, mshadow_op::arctan);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_degrees, mshadow_op::degrees);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_radians, mshadow_op::radians);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_sinh, mshadow_op::sinh);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_cosh, mshadow_op::cosh);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_tanh, mshadow_op::tanh);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arcsinh, mshadow_op::arcsinh);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arccosh, mshadow_op::arccosh);
+
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arctanh, mshadow_op::arctanh);
+
 }  // namespace op
 }  // namespace mxnet
