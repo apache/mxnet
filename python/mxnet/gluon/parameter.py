@@ -157,6 +157,11 @@ class Parameter(object):
 
     @property
     def shape(self):
+        """The shape of the parameter.
+
+        By default, an unknown dimension size is 0. However, when the NumPy semantic
+        is turned on, unknown dimension size is -1.
+        """
         if self._shape is None:
             return None
         elif is_np_shape():
