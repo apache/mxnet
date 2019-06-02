@@ -17,4 +17,46 @@
 
 """Namespace for ops used in imperative programming."""
 
-__all__ = []
+from __future__ import absolute_import
+from ..ndarray import numpy as _mx_nd_np
+
+__all__ = ['norm']
+
+
+def norm(x, ord=None, axis=None, keepdims=False):
+    r"""Matrix or vector norm.
+
+    This function can only support Frobenius norm for now.
+    The Frobenius norm is given by [1]_:
+
+        :math:`||A||_F = [\sum_{i,j} abs(a_{i,j})^2]^{1/2}`
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    ord : {'fro'}, optional
+        Order of the norm.
+    axis : {int, 2-tuple of ints, None}, optional
+        If `axis` is an integer, it specifies the axis of `x` along which to
+        compute the vector norms.  If `axis` is a 2-tuple, it specifies the
+        axes that hold 2-D matrices, and the matrix norms of these matrices
+        are computed.  If `axis` is None, the norm of the whole ndarray is
+        returned.
+
+    keepdims : bool, optional
+        If this is set to True, the axes which are normed over are left in the
+        result as dimensions with size one.  With this option the result will
+        broadcast correctly against the original `x`.
+
+    Returns
+    -------
+    n : float or ndarray
+        Norm of the matrix or vector(s).
+
+    References
+    ----------
+    .. [1] G. H. Golub and C. F. Van Loan, *Matrix Computations*,
+           Baltimore, MD, Johns Hopkins University Press, 1985, pg. 15
+    """
+    return _mx_nd_np.linalg.norm(x, ord, axis, keepdims)

@@ -29,7 +29,7 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack']
+__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -114,8 +114,7 @@ class _Symbol(Symbol):
         elif isinstance(other, numeric_types):
             return _npi.mod_scalar(self, float(other))
         else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
@@ -124,8 +123,7 @@ class _Symbol(Symbol):
         elif isinstance(other, numeric_types):
             return _npi.rmod_scalar(self, float(other))
         else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __idiv__(self, other):
         raise NotImplementedError
@@ -137,8 +135,7 @@ class _Symbol(Symbol):
         elif isinstance(other, numeric_types):
             return _npi.true_divide_scalar(self, float(other))
         else:
-            raise TypeError("_Symbol does not support type {} as divisor"
-                            .format(str(type(other))))
+            raise TypeError("_Symbol does not support type {} as divisor".format(str(type(other))))
 
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
@@ -147,8 +144,7 @@ class _Symbol(Symbol):
         elif isinstance(other, numeric_types):
             return _npi.rtrue_divide_scalar(self, float(other)).as_np_ndarray()
         else:
-            raise TypeError("_Symbol does not support type {} as dividend"
-                            .format(str(type(other))))
+            raise TypeError("_Symbol does not support type {} as dividend".format(str(type(other))))
 
     def __itruediv__(self, other):
         raise NotImplementedError
@@ -160,8 +156,7 @@ class _Symbol(Symbol):
         elif isinstance(other, numeric_types):
             return _npi.power_scalar(self, float(other))
         else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
@@ -170,8 +165,7 @@ class _Symbol(Symbol):
         elif isinstance(other, numeric_types):
             return _npi.rpower_scalar(self, float(other))
         else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __neg__(self):
         """x.__neg__() <=> - x"""
@@ -182,27 +176,63 @@ class _Symbol(Symbol):
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, _Symbol):
+            return _npi.equal(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.equal_scalar(self, float(other))
+        else:
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __ne__(self, other):
         """x.__ne__(y) <=> x != y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, _Symbol):
+            return _npi.not_equal(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.not_equal_scalar(self, float(other))
+        else:
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __gt__(self, other):
         """x.__gt__(y) <=> x > y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, _Symbol):
+            return _npi.greater(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.greater_scalar(self, float(other))
+        else:
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __ge__(self, other):
         """x.__ge__(y) <=> x >= y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, _Symbol):
+            return _npi.greater_equal(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.greater_equal_scalar(self, float(other))
+        else:
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __lt__(self, other):
         """x.__lt__(y) <=> x < y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, _Symbol):
+            return _npi.less(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.less_scalar(self, float(other))
+        else:
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
-        raise NotImplementedError
+        # TODO(junwu): Return boolean ndarray when dtype=bool_ is supported
+        if isinstance(other, _Symbol):
+            return _npi.less_equal(self, other)
+        elif isinstance(other, numeric_types):
+            return _npi.less_equal_scalar(self, float(other))
+        else:
+            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
 
     def __len__(self):
         raise NotImplementedError
@@ -228,8 +258,8 @@ class _Symbol(Symbol):
 
     def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
         if order != 'C':
-            raise NotImplementedError('ndarray.copy only supports order=\'C\', while '
-                                      'received {}'.format(str(order)))
+            raise NotImplementedError('only supports order=\'C\', while received {}'
+                                      .format(str(order)))
         return _mx_np_op.reshape(self, newshape=shape, order=order)
 
     def reshape_like(self, *args, **kwargs):
@@ -1028,6 +1058,82 @@ def stack(arrays, axis=0, out=None):
 
     arrays = get_list(arrays)
     return _npi.stack(*arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def arange(start, stop=None, step=1, dtype=None, ctx=None):
+    """Return evenly spaced values within a given interval.
+
+    Values are generated within the half-open interval ``[start, stop)``
+    (in other words, the interval including `start` but excluding `stop`).
+    For integer arguments the function is equivalent to the Python built-in
+    `range` function, but returns an ndarray rather than a list.
+
+    Parameters
+    ----------
+    start : number, optional
+        Start of interval. The interval includes this value.  The default
+        start value is 0.
+    stop : number
+        End of interval. The interval does not include this value, except
+        in some cases where `step` is not an integer and floating point
+        round-off affects the length of `out`.
+    step : number, optional
+        Spacing between values. For any output `out`, this is the distance
+        between two adjacent values, ``out[i+1] - out[i]``.  The default
+        step size is 1.  If `step` is specified as a position argument,
+        `start` must also be given.
+    dtype : dtype
+        The type of the output array. The default is `float32`.
+
+    Returns
+    -------
+    arange : ndarray
+        Array of evenly spaced values.
+
+        For floating point arguments, the length of the result is
+        ``ceil((stop - start)/step)``.  Because of floating point overflow,
+        this rule may result in the last element of `out` being greater
+        than `stop`.
+    """
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if stop is None:
+        stop = start
+        start = 0
+    if step is None:
+        step = 1
+    if start is None and stop is None:
+        raise ValueError('start and stop cannot be both None')
+    if step == 0:
+        raise ZeroDivisionError('step cannot be 0')
+    return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def argmax(a, axis=None, out=None):
+    """Returns the indices of the maximum values along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array. Only support ndarrays of dtype `float16`, `float32`, and `float64`.
+    axis : int, optional
+        By default, the index is into the flattened array, otherwise
+        along the specified axis.
+    out : array, optional
+        If provided, the result will be inserted into this array. It should
+        be of the appropriate shape and dtype.
+
+    Returns
+    -------
+    index_array : ndarray of indices whose dtype is same as the input ndarray.
+        Array of indices into the array. It has the same shape as `a.shape`
+        with the dimension along `axis` removed.
+    """
+    return _npi.argmax(a, axis=axis, keepdims=False, out=out)
 
 
 _set_np_symbol_class(_Symbol)
