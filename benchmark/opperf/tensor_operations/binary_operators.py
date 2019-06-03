@@ -36,7 +36,7 @@ import mxnet as mx
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
 from benchmark.opperf.utils.op_registry_utils import get_all_broadcast_binary_operators, \
-    get_all_element_wise_binary_operators, prepare_op_inputs
+    get_all_elemen_wise_binary_operators, prepare_op_inputs
 from benchmark.opperf.rules.input_shapes import DEFAULT_BINARY_BROADCAST_OP_INPUTS, \
     DEFAULT_BINARY_ELEMENT_WISE_OP_INPUTS
 
@@ -84,7 +84,7 @@ def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32
 
     """
     # Fetch all Binary Element_wise Operators
-    mx_binary_element_wise_ops = get_all_element_wise_binary_operators()
+    mx_binary_element_wise_ops = get_all_elemen_wise_binary_operators()
 
     # For each operator, run benchmarks
     mx_binary_op_results = []

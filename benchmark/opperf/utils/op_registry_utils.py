@@ -24,34 +24,36 @@ from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
 mx_nd_module = sys.modules["mxnet.ndarray.op"]
 
 
-def _get_all_registered_ops(filters=("_backward", "_contrib", "_")):
-    """Get all registered MXNet operators.
+def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
+    """From a given list of operators, filter out all operator names starting with given filters and prepares
+    a dictionary of operator with attributes - 'has_backward' and 'nd_op_handle = mxnet.ndarray.op'
 
-    By default, filter out all backward operators that starts with  '_backward',
-    Contrib operators that starts with '_contrib' and internal operators that
+    By default, merge forward and backward operators for a given op into one operator and sets the attribute
+    'has_backward' for the operator.
+
+    By default, filter out all Contrib operators that starts with '_contrib' and internal operators that
     starts with '_'.
 
     Parameters
     ----------
-    filters: tuple(str)
-        List of operator name prefix to ignore from benchmarking.
-        Default - ("_backward", "_contrib", "_")
+    operator_names: List[str]
+        List of operator names.
+    filters: Tuple(str)
+        Tuple of filters to apply on operator names.
+    merge_op_forward_backward: Boolean, Default - True
+        Merge forward and backward operators for a given op in to one op.
 
     Returns
     -------
     {"operator_name": {"has_backward", "nd_op_handle"}}
     """
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
-
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
     mx_operators = {}
     operators_with_backward = []
 
-    # Prepare master list of all operators.
-    for i in range(size.value):
-        cur_op_name = py_str(plist[i])
+    if merge_op_forward_backward:
+        filters += ("_backward",)
+
+    for cur_op_name in operator_names:
         if not cur_op_name.startswith(filters):
             mx_operators[cur_op_name] = {"has_backward": False,
                                          "nd_op_handle": getattr(mx_nd_module, cur_op_name)}
@@ -59,13 +61,32 @@ def _get_all_registered_ops(filters=("_backward", "_contrib", "_")):
         if cur_op_name.startswith("_backward_"):
             operators_with_backward.append(cur_op_name)
 
-    # Identify all operators that can run backward.
-    for op_with_backward in operators_with_backward:
-        op_name = op_with_backward.split("_backward_")[1]
-        if op_name in mx_operators:
-            mx_operators[op_name]["has_backward"] = True
+    if merge_op_forward_backward:
+        # Identify all operators that can run backward.
+        for op_with_backward in operators_with_backward:
+            op_name = op_with_backward.split("_backward_")[1]
+            if op_name in mx_operators:
+                mx_operators[op_name]["has_backward"] = True
 
     return mx_operators
+
+
+def _get_all_registered_ops():
+    """Get all registered MXNet operator names.
+
+
+    Returns
+    -------
+    ["operator_name"]
+    """
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
+                                     ctypes.byref(plist)))
+
+    mx_registered_operator_names = [py_str(plist[i]) for i in range(size.value)]
+    return mx_registered_operator_names
 
 
 def _get_op_handles(op_name):
@@ -134,8 +155,9 @@ def _set_op_arguments(mx_operators):
 
 
 def _get_all_mxnet_operators():
-    # Step 1 - Get all registered op names
-    mx_operators = _get_all_registered_ops()
+    # Step 1 - Get all registered op names and filter it
+    operator_names = _get_all_registered_ops()
+    mx_operators = _select_ops(operator_names)
 
     # Step 2 - Get all parameters for the operators
     _set_op_arguments(mx_operators)
@@ -173,8 +195,8 @@ def get_all_broadcast_binary_operators():
     return binary_broadcast_mx_operators
 
 
-def get_all_element_wise_binary_operators():
-    """Gets all binary element_wise operators registered with MXNet.
+def get_all_elemen_wise_binary_operators():
+    """Gets all binary elemen_wise operators registered with MXNet.
 
     Returns
     -------
@@ -183,11 +205,11 @@ def get_all_element_wise_binary_operators():
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
-    # Filter for binary element_wise operators
-    binary_element_wise_mx_operators = {}
+    # Filter for binary elemen_wise operators
+    binary_elemen_wise_mx_operators = {}
     for op_name, op_params in mx_operators.items():
         if op_name.startswith("elemwise_") and op_params["params"]["narg"] == 2 and \
                 "lhs" in op_params["params"]["arg_names"] and \
                 "rhs" in op_params["params"]["arg_names"]:
-            binary_element_wise_mx_operators[op_name] = mx_operators[op_name]
-    return binary_element_wise_mx_operators
+            binary_elemen_wise_mx_operators[op_name] = mx_operators[op_name]
+    return binary_elemen_wise_mx_operators
