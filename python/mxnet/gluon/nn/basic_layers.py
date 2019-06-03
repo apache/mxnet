@@ -27,6 +27,7 @@ from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from ... import nd, sym
+from ...util import is_np_array
 
 
 class Sequential(Block):
@@ -217,8 +218,9 @@ class Dense(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
-        act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
-                               flatten=self._flatten, name='fwd')
+        fc_op = F.npx.FullyConnected if is_np_array() else F.FullyConnected
+        act = fc_op(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
+                    flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
         return act

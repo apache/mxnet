@@ -37,6 +37,8 @@ except ImportError:
 
 from . import sampler as _sampler
 from ... import nd, context
+from ...util import is_np_array
+from ... import numpy as _mx_np
 
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):
@@ -127,13 +129,14 @@ class SimpleQueue(multiprocessing.queues.SimpleQueue):
 def default_batchify_fn(data):
     """Collate data into batch."""
     if isinstance(data[0], nd.NDArray):
-        return nd.stack(*data)
+        return _mx_np.stack(data) if is_np_array() else nd.stack(*data)
     elif isinstance(data[0], tuple):
         data = zip(*data)
         return [default_batchify_fn(i) for i in data]
     else:
         data = np.asarray(data)
-        return nd.array(data, dtype=data.dtype)
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        return array_fn(data, dtype=data.dtype)
 
 
 def default_mp_batchify_fn(data):
@@ -141,13 +144,18 @@ def default_mp_batchify_fn(data):
     if isinstance(data[0], nd.NDArray):
         out = nd.empty((len(data),) + data[0].shape, dtype=data[0].dtype,
                        ctx=context.Context('cpu_shared', 0))
-        return nd.stack(*data, out=out)
+        if is_np_array():
+            out = out.as_np_ndarray()
+            return _mx_np.stack(data, out=out)
+        else:
+            return nd.stack(*data, out=out)
     elif isinstance(data[0], tuple):
         data = zip(*data)
         return [default_mp_batchify_fn(i) for i in data]
     else:
         data = np.asarray(data)
-        return nd.array(data, dtype=data.dtype,
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        return array_fn(data, dtype=data.dtype,
                         ctx=context.Context('cpu_shared', 0))
 
 
