@@ -74,6 +74,18 @@ def python3_ut_mkldnn(docker_container_name) {
   }
 }
 
+def python3_ut_naive(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_naive_cpu', false)
+  }
+}
+
+def python3_ut_mkldnn_naive(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_naive_cpu_mkldnn', false)
+  }
+}
+
 // GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
 // both CPU and GPU
 // Python 2
@@ -723,6 +735,23 @@ def test_unix_python3_cpu() {
     }]
 }
 
+def test_unix_python3_naive_cpu() {
+    return ['Python3: NaiveEngine CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-naive-cpu') {
+          try {
+            utils.unpack_and_init('cpu', mx_lib, true)
+            python3_ut_naive('ubuntu_cpu')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_naive_cpu_unittest.xml')
+            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_naive_cpu_quantization.xml')
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_python3_mkl_cpu() {
     return ['Python3: MKL-CPU': {
       node(NODE_LINUX_CPU) {
@@ -819,6 +848,23 @@ def test_unix_python3_mkldnn_cpu() {
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
             utils.collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_naive_mkldnn_cpu() {
+    return ['Python3: NaiveEngine MKLDNN-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-naive-mkldnn-cpu') {
+          try {
+            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
+            python3_ut_mkldnn_naive('ubuntu_cpu')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_naive_mkldnn_cpu_unittest.xml')
+            utils.collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_naive_mkldnn_cpu_mkl.xml')
           }
         }
       }
