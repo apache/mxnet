@@ -32,8 +32,11 @@ from ..base import c_array, c_str, mx_uint, c_str_array
 from ..base import NDArrayHandle, SymbolHandle
 from ..symbol import Symbol
 from ..symbol import load as sym_load
+from ..symbol import load_json as sym_load_json
 from .. import ndarray
 from ..ndarray import load as nd_load
+from ..ndarray import save as nd_save
+from ..ndarray import zeros as zeros
 from ..ndarray import NDArray
 from ..io import DataIter
 from ..context import cpu, Context
@@ -699,3 +702,94 @@ def calib_graph(qsym, arg_params, aux_params, collector,
     qarg_params = _quantize_params(qsym, arg_params, th_dict)
 
     return qsym, qarg_params, aux_params
+
+def static_net_forward(sym, arg_params, aux_params, collector,
+                       calib_data, data_shapes, ctx=cpu(), logger=logging):
+    """symbolic forward a static model with gluon dataset.
+    """
+    num_batches = len(calib_data)
+    num_inputs = len(data_shapes)
+    data_names = ()
+    data_shapes_ = []
+    for i in range(num_inputs):
+        data_names = data_names + ('data' + str(i),)
+        data_shapes_.append((data_names[i], data_shapes[i]))
+    mod = Module(symbol=sym, context=ctx,
+                 data_names=data_names, label_names=None)
+    mod.bind(for_training=False, data_shapes=data_shapes_)
+    mod.set_params(arg_params, aux_params,
+                   allow_missing=False, force_init=True)
+    mod._exec_group.execs[0].set_monitor_callback(
+        collector.collect, monitor_all=True)
+    for batch in calib_data:
+        mod.forward(data_batch=batch, is_train=False)
+    if logger is not None:
+        logger.info("Collected statistics from %d batches"
+                    % num_batches)
+    return collector, data_names
+
+def save_params(fname, arg_params, aux_params, logger=logging):
+    if logger is not None:
+        logger.info('Saving tmp params into file at %s' % fname)
+    save_dict = {('arg:%s' % k): v.as_in_context(cpu())
+                 for k, v in arg_params.items()}
+    save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
+                      for k, v in aux_params.items()})
+    nd_save(fname, save_dict)
+
+def quantize_net(network, quantized_dtype='auto', exclude_layers=None, calib_data=None,
+                 data_shapes=None, calib_mode='none', ctx=cpu(), logger=logging):
+    """quantize a gluon net
+    """
+
+    logger.info('Export symbolblock')
+    network.hybridize()
+    import mxnet as mx
+    data_sym = []
+    for i in range(len(data_shapes)):
+        data_sym.append(mx.sym.var('data'+str(i)))
+    symnet = sym_load_json(network(*data_sym).tojson())
+    params = network.collect_params()
+    args = {}
+    auxs = {}
+    for param in params.values():
+        v = param._reduce()
+        k = param.name
+        if 'running' in k:
+            auxs[k] = v
+        else:
+            args[k] = v
+
+    logger.info('Exclude all fc layers')
+    if exclude_layers is None:
+        exclude_layers = []
+    for layers in list(symnet.get_internals()):
+        if layers.name.find('dense') != -1:
+            exclude_layers.append(layers.name)
+    symnet = symnet.get_backend_symbol('MKLDNN')
+    qsym, qarg_params, aux_params, collector = quantize_graph(sym=symnet, arg_params=args, aux_params=auxs,
+                                                excluded_sym_names=exclude_layers, calib_mode=calib_mode,
+                                                calib_layer=None, quantized_dtype=quantized_dtype, logger=logger)
+
+    if calib_mode is not None and calib_mode != 'none':
+        if calib_mode in ['naive', 'entropy']:
+            collector, data_names = static_net_forward(sym=symnet, arg_params=args, aux_params=auxs,
+                                                    collector=collector, calib_data=calib_data,
+                                                    data_shapes=data_shapes, ctx=cpu(), logger=logger)
+            qsym, qarg_params, aux_params = calib_graph(qsym=qsym, arg_params=args, aux_params=auxs,
+                                                        collector=collector, calib_mode=calib_mode,
+                                                        quantized_dtype=quantized_dtype, logger=logger)
+            logger.info('Calibrating quantized symbol')
+        else:
+            raise ValueError('please set calibration mode to naive or entropy.')
+    qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
+
+    from ..gluon import SymbolBlock
+    net = SymbolBlock(qsym, data_sym)
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        prefix = os.path.join(tmpdirname, 'tmp')
+        param_name = '%s-%04d.params' % (prefix + 'net-quantized', 0)
+        save_params(param_name, qarg_params, aux_params, logger)
+        net.collect_params().load(param_name)
+    return net
