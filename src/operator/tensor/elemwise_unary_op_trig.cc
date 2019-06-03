@@ -58,8 +58,10 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshad
       auto x_grad = MakeNode("cos", n->attrs.name + "_x_grad",
                              {n->inputs[1]}, nullptr, &n);
       auto x_grad_grad = MakeNode("negative", n->attrs.name + "_x_grad_grad",
-                                  {nnvm::NodeEntry{MakeNode("sin", n->attrs.name + "_grad_grad_mid",
-                                                            {n->inputs[1]}, nullptr, &n)}}, nullptr, &n);
+          {nnvm::NodeEntry{
+            MakeNode("sin", n->attrs.name + "_grad_grad_mid", {n->inputs[1]}, nullptr, &n)
+          }},
+          nullptr, &n);
 
       auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_mid",
                                     {n->inputs[0], nnvm::NodeEntry{x_grad_grad}}, nullptr, &n);
@@ -101,8 +103,10 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_
                              {nnvm::NodeEntry{MakeNode("sin", n->attrs.name + "_grad_mid",
                                                        {n->inputs[1]}, nullptr, &n)}}, nullptr, &n);
       auto x_grad_grad = MakeNode("negative", n->attrs.name + "_x_grad_grad",
-                                  {nnvm::NodeEntry{MakeNode("cos", n->attrs.name + "_grad_grad_mid",
-                                                            {n->inputs[1]}, nullptr, &n)}}, nullptr, &n);
+          {nnvm::NodeEntry{
+            MakeNode("cos", n->attrs.name + "_grad_grad_mid",{n->inputs[1]}, nullptr, &n)
+          }},
+          nullptr, &n);
 
       auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_mid",
                                     {n->inputs[0], nnvm::NodeEntry{x_grad_grad}}, nullptr, &n);
