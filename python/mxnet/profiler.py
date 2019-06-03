@@ -148,17 +148,33 @@ def dump_profile():
     dump(True)
 
 
-def dumps(reset=False):
+def dumps(reset=False, format = 'table', sort_by = 'avg', ascending = False):
     """Return a printable string of aggregate profile stats.
 
     Parameters
     ----------
     reset: boolean
-        Indicates whether to clean aggeregate statistical data collected up to this point
+        indicates whether to clean aggeregate statistical data collected up to this point
+    format: string
+        whether to return the aggregate stats in table of json format
+        can take 'table' or 'json'
+    sort_by: string
+        can take 'avg', 'min', 'max', or 'count'
+        by which stat to sort the entries in each category
+    ascending: boolean
+        whether to sort ascendingly
     """
     debug_str = ctypes.c_char_p()
-    do_reset = 1 if reset is True else 0
-    check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str), int(do_reset)))
+    reset_to_int = {False: 0, True: 1}
+    format_to_int = {'table': 0, 'json': 1}
+    sort_by_to_int = {'avg': 0, 'min': 1, 'max': 2, 'count': 3}
+    asc_to_int = {False: 0, True: 1}
+    check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str), 
+                                                reset_to_int[reset],
+                                                format_to_int[format],
+                                                sort_by_to_int[sort_by],
+                                                asc_to_int[ascending]
+                                                ))
     return py_str(debug_str.value)
 
 

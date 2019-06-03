@@ -57,16 +57,31 @@ class AggregateStats {
    */
   void OnProfileStat(const ProfileStat& stat);
   /*!
-   * \brief Print profliing statistics to console
+   * \brief Print profliing statistics to console in a tabular fasion
    * \param clear Delete all of the current statistics after printing
    */
-  void Dump(std::ostream& os, bool clear);
+  void DumpTable(std::ostream& os, int sort_by, int ascending);
+  /*!
+   * \brief Print profliing statistics to console in json
+   */
+  void DumpJson(std::ostream& os, int sort_by, int ascending);
+  /*!
+   * \brief Delete all of the current statistics
+   */
+  void clear();
 
  private:
   /*! \brief Should rarely collide, so most locks should occur only in user-space (futex) */
   std::mutex m_;
   /* !\brief Stat type -> State name -> Stats */
   std::map<std::string, std::unordered_map<std::string, StatData>> stats_;
+  // /* !\brief Sort by which stat */
+  // enum SortBy{
+  //   avg = 0,
+  //   min = 1,
+  //   max = 2,
+  //   count = 3
+  // };
 };
 
 }  // namespace profiler

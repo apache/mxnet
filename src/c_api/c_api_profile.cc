@@ -302,7 +302,7 @@ int MXSetProfilerConfig(int num_params, const char* const* keys, const char* con
   return MXSetProcessProfilerConfig(num_params, keys, vals, nullptr);
 }
 
-int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
+int MXAggregateProfileStatsPrint(const char **out_str, int reset, int format, int sort_by, int ascending) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
     CHECK_NOTNULL(out_str);
@@ -314,8 +314,13 @@ int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
     std::shared_ptr<profiler::AggregateStats> stats = profiler->GetAggregateStats();
     std::ostringstream os;
     if (stats) {
-      stats->Dump(os, reset != 0);
+      if (format == 0)
+        stats->DumpTable(os, sort_by, ascending);
+      else if (format == 1)
+        stats->DumpJson(os, sort_by, ascending);
     }
+    if (reset == 1)
+      stats->clear();
     ret->ret_str = os.str();
     *out_str = (ret->ret_str).c_str();
   API_END();
