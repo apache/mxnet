@@ -262,6 +262,9 @@ class _Symbol(Symbol):
                                       .format(str(order)))
         return _mx_np_op.reshape(self, newshape=shape, order=order)
 
+    def argmax(self, axis=None, out=None):
+        return _mx_np_op.argmax(self, axis, out)
+
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
 
@@ -402,14 +405,6 @@ class _Symbol(Symbol):
         """Convenience fluent method for :py:func:`argsort`.
 
         The arguments are the same as for :py:func:`argsort`, with
-        this array as data.
-        """
-        raise NotImplementedError
-
-    def argmax(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`argmax`.
-
-        The arguments are the same as for :py:func:`argmax`, with
         this array as data.
         """
         raise NotImplementedError
@@ -566,13 +561,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute nanprod')
 
-    def mean(self, *args, **kwargs):
+    def mean(self, axis=None, dtype=None, out=None, keepdims=False):
         """Convenience fluent method for :py:func:`mean`.
 
         The arguments are the same as for :py:func:`mean`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def max(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`max`.

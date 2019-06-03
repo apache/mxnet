@@ -559,6 +559,9 @@ class ndarray(NDArray):
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute as_scalar')
 
+    def argmax(self, axis=None, out=None):
+        return _mx_nd_np.argmax(self, axis, out)
+
     def as_in_context(self, context):
         return super(ndarray, self).as_in_context(context).as_np_ndarray()
 
@@ -722,14 +725,6 @@ class ndarray(NDArray):
         """
         raise NotImplementedError
 
-    def argmax(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`argmax`.
-
-        The arguments are the same as for :py:func:`argmax`, with
-        this array as data.
-        """
-        raise NotImplementedError
-
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
 
@@ -882,13 +877,13 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute nanprod')
 
-    def mean(self, *args, **kwargs):
+    def mean(self, axis=None, dtype=None, out=None, keepdims=False):
         """Convenience fluent method for :py:func:`mean`.
 
         The arguments are the same as for :py:func:`mean`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_nd_np.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def max(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`max`.

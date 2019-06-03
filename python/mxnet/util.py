@@ -334,7 +334,7 @@ class _NumpyArrayScope(object):
     """
     _current = threading.local()
 
-    def __init__(self, is_np_array):  #pylint: disable=redefined-outer-name
+    def __init__(self, is_np_array):  # pylint: disable=redefined-outer-name
         self._old_scope = None
         self._is_np_array = is_np_array
 
