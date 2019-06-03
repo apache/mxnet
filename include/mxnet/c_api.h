@@ -324,6 +324,15 @@ MXNET_DLL int MXDumpProfile(int finished);
 	 * \brief Print aggregate stats to the a string
 	 * \param out_str Will receive a pointer to the output string
 	 * \param reset Clear the aggregate stats after printing
+	 * \return 0 when success, -1 when failure happens.
+	 * \note
+	 */
+	MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
+
+/*!
+	 * \brief Print aggregate stats to the a string
+	 * \param out_str Will receive a pointer to the output string
+	 * \param reset Clear the aggregate stats after printing
 	 * \param out_str will receive a pointer to the output string
 	 * \param reset clear the aggregate stats after printing
 	 * \param format whether to return in tabluar or json format
@@ -332,7 +341,7 @@ MXNET_DLL int MXDumpProfile(int finished);
 	 * \return 0 when success, -1 when failure happens.
 	 * \note
 	 */
-MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset, int format, int sort_by, int ascending);
+MXNET_DLL int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format, int sort_by, int ascending);
 
 /*!
  * \brief Pause profiler tuning collection

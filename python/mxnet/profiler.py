@@ -169,7 +169,7 @@ def dumps(reset=False, format = 'table', sort_by = 'avg', ascending = False):
     format_to_int = {'table': 0, 'json': 1}
     sort_by_to_int = {'avg': 0, 'min': 1, 'max': 2, 'count': 3}
     asc_to_int = {False: 0, True: 1}
-    check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str), 
+    check_call(_LIB.MXAggregateProfileStatsPrintEx(ctypes.byref(debug_str), 
                                                 reset_to_int[reset],
                                                 format_to_int[format],
                                                 sort_by_to_int[sort_by],

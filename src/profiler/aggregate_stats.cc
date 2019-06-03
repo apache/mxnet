@@ -54,7 +54,7 @@ inline std::priority_queue<pi>
   for (const auto& iter : mm) {
     const std::string& name = iter.first;
     const AggregateStats::StatData &data = iter.second;
-    double value;
+    double value = 0;
     switch (sort_by) {
       case 0: 
         if (data.type_ == AggregateStats::StatData::kCounter)
@@ -142,17 +142,18 @@ void AggregateStats::DumpTable(std::ostream& os, int sort_by, int ascending) {
         os << std::setw(25) << std::left << name
             << std::setw(16) << std::right << data.total_count_;
         os << " "
-            << std::fixed << (is_memory ? std::setw(0) : std::setw(16)) << std::setprecision(4) << std::right;
+            << std::fixed << (is_memory ? std::setw(0) : std::setw(16))
+            << std::setprecision(4) << std::right;
         if (!is_memory)
           os << MicroToMilli(data.total_aggregate_) << " ";
         os << std::fixed << std::setw(16) << std::setprecision(4) << std::right
-            << (is_memory ? ByteToKilobyte(data.min_aggregate_) : MicroToMilli(data.min_aggregate_))
-            << " "
-            << std::fixed << std::setw(16) << std::setprecision(4) << std::right
-            << (is_memory ? ByteToKilobyte(data.max_aggregate_) : MicroToMilli(data.max_aggregate_))
-            << " "
-            << std::fixed << std::setw(16) << std::setprecision(4) << std::right
-            << (is_memory ? ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
+           << (is_memory ? ByteToKilobyte(data.min_aggregate_) : MicroToMilli(data.min_aggregate_))
+           << " "
+           << std::fixed << std::setw(16) << std::setprecision(4) << std::right
+           << (is_memory ? ByteToKilobyte(data.max_aggregate_) : MicroToMilli(data.max_aggregate_))
+           << " "
+           << std::fixed << std::setw(16) << std::setprecision(4) << std::right
+           << (is_memory ? ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
                     MicroToMilli(static_cast<double>(data.total_aggregate_)/ data.total_count_));
         os << std::endl;
         heap.pop();
@@ -184,19 +185,24 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
     while(!heap.empty()){
       const std::string& name = heap.top().second;
       const StatData &data = mm.at(name);
-      if (data.type_ == AggregateStats::StatData::kDuration || data.type_ == AggregateStats::StatData::kCounter) {
-        if (!first_pass) 
+      if (data.type_ == AggregateStats::StatData::kDuration || 
+          data.type_ == AggregateStats::StatData::kCounter) {
+        if (!first_pass)
           *ss << "            ," << std::endl;
-        first_pass = false;        
+        first_pass = false;   
         *ss << "            \"" << name << "\": {" << std::endl
             << "                \"Count\": " << data.total_count_ << "," << std::endl;
-        if (!is_memory) 
+        if (!is_memory)
           *ss << "                \"Total\": " << MicroToMilli(data.total_aggregate_) << "," << std::endl;
-        *ss << "                \"Min\": " << (is_memory ? ByteToKilobyte(data.min_aggregate_) : MicroToMilli(data.min_aggregate_)) << "," << std::endl
-            << "                \"Max\": " << (is_memory ? ByteToKilobyte(data.max_aggregate_) : MicroToMilli(data.max_aggregate_)) << "," << std::endl
+        *ss << "                \"Min\": " << (is_memory ? ByteToKilobyte(data.min_aggregate_) : 
+                                              MicroToMilli(data.min_aggregate_)) 
+            << "," << std::endl
+            << "                \"Max\": " << (is_memory ? 
+                                              ByteToKilobyte(data.max_aggregate_) : MicroToMilli(data.max_aggregate_))
+            << "," << std::endl
             << "                \"Avg\": " << (is_memory ? ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
-                                                          MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_)) << std::endl
-
+                                                          MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_)) 
+            << std::endl
             << "            }" << std::endl;
       }
       heap.pop();
