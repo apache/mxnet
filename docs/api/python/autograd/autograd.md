@@ -98,23 +98,40 @@ backward nodes, not the full initial graph that includes the forward nodes.
 The idiom to calculate higher order gradients is the following:
 
 ```python
-import mxnet autograd as ag
+from mxnet import ndarray as nd
+from mxnet import autograd as ag
+x=nd.array([1,2,3])
+def f(x):
+    # A function which supports higher oder gradients
+    return x*x
+```
+
+If the operators used in `f` don't support higher order gradients you will get an error like
+`operator ... is non-differentiable because it didn't register FGradient attribute.`. This means
+that it doesn't support getting the gradient of the gradient. Which is, running backward on
+the backward graph.
+
+Using mxnet.autograd.grad multiple times:
+
+```python
 with ag.record():
     y = f(x)
     y_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
     y_grad_grad = ag.grad(y_grad, x, create_graph=False, retain_graph=True)[0]
 ```
 
-or
+Running backward on the backward graph:
 
 ```python
-import mxnet autograd as ag
 with ag.record():
     y = f(x)
     y_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
 y_grad_grad = y_grad.backward()
 ```
 
+Both methods are equivalent, except that in the second case, retain_graph on running backward is set
+to False by default. But both calls are running a backward pass as on the graph as usual to get the
+gradient of the first gradient `y_grad` with respect to `x` evaluated at the value of `x`.
 
 
 
