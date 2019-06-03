@@ -49,21 +49,27 @@ The storage type of ``sin`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshadow_op::sin_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: d^2L/dx^2
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseUseIn)
       // f(x) = sin(x)
       // f'(x) = cos(x)
       // f''(x) = -sin(x)
-      auto grad_x = nnvm::NodeEntry{n};
-      auto grad_grad_x_mid = MakeNode("sin", n->attrs.name + "_mid_grad_grad",
-                                      {n->inputs[1]}, nullptr, &n);
-      auto grad_grad_x = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                                  {nnvm::NodeEntry{grad_grad_x_mid}}, nullptr, &n);
+      auto x_grad = MakeNode("cos", n->attrs.name + "_x_grad",
+                             {n->inputs[1]}, nullptr, &n);
+      auto x_grad_grad = MakeNode("negative", n->attrs.name + "_x_grad_grad",
+                                  {nnvm::NodeEntry{MakeNode("sin", n->attrs.name + "_grad_grad_mid",
+                                                            {n->inputs[1]}, nullptr, &n)}}, nullptr, &n);
+
+      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_mid",
+                                    {n->inputs[0], nnvm::NodeEntry{x_grad_grad}}, nullptr, &n);
+
       std::vector<nnvm::NodeEntry> ret;
-      // for the backward of the _backward_sin node
-      // first input is the ograd and second input is x (because ElemwiseUseIn)
+
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                                {ograds[0], grad_x}, nullptr, &n));
+                                {ograds[0], nnvm::NodeEntry{x_grad}}, nullptr, &n));
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
-                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
       return ret;
     });
 
@@ -85,21 +91,29 @@ The storage type of ``cos`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_op::cos_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: d^2L/dx^2
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseUseIn)
       // f(x) = cos(x)
       // f'(x) = -sin(x)
       // f''(x) = -cos(x)
-      auto grad_x = nnvm::NodeEntry{n};
-      auto grad_grad_x_mid = MakeNode("cos", n->attrs.name + "_mid_grad_grad",
-                                      {n->inputs[1]}, nullptr, &n);
-      auto grad_grad_x = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                                  {nnvm::NodeEntry{grad_grad_x_mid}}, nullptr, &n);
+      auto x_grad = MakeNode("negative", n->attrs.name + "_x_grad",
+                             {nnvm::NodeEntry{MakeNode("sin", n->attrs.name + "_grad_mid",
+                                                       {n->inputs[1]}, nullptr, &n)}}, nullptr, &n);
+      auto x_grad_grad = MakeNode("negative", n->attrs.name + "_x_grad_grad",
+                                  {nnvm::NodeEntry{MakeNode("cos", n->attrs.name + "_grad_grad_mid",
+                                                            {n->inputs[1]}, nullptr, &n)}}, nullptr, &n);
+
+      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_mid",
+                                    {n->inputs[0], nnvm::NodeEntry{x_grad_grad}}, nullptr, &n);
+
       std::vector<nnvm::NodeEntry> ret;
       // for the backward of the _backward_cos node
       // first input is the ograd and second input is x (because ElemwiseUseIn)
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                                {ograds[0], grad_x}, nullptr, &n));
+                                {ograds[0], nnvm::NodeEntry{x_grad}}, nullptr, &n));
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
-                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
       return ret;
     });
 
