@@ -321,15 +321,17 @@ MXNET_DLL int MXDumpProcessProfile(int finished, int profile_process, KVStoreHan
 MXNET_DLL int MXDumpProfile(int finished);
 
 /*!
- * \brief Print aggregate stats to the a string
- * \param out_str will receive a pointer to the output string
- * \param reset clear the aggregate stats after printing
- * \param format whether to return in tabluar or json format
- * \param sort_by sort by avg, min, max, or count
- * \param ascending whether to sort ascendingly
- * \return 0 when success, -1 when failure happens.
- * \note
- */
+	 * \brief Print aggregate stats to the a string
+	 * \param out_str Will receive a pointer to the output string
+	 * \param reset Clear the aggregate stats after printing
+	 * \param out_str will receive a pointer to the output string
+	 * \param reset clear the aggregate stats after printing
+	 * \param format whether to return in tabluar or json format
+	 * \param sort_by sort by avg, min, max, or count
+	 * \param ascending whether to sort ascendingly
+	 * \return 0 when success, -1 when failure happens.
+	 * \note
+	 */
 MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset, int format, int sort_by, int ascending);
 
 /*!
@@ -821,10 +823,12 @@ MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
 * The memory is retained until the NDArray went out of scope.
 *
 * \param dlpack the pointer of the input DLManagedTensor
+* \param transient_handle whether the handle will be destructed before calling the deleter
 * \param out_handle pointer holder to get pointer of NDArray
 * \return 0 when success, -1 when failure happens
 */
 MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                                  const bool transient_handle,
                                   NDArrayHandle *out_handle);
 
 /*!
@@ -1068,14 +1072,14 @@ MXNET_DLL int MXAutogradIsTraining(bool* curr);
  * \param curr returns the current status
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIsNumpyCompatible(bool* curr);
+MXNET_DLL int MXIsNumpyShape(bool* curr);
 /*!
  * \brief set numpy compatibility switch
- * \param is_np_comp 1 when numpy compatibility is on, 0 when off
+ * \param is_np_shape 1 when numpy shape semantics is on, 0 when off
  * \param prev returns the previous status before this set
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSetIsNumpyCompatible(int is_np_comp, int* prev);
+MXNET_DLL int MXSetIsNumpyShape(int is_np_shape, int* prev);
 /*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
@@ -1294,6 +1298,13 @@ MXNET_DLL int MXSymbolCreateFromFile(const char *fname, SymbolHandle *out);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXSymbolCreateFromJSON(const char *json, SymbolHandle *out);
+/*!
+ * \brief Remove the operators amp_cast and amp_multicast
+ * \param sym_handle the input symbol.
+ * \param ret_sym_handle the output symbol.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolRemoveAmpCast(SymbolHandle sym_handle, SymbolHandle* ret_sym_handle);
 /*!
  * \brief Save a symbol into a json file.
  * \param symbol the input symbol.
@@ -1749,6 +1760,14 @@ MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
  */
 MXNET_DLL int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
                                    SymbolHandle *ret_sym_handle);
+
+/*!
+ * \brief Generate atomic symbol (able to be composed) from a source symbol
+ * \param sym_handle source symbol
+ * \param ret_sym_handle returned atomic symbol
+ */
+MXNET_DLL int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle);
+
 
 //--------------------------------------------
 // Part 4: Executor interface
@@ -2732,6 +2751,12 @@ MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
 MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
                                            mx_uint ndim, int dtype, NDArrayHandle *out);
 
+/*!
+ * \brief Release all unreferenced memory from the devices storage managers memory pool
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ */
+MXNET_DLL int MXStorageEmptyCache(int dev_type, int dev_id);
 
 /*!
  * \brief Reconstruct NDArray from shared memory handle
