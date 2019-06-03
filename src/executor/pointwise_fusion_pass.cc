@@ -143,7 +143,8 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
         if (subgraph_set.count(e.get())) {
           uint32_t node_id = index.node_id(e.get());
           auto helper_node = op::MakeNode("_FusedOpHelper",
-                                          subgraph_node->attrs.name + "_helper",
+                                          subgraph_node->attrs.name + "_"
+                                          + node->attrs.name + "_helper",
                                           nullptr,
                                           nullptr,
                                           nullptr);
@@ -157,15 +158,33 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     });
     DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
       auto it = node->control_deps.begin();
+      static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
+      std::vector<nnvm::NodePtr> new_control_deps;
       while (it != node->control_deps.end()) {
         if (subgraph_set.count(it->get())) {
           ++it;
         } else {
-          subgraph_node->control_deps.push_back(*it);
-          //it = node->control_deps.erase(it);
+          if ((*it)->is_variable() || !is_fusion.get((*it)->op(), false)) {
+            uint32_t node_id = subgraph_node->control_deps.size();
+            subgraph_node->control_deps.push_back(*it);
+            auto helper_node = op::MakeNode("_FusedOpOutHelper",
+                                            subgraph_node->attrs.name + "_"
+                                            + node->attrs.name + "_outhelper",
+                                            nullptr,
+                                            nullptr,
+                                            nullptr);
+            helper_node->attrs.parsed =
+              FusedOpHelperParamPtr(new FusedOpHelperParam(
+                    nnvm::get<FusedOpPtr>(subgraph_node->attrs.parsed),
+                    node_id));
+            new_control_deps.push_back(helper_node);
+          } else {
+            new_control_deps.push_back(*it);
+          }
           ++it;
         }
       }
+      node->control_deps = new_control_deps;
     });
   }
   Graph new_graph;

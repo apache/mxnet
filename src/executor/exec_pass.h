@@ -45,7 +45,17 @@ using FAccessSubgraphAttr = std::function<std::pair<std::vector<Attr>, std::vect
 using FAccessSubgraphShape = FAccessSubgraphAttr<mxnet::TShape>;
 using FAccessSubgraphType = FAccessSubgraphAttr<int>;
 using FAccessSubgraphStorageType = FAccessSubgraphAttr<int>;
+
+template <typename Attr>
+using FProvideSubgraphAttr = std::function<void (const NodeAttrs& attrs,
+                                                 const std::vector<std::vector<Attr>> &in_attrs,
+                                                 const std::vector<std::vector<Attr>> &out_attrs)>;
+using FProvideSubgraphShape = FProvideSubgraphAttr<mxnet::TShape>;
+using FProvideSubgraphType = FProvideSubgraphAttr<int>;
+using FProvideSubgraphStorageType = FProvideSubgraphAttr<int>;
+
 using TIsFusion = bool;
+using TIsFusionHelper = bool;
 
 /*! \brief reuse graph definition */
 using nnvm::Graph;

@@ -6,7 +6,7 @@ index b8bcae7..af7bb4a 100644
  
    DFSVisit(g.outputs, [this, &inputs_rptr, &control_rptr, &subgraphs]
               (const NodePtr& n) {
-+      const auto& is_fusion = Op::GetAttr<bool>("TIsFusion");
++      const auto& is_fusion = Op::GetAttr<bool>("TIsGhost");
 +      if (!n->is_variable() && is_fusion.get(n->op(), false)) return;
        CHECK_LT(nodes_.size(), std::numeric_limits<uint32_t>::max());
        uint32_t nid = static_cast<uint32_t>(nodes_.size());

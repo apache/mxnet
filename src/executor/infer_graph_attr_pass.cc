@@ -92,11 +92,12 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
  *                         for storage type inference
  */
 template<typename AttrType, typename FInferType, typename FAccessSubgraphType,
-         typename IsNone, typename FDefault>
+         typename FProvideSubgraphType, typename IsNone, typename FDefault>
 nnvm::Graph InferAttr(nnvm::Graph &&ret,
                       const AttrType empty_val,
                       const char* infer_name,
                       const char* infer_fusion_name,
+                      const char* provide_fusion_name,
                       const char* input_name,
                       const char* attr_key_name,
                       const char* attr_name,
@@ -220,7 +221,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
       nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
       CHECK(fwd_ptr->op() != nullptr) << "Forward op cannot be a variable";
 
-      static auto& is_fusion = Op::GetAttr<exec::TIsFusion>("TIsFusion");
+      static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
       if (!is_fusion.get(fwd_ptr->op(), false)) {
         const IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
         // use gradient function to find out the correspondence.
@@ -318,6 +319,28 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
         if (finfer != nullptr) {
           // Call inference function of the operator.
           try {
+            static auto& is_fusion = Op::GetAttr<exec::TIsFusion>("TIsFusion");
+            if (is_fusion.get(inode.source->op(), false)) {
+              std::vector<std::vector<AttrType>> in_attrs;
+              std::vector<std::vector<AttrType>> out_attrs;
+              for (const auto& dep_node : inode.source->control_deps) {
+                in_attrs.push_back({});
+                out_attrs.push_back({});
+                auto &current_in_attrs = in_attrs.back();
+                auto &current_out_attrs = out_attrs.back();
+                std::cout << "Control deps: " << dep_node->attrs.name << std::endl;
+                uint32_t dep_node_id = idx.node_id(dep_node.get());
+                for (const auto& e : idx[dep_node_id].inputs) {
+                  current_in_attrs.push_back(rshape[idx.entry_id(e)]);
+                }
+                for (size_t i = 0; i < dep_node->num_outputs(); ++i) {
+                  current_out_attrs.push_back(rshape[idx.entry_id(dep_node_id, i)]);
+                }
+              }
+              auto provide = Op::GetAttr<FProvideSubgraphType>(provide_fusion_name).get(inode.source->op(), nullptr);
+              CHECK(provide != nullptr) << "Encountered Fusion operator that does not implement providing subgraph attr " << provide_fusion_name << ".";
+              provide(inode.source->attrs, in_attrs, out_attrs);
+            }
             forward_known = ApplyOpInferAttr(ret, finfer, inode.source->attrs,
                                              nid, &ishape, &oshape, dispatch_mode);
           } catch (const std::exception& e) {
@@ -584,7 +607,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
       CHECK(fwd_ptr->op() != nullptr) << "Forward op cannot be a variable";
 
-      static auto& is_fusion = Op::GetAttr<exec::TIsFusion>("TIsFusion");
+      static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
       if (!is_fusion.get(fwd_ptr->op(), false)) {
         const IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
         LOG(INFO) << inode.source->attrs.name << ": No fusion!" << std::endl;
@@ -703,6 +726,28 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
         if (finfer != nullptr) {
           // Call inference function of the operator.
           try {
+            static auto& is_fusion = Op::GetAttr<exec::TIsFusion>("TIsFusion");
+            if (is_fusion.get(inode.source->op(), false)) {
+              std::vector<std::vector<AttrType>> in_attrs;
+              std::vector<std::vector<AttrType>> out_attrs;
+              for (const auto& dep_node : inode.source->control_deps) {
+                in_attrs.push_back({});
+                out_attrs.push_back({});
+                auto &current_in_attrs = in_attrs.back();
+                auto &current_out_attrs = out_attrs.back();
+                std::cout << "Control deps: " << dep_node->attrs.name << std::endl;
+                uint32_t dep_node_id = idx.node_id(dep_node.get());
+                for (const auto& e : idx[dep_node_id].inputs) {
+                  current_in_attrs.push_back(rshape[idx.entry_id(e)]);
+                }
+                for (size_t i = 0; i < dep_node->num_outputs(); ++i) {
+                  current_out_attrs.push_back(rshape[idx.entry_id(dep_node_id, i)]);
+                }
+              }
+              auto provide = Op::GetAttr<exec::FProvideSubgraphShape>("FProvideSubgraphShape").get(inode.source->op(), nullptr);
+              CHECK(provide != nullptr) << "Encountered Fusion operator that does not implement providing subgraph shape.";
+              provide(inode.source->attrs, in_attrs, out_attrs);
+            }
             forward_known = ApplyOpInferAttr(ret, finfer, inode.source->attrs,
                                              nid, &ishape, &oshape, dispatch_mode);
           } catch (const std::exception& e) {
@@ -813,10 +858,11 @@ nnvm::Graph InferType(nnvm::Graph&& graph,
   if (dtype_attr_key.length() != 0) {
     graph.attrs["dtype_attr_key"] = std::make_shared<any>(dtype_attr_key);
   }
-  return InferAttr<int, nnvm::FInferType, exec::FAccessSubgraphType>(
+  return InferAttr<int, nnvm::FInferType, exec::FAccessSubgraphType,
+                   exec::FProvideSubgraphType>(
       std::move(graph), -1,
-      "FInferType", "FAccessSubgraphType", "dtype_inputs", "dtype_attr_key",
-      "dtype", "dtype_num_unknown_nodes",
+      "FInferType", "FAccessSubgraphType", "FProvideSubgraphType",
+      "dtype_inputs", "dtype_attr_key", "dtype", "dtype_num_unknown_nodes",
       [](const int t) { return t == -1; },
       common::SameType, true, nullptr);
 }
@@ -846,10 +892,12 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
   }
 
   // for storage type, the backward attr is not necessarily the same as it's correspondence
-  nnvm::Graph ret = InferAttr<int, FInferStorageType, exec::FAccessSubgraphStorageType>(
+  nnvm::Graph ret = InferAttr<int, FInferStorageType, exec::FAccessSubgraphStorageType,
+                              exec::FProvideSubgraphStorageType>(
       std::move(graph), -1,
-      "FInferStorageType", "FAccessSubgraphStorageType", "storage_type_inputs", "storage_type_attr_key",
-      "storage_type", "storage_type_num_unknown_nodes",
+      "FInferStorageType", "FAccessSubgraphStorageType", "FProvideSubgraphStorageType",
+      "storage_type_inputs", "storage_type_attr_key", "storage_type",
+      "storage_type_num_unknown_nodes",
       [](const int t) { return t == -1; },
       common::DefaultStorageType, false, "dispatch_mode", DispatchMode::kVariable);
 

@@ -69,8 +69,13 @@ FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
   this->GenerateCode();
 }
 
+nnvm::Graph FusedOp::GetGraphWithoutControlDeps(nnvm::Graph &old) {
+  return old;
+}
+
 void FusedOp::GenerateCode() {
-  const auto& g = this->symbol_.indexed_graph();
+  const auto& codegen_graph = GetGraphWithoutControlDeps(this->symbol_);
+  const auto& g = codegen_graph.indexed_graph();
   std::string code = "";
   int temp_name_counter = 0;
   using NodeEntry = nnvm::IndexedGraph::NodeEntry;
@@ -527,7 +532,30 @@ bool FusedOpInferType(const nnvm::NodeAttrs& attrs,
   return op->InferType<gpu>(attrs, in_attrs, out_attrs);
 }
 
+void FusedOpProvideShape(const nnvm::NodeAttrs& attrs,
+                         const std::vector<std::vector<mxnet::TShape>> &in_attrs,
+                         const std::vector<std::vector<mxnet::TShape>> &out_attrs) {
+  const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
+  op->ProvideShape(in_attrs, out_attrs);
+}
+
+void FusedOpProvideType(const nnvm::NodeAttrs& attrs,
+                        const std::vector<std::vector<int>> &in_attrs,
+                        const std::vector<std::vector<int>> &out_attrs) {
+  const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
+  op->ProvideType(in_attrs, out_attrs);
+}
+
+void FusedOpProvideStorageType(const nnvm::NodeAttrs& attrs,
+                               const std::vector<std::vector<int>> &in_attrs,
+                               const std::vector<std::vector<int>> &out_attrs) {}
+
+
 NNVM_REGISTER_OP(FusedOp)
+.set_attr<exec::TIsFusion>("TIsFusion", true)
+.set_attr<exec::FProvideSubgraphShape>("FProvideSubgraphShape", FusedOpProvideShape)
+.set_attr<exec::FProvideSubgraphType>("FProvideSubgraphType", FusedOpProvideType)
+.set_attr<exec::FProvideSubgraphStorageType>("FProvideSubgraphStorageType", FusedOpProvideStorageType)
 .set_attr<mxnet::FInferShape>("FInferShape", FusedOpInferShape)
 .set_attr<nnvm::FInferType>("FInferType", FusedOpInferType)
 .set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);
@@ -551,8 +579,33 @@ FusedOpHelperType(const NodeAttrs& attrs) {
 NNVM_REGISTER_OP(_FusedOpHelper)
 .set_num_inputs(0)
 .set_num_outputs(0)
-.set_attr<exec::TIsFusion>("TIsFusion", true)
+.set_attr<bool>("TIsGhost", true)
+.set_attr<exec::TIsFusionHelper>("TIsFusionHelper", true)
 .set_attr<exec::FAccessSubgraphShape>("FAccessSubgraphShape", FusedOpHelperShape)
 .set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpHelperType);
 
+
+std::pair<std::vector<mxnet::TShape>, std::vector<mxnet::TShape>>
+FusedOpOutHelperShape(const NodeAttrs& attrs) {
+  const auto& p = nnvm::get<FusedOpHelperParamPtr>(attrs.parsed);
+  const auto& op = p->op;
+  const auto& node_id = p->node_id;
+  return op->GetAuxShape(node_id);
+}
+
+std::pair<std::vector<int>, std::vector<int>>
+FusedOpOutHelperType(const NodeAttrs& attrs) {
+  const auto& p = nnvm::get<FusedOpHelperParamPtr>(attrs.parsed);
+  const auto& op = p->op;
+  const auto& node_id = p->node_id;
+  return op->GetAuxType(node_id);
+}
+
+NNVM_REGISTER_OP(_FusedOpOutHelper)
+.set_num_inputs(0)
+.set_num_outputs(0)
+.set_attr<bool>("TIsGhost", true)
+.set_attr<exec::TIsFusionHelper>("TIsFusionHelper", true)
+.set_attr<exec::FAccessSubgraphShape>("FAccessSubgraphShape", FusedOpOutHelperShape)
+.set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpOutHelperType);
 }  // namespace mxnet
