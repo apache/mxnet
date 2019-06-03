@@ -58,8 +58,14 @@ def parse_profiler_dump(operator_name, profiler_dump):
     """Parse the MXNet profiler dump output, fetch Memory profile results and
     Operator compute profiler results.
 
-    :param profiler_dump: string, MXNet profiler output from mx.profiler.dumps() API.
-    :return: map, Memory and Compute profiler results.
+    Parameters
+    ----------
+    profiler_dump: string
+        MXNet profiler output from mx.profiler.dumps() API.
+
+    Returns
+    -------
+    map, Memory and Compute profiler results.
 
     """
     if not profiler_dump:
@@ -136,17 +142,23 @@ def profile(func):
     Uses MXNet profiler to collect metrics on memory usage and execution time
     of the operation.
 
-    :param func: Operation to be executed and timed.
-    :return: res, profiler output. res being an return values from operator execution.
-             profiler output is a dictionary with summary of operation execution.
-             Example output : { "add": [{"avg_time_mem_alloc_cpu/0": 207618.0469,
-                                         "avg_time_forward_broadcast_add": 4.204,
-                                         "avg_time_backward_broadcast_add": 5.6288,
-                                         "inputs": {
-                                                    "lhs": [1024, 1024],
-                                                    "rhs": [1024,1024]
-                                                    }]
-                              }
+    Parameters
+    ----------
+    func:
+        Operation to be executed and timed.
+
+    Returns
+    -------
+    res, profiler output. res being an return values from operator execution.
+    profiler output is a dictionary with summary of operation execution.
+    Example output : { "add": [{"avg_time_mem_alloc_cpu/0": 207618.0469,
+                                "avg_time_forward_broadcast_add": 4.204,
+                                "avg_time_backward_broadcast_add": 5.6288,
+                                "inputs": {
+                                            "lhs": [1024, 1024],
+                                            "rhs": [1024,1024]
+                                          }]
+                     }
     """
 
     @functools.wraps(func)

@@ -72,15 +72,27 @@ def run_performance_test(ops, inputs, run_backward=True,
     key -> name of the operator and value -> map of results (forward time, backward time, time spent in memory
     operations.
 
-    :param ops: One or list of operators to benchmark. Should be an NDArray operator.
-    :param inputs: map, Inputs for operator. Key should be name of parameter for operator.
-                   Example: inputs = {"lhs": (1024, 1024), "rhs": (1024, 1024)} for mx.nd.add
-    :param run_backward: Default is True. Should we have backward operator benchmarks.
-    :param dtype: Precision to use for input tensors. Defaults to float32. Example: 'float32', 'int64'
-    :param ctx: Context to use for benchmarks. Default to mx.cpu()
-    :param warmup: Number of warmup runs
-    :param runs: Number of runs for capturing benchmark results
-    :return: List of dictionary of benchmark results. key -> name of the operator, Value is benchmark results.
+    Parameters
+    ----------
+    ops: [Str]
+        One or list of operators to benchmark. Should be an NDArray operator.
+    inputs: map
+        Inputs for operator. Key should be name of parameter for operator.
+        Example: inputs = {"lhs": (1024, 1024), "rhs": (1024, 1024)} for mx.nd.add
+    run_backward: Boolean, Default is True
+        Should we have backward operator benchmarks.
+    dtype: Str, default 'float32'
+        Precision to use for input tensors. Defaults to float32. Example: 'float32', 'int64'
+    ctx: mx.ctx, default mx.cpu()
+        Context to use for benchmarks. Default to mx.cpu()
+    warmup: int, default 10
+        Number of warmup runs
+    runs: int, default 50
+        Number of runs for capturing benchmark results
+
+    Returns
+    -------
+    List of dictionary of benchmark results. key -> name of the operator, Value is benchmark results.
 
     """
     kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)

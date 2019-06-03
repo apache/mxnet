@@ -39,11 +39,20 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs
     """Runs benchmarks with the given context and precision (dtype)for all the GEMM
     operators (dot, batch_dot) in MXNet.
 
-    :param ctx: Context to run benchmarks
-    :param dtype: Precision to use for benchmarks
-    :param warmup: Number of times to run for warmup
-    :param runs: Number of runs to capture benchmark results
-    :return: Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    warmup: int, default 10
+        Number of times to run for warmup
+    runs: int, default 50
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
     # Benchmark tests for dot and batch_dot operators

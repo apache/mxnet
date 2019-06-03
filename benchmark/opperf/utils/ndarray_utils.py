@@ -29,11 +29,20 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
 
     NOTE: This is a sync call and waits for all the operations execution to complete.
 
-    :param op: NDArray operator (Function reference) to execute. Example: mx.nd.add
-    :param runs: Number of times to execute the operation
-    :param args: Arguments for the NDArray operator (op) being executed.
-    :param kwargs: Key value arguments for the NDArray operator (op) being executed.
-    :return: any results from NDArray operation execution
+    Parameters
+    ----------
+    op: Str
+        NDArray operator (Function reference) to execute. Example: mx.nd.add
+    runs: int
+        Number of times to execute the operation
+    args:
+        Arguments for the NDArray operator (op) being executed.
+    kwargs:
+        Key value arguments for the NDArray operator (op) being executed.
+
+    Returns
+    -------
+    any results from NDArray operation execution
 
     """
     for _ in range(runs):
@@ -51,11 +60,20 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
 
     NOTE: This is a sync call and waits for all the operations execution to complete.
 
-    :param op: NDArray operator (Function reference) to execute. Example: mx.nd.add
-    :param runs: Number of time to execute the operation
-    :param args: Arguments for the NDArray operator (op) being executed.
-    :param kwargs: Key value arguments for the NDArray operator (op) being executed.
-    :return: any results from NDArray operation execution
+    Parameters
+    ----------
+    op: Str
+        NDArray operator (Function reference) to execute. Example: mx.nd.add
+    runs: int
+        Number of time to execute the operation
+    args:
+        Arguments for the NDArray operator (op) being executed.
+    kwargs:
+        Key value arguments for the NDArray operator (op) being executed.
+
+    Returns
+    -------
+    any results from NDArray operation execution
     """
     for _ in range(runs):
         res = op(*args, **kwargs)
@@ -70,12 +88,22 @@ def get_mx_ndarray(ctx, in_tensor, dtype, initializer, attach_grad=True):
 
     NOTE: This is a sync call and waits for the Tensor to be created.
 
-    :param ctx: Context of the new MXNet NDArray Tensor.
-    :param in_tensor: Can be a tuple of shape or Numpy NDArray or MXNet NDArray.
-    :param dtype: Precision or Dtype of the expected Tensor. Ex: "float32", "Int64"
-    :param initializer: Function reference to the initialize to use. Ex: mx.nd.random.normal, mx.nd.zeros
-    :param attach_grad: To attach a gradient for the Tensor. Default is True.
-    :return: MXNet NDArray Tensor.
+    Parameters
+    ----------
+    ctx: mx.ctx, default mx.cpu()
+        Context of the new MXNet NDArray Tensor.
+    in_tensor: Numpy NDArray or MXNet NDArray or Tuple of shape
+        Can be a tuple of shape or Numpy NDArray or MXNet NDArray.
+    dtype: str
+        Precision or Dtype of the expected Tensor. Ex: "float32", "Int64"
+    initializer:
+        Function reference to the initialize to use. Ex: mx.nd.random.normal, mx.nd.zeros
+    attach_grad: Boolean, default True
+        To attach a gradient for the Tensor. Default is True.
+
+    Returns
+    -------
+    MXNet NDArray Tensor.
     """
     if isinstance(in_tensor, tuple):
         tensor = initializer(ctx=ctx, shape=in_tensor, dtype=dtype)

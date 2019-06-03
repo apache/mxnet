@@ -102,15 +102,12 @@ def _get_op_handles(op_name):
     return op_handle
 
 
-def _get_op_arguments(op_name, op_handle):
+def _get_op_arguments(op_handle):
     """Given operator name and handle, fetch operator arguments - number of arguments,
     argument names, argument types.
 
     Parameters
     ----------
-    op_name: str
-        Name of the operator
-
     op_handle: OpHandle
         Handle for the operator
 
@@ -148,7 +145,7 @@ def _set_op_arguments(mx_operators):
     """
     for op_name in mx_operators:
         op_handle = _get_op_handles(op_name)
-        narg, arg_names, arg_types = _get_op_arguments(op_name, op_handle)
+        narg, arg_names, arg_types = _get_op_arguments(op_handle)
         mx_operators[op_name]["params"] = {"narg": narg,
                                            "arg_names": arg_names,
                                            "arg_types": arg_types}

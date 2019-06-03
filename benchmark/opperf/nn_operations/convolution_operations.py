@@ -15,13 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import mxnet as mx
-
-from mxnet.gluon import nn
-
-from benchmark.opperf.utils.benchmark_utils import run_performance_test
-from benchmark.opperf.utils.common_utils import merge_map_list
-
 """ Performance benchmark tests for MXNet NDArray NN Convolution Operators
 
 1. Conv2D

@@ -45,11 +45,20 @@ def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', 
     """Runs benchmarks with the given context and precision (dtype)for all the binary
     broadcast operators in MXNet.
 
-    :param ctx: Context to run benchmarks
-    :param dtype: Precision to use for benchmarks
-    :param warmup: Number of times to run for warmup
-    :param runs: Number of runs to capture benchmark results
-    :return: Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    warmup: int, default 10
+        Number of times to run for warmup
+    runs: int, default 50
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
     # Fetch all Binary Broadcast Operators
@@ -76,11 +85,20 @@ def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32
     """Runs benchmarks with the given context and precision (dtype)for all the binary
     element_wise operators in MXNet.
 
-    :param ctx: Context to run benchmarks
-    :param dtype: Precision to use for benchmarks
-    :param warmup: Number of times to run for warmup
-    :param runs: Number of runs to capture benchmark results
-    :return: Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    warmup: int, default 10
+        Number of times to run for warmup
+    runs: int, default 50
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
     # Fetch all Binary Element_wise Operators

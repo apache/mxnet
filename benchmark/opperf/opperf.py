@@ -28,7 +28,9 @@ from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
     """Run all the MXNet operators (NDArray) benchmarks.
 
-    :return: Dictionary of benchmark results.
+    Returns
+    -------
+    Dictionary of benchmark results.
     """
     mxnet_operator_benchmark_results = []
 
