@@ -17,6 +17,11 @@
 
 """Default Input Tensor shapes to use for benchmarking"""
 
+# For Unary operators like - arcos, arcsin etc..
+DEFAULT_UNARY_OP_INPUTS = [{"data": (1024, 1024)},
+                           {"data": (10000, 1)},
+                           {"data": (10000, 100)}]
+
 # For Binary broadcast operators like - broadcast_add/sub/mode/logical_and etc..
 DEFAULT_BINARY_BROADCAST_OP_INPUTS = [{"lhs": (1024, 1024),
                                        "rhs": (1024, 1024)},
