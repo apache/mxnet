@@ -276,6 +276,7 @@
           Copyright (c) 2015 by Contributors
           Copyright 1984, 1987, 1992 by Stephen L. Moshier
 
+    27. CNN Text Classification Example - For details, see example/cnn_text_classification/data_helpers.py
 
     =======================================================================================
     MIT licenses
@@ -707,6 +708,14 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
     DEALINGS IN THE SOFTWARE.
 
+    =======================================================================================
+
+    15. CUB-200 Dataset
+    For details, see example/gluon/embedding_learning/get_cub200_data.sh
+    For details about the dataset, see http://www.vision.caltech.edu/archive.html
+
+    Creative Commons Attribution 4.0 International (CC BY 4.0)
+    For details of of the license, see https://creativecommons.org/licenses/by/4.0/
 
 
     =======================================================================================
