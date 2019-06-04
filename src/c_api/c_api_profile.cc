@@ -306,7 +306,8 @@ int MXAggregateProfileStatsPrint(const char **out_str, int reset) {
   return MXAggregateProfileStatsPrintEx(out_str, reset, 0, 0, 0);
 }
 
-int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format, int sort_by, int ascending) {
+int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format, int sort_by,
+                                  int ascending) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
     CHECK_NOTNULL(out_str);

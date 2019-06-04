@@ -29,7 +29,7 @@
 #include <thread>
 #include <iomanip>
 #include <queue>
-#include <utility> 
+#include <utility>
 #include "./profiler.h"
 
 namespace mxnet {
@@ -56,10 +56,10 @@ inline std::priority_queue<pi>
     const AggregateStats::StatData &data = iter.second;
     double value = 0;
     switch (sort_by) {
-      case 0: 
+      case 0:
         if (data.type_ == AggregateStats::StatData::kCounter)
           value = (data.max_aggregate_ - data.min_aggregate_) / 2;
-        else 
+        else
           value = static_cast<double>(data.total_aggregate_)
                                 / data.total_count_;
         break;
@@ -75,7 +75,6 @@ inline std::priority_queue<pi>
     }
     if (ascending == 1)
       value = -value;
-    
     heap.push(std::make_pair(value, name));
   }
   return heap;
@@ -130,20 +129,14 @@ void AggregateStats::DumpTable(std::ostream& os, int sort_by, int ascending) {
         << "-------------"
         << std::endl;
     auto heap = BuildHeap(mm, sort_by, ascending);
-    while(!heap.empty()){
+    while (!heap.empty()) {
       const std::string& name = heap.top().second;
       const StatData &data = mm.at(name);
-      
-    // for (auto &it : mm) {
-    //   const std::string& name = it.first;
-    //   const StatData &data = it.second;
-    
       if (data.type_ == StatData::kDuration || data.type_ == StatData::kCounter) {
         os << std::setw(25) << std::left << name
-            << std::setw(16) << std::right << data.total_count_;
-        os << " "
-            << std::fixed << (is_memory ? std::setw(0) : std::setw(16))
-            << std::setprecision(4) << std::right;
+           << std::setw(16) << std::right << data.total_count_ << " "
+           << std::fixed << (is_memory ? std::setw(0) : std::setw(16))
+           << std::setprecision(4) << std::right;
         if (!is_memory)
           os << MicroToMilli(data.total_aggregate_) << " ";
         os << std::fixed << std::setw(16) << std::setprecision(4) << std::right
@@ -177,31 +170,41 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
     const std::unordered_map<std::string, StatData>& mm = stat.second;
     bool is_memory = (type == "Device Storage"  || type == "Pool Memory");
     ss = is_memory ? &memory_ss : &time_ss;
-    if (ss->tellp() != std::streampos(0)) 
+    if (ss->tellp() != std::streampos(0))
       *ss << "        ," << std::endl;
     *ss << "        \"" << type << "\": {" << std::endl;
     auto heap = BuildHeap(mm, sort_by, ascending);
     bool first_pass = true;
-    while(!heap.empty()){
+    while (!heap.empty()) {
       const std::string& name = heap.top().second;
       const StatData &data = mm.at(name);
-      if (data.type_ == AggregateStats::StatData::kDuration || 
+      if (data.type_ == AggregateStats::StatData::kDuration ||
           data.type_ == AggregateStats::StatData::kCounter) {
         if (!first_pass)
           *ss << "            ," << std::endl;
-        first_pass = false;   
+        first_pass = false;
         *ss << "            \"" << name << "\": {" << std::endl
-            << "                \"Count\": " << data.total_count_ << "," << std::endl;
+            << "                \"Count\": "
+            << data.total_count_
+            << "," << std::endl;
         if (!is_memory)
-          *ss << "                \"Total\": " << MicroToMilli(data.total_aggregate_) << "," << std::endl;
-        *ss << "                \"Min\": " << (is_memory ? ByteToKilobyte(data.min_aggregate_) : 
-                                              MicroToMilli(data.min_aggregate_)) 
+          *ss << "                \"Total\": "
+              << MicroToMilli(data.total_aggregate_)
+              << "," << std::endl;
+        *ss << "                \"Min\": " 
+            << (is_memory ?
+                ByteToKilobyte(data.min_aggregate_) :
+                MicroToMilli(data.min_aggregate_)) 
             << "," << std::endl
-            << "                \"Max\": " << (is_memory ? 
-                                              ByteToKilobyte(data.max_aggregate_) : MicroToMilli(data.max_aggregate_))
+            << "                \"Max\": "
+            << (is_memory ?
+                ByteToKilobyte(data.max_aggregate_) :
+                MicroToMilli(data.max_aggregate_))
             << "," << std::endl
-            << "                \"Avg\": " << (is_memory ? ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
-                                                          MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_)) 
+            << "                \"Avg\": "
+            << (is_memory ?
+                ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
+                MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_))
             << std::endl
             << "            }" << std::endl;
       }
