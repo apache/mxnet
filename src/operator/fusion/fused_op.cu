@@ -277,9 +277,6 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     nnvm::Symbol sym;
     sym.outputs = this->symbol_.outputs;
     const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
-    for (const auto& name : input_names) {
-      LOG(INFO) << name;
-    }
     size_t num_params = in_dtypes.size() + out_dtypes.size();
     size_t i = 0;
     for (const auto &type : in_dtypes) {
@@ -567,7 +564,7 @@ FusedOpHelperType(const NodeAttrs& attrs) {
 NNVM_REGISTER_OP(_FusedOpHelper)
 .set_num_inputs(0)
 .set_num_outputs(0)
-.set_attr<TIsGhost>("TIsGhost", true)
+.set_attr<nnvm::TIsGhost>("TIsGhost", true)
 .set_attr<exec::TIsFusionHelper>("TIsFusionHelper", true)
 .set_attr<exec::FAccessSubgraphShape>("FAccessSubgraphShape", FusedOpHelperShape)
 .set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpHelperType);
@@ -592,7 +589,7 @@ FusedOpOutHelperType(const NodeAttrs& attrs) {
 NNVM_REGISTER_OP(_FusedOpOutHelper)
 .set_num_inputs(0)
 .set_num_outputs(0)
-.set_attr<TIsGhost>("TIsGhost", true)
+.set_attr<nnvm::TIsGhost>("TIsGhost", true)
 .set_attr<exec::TIsFusionHelper>("TIsFusionHelper", true)
 .set_attr<exec::FAccessSubgraphShape>("FAccessSubgraphShape", FusedOpOutHelperShape)
 .set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpOutHelperType);
