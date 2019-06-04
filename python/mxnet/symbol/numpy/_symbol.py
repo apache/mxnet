@@ -142,7 +142,7 @@ class _Symbol(Symbol):
         if isinstance(other, _Symbol):
             return _npi.true_divide(other, self)
         elif isinstance(other, numeric_types):
-            return _npi.rtrue_divide_scalar(self, float(other)).as_np_ndarray()
+            return _npi.rtrue_divide_scalar(self, float(other))
         else:
             raise TypeError("_Symbol does not support type {} as dividend".format(str(type(other))))
 
@@ -242,6 +242,10 @@ class _Symbol(Symbol):
         hdl = SymbolHandle()
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
         return Symbol(handle=hdl)
+
+    def as_np_ndarray(self):
+        """For the convenience of conversion between legacy and np symbols."""
+        return self
 
     @property
     # pylint: disable= invalid-name, undefined-variable

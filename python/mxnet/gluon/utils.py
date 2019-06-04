@@ -466,8 +466,33 @@ def _check_same_symbol_type(symbols):
 def _check_all_np_ndarrays(out):
     """Check if ndarrays in out are all np.ndarray"""
     from ..numpy import ndarray as np_ndarray
+    from ..symbol.numpy import _Symbol as np_symbol
     assert isinstance(out, (list, tuple))
     for array in out:
-        if not isinstance(array, np_ndarray):
-            raise TypeError('Expected np.ndarray type in output, while received type '
+        if not isinstance(array, (np_ndarray, np_symbol)):
+            raise TypeError('Expected np.ndarray or np._Symbol type in output, while received type '
                             '{}'.format(str(type(array))))
+
+
+def _to_classic_arrays(*args):
+    """Convert arrays to classic arrays. This is used in a Gluon layer for converting
+    inputs of np arrays to classic arrays so that the layer built with legacy ops can still
+    be used in np_array semantics."""
+    num_inputs = len(args)
+    assert num_inputs != 0
+    if not is_np_array():
+        return args[0] if num_inputs == 1 else args
+    in_arrs = [arr if arr is None else arr.as_classic_ndarray() for arr in args]
+    return in_arrs[0] if num_inputs == 1 else in_arrs
+
+
+def _to_np_arrays(*args):
+    """Convert arrays to np arrays. This is used in a Gluon layer for converting
+    outputs of classic arrays to np arrays so that the layer built with legacy ops can still
+    be used in np_array semantics."""
+    num_outputs = len(args)
+    assert num_outputs != 0
+    if not is_np_array():
+        return args[0] if num_outputs == 1 else args
+    out = [arr.as_np_ndarray() for arr in args]
+    return out[0] if num_outputs == 1 else out

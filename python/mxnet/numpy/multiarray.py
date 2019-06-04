@@ -376,6 +376,12 @@ class ndarray(NDArray):
             raise TypeError('only size-1 arrays can be converted to Python scalars')
         return float(self.item())
 
+    def __int__(self):
+        num_elements = self.size
+        if num_elements != 1:
+            raise TypeError('only size-1 arrays can be converted to Python scalars')
+        return int(self.item())
+
     def __len__(self):
         """Number of elements along the first axis."""
         return self.shape[0]

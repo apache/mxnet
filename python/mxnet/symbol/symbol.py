@@ -68,6 +68,10 @@ class Symbol(SymbolBase):
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
         return _Symbol(hdl)
 
+    def as_classic_ndarray(self):
+        """Returns self. For the convenience of conversion between legacy and np symbols."""
+        return self
+
     def __repr__(self):
         """Gets a string representation of the symbol."""
         name = self.name

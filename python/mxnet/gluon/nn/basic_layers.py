@@ -25,9 +25,8 @@ import numpy as np
 
 from .activations import Activation
 from ..block import Block, HybridBlock
-from ..utils import _indent
+from ..utils import _indent, _to_classic_arrays, _to_np_arrays
 from ... import nd, sym
-from ...util import is_np_array
 
 
 class Sequential(Block):
@@ -220,16 +219,12 @@ class Dense(HybridBlock):
     def hybrid_forward(self, F, x, weight, bias=None):
         # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
         # We should rewrite this with np/npx ops.
-        if is_np_array():
-            x = x.as_classic_ndarray()
-            weight = weight.as_classic_ndarray()
-            if bias is not None:
-                bias = bias.as_classic_ndarray()
+        x, weight, bias = _to_classic_arrays(x, weight, bias)
         act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
                                flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
-        return act.as_np_ndarray() if is_np_array() else act
+        return _to_np_arrays(act)
 
     def __repr__(self):
         s = '{name}({layout}, {act})'
