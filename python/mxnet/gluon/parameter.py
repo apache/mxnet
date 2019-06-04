@@ -940,7 +940,7 @@ class ParameterDict(object):
         loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
                   for k, v in param_dict.items()] if isinstance(param_dict, dict) else param_dict
         arg_dict = {restore_prefix+k: v for k, v in loaded}
-        error_str = "file: %" % (filename) if filename else "param_dict"
+        error_str = "file: %s" % (filename) if filename else "param_dict"
         if not allow_missing:
             for name in self.keys():
                 assert name in arg_dict, \

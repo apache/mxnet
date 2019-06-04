@@ -31,7 +31,7 @@ from ...context import gpu
 from ...symbol import Symbol
 from ...symbol import contrib as symbol_contrib
 from ... import ndarray
-from ...ndarray import NDArray, _DTYPE_NP_TO_MX
+from ...ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from . import lists
 from ...gluon import trainer
 from ... import base
@@ -392,25 +392,12 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     else:
         fp32_ops = lists.symbol.FP32_FUNCS
 
-    common_ops = set(target_dtype_ops) & set(fp32_ops)
-    assert len(common_ops) == 0, "Ops cannot be in both FP16 list and FP32 list {}".format(common_ops)
-
-    combined_ops = set(target_dtype_ops + fp32_ops)
-    all_fp16_fp32_ops = set(lists.symbol.FP16_FUNCS + lists.symbol.FP32_FUNCS + lists.symbol.FP16_FP32_FUNCS)
-
-    assert combined_ops.issubset(all_fp16_fp32_ops), "Can only choose ops from one of the three lists " \
-                                                     "for fp16_ops and fp32_ops" \
-                                                     " 1. amp.list_fp16_ops()" \
-                                                     " 2. amp.list_fp32_ops()" \
-                                                     " 3. amp.list_fp16_fp32_ops()"
-
-    widest_dtype_ops = lists.symbol.WIDEST_TYPE_CASTS
-
     if conditional_fp32_ops is not None:
-        assert isinstance(conditional_fp32_ops, list) << "conditional_fp32_ops should be a list"
+        assert isinstance(conditional_fp32_ops, list), "conditional_fp32_ops should be a list"
     else:
         conditional_fp32_ops = lists.symbol.CONDITIONAL_FP32_FUNCS
 
+    original_conditional_op_names = []
     conditional_op_names = []
     param_names = []
     param_vals = []
@@ -428,6 +415,36 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
         assert isinstance(excluded_sym_names, list), "excluded_sym_names should be a list of strs"
     else:
         excluded_sym_names = []
+
+    for original_conditional_fp32_op in lists.symbol.CONDITIONAL_FP32_FUNCS:
+        original_conditional_op_names.append(original_conditional_fp32_op[0])
+
+
+
+    common_ops = set(target_dtype_ops) & set(fp32_ops)
+    assert len(common_ops) == 0, "Ops cannot be in two or more lists. " \
+                                 "Common ops in target_dtype_ops and fp32_ops {}".format(common_ops)
+    common_ops = set(target_dtype_ops) & set(conditional_op_names)
+    assert len(common_ops) == 0, "Ops cannot be in two or more lists. " \
+                                 "Common ops in target_dtype_ops and conditional_fp32_ops {}".format(common_ops)
+    common_ops = set(conditional_op_names) & set(fp32_ops)
+    assert len(common_ops) == 0, "Ops cannot be in two or more lists. " \
+                                 "Common ops in fp32_ops and conditional_fp32_ops {}".format(common_ops)
+
+    combined_ops = set(target_dtype_ops + fp32_ops + conditional_op_names)
+    all_fp16_fp32_ops = set(lists.symbol.FP16_FUNCS + lists.symbol.FP32_FUNCS
+                            + lists.symbol.FP16_FP32_FUNCS + original_conditional_op_names)
+
+    illegal_ops = combined_ops - all_fp16_fp32_ops
+    assert not illegal_ops, '''Can only choose ops from one of the three lists
+                            for fp16_ops and fp32_ops
+                            1. amp.list_fp16_ops()
+                            2. amp.list_fp32_ops()
+                            3. amp.list_fp16_fp32_ops()
+                            4. amp.list_conditional_fp32_ops()
+                            Op %s not in any of them''' % (illegal_ops)
+
+    widest_dtype_ops = lists.symbol.WIDEST_TYPE_CASTS
 
     target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
@@ -478,8 +495,8 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
                   fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=None):
     """API for converting a model from FP32 model to a mixed precision model.
     MXNet tries to convert the FP32 model to mixed precision model by adding
-    cast layers using amp_cast and amp_multicast operators. The decision on
-    which cast layer to add is based on hardcoded lists for Automatic Mixed Precision
+    cast layers using amp_cast and amp_multicast operators which can be used for inference use cases.
+    The decision on which cast layer to add is based on hardcoded lists for Automatic Mixed Precision
     in MXNet. These lists can be overridden by the user by providing their own lists
     using : targe_precision_ops, fp32_ops, widest_precision_ops, conditional_fp32_ops
 
@@ -524,13 +541,26 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
     sym = convert_symbol(sym, target_dtype, target_dtype_ops,
                          fp32_ops, conditional_fp32_ops,
                          excluded_sym_names, data_names)
+    attr_dict = sym.attr_dict()
+    for sym_name in sym.list_arguments():
+        if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
+            if attr_dict[sym_name]["__dtype__"] != "-1":
+                typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
+                arg_params[sym_name] = arg_params[sym_name].astype(typ)
+
+    for sym_name in sym.list_auxiliary_states():
+        if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
+            if attr_dict[sym_name]["__dtype__"] != "-1":
+                typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
+                aux_params[sym_name] = aux_params[sym_name].astype(typ)
+
     return sym, arg_params, aux_params
 
 def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
                          excluded_sym_names=None, ctx=gpu(0)):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
-    return a block with mixed precision support which can be used for inference.
+    return a block with mixed precision support which can be used for inference use cases.
 
     Parameters
     ----------
@@ -550,29 +580,56 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
         from being quantized
+    ctx : Context
+        Context on which model parameters should live
     """
     from ...gluon import HybridBlock, SymbolBlock
-    if isinstance(block, HybridBlock):
-        inputs, sym = block._cached_graph
-        converted_sym = convert_symbol(sym, target_dtype, target_dtype_ops,
-                                       fp32_ops, conditional_fp32_ops,
-                                       excluded_sym_names)
+    assert isinstance(block, HybridBlock), "block input should be a HybridBlock"
+    if not block._cached_graph:
+        raise RuntimeError(
+            "Please first call block.hybridize() and then run forward with "
+            "this block at least once before calling export.")
 
-        arg_names = set(converted_sym.list_arguments())
-        aux_names = set(converted_sym.list_auxiliary_states())
-        arg_dict = {}
-        # collect params
-        for name, param in block.collect_params().items():
-            if name in arg_names:
-                arg_dict['arg:%s'%name] = param._reduce()
-            else:
-                assert name in aux_names
-                arg_dict['aux:%s'%name] = param._reduce()
+    inputs, sym = block._cached_graph
+    input_names = []
+    for inp in inputs:
+        input_names.append(inp.name)
+    converted_sym = convert_symbol(sym, target_dtype, target_dtype_ops,
+                                   fp32_ops, conditional_fp32_ops,
+                                   excluded_sym_names, data_names=input_names)
 
-        ret = SymbolBlock(converted_sym, inputs)
+    arg_names = set(converted_sym.list_arguments())
+    aux_names = set(converted_sym.list_auxiliary_states())
+    arg_dict = {}
+    attr_dict = converted_sym.attr_dict()
+    # collect params
+    for name, param in block.collect_params().items():
+        if name in arg_names:
+            arg_dict['arg:%s'%name] = param._reduce()
+            if name in attr_dict and "__dtype__" in attr_dict[name]:
+                if attr_dict[name]["__dtype__"] != "-1":
+                    typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
+                    arg_dict['arg:%s'%name] = arg_dict['arg:%s'%name].astype(typ)
+        else:
+            assert name in aux_names
+            arg_dict['aux:%s'%name] = param._reduce()
+            if name in attr_dict and "__dtype__" in attr_dict[name]:
+                if attr_dict[name]["__dtype__"] != "-1":
+                    typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
+                    arg_dict['aux:%s'%name] = arg_dict['aux:%s'%name].astype(typ)
 
-        ret.collect_params().load_dict(arg_dict, ctx=ctx)
-        return ret
+    ret = SymbolBlock(converted_sym, inputs)
+    for key, param in ret.collect_params().items():
+        arg_param_name = "arg:%s" % key
+        if arg_param_name in arg_dict and param.dtype != arg_dict[arg_param_name].dtype:
+            param.cast(arg_dict[arg_param_name].dtype)
+
+        aux_param_name = "aux:%s" % key
+        if aux_param_name in arg_dict and param.dtype != arg_dict[aux_param_name].dtype:
+            param.cast(arg_dict[aux_param_name].dtype)
+
+    ret.collect_params().load_dict(arg_dict, ctx=ctx)
+    return ret
 
 def list_fp16_ops():
     """Get the default list of FP16 ops for AMP
@@ -588,3 +645,8 @@ def list_fp16_fp32_ops():
     """Get the default list of ops which run in both FP16 and FP32
     """
     return lists.symbol.FP16_FP32_FUNCS
+
+def list_conditional_fp32_ops():
+    """Get the conditional fp32 ops list
+    """
+    return lists.symbol.CONDITIONAL_FP32_FUNCS

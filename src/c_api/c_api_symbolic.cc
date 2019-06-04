@@ -841,8 +841,9 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   std::unordered_set<std::string> widest_dtype_ops;
   std::unordered_set<std::string> excluded_syms;
   std::unordered_set<std::string> model_params;
-  std::unordered_map<std::string, std::unordered_map<std::string,
-                                                     std::vector<std::string>>> conditional_fp32_ops;
+  std::unordered_map<std::string,
+                     std::unordered_map<std::string,
+                                        std::vector<std::string>>> conditional_fp32_ops;
   int target_dt = *target_dtype;
 
   for (size_t i = 0; i < num_target_dtype_op_names; ++i) {
