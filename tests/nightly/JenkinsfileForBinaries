@@ -86,7 +86,7 @@ core_logic: {
         }
       }
     },*/
-    // https://github.com/apache/incubator-mxnet/issues/14980
+    // https://github.com/apache/incubator-mxnet/issues/14981
     /*'Test Large Tensor Size: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/large_tensor-gpu') {
