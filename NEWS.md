@@ -21,7 +21,7 @@ MXNet Change Log
 
 ### New Features
 
-#### AMP(Automatic Mixed Precision)
+#### Automatic Mixed Precision(experimental)
 Training Deep Learning networks is a very computationally intensive task. Novel model architectures tend to have increasing number of layers and parameters, which slows down training. Fortunately, new generations of training hardware as well as software optimizations, make it a feasible task. 
 However, where most of the (both hardware and software) optimization opportunities exists is in exploiting lower precision (like FP16) to, for example, utilize Tensor Cores available on new Volta and Turing GPUs. While training in FP16 showed great success in image classification tasks, other more complicated neural networks typically stayed in FP32 due to difficulties in applying the FP16 training guidelines.
 That is where AMP (Automatic Mixed Precision) comes into play. It automatically applies the guidelines of FP16 training, using FP16 precision where it provides the most benefit, while conservatively keeping in full FP32 precision operations unsafe to do in FP16. To learn more about AMP, checkout this [tutorial](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/amp/amp_tutorial.md). 
@@ -36,6 +36,28 @@ MXNet now supports Dynamic Shape in both imperative and symbolic mode. MXNet use
 * many operators can be extended to take a shape symbol as input and the shape symbol can determine the output shape of these operators (with this extension, the symbol interface of MXNet can fully support shape).
 To support dynamic shape and such operators, we have modified MXNet backend including graph binding, the MXNet executor and the operator interface. Now MXNet supports operators with dynamic shape such as [`contrib.while_loop`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.while_loop), [`contrib.cond`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.cond), and [`mxnet.ndarray.contrib.boolean_mask`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#contrib)
 Note: Currently dynamic shape does not work with Gluon defferred initialization.
+
+#### Large Tensor Support
+Current MXNet only supports maximal tensors size around 4 billon (2^32). This is because uint32_t is used as default data type for tensor size as well as indexing variables. 
+This limitation has created many problems when larger tensors are used in the model. 
+A naive solution to this problem is to replace all uint32_t in the MXNet backend source code by int64_t. 
+This solution is not viable, however, because many data structures use uint32_t as data type for its members. 
+Unnecessarily replacing these variables to int64_t will increase the memory consumption causing another limitation. Second, MXNet has many submodule dependencies. 
+Updating the variable types in MXNet repository is not enough. We also need to make sure different libraries, such as MKLDNN, MShadow etc. supports the int64_t integer data type. 
+Third, many front end APIs assumes unsigned 32-bit integer interface. Only updating the interface in C/C++ will cause all the language bindings to fail.
+Therefore, we need a systematic approach to enhance MXNet to support large tensors. 
+Now you can enable large tensor support by changing the following build flag to 1: `USE_INT64_TENSOR_SIZE = 1`. Note this is set to 0 by default.
+For more details please refer to the [design document](https://cwiki.apache.org/confluence/display/MXNET/Large+Tensor+Support).
+
+#### Dependency Update
+MXNet now added support for CUDA 10, CUDA 10.1, cudnn7.5, NCCL 2.4.2, numpy 1.16.0 to benefit from the latest features and performance improvements.
+These updates are available through PyPI packages and build from source, refer to [installation guid](https://mxnet.incubator.apache.org/versions/master/install/index.html) for more details.
+
+#### Gluon Fit API(experimental)
+Training a model in Gluon requires users to write the training loop, this is useful because of its imperative nature, however repeating the same code across multiple models can become tedious and repetitive with boilerplate code. 
+The training loop can also be overwhelming to some users new to deep learning. We have introduced a Estimator and Fit API to help facilitate training loop.
+Note: this feature is still experimental, for more details, refer to [design document](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design).
+
 
 #### New Operators
 * split_v2 (#13687)
@@ -88,6 +110,7 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * Use env var to enforce safe accumulation in ReduceAxesCompute (#14830)
 * [MXNet-1211] Factor and "Like" modes in BilinearResize2D operator (#13226)
 * added extraction/generation of diagonal and triangonal matrices to linalg (#14501)
+* [Mxnet-1397] Support symbolic api for requantize and dequantize (#14749)
 
 
 #### MKLDNN
@@ -123,6 +146,9 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * Add primitive cache for MKL-DNN sum(elemwise_add operator (#14914)
 * Fix reshape to add in-place back (#14903)
 * [int8] Add MobileNetV2_1.0 & ResNet18 Quantization (#14823)
+* [MKLDNN]Improve quantizeV2 and dequantize latency (#14641)
+* added mkldnn dependency for plugin compile target (#14274)
+* Support Quantized Fully Connected by INT8 GEMM (#12922)
 
 
 #### ONNX
@@ -181,6 +207,11 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * Fix warning / static function in header. (#14900)
 * Simplify creation of NodeEntry instances and use emplace_back (#14095)
 * Add unpooled gpu memory type (#14716)
+* [MXNET-1398] Enable zero-copy from numpy to MXNet NDArray (#14733)
+* Use DEFAULT macro in C APIs (#14767)
+* Avoid uneccesary vector copies in imperative_utils.cc (#14665)
+* Support populating errors back to MXNet engine in callback (#13922)
+
 
 #### Large Tensor Support
 * Large array support for randint (#14242)
@@ -208,7 +239,8 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * fix website build (#14148)
 * Fixed mailing list addresses (#13766)
 * website publish updates (#14015)
-
+* use relative links; update links (#13741)
+* update social media section (#13705)
 
 ### Front End API
 
@@ -229,6 +261,7 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * [MXNET-1333] Estimator and Fit API (#14629)
 * Add support for fast variable-length LSTM (#14208)
 * Add the Gluon Implementation of Deformable Convolution (#14810)
+* hybridize rnn and add model graph (#13244)
 
 
 #### Python
@@ -262,6 +295,12 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * Add scalaclean to make clean (#14322)
 * Add maven wraper to scala project. (#13702)
 * Add new Maven build for Scala package (#13819)
+* [MXNET-1287] Feat dep (#14668)
+* add Apache header on all XML (#14138)
+* update the version name (#14076)
+* change to compile time (#13835)
+* [MXNET-918] Random module (#13039)
+
 
 #### Java
 * [MXNET-1180] Java Image API (#13807)
@@ -271,6 +310,9 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * [MXNET-1331] Removal of non-MXNET classes from JAR (#14303)
 * Java install info update (#13912)
 * [MXNET-1226] add Docs update for MXNet Java (#14395)
+* [MXNET-1383] Java new use of ParamObject (#14645)
+* MXNET-1302 Exclude commons-codec and commons-io from assembled JAR (#14000)
+
 
 #### C++
 * print error message for mxnet::cpp::Operator::Invoke when failed (#14318)
@@ -297,13 +339,14 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * [Clojure] Correct the versions in the README so they correspond to the latest maven.org release (#13507)
 * Update version to v1.5.0 including clojure package (#13566)
 * [clojure][generator] ndarray/symbol api random merged (#14800)
-
+* upgrade codox to work with lein 2.9.0 (#14133)
 
 #### Julia
 * Julia v0.7/1.0 support and drop v0.6 support (#12845)
 * Julia: split ndarray.jl into several snippets (#14001)
 * Julia: split symbolic-node.jl into several snippets (#14024)
 * Julia: rename mx.clip to clamp for NDArray (#14027)
+* Julia: add binding for runtime feature detection (#13992)
 
 #### Perl:
 * Two more gluon loss classes. (#14194)
@@ -459,7 +502,29 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * Updates build_lib.sh to copy the cub library license (#14347)
 * Add license check to dev_menu, docs build with docker (#14166)
 * Print reproduction command on CI failure (#14815)
-
+* change mxnet_option behavior (#14743)
+* [DEP] upgrade dmlc-core (#14510)
+* Use ubuntu_rat container for rat check (#14678)
+* Added repeats for github status updates (#14530)
+* add filter to warnings (#14532)
+* CI Changes for Codified Windows AMIs (#14336)
+* Refactors USE_NVRTC setting to ENABLE_CUDA_RTC in pip make config files (#14250)
+* pypi package description. manifest/setup.py update (#14255)
+* make rat-excludes compliant with apache release policy (#14142)
+* Add libhdf5-dev to ubuntu_core.sh (#14079)
+* Added logging to GitHub commit status publishing (#13615)
+* [CI] Prevent timeouts when rebuilding containers with docker. (#13818)
+* [MXNET-862] Basic maven jenkins pipeline (#13450)
+* Scope requests so it's not needed for dev_menu (#13771)
+* Add timeout/retry logic to docker cache download (#13573)
+* turn on Sphinx warnings as errors (#13544)
+* [MXNET-1251] Basic configuration to do static-linking (#13621)
+* Improve CCache handling (#13456)
+* build config for maven and pip (#13556)
+* Add Intel MKL blas to Jenkins (#13607)
+* Add workspace cleaning after job finished (#13490)
+* Add a retry to qemu_provision (#13551)
+* Deprecate Jenkinsfile (#13474)
 
 
 ### Example and Tutorials
@@ -679,6 +744,8 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * data preparation file moved in example (#14781)
 * [MXNET-1291] solve pylint errors in examples with issue no.12205 (#13848)
 *  Prevent crashes for opencv exception and std::exception (#14433)
+* Set idx2name for Optimizer object (#14703)
+* Revert "Bumped minor version from 1.4.0 to 1.5.0 on master, updated License file" (#13558)
 
 
 ### Documentation
@@ -722,7 +789,23 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * Change Straight Dope to Dive into Deep Learning (#14465)
 * [DEV] update code owner (#14862)
 * Add notes about debug with libstdc++ symbols (#13533)
-
+* Mention additional language bindings and add links (#14798)
+* add contributors from intel (#14455)
+* what's new - add 1.4.0 release (#14435)
+* added note about cuda9.2 requirement (#14140)
+* Remove unnecessary "also" in README.md (#14543)
+* Updated news.md with the latest mkldnn submodule version (#14298)
+* add new cloud providers to install page (#14039)
+* Update NOTICE (#14043)
+* Update README.md (#13973)
+* Update profiler doc (#13901)
+* Add CODEOWNERS for Julia package (#13872)
+* update code owner (#13737)
+* Update git clone location to apache github (#13706)
+* NEWS.md backport from v1.4.x to master (#13693)
+* Update CODEOWNERS, add Pedro Larroy. (#13579)
+* [MXNET-1225] Always use config.mk in make install instructions (#13364)
+* Docs & website sphinx errors squished 🌦  (#13488)
 
 
 ### license
@@ -732,7 +815,9 @@ Note: Currently dynamic shape does not work with Gluon defferred initialization.
 * License update  (#13565)
 * Bumped minor version from 1.4.0 to 1.5.0 on master, updated License file (#13478)
 * License Googletest and Appendix (#14687)
-
+* Add copyrights for third party licenses to license file (#13851)
+* Improve license_header tool by only traversing files under revision c… (#13803)
+* Update LICENSE File with subcomponents (#13808)
 
 ### Depreciations
 * Julia: deprecate `mx.empty`, replace it with `UndefInitializer` (#13934)
@@ -1014,6 +1099,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Update log4j version of Scala package (#13131)
 * Review require() usages to add meaningful messages (#12570)
 * Fix Scala readme (#13082)
+* Avoid secondary deployment of package to local (#14647)
 
 #### Clojure
 * Introduction to Clojure-MXNet video link (#12754)
