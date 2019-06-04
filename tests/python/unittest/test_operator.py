@@ -7481,14 +7481,14 @@ def test_bilinear_resize_op():
             resize_sym = mx.sym.contrib.BilinearResize2D(data_sym, None, scale_height=scale_height, scale_width=scale_width, mode=mode)
             check_symbolic_forward(resize_sym, [data_np], [expected], rtol=1e-3, atol=1e-5)
             check_symbolic_backward(resize_sym, [data_np], [out_grads], expected_backward, rtol=1e-3, atol=1e-5)
-            check_numeric_gradient(resize_sym, [data_np], rtol=1e-2, atol=1e-5)
+            check_numeric_gradient(resize_sym, [data_np], rtol=1e-2, atol=1e-4)
         else:
             data_sym_like = mx.sym.var('data_like')
             resize_sym = mx.sym.contrib.BilinearResize2D(data_sym, data_sym_like, mode=mode)
             date_np_like = x_1.asnumpy()
             check_symbolic_forward(resize_sym, [data_np, date_np_like], [expected], rtol=1e-3, atol=1e-5)
             check_symbolic_backward(resize_sym, [data_np, date_np_like], [out_grads], expected_backward, rtol=1e-3, atol=1e-5)
-            check_numeric_gradient(resize_sym, [data_np, date_np_like], rtol=1e-2, atol=1e-5)
+            check_numeric_gradient(resize_sym, [data_np, date_np_like], rtol=1e-2, atol=1e-4)
 
     shape = (2, 2, 10, 10)
     check_bilinear_resize_op(shape, 5, 5)
