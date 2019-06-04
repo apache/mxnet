@@ -37,8 +37,8 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
-           'argmax']
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack',
+           'concatenate', 'arange', 'argmax']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1486,3 +1486,28 @@ def argmax(a, axis=None, out=None):
         with the dimension along `axis` removed.
     """
     return _mx_nd_np.argmax(a, axis, out)
+
+
+@set_module('mxnet.numpy')
+def concatenate(seq, axis=0, out=None):
+    """Join a sequence of arrays along an existing axis.
+
+    Parameters
+    ----------
+    a1, a2, ... : sequence of array_like
+        The arrays must have the same shape, except in the dimension
+        corresponding to `axis` (the first, by default).
+    axis : int, optional
+        The axis along which the arrays will be joined.  If axis is None,
+        arrays are flattened before use.  Default is 0.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be
+        correct, matching that of what concatenate would have returned if no
+        out argument were specified.
+
+    Returns
+    -------
+    res : ndarray
+        The concatenated array.
+    """
+    return _mx_nd_np.concatenate(seq, axis=axis, out=out)
