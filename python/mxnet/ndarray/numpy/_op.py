@@ -24,7 +24,7 @@ from ...util import _sanity_check_params, set_module
 from ...context import current_context
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax']
+__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -277,3 +277,28 @@ def argmax(a, axis=None, out=None):
         with the dimension along `axis` removed.
     """
     return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def concatenate(seq, axis=0, out=None):
+    """Join a sequence of arrays along an existing axis.
+
+    Parameters
+    ----------
+    a1, a2, ... : sequence of array_like
+        The arrays must have the same shape, except in the dimension
+        corresponding to `axis` (the first, by default).
+    axis : int, optional
+        The axis along which the arrays will be joined.  If axis is None,
+        arrays are flattened before use.  Default is 0.
+    out : ndarray, optional
+        If provided, the destination to place the result. The shape must be
+        correct, matching that of what concatenate would have returned if no
+        out argument were specified.
+
+    Returns
+    -------
+    res : ndarray
+        The concatenated array.
+    """
+    return _npi.concatenate(*seq, dim=axis, out=out)
