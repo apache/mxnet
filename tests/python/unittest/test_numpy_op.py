@@ -633,6 +633,57 @@ def test_np_linalg_norm():
                     assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-5, rtol=1e-4)
 
 
+@with_seed()
+@npx.use_np_shape
+def test_np_concat():
+    class TestConcat(HybridBlock):
+        def __init__(self, axis=None):
+            super(TestConcat, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a, *args):
+            return F.np.concatenate([a] + list(args), axis=self._axis)
+
+    def get_new_shape(shape, axis):
+        shape_lst = list(shape)
+        shape_lst[axis] = random.randint(0, 3)
+        return tuple(shape_lst)
+
+    for shape in [(0, 0), (2, 3)]:
+        for hybridize in [True, False]:
+            for axis in range(2):
+                # test gluon
+                test_concat = TestConcat(axis=axis)
+                if hybridize:
+                    test_concat.hybridize()
+
+                a = mx.nd.random.uniform(-1.0, 1.0, shape=get_new_shape(shape, axis)).as_np_ndarray()
+                a.attach_grad()
+                b = mx.nd.random.uniform(-1.0, 1.0, shape=get_new_shape(shape, axis)).as_np_ndarray()
+                b.attach_grad()
+                c = mx.nd.random.uniform(-1.0, 1.0, shape=get_new_shape(shape, axis)).as_np_ndarray()
+                c.attach_grad()
+                d = mx.nd.random.uniform(-1.0, 1.0, shape=get_new_shape(shape, axis)).as_np_ndarray()
+                d.attach_grad()
+                expected_ret = _np.concatenate([a.asnumpy(), b.asnumpy(), c.asnumpy(), d.asnumpy()], axis=axis)
+                with mx.autograd.record():
+                    y = test_concat(a, b, c, d)
+                assert y.shape == expected_ret.shape
+                assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
+
+                y.backward()
+
+                assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(b.grad.asnumpy(), _np.ones(b.shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(c.grad.asnumpy(), _np.ones(c.shape), rtol=1e-3, atol=1e-5)
+                assert_almost_equal(d.grad.asnumpy(), _np.ones(d.shape), rtol=1e-3, atol=1e-5)
+
+                # test imperative
+                mx_out = np.concatenate([a, b, c, d], axis=axis)
+                np_out = _np.concatenate([a.asnumpy(), b.asnumpy(), c.asnumpy(), d.asnumpy()], axis=axis)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

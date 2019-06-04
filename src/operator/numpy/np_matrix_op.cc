@@ -24,6 +24,7 @@
  */
 
 #include "./np_matrix_op-inl.h"
+#include "../nn/concat-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -251,6 +252,63 @@ Examples::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_stack"})
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to stack")
 .add_arguments(StackParam::__FIELDS__());
+
+bool ConcatShape(const nnvm::NodeAttrs& attrs,
+                 mxnet::ShapeVector *in_shape,
+                 mxnet::ShapeVector *out_shape);
+
+bool ConcatType(const nnvm::NodeAttrs& attrs,
+                std::vector<int> *in_type,
+                std::vector<int> *out_type);
+
+struct NumpyConcatGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+    CHECK_EQ(ograds.size(), 1);
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
+
+
+NNVM_REGISTER_OP(_npi_concatenate)
+.describe(R"code(Join a sequence of arrays along an existing axis.)code" ADD_FILELINE)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+    std::vector<std::string> ret;
+    for (int i = 0; i < params.num_args; ++i) {
+      ret.push_back(std::string("data") + std::to_string(i));
+    }
+    return ret;
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"out"};
+})
+.set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<nnvm::FInferType>("FInferType", ConcatType)
+.set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
+.set_attr<FCompute>("FCompute<cpu>", ConcatCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", NumpyConcatGrad{"_backward_np_concat"})
+.add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
+.add_arguments(ConcatParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_np_concat)
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
