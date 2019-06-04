@@ -170,12 +170,6 @@ const std::map<std::string, std::vector<std::string>> fused_op_special_ops = {
   {"_hypot_scalar", {"hypot(%, %)", "_0", "scalar"}},
   {"_backward_relu", {"backward_relu(%, %)", "_1", "_0"}},
   {"_backward_sigmoid", {"backward_sigmoid(%, %)", "_1", "_0"}},
-  {"_backward_Activation", {"((% == " + std::to_string(mxnet::op::activation::kReLU) +
-                            " || % == " + std::to_string(mxnet::op::activation::kSigmoid) +
-                            " || % == " + std::to_string(mxnet::op::activation::kTanh) +
-                            ") ? backward_%(%, %) : backward_%(%, %))",
-                            "act_type", "act_type", "act_type", "act_type",
-                            "_1", "_0", "_2", "_0"}},
   {"_backward_expm1", {"backward_expm1(%, %)", "_1", "_0"}},
   {"_backward_log", {"backward_log(%, %)", "_1", "_0"}},
   {"_backward_log10", {"backward_log10(%, %)", "_1", "_0"}},
@@ -227,7 +221,8 @@ const std::map<std::string, std::vector<std::vector<std::string>>> fused_op_mimo
 };
 
 const std::vector<std::string> fused_op_variable_io_ops = {
-  "add_n"
+  "add_n",
+  "_backward_Activation"
 };
 
 const std::string fused_op_function_definitions = R"code(

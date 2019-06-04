@@ -126,16 +126,20 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
         if (detail::fused_op_special_ops.find(op_name) != detail::fused_op_special_ops.end()) {
           const std::vector<std::string>& op_desc = detail::fused_op_special_ops.at(op_name);
           std::string fmt = op_desc[0];
+          std::cout << "Generating for " << op_name << std::endl;
           for (size_t j = 1; j < op_desc.size(); ++j) {
             const std::string& desc = op_desc[j];
+            std::cout << "desc: " << desc << std::endl;
             std::string sub;
             if (desc[0] == '_') {
               // Argument
               int arg_id = std::stoi(desc.substr(1));
+              std::cout << "arg_id: " << arg_id << std::endl;
               sub = variables[{node.inputs[arg_id].node_id, node.inputs[arg_id].index}];
             } else {
               sub = source->attrs.dict.at(desc);
             }
+            std::cout << "sub: " << sub << std::endl;
             size_t pos = fmt.find("%");
             CHECK_NE(pos, std::string::npos);
             fmt.replace(pos, 1, sub);
@@ -186,6 +190,25 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
             const auto& temp_arg = variables[{node.inputs[inp].node_id, node.inputs[inp].index}];
             code += var_name + " = add(" + var_name + ", " + temp_arg + ");\n";
           }
+          variables[{i,0}] = var_name;
+          continue;
+        }
+
+        if (op_name == "_backward_Activation") {
+          CHECK_EQ(outputs[i], 1);
+          std::string act_type = node.source->attrs.dict.at("act_type");
+          std::string rhs, lhs;
+          rhs = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          if (act_type == "relu" ||
+              act_type == "sigmoid" ||
+              act_type == "tanh") {
+            lhs = variables[{node.inputs[1].node_id, node.inputs[1].index}];
+          } else {
+            lhs = variables[{node.inputs[2].node_id, node.inputs[2].index}];
+          }
+          code += "const auto " + var_name + " = backward_" + act_type +
+                  "(" + lhs + ", " + rhs + ");\n";
+
           variables[{i,0}] = var_name;
           continue;
         }
