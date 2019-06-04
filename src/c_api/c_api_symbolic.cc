@@ -863,7 +863,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   }
 
   for (size_t i = 0; i < num_ind_ptr - 1; ++i) {
-    for (size_t j = ind_ptr[i]; j < ind_ptr[i + 1]; ++j) {
+    for (int j = ind_ptr[i]; j < ind_ptr[i + 1]; ++j) {
       conditional_fp32_ops[conditional_fp32_op_names[i]][param_names[i]]
           .emplace_back(std::string(param_vals[j]));
     }
@@ -930,7 +930,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   // Update args to have the right dtype attrs
   if (num_model_params > 0) {
     // if model params provided, set dtype only for model params
-    for (int i = 0; i < args.size(); ++i) {
+    for (size_t i = 0; i < args.size(); ++i) {
       auto it = model_params.find(args[i]->attrs.name);
       auto it2 = node_name_dtype_map.find(args[i]->attrs.name);
       if (it != model_params.end()) {
@@ -946,7 +946,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   } else {
     // if model params not provided, update __dtype__ for all inputs,
     // which already had it set, don't touch the rest
-    for (int i = 0; i < args.size(); ++i) {
+    for (size_t i = 0; i < args.size(); ++i) {
       auto it = node_name_dtype_map.find(args[i]->attrs.name);
       if (it != node_name_dtype_map.end()) {
         if (args[i]->attrs.dict.find(dtype_keyword) !=
