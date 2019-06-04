@@ -5105,6 +5105,39 @@ def test_softmax_dtype():
         check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
                                   'float32', 'float64', 'float64')
 
+
+@with_seed()
+def test_softmax_with_length():
+    def np_softmax_with_length(data, length):
+        res = np.zeros(data.shape)
+        for i in range(length.shape[0]):
+            for j in range(length.shape[1]):
+                leng = int(length[i, j])
+                res[i, 0:leng, j] = np_softmax(data[i, 0:leng, j])
+        return res
+
+    ndim = 3
+    shape = rand_shape_nd(ndim, dim=10)
+    len_shape = list(shape)
+    del len_shape[1]
+    len_shape = tuple(len_shape)
+    for dtype in [np.float16, np.float32, np.float64]:
+        mx_data = rand_ndarray(shape, dtype=dtype)
+        np_data = mx_data.asnumpy()
+        np_length = np.random.randint(1, shape[1] + 1, len_shape)
+        mx_length = mx.nd.array(np_length)
+        np_out = np_softmax_with_length(np_data, np_length)
+        data = mx.sym.Variable("data")
+        length = mx.sym.Variable("length")
+        mx_sym = mx.sym.softmax(data=data, length=length, use_length=True, axis=1)
+        location = {"data": mx_data, "length": mx_length}
+        rtol = 1e-2 if dtype == np.float16 else 1e-3
+        atol = 1e-4 if dtype == np.float16 else 1e-5
+        check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype=dtype)
+        # check_symbolic_backward(mx_sym, location, [np.ones(shape)], [], rtol=1e-3, atol=1e-5, dtype=dtype)
+        # check_numeric_gradient(mx_sym, location, rtol=1e-3, atol=1e-5, dtype=dtype)
+
+
 @with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
