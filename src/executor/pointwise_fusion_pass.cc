@@ -60,7 +60,7 @@ namespace {
     return false;
   }
 
-  nnvm::NodePtr CreateSubgraphNode(const Graph& subgraph) {
+  nnvm::NodePtr CreateSubgraphNode(const Graph& subgraph, size_t inputs_size) {
     nnvm::Symbol subgraph_sym;
     auto node = nnvm::Node::Create();
     subgraph_sym.outputs = subgraph.outputs;
@@ -82,8 +82,7 @@ namespace {
     params_names.pop_back();
     //node->attrs.dict["subgraph_params_names"] = params_names;
     node->attrs.dict["symbol_json"] = nnvm::pass::SaveJSON(subgraph);
-    node->attrs.dict["num_inputs"] =
-        std::to_string(subgraph.indexed_graph().input_nodes().size());
+    node->attrs.dict["num_inputs"] = std::to_string(inputs_size);
     node->attrs.dict["num_outputs"] = std::to_string(subgraph.outputs.size());
     node->attrs.op = Op::Get("FusedOp");
     node->op()->attr_parser(&(node->attrs));
@@ -110,7 +109,7 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     // and it have to be agnostic to the node from which it's an output
     // (For exemple even if two inputs are two different outputs from the same node)
     auto inputs = GetSubgraphInputs(subgraph, subgraph_set);
-    auto subgraph_node = create_subgraph_node(subgraph);
+    auto subgraph_node = create_subgraph_node(subgraph, inputs.size());
     subgraph_node->inputs = inputs;
     // replug inputs of node out of subgraph to be output of the subgraph node
     // if it was a node in the subgraph
@@ -137,7 +136,50 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     }
     // move control dependencies between nodes of the subgraph and out of the subgraph
     // to a dependencies between the subgraph node and the nodes out of the subgraph
-    const auto& index = g.indexed_graph();
+    DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
+      std::cout << "Visiting node " << node->attrs.name << std::endl;
+      if (subgraph_set.count(node.get())) {
+        std::cout << "It is in the set!" << std::endl;
+        std::cout << "It has " << node->control_deps.size() << " control deps!" << std::endl;
+        auto it = node->control_deps.begin();
+        static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
+        std::vector<nnvm::NodePtr> new_control_deps;
+        while (it != node->control_deps.end()) {
+          if (subgraph_set.count(it->get())) {
+            std::cout << "Control dep " << it->get()->attrs.name << " in the subgraph!" << std::endl;
+            ++it;
+          } else {
+            if ((*it)->is_variable() || !is_fusion.get((*it)->op(), false)) {
+              std::cout << "Control dep " << it->get()->attrs.name << " not variable nor fusion" << std::endl;
+              uint32_t node_id = subgraph_node->control_deps.size();
+              subgraph_node->control_deps.push_back(*it);
+              auto helper_node = op::MakeNode("_FusedOpOutHelper",
+                                              subgraph_node->attrs.name + "_"
+                                              + node->attrs.name + "_outhelper",
+                                              nullptr,
+                                              nullptr,
+                                              nullptr);
+              helper_node->attrs.parsed =
+                FusedOpHelperParamPtr(new FusedOpHelperParam(
+                      nnvm::get<FusedOpPtr>(subgraph_node->attrs.parsed),
+                      node_id));
+              new_control_deps.push_back(helper_node);
+            } else {
+              std::cout << "Control dep " << it->get()->attrs.name << " variable or fusion" << std::endl;
+              new_control_deps.push_back(*it);
+            }
+            ++it;
+          }
+        }
+        node->control_deps = new_control_deps;
+        std::cout << "New control deps size: " << node->control_deps.size() << std::endl;
+        for (const auto& d : node->control_deps) {
+          std::cout << "Control dep: " << d->attrs.name << std::endl;
+        }
+      }
+    });
+
+    const auto& index = subgraph.indexed_graph();
     DFSVisit(g.outputs, [&subgraph_node, &subgraph_set, &index](const nnvm::NodePtr& node) {
       for (auto &e : node->control_deps) {
         if (subgraph_set.count(e.get())) {
@@ -155,36 +197,6 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
           e = helper_node;
         }
       }
-    });
-    DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
-      auto it = node->control_deps.begin();
-      static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
-      std::vector<nnvm::NodePtr> new_control_deps;
-      while (it != node->control_deps.end()) {
-        if (subgraph_set.count(it->get())) {
-          ++it;
-        } else {
-          if ((*it)->is_variable() || !is_fusion.get((*it)->op(), false)) {
-            uint32_t node_id = subgraph_node->control_deps.size();
-            subgraph_node->control_deps.push_back(*it);
-            auto helper_node = op::MakeNode("_FusedOpOutHelper",
-                                            subgraph_node->attrs.name + "_"
-                                            + node->attrs.name + "_outhelper",
-                                            nullptr,
-                                            nullptr,
-                                            nullptr);
-            helper_node->attrs.parsed =
-              FusedOpHelperParamPtr(new FusedOpHelperParam(
-                    nnvm::get<FusedOpPtr>(subgraph_node->attrs.parsed),
-                    node_id));
-            new_control_deps.push_back(helper_node);
-          } else {
-            new_control_deps.push_back(*it);
-          }
-          ++it;
-        }
-      }
-      node->control_deps = new_control_deps;
     });
   }
   Graph new_graph;

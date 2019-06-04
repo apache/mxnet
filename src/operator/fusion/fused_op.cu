@@ -66,7 +66,6 @@ FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
   this->cc_major_ = -1;
   this->cc_minor_ = -1;
 
-  this->GenerateCode();
 }
 
 nnvm::Graph FusedOp::GetGraphWithoutControlDeps(nnvm::Graph &old) {
@@ -246,6 +245,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   this->cc_minor_ = cc_minor;
 
   if (!initialized_) {
+    this->GenerateCode();
     LOG(INFO) << code_;
     std::string aux_code = "";
     std::string kernel_params = "";
