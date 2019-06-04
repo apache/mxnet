@@ -29,7 +29,6 @@ import numpy as np
 from .. import ndarray
 from ..base import numeric_types
 from .block import HybridBlock
-from ..util import is_np_array
 from .utils import _to_classic_arrays, _to_np_arrays
 
 
@@ -139,14 +138,12 @@ class L2Loss(Loss):
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
         # We should rewrite this with np/npx ops.
-        if is_np_array():
-            pred = pred.as_classic_ndarray()
-            label = label.as_classic_ndarray()
+        pred, label, sample_weight = _to_classic_arrays(pred, label, sample_weight)
         label = _reshape_like(F, label, pred)
         loss = F.square(label - pred)
         loss = _apply_weighting(F, loss, self._weight / 2, sample_weight)
         out = F.mean(loss, axis=self._batch_axis, exclude=True)
-        return out.as_np_ndarray() if is_np_array() else out
+        return _to_np_arrays(out)
 
 
 class L1Loss(Loss):
