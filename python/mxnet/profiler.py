@@ -47,7 +47,7 @@ def set_config(**kwargs):
         whether to profile memory usage
     profile_api : boolean,
         whether to profile the C API
-    contiguous_dump : boolean,
+    continuous_dump : boolean,
         whether to periodically dump profiling data to file
     dump_period : float,
         seconds between profile data dumps
