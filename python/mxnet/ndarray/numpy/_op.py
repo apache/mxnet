@@ -52,7 +52,7 @@ def zeros(shape, dtype=_np.float32, **kwargs):
         Array of zeros with the given shape, dtype, and ctx.
     """
     _sanity_check_params('zeros', ['order'], kwargs)
-    ctx = kwargs.get('ctx', current_context())
+    ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
@@ -83,7 +83,7 @@ def ones(shape, dtype=None, **kwargs):
         Array of zeros with the given shape, dtype, and ctx.
     """
     _sanity_check_params('zeros', ['order'], kwargs)
-    ctx = kwargs.get('ctx', current_context())
+    ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
