@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=ungrouped-imports
 """Dataset generator."""
+from __future__ import absolute_import
 __all__ = ['DataLoader']
 
 import pickle
@@ -38,7 +39,7 @@ except ImportError:
 from . import sampler as _sampler
 from ... import nd, context
 from ...util import is_np_array
-from ... import numpy as _mx_np
+from ... import numpy as _mx_np  #pylint: disable=reimported
 
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):

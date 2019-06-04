@@ -563,9 +563,9 @@ class ndarray(NDArray):
         return self._as_classic_ndarray().copyto(other).as_np_ndarray()
 
     def asscalar(self):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute as_scalar')
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
-    def argmax(self, axis=None, out=None):
+    def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
         return _mx_nd_np.argmax(self, axis, out)
 
     def as_in_context(self, context):
@@ -883,7 +883,7 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute nanprod')
 
-    def mean(self, axis=None, dtype=None, out=None, keepdims=False):
+    def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`mean`.
 
         The arguments are the same as for :py:func:`mean`, with

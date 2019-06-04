@@ -421,6 +421,7 @@ class HookHandle(object):
     def __exit__(self, ptype, value, trace):
         self.detach()
 
+
 def shape_is_known(shape):
     """Check whether a shape is completely known with or without np semantics.
 
@@ -437,6 +438,7 @@ def shape_is_known(shape):
         assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
                                             "received {}".format(unknown_dim_size, dim_size)
     return True
+
 
 def _check_same_symbol_type(symbols):
     """Check whether all the symbols in the list are of the same type.
@@ -469,18 +471,3 @@ def _check_all_np_ndarrays(out):
         if not isinstance(array, np_ndarray):
             raise TypeError('Expected np.ndarray type in output, while received type '
                             '{}'.format(str(type(array))))
-
-
-def shape_is_known(shape):
-    """Check whether a shape is completely known w/ or w/o np semantics."""
-    if shape is None:
-        return False
-    unknown_dim_size = -1 if is_np_shape() else 0
-    if len(shape) == 0:
-        return unknown_dim_size == -1
-    for dim_size in shape:
-        if dim_size == unknown_dim_size:
-            return False
-        assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
-                                            "received {}".format(unknown_dim_size, dim_size)
-    return True

@@ -262,7 +262,7 @@ class _Symbol(Symbol):
                                       .format(str(order)))
         return _mx_np_op.reshape(self, newshape=shape, order=order)
 
-    def argmax(self, axis=None, out=None):
+    def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
         return _mx_np_op.argmax(self, axis, out)
 
     def reshape_like(self, *args, **kwargs):
@@ -561,7 +561,7 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute nanprod')
 
-    def mean(self, axis=None, dtype=None, out=None, keepdims=False):
+    def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`mean`.
 
         The arguments are the same as for :py:func:`mean`, with
