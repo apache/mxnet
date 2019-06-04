@@ -47,7 +47,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The maximum number of concurrent threads that do the memory copy job on each GPU.
 * MXNET_CPU_WORKER_NTHREADS
   - Values: Int ```(default=1)```
-  - The maximum number of scheduling threads on CPU. It specifies how many operators can be run in parallel.
+  - The maximum number of scheduling threads on CPU. It specifies how many operators can be run in parallel. Note that most CPU operators are parallelized by OpenMP. To change the number of threads used by individual operators, please set `OMP_NUM_THREADS` instead.
 * MXNET_CPU_PRIORITY_NTHREADS
   - Values: Int ```(default=4)```
   - The number of threads given to prioritized CPU jobs.
