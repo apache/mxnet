@@ -37,8 +37,8 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack',
-           'concatenate', 'arange', 'argmax']
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
+           'argmax', 'add', 'subtract', 'multiply', 'divide', 'concatenate']
 
 
 # This function is copied from ndarray.py since pylint
@@ -152,67 +152,40 @@ class ndarray(NDArray):
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
-        if isinstance(other, ndarray):
-            return _npi.add(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.add_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
+        return add(self, other)
 
     def __iadd__(self, other):
         """x.__iadd__(y) <=> x += y"""
         if not self.writable:
             raise ValueError('trying to add to a readonly ndarray')
-        if isinstance(other, ndarray):
-            return _npi.add(self, other, out=self)
-        elif isinstance(other, numeric_types):
-            return _npi.add_scalar(self, float(other), out=self)
-        else:
-            raise TypeError('type {} is not supported'.format(str(type(other))))
+        return add(self, other, out=self)
 
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
-        if isinstance(other, ndarray):
-            return _npi.subtract(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.subtract_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
+        return subtract(self, other)
 
     def __isub__(self, other):
         """x.__isub__(y) <=> x -= y"""
         if not self.writable:
             raise ValueError('trying to subtract from a readonly ndarray')
-        if isinstance(other, ndarray):
-            return _npi.subtract(self, other, out=self)
-        elif isinstance(other, numeric_types):
-            return _npi.subtract_scalar(self, float(other), out=self)
-        else:
-            raise TypeError('type {} is not supported'.format(str(type(other))))
+        return subtract(self, other, out=self)
 
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
-        if isinstance(other, ndarray):
-            return _npi.subtract(other, self)
-        elif isinstance(other, numeric_types):
-            return _npi.rsubtract_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
+        return subtract(other, self)
 
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
-        if isinstance(other, ndarray):
-            return _npi.multiply(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.multiply_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
+        return multiply(self, other)
 
     def __neg__(self):
         return self.__mul__(-1.0)
 
     def __imul__(self, other):
-        raise NotImplementedError
+        """x.__imul__(y) <=> x *= y"""
+        if not self.writable:
+            raise ValueError('trying to add to a readonly ndarray')
+        return multiply(self, other, out=self)
 
     def __rmul__(self, other):
         """x.__rmul__(y) <=> y * x"""
@@ -233,67 +206,42 @@ class ndarray(NDArray):
                              ' been encountered.')
 
     def __idiv__(self, other):
-        raise NotImplementedError
+        raise AttributeError('ndarray.__idiv__ is replaced by __irtruediv__. If you are using'
+                             ' Python2, please use the statement from __future__ import division'
+                             ' to change the / operator to mean true division throughout the'
+                             ' module. If you are using Python3, this error should not have'
+                             ' been encountered.')
 
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
-        if isinstance(other, ndarray):
-            return _npi.true_divide(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.true_divide_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as divisor".format(str(type(other))))
+        return divide(self, other)
 
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        if isinstance(other, ndarray):
-            return _npi.true_divide(other, self)
-        elif isinstance(other, numeric_types):
-            return _npi.rtrue_divide_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as dividend".format(str(type(other))))
+        return divide(other, self)
 
     def __itruediv__(self, other):
-        raise NotImplementedError
+        return divide(self, other, out=self)
 
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
-        if isinstance(other, ndarray):
-            return _npi.mod(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.mod_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
+        return mod(self, other)
 
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
-        if isinstance(other, ndarray):
-            return _npi.mod(other, self)
-        elif isinstance(other, numeric_types):
-            return _npi.rmod_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
+        return mod(other, self)
 
     def __imod__(self, other):
-        raise NotImplementedError
+        """x.__imod__(y) <=> x %= y"""
+        return mod(self, other, out=self)
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
-        if isinstance(other, ndarray):
-            return _npi.power(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.power_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
+        return power(self, other)
 
     def __rpow__(self, other):
         """x.__rpow__(y) <=> y ** x"""
-        if isinstance(other, ndarray):
-            return _npi.power(other, self)
-        elif isinstance(other, numeric_types):
-            return _npi.rpower_scalar(self, float(other))
-        else:
-            raise TypeError("ndarray does not support type {} as operand".format(str(type(other))))
+        return power(other, self)
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
@@ -1518,3 +1466,149 @@ def concatenate(seq, axis=0, out=None):
         The concatenated array.
     """
     return _mx_nd_np.concatenate(seq, axis=axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def add(x1, x2, out=None):
+    """Add arguments element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays to be added. If x1.shape != x2.shape, they must be broadcastable to
+        a common shape (which may be the shape of one or the other).
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    add : ndarray or scalar
+        The sum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.add(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+def subtract(x1, x2, out=None):
+    """Subtract arguments element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays to be subtracted from each other. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which may be the shape
+        of one or the other).
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    subtract : ndarray or scalar
+        The difference of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.subtract(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+def multiply(x1, x2, out=None):
+    """Multiply arguments element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays to be multiplied. If x1.shape != x2.shape, they must be broadcastable to
+        a common shape (which may be the shape of one or the other).
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The difference of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.multiply(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+def divide(x1, x2, out=None):
+    """Returns a true division of the inputs, element-wise.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.divide(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def mod(x1, x2, out=None):
+    """Return element-wise remainder of division.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.mod(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def power(x1, x2, out=None):
+    """First array elements raised to powers from second array, element-wise.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        The bases.
+
+    x2 : ndarray or scalar
+        The exponent.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The bases in x1 raised to the exponents in x2.
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _mx_nd_np.power(x1, x2, out=out)

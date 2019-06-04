@@ -24,7 +24,8 @@ from ...util import _sanity_check_params, set_module
 from ...context import current_context
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax']
+__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
+           'add', 'subtract', 'multiply', 'divide', 'concatenate']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -302,3 +303,150 @@ def concatenate(seq, axis=0, out=None):
         The concatenated array.
     """
     return _npi.concatenate(*seq, dim=axis, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def add(x1, x2, out=None):
+    """Add arguments element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays to be added. If x1.shape != x2.shape, they must be broadcastable to
+        a common shape (which may be the shape of one or the other).
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    add : ndarray or scalar
+        The sum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
+    """
+    return _ufunc_helper(x1, x2, _npi.add, _np.add, _npi.add_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def subtract(x1, x2, out=None):
+    """Subtract arguments element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays to be subtracted from each other. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which may be the shape
+        of one or the other).
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    subtract : ndarray or scalar
+        The difference of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
+    """
+    return _ufunc_helper(x1, x2, _npi.subtract, _np.subtract, _npi.subtract_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def multiply(x1, x2, out=None):
+    """Multiply arguments element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays to be multiplied. If x1.shape != x2.shape, they must be broadcastable to
+        a common shape (which may be the shape of one or the other).
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The multiplication of x1 and x2, element-wise. This is a scalar if both x1 and x2
+        are scalars.
+    """
+    return _ufunc_helper(x1, x2, _npi.multiply, _np.multiply, _npi.multiply_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def divide(x1, x2, out=None):
+    """Returns a true division of the inputs, element-wise.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def mod(x1, x2, out=None):
+    """Return element-wise remainder of division.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def power(x1, x2, out=None):
+    """First array elements raised to powers from second array, element-wise.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        The bases.
+
+    x2 : ndarray or scalar
+        The exponent.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The bases in x1 raised to the exponents in x2.
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, None, out)
