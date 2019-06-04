@@ -262,6 +262,17 @@ inline void store(const float value, int i, half * output) {
 }
 
 template <typename DType>
+inline void storeadd(const typename LoadType<DType>::Type value, int i, DType * output) {
+  output[i] += value;
+}
+
+template <>
+inline void storeadd(const float value, int i, half * output) {
+  const auto previous = load(output, i);
+  output[i] = __float2half(value + previous);
+}
+
+template <typename DType>
 inline DType identity(const DType val) {
   return val;
 }

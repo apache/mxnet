@@ -102,7 +102,7 @@ class FusedOp {
   }
 
  private:
-  void GenerateCode();
+  void GenerateCode(const std::vector<OpReqType> &req);
   nnvm::Graph GetGraphWithoutControlDeps(nnvm::Graph &old);
 
   std::vector<FusedOpEntry> inputs_;

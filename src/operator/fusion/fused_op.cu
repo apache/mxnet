@@ -72,7 +72,7 @@ nnvm::Graph FusedOp::GetGraphWithoutControlDeps(nnvm::Graph &old) {
   return old;
 }
 
-void FusedOp::GenerateCode() {
+void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
   const auto& codegen_graph = GetGraphWithoutControlDeps(this->symbol_);
   const auto& g = codegen_graph.indexed_graph();
   std::string code = "";
@@ -199,7 +199,13 @@ void FusedOp::GenerateCode() {
   int counter = 0;
   for (const auto& entry : g.outputs()) {
     const std::string& var = variables[{entry.node_id, entry.index}];
-    code += "store(" + var + ", i, output" + std::to_string(counter) + ");\n";
+    if (req[counter] == kWriteTo || req[counter] == kWriteInplace) {
+      code += "store(" + var + ", i, output" + std::to_string(counter) + ");\n";
+    } else if (req[counter] == kAddTo) {
+      code += "storeadd(" + var + ", i, output" + std::to_string(counter) + ");\n";
+    } else {
+      LOG(FATAL) << "Encountered unexpected req";
+    }
     ++counter;
   }
 
@@ -245,8 +251,11 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   this->cc_minor_ = cc_minor;
 
   if (!initialized_) {
-    this->GenerateCode();
+    this->GenerateCode(req);
     LOG(INFO) << code_;
+    for (const auto &r : req) {
+      std::cout << r << std::endl;
+    }
     std::string aux_code = "";
     std::string kernel_params = "";
     nnvm::Symbol sym;
