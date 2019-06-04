@@ -126,20 +126,16 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
         if (detail::fused_op_special_ops.find(op_name) != detail::fused_op_special_ops.end()) {
           const std::vector<std::string>& op_desc = detail::fused_op_special_ops.at(op_name);
           std::string fmt = op_desc[0];
-          std::cout << "Generating for " << op_name << std::endl;
           for (size_t j = 1; j < op_desc.size(); ++j) {
             const std::string& desc = op_desc[j];
-            std::cout << "desc: " << desc << std::endl;
             std::string sub;
             if (desc[0] == '_') {
               // Argument
               int arg_id = std::stoi(desc.substr(1));
-              std::cout << "arg_id: " << arg_id << std::endl;
               sub = variables[{node.inputs[arg_id].node_id, node.inputs[arg_id].index}];
             } else {
               sub = source->attrs.dict.at(desc);
             }
-            std::cout << "sub: " << sub << std::endl;
             size_t pos = fmt.find("%");
             CHECK_NE(pos, std::string::npos);
             fmt.replace(pos, 1, sub);
@@ -276,9 +272,6 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   if (!initialized_) {
     this->GenerateCode(req);
     LOG(INFO) << code_;
-    for (const auto &r : req) {
-      std::cout << r << std::endl;
-    }
     std::string aux_code = "";
     std::string kernel_params = "";
     nnvm::Symbol sym;
@@ -399,51 +392,14 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
         &(args[0]), 0));           // arguments
 }
 
-inline void PrintFullGraph(const nnvm::Graph& g) {
-  const auto& index = g.indexed_graph();
-
-  for (size_t i = 0; i < index.num_nodes(); ++i) {
-    const auto& node = index[i];
-    std::cout << "Node " << i << std::endl;
-    const auto* source = node.source;
-    if (source != nullptr) {
-      std::cout << source->attrs.name << std::endl;
-      if (source->is_variable()) {
-        std::cout << "Variable!" << std::endl;
-      }
-      std::cout << "Inputs: " << node.inputs.size() << std::endl;
-      for (size_t j = 0; j < node.inputs.size(); ++j) {
-        std::cout << node.inputs[j].node_id << " (" <<
-          index[node.inputs[j].node_id].source->attrs.name << ") " <<
-          node.inputs[j].index << ". Entry id: " <<
-          index.entry_id(node.inputs[j]) << std::endl;
-      }
-      std::cout << "Outputs: " << source->num_outputs() << std::endl;
-    } else {
-      std::cout << "NULLPTR in source" << std::endl;
-    }
-  }
-
-  std::cout << "Graph outputs" << std::endl;
-  for (const auto& entry : index.outputs()) {
-    std::cout << entry.node_id << " (" <<
-      index[entry.node_id].source->attrs.name << ") " <<
-      entry.index << ". Entry id: " <<
-      index.entry_id(entry) << std::endl;
-  }
-}
-
 template <>
 bool FusedOp::InferShape<gpu>(const nnvm::NodeAttrs &attrs,
                               std::vector<mxnet::TShape> *in_attrs,
                               std::vector<mxnet::TShape> *out_attrs) {
   std::vector<mxnet::TShape> input_shapes(*in_attrs);
-  std::cout << "InferShape in FusedOp! " << attrs.name  << std::endl;
-  PrintFullGraph(this->symbol_);
   this->symbol_ = mxnet::exec::InferShape(std::move(this->symbol_),
                                           std::move(input_shapes),
                                           "__shape__");
-  std::cout << "End of infershape in FusedOp " << attrs.name << std::endl;
 
   const auto& g = this->symbol_.indexed_graph();
   const auto& input_nids = g.input_nodes();

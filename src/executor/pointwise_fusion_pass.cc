@@ -42,7 +42,6 @@ namespace {
     if (n->op() == nullptr)
       return false;
     std::string op_name = n->op()->name;
-    std::cout << "Visiting " << op_name << std::endl;
     if (fused_op_binary_ops.count(op_name))
       return true;
     if (fused_op_unary_ops.count(op_name))
@@ -56,7 +55,6 @@ namespace {
                   op_name) !=
         fused_op_variable_io_ops.end())
       return true;
-    std::cout << "It was not in any list" << std::endl;
     return false;
   }
 
@@ -96,7 +94,6 @@ namespace {
 template<typename FCreateNode>
 Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_sets,
                                 FCreateNode create_subgraph_node) {
-  std::cout << "Fusion sets: " << subgraph_sets.size() << std::endl;
   for (auto subgraph_set : subgraph_sets) {
     // Create MXNet subgraph
     Graph subgraph;
@@ -137,20 +134,15 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     // move control dependencies between nodes of the subgraph and out of the subgraph
     // to a dependencies between the subgraph node and the nodes out of the subgraph
     DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
-      std::cout << "Visiting node " << node->attrs.name << std::endl;
       if (subgraph_set.count(node.get())) {
-        std::cout << "It is in the set!" << std::endl;
-        std::cout << "It has " << node->control_deps.size() << " control deps!" << std::endl;
         auto it = node->control_deps.begin();
         static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
         std::vector<nnvm::NodePtr> new_control_deps;
         while (it != node->control_deps.end()) {
           if (subgraph_set.count(it->get())) {
-            std::cout << "Control dep " << it->get()->attrs.name << " in the subgraph!" << std::endl;
-            ++it;
+            new_control_deps.push_back(*it);
           } else {
             if ((*it)->is_variable() || !is_fusion.get((*it)->op(), false)) {
-              std::cout << "Control dep " << it->get()->attrs.name << " not variable nor fusion" << std::endl;
               uint32_t node_id = subgraph_node->control_deps.size();
               subgraph_node->control_deps.push_back(*it);
               auto helper_node = op::MakeNode("_FusedOpOutHelper",
@@ -165,17 +157,12 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
                       node_id));
               new_control_deps.push_back(helper_node);
             } else {
-              std::cout << "Control dep " << it->get()->attrs.name << " variable or fusion" << std::endl;
               new_control_deps.push_back(*it);
             }
-            ++it;
           }
+          ++it;
         }
         node->control_deps = new_control_deps;
-        std::cout << "New control deps size: " << node->control_deps.size() << std::endl;
-        for (const auto& d : node->control_deps) {
-          std::cout << "Control dep: " << d->attrs.name << std::endl;
-        }
       }
     });
 

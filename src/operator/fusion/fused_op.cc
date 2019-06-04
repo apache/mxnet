@@ -26,7 +26,6 @@ namespace mxnet {
 DMLC_REGISTER_PARAMETER(FusedOpConfig);
 
 void FusedOpParamParser(nnvm::NodeAttrs* attrs) {
-  std::cout << "Parser!" << std::endl;
   FusedOpConfig param;
   try {
     param.Init(attrs->dict);
@@ -42,9 +41,7 @@ void FusedOpParamParser(nnvm::NodeAttrs* attrs) {
     throw dmlc::ParamError(os.str());
   }
   CHECK(!param.symbol_json.empty());
-  std::cout << "JSON: " << param.symbol_json << std::endl;
   attrs->parsed = FusedOpPtr(new FusedOp(attrs, param));
-  std::cout << "Empty: " << attrs->parsed.empty() <<std::endl;
 }
 
 NNVM_REGISTER_OP(FusedOp)
