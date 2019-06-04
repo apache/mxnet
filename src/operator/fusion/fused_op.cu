@@ -567,7 +567,7 @@ FusedOpHelperType(const NodeAttrs& attrs) {
 NNVM_REGISTER_OP(_FusedOpHelper)
 .set_num_inputs(0)
 .set_num_outputs(0)
-.set_attr<bool>("TIsGhost", true)
+.set_attr<TIsGhost>("TIsGhost", true)
 .set_attr<exec::TIsFusionHelper>("TIsFusionHelper", true)
 .set_attr<exec::FAccessSubgraphShape>("FAccessSubgraphShape", FusedOpHelperShape)
 .set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpHelperType);
@@ -592,7 +592,7 @@ FusedOpOutHelperType(const NodeAttrs& attrs) {
 NNVM_REGISTER_OP(_FusedOpOutHelper)
 .set_num_inputs(0)
 .set_num_outputs(0)
-.set_attr<bool>("TIsGhost", true)
+.set_attr<TIsGhost>("TIsGhost", true)
 .set_attr<exec::TIsFusionHelper>("TIsFusionHelper", true)
 .set_attr<exec::FAccessSubgraphShape>("FAccessSubgraphShape", FusedOpOutHelperShape)
 .set_attr<exec::FAccessSubgraphType>("FAccessSubgraphType", FusedOpOutHelperType);
