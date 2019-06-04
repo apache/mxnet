@@ -25,7 +25,7 @@ from ...context import current_context
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
-           'add', 'subtract', 'multiply', 'divide', 'concatenate']
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate']
 
 
 @set_module('mxnet.ndarray.numpy')
