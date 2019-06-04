@@ -43,3 +43,11 @@ Once the network is trained you can use the following command to increase the re
 ```
 python  super_resolution.py --resolve_img myimage.jpg
 ```
+
+## Citation
+<b>Contour Detection and Hierarchical Image Segmentation
+P. Arbelaez, M. Maire, C. Fowlkes and J. Malik.
+IEEE TPAMI, Vol. 33, No. 5, pp. 898-916, May 2011.
+[PDF](http://web.archive.org/web/20160306133802/http://www.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/papers/amfm_pami2010.pdf)
+[BibTex](http://web.archive.org/web/20160306133802/http://www.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/papers/amfm_pami2011.bib)
+</b>

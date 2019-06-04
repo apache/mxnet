@@ -26,6 +26,7 @@ def unzip_file(filename, outpath):
         z.extract(name, outpath)
     fh.close()
 
+# Dataset from COCO 2014: http://cocodataset.org/#download
 download('http://msvocds.blob.core.windows.net/coco2014/train2014.zip', 'dataset/train2014.zip')
 download('http://msvocds.blob.core.windows.net/coco2014/val2014.zip', 'dataset/val2014.zip')
 

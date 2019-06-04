@@ -350,6 +350,19 @@
          Copyright 2012 Continuum Analytics, Inc.
 
 
+    =======================================================================================
+    Creative Commons Attribution 4.0 International (CC BY 4.0)
+    =======================================================================================
+
+    1. CUB-200 Dataset
+    For details, see example/gluon/embedding_learning/get_cub200_data.sh
+    For details about the dataset, see http://www.vision.caltech.edu/archive.html
+
+    2. COCO2014 Dataset
+    For details, see example/gluon/style_transfer/dataset/download_dataset.py
+    For details about the dataset, see http://cocodataset.org/#download
+
+    For details of of the license, see https://creativecommons.org/licenses/by/4.0/
 
     =======================================================================================
     Other Licenses
@@ -708,15 +721,24 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
     DEALINGS IN THE SOFTWARE.
 
+
     =======================================================================================
+    15. MovieLens 10M Dataset Usage License
+    For details, see:
+    * example/model-parallel/matrix_factorization/get_data.py
+    * example/recommenders/movielens_data.py
+    * example/sparse/matrix_factorization/data.py
 
-    15. CUB-200 Dataset
-    For details, see example/gluon/embedding_learning/get_cub200_data.sh
-    For details about the dataset, see http://www.vision.caltech.edu/archive.html
+    Neither the University of Minnesota nor any of the researchers involved can guarantee the correctness of the data, its suitability for any particular purpose, or the validity of results based on the use of the data set. The data set may be used for any research purposes under the following conditions:
+    The user may not state or imply any endorsement from the University of Minnesota or the GroupLens Research Group.
+    The user must acknowledge the use of the data set in publications resulting from the use of the data set (see below for citation information).
+    The user may not redistribute the data without separate permission.
+    The user may not use this information for any commercial or revenue-bearing purposes without first obtaining permission from a faculty member of the GroupLens Research Project at the University of Minnesota.
+    The executable software scripts are provided "as is" without warranty of any kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose. The entire risk as to the quality and performance of them is with you. Should the program prove defective, you assume the cost of all necessary servicing, repair or correction.
 
-    Creative Commons Attribution 4.0 International (CC BY 4.0)
-    For details of of the license, see https://creativecommons.org/licenses/by/4.0/
+    In no event shall the University of Minnesota, its affiliates or employees be liable to you for any damages arising out of the use or inability to use these programs (including but not limited to loss of data or data being rendered inaccurate).
 
+    If you have any further questions or comments, please email grouplens-info
 
     =======================================================================================
     Appendix
