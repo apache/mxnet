@@ -341,8 +341,8 @@ MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
 	 * \return 0 when success, -1 when failure happens.
 	 * \note
 	 */
-MXNET_DLL int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format, int sort_by,
-                                            int ascending);
+MXNET_DLL int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format,
+                                            int sort_by, int ascending);
 
 /*!
  * \brief Pause profiler tuning collection

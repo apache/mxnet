@@ -191,10 +191,10 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
           *ss << "                \"Total\": "
               << MicroToMilli(data.total_aggregate_)
               << "," << std::endl;
-        *ss << "                \"Min\": " 
+        *ss << "                \"Min\": "
             << (is_memory ?
                 ByteToKilobyte(data.min_aggregate_) :
-                MicroToMilli(data.min_aggregate_)) 
+                MicroToMilli(data.min_aggregate_))
             << "," << std::endl
             << "                \"Max\": "
             << (is_memory ?
