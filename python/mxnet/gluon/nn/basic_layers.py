@@ -218,12 +218,18 @@ class Dense(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
-        fc_op = F.npx.FullyConnected if is_np_array() else F.FullyConnected
-        act = fc_op(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
-                    flatten=self._flatten, name='fwd')
+        # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
+        # We should rewrite this with np/npx ops.
+        if is_np_array():
+            x = x.as_classic_ndarray()
+            weight = weight.as_classic_ndarray()
+            if bias is not None:
+                bias = bias.as_classic_ndarray()
+        act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
+                               flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
-        return act
+        return act.as_np_ndarray() if is_np_array() else act
 
     def __repr__(self):
         s = '{name}({layout}, {act})'

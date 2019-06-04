@@ -136,12 +136,16 @@ class L2Loss(Loss):
         super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
-        pred = pred.as_classic_ndarray()
-        label = label.as_classic_ndarray()
+        # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
+        # We should rewrite this with np/npx ops.
+        if is_np_array():
+            pred = pred.as_classic_ndarray()
+            label = label.as_classic_ndarray()
         label = _reshape_like(F, label, pred)
         loss = F.square(label - pred)
         loss = _apply_weighting(F, loss, self._weight / 2, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True).as_np_ndarray()
+        out = F.mean(loss, axis=self._batch_axis, exclude=True)
+        return out.as_np_ndarray() if is_np_array() else out
 
 
 class L1Loss(Loss):
@@ -344,6 +348,11 @@ class SoftmaxCrossEntropyLoss(Loss):
         self._from_logits = from_logits
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
+        # We should rewrite this with np/npx ops.
+        if is_np_array():
+            pred = pred.as_classic_ndarray()
+            label = label.as_classic_ndarray()
         if not self._from_logits:
             pred = F.log_softmax(pred, self._axis)
         if self._sparse_label:
@@ -352,7 +361,8 @@ class SoftmaxCrossEntropyLoss(Loss):
             label = _reshape_like(F, label, pred)
             loss = -F.sum(pred * label, axis=self._axis, keepdims=True)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        out = F.mean(loss, axis=self._batch_axis, exclude=True)
+        return out.as_np_ndarray() if is_np_array() else out
 
 
 SoftmaxCELoss = SoftmaxCrossEntropyLoss

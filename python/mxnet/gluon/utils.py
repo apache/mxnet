@@ -38,7 +38,7 @@ except ImportError:
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape
+from ..util import is_np_shape, is_np_array
 
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
@@ -112,12 +112,18 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     list of NDArray
         Each corresponds to a context in `ctx_list`.
     """
+    # TODO(junwu): temp solution for supporting np.ndarray
+    # rewrite this using np ops
     if not isinstance(data, ndarray.NDArray):
         data = ndarray.array(data, ctx=ctx_list[0])
     if len(ctx_list) == 1:
+        if is_np_array():
+            data = data.as_np_ndarray()
         return [data.as_in_context(ctx_list[0])]
 
     slices = split_data(data, len(ctx_list), batch_axis, even_split)
+    if is_np_array():
+        slices = [i.as_np_ndarray() for i in slices]
     return [i.as_in_context(ctx) for i, ctx in zip(slices, ctx_list)]
 
 

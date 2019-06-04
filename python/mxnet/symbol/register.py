@@ -230,8 +230,8 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                 if is_np_op:
                     code.append("""
     if %s is not _Null and %s is not None:
-        keys.append('%s')
-        vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name, dtype_name))
+        _keys.append('%s')
+        _vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name, dtype_name))
                 else:
                     code.append("""
     if %s is not _Null:
