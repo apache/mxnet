@@ -538,7 +538,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
 
     if target_dtype != "float16":
         raise ValueError("Only target_dtype float16 is supported currently")
-    param_names = arg_params.keys() + aux_params.keys()
+    param_names = list(arg_params.keys()) + list(aux_params.keys())
 
     # Only pass non params as data_names, param types can be inferred
     data_names = list(set(sym.list_inputs()) - set(param_names))
