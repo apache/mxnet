@@ -419,8 +419,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     for original_conditional_fp32_op in lists.symbol.CONDITIONAL_FP32_FUNCS:
         original_conditional_op_names.append(original_conditional_fp32_op[0])
 
-
-
+    # Op lists should not have intersection
     common_ops = set(target_dtype_ops) & set(fp32_ops)
     assert len(common_ops) == 0, "Ops cannot be in two or more lists. " \
                                  "Common ops in target_dtype_ops and fp32_ops {}".format(common_ops)
@@ -445,9 +444,11 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                             Op %s not in any of them''' % (illegal_ops)
 
     widest_dtype_ops = lists.symbol.WIDEST_TYPE_CASTS
-
     target_dtype = _DTYPE_NP_TO_MX[np.dtype(target_dtype).type]
 
+    # Prepare a data_names list based on list_inputs if its not provided
+    # Add all names in list for the nodes in the symbol which don't have
+    # __dtype__ set
     attr_dict = sym.attr_dict()
     if not data_names:
         data_names = []
@@ -459,6 +460,8 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                 data_names.append(sym_name)
     model_param_names = list(set(sym.list_inputs()) - set(data_names))
 
+    # Since assumption is that it is a FP32 model, set dtypes for all
+    # data_names to float32
     str_keys = []
     sdata = []
     for k in data_names:
@@ -536,11 +539,15 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
     if target_dtype != "float16":
         raise ValueError("Only target_dtype float16 is supported currently")
     param_names = arg_params.keys() + aux_params.keys()
+
+    # Only pass non params as data_names, param types can be inferred
     data_names = list(set(sym.list_inputs()) - set(param_names))
 
     sym = convert_symbol(sym, target_dtype, target_dtype_ops,
                          fp32_ops, conditional_fp32_ops,
                          excluded_sym_names, data_names)
+
+    # If dtype is set for params, cast the param to that dtype
     attr_dict = sym.attr_dict()
     for sym_name in sym.list_arguments():
         if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
@@ -554,6 +561,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
                 typ = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
                 aux_params[sym_name] = aux_params[sym_name].astype(typ)
 
+    # Return the converted symbol and casted params
     return sym, arg_params, aux_params
 
 def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
@@ -590,6 +598,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
             "Please first call block.hybridize() and then run forward with "
             "this block at least once before calling export.")
 
+    # Prepare inputs to pass to the convert_symbol API
     inputs, sym = block._cached_graph
     input_names = []
     for inp in inputs:
@@ -601,8 +610,10 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     arg_names = set(converted_sym.list_arguments())
     aux_names = set(converted_sym.list_auxiliary_states())
     arg_dict = {}
+
+    # If dtype for the param was set in the json, cast the
+    # param to this dtype
     attr_dict = converted_sym.attr_dict()
-    # collect params
     for name, param in block.collect_params().items():
         if name in arg_names:
             arg_dict['arg:%s'%name] = param._reduce()
@@ -618,6 +629,8 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
                     typ = _DTYPE_MX_TO_NP[int(attr_dict[name]["__dtype__"])]
                     arg_dict['aux:%s'%name] = arg_dict['aux:%s'%name].astype(typ)
 
+    # Create a symbolblock and cast the params to the dtypes based
+    # on the dtype information from the converted_symbol
     ret = SymbolBlock(converted_sym, inputs)
     for key, param in ret.collect_params().items():
         arg_param_name = "arg:%s" % key

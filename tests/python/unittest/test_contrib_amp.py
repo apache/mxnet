@@ -195,7 +195,7 @@ def test_amp_conversion():
                                                                              aux_params,
                                                                              target_dtype="float16",
                                                                              target_dtype_ops=["Convolution"])
-        mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"])
+        mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.gpu())
         mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
 
         mod.set_params(result_arg_params, result_aux_params)
