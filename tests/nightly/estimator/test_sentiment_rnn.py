@@ -101,7 +101,8 @@ def download_imdb(data_dir='/tmp/data'):
     '''
     Download and extract the IMDB dataset
     '''
-    # dataset from http://ai.stanford.edu/~amaas/data/sentiment/
+    # Large Movie Review Dataset from http://ai.stanford.edu/~amaas/data/sentiment/
+    # Note this dataset is copyright to Andrew Maas and Stanford AI Lab
     # @InProceedings{maas-EtAl:2011:ACL-HLT2011,
     #   author    = {Maas, Andrew L.  and  Daly, Raymond E.  and  Pham, Peter T.  and  Huang, Dan  and  Ng, Andrew Y.  and  Potts, Christopher},
     #   title     = {Learning Word Vectors for Sentiment Analysis},

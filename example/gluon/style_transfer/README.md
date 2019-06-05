@@ -112,6 +112,10 @@ python main.py optim --content-image images/content/venice-boat.jpg --style-imag
 
 ### Train Your Own MSG-Net Model
 0. Download the style images and COCO dataset
+Note: Dataset from [COCO 2014](http://cocodataset.org/#download).
+The dataset annotations and site are Copyright COCO Consortium and licensed CC BY 4.0 Attribution.
+The images within the dataset are available under the Flickr Terms of Use.
+See original [dataset source](http://cocodataset.org/#termsofuse) for details
 	```bash
     python download_images.py 
 	python dataset/download_dataset.py

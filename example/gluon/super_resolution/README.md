@@ -17,6 +17,9 @@
 
 # Superresolution
 
+Note: this example use The BSDS500 Dataset which is copyright Berkeley Computer Vision Group.
+For more details, see [dataset website](https://www2.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/resources.html#bsds500)
+
 This example trains a convolutional neural network to enhance the resolution of images (also known as superresolution). 
 The script takes the following commandline arguments:
 
