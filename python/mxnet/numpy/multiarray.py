@@ -38,7 +38,8 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
-           'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate']
+           'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
+           'clip']
 
 
 # This function is copied from ndarray.py since pylint
@@ -701,13 +702,11 @@ class ndarray(NDArray):
         """
         raise NotImplementedError
 
-    def clip(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`clip`.
-
-        The arguments are the same as for :py:func:`clip`, with
-        this array as data.
+    def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
+        """Return an array whose values are limited to [min, max].
+        One of max or min must be given.
         """
-        raise NotImplementedError
+        return clip(self, min, max, out=out)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -1612,3 +1611,39 @@ def power(x1, x2, out=None):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.power(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def clip(a, a_min, a_max, out=None):
+    """Clip (limit) the values in an array.
+
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : ndarray, optional
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.
+
+    Returns
+    -------
+    clipped_array : ndarray
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+    """
+    return _mx_nd_np.clip(a, a_min, a_max, out=out)

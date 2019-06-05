@@ -25,7 +25,8 @@ from ...context import current_context
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
-           'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate']
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
+           'clip']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -349,7 +350,8 @@ def subtract(x1, x2, out=None):
     subtract : ndarray or scalar
         The difference of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.subtract, _np.subtract, _npi.subtract_scalar, None, out)
+    return _ufunc_helper(x1, x2, _npi.subtract, _np.subtract, _npi.subtract_scalar,
+                         _npi.rsubtract_scalar, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -398,7 +400,8 @@ def divide(x1, x2, out=None):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar, None, out)
+    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
+                         _npi.rtrue_divide_scalar, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -423,7 +426,7 @@ def mod(x1, x2, out=None):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, None, out)
+    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -449,4 +452,46 @@ def power(x1, x2, out=None):
         The bases in x1 raised to the exponents in x2.
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, None, out)
+    return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def clip(a, a_min, a_max, out=None):
+    """Clip (limit) the values in an array.
+
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : ndarray, optional
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.
+
+    Returns
+    -------
+    clipped_array : ndarray
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+    """
+    if a_min is None and a_max is None:
+        raise ValueError('array_clip: must set either max or min')
+    if a_min is None:
+        a_min = float('-inf')
+    if a_max is None:
+        a_max = float('inf')
+    return _npi.clip(a, a_min, a_max, out=out)
