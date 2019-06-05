@@ -67,6 +67,14 @@ class Initializer {
       InitZero(arr);
     } else if (StringEndWith(name, "moving_avg")) {
       InitZero(arr);
+    } else if (StringEndWith(name, "min")) {
+      InitZero(arr);
+    } else if (StringEndWith(name, "max")) {
+      InitOne(arr);
+    } else if (StringEndWith(name, "weight_quantize")) {
+      InitQuantizedWeight(arr);
+    } else if (StringEndWith(name, "bias_quantize")) {
+      InitQuantizedBias(arr);
     } else {
       InitDefault(arr);
     }
@@ -91,6 +99,14 @@ class Initializer {
   virtual void InitGamma(NDArray* arr) { (*arr) = 1.0f; }
   virtual void InitBeta(NDArray* arr) { (*arr) = 0.0f; }
   virtual void InitWeight(NDArray* arr) {}
+  virtual void InitQuantizedWeight(NDArray* arr) {
+    std::default_random_engine generator;
+    std::uniform_int_distribution<int32_t> _val(-127, 127);
+    (*arr) = static_cast<int8_t>(_val(generator));
+  }
+  virtual void InitQuantizedBias(NDArray* arr) {
+    (*arr) = (int8_t)0;
+  }
   virtual void InitDefault(NDArray* arr) {}
 };
 
@@ -164,6 +180,15 @@ class Xavier : public Initializer {
       : rand_type(rand_type), factor_type(factor_type), magnitude(magnitude) {}
 
   void operator()(const std::string &name, NDArray* arr) override {
+    if (StringEndWith(name, "weight_quantize")) {
+      InitQuantizedWeight(arr);
+      return;
+    }
+    if (StringEndWith(name, "bias_quantize")) {
+      InitQuantizedBias(arr);
+      return;
+    }
+
     Shape shape(arr->GetShape());
     float hw_scale = 1.0f;
     if (shape.ndim() > 2) {

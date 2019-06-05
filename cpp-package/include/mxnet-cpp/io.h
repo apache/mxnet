@@ -60,6 +60,8 @@ class DataIter {
     return DataBatch{GetData(), GetLabel(), GetPadNum(), GetIndex()};
   }
   void Reset() { BeforeFirst(); }
+
+  virtual ~DataIter() = default;
 };
 
 class MXDataIterMap {
