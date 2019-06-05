@@ -70,6 +70,7 @@ class TBlob {
   void *dptr_;
   /*! \brief shape of the tensor */
   mxnet::TShape shape_;
+  mxnet::TShape strides_;
   /*! \brief type flag of the tensor blob */
   int type_flag_;
 
@@ -400,13 +401,25 @@ class TBlob {
     return mshadow::kFloat32;
   }
 
+  inline void SetStrides() {
+    if (shape_.ndim() > 0) {
+      std::vector<dim_t> strides(shape_.ndim(), 1);
+      for (int i = shape_.ndim() - 2; i >= 0; --i) {
+        strides[i] = strides[i + 1] * shape_[i + 1];
+        LOG(INFO) << strides[i];
+      }
+      strides_ = strides;
+    }
+  }
+
   inline void SetDLTensor(int dev_mask, int dev_id) {
+    SetStrides();
     dltensor_.data = dptr_;
     dltensor_.ctx = DLContext{static_cast<DLDeviceType>(dev_mask), dev_id};
     dltensor_.ndim = shape_.ndim();
     dltensor_.dtype = DTypeTransform(type_flag_);
     dltensor_.shape = shape_.data();
-    dltensor_.strides = nullptr;
+    dltensor_.strides = strides_.ndim() > 0 ? strides_.data() : nullptr;
     dltensor_.byte_offset = 0;
   }
 

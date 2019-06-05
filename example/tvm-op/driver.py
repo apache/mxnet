@@ -15,7 +15,15 @@ for func in dir(vector_add):
             print("Compile", f_name, "... target = llvm")
 
         sch, args = f()
-        func_lower = tvm.lower(sch, args, name=f_name)
+        binds = {}
+        new_args = []
+        for arg in args:
+            if isinstance(arg, tuple):
+                arg, buf = arg
+                binds[arg] = buf
+            new_args.append(arg)
+
+        func_lower = tvm.lower(sch, new_args, name=f_name, binds=binds)
         func_list.append(func_lower)
 
 lowered_funcs = {"llvm" : func_list_llvm}
