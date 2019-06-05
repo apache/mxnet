@@ -244,6 +244,7 @@ DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
 NNVM_REGISTER_OP(FullyConnected)
 MXNET_ADD_SPARSE_OP_ALIAS(FullyConnected)
+.add_alias("_npx_FullyConnected")
 .describe(R"code(Applies a linear transformation: :math:`Y = XW^T + b`.
 
 If ``flatten`` is set to be true, then the shapes are:
