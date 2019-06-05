@@ -89,17 +89,20 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu, unary_bwd<mshadow
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       std::vector<nnvm::NodeEntry> ret;
-      // ograds[0]: d^2L/dx^2
+      // ograds[0]: dL/dxgrad
       // inputs[0]: dL/dy
       // inputs[1]: y
       // f(x) -> relu(x)
       // f'(x) = 1 if x > 0 else 0
       // f''(x) = 0
-      auto gx = nnvm::NodeEntry{n};  // f'(x)
+      auto dydx = MakeNode("_greater", n->attrs.name + "_dydx",
+          {n->inputs[1], nnvm::NodeEntry{
+            MakeNode("zeros_like", n->attrs.name + "tmp", {n->inputs[1]}, nullptr, &n)
+          }}, nullptr, &n);
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                                {ograds[0], gx}, nullptr, &n));
+                                {ograds[0], nnvm::NodeEntry(dydx)}, nullptr, &n));
       ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_grad_in",
-                                {gx}, nullptr, &n));
+                                {n->inputs[1]}, nullptr, &n));
       return ret;
     });
 
