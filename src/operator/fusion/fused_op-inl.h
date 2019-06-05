@@ -29,7 +29,7 @@ namespace mxnet {
 
 namespace detail {
 
-const std::string fp16_support_string = R"code(
+const char fp16_support_string[] = R"code(
 #define __HALF_TO_US(var) *(reinterpret_cast<unsigned short *>(&(var)))
 #define __HALF_TO_CUS(var) *(reinterpret_cast<const unsigned short *>(&(var)))
 #if defined(__cplusplus)
@@ -58,7 +58,7 @@ const std::string fp16_support_string = R"code(
 typedef __half half;
 )code";
 
-const std::string type_support_string = R"code(
+const char type_support_string[] = R"code(
 using float32 = float;
 using float64 = double;
 using float16 = half;
@@ -83,8 +83,8 @@ const std::map<std::string, std::string> fused_op_binary_ops = {
   {"elemwise_div", "div"},
   {"_div"        , "div"},
   {"_Div"        , "div"},
-  {"_Power"      , "pow"},
-  {"_power"      , "pow"},
+  {"_Power"      , "power"},
+  {"_power"      , "power"},
   {"_Maximum"    , "max"},
   {"_maximum"    , "max"},
   {"_Minimum"    , "min"},
@@ -158,6 +158,10 @@ const std::map<std::string, std::vector<std::string>> fused_op_special_ops = {
   {"_div_scalar", {"div(%, %)", "_0", "scalar"}},
   {"_DivScalar", {"div(%, %)", "_0", "scalar"}},
   {"_rdiv_scalar", {"rdiv(%, %)", "_0", "scalar"}},
+  {"_power_scalar", {"power(%, %)", "_0", "scalar"}},
+  {"_PowerScalar", {"power(%, %)", "_0", "scalar"}},
+  {"_rpower_scalar", {"rpow(%, %)", "_0", "scalar"}},
+  {"_RPowerScalar", {"rpow(%, %)", "_0", "scalar"}},
   {"_RDivScalar", {"rdiv(%, %)", "_0", "scalar"}},
   {"Cast", {"cast<%>(%)", "dtype", "_0"}},
   {"cast", {"cast<%>(%)", "dtype", "_0"}},
@@ -195,7 +199,8 @@ const std::map<std::string, std::vector<std::string>> fused_op_special_ops = {
   {"_backward_div_scalar", {"(% / %)", "_0", "scalar"}},
   {"_backward_div_scalar", {"(% / %)", "_0", "scalar"}},
   {"_backward_rdiv_scalar", {"(-% * % / (% * %))", "_0", "scalar", "_1", "_1"}},
-  {"_backward_hypot_scalar", {"(% * % / hypot(%, %))", "_0", "_1", "_1", "scalar"}}
+  {"_backward_hypot_scalar", {"(% * % / hypot(%, %))", "_0", "_1", "_1", "scalar"}},
+  {"_backward_radians", {"radians(%)", "_0"}}
   // TODO(ptredak): arange
 };
 
@@ -209,13 +214,13 @@ const std::map<std::string, std::vector<std::vector<std::string>>> fused_op_mimo
   {"_backward_div", {{"(% / %)", "_0", "_2"},
                      {"(-% * % / (% * %))", "_0", "_1", "_2", "_2"}}},
   {"_backward_power", {{"(% * % * powf(%, % - 1))", "_0", "_2", "_1", "_2"},
-                       {"(% * powf(%, %) & logf(%))", "_0", "_1", "_2", "_1"}}},
+                       {"(% * powf(%, %) * logf(%))", "_0", "_1", "_2", "_1"}}},
   {"_backward_power_scalar", {{"(% * % * powf(%, % - 1))", "_0", "scalar", "_1", "scalar"}}},
-  {"_backward_rpower_scalar", {{"(% * powf(%, %) & logf(%))", "_0", "scalar", "_2", "scalar"}}},
-  {"_backward_maximum", {{"((% > %) ? % : 0)", "_1", "_2", "_0"},
-                         {"((% > %) ? 0 : %)", "_1", "_2", "_0"}}},
-  {"_backward_minimum", {{"((% < %) ? % : 0)", "_1", "_2", "_0"},
-                         {"((% < %) ? 0 : %)", "_1", "_2", "_0"}}},
+  {"_backward_rpower_scalar", {{"(% * % * logf(%))", "_0", "_1", "scalar"}}},
+  {"_backward_maximum", {{"((% >= %) ? % : 0)", "_1", "_2", "_0"},
+                         {"((% >= %) ? 0 : %)", "_1", "_2", "_0"}}},
+  {"_backward_minimum", {{"((% <= %) ? % : 0)", "_1", "_2", "_0"},
+                         {"((% <= %) ? 0 : %)", "_1", "_2", "_0"}}},
   {"_backward_hypot", {{"(% * % / hypot(%, %))", "_0", "_1", "_1", "_2"},
                        {"(% * % / hypot(%, %))", "_0", "_2", "_1", "_2"}}}
 };
@@ -225,7 +230,7 @@ const std::vector<std::string> fused_op_variable_io_ops = {
   "_backward_Activation"
 };
 
-const std::string fused_op_function_definitions = R"code(
+const char fused_op_function_definitions[] = R"code(
 template <typename DType>
 struct LoadType {
   using Type = DType;
@@ -298,8 +303,13 @@ inline DType rdiv(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
-inline DType pow(const DType a, const DType2 b) {
+inline DType power(const DType a, const DType2 b) {
   return powf(a, b);
+}
+
+template <typename DType, typename DType2>
+inline DType rpow(const DType a, const DType2 b) {
+  return powf(b, a);
 }
 
 template <typename DType, typename DType2>
@@ -625,12 +635,12 @@ inline DType backward_square(const DType val, const DType grad) {
 }
 
 template <typename DType>
-inline DType zero(const DType val) {
+inline typename LoadType<DType>::Type zero(const DType val) {
   return 0;
 }
 
 template <typename DType>
-inline DType one(const DType val) {
+inline typename LoadType<DType>::Type one(const DType val) {
   return 1;
 }
 
@@ -709,12 +719,12 @@ inline DType erfinv(const DType val) {
 
 )code";
 
-const std::string fused_op_kernel_begin = R"code(
+const char fused_op_kernel_begin[] = R"code(
 const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 for (int i = tid; i < N; i+= gridDim.x * blockDim.x) {
 )code";
 
-const std::string fused_op_kernel_end = R"code(
+const char fused_op_kernel_end[] = R"code(
 }
 }
 )code";

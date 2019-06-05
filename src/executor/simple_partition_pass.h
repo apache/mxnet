@@ -253,7 +253,7 @@ std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_s
             e = entry_map[e];
           } else {
             auto new_node = nnvm::Node::Create();
-            new_node->attrs.name = e.node->attrs.name + std::to_string(e.index);
+            new_node->attrs.name = "input_" + std::to_string(inputs.size());
             entry_map.insert({e, nnvm::NodeEntry{new_node, 0, 0}});
             inputs.push_back(e);
             e.node = new_node;

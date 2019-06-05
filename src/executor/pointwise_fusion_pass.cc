@@ -67,7 +67,7 @@ namespace {
     // the name of the new node will be the concatenation of all the node names in the subgraph
     DFSVisit(subgraph.outputs, [&name_oss](const nnvm::NodePtr n) {
       if (n->op() != nullptr)
-        name_oss << n->attrs.name << "_";
+        name_oss << n->op()->name << "_";
     });
     auto subgraph_name = name_oss.str();
     subgraph_name.pop_back();
@@ -78,7 +78,6 @@ namespace {
     }
     auto params_names = params_oss.str();
     params_names.pop_back();
-    node->attrs.dict["symbol_json"] = nnvm::pass::SaveJSON(subgraph);
     node->attrs.dict["num_inputs"] = std::to_string(inputs_size);
     node->attrs.dict["num_outputs"] = std::to_string(subgraph.outputs.size());
     node->attrs.op = Op::Get("FusedOp");

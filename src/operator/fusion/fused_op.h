@@ -29,12 +29,9 @@
 namespace mxnet {
 
 struct FusedOpConfig : public dmlc::Parameter<FusedOpConfig> {
-  std::string symbol_json;
   int num_inputs;
   int num_outputs;
   DMLC_DECLARE_PARAMETER(FusedOpConfig) {
-    DMLC_DECLARE_FIELD(symbol_json)
-    .describe("JSON of the replaced symbol.");
     DMLC_DECLARE_FIELD(num_inputs)
     .describe("Number of inputs.");
     DMLC_DECLARE_FIELD(num_outputs)

@@ -20,13 +20,13 @@
 #include <nvrtc.h>
 #include <cuda.h>
 #include <algorithm>
+#include <nnvm/pass_functions.h>
 #include "./fused_op.h"
 #include "./fused_op-inl.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../../executor/exec_pass.h"
 #include "../../common/cuda_utils.h"
-#include <nnvm/pass_functions.h>
 
 namespace mxnet {
 
@@ -64,7 +64,6 @@ FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
   this->initialized_ = false;
   this->cc_major_ = -1;
   this->cc_minor_ = -1;
-
 }
 
 void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
@@ -91,7 +90,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
     if (source != nullptr) {
       std::string var_name = "temp" + std::to_string(temp_name_counter++);
       if (source->is_variable()) {
-        code += "const auto " + var_name + " = load(input_" + source->attrs.name + ", i);\n";
+        code += "const auto " + var_name + " = load(" + source->attrs.name + ", i);\n";
         CHECK_EQ(outputs[i], 1);
         variables[{i, 0}] = var_name;
       } else {
@@ -276,7 +275,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     for (const auto &type : in_dtypes) {
       std::string type_name = detail::mshadowTypeToString(type);
       aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      kernel_params += "DType" + std::to_string(i) + "* input_" +input_names[i];
+      kernel_params += "DType" + std::to_string(i) + "* " +input_names[i];
       ++i;
       if (i < num_params) {
         kernel_params += ", ";
@@ -292,7 +291,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
         kernel_params += ", ";
       }
     }
-    code_ = detail::fp16_support_string + "\n" +
+    code_ = std::string(detail::fp16_support_string) + "\n" +
             detail::type_support_string + "\n" +
             detail::fused_op_function_definitions + "\n" +
             aux_code + "\n" +

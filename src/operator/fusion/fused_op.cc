@@ -40,7 +40,6 @@ void FusedOpParamParser(nnvm::NodeAttrs* attrs) {
     os << ")";
     throw dmlc::ParamError(os.str());
   }
-  CHECK(!param.symbol_json.empty());
   attrs->parsed = FusedOpPtr(new FusedOp(attrs, param));
 }
 
