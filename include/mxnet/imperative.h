@@ -48,7 +48,7 @@ class AGInfo {
   bool fresh_out_grad;
 
   AGInfo() :
-    grad_req(kNullOp), fresh_out_grad(false) {}
+      grad_req(kNullOp), fresh_out_grad(false) {}
 
   static void Clear(const nnvm::NodePtr& node) {
     if (node == nullptr || node->info.empty()) return;
@@ -73,7 +73,7 @@ class AGInfo {
   static bool IsVariable(const nnvm::NodePtr& node) {
     AGInfo& info = Get(node);
     return info.grad_req != kNullOp && info.outputs.size() == 1
-           && info.out_grads.size() == 1;
+        && info.out_grads.size() == 1;
   }
 };
 
