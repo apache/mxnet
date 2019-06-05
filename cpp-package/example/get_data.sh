@@ -51,6 +51,7 @@ download () {
     (($? != 0)) && exit 1 || return 0
 }
 
+# MNIST dataset from: http://yann.lecun.com/exdb/mnist/
 FILES=(
     "http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz"
     "http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz"
