@@ -602,7 +602,7 @@ class NDArray {
    *
    * \return The created NDArray view.
    */
-  static NDArray FromDLPack(const DLManagedTensor* tensor);
+  static NDArray FromDLPack(const DLManagedTensor* tensor, bool transient_handle);
 
   /*!
    * \brief Update ndarray chunk storage handles using existing ndarray storage handles

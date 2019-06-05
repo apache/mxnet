@@ -344,7 +344,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 6U) << "Transpose support at most 6 dimensions";
+  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   mxnet::TShape ret(shp.ndim(), -1);
   if (param.axes.ndim() == 0) {
     for (int i = 0; i < shp.ndim(); ++i) {
@@ -1950,10 +1950,10 @@ struct ReverseParam : public dmlc::Parameter<ReverseParam> {
 #define REVERSE_MAX_DIM 10U
 
 struct reverse {
-  MSHADOW_XINLINE static int ReverseIndex(index_t idx,
-                                          index_t nreversedim,
-                                          const index_t * stride_,
-                                          const index_t * trailing_) {
+  MSHADOW_XINLINE static index_t ReverseIndex(index_t idx,
+                                              index_t nreversedim,
+                                              const index_t * stride_,
+                                              const index_t * trailing_) {
     index_t outputIndex = idx;
     for (index_t i = 0; i < nreversedim; ++i) {
       const index_t low = outputIndex % trailing_[i];

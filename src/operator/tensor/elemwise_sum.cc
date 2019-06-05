@@ -53,7 +53,7 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
     nnvm::NodePtr node = nnvm::Node::Create();
     node->attrs.op = copy_op;
     node->inputs = {ograds[0]};
-    ret.emplace_back(std::move(node), 0, 0);
+    ret.emplace_back(std::move(node));
   }
   return ret;
 }

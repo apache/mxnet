@@ -414,8 +414,7 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
     } else {
       os << n->attrs.name << "_in" << i << "_backward";
     }
-    auto p = MakeNode("zeros_like", os.str(), {n->inputs[i]}, nullptr, &n);
-    ret.emplace_back(p);
+    ret.emplace_back(MakeNode("zeros_like", os.str(), {n->inputs[i]}, nullptr, &n));
   }
   return ret;
 }

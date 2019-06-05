@@ -332,7 +332,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   std::vector<NodeEntry> xs;
   for (size_t i = 0; i < grad_req_types.size(); ++i) {
     if (grad_req_types[i] != kNullOp) {
-      xs.emplace_back(NodeEntry{args[i], 0, 0});
+      xs.emplace_back(args[i]);
     }
   }
 

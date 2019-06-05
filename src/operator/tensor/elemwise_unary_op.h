@@ -35,9 +35,10 @@
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
 #include "../../ndarray/ndarray_function.h"
+
 #if MSHADOW_USE_MKL == 1
-#include "mkl.h"
-#endif
+#include "../mkl_functions-inl.h"
+#endif  // MSHADOW_USE_MKL == 1
 
 namespace mxnet {
 namespace op {
@@ -264,6 +265,48 @@ class UnaryOp : public OpBase {
     }
   }
 
+#if MSHADOW_USE_MKL == 1
+  template<typename OP, typename MKL_OP>
+  static void MKL_Compute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+    if (req[0] == kNullOp)  return;
+    auto type_flag = inputs[0].type_flag_;
+    size_t input_size = inputs[0].Size();
+    if ((req[0] == kWriteTo || req[0] == kWriteInplace) &&
+        mkl_func::check_size(input_size) &&
+        mkl_func::check_type(type_flag)) {
+      // set DType as float or double according to type_flag
+      MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
+        MKL_OP::Vectorize(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+      });
+    } else {
+      Compute<cpu, OP>(attrs, ctx, inputs, req, outputs);
+    }
+  }
+
+  template<typename OP, typename MKL_OP>
+  static void MKL_ComputeEx(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs) {
+    CHECK_EQ(inputs.size(), 1U)
+      << "Invalid input, only one input is allowed";
+    CHECK_EQ(outputs.size(), 1U)
+      << "Invalid output, only one output is allowed";
+    CHECK_NE(inputs[0].storage_type(), kDefaultStorage)
+      << "Operation requires a sparse output storage type";
+    CHECK_NE(outputs[0].storage_type(), kDefaultStorage)
+      << "Operation requires a sparse output storage type";
+    if (inputs[0].storage_shape().Size()) {
+      MapToFCompute<cpu>(attrs, ctx, inputs, req, outputs, MKL_Compute<OP, MKL_OP>);
+    }
+  }
+#endif
+
   template<typename xpu, typename op>
   static void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
                                const OpContext &ctx,
@@ -352,43 +395,6 @@ class UnaryOp : public OpBase {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
   }
-
-#if MSHADOW_USE_MKL == 1
-  static inline void MKLLog(MKL_INT size, const float* pIn, float* pOut) {
-    vsLn(size, pIn, pOut);
-  }
-
-  static inline void MKLLog(MKL_INT size, const double* pIn, double* pOut) {
-    vdLn(size, pIn, pOut);
-  }
-#endif
-
-  template<typename xpu, typename OP>
-  static void LogCompute(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
-    if (req[0] == kNullOp) return;
-    // if defined MSHADOW_USE_MKL then call mkl log when req is KWriteTo, type_flag
-    // is mshadow::kFloat32 or mshadow::kFloat64 and data size less than or equal MKL_INT_MAX
-#if MSHADOW_USE_MKL == 1
-    auto type_flag = inputs[0].type_flag_;
-    const size_t MKL_INT_MAX = (sizeof(MKL_INT) == sizeof(int)) ? INT_MAX : LLONG_MAX;
-    size_t input_size = inputs[0].Size();
-    if (req[0] == kWriteTo &&
-        input_size <= MKL_INT_MAX &&
-        (type_flag == mshadow::kFloat32 || type_flag == mshadow::kFloat64)) {
-      MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
-        MKLLog(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
-      });
-    } else {
-      Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
-    }
-#else
-    Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
-#endif
-  }
 };
 
 /*! \brief Map legacy unary_bwd to backward_grad */
@@ -428,7 +434,10 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DstDType> out = outputs[0].FlatTo1D<xpu, DstDType>(s);
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, SrcDType, {
       Tensor<xpu, 1, SrcDType> data = inputs[0].FlatTo1D<xpu, SrcDType>(s);
-      Assign(out, req[0], tcast<DstDType>(data));
+      if (outputs[0].type_flag_ != inputs[0].type_flag_ ||
+          req[0] != kWriteInplace) {
+        Assign(out, req[0], tcast<DstDType>(data));
+      }
     });
   });
 }
@@ -554,13 +563,45 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
   NNVM_REGISTER_OP(__name$)                                         \
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}};             \
     })                                                              \
   .add_argument("data", "NDArray-or-Symbol", "The input array.")
+
+#if MSHADOW_USE_MKL == 1
+  /*! \bried MKL Unary compute.
+   *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
+   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
+  */
+  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$,                          \
+                                                         __kernel$, __mkl_kernel$)                 \
+    MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                         \
+    MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                             \
+    .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1,                    \
+                                 false, true, true>)                                               \
+    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)   \
+    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
+
+  /*! \bried MKL Unary compute.
+   *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
+   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
+  */
+  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$, __mkl_kernel$)    \
+    MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                         \
+    MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                             \
+    .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1,                    \
+                                 false, true, false>)                                              \
+    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)   \
+    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__xpu$, __kernel$>)
+
+  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$,             \
+                                                           __mkl_kernel$)                          \
+    MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                         \
+    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)
+#endif
 
 /*! \brief Unary compute, with FComputeEx for csr and rsp available  */
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$)                     \

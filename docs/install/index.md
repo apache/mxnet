@@ -120,7 +120,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="pip">
 <div class="v1-4-1">
 
-MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
 
 ```
 $ pip install mxnet
@@ -140,7 +140,7 @@ $ pip install mxnet==1.4.0
 $ pip install mxnet==1.3.1
 ```
 
-MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
 
 ```
 $ pip install mxnet-mkl==1.3.1
@@ -153,7 +153,7 @@ $ pip install mxnet-mkl==1.3.1
 $ pip install mxnet==1.2.1
 ```
 
-MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
 
 ```
 $ pip install mxnet-mkl==1.2.1
@@ -206,7 +206,7 @@ $ pip install mxnet==0.11.0
 $ pip install mxnet --pre
 ```
 
-MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="../../faq/perf.md#intel-cpu">MXNet tuning guide</a>.
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
 
 ```
 $ pip install mxnet-mkl --pre
@@ -767,7 +767,10 @@ To ensure MXNet R package runs with the version of OpenBLAS installed, create a 
 ln -sf /usr/local/opt/openblas/lib/libopenblas.dylib /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
 ```
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
+Note: packages for 3.6.x are not yet available.
+
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/macosx/). The latest is [v3.5.3](https://cran.r-project.org/bin/macosx/R-3.5.3.pkg).
+
 You can [build MXNet-R from source](osx_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -1127,7 +1130,9 @@ To build from source, refer to the <a href="windows_setup.html">MXNet Windows in
 <div class="cpu">
 </br>
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/windows/).
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
+
 You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -1408,7 +1413,16 @@ then running:
   free -m # to verify the swapfile size has been increased
 ```
 
-**Step 2** Install MXNet Python Bindings
+**Step 2** Build cython modules (optional)
+
+```bash
+$ pip install Cython
+$ make cython # You can set the python executable with `PYTHON` flag, e.g., make cython PYTHON=python3
+```
+*MXNet* tries to use the cython modules unless the environment variable `MXNET_ENABLE_CYTHON` is set to `0`. If loading the cython modules fails, the default behavior is falling back to ctypes without any warning. To raise an exception at the failure, set the environment variable `MXNET_ENFORCE_CYTHON` to `1`. See [here](/faq/env_var.html) for more details.
+
+
+**Step 3** Install MXNet Python Bindings
 
 To install Python bindings run the following commands in the MXNet directory:
 
