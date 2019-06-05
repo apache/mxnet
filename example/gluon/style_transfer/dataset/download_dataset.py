@@ -27,6 +27,7 @@ def unzip_file(filename, outpath):
     fh.close()
 
 # Dataset from COCO 2014: http://cocodataset.org/#download
+# for full text of the license, see https://creativecommons.org/licenses/by/4.0/legalcode
 download('http://msvocds.blob.core.windows.net/coco2014/train2014.zip', 'dataset/train2014.zip')
 download('http://msvocds.blob.core.windows.net/coco2014/val2014.zip', 'dataset/val2014.zip')
 

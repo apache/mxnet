@@ -45,6 +45,8 @@ def load_mldataset(filename):
 def ensure_local_data(prefix):
     if not os.path.exists("%s.zip" % prefix):
         print("Downloading MovieLens data: %s" % prefix)
+        # MovieLens 100k dataset from https://grouplens.org/datasets/movielens/
+        # for full text of the usage license, see http://files.grouplens.org/datasets/movielens/ml-100k-README.txt
         os.system("wget http://files.grouplens.org/datasets/movielens/%s.zip" % prefix)
         os.system("unzip %s.zip" % prefix)
 
