@@ -101,9 +101,10 @@ The idiom to calculate higher order gradients is the following:
 from mxnet import ndarray as nd
 from mxnet import autograd as ag
 x=nd.array([1,2,3])
+x.attach_grad()
 def f(x):
     # A function which supports higher oder gradients
-    return x*x
+    return nd.log(x)
 ```
 
 If the operators used in `f` don't support higher order gradients you will get an error like
@@ -116,8 +117,10 @@ Using mxnet.autograd.grad multiple times:
 ```python
 with ag.record():
     y = f(x)
-    y_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
-    y_grad_grad = ag.grad(y_grad, x, create_graph=False, retain_graph=True)[0]
+    x_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
+    x_grad_grad = ag.grad(x_grad, x, create_graph=False, retain_graph=True)[0]
+print(f"dy/dx: {x_grad}")
+print(f"d2y/dx2: {x_grad_grad}")
 ```
 
 Running backward on the backward graph:
@@ -125,8 +128,12 @@ Running backward on the backward graph:
 ```python
 with ag.record():
     y = f(x)
-    y_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
-y_grad_grad = y_grad.backward()
+    x_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
+x_grad.backward()
+x_grad_grad = x.grad
+print(f"dy/dx: {x_grad}")
+print(f"d2y/dx2: {x_grad_grad}")
+
 ```
 
 Both methods are equivalent, except that in the second case, retain_graph on running backward is set
