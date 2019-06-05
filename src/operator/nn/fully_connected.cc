@@ -165,7 +165,6 @@ static bool FullyConnectedType(const nnvm::NodeAttrs& attrs,
       attrs, in_type, out_type, -1);
 }
 
-
 struct FullyConnectedGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
@@ -176,22 +175,6 @@ struct FullyConnectedGrad {
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
-
-
-std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(
-    const nnvm::NodePtr& n,
-    const std::vector<nnvm::NodeEntry>& ograds) {
-  std::vector<nnvm::NodeEntry> ret;
-  decltype(nnvm::NodeEntry::index) i = 0;
-  for (const auto& x : n->inputs) {
-    std::ostringstream os;
-    os << n->attrs.name << "_backward_" << i;
-    ret.emplace_back(nnvm::NodeEntry{MakeNode("zeros_like", os.str(), {x}, nullptr, &n), 0, 0});
-    ++i;
-  }
-  return ret;
-}
-
 
 inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
                                  const int dev_mask,
@@ -342,7 +325,6 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{1, 0}};
 })
-.set_attr<nnvm::FGradient>("FGradient", FullyConnectedBackwardGrad)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 #if MXNET_USE_MKLDNN == 1

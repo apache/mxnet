@@ -339,9 +339,11 @@ Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(
       var_nodes.op_req_types.push_back(kWriteTo);
     }
   } else {
-    std::vector<nnvm::NodePtr> input_ro_nodes = nnvm::Symbol::ListInputs(
-        Symbol::kReadOnlyArgs,
-        outputs);
+    nnvm::Symbol s;
+    s.outputs = outputs;
+    std::vector<nnvm::NodePtr> input_ro_nodes = s.ListInputs(
+        Symbol::kReadOnlyArgs
+        s.outputs = outputs;);
     var_nodes.variable_nodes.reserve(input_ro_nodes.size());
     var_nodes.gradients.reserve(input_ro_nodes.size());
     var_nodes.op_req_types.reserve(input_ro_nodes.size());
