@@ -392,6 +392,7 @@ def test_get_symbol():
         y = x*x + 2*z - 1
     assert len(get_symbol(y).list_arguments()) == 2
 
+
 @with_seed()
 def test_grad_with_stype():
     def check_grad_with_stype(array_stype, grad_stype, expected_stype):
@@ -410,6 +411,7 @@ def test_grad_with_stype():
         for grad_stype in stypes:
             # check the stype of the gradient when provided
             check_grad_with_stype(stype, grad_stype, grad_stype)
+
 
 @with_seed()
 def test_sparse_dot_grad():
@@ -433,6 +435,7 @@ def test_sparse_dot_grad():
     dns = mx.nd.ones(shape)
     dns.attach_grad(stype='row_sparse')
     check_sparse_dot_grad(dns)
+
 
 @with_seed()
 def test_gradient():
