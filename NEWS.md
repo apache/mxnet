@@ -217,6 +217,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Large array support for randint (#14242)
 * [MXNET-1185] Support large array in several operators (part 1) (#13418)
 * [MXNET-1401] adding more operators to test support for Large Tensor (#14944)
+* [MXNET-1410]Adding Large Tensor Support for tensor transpose (#15059)
 
 
 #### Quantization
@@ -340,6 +341,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Update version to v1.5.0 including clojure package (#13566)
 * [clojure][generator] ndarray/symbol api random merged (#14800)
 * upgrade codox to work with lein 2.9.0 (#14133)
+* [clojure] fix: image test does not rely on s3 to run (#15122)
 
 #### Julia
 * Julia v0.7/1.0 support and drop v0.6 support (#12845)
@@ -525,6 +527,12 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Add workspace cleaning after job finished (#13490)
 * Add a retry to qemu_provision (#13551)
 * Deprecate Jenkinsfile (#13474)
+* [MXNET-1408] Adding test to verify Large Tensor Support for ravel and unravel (#15048)
+* move amp test and change op support to warning (#15085)
+* Fixes call to build ubuntu gpu in nightly tests (#14964)
+* rat check make target (#15127)
+* add epsilon for tolerance level (#15098)
+* Change mx.test_utils.list_gpus to mx.context.num_gpus where possible (#14946)
 
 
 ### Example and Tutorials
@@ -746,6 +754,16 @@ Note: this feature is still experimental, for more details, refer to [design doc
 *  Prevent crashes for opencv exception and std::exception (#14433)
 * Set idx2name for Optimizer object (#14703)
 * Revert "Bumped minor version from 1.4.0 to 1.5.0 on master, updated License file" (#13558)
+* [BUGFIX] fix unknown parameter shapes when np_shape is turned on. (#15097)
+* Add gluonCV to fix AMP Tutorial (#15039)
+* fix the if condition for LayerNorm (#15094)
+* [MKLDNN]Fix mkldnn deconvolution forward with bias (#15088)
+* NER example: fix divisions by zero (#15068)
+* remove warning in tutorial: (#15135)
+* [MXNET-1291] solve pylint errors in examples with issue no.12205 (#13938)
+* Revert "Improve cached_op performance for static mode (#14785)" (#14868)
+* Fix mkldnn backend when using naive engine (#15089)
+* fix gluon rnn cell single step unroll (#15081)
 
 
 ### Documentation
