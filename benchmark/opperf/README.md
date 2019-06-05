@@ -179,4 +179,4 @@ All contributions are welcome. Below is the list of desired features:
 2. Enhance MXNet profiler with additional APIs to programmatically fetch and process profiler data.
 3. Integration with CI/CD system to run operator benchmarks for PR builds, nightly builds.
 4. Dashboards and other modes of presentation of results for analyzing and planning tasks such as operator performance improvements.
-5. Integration with tools such as [Hypothesis](https://hypothesis.readthedocs.io/en/latest/) for randomized Tensor Shape generation for profiling to identify bottlenecks in the operators.
+5. Randomized Tensor Shape generation for profiling to identify bottlenecks in the operators.
