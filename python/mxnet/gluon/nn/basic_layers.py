@@ -26,7 +26,7 @@ import numpy as np
 
 from .activations import Activation
 from ..block import Block, HybridBlock
-from ..utils import _indent
+from ..utils import _indent, _to_classic_arrays, _to_np_arrays
 from ... import nd, sym
 
 
@@ -218,11 +218,14 @@ class Dense(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
+        # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
+        # We should rewrite this with np/npx ops.
+        x, weight, bias = _to_classic_arrays(x, weight, bias)
         act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
                                flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
-        return act
+        return _to_np_arrays(act)
 
     def __repr__(self):
         s = '{name}({layout}, {act})'
@@ -263,10 +266,12 @@ class Dropout(HybridBlock):
         self._axes = axes
 
     def hybrid_forward(self, F, x):
+        x = _to_classic_arrays(x)
         if self._rate > 0:
-            return F.Dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
+            out = F.Dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
         else:
-            return F.identity(x)
+            out = F.identity(x)
+        return _to_np_arrays(out)
 
     def __repr__(self):
         s = '{name}(p = {_rate}, axes={_axes})'

@@ -1289,6 +1289,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_expm1, unary_bwd<msh
 // gamma
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(gamma, cpu, mshadow_op::gamma)
 MXNET_ADD_SPARSE_OP_ALIAS(gamma)
+.add_alias("_npx_gamma")
 .describe(R"code(Returns the gamma function (extension of the factorial function \
 to the reals), computed element-wise on the input array.
 
