@@ -983,7 +983,7 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
   // setup gradient
   nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
 
-  if (dmlc::GetEnv("MXNET_USE_FUSION", true)) {
+  if (dmlc::GetEnv("MXNET_USE_FUSION", true) && default_ctx.dev_mask() == Context::kGPU) {
     g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
     g = FusePointwiseForward(std::move(g));
     g.attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs_);
