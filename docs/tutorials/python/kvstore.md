@@ -75,9 +75,9 @@ For each push, KVStore combines the pushed value with the value stored using an
 control how data is merged:
 
 ```python
-def update(key, input, stored):
+def update(key, value, stored):
     print("update on key: %d" % key)
-    stored += input * 2
+    stored += value * 2
 kv._set_updater(update)
 kv.pull(3, out=a)
 print(a.asnumpy())
@@ -86,7 +86,7 @@ print(a.asnumpy())
 `[[ 4.  4.  4.],[ 4.  4.  4.]]`<!--notebook-skip-line-->
 
 ```python
-kv.push(3, mx.nd.ones(shape))
+kv.push(3, mx.nd.ones(shape, mx.gpu(0)))
 #
 kv.pull(3, out=a)
 print(a.asnumpy())
