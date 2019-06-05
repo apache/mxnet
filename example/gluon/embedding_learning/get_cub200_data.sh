@@ -28,6 +28,7 @@ fi
 
 # the dataset is from Caltech-UCSD Birds 200
 # http://www.vision.caltech.edu/visipedia/CUB-200.html
-# for full text of the license, see https://creativecommons.org/licenses/by/4.0/legalcode
+# These datasets are copyright Caltech Computational Vision Group and licensed CC BY 4.0 Attribution.
+# See http://www.vision.caltech.edu/archive.html for details
 wget -P ${DATA_DIR} http://www.vision.caltech.edu/visipedia-data/CUB-200-2011/CUB_200_2011.tgz
 cd ${DATA_DIR}; tar -xf CUB_200_2011.tgz
