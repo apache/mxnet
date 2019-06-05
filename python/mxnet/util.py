@@ -334,7 +334,7 @@ class _NumpyArrayScope(object):
     """
     _current = threading.local()
 
-    def __init__(self, is_np_array):  #pylint: disable=redefined-outer-name
+    def __init__(self, is_np_array):  # pylint: disable=redefined-outer-name
         self._old_scope = None
         self._is_np_array = is_np_array
 
@@ -545,3 +545,39 @@ def use_np(func):
         A function or class wrapped in the Numpy-shape and NumPy-array scope.
     """
     return use_np_array(use_np_shape(func))
+
+
+def set_np_array(active):
+    """Turns on/off NumPy array semantics for the current thread in which `mxnet.numpy.ndarray`
+    is expected to be created, instead of the legacy `mx.nd.NDArray`.
+
+    Parameters
+    ---------
+    active : bool
+        A boolean value indicating whether the NumPy-array semantics should be turned on or off.
+
+    Returns
+    -------
+        A bool value indicating the previous state of NumPy array semantics.
+    """
+    cur_state = is_np_array()
+    _NumpyArrayScope._current.value = _NumpyArrayScope(active)
+    return cur_state
+
+
+def set_np(shape=True, array=True):
+    """A convenience function for setting NumPy shape and array semantics at the same time.
+
+    Parameters
+    ----------
+    shape : bool
+        A boolean value indicating whether the NumPy-shape semantics should be turned on or off.
+    array : bool
+        A boolean value indicating whether the NumPy-array semantics should be turned on or off.
+
+    Returns
+    -------
+        A tuple with elements indicating the previous states of shape and array
+        semantics, respectively.
+    """
+    return set_np_shape(shape), set_np_array(array)
