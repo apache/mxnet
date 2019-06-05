@@ -190,3 +190,5 @@ With Apache MXNet training using multiple GPUs doesn't need a lot of extra code.
 ## Recommended Next Steps
 
 * Check out our two video tutorial on improving your code performance. In the [first video](https://www.youtube.com/watch?v=n8tN6pRZBdE) we explain how to visualize the performance, and in the [second video](https://www.youtube.com/watch?v=Cqo7FPftNyo) we show how to optimize it
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
