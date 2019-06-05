@@ -34,6 +34,7 @@ from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, 
                        multi_mp_sgd_mom_update)
 from ..ndarray import sparse
 from ..random import normal
+from ..util import is_np_array
 
 __all__ = [
     'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LBSGD',
@@ -95,7 +96,7 @@ class Optimizer(object):
     def __init__(self, rescale_grad=1., param_idx2name=None, wd=0.,
                  clip_gradient=None, learning_rate=0.01,
                  lr_scheduler=None, sym=None, begin_num_update=0,
-                 multi_precision=False, param_dict=None, allow_np=False):
+                 multi_precision=False, param_dict=None):
         self.rescale_grad = rescale_grad
         self.lr = learning_rate
         self.lr_scheduler = lr_scheduler
@@ -120,7 +121,7 @@ class Optimizer(object):
         self.idx2name = param_idx2name.copy()
         self.sym_info = (sym.attr_dict(), sym.list_arguments()) if sym is not None else ()
         self.param_dict = param_dict if param_dict else {}
-        self.allow_np = allow_np
+        self.allow_np_array = is_np_array()
 
         self.set_lr_mult({})
         self.set_wd_mult({})
@@ -1648,6 +1649,9 @@ create = Optimizer.create_optimizer  # pylint: disable=invalid-name
 
 
 def _as_classic(a, allow_np):
+    # TODO(junwu): This is a temp solution for allowing converting
+    # np.ndarray to mx.nd.NDArray to be fed into the optimizer since
+    # users may have custom optimizers implemented using mx.nd.NDArray ops.
     from ..numpy import ndarray as np_ndarray
     if isinstance(a, (tuple, list)):
         if any(isinstance(x, np_ndarray) for x in a):
@@ -1675,7 +1679,7 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
-        allow_np = self.optimizer.allow_np
+        allow_np = self.optimizer.allow_np_array
         if not isinstance(index, (list, tuple)):
             indices = [index]
             grads = [_as_classic(grad, allow_np)]

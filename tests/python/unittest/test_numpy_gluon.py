@@ -18,6 +18,7 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from __future__ import division
+
 import mxnet as mx
 from mxnet import gluon, autograd, np, npx
 
@@ -61,8 +62,8 @@ def test_create_np_param():
     check_block_params(x.as_np_ndarray(), TestBlock2, True, np.ndarray)
 
 
+@npx.use_np
 def test_optimizer_with_np_ndarrays():
-    @npx.use_np
     class LinearRegression(gluon.HybridBlock):
         def __init__(self, num_input_dim=0, num_hidden_dim=100, num_output_dim=10):
             super(LinearRegression, self).__init__()
@@ -78,7 +79,6 @@ def test_optimizer_with_np_ndarrays():
             y_pred = h_relu.dot(w2)  # equivalent to F.np.dot(h_relu, w2)
             return y_pred
 
-    @npx.use_np
     class TotalLoss(gluon.HybridBlock):
         def hybrid_forward(self, F, pred, label):
             return ((pred - label) ** 2).sum()  # equivalent to F.np.sum(F.np.square(pred - label))
@@ -97,7 +97,7 @@ def test_optimizer_with_np_ndarrays():
 
     trainer = gluon.Trainer(regressor.collect_params(),
                             'sgd',
-                            {'learning_rate': 1e-3, 'momentum': 0.9, 'allow_np': True})
+                            {'learning_rate': 1e-3, 'momentum': 0.9})
 
     for t in range(5):
         with autograd.record():
