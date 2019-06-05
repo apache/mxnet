@@ -53,15 +53,11 @@ print(a.asnumpy())
 
 The data for pushing can be stored on any device. Furthermore, you can push multiple
 values into the same key, where KVStore will first sum all of these
-values and then push the aggregated value:
+values and then push the aggregated value. Here we will just demonstrate pushing a list of values on CPU.
+Please note when the sum will only happen if length of the value list is larger than 1.
 
 ```python
-# The numbers used below assume 4 GPUs
-gpus = mx.context.num_gpus()
-if gpus > 0:
-    contexts = [mx.gpu(i) for i in range(gpus)]
-else:
-    contexts = [mx.cpu(i) for i in range(4)]
+contexts = [mx.cpu(i) for i in range(4)]
 b = [mx.nd.ones(shape, ctx) for ctx in contexts]
 kv.push(3, b)
 kv.pull(3, out = a)
@@ -86,8 +82,7 @@ print(a.asnumpy())
 `[[ 4.  4.  4.],[ 4.  4.  4.]]`<!--notebook-skip-line-->
 
 ```python
-kv.push(3, mx.nd.ones(shape, contexts[0]))
-#
+kv.push(3, mx.nd.ones(shape))
 kv.pull(3, out=a)
 print(a.asnumpy())
 ```
