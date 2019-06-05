@@ -38,7 +38,7 @@ except ImportError:
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape
+from ..util import is_np_shape, is_np_array
 
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
@@ -112,12 +112,18 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     list of NDArray
         Each corresponds to a context in `ctx_list`.
     """
+    # TODO(junwu): temp solution for supporting np.ndarray
+    # rewrite this using np ops
     if not isinstance(data, ndarray.NDArray):
         data = ndarray.array(data, ctx=ctx_list[0])
     if len(ctx_list) == 1:
+        if is_np_array():
+            data = data.as_np_ndarray()
         return [data.as_in_context(ctx_list[0])]
 
     slices = split_data(data, len(ctx_list), batch_axis, even_split)
+    if is_np_array():
+        slices = [i.as_np_ndarray() for i in slices]
     return [i.as_in_context(ctx) for i, ctx in zip(slices, ctx_list)]
 
 
@@ -415,6 +421,7 @@ class HookHandle(object):
     def __exit__(self, ptype, value, trace):
         self.detach()
 
+
 def shape_is_known(shape):
     """Check whether a shape is completely known with or without np semantics.
 
@@ -431,6 +438,7 @@ def shape_is_known(shape):
         assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
                                             "received {}".format(unknown_dim_size, dim_size)
     return True
+
 
 def _check_same_symbol_type(symbols):
     """Check whether all the symbols in the list are of the same type.
@@ -458,23 +466,33 @@ def _check_same_symbol_type(symbols):
 def _check_all_np_ndarrays(out):
     """Check if ndarrays in out are all np.ndarray"""
     from ..numpy import ndarray as np_ndarray
+    from ..symbol.numpy import _Symbol as np_symbol
     assert isinstance(out, (list, tuple))
     for array in out:
-        if not isinstance(array, np_ndarray):
-            raise TypeError('Expected np.ndarray type in output, while received type '
+        if not isinstance(array, (np_ndarray, np_symbol)):
+            raise TypeError('Expected np.ndarray or np._Symbol type in output, while received type '
                             '{}'.format(str(type(array))))
 
 
-def shape_is_known(shape):
-    """Check whether a shape is completely known w/ or w/o np semantics."""
-    if shape is None:
-        return False
-    unknown_dim_size = -1 if is_np_shape() else 0
-    if len(shape) == 0:
-        return unknown_dim_size == -1
-    for dim_size in shape:
-        if dim_size == unknown_dim_size:
-            return False
-        assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
-                                            "received {}".format(unknown_dim_size, dim_size)
-    return True
+def _to_classic_arrays(*args):
+    """Convert arrays to classic arrays. This is used in a Gluon layer for converting
+    inputs of np arrays to classic arrays so that the layer built with legacy ops can still
+    be used in np_array semantics."""
+    num_inputs = len(args)
+    assert num_inputs != 0
+    if not is_np_array():
+        return args[0] if num_inputs == 1 else args
+    in_arrs = [arr if arr is None else arr.as_classic_ndarray() for arr in args]
+    return in_arrs[0] if num_inputs == 1 else in_arrs
+
+
+def _to_np_arrays(*args):
+    """Convert arrays to np arrays. This is used in a Gluon layer for converting
+    outputs of classic arrays to np arrays so that the layer built with legacy ops can still
+    be used in np_array semantics."""
+    num_outputs = len(args)
+    assert num_outputs != 0
+    if not is_np_array():
+        return args[0] if num_outputs == 1 else args
+    out = [arr.as_np_ndarray() for arr in args]
+    return out[0] if num_outputs == 1 else out

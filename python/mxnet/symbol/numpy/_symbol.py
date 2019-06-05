@@ -29,7 +29,8 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax']
+__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
+           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -45,53 +46,23 @@ class _Symbol(Symbol):
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
-        if isinstance(other, _Symbol):
-            return _npi.add(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.add_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+        return add(self, other)
 
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
-        if isinstance(other, _Symbol):
-            return _npi.subtract(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.subtract_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+        return subtract(self, other)
 
     def __rsub__(self, other):
         """x.__rsub__(y) <=> y - x"""
-        if isinstance(other, _Symbol):
-            return _npi.subtract(other, self)
-        elif isinstance(other, numeric_types):
-            return _npi.rsubtract_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+        return subtract(other, self)
 
     def __mul__(self, other):
         """x.__mul__(y) <=> x * y"""
-        if isinstance(other, _Symbol):
-            return _npi.multiply(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.multiply_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+        return multiply(self, other)
 
     def __rmul__(self, other):
         """x.__rmul__(y) <=> y * x"""
-        if isinstance(other, _Symbol):
-            return _npi.multiply(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.multiply_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand"
-                            .format(str(type(other))))
+        return multiply(other, self)
 
     def __div__(self, other):
         raise AttributeError('_Symbol.__div__ is replaced by __truediv__. If you are using'
@@ -109,63 +80,32 @@ class _Symbol(Symbol):
 
     def __mod__(self, other):
         """x.__mod__(y) <=> x % y"""
-        if isinstance(other, _Symbol):
-            return _npi.mod(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.mod_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return mod(self, other)
 
     def __rmod__(self, other):
         """x.__rmod__(y) <=> y % x"""
-        if isinstance(other, _Symbol):
-            return _npi.mod(other, self)
-        elif isinstance(other, numeric_types):
-            return _npi.rmod_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return mod(other, self)
 
     def __idiv__(self, other):
         raise NotImplementedError
 
     def __truediv__(self, other):
         """x.__truediv__(y) <=> x / y"""
-        if isinstance(other, _Symbol):
-            return _npi.true_divide(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.true_divide_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as divisor".format(str(type(other))))
+        return divide(self, other)
 
     def __rtruediv__(self, other):
         """x.__rtruediv__(y) <=> y / x"""
-        if isinstance(other, _Symbol):
-            return _npi.true_divide(other, self)
-        elif isinstance(other, numeric_types):
-            return _npi.rtrue_divide_scalar(self, float(other)).as_np_ndarray()
-        else:
-            raise TypeError("_Symbol does not support type {} as dividend".format(str(type(other))))
+        return divide(other, self)
 
     def __itruediv__(self, other):
         raise NotImplementedError
 
     def __pow__(self, other):
         """x.__pow__(y) <=> x ** y"""
-        if isinstance(other, _Symbol):
-            return _npi.power(self, other)
-        elif isinstance(other, numeric_types):
-            return _npi.power_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return power(self, other)
 
     def __rpow__(self, other):
-        """x.__rpow__(y) <=> y ** x"""
-        if isinstance(other, _Symbol):
-            return _npi.power(other, self)
-        elif isinstance(other, numeric_types):
-            return _npi.rpower_scalar(self, float(other))
-        else:
-            raise TypeError("_Symbol does not support type {} as operand".format(str(type(other))))
+        return power(other, self)
 
     def __neg__(self):
         """x.__neg__() <=> - x"""
@@ -243,6 +183,10 @@ class _Symbol(Symbol):
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))
         return Symbol(handle=hdl)
 
+    def as_np_ndarray(self):
+        """For the convenience of conversion between legacy and np symbols."""
+        return self
+
     @property
     # pylint: disable= invalid-name, undefined-variable
     def T(self):
@@ -261,6 +205,9 @@ class _Symbol(Symbol):
             raise NotImplementedError('only supports order=\'C\', while received {}'
                                       .format(str(order)))
         return _mx_np_op.reshape(self, newshape=shape, order=order)
+
+    def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
+        return _mx_np_op.argmax(self, axis, out)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -406,14 +353,6 @@ class _Symbol(Symbol):
         """
         raise NotImplementedError
 
-    def argmax(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`argmax`.
-
-        The arguments are the same as for :py:func:`argmax`, with
-        this array as data.
-        """
-        raise NotImplementedError
-
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
 
@@ -430,13 +369,11 @@ class _Symbol(Symbol):
         """
         raise NotImplementedError
 
-    def clip(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`clip`.
-
-        The arguments are the same as for :py:func:`clip`, with
-        this array as data.
+    def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
+        """Return an array whose values are limited to [min, max].
+        One of max or min must be given.
         """
-        raise NotImplementedError
+        return clip(self, min, max, out=out)
 
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
@@ -566,13 +503,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute nanprod')
 
-    def mean(self, *args, **kwargs):
+    def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`mean`.
 
         The arguments are the same as for :py:func:`mean`, with
         this array as data.
         """
-        raise NotImplementedError
+        return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def max(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`max`.
@@ -1031,11 +968,44 @@ def minimum(x1, x2, out=None):
 
 
 @set_module('mxnet.symbol.numpy')
+def add(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.add, _np.add, _npi.add_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def subtract(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.subtract, _np.subtract, _npi.subtract_scalar,
+                         _npi.rsubtract_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def multiply(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.multiply, _np.multiply, _npi.multiply_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def divide(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
+                         _npi.rtrue_divide_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def mod(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def power(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
 def stack(arrays, axis=0, out=None):
     """Join a sequence of arrays along a new axis.
 
-        The axis parameter specifies the index of the new axis in the dimensions of the result.
-        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+    The axis parameter specifies the index of the new axis in the dimensions of the result.
+    For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last
+    dimension.
 
     Parameters
     ----------
@@ -1159,6 +1129,48 @@ def argmax(a, axis=None, out=None):
         with the dimension along `axis` removed.
     """
     return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def clip(a, a_min, a_max, out=None):
+    """Clip (limit) the values in an array.
+
+    Given an interval, values outside the interval are clipped to
+    the interval edges.  For example, if an interval of ``[0, 1]``
+    is specified, values smaller than 0 become 0, and values larger
+    than 1 become 1.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array containing elements to clip.
+    a_min : scalar or `None`
+        Minimum value. If `None`, clipping is not performed on lower
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    a_max : scalar or `None`
+        Maximum value. If `None`, clipping is not performed on upper
+        interval edge. Not more than one of `a_min` and `a_max` may be
+        `None`.
+    out : _Symbol, optional
+        The results will be placed in this array. It may be the input
+        array for in-place clipping.  `out` must be of the right shape
+        to hold the output.
+
+    Returns
+    -------
+    clipped_array : _Symbol
+        An array with the elements of `a`, but where values
+        < `a_min` are replaced with `a_min`, and those > `a_max`
+        with `a_max`.
+    """
+    if a_min is None and a_max is None:
+        raise ValueError('array_clip: must set either max or min')
+    if a_min is None:
+        a_min = float('-inf')
+    if a_max is None:
+        a_max = float('inf')
+    return _npi.clip(a, a_min, a_max, out=out)
 
 
 _set_np_symbol_class(_Symbol)

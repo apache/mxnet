@@ -520,6 +520,7 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
 }
 
 NNVM_REGISTER_OP(BatchNorm)
+.add_alias("_npx_BatchNorm")
 .describe(R"code(Batch normalization.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
