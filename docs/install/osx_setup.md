@@ -95,7 +95,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	# For visualization of network graphs
 	pip install graphviz==0.8.4
 	# Jupyter notebook
-	pip3 install jupyter
+	pip install jupyter
 ```
 
 ### Build MXNet Shared Library
@@ -104,7 +104,7 @@ After you have installed the dependencies, pull the MXNet source code from Git a
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet ~/mxnet
 cd ~/mxnet && pushd .
-mkdir build && cd build
+mkdir -p build && cd build
 cmake \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -162,7 +162,7 @@ pip install -e python
 First we create a [virtualenv](https://docs.python-guide.org/dev/virtualenvs/#lower-level-virtualenv) to isolate this installation from our global environment.
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
 
-If you don't want to use virtualenv, a simple `pip install -e python` or `pip3 install -e python`
+If you don't want to use virtualenv, a simple `pip install -e python` or `pip install -e python`
 will suffice.
 
 ## Install the MXNet Package for R
