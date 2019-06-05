@@ -23,12 +23,12 @@
  * \brief
  * \author Clement Fuji Tsang
  */
-#include <algorithm>
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 #include <nnvm/pass_functions.h>
+#include <algorithm>
 #include "./simple_partition_pass.h"
 #include "../operator/fusion/fused_op-inl.h"
 #include "../operator/fusion/fused_op.h"
@@ -78,7 +78,6 @@ namespace {
     }
     auto params_names = params_oss.str();
     params_names.pop_back();
-    //node->attrs.dict["subgraph_params_names"] = params_names;
     node->attrs.dict["symbol_json"] = nnvm::pass::SaveJSON(subgraph);
     node->attrs.dict["num_inputs"] = std::to_string(inputs_size);
     node->attrs.dict["num_outputs"] = std::to_string(subgraph.outputs.size());
@@ -86,7 +85,7 @@ namespace {
     node->op()->attr_parser(&(node->attrs));
     return node;
   }
-}
+}  // namespace
 
 /*!
  * \brief Replace a set of nodes by a subgraph node
@@ -225,5 +224,5 @@ Graph FusePointwiseBackward(Graph &&g) {
   return ret;
 }
 
-}
-}
+}  // namespace exec
+}  // namespace mxnet

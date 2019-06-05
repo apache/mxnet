@@ -34,6 +34,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace mxnet {
 namespace exec {

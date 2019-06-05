@@ -17,9 +17,9 @@
  * under the License.
  */
 
-#include <algorithm>
 #include <nvrtc.h>
 #include <cuda.h>
+#include <algorithm>
 #include "./fused_op.h"
 #include "./fused_op-inl.h"
 #include "../operator_common.h"
@@ -59,7 +59,6 @@ inline std::string mshadowTypeToString(int type) {
 FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
   this->inputs_ = std::vector<FusedOpEntry>(config.num_inputs);
   this->outputs_ = std::vector<FusedOpEntry>(config.num_outputs);
-  //this->symbol_ = nnvm::pass::LoadJSON(config.symbol_json);
   this->symbol_ = nnvm::Graph();
   this->symbol_.outputs = attrs->subgraphs[0]->outputs;
   this->initialized_ = false;
@@ -68,13 +67,8 @@ FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
 
 }
 
-nnvm::Graph FusedOp::GetGraphWithoutControlDeps(nnvm::Graph &old) {
-  return old;
-}
-
 void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
-  const auto& codegen_graph = GetGraphWithoutControlDeps(this->symbol_);
-  const auto& g = codegen_graph.indexed_graph();
+  const auto& g = this->symbol_.indexed_graph();
   std::string code = "";
   int temp_name_counter = 0;
   using NodeEntry = nnvm::IndexedGraph::NodeEntry;
@@ -186,7 +180,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
             const auto& temp_arg = variables[{node.inputs[inp].node_id, node.inputs[inp].index}];
             code += var_name + " = add(" + var_name + ", " + temp_arg + ");\n";
           }
-          variables[{i,0}] = var_name;
+          variables[{i, 0}] = var_name;
           continue;
         }
 
@@ -205,7 +199,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
           code += "const auto " + var_name + " = backward_" + act_type +
                   "(" + lhs + ", " + rhs + ");\n";
 
-          variables[{i,0}] = var_name;
+          variables[{i, 0}] = var_name;
           continue;
         }
         LOG(FATAL) << "Unrecognized op " + op_name;
@@ -540,7 +534,8 @@ NNVM_REGISTER_OP(FusedOp)
 .set_attr<exec::TIsFusion>("TIsFusion", true)
 .set_attr<exec::FProvideSubgraphShape>("FProvideSubgraphShape", FusedOpProvideShape)
 .set_attr<exec::FProvideSubgraphType>("FProvideSubgraphType", FusedOpProvideType)
-.set_attr<exec::FProvideSubgraphStorageType>("FProvideSubgraphStorageType", FusedOpProvideStorageType)
+.set_attr<exec::FProvideSubgraphStorageType>("FProvideSubgraphStorageType",
+                                             FusedOpProvideStorageType)
 .set_attr<mxnet::FInferShape>("FInferShape", FusedOpInferShape)
 .set_attr<nnvm::FInferType>("FInferType", FusedOpInferType)
 .set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);

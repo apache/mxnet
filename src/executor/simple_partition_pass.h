@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file simple_partition_pass.h
- * \brief 
+ * \brief
  * \author Clement Fuji Tsang
  */
 #ifndef MXNET_EXECUTOR_SIMPLE_PARTITION_PASS_H_
@@ -30,6 +30,10 @@
 #include <mxnet/op_attr_types.h>
 #include <mxnet/operator.h>
 #include <nnvm/graph_attr_types.h>
+#include <utility>
+#include <deque>
+#include <algorithm>
+#include <vector>
 
 #include "exec_pass.h"
 
@@ -215,8 +219,6 @@ using NodeRawPtrSet = std::unordered_set<nnvm::Node*>;
  * \return a map between the node in the main graph and the output index of the subgraph node
 */
 nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_set) {
-  //std::vector<nnvm::NodeEntry> outputs;
-  //NodeEntrySet _outputs;
   nnvm::NodeEntryMap<uint32_t> outputs;
   uint32_t count = 0;
   for (auto& e : g.outputs) {
@@ -233,7 +235,6 @@ nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_
       }
     }
   });
-  //outputs.insert(outputs.begin(), _outputs.begin(), _outputs.end());
   return outputs;
 }
 
@@ -345,7 +346,7 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
     DFSVisit(g.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
       for (auto &e : node->control_deps) {
         if (subgraph_set.count(e.get()))
-	  e = subgraph_node;
+          e = subgraph_node;
       }
     });
     DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
@@ -368,7 +369,8 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
 template<typename FCompatible>
 std::vector<NodeRawPtrSet> GetCompatibleSubsets(const Graph& g, FCompatible is_compatible) {
   BidirectionalGraph biG = BidirectionalGraph(g);
-  std::vector<std::unordered_set<BidirectionalGraph::Node*>> subsets = biG.get_subsets(is_compatible);
+  std::vector<std::unordered_set<BidirectionalGraph::Node*>> subsets =
+    biG.get_subsets(is_compatible);
   std::vector<NodeRawPtrSet> nnvm_subsets;
   nnvm_subsets.reserve(subsets.size());
   for (auto& subset : subsets) {

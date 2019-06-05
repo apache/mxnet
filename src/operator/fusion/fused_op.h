@@ -24,6 +24,7 @@
 #include <nnvm/graph.h>
 #include <vector>
 #include <string>
+#include <utility>
 
 namespace mxnet {
 
@@ -103,7 +104,6 @@ class FusedOp {
 
  private:
   void GenerateCode(const std::vector<OpReqType> &req);
-  nnvm::Graph GetGraphWithoutControlDeps(nnvm::Graph &old);
 
   std::vector<FusedOpEntry> inputs_;
   std::vector<FusedOpEntry> outputs_;

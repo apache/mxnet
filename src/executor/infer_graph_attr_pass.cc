@@ -336,8 +336,12 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
                   current_out_attrs.push_back(rshape[idx.entry_id(dep_node_id, i)]);
                 }
               }
-              auto provide = Op::GetAttr<FProvideSubgraphType>(provide_fusion_name).get(inode.source->op(), nullptr);
-              CHECK(provide != nullptr) << "Encountered Fusion operator that does not implement providing subgraph attr " << provide_fusion_name << ".";
+              auto provide =
+                Op::GetAttr<FProvideSubgraphType>(provide_fusion_name).get(inode.source->op(),
+                                                                           nullptr);
+              CHECK(provide != nullptr) <<
+                "Encountered Fusion operator that does not implement providing subgraph attr " <<
+                provide_fusion_name << ".";
               provide(inode.source->attrs, in_attrs, out_attrs);
             }
             forward_known = ApplyOpInferAttr(ret, finfer, inode.source->attrs,
@@ -612,7 +616,8 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
           }
         }
       } else {
-        static auto& finfer_fused_shape = Op::GetAttr<exec::FAccessSubgraphShape>("FAccessSubgraphShape");
+        static auto& finfer_fused_shape =
+          Op::GetAttr<exec::FAccessSubgraphShape>("FAccessSubgraphShape");
         auto finfer = finfer_fused_shape.get(fwd_ptr->op(), nullptr);
         CHECK(finfer != nullptr) << "Operator " << fwd_ptr->attrs.name <<
           " is marked as Fusion but does not allow accessing attributes";
@@ -693,8 +698,12 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
                   current_out_attrs.push_back(rshape[idx.entry_id(dep_node_id, i)]);
                 }
               }
-              auto provide = Op::GetAttr<exec::FProvideSubgraphShape>("FProvideSubgraphShape").get(inode.source->op(), nullptr);
-              CHECK(provide != nullptr) << "Encountered Fusion operator that does not implement providing subgraph shape.";
+              auto provide =
+                Op::GetAttr<exec::FProvideSubgraphShape>("FProvideSubgraphShape").get(
+                    inode.source->op(),
+                    nullptr);
+              CHECK(provide != nullptr) <<
+                "Encountered Fusion operator that does not implement providing subgraph shape.";
               provide(inode.source->attrs, in_attrs, out_attrs);
             }
             forward_known = ApplyOpInferAttr(ret, finfer, inode.source->attrs,
