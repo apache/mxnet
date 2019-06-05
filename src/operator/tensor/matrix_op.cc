@@ -696,6 +696,7 @@ NNVM_REGISTER_OP(_backward_slice_like)
 
 NNVM_REGISTER_OP(clip)
 MXNET_ADD_SPARSE_OP_ALIAS(clip)
+.add_alias("_npi_clip")
 .describe(R"code(Clips (limits) the values in an array.
 
 Given an interval, values outside the interval are clipped to the interval edges.
