@@ -32,10 +32,11 @@
 #include <fstream>
 #include <iostream>
 #include <map>
-#include <opencv2/opencv.hpp>
 #include <string>
 #include <vector>
+#include <random>
 #include <type_traits>
+#include <opencv2/opencv.hpp>
 #include "mxnet/c_api.h"
 #include "mxnet/tuple.h"
 #include "mxnet-cpp/MxNetCpp.h"
@@ -69,9 +70,17 @@ enum TypeFlag {
 class Predictor {
  public:
     Predictor() {}
-    Predictor(const std::string& model_json_file, const std::string& model_params_file, const Shape& input_shape,
-              bool use_gpu, const std::string& dataset, const int data_nthreads, const std::string& data_layer_type,
-              std::vector<float>& rgb_mean, std::vector<float>& rgb_std, int shuffle_chunk_seed, int seed, bool benchmark);
+    Predictor(const std::string& model_json_file,
+              const std::string& model_params_file,
+              const Shape& input_shape,
+              bool use_gpu,
+              const std::string& dataset,
+              const int data_nthreads,
+              const std::string& data_layer_type,
+              const std::vector<float>& rgb_mean,
+              const std::vector<float>& rgb_std,
+              int shuffle_chunk_seed,
+              int seed, bool benchmark);
     void BenchmarkScore(int num_inference_batches);
     void Score(int num_skipped_batches, int num_inference_batches);
     ~Predictor();
@@ -132,16 +141,32 @@ class Predictor {
  *  2. Create ImageRecordIter by using the given dataset file.
  *  3. Infer and construct NDArrays according to the input argument and create an executor.
  */
-Predictor::Predictor(const std::string& model_json_file, const std::string& model_params_file, const Shape& input_shape,
-                     bool use_gpu, const std::string& dataset, const int data_nthreads, const std::string& data_layer_type,
-                     std::vector<float>& rgb_mean, std::vector<float>& rgb_std, int shuffle_chunk_seed, int seed, bool benchmark)
-    : input_shape(input_shape), use_gpu_(use_gpu), dataset_(dataset), data_nthreads_(data_nthreads), data_layer_type_(data_layer_type),
-      rgb_mean_(rgb_mean), rgb_std_(rgb_std), shuffle_chunk_seed_(shuffle_chunk_seed), seed_(seed), benchmark_(benchmark) {
+Predictor::Predictor(const std::string& model_json_file,
+                     const std::string& model_params_file,
+                     const Shape& input_shape,
+                     bool use_gpu,
+                     const std::string& dataset,
+                     const int data_nthreads,
+                     const std::string& data_layer_type,
+                     const std::vector<float>& rgb_mean,
+                     const std::vector<float>& rgb_std,
+                     int shuffle_chunk_seed,
+                     int seed, bool benchmark)
+    : input_shape(input_shape),
+      use_gpu_(use_gpu),
+      dataset_(dataset),
+      data_nthreads_(data_nthreads),
+      data_layer_type_(data_layer_type),
+      rgb_mean_(rgb_mean),
+      rgb_std_(rgb_std),
+      shuffle_chunk_seed_(shuffle_chunk_seed),
+      seed_(seed),
+      benchmark_(benchmark) {
   if (use_gpu) {
     global_ctx = Context::gpu();
   }
 
-  //initilize data iterator
+  // initilize data iterator
   if (!benchmark_ && !CreateImageRecordIter()) {
     LG << "Error: failed to create ImageRecordIter";
     throw std::runtime_error("ImageRecordIter cannot be created");
@@ -152,8 +177,11 @@ Predictor::Predictor(const std::string& model_json_file, const std::string& mode
   // Initilize the parameters
   // benchmark=false, load from params file
   // benchmark=true, randomly initializes parameters
-  if (!benchmark_) LoadParameters(model_params_file);
-  else InitParameters();
+  if (!benchmark_) {
+    LoadParameters(model_params_file);
+  } else {
+    InitParameters();
+  }
 
   int dtype = GetDataLayerType();
   if (dtype == -1) {
@@ -230,7 +258,7 @@ bool Predictor::CreateImageRecordIter() {
   val_iter->SetParam("std_g", rgb_std_[1]);
   val_iter->SetParam("std_b", rgb_std_[2]);
 
-  //set prefetcher parameters
+  // set prefetcher parameters
   if (use_gpu_) {
     val_iter->SetParam("ctx", "gpu");
   } else {
@@ -283,7 +311,7 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
 /*
  * The following function randomly initializes the parameters when benchmark_ is true.
  */
-void Predictor::InitParameters () {
+void Predictor::InitParameters() {
   std::vector<mx_uint> data_shape;
   for (index_t i=0; i < input_shape.ndim(); i++) {
     data_shape.push_back(input_shape[i]);
@@ -325,9 +353,10 @@ void Predictor::InitParameters () {
 void Predictor::BenchmarkScore(int num_inference_batches) {
   // Create dummy data
   std::vector<float> dummy_data(input_shape.Size());
-
+  std::default_random_engine generator;
+  std::uniform_real_distribution<float> val(0.0f, 1.0f);
   for (int i = 0; i < static_cast<int>(input_shape.Size()); ++i) {
-    dummy_data[i] = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    dummy_data[i] = static_cast<float>(val(generator));
   }
     executor->arg_dict()["data"].SyncCopyFromCPU(
         dummy_data.data(),
@@ -408,13 +437,18 @@ void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
   auto args_name = net.ListArguments();
   std::cout << "INFO:" << "Dataset for inference: " << dataset_ << std::endl
             << "INFO:" << "label_name = " << args_name[args_name.size()-1] << std::endl
-            << "INFO:" << "rgb_mean: " << "(" << rgb_mean_[0] << ", " << rgb_mean_[1] << ", " << rgb_mean_[2] << ")" << std::endl
-            << "INFO:" << "rgb_std: " << "(" << rgb_std_[0] << ", " << rgb_std_[1] << ", " << rgb_std_[2] << ")" << std::endl
-            << "INFO:" << "Image shape: " << "(" << input_shape[1] << ", " << input_shape[2] << ", " << input_shape[3] << ")" << std::endl
-            << "INFO:" << "Finished inference with: " << num_inference_batches * input_shape[0] << " images " << std::endl
+            << "INFO:" << "rgb_mean: " << "(" << rgb_mean_[0] << ", " << rgb_mean_[1]
+            << ", " << rgb_mean_[2] << ")" << std::endl
+            << "INFO:" << "rgb_std: " << "(" << rgb_std_[0] << ", " << rgb_std_[1]
+            << ", " << rgb_std_[2] << ")" << std::endl
+            << "INFO:" << "Image shape: " << "(" << input_shape[1] << ", "
+            << input_shape[2] << ", " << input_shape[3] << ")" << std::endl
+            << "INFO:" << "Finished inference with: " << num_inference_batches * input_shape[0]
+            << " images " << std::endl
             << "INFO:" << "Batch size = " << input_shape[0] << " for inference" << std::endl
             << "INFO:" << "Accuracy: " << val_acc.Get() << std::endl
-            << "INFO:" << "Throughput: " << (1000 * num_inference_batches * input_shape[0] / ms) << " images per second" << std::endl;
+            << "INFO:" << "Throughput: " << (1000 * num_inference_batches * input_shape[0] / ms)
+            << " images per second" << std::endl;
 }
 
 Predictor::~Predictor() {
@@ -456,17 +490,19 @@ std::vector<T> createVectorFromString(const std::string& input_string) {
 
 void printUsage() {
     std::cout << "Usage:" << std::endl;
-    std::cout << "imagenet_inference --symbol_file <model symbol file in json format>  " << std::endl
+    std::cout << "imagenet_inference --symbol_file <model symbol file in json format>" << std::endl
               << "--params_file <model params file> " << std::endl
               << "--dataset <dataset used to run inference> " << std::endl
               << "--data_nthreads <default: 60> " << std::endl
               << "--input_shape <shape of input image e.g \"3 224 224\">] " << std::endl
-              << "--rgb_mean <mean value to be subtracted on R/G/B channel e.g \"0 0 0\"> " << std::endl
+              << "--rgb_mean <mean value to be subtracted on RGB channel e.g \"0 0 0\">"
+              << std::endl
               << "--rgb_std <standard deviation on R/G/B channel. e.g \"1 1 1\"> " << std::endl
               << "--batch_size <number of images per batch> " << std::endl
               << "--num_skipped_batches <skip the number of batches for inference> " << std::endl
               << "--num_inference_batches <number of batches used for inference> " << std::endl
-              << "--data_layer_type <default: \"float32\" choices: [\"float32\", \"int8\", \"uint8\"]> " << std::endl
+              << "--data_layer_type <default: \"float32\" "
+              << "choices: [\"float32\",\"int8\",\"uint8\"]>" << std::endl
               << "--gpu  <whether to run inference on GPU, default: false>" << std::endl
               << "--benchmark <whether to use dummy data to run inference, default: false>"
               << std::endl;
@@ -549,7 +585,8 @@ int main(int argc, char** argv) {
 
   // Initialize the predictor object
   Predictor predict(model_file_json, model_file_params, input_data_shape, use_gpu, dataset,
-                    data_nthreads, data_layer_type, rgb_mean, rgb_std, shuffle_chunk_seed, seed, benchmark);
+                    data_nthreads, data_layer_type, rgb_mean, rgb_std, shuffle_chunk_seed,
+                    seed, benchmark);
 
   if (benchmark) {
     predict.BenchmarkScore(num_inference_batches);

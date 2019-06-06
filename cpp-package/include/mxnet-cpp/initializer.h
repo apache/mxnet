@@ -30,6 +30,7 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <random>
 #include "mxnet-cpp/ndarray.h"
 
 namespace mxnet {
