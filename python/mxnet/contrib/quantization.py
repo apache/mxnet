@@ -705,7 +705,32 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 
 def static_net_forward(sym, arg_params, aux_params, collector,
                        calib_data, data_shapes, ctx=cpu(), logger=logging):
-    """symbolic forward a static model with gluon dataset.
+    """Symbolic forward a symbol converted from gluon HybridBlock to use monitor API.
+
+    Parameters
+    ----------
+    sym : str or Symbol
+        Defines the structure of a neural network for FP32 data types.
+    arg_params : dict
+        Dictionary of name to `NDArray`.
+    aux_params : dict
+        Dictionary of name to `NDArray`.
+    collector : function
+        Layer collector for naive or entropy calibration.
+    calib_data : list
+        A list containing several batches of input data for calibration.
+    data_shapes : list
+        A list containing shapes of input data for symbolic bind.
+    logger : Object
+        A logging object for printing information during the process of quantization.
+
+    Returns
+    -------
+    collector : function
+        Layer collector containing statistical information of each layer.
+    data_names : tuple
+        A tuple containing data names for gluon SymbolBlock import.
+    -------
     """
     num_batches = len(calib_data)
     num_inputs = len(data_shapes)
@@ -714,10 +739,12 @@ def static_net_forward(sym, arg_params, aux_params, collector,
     if num_inputs == 1:
         data_names = ('data',)
         data_shapes_ = [(data_names[0], data_shapes[0])]
-    else:
+    elif num_inputs > 1:
         for i in range(num_inputs):
             data_names = data_names + ('data' + str(i),)
             data_shapes_.append((data_names[i], data_shapes[i]))
+    else:
+        raise ValueError('symbol must have at least one inputs.')
     mod = Module(symbol=sym, context=ctx,
                  data_names=data_names, label_names=None)
     mod.bind(for_training=False, data_shapes=data_shapes_)
@@ -732,53 +759,111 @@ def static_net_forward(sym, arg_params, aux_params, collector,
                     % num_batches)
     return collector, data_names
 
-def save_params(fname, arg_params, aux_params, logger=logging):
-    save_dict = {('arg:%s' % k): v.as_in_context(cpu())
-                 for k, v in arg_params.items()}
-    save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
-                      for k, v in aux_params.items()})
-    nd_save(fname, save_dict)
-
 def quantize_net(network, quantized_dtype='auto', exclude_layers=None, calib_data=None,
                  data_shapes=None, calib_mode='none', ctx=cpu(), logger=logging):
-    """quantize a gluon net
+    """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
+    The backend quantized operators are only enabled for Linux systems. Please do not run
+    inference using the quantized models on Windows for now.
+    The quantization implementation adopts the TensorFlow's approach:
+    https://www.tensorflow.org/performance/quantization.
+    The calibration implementation borrows the idea of Nvidia's 8-bit Inference with TensorRT:
+    http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
+    and adapts the method to MXNet.
+
+    Parameters
+    ----------
+    network : Gluon HybridBlock
+        Defines the structure of a neural network for FP32 data types.
+    quantized_dtype : str
+        The quantized destination type for input data. Currently support 'int8'
+        , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
+        Default value is 'int8'.
+    exclude_layers : list of strings
+        A list of strings representing the names of the symbols that users want to excluding
+        from being quantized.
+    calib_data : list
+        A list containing several batches of input data for calibration.
+    data_shapes : list
+        A list containing shapes of input data for symbolic bind.
+    calib_mode : str
+        If calib_mode='none', no calibration will be used and the thresholds for
+        requantization after the corresponding layers will be calculated at runtime by
+        calling min and max operators. The quantized models generated in this
+        mode are normally 10-20% slower than those with calibrations during inference.
+        If calib_mode='naive', the min and max values of the layer outputs from a calibration
+        dataset will be directly taken as the thresholds for quantization.
+        If calib_mode='entropy' (default mode), the thresholds for quantization will be
+        derived such that the KL divergence between the distributions of FP32 layer outputs and
+        quantized layer outputs is minimized based upon the calibration dataset.
+    calib_layer : function
+        Given a layer's output name in string, return True or False for deciding whether to
+        calibrate this layer. If yes, the statistics of the layer's output will be collected;
+        otherwise, no information of the layer's output will be collected. If not provided,
+        all the layers' outputs that need requantization will be collected.
+    ctx : Context
+        Defines the device that users want to run forward propagation on the calibration
+        dataset for collecting layer output statistics. Currently, only supports single context.
+    logger : Object
+        A logging object for printing information during the process of quantization.
+
+    Returns
+    -------
+    network : Gluon SymbolBlock
+        Defines the structure of a neural network for INT8 data types.
+    -------
     """
 
-    logger.info('Export symbolblock')
+    logger.info('Export HybridBlock')
     network.hybridize()
     import mxnet as mx
     data_nd = []
     for shape in data_shapes:
         data_nd.append(mx.nd.zeros(shape))
     network(*data_nd)
+
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdirname:
         prefix = os.path.join(tmpdirname, 'tmp')
         network.export(prefix, epoch=0)
         symnet, args, auxs = mx.model.load_checkpoint(prefix, 0)
-    logger.info('Exclude all fc layers')
+
+    logger.info('Exclude all FullyConnect and Flatten layers.')
     if exclude_layers is None:
         exclude_layers = []
     for layers in list(symnet.get_internals()):
-        if layers.name.find('dense') != -1 or layers.name.find('flatten') != -1:
+        if layers.name.find('dense') != -1\
+                or layers.name.find('fc') != -1\
+                or layers.name.find('flatten') != -1:
             exclude_layers.append(layers.name)
-    symnet = symnet.get_backend_symbol('MKLDNN')
-    qsym, qarg_params, aux_params, collector = quantize_graph(sym=symnet, arg_params=args, aux_params=auxs,
-                                                excluded_sym_names=exclude_layers, calib_mode=calib_mode,
-                                                calib_layer=None, quantized_dtype=quantized_dtype, logger=logger)
+
+    if ctx == mx.cpu():
+        symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
+
+    qsym, qarg_params, aux_params, collector = quantize_graph(
+        sym=symnet, arg_params=args, aux_params=auxs, excluded_sym_names=exclude_layers,
+        calib_mode=calib_mode, calib_layer=None, quantized_dtype=quantized_dtype, logger=logger)
 
     if calib_mode is not None and calib_mode != 'none':
+        if not isinstance(ctx, Context):
+            raise ValueError(
+                'currently only supports single ctx, while received %s' % str(ctx))
+        if calib_data is None:
+            raise ValueError(
+                'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy']:
-            collector, data_names = static_net_forward(sym=symnet, arg_params=args, aux_params=auxs,
-                                                    collector=collector, calib_data=calib_data,
-                                                    data_shapes=data_shapes, ctx=cpu(), logger=logger)
-            qsym, qarg_params, aux_params = calib_graph(qsym=qsym, arg_params=args, aux_params=auxs,
-                                                        collector=collector, calib_mode=calib_mode,
-                                                        quantized_dtype=quantized_dtype, logger=logger)
-            logger.info('Calibrating quantized symbol')
+            collector, data_names = static_net_forward(
+                sym=symnet, arg_params=args, aux_params=auxs, collector=collector,
+                calib_data=calib_data, data_shapes=data_shapes, ctx=cpu(),
+                logger=logger)
+            qsym, qarg_params, aux_params = calib_graph(
+                qsym=qsym, arg_params=args, aux_params=auxs, collector=collector,
+                calib_mode=calib_mode, quantized_dtype=quantized_dtype, logger=logger)
         else:
-            raise ValueError('please set calibration mode to naive or entropy.')
-    qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
+            raise ValueError(
+                'please set calibration mode to naive or entropy.')
+
+    if ctx == mx.cpu():
+        qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
 
     from ..gluon import SymbolBlock
     data_sym = []
@@ -788,6 +873,10 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, calib_dat
     with tempfile.TemporaryDirectory() as tmpdirname:
         prefix = os.path.join(tmpdirname, 'tmp')
         param_name = '%s-%04d.params' % (prefix + 'net-quantized', 0)
-        save_params(param_name, qarg_params, aux_params, logger)
+        save_dict = {('arg:%s' % k): v.as_in_context(cpu())
+                    for k, v in qarg_params.items()}
+        save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
+                        for k, v in aux_params.items()})
+        nd_save(param_name, save_dict)
         net.collect_params().load(param_name)
     return net
