@@ -1001,6 +1001,56 @@ struct nrm2 {
   }
 };
 
+namespace limits {
+/*!
+ * \brief minimum value of certain types
+ * \tparam DType data type
+ */
+template<typename DType>
+MSHADOW_XINLINE DType MinValue(void);
+/*! \brief minimum value of float */
+template<>
+MSHADOW_XINLINE float MinValue<float>(void) {
+  return -FLT_MAX;
+}
+/*! \brief minimum value of double */
+template<>
+MSHADOW_XINLINE double MinValue<double>(void) {
+  return -DBL_MAX;
+}
+/*! \brief minimum value of half */
+template<>
+MSHADOW_XINLINE mshadow::half::half_t MinValue<mshadow::half::half_t>(void) {
+  return MSHADOW_HALF_MIN;
+}
+/*! \brief minimum value of uint8_t */
+template<>
+MSHADOW_XINLINE uint8_t MinValue<uint8_t>(void) {
+  return 0;
+}
+/*! \brief minimum value of int8_t */
+template<>
+MSHADOW_XINLINE int8_t MinValue<int8_t>(void) {
+  return SCHAR_MIN;
+}
+/*! \brief minimum value of int32_t */
+template<>
+MSHADOW_XINLINE int MinValue<int32_t>(void) {
+  return INT_MIN;
+}
+/*! \brief minimum value of uint8_t */
+template<>
+MSHADOW_XINLINE uint32_t MinValue<uint32_t>(void) {
+  return 0;
+}
+/*! \brief minimum value of int64_t */
+template<>
+MSHADOW_XINLINE int64_t MinValue<int64_t>(void) {
+  return LLONG_MIN;
+}
+}  // namespace limits
+
+
 /*! \brief sum reducer */
 struct sum {
   /*! \brief do reduction into dst */
@@ -1058,6 +1108,62 @@ struct sum {
   MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
     SetInitValue(initv);
     residual = 0;
+  }
+};
+
+/*! \brief maximum reducer */
+struct max {
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src) { // NOLINT(*)
+#ifdef __CUDACC__
+    dst = ::max(dst, src);
+#else
+    dst = std::max(dst, src);
+#endif  // __CUDACC__
+  }
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src, volatile DType &none) { // NOLINT(*)
+    Reduce(dst, src);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
+  /*!
+   * \brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return redres == redsrc ? 1: 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv = limits::MinValue<DType>();
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &none) { // NOLINT(*)
+    SetInitValue(initv);
   }
 };
 

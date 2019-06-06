@@ -22,23 +22,30 @@
  * \file np_broadcast_reduce_op_value.cu
  * \brief GPU Implementation of reduce functions based on value.
  */
-#include "np_broadcast_reduce_op.h"
+ #include "np_broadcast_reduce_op.h"
 
-namespace mxnet {
-namespace op {
-
-NNVM_REGISTER_OP(_np_sum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true>);
-
-NNVM_REGISTER_OP(_backward_np_sum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
-
-NNVM_REGISTER_OP(_np_mean)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true, true>);
-
-NNVM_REGISTER_OP(_backward_np_mean)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu, true>);
-
-
-}  // namespace op
-}  // namespace mxnet
+ namespace mxnet {
+ namespace op {
+ 
+ NNVM_REGISTER_OP(_np_sum)
+ .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true>);
+ 
+ NNVM_REGISTER_OP(_backward_np_sum)
+ .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
+ 
+ NNVM_REGISTER_OP(_np_mean)
+ .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true, true>);
+ 
+ NNVM_REGISTER_OP(_backward_np_mean)
+ .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu, true>);
+ 
+ NNVM_REGISTER_OP(_np_max)
+ .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::max, true>);
+ 
+ NNVM_REGISTER_OP(_backward_np_max)
+ .set_attr<FCompute>("FCompute<gpu>", NumpyMaxBackward<gpu, mshadow_op::eq>);
+ 
+ 
+ }  // namespace op
+ }  // namespace mxnet
+ 
