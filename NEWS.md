@@ -58,7 +58,6 @@ Training a model in Gluon requires users to write the training loop, this is use
 The training loop can also be overwhelming to some users new to deep learning. We have introduced a Estimator and Fit API to help facilitate training loop.
 Note: this feature is still experimental, for more details, refer to [design document](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design).
 
-
 #### New Operators
 * split_v2 (#13687)
 * Gradient multiplier (contrib) operator (#13632)
@@ -71,7 +70,9 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * add an operator for computing the likelihood of a Hawkes self-exciting process (#14683)
 * Add numpy linspace (#14927)
 
+
 ### Feature Improvements
+
 #### Operators
 * make ROIAlign support position-sensitive pooling (#13088)
 * Add erfinv operator for calculating inverse error function (#13811)
@@ -111,7 +112,8 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * [MXNet-1211] Factor and "Like" modes in BilinearResize2D operator (#13226)
 * added extraction/generation of diagonal and triangonal matrices to linalg (#14501)
 * [Mxnet-1397] Support symbolic api for requantize and dequantize (#14749)
-
+* [MXNET-978] Support higher order gradient for `log`. (#14992)
+* Add cpu implementation for Deformable Convolution (#14879)
 
 #### MKLDNN
 * Feature/mkldnn static (#13628)
@@ -150,7 +152,6 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * added mkldnn dependency for plugin compile target (#14274)
 * Support Quantized Fully Connected by INT8 GEMM (#12922)
 
-
 #### ONNX
 * ONNX export: Instance normalization, Shape (#12920)
 * ONNX export: Logical operators (#12852)
@@ -180,6 +181,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * softmax for fp16 with fp32 accumulator (#14098)
 * [MXNET-1327] Allow RNN Layers to be initialized to fp16 (#14219)
 * fp16 safe norm operator (#14616)
+* NAG Optimizer with multi-precision support (#14568)
 
 #### Deep Graph Library(DGL) support
 * Add graph_compact operator. (#13436)
@@ -211,14 +213,17 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Use DEFAULT macro in C APIs (#14767)
 * Avoid uneccesary vector copies in imperative_utils.cc (#14665)
 * Support populating errors back to MXNet engine in callback (#13922)
-
+* Restore save/load ndarray to 1.4.1 (#15073)
+* Enable serializing/deserializing ndarrays in np_shape semantics (#15090)
+* [numpy] Support zero-dim and zero-size tensors in MXNet (#14661)
+* Rename np_compat to np_shape (#15063)
+* [MXNET-1330] Bring nnvm::Tuple to mxnet::Tuple (#14270)
 
 #### Large Tensor Support
 * Large array support for randint (#14242)
 * [MXNET-1185] Support large array in several operators (part 1) (#13418)
 * [MXNET-1401] adding more operators to test support for Large Tensor (#14944)
 * [MXNET-1410]Adding Large Tensor Support for tensor transpose (#15059)
-
 
 #### Quantization
 * Exclude concat layer for gpu quantization (#14060)
@@ -229,19 +234,9 @@ Note: this feature is still experimental, for more details, refer to [design doc
 #### Profiler
 * [MXNET-857] Add initial NVTX profiler implementation (#12328)
 
-
 #### CoreML
 * Add more support for mxnet_to_coreml (#14222)
 
-#### Website
-* Version switching user experience improvements (#13921)
-* fix toctree Sphinx errors (#13489)
-* fix link (#15036)
-* fix website build (#14148)
-* Fixed mailing list addresses (#13766)
-* website publish updates (#14015)
-* use relative links; update links (#13741)
-* update social media section (#13705)
 
 ### Front End API
 
@@ -264,7 +259,6 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Add the Gluon Implementation of Deformable Convolution (#14810)
 * hybridize rnn and add model graph (#13244)
 
-
 #### Python
 * Python BucketingModule bind() with grad_req = 'add' (#13984)
 * Refine runtime feature discovery python API and add documentation to … (#14130)
@@ -278,6 +272,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 
 
 ### Language Bindings
+
 #### Scala
 * [MXNET-1260] Float64 DType computation support in Scala/Java (#13678)
 * [MXNET-1000] get Ndarray real value and form it from a NDArray (#12690)
@@ -302,7 +297,6 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * change to compile time (#13835)
 * [MXNET-918] Random module (#13039)
 
-
 #### Java
 * [MXNET-1180] Java Image API (#13807)
 * [MXNET-1285] Draw bounding box with Scala/Java Image API (#14474)
@@ -314,13 +308,11 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * [MXNET-1383] Java new use of ParamObject (#14645)
 * MXNET-1302 Exclude commons-codec and commons-io from assembled JAR (#14000)
 
-
 #### C++
 * print error message for mxnet::cpp::Operator::Invoke when failed (#14318)
 * build docs with CPP package (#13983)
 * Update inception_inference.cpp (#14674)
 * Optimize C++ API (#13496)
-
 
 #### Clojure 
 * [Clojure] - Add Spec Validations to the Optimizer namespace (#13499)
@@ -357,7 +349,9 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * add NAG optimizer to r api (#14023)
 * R-Package Makefile (#14068)
 
+
 ### Performance Improvements
+
 * Less cudaGet/SetDevice calls in Gluon execution (#13764)
 * Improve bulking in Gluon (#13890)
 * Increase perfomance of BulkAppend and BulkFlush (#14067)
@@ -371,9 +365,118 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * use mkl sparse matrix to improve performance (#14492)
 * Re-enable static cached_op optimization (#14931)
 * Speed up SequenceReverse (#14627)
+* Improve FC perf when no_bias=False (#15033)
+* Improve cached_op performance for static mode (#14785)
+
+
+### Example and Tutorials
+
+* [MXNET-949] Module API to Gluon API tutorial (#12542)
+* Support SSD f32/int8 evaluation on COCO dataset (#14646)
+* [MXNET-1209] Tutorial transpose reshape  (#13208)
+* [Clojure] Add Fine Tuning Sentence Pair Classification BERT Example (#14769)
+* example/ssd/evaluate/eval_metric.py (#14561)
+* Add examples of running MXNet with Horovod (#14286)
+* Added link to landing page for Java examples (#14481)
+* Update lip reading example (#13647)
+* [MXNET-1121] Example to demonstrate the inference workflow using RNN (#13680)
+* [MXNET-1301] Remove the unnecessary WaitAll statements from inception_inference example (#13972)
+* Modifying clojure CNN text classification example (#13865)
+* [MXNET-1210 ] Gluon Audio - Example (#13325)
+* add examples and fix the dependency problem (#13620)
+* add quantization example to readme (#14186)
+* Add an inference script providing both accuracy and benchmark result for original wide_n_deep example (#13895)
+* Update autoencoder example (#12933)
+*  #13813 examples with opencv4/origami (#13813)
+* [MXNET-1083] Add the example to demonstrate the inference workflow using C++ API (#13294)
+* Add tutorial on how to use build from source jar (#14197)
+* Gluon end to end tutorial (#13411)
+* Update MXNetTutorialTemplate.ipynb (#13568)
+* Simplifications and some fun stuff for the MNIST Gluon tutorial (#13094)
+* Clarify dependency on OpenCV in CNN Visualization tutorial. (#13495)
+* Update row_sparse tutorial (#13414)
+* add clojure tutorials to index (#14814)
+* Update lstm_crf.py (#14865)
+
+
+### Website
+
+* Version switching user experience improvements (#13921)
+* fix toctree Sphinx errors (#13489)
+* fix link (#15036)
+* fix website build (#14148)
+* Fixed mailing list addresses (#13766)
+* website publish updates (#14015)
+* use relative links; update links (#13741)
+* update social media section (#13705)
+* [MXNET] Updated http://data.dmlc.ml/ links to http://data.mxnet.io/ (#15065)
+
+### Documentation
+* [MXNET-1402] MXNet docs change for 1.4.1 release (#14949)
+* Add API documentation for upsampling operator with examples (#14919)
+* Make docblocks for Gluon BatchNorm and SyncBatchNorm consistent with the code (#14840)
+* [DOC] Update ubuntu install instructions from source (#14534)
+* [Clojure] Better api docstrings by replacing newlines (#14752)
+* Fix documentation for bilinear upsampling and add unit test (#14035)
+* Updated docs for R-package installation (#14269)
+* [docstring] improve docstring and indentation in `module.clj` (#14705)
+* The folder python-howto was removed in an earlier commit. The reference to that folder was not removed. Making a PR to remove the reference to this folder to keep documents consistent (#14573)
+* Updated documentation about nightly tests (#14493)
+* [Doc] Start the tutorials for MKL-DNN backend (#14202)
+* [DOC] fix sym.arange doc (#14237)
+* fix render issue in NDArray linalg docs (#14258)
+* [clojure-package] fix docstrings in `normal.clj` (#14295)
+* [DOC] Refine documentation of runtime feature detection (#14238)
+* [MXNET-1178] updating scala docs (#14070)
+* Fix website scala doc (#14065)
+*  Return value docs for nd.random.* and sym.random.* (#13994)
+* Fixing the doc for symbolic version of rand_zipfian (#13978)
+* fix doc of take operator (#13947)
+* beta doc fixes (#13860)
+* [MXNET-1255] update hybridize documentation (#13597)
+* Update Adam optimizer documentation (#13754)
+* local docs build feature (#13682)
+* gluon docfix (#13631)
+* Added javadocs and improved example instructions (#13711)
+* [MXNET-1164] Generate the document for cpp-package using Doxygen (#12977)
+* Fix warning in waitall doc (#13618)
+* Updated docs for randint operator (#13541)
+* Update java setup docs for 1.4.0 (#13536)
+* clarify ops faq regarding docs strings (#13492)
+* [MXNET-1158] JVM Memory Management Documentation (#13105)
+* Fixing a 404 in the ubuntu setup doc (#13542)
+* Fix READMEs for examples (#14179)
+* [Doc] Add MKL-DNN operator list (#14891)
+* Fixed some typos in AvgPooling Docs (#14324)
+* doc fix (#13465)
+* Change Straight Dope to Dive into Deep Learning (#14465)
+* [DEV] update code owner (#14862)
+* Add notes about debug with libstdc++ symbols (#13533)
+* Mention additional language bindings and add links (#14798)
+* add contributors from intel (#14455)
+* what's new - add 1.4.0 release (#14435)
+* added note about cuda9.2 requirement (#14140)
+* Remove unnecessary "also" in README.md (#14543)
+* Updated news.md with the latest mkldnn submodule version (#14298)
+* add new cloud providers to install page (#14039)
+* Update NOTICE (#14043)
+* Update README.md (#13973)
+* Update profiler doc (#13901)
+* Add CODEOWNERS for Julia package (#13872)
+* update code owner (#13737)
+* Update git clone location to apache github (#13706)
+* NEWS.md backport from v1.4.x to master (#13693)
+* Update CODEOWNERS, add Pedro Larroy. (#13579)
+* [MXNET-1225] Always use config.mk in make install instructions (#13364)
+* Docs & website sphinx errors squished 🌦  (#13488)
+* add Qing's Key to master (#14180)
+* add KEY for zachgk (#14965)
+* corrected a spellign (#14247)
+* 1.4 release (#14297)
 
 
 ### Build and Test
+
 * Fix scala doc build break for v1.3.1 (#13820)
 * Adds additional CUDA build environments (#14909)
 * Pins version of scikit-learn for python2 due to drop in support (#14928)
@@ -403,10 +506,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * increased docker shared memory (#14119)
 * Fix permissions of ci/docker/install/ubuntu_publish.sh (#13840)
 * Dockerfiles for Publish Testing (#13707)
-* Disables flaky test_random_size_crop (#15019)
-* Disables flaky test_l2_normalization (#15006)
 * Fix test randint (#14990)
-* Disables test_bulking due to flakyness (#14971)
 * Silence excessive mkldnn logging output on tests. (#14947)
 * Fix test memory with ResourceScope (#14666)
 * Sync Horovod distributed training examples with latest changes (#14748)
@@ -420,18 +520,14 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Adds context parameter to check_rnn_layer_forward calls in test_lstmp (#14529)
 * reenable the test (#14483)
 * temporarily disable integ tests with a dependency on origami repo (#14448)
-* Disables flaky TestStochasticTiming_2D test (#14412)
-* Disables flaky test_operator.test_sgld test (#14410)
 * Bypass ThreadedEngine in test_operator_gpu.py:test_convolution_multiple_streams. (#14338)
 * Updated the MLP test to accept the number of epochs. Reduced the epochs in ci_test.sh to shorten the CI build time (#14149)
-* disable flaky integration test (#14151)
 * follow up on fix nightly test (#14134)
 * Julia: enable integration test (#14025)
 * fix test_depthwise_convoltuion for occasional CI failures (#14016)
 * fix test_stn (#14063)
 * Add a test for SGLD optimizer with comparisons for set noise seeds. (#13762)
 * Code modification for  testcases of various network models in directory example (#12498)
-* Disabled flaky test (#13758)
 * Remove MXNET_STORAGE_FALLBACK_LOG_VERBOSE from test_autograd.py (#13830)
 * [MXNET-1263] Unit Tests for Java Predictor and Object Detector APIs (#13794)
 * ONNX test code cleanup (#13553)
@@ -458,16 +554,12 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Decreases test sensitivity (#15014)
 * bump up atol for test_bilinear_resize_op (#15011)
 * Add STL checks via -D_GLIBCXX_ASSERTIONS in debug mode (#14896)
-* Disables flaky test_droupout (#15003)
 * clean up duplicate cudnn installation (#14996)
-* Disables flaky test_operator_gpu.test_activation (#14969)
-* Disables large tensor size cpu test step (#14982)
 * fix custom op fork test (#14753)
 * fix pi instructions (#14746)
 * Reenable TensorRT step (#14654)
 * Fixes for CI downloads (#14504)
 * Fixed tutorial warnings (#14472)
-* Disable Flaky Test test_poisson_generator (#14540)
 * Fixes static build script for cub directory rename (#14578)
 * add a compiler flag to use int64 as tensor size (#14570)
 * Upgrade Pylint version to 2.3.1 (#14807)
@@ -487,12 +579,10 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Rearrange tests written only for update_on_kvstore = True (#13514)
 * add batch norm test (#13625)
 * Adadelta optimizer test (#13443)
-* Disabled flaky test test_gluon_data.test_recordimage_dataset_with_data_loader_multiworker (#13527)
 * Skip flaky test https://github.com/apache/incubator-mxnet/issues/13446 (#13480)
 * Comment out test_unix_python3_tensorrt_gpu step (#14642)
 * Enable bulking test on windows (#14392)
 * rewrote the concat test to avoid flaky failures (#14049)
-* Disabled flaky test test_negative_binomial_generator (#13784)
 * #13624 clojure nightly tests (#13624)
 * Temporarily disable website testing (#13887)
 * adding tolerance to flaky test (#13850)
@@ -533,38 +623,17 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * rat check make target (#15127)
 * add epsilon for tolerance level (#15098)
 * Change mx.test_utils.list_gpus to mx.context.num_gpus where possible (#14946)
-
-
-### Example and Tutorials
-* [MXNET-949] Module API to Gluon API tutorial (#12542)
-* Support SSD f32/int8 evaluation on COCO dataset (#14646)
-* [MXNET-1209] Tutorial transpose reshape  (#13208)
-* [Clojure] Add Fine Tuning Sentence Pair Classification BERT Example (#14769)
-* example/ssd/evaluate/eval_metric.py (#14561)
-* Add examples of running MXNet with Horovod (#14286)
-* Added link to landing page for Java examples (#14481)
-* Update lip reading example (#13647)
-* [MXNET-1121] Example to demonstrate the inference workflow using RNN (#13680)
-* [MXNET-1301] Remove the unnecessary WaitAll statements from inception_inference example (#13972)
-* Modifying clojure CNN text classification example (#13865)
-* [MXNET-1210 ] Gluon Audio - Example (#13325)
-* add examples and fix the dependency problem (#13620)
-* add quantization example to readme (#14186)
-* Add an inference script providing both accuracy and benchmark result for original wide_n_deep example (#13895)
-* Update autoencoder example (#12933)
-*  #13813 examples with opencv4/origami (#13813)
-* [MXNET-1083] Add the example to demonstrate the inference workflow using C++ API (#13294)
-* Add tutorial on how to use build from source jar (#14197)
-* Gluon end to end tutorial (#13411)
-* Update MXNetTutorialTemplate.ipynb (#13568)
-* Simplifications and some fun stuff for the MNIST Gluon tutorial (#13094)
-* Clarify dependency on OpenCV in CNN Visualization tutorial. (#13495)
-* Update row_sparse tutorial (#13414)
-* add clojure tutorials to index (#14814)
-* Update lstm_crf.py (#14865)
+* bump up cudnn to 7.5.1 & nccl 2.4.2 (#14988)
+* Disables TensorRT build step (#14958)
+* disable flaky integration test (#14151)
+* Disables large tensor size cpu test step (#14982)
+* Disable Flaky Test test_poisson_generator (#14540)
+* Disabled flaky test test_negative_binomial_generator (#13784)
+* Disabled flaky test test_gluon_data.test_recordimage_dataset_with_data_loader_multiworker (#13527)
 
 
 ### Bug-fixes
+
 * Improve dev_menu virtualenv handling (#14788)
 * Fallback to dense version for grad(reshape), grad(expand_dims) (#13599)
 * Fix the bug of BidirectionalCell (#13575)
@@ -764,69 +833,11 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Revert "Improve cached_op performance for static mode (#14785)" (#14868)
 * Fix mkldnn backend when using naive engine (#15089)
 * fix gluon rnn cell single step unroll (#15081)
+* Revert "Improve FC perf when no_bias=False (#15033)" (#15099)
 
 
-### Documentation
-* [MXNET-1402] MXNet docs change for 1.4.1 release (#14949)
-* Add API documentation for upsampling operator with examples (#14919)
-* Make docblocks for Gluon BatchNorm and SyncBatchNorm consistent with the code (#14840)
-* [DOC] Update ubuntu install instructions from source (#14534)
-* [Clojure] Better api docstrings by replacing newlines (#14752)
-* Fix documentation for bilinear upsampling and add unit test (#14035)
-* Updated docs for R-package installation (#14269)
-* [docstring] improve docstring and indentation in `module.clj` (#14705)
-* The folder python-howto was removed in an earlier commit. The reference to that folder was not removed. Making a PR to remove the reference to this folder to keep documents consistent (#14573)
-* Updated documentation about nightly tests (#14493)
-* [Doc] Start the tutorials for MKL-DNN backend (#14202)
-* [DOC] fix sym.arange doc (#14237)
-* fix render issue in NDArray linalg docs (#14258)
-* [clojure-package] fix docstrings in `normal.clj` (#14295)
-* [DOC] Refine documentation of runtime feature detection (#14238)
-* [MXNET-1178] updating scala docs (#14070)
-* Fix website scala doc (#14065)
-*  Return value docs for nd.random.* and sym.random.* (#13994)
-* Fixing the doc for symbolic version of rand_zipfian (#13978)
-* fix doc of take operator (#13947)
-* beta doc fixes (#13860)
-* [MXNET-1255] update hybridize documentation (#13597)
-* Update Adam optimizer documentation (#13754)
-* local docs build feature (#13682)
-* gluon docfix (#13631)
-* Added javadocs and improved example instructions (#13711)
-* [MXNET-1164] Generate the document for cpp-package using Doxygen (#12977)
-* Fix warning in waitall doc (#13618)
-* Updated docs for randint operator (#13541)
-* Update java setup docs for 1.4.0 (#13536)
-* clarify ops faq regarding docs strings (#13492)
-* [MXNET-1158] JVM Memory Management Documentation (#13105)
-* Fixing a 404 in the ubuntu setup doc (#13542)
-* Fix READMEs for examples (#14179)
-* [Doc] Add MKL-DNN operator list (#14891)
-* Fixed some typos in AvgPooling Docs (#14324)
-* doc fix (#13465)
-* Change Straight Dope to Dive into Deep Learning (#14465)
-* [DEV] update code owner (#14862)
-* Add notes about debug with libstdc++ symbols (#13533)
-* Mention additional language bindings and add links (#14798)
-* add contributors from intel (#14455)
-* what's new - add 1.4.0 release (#14435)
-* added note about cuda9.2 requirement (#14140)
-* Remove unnecessary "also" in README.md (#14543)
-* Updated news.md with the latest mkldnn submodule version (#14298)
-* add new cloud providers to install page (#14039)
-* Update NOTICE (#14043)
-* Update README.md (#13973)
-* Update profiler doc (#13901)
-* Add CODEOWNERS for Julia package (#13872)
-* update code owner (#13737)
-* Update git clone location to apache github (#13706)
-* NEWS.md backport from v1.4.x to master (#13693)
-* Update CODEOWNERS, add Pedro Larroy. (#13579)
-* [MXNET-1225] Always use config.mk in make install instructions (#13364)
-* Docs & website sphinx errors squished 🌦  (#13488)
+### License
 
-
-### license
 * Updates python setup.py for recent license changes (#14778)
 * [MXNET-1377] Add static-dependencies licenses (#14726)
 * add license (#13793)
@@ -838,8 +849,22 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Update LICENSE File with subcomponents (#13808)
 
 ### Depreciations
+
 * Julia: deprecate `mx.empty`, replace it with `UndefInitializer` (#13934)
  * Deprecate NDArrayCollector and instead use ResourceScope (#14780)
+
+### Known Issues
+* Amalgamation compile problems(#14808)
+* Dynamic Shape does not support reverse shape inference and deferred initialization. (#14983)
+* Disables flaky test_random_size_crop (#15019)
+* Disables flaky test_l2_normalization (#15006)
+* Disables flaky TestStochasticTiming_2D test (#14412)
+* Disables flaky test_operator.test_sgld test (#14410)
+* Disables test_bulking due to flakyness (#14971)
+* Disabled flaky test (#13758)
+* Disables flaky test_droupout (#15003)
+* Disables flaky test_operator_gpu.test_activation (#14969)
+
 
 ## 1.4.1
 
