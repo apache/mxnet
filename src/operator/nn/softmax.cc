@@ -118,8 +118,8 @@ Example::
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
 #endif
-// .set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_softmax"})
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_softmax"})
+// .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
     const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
@@ -137,7 +137,9 @@ Example::
 
 NNVM_REGISTER_OP(_backward_softmax)
 .set_num_inputs(SoftmaxGradOpNumInputs)
-.set_num_outputs(1)
+.set_num_outputs([](const nnvm::NodeAttrs& attrs) {
+    return (softmax_use_length(attrs) ? 2 : 1);
+  })
 .set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
 .set_attr<mxnet::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)

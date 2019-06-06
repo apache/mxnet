@@ -5125,7 +5125,7 @@ def test_softmax_with_length():
         mx_data = rand_ndarray(shape, dtype=dtype)
         np_data = mx_data.asnumpy()
         np_length = np.random.randint(1, shape[1] + 1, len_shape)
-        mx_length = mx.nd.array(np_length)
+        mx_length = mx.nd.array(np_length, dtype=dtype)
         np_out = np_softmax_with_length(np_data, np_length)
         data = mx.sym.Variable("data")
         length = mx.sym.Variable("length")
@@ -5134,8 +5134,8 @@ def test_softmax_with_length():
         rtol = 1e-2 if dtype == np.float16 else 1e-3
         atol = 1e-4 if dtype == np.float16 else 1e-5
         check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype=dtype)
-        # check_symbolic_backward(mx_sym, location, [np.ones(shape)], [], rtol=1e-3, atol=1e-5, dtype=dtype)
-        # check_numeric_gradient(mx_sym, location, rtol=1e-3, atol=1e-5, dtype=dtype)
+        check_symbolic_backward(mx_sym, location, [np.ones(shape)],
+                                [np.zeros(shape), np.zeros(len_shape)], rtol=1e-2, atol=1e-3, dtype=dtype)
 
 
 @with_seed()
