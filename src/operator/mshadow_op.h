@@ -27,12 +27,12 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
+#include <algorithm>
 #include "math.h"
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
 #include "./operator_tune.h"
 #include "./contrib/erfinv-inl.h"
-#include <algorithm>
 
 #ifdef __CUDACC__
 #include <cuda_fp16.h>
