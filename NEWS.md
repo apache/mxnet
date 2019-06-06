@@ -296,6 +296,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * update the version name (#14076)
 * change to compile time (#13835)
 * [MXNET-918] Random module (#13039)
+* Avoid secondary deployment of package to local (#14647)
 
 #### Java
 * [MXNET-1180] Java Image API (#13807)
@@ -1142,7 +1143,6 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Update log4j version of Scala package (#13131)
 * Review require() usages to add meaningful messages (#12570)
 * Fix Scala readme (#13082)
-* Avoid secondary deployment of package to local (#14647)
 
 #### Clojure
 * Introduction to Clojure-MXNet video link (#12754)
