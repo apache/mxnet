@@ -241,7 +241,7 @@ class Parameter(object):
         self._trainer._row_sparse_pull(self, results, row_id)
         return results
 
-    def _load_init(self, data, ctx):
+    def _load_init(self, data, ctx, cast_dtype=False):
         """(Re)initializes by loading from data."""
         if self.shape:
             for self_dim, data_dim in zip(self.shape, data.shape):
@@ -251,9 +251,12 @@ class Parameter(object):
                         self.name, str(self.shape), str(data.shape))
             self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
         if self.dtype:
+            if cast_dtype and np.dtype(self.dtype).type != data.dtype:
+                data = data.astype(self.dtype, copy=False)
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter '%s' from saved params: " \
-                "dtype incompatible expected %s vs saved %s"%(
+                "dtype incompatible expected %s vs saved %s. " \
+                "Set cast_dtype=True to cast the dtype of saved params."%(
                     self.name, str(self.dtype), str(data.dtype))
         if self._stype != data.stype:
             data = data.tostype(self._stype)
@@ -891,7 +894,7 @@ class ParameterDict(object):
         ndarray.save(filename, arg_dict)
 
     def load(self, filename, ctx=None, allow_missing=False,
-             ignore_extra=False, restore_prefix=''):
+             ignore_extra=False, restore_prefix='', cast_dtype=False):
         """Load parameters from file.
 
         Parameters
@@ -907,6 +910,9 @@ class ParameterDict(object):
             present in this ParameterDict.
         restore_prefix : str, default ''
             prepend prefix to names of stored parameters before loading.
+        cast_dtype : bool, default False
+            Cast the data type of the NDArray loaded from the checkpoint to the dtype
+            provided by the Parameter if any.
         """
         if restore_prefix:
             for name in self.keys():
@@ -932,4 +938,4 @@ class ParameterDict(object):
                     "Please make sure source and target networks have the same prefix."%(
                         name[lprefix:], filename, _brief_print_list(self._params.keys()))
                 continue
-            self[name]._load_init(arg_dict[name], ctx)
+            self[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype)
