@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#if MXNET_USE_CUDA
+
 #include "./fused_op.h"
 #include "../operator_common.h"
 #include "../../executor/exec_pass.h"
@@ -56,3 +58,5 @@ NNVM_REGISTER_OP(FusedOp)
 .add_argument("data", "NDArray-or-Symbol[]", "Data");
 
 }  // namespace mxnet
+
+#endif  // MXNET_USE_CUDA

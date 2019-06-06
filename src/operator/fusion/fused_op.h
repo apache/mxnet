@@ -20,6 +20,8 @@
 #ifndef MXNET_OPERATOR_FUSION_FUSED_OP_H_
 #define MXNET_OPERATOR_FUSION_FUSED_OP_H_
 
+#if MXNET_USE_CUDA
+
 #include <mxnet/operator.h>
 #include <nnvm/graph.h>
 #include <vector>
@@ -136,4 +138,5 @@ using FusedOpHelperParamPtr = std::shared_ptr<FusedOpHelperParam>;
 
 }  // namespace mxnet
 
+#endif  // MXNET_USE_CUDA
 #endif  // MXNET_OPERATOR_FUSION_FUSED_OP_H_

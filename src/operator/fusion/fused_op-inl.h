@@ -20,6 +20,8 @@
 #ifndef MXNET_OPERATOR_FUSION_FUSED_OP_INL_H_
 #define MXNET_OPERATOR_FUSION_FUSED_OP_INL_H_
 
+#if MXNET_USE_CUDA
+
 #include <string>
 #include <map>
 #include <vector>
@@ -732,5 +734,7 @@ const char fused_op_kernel_end[] = R"code(
 }  // namespace detail
 
 }  // namespace mxnet
+
+#endif  // MXNET_USE_CUDA
 
 #endif  // MXNET_OPERATOR_FUSION_FUSED_OP_INL_H_

@@ -23,6 +23,9 @@
  * \brief
  * \author Clement Fuji Tsang
  */
+
+#if MXNET_USE_CUDA
+
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
@@ -225,3 +228,5 @@ Graph FusePointwiseBackward(Graph &&g) {
 
 }  // namespace exec
 }  // namespace mxnet
+
+#endif  // MXNET_USE_CUDA
