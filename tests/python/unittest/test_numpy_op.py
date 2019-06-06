@@ -219,16 +219,16 @@ def test_np_max():
         else:
             temp = _np.zeros((2,3,4,5))
             if axis == 0:
-                temp[1,:,:,:] = 1
+                temp[-1,:,:,:] = 1
                 return temp
             elif axis == 1:
-                temp[:,2,:,:] = 1
+                temp[:,-1,:,:] = 1
                 return temp
             elif axis == 2:
-                temp[:,:,3,:] = 1
+                temp[:,:,-1,:] = 1
                 return temp
             elif axis == 3:
-                temp[:,:,:,4] = 1
+                temp[:,:,:-1] = 1
                 return temp
             elif not axis:
                 temp[-1,-1,-1,-1] = 1

@@ -32,6 +32,7 @@
 #include "special_functions-inl.h"
 #include "./operator_tune.h"
 #include "./contrib/erfinv-inl.h"
+#include <algorithm>
 
 #ifdef __CUDACC__
 #include <cuda_fp16.h>
