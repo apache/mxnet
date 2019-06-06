@@ -105,8 +105,6 @@ class ndarray(NDArray):
                 raise IndexError('scalar tensor can only accept `()` as index')
         if isinstance(key, tuple) and len(key) == 0:
             return self
-        if isinstance(key, integer_types):
-            key = (key,)
         if isinstance(key, tuple) and len(key) == self.ndim\
                 and all(isinstance(idx, integer_types) for idx in key):
             out = self._as_classic_ndarray()
@@ -138,8 +136,6 @@ class ndarray(NDArray):
             self._as_classic_ndarray().__setitem__(slice(None), value)
             return
 
-        if isinstance(key, integer_types):
-            key = (key,)
         if isinstance(key, ndarray):
             key = key._as_classic_ndarray()
         elif isinstance(key, tuple):

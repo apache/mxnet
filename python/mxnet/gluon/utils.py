@@ -38,7 +38,7 @@ except ImportError:
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape, is_np_array
+from ..util import is_np_shape, is_np_array, wraps_safely
 
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
@@ -474,16 +474,24 @@ def _check_all_np_ndarrays(out):
                             '{}'.format(str(type(array))))
 
 
-def _to_classic_arrays(*args):
+def _to_classic_arrays(*args, **kwargs):
     """Convert arrays to classic arrays. This is used in a Gluon layer for converting
     inputs of np arrays to classic arrays so that the layer built with legacy ops can still
     be used in np_array semantics."""
+    from ..numpy import ndarray as np_ndarray
+    from ..symbol.numpy import _Symbol as np_symbol
     num_inputs = len(args)
     assert num_inputs != 0
     if not is_np_array():
-        return args[0] if num_inputs == 1 else args
+        return args, kwargs
     in_arrs = [arr if arr is None else arr.as_classic_ndarray() for arr in args]
-    return in_arrs[0] if num_inputs == 1 else in_arrs
+    new_kwargs = {}
+    for k, v in kwargs.items():
+        if isinstance(v, (np_ndarray, np_symbol)):
+            new_kwargs[k] = v.as_classic_ndarray()
+        else:
+            new_kwargs[k] = v
+    return in_arrs, new_kwargs
 
 
 def _to_np_arrays(*args):
@@ -496,3 +504,17 @@ def _to_np_arrays(*args):
         return args[0] if num_outputs == 1 else args
     out = [arr.as_np_ndarray() for arr in args]
     return out[0] if num_outputs == 1 else out
+
+
+def adapt_np_array(func):
+    @wraps_safely(func)
+    def _with_np_array(*args, **kwargs):
+        assert len(args) > 2, "expect at least three arguments in args"
+        if is_np_array():
+            input_args, kwargs = _to_classic_arrays(*args[2:], **kwargs)
+            input_args = list(args[0:2]) + input_args
+            out = func(*input_args, **kwargs)
+            return _to_np_arrays(out)
+        else:
+            return func(*args, **kwargs)
+    return _with_np_array
