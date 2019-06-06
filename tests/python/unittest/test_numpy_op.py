@@ -214,19 +214,26 @@ def test_np_max():
         return 'int' == dtype
 
     def get_grad(axis):
-        temp = _np.zeros((2,3,4,5))
-        if axis == 0:
-            temp[1,:,:,:] = 1
-            return temp
-        elif axis == 1:
-            temp[:,2,:,:] = 1
-            return temp
-        elif axis == 2:
-            temp[:,:,3,:] = 1
-            return temp
+        if axis == ():
+            return _np.ones((2,3,4,5))
         else:
-            temp[:,:,:,4] = 1
-            return temp
+            temp = _np.zeros((2,3,4,5))
+            if axis == 0:
+                temp[1,:,:,:] = 1
+                return temp
+            elif axis == 1:
+                temp[:,2,:,:] = 1
+                return temp
+            elif axis == 2:
+                temp[:,:,3,:] = 1
+                return temp
+            elif axis == 3:
+                temp[:,:,:,4] = 1
+                return temp
+            elif not axis:
+                temp[-1,-1,-1,-1] = 1
+                return temp
+            raise ValueError('axis should be int or None or ()')
 
     in_data_dim = random.choice([2, 3, 4])
     shape = rand_shape_nd(in_data_dim, dim=3)
@@ -253,8 +260,9 @@ def test_np_max():
                                         atol=1e-5 if itype == 'float16' else 1e-5)
                     y.backward()
                     # only check the gradient with hardcoded input
-                    if is_int(itype) and axis in [0, 1, 2, 3]:
-                        assert same(x.grad.asnumpy(), get_grad(axis))
+                    if is_int(itype):
+                        assert same(x.grad.asnumpy(), get_grad(axis)), \
+                            'x={}\ny={}\nx.grad={}\nnumpy={}'.format(x.asnumpy(), y.asnumpy(), x.grad.asnumpy(), get_grad(axis))
 
                     # test numeric
                     if itype == 'float32':
