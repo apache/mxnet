@@ -153,7 +153,7 @@ class BidirectionalGraph {
   using PairVec = std::pair<std::vector<Node*>, std::vector<Node*>>;
   using IncompMap = std::unordered_map<Node*, std::unordered_set<Node*>>;
 
- template <typename FVisit>
+  template <typename FVisit>
   void DFS(const std::vector<Node*>& heads, bool reverse, FVisit fvisit) {
     std::unordered_set<Node*> visited;
     std::vector<Node*> vec(heads.begin(), heads.end());

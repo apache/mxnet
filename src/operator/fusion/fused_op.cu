@@ -19,8 +19,8 @@
 
 #include <nvrtc.h>
 #include <cuda.h>
-#include <algorithm>
 #include <nnvm/pass_functions.h>
+#include <algorithm>
 #include "./fused_op.h"
 #include "./fused_op-inl.h"
 #include "../operator_common.h"
