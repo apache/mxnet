@@ -283,9 +283,7 @@ def test_np_max():
         x = _np.random.uniform(-1.0, 1.0, shape)
         x = mx.nd.array(x).as_np_ndarray()
         out = mx.np.max(x)
-        assert out.ndim == dim, 'output.ndim={}, dim={}'.format(output.ndim, dim)
-        if shape == ():
-            assert x == out
+        assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
 
 
 @with_seed()
