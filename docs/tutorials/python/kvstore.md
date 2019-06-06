@@ -54,7 +54,7 @@ print(a.asnumpy())
 The data for pushing can be stored on any device. Furthermore, you can push multiple
 values into the same key, where KVStore will first sum all of these
 values and then push the aggregated value. Here we will just demonstrate pushing a list of values on CPU.
-Please note when the sum will only happen if length of the value list is larger than 1.
+Please note summation only happens if the value list is longer than one
 
 ```python
 contexts = [mx.cpu(i) for i in range(4)]
