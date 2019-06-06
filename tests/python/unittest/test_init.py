@@ -67,10 +67,19 @@ def test_bilinear_init():
     bili_1d = np.array([[1/float(4), 3/float(4), 3/float(4), 1/float(4)]])
     bili_2d = bili_1d * np.transpose(bili_1d)
     assert (bili_2d == bili_weight.asnumpy()).all()
-    
+
+def test_const_init_dumps():
+    # test NDArray input
+    init = mx.init.Constant(mx.nd.ones(5))
+    assert init.dumps() == '["constant", {"value": [1.0, 1.0, 1.0, 1.0, 1.0]}]'
+    # test scalar input
+    init = mx.init.Constant(1)
+    assert init.dumps() == '["constant", {"value": 1}]'
+
 if __name__ == '__main__':
     test_variable_init()
     test_default_init()
     test_aux_init()
     test_rsp_const_init()
     test_bilinear_init()
+    test_const_init_dumps()
