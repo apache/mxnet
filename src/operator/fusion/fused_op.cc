@@ -17,11 +17,11 @@
  * under the License.
  */
 
-#if MXNET_USE_CUDA
-
 #include "./fused_op.h"
 #include "../operator_common.h"
 #include "../../executor/exec_pass.h"
+
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 

@@ -20,12 +20,12 @@
 #ifndef MXNET_OPERATOR_FUSION_FUSED_OP_INL_H_
 #define MXNET_OPERATOR_FUSION_FUSED_OP_INL_H_
 
-#if MXNET_USE_CUDA
-
 #include <string>
 #include <map>
 #include <vector>
 #include "../nn/activation-inl.h"
+
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 

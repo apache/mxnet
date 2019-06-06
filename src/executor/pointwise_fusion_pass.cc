@@ -24,8 +24,6 @@
  * \author Clement Fuji Tsang
  */
 
-#if MXNET_USE_CUDA
-
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
@@ -36,6 +34,8 @@
 #include "../operator/fusion/fused_op-inl.h"
 #include "../operator/fusion/fused_op.h"
 #include "../operator/operator_common.h"
+
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 namespace exec {

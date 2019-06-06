@@ -20,13 +20,14 @@
 #ifndef MXNET_OPERATOR_FUSION_FUSED_OP_H_
 #define MXNET_OPERATOR_FUSION_FUSED_OP_H_
 
-#if MXNET_USE_CUDA
 
 #include <mxnet/operator.h>
 #include <nnvm/graph.h>
 #include <vector>
 #include <string>
 #include <utility>
+
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 
