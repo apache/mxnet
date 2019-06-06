@@ -75,6 +75,10 @@ def test_const_init_dumps():
     # test scalar input
     init = mx.init.Constant(1)
     assert init.dumps() == '["constant", {"value": 1}]'
+    # test numpy input
+    init = mx.init.Constant(np.ones(5))
+    assert init.dumps() == '["constant", {"value": [1.0, 1.0, 1.0, 1.0, 1.0]}]'
+
 
 if __name__ == '__main__':
     test_variable_init()
