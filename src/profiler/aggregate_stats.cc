@@ -204,7 +204,7 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
             << "                \"Avg\": "
             << (is_memory ?
                 ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
-                MicroToMilli(static_cast<double>(data.total_aggregate_) / data.total_count_))
+                MicroToMilli(static_cast<double>(data.total_aggregate_) /  data.total_count_))
             << std::endl
             << "            }" << std::endl;
       }
