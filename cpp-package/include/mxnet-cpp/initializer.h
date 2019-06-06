@@ -138,6 +138,14 @@ class Uniform : public Initializer {
   Uniform(float begin, float end)
     : begin(begin), end(end) {}
   void operator()(const std::string &name, NDArray *arr) override {
+    if (StringEndWith(name, "weight_quantize")) {
+      InitQuantizedWeight(arr);
+      return;
+    }
+    if (StringEndWith(name, "bias_quantize")) {
+      InitQuantizedBias(arr);
+      return;
+    }
     NDArray::SampleUniform(begin, end, arr);
   }
  protected:
@@ -149,6 +157,14 @@ class Normal : public Initializer {
   Normal(float mu, float sigma)
     : mu(mu), sigma(sigma) {}
   void operator()(const std::string &name, NDArray *arr) override {
+    if (StringEndWith(name, "weight_quantize")) {
+      InitQuantizedWeight(arr);
+      return;
+    }
+    if (StringEndWith(name, "bias_quantize")) {
+      InitQuantizedBias(arr);
+      return;
+    }
     NDArray::SampleGaussian(mu, sigma, arr);
   }
  protected:
@@ -159,6 +175,14 @@ class Bilinear : public Initializer {
  public:
   Bilinear() {}
   void operator()(const std::string &name, NDArray *arr) override {
+    if (StringEndWith(name, "weight_quantize")) {
+      InitQuantizedWeight(arr);
+      return;
+    }
+    if (StringEndWith(name, "bias_quantize")) {
+      InitQuantizedBias(arr);
+      return;
+    }
     InitBilinear(arr);
   }
 };

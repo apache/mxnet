@@ -70,7 +70,7 @@ class Predictor {
  public:
     Predictor() {}
     Predictor(const std::string& model_json_file, const std::string& model_params_file, const Shape& input_shape,
-              bool use_gpu, const std::string& data_prefix, const int data_nthreads, const std::string& data_layer_type,
+              bool use_gpu, const std::string& dataset, const int data_nthreads, const std::string& data_layer_type,
               std::vector<float>& rgb_mean, std::vector<float>& rgb_std, int shuffle_chunk_seed, int seed, bool benchmark);
     void BenchmarkScore(int num_inference_batches);
     void Score(int num_skipped_batches, int num_inference_batches);
@@ -132,8 +132,8 @@ class Predictor {
  *  2. Create ImageRecordIter by using the given dataset file.
  *  3. Infer and construct NDArrays according to the input argument and create an executor.
  */
-Predictor::Predictor(const std::string& model_json_file, const std::string& model_params_file, const Shape& input_shape, 
-                     bool use_gpu, const std::string& dataset, const int data_nthreads, const std::string& data_layer_type, 
+Predictor::Predictor(const std::string& model_json_file, const std::string& model_params_file, const Shape& input_shape,
+                     bool use_gpu, const std::string& dataset, const int data_nthreads, const std::string& data_layer_type,
                      std::vector<float>& rgb_mean, std::vector<float>& rgb_std, int shuffle_chunk_seed, int seed, bool benchmark)
     : input_shape(input_shape), use_gpu_(use_gpu), dataset_(dataset), data_nthreads_(data_nthreads), data_layer_type_(data_layer_type),
       rgb_mean_(rgb_mean), rgb_std_(rgb_std), shuffle_chunk_seed_(shuffle_chunk_seed), seed_(seed), benchmark_(benchmark) {
@@ -285,7 +285,6 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
  */
 void Predictor::InitParameters () {
   std::vector<mx_uint> data_shape;
-  std::vector<mx_uint> label_shape{input_shape[0]};
   for (index_t i=0; i < input_shape.ndim(); i++) {
     data_shape.push_back(input_shape[i]);
   }
@@ -293,7 +292,6 @@ void Predictor::InitParameters () {
   std::map<std::string, std::vector<mx_uint> > arg_shapes;
   std::vector<std::vector<mx_uint> > aux_shapes, in_shapes, out_shapes;
   arg_shapes["data"] = data_shape;
-  arg_shapes["softmax_label"] = label_shape;
   net.InferShape(arg_shapes, &in_shapes, &aux_shapes, &out_shapes);
 
   // initializer to call
@@ -354,7 +352,7 @@ void Predictor::BenchmarkScore(int num_inference_batches) {
   LG << "benchmark completed!";
   LG << "batch size: " << input_shape[0] << " num batch: " << num_inference_batches
      << " throughput: " << 1000 * input_shape[0] * num_inference_batches / ms
-     << " img/s latency:" << ms / input_shape[0] / num_inference_batches << " ms";
+     << " imgs/s latency:" << ms / input_shape[0] / num_inference_batches << " ms";
 }
 
 /*
@@ -391,8 +389,8 @@ void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
   double ms = get_msec();
   while (val_iter->Next()) {
     auto data_batch = val_iter->GetDataBatch();
-    data_batch.data.CopyTo(&(executor->arg_dict()["data"]));
-    data_batch.label.CopyTo(&(executor->arg_dict()["softmax_label"]));
+    data_batch.data.CopyTo(&args_map["data"]);
+    data_batch.label.CopyTo(&args_map["softmax_label"]);
     NDArray::WaitAll();
 
     // running on forward pass
@@ -519,7 +517,7 @@ int main(int argc, char** argv) {
             batch_size = strtol(argv[index], nullptr, 10);
         }  else if (strcmp("--num_skipped_batches", argv[index]) == 0) {
             index++;
-            num_skipped_batches = strtol(argv[index], nullptr, 10);    
+            num_skipped_batches = strtol(argv[index], nullptr, 10);
         }  else if (strcmp("--num_inference_batches", argv[index]) == 0) {
             index++;
             num_inference_batches = strtol(argv[index], nullptr, 10);

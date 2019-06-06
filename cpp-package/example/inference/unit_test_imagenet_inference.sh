@@ -21,18 +21,27 @@
 mkdir -p model
 wget -nc http://data.mxnet.io/models/imagenet/inception-bn.tar.gz
 tar -xvzf inception-bn.tar.gz -C model
+wget -nc https://raw.githubusercontent.com/dmlc/gluon-cv/master/gluoncv/model_zoo/quantized/resnet50_v1_int8-symbol.json -O ./model/resnet50_v1_int8-symbol.json
 mkdir -p data
 wget -nc http://data.mxnet.io/data/val_256_q90.rec -O ./data/val_256_q90.rec
 
 # Running inference on imagenet.
 if [ "$(uname)" == "Darwin" ]; then
-	echo ">>> INFO: FP32 dummy data"
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 1 --num_skipped_batches 50 --num_inference_batches 500 --benchmark
 	echo ">>> INFO: FP32 real data"
     DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --params_file "./model/Inception-BN-0126.params" --dataset "./data/val_256_q90.rec" --rgb_mean "123.68 116.779 103.939" --batch_size 1 --num_skipped_batches 50 --num_inference_batches 500
+
+    echo ">>> INFO: FP32 dummy data"
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
+
+    echo ">>> INFO: INT8 dummy data"
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/resnet50_v1_int8-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
 else
-	echo ">>> INFO: FP32 dummy data"
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 1 --num_skipped_batches 50 --num_inference_batches 500 --benchmark
-    echo ">>> INFO: FP32 real data"
+	echo ">>> INFO: FP32 real data"
     LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --params_file "./model/Inception-BN-0126.params" --dataset "./data/val_256_q90.rec" --rgb_mean "123.68 116.779 103.939" --batch_size 1 --num_skipped_batches 50 --num_inference_batches 500
+
+    echo ">>> INFO: FP32 dummy data"
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
+
+    echo ">>> INFO: INT8 dummy data"
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./imagenet_inference --symbol_file "./model/resnet50_v1_int8-symbol.json" --batch_size 1 --num_inference_batches 500 --benchmark
 fi
