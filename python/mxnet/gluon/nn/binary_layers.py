@@ -163,13 +163,14 @@ class QActivation(HybridBlock):
 
 
 class QDense(Dense):
-    def __init__(self, *args, bits=None, activation=None, use_bias=False, **kwargs):
+    def __init__(self, *args, bits=None, activation=None, use_bias=False, no_offset=False, **kwargs):
         check_params(use_bias, activation)
         super(QDense, self).__init__(*args, activation=None, use_bias=False, **kwargs)
         self._offset = 0
         self.quantize = binary_layer_config.get_weight_quantization_function(bits=bits)
         self.method = binary_layer_config.activation
         self.weight.wd_mult = 0.0
+        self.no_offset = no_offset
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
@@ -177,6 +178,8 @@ class QDense(Dense):
         quantized_weight = self.quantize(F, weight)
         h = F.FullyConnected(x, quantized_weight, bias, no_bias=True,
                              num_hidden=self._units, flatten=self._flatten, name='fwd')
+        if self.no_offset:
+            return h
         return (h + self._offset) / 2
 
 
