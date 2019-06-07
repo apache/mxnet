@@ -48,15 +48,15 @@ def _verify_np_symbol(op_name, func_name, sym):
     if not isinstance(sym, np_symbol):
         raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                         'This is a numpy operator which can only accept '
-                        'MXNet numpy ndarrays, while received a classic ndarray. '
-                        'Please call `as_np_ndarray()` upon the classic ndarray to '
+                        'MXNet numpy ndarrays, while received a legacy ndarray. '
+                        'Please call `as_np_ndarray()` upon the legacy ndarray to '
                         'convert it to an MXNet numpy ndarray, and then feed the converted '
                         'array to this operator.'
                         .format(op_name, func_name))
 
 
-def _verify_classic_symbol(op_name, func_name, sym):
-    """Verify if the sym is a classic symbol.
+def _verify_legacy_symbol(op_name, func_name, sym):
+    """Verify if the sym is a legacy symbol.
 
     Parameters
     ----------
@@ -70,10 +70,10 @@ def _verify_classic_symbol(op_name, func_name, sym):
     from .numpy._symbol import _Symbol as np_symbol
     if isinstance(sym, np_symbol):
         raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
-                        'This is a classic operator which can only accept '
-                        'classic ndarrays, while received an MXNet numpy ndarray. '
-                        'Please call `as_classic_ndarray()` upon the numpy ndarray to '
-                        'convert it to a classic ndarray, and then feed the converted '
+                        'This is a legacy operator which can only accept '
+                        'legacy ndarrays, while received an MXNet numpy ndarray. '
+                        'Please call `as_nd_ndarray()` upon the numpy ndarray to '
+                        'convert it to a legacy ndarray, and then feed the converted '
                         'array to this operator.'
                         .format(op_name, func_name))
 
@@ -142,7 +142,7 @@ def _generate_symbol_function_code(handle, op_name, func_name, signature_only=Fa
     signature = ndsignature + signature
 
     is_np_op = _is_np_op(op_name)
-    verify_symbol_fn = _verify_np_symbol.__name__ if is_np_op else _verify_classic_symbol.__name__
+    verify_symbol_fn = _verify_np_symbol.__name__ if is_np_op else _verify_legacy_symbol.__name__
     code = []
     if arr_name:
         code.append("""
