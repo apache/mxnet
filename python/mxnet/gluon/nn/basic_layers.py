@@ -660,7 +660,6 @@ class Lambda(Block):
                 "Unrecognized function in lambda: {} of type {}"
                 .format(function, type(function)))
 
-    @_adapt_np_array
     def forward(self, *args):
         return self._func_impl(*args)
 
