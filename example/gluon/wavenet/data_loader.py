@@ -28,8 +28,7 @@ def load_wav(file_nm):
     """
     Description : load wav file
     """
-    fs, data = wavfile.read(os.getcwd()+'/dataset/'+file_nm)
-    return  fs, data
+    return wavfile.read(os.getcwd()+'/dataset/'+file_nm)
 
 def data_generation(data, seq_size, mu, ctx):
     """
@@ -48,6 +47,8 @@ def data_generation_sample(data, seq_size, mu, ctx):
     Description : sample data generation to loading data
     """
     div = max(data.max(), abs(data.min()))
+    if div == 0:
+        raise ("check the data values")
     data = data/div
     start = 0
     ys = data[start:start+seq_size]

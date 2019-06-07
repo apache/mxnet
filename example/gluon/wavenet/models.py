@@ -73,8 +73,7 @@ class WaveNet(nn.HybridBlock):
         """
         Description : module for preprocess
         """
-        output = self.from_input(x)
-        return output
+        return self.from_input(x)
 
     def postprocess(self, F, x):
         """
