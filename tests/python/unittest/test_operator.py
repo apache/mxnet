@@ -3384,7 +3384,6 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
 
 
 @with_seed()
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/15004")
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
         for mode in ['channel', 'spatial', 'instance']:
@@ -4859,7 +4858,6 @@ def test_where():
     test_1d_cond()
 
 
-@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13600")
 @with_seed()
 def test_softmin():
     for ndim in range(1, 5):
