@@ -521,7 +521,7 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
     .describe("DType of the output in case this can't be inferred. "
               "Defaults to the same as input's dtype if not defined (dtype=None).");
     DMLC_DECLARE_FIELD(use_length)
-    .set_default(dmlc::optional<bool>())
+    .set_default(dmlc::optional<bool>(false))
     .describe("Whether to use the length input as a mask over the data input.");
   }
 };
@@ -721,7 +721,7 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
           }
         }
       } else {
-        MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {
+        MXNET_INT_TYPE_SWITCH(inputs[1].type_flag_, IType, {
           if (shape.ndim() == 2) {
             SoftmaxWithLength<OP, negate, AType>(
               ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
@@ -788,7 +788,7 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
             }
           }
         } else {
-          MSHADOW_TYPE_SWITCH(inputs[2].type_flag_, IType, {
+          MXNET_INT_TYPE_SWITCH(inputs[2].type_flag_, IType, {
             if (req[1] != kNullOp) {
               mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
                 ctx.get_stream<xpu>(), outputs[1].Size(), outputs[1].dptr<IType>());

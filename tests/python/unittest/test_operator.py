@@ -5125,7 +5125,7 @@ def test_softmax_with_length():
         mx_data = rand_ndarray(shape, dtype=dtype)
         np_data = mx_data.asnumpy()
         np_length = np.random.randint(1, shape[1] + 1, len_shape)
-        mx_length = mx.nd.array(np_length, dtype=dtype)
+        mx_length = mx.nd.array(np_length, dtype=np.int32)
         np_out = np_softmax_with_length(np_data, np_length)
         data = mx.sym.Variable("data")
         length = mx.sym.Variable("length")
@@ -5133,9 +5133,9 @@ def test_softmax_with_length():
         location = {"data": mx_data, "length": mx_length}
         rtol = 1e-2 if dtype == np.float16 else 1e-3
         atol = 1e-4 if dtype == np.float16 else 1e-5
-        check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype=dtype)
-        check_symbolic_backward(mx_sym, location, [np.ones(shape)],
-                                [np.zeros(shape), np.zeros(len_shape)], rtol=1e-2, atol=1e-3, dtype=dtype)
+        check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype="asnumpy")
+        check_symbolic_backward(mx_sym, location, [np.ones(shape, dtype=dtype)],
+                                [np.zeros(shape), np.zeros(len_shape, dtype=np.int32)], rtol=1e-2, atol=1e-3, dtype="asnumpy")
 
 
 @with_seed()
@@ -7953,6 +7953,7 @@ def test_op_all_names_monitor():
         except mx.base.MXNetError:
             # skip errors since test is to check all names
             pass
+        print(output_names)
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 
@@ -7976,7 +7977,11 @@ def test_op_all_names_monitor():
     check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
 
     sm_sym = mx.sym.softmax(data, name='softmax')
-    check_name(sm_sym, ['data', 'softmax_input0', 'softmax_output'])
+    check_name(sm_sym, ['data', 'softmax_data', 'softmax_output'])
+
+    length = mx.sym.Variable("length", shape=(10, 10, 10))
+    sm_sym = mx.sym.softmax(data, length, axis=1, use_length=True, name='softmax')
+    check_name(sm_sym, ['data', 'softmax_data', 'length', 'softmax_length', 'softmax_output'])
 
     sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
     check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
