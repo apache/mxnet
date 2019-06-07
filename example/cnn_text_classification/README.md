@@ -29,6 +29,10 @@ Finally, I got a best dev accuracy 80.1%, close to 81% that reported in the orig
 ## Data
 Please download the corpus from this repository [cnn-text-classification-tf](https://github.com/dennybritz/cnn-text-classification-tf), :)
 
+Note: The dataset is from cnn-text-classification-tf [repository](https://github.com/dennybritz/cnn-text-classification-tf/tree/master/data/rt-polaritydata).
+The dataset is copyright to Denny Britz and licensed under Apache License 2.0.
+For full text of the license, see [repository license](https://github.com/dennybritz/cnn-text-classification-tf/blob/master/LICENSE)
+    
 'data/rt.vec', this file was trained on the corpus by word2vec tool. I recommend to use GoogleNews word2vec, which could get better performance, since
 this corpus is small (contains about 10K sentences).
 
