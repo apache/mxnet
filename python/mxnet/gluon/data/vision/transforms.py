@@ -24,7 +24,7 @@ from ...nn import Sequential, HybridSequential
 from .... import image
 from ....base import numeric_types
 from ....util import is_np_array
-from ...utils import adapt_np_array
+from ...utils import _adapt_np_array
 
 
 class Compose(Sequential):
@@ -135,7 +135,7 @@ class ToTensor(HybridBlock):
     def __init__(self):
         super(ToTensor, self).__init__()
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, x):
         return F.image.to_tensor(x)
 

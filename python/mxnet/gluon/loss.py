@@ -29,7 +29,8 @@ import numpy as np
 from .. import ndarray
 from ..base import numeric_types
 from .block import HybridBlock
-from .utils import adapt_np_array
+from .utils import _adapt_np_array
+from ..util import is_np_array
 
 
 def _apply_weighting(F, loss, weight=None, sample_weight=None):
@@ -54,7 +55,10 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
         Weighted loss
     """
     if sample_weight is not None:
-        loss = F.broadcast_mul(loss, sample_weight)
+        if is_np_array():
+            loss = loss * sample_weight
+        else:
+            loss = F.broadcast_mul(loss, sample_weight)
 
     if weight is not None:
         assert isinstance(weight, numeric_types), "weight must be a number"
@@ -65,7 +69,11 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
 
 def _reshape_like(F, x, y):
     """Reshapes x to the same shape as y."""
-    return x.reshape(y.shape) if F is ndarray else F.reshape_like(x, y)
+    if F is ndarray:
+        return x.reshape(y.shape)
+    elif is_np_array():
+        F = F.npx
+    return F.reshape_like(x, y)
 
 
 class Loss(HybridBlock):
@@ -135,12 +143,17 @@ class L2Loss(Loss):
     def __init__(self, weight=1., batch_axis=0, **kwargs):
         super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
 
-    @adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.square(label - pred)
+        loss = F.np.square(label - pred) if is_np_array() else F.square(label - pred)
         loss = _apply_weighting(F, loss, self._weight / 2, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        if is_np_array():
+            if F is ndarray:
+                return F.np.mean(loss, axis=tuple(range(1, loss.ndim)))
+            else:
+                return F.npx.batch_flatten(loss).mean(axis=1)
+        else:
+            return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
 class L1Loss(Loss):
@@ -175,7 +188,7 @@ class L1Loss(Loss):
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(L1Loss, self).__init__(weight, batch_axis, **kwargs)
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
         loss = F.abs(label - pred)
@@ -245,7 +258,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
             weight, batch_axis, **kwargs)
         self._from_sigmoid = from_sigmoid
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None, pos_weight=None):
         label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
@@ -344,7 +357,7 @@ class SoftmaxCrossEntropyLoss(Loss):
         self._sparse_label = sparse_label
         self._from_logits = from_logits
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         if not self._from_logits:
             pred = F.log_softmax(pred, self._axis)

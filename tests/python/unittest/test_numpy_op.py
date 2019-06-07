@@ -26,6 +26,8 @@ from mxnet.test_utils import check_numeric_gradient
 from common import with_seed
 import random
 
+npx.set_np()
+
 
 @with_seed()
 def test_np_sum():
@@ -78,8 +80,8 @@ def test_np_sum():
                         # test numeric
                         if itype == 'float32' and dtype == 'float32':
                             x_sym = mx.sym.Variable("x").as_np_ndarray()
-                            mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_classic_ndarray()
-                            check_numeric_gradient(mx_sym, [x.as_classic_ndarray()],
+                            mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
                                                    numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
 
                         # test imperative
@@ -116,7 +118,7 @@ def test_np_dot():
         assert_almost_equal(np_res, mx_res.asnumpy(), rtol=1e-5, atol=1e-5)
         mx_a = mx.sym.Variable("a")
         mx_b = mx.sym.Variable("b")
-        mx_sym = mx.sym.np.dot(mx_a.as_np_ndarray(), mx_b.as_np_ndarray()).as_classic_ndarray()
+        mx_sym = mx.sym.np.dot(mx_a.as_np_ndarray(), mx_b.as_np_ndarray()).as_nd_ndarray()
         check_numeric_gradient(mx_sym, {"a": a, "b": b}, numeric_eps=eps, rtol=1e-2, atol=1e-3)
 
     bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6, ))]
@@ -185,8 +187,8 @@ def test_np_mean():
                         # test numeric
                         if itype == 'float32' and dtype == 'float32':
                             x_sym = mx.sym.Variable("x").as_np_ndarray()
-                            mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_classic_ndarray()
-                            check_numeric_gradient(mx_sym, [x.as_classic_ndarray()],
+                            mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
                                                    numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
 
                         # test imperative

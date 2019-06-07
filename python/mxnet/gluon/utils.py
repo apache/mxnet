@@ -459,7 +459,7 @@ def _check_same_symbol_type(symbols):
                             'symbols in the list to numpy symbols by calling `as_np_ndarray()` '
                             'on each of them; if you want classic ndarray output(s) from the '
                             'computation graph, please convert all the numpy symbols in the list '
-                            'to classic symbols by calling `as_classic_ndarray()` on each of them.')
+                            'to classic symbols by calling `as_nd_ndarray()` on each of them.')
     return np_symbol if is_np_sym else classic_symbol
 
 
@@ -484,11 +484,11 @@ def _to_classic_arrays(*args, **kwargs):
     assert num_inputs != 0
     if not is_np_array():
         return args, kwargs
-    in_arrs = [arr if arr is None else arr.as_classic_ndarray() for arr in args]
+    in_arrs = [arr if arr is None else arr.as_nd_ndarray() for arr in args]
     new_kwargs = {}
     for k, v in kwargs.items():
         if isinstance(v, (np_ndarray, np_symbol)):
-            new_kwargs[k] = v.as_classic_ndarray()
+            new_kwargs[k] = v.as_nd_ndarray()
         else:
             new_kwargs[k] = v
     return in_arrs, new_kwargs
@@ -506,7 +506,11 @@ def _to_np_arrays(*args):
     return out[0] if num_outputs == 1 else out
 
 
-def adapt_np_array(func):
+# TODO(junwu): This is a temp solution for allowing basic layers
+# implemented using legacy ops to accept np.ndarrays as inputs and return
+# np.ndarrays as outputs. We should remove it after changing all the layers
+# to use np ops in np_array semantics in the future.
+def _adapt_np_array(func):
     @wraps_safely(func)
     def _with_np_array(*args, **kwargs):
         assert len(args) > 2, "expect at least three arguments in args"

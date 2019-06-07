@@ -25,8 +25,9 @@ import numpy as np
 
 from .activations import Activation
 from ..block import Block, HybridBlock
-from ..utils import _indent, adapt_np_array
+from ..utils import _indent, _adapt_np_array
 from ... import nd, sym
+from ...util import is_np_array
 
 
 class Sequential(Block):
@@ -216,8 +217,9 @@ class Dense(HybridBlock):
             else:
                 self.act = None
 
-    @adapt_np_array
     def hybrid_forward(self, F, x, weight, bias=None):
+        if is_np_array():
+            F = F.npx
         act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
                                flatten=self._flatten, name='fwd')
         if self.act is not None:
@@ -262,7 +264,7 @@ class Dropout(HybridBlock):
         self._rate = rate
         self._axes = axes
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, x):
         if self._rate > 0:
             return F.Dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
@@ -357,7 +359,7 @@ class BatchNorm(HybridBlock):
             dtype = 'float32'
         super(BatchNorm, self).cast(dtype)
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,
                            name='fwd', **self._kwargs)
@@ -411,7 +413,7 @@ class Embedding(HybridBlock):
                                       init=weight_initializer, dtype=dtype,
                                       allow_deferred_init=True, grad_stype=grad_stype)
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, x, weight):
         return F.Embedding(x, weight, name='fwd', **self._kwargs)
 
@@ -433,7 +435,7 @@ class Flatten(HybridBlock):
     def __init__(self, **kwargs):
         super(Flatten, self).__init__(**kwargs)
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, x):
         return F.Flatten(x)
 
@@ -519,7 +521,7 @@ class InstanceNorm(HybridBlock):
                                     shape=(in_channels,), init=beta_initializer,
                                     allow_deferred_init=True)
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, x, gamma, beta):
         if self._axis == 1:
             return F.InstanceNorm(x, gamma, beta,
@@ -608,7 +610,7 @@ class LayerNorm(HybridBlock):
                                     shape=(in_channels,), init=beta_initializer,
                                     allow_deferred_init=True)
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, data, gamma, beta):
         norm_data = F.LayerNorm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
         return norm_data
@@ -658,7 +660,7 @@ class Lambda(Block):
                 "Unrecognized function in lambda: {} of type {}"
                 .format(function, type(function)))
 
-    @adapt_np_array
+    @_adapt_np_array
     def forward(self, *args):
         return self._func_impl(*args)
 
@@ -706,7 +708,7 @@ class HybridLambda(HybridBlock):
                 "Unrecognized function in lambda: {} of type {}"
                 .format(function, type(function)))
 
-    @adapt_np_array
+    @_adapt_np_array
     def hybrid_forward(self, F, x, *args):
         return self._func(F, x, *args)
 
