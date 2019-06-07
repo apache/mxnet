@@ -17,7 +17,7 @@
 
 """Performance benchmark tests for MXNet NDArray Binary Operations - covers both broadcast and element_wise.
 1. Operators are automatically fetched from MXNet operator registry.
-2. Default Inputs are generated. See rules/input_shapes.py. You can override the default values.
+2. Default Inputs are generated. See rules/default_params.py. You can override the default values.
 
 Below 20 binary broadcast Operators are covered:
 
@@ -33,12 +33,9 @@ Below 4 binary element_wise Operators are covered:
 """
 import mxnet as mx
 
-from benchmark.opperf.utils.benchmark_utils import run_performance_test
-from benchmark.opperf.utils.common_utils import merge_map_list
+from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 from benchmark.opperf.utils.op_registry_utils import get_all_broadcast_binary_operators, \
-    get_all_elemen_wise_binary_operators, prepare_op_inputs
-from benchmark.opperf.rules.input_shapes import DEFAULT_BINARY_BROADCAST_OP_INPUTS, \
-    DEFAULT_BINARY_ELEMENT_WISE_OP_INPUTS
+    get_all_elemen_wise_binary_operators
 
 
 def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
@@ -63,21 +60,8 @@ def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', 
     """
     # Fetch all Binary Broadcast Operators
     mx_binary_broadcast_ops = get_all_broadcast_binary_operators()
-
-    # For each operator, run benchmarks
-    mx_binary_op_results = []
-    for _, op_params in mx_binary_broadcast_ops.items():
-        # Prepare inputs for the operator
-        inputs = prepare_op_inputs(op_params, DEFAULT_BINARY_BROADCAST_OP_INPUTS)
-        # Run benchmarks
-        cur_op_res = run_performance_test(op_params["nd_op_handle"], run_backward=op_params["has_backward"],
-                                          dtype=dtype, ctx=ctx,
-                                          inputs=inputs,
-                                          warmup=warmup, runs=runs)
-        mx_binary_op_results += cur_op_res
-
-    # Prepare combined results for Binary Broadcast operators
-    mx_binary_op_results = merge_map_list(mx_binary_op_results)
+    # Run benchmarks
+    mx_binary_op_results = run_op_benchmarks(mx_binary_broadcast_ops, dtype, ctx, warmup, runs)
     return mx_binary_op_results
 
 
@@ -103,19 +87,6 @@ def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32
     """
     # Fetch all Binary Element_wise Operators
     mx_binary_element_wise_ops = get_all_elemen_wise_binary_operators()
-
-    # For each operator, run benchmarks
-    mx_binary_op_results = []
-    for _, op_params in mx_binary_element_wise_ops.items():
-        # Prepare inputs for the operator
-        inputs = prepare_op_inputs(op_params, DEFAULT_BINARY_ELEMENT_WISE_OP_INPUTS)
-        # Run benchmarks
-        cur_op_res = run_performance_test(op_params["nd_op_handle"], run_backward=op_params["has_backward"],
-                                          dtype=dtype, ctx=ctx,
-                                          inputs=inputs,
-                                          warmup=warmup, runs=runs)
-        mx_binary_op_results += cur_op_res
-
-    # Prepare combined results for Binary Element_wise operators
-    mx_binary_op_results = merge_map_list(mx_binary_op_results)
+    # Run benchmarks
+    mx_binary_op_results = run_op_benchmarks(mx_binary_element_wise_ops, dtype, ctx, warmup, runs)
     return mx_binary_op_results

@@ -107,16 +107,6 @@ MXNet NDArray Join and Split Operations
 2. split
 3. stack
 
-MXNet NDArray Random Sampling Operations
-
-1. normal
-2. poisson
-3. uniform
-4. random
-5. randn
-6. randint
-7. shuffle
-
 MXNet NDArray Reduction Operations
 
 1. sum

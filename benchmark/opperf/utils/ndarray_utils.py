@@ -105,8 +105,13 @@ def get_mx_ndarray(ctx, in_tensor, dtype, initializer, attach_grad=True):
     -------
     MXNet NDArray Tensor.
     """
+    if isinstance(in_tensor, int) or isinstance(in_tensor, float):
+        return in_tensor
+
     if isinstance(in_tensor, tuple):
         tensor = initializer(ctx=ctx, shape=in_tensor, dtype=dtype)
+    elif isinstance(in_tensor, list):
+        tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
     elif isinstance(in_tensor, np.ndarray):
         tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
     elif isinstance(in_tensor, mx.ndarray):

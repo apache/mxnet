@@ -20,8 +20,15 @@ import ctypes
 import sys
 from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
 
+from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS
+
+
 # We will use all operators inside NDArray Module
 mx_nd_module = sys.modules["mxnet.ndarray.op"]
+
+# Operators where parameter have special criteria that cannot be cleanly automated.
+# Example: sample_multinomial operator has a parameter 'data'. It expects values to sum up to 1.
+unique_ops = ("sample_multinomial",)
 
 
 def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
@@ -162,12 +169,48 @@ def _get_all_mxnet_operators():
 
 
 def prepare_op_inputs(arg_params, arg_values):
-    # For each default value combination, prepare inputs
     inputs = []
+
     for arg_value in arg_values:
         inp = {}
         for arg_name in arg_params["params"]["arg_names"]:
-            inp[arg_name] = arg_value[arg_name]
+            if arg_name in arg_value:
+                inp[arg_name] = arg_value[arg_name]
+        inputs.append(inp)
+    return inputs
+
+
+def prepare_op_inputs(arg_params):
+    inputs = []
+
+    # Prepare op to default input mapping
+    arg_values = {}
+    for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
+                                  arg_params["params"]["arg_types"]):
+        if "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
+        elif arg_name in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
+        elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
+
+    # Number of different inputs we want to use to test
+    # the operator
+    num_input_combinations = max([len(value) for value in arg_values.values()])
+
+    # Prepare key/value args for param to input value
+    for idx in range(num_input_combinations):
+        inp = {}
+        for arg_name in arg_params["params"]["arg_names"]:
+            if arg_name in arg_values:
+                if len(arg_values[arg_name]) == num_input_combinations:
+                    inp[arg_name] = arg_values[arg_name][idx]
+                else:
+                    # This is required when we want to use a param same across all
+                    # input combination. Example: keeping low and high same for random sampling
+                    # operator for all different types of Tensor shape.
+                    inp[arg_name] = arg_values[arg_name][0]
+
         inputs.append(inp)
     return inputs
 
@@ -229,3 +272,21 @@ def get_all_elemen_wise_binary_operators():
                 "rhs" in op_params["params"]["arg_names"]:
             binary_elemen_wise_mx_operators[op_name] = mx_operators[op_name]
     return binary_elemen_wise_mx_operators
+
+
+def get_all_random_sampling_operators():
+    """Gets all Random Sampling operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Random Sampling operators
+    random_sampling_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name.startswith(("random_", "sample_")) and op_name not in unique_ops:
+            random_sampling_mx_operators[op_name] = mx_operators[op_name]
+    return random_sampling_mx_operators

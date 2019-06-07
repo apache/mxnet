@@ -15,28 +15,27 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Performance benchmark tests for MXNet NDArray Unary Operations.
+"""Performance benchmark tests for MXNet NDArray Random Sampling Operations.
 1. Operators are automatically fetched from MXNet operator registry.
 2. Default Inputs are generated. See rules/default_params.py. You can override the default values.
 
-Below 54 unary Operators are covered:
+Below 16 random sampling Operators are covered:
 
-['BlockGrad', 'Flatten', 'abs', 'arccos', 'arccosh', 'arcsin', 'arcsinh', 'arctan', 'arctanh',
-'argmax_channel', 'cbrt', 'ceil', 'cos', 'cosh', 'degrees', 'erf', 'erfinv', 'exp', 'expm1', 'fix', 'flatten',
-'floor', 'gamma', 'gammaln', 'identity', 'log', 'log10', 'log1p', 'log2', 'logical_not', 'make_loss', 'negative',
-'ones_like', 'radians', 'rcbrt', 'reciprocal', 'relu', 'rint', 'round', 'rsqrt', 'shuffle', 'sigmoid', 'sign',
-'sin', 'sinh', 'size_array', 'softsign', 'sqrt', 'square', 'stop_gradient', 'tan', 'tanh', 'trunc', 'zeros_like']
+['random_exponential', 'random_gamma', 'random_generalized_negative_binomial', 'random_negative_binomial',
+'random_normal', 'random_poisson', 'random_randint', 'random_uniform', 'sample_exponential', 'sample_gamma',
+'sample_generalized_negative_binomial', 'sample_multinomial', 'sample_negative_binomial', 'sample_normal',
+'sample_poisson', 'sample_uniform']
 
 """
 
 import mxnet as mx
 
-from benchmark.opperf.utils.op_registry_utils import get_all_unary_operators
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
+from benchmark.opperf.utils.op_registry_utils import get_all_random_sampling_operators
 
 
-def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
-    """Runs benchmarks with the given context and precision (dtype)for all the unary
+def run_mx_random_sampling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+    """Runs benchmarks with the given context and precision (dtype)for all the random sampling
     operators in MXNet.
 
     Parameters
@@ -55,8 +54,8 @@ def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, 
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
-    # Fetch all Unary Operators
-    mx_unary_broadcast_ops = get_all_unary_operators()
+    # Fetch all Random Sampling Operators
+    mx_random_sample_ops = get_all_random_sampling_operators()
     # Run benchmarks
-    mx_unary_op_results = run_op_benchmarks(mx_unary_broadcast_ops, dtype, ctx, warmup, runs)
-    return mx_unary_op_results
+    mx_random_sample_op_results = run_op_benchmarks(mx_random_sample_ops, dtype, ctx, warmup, runs)
+    return mx_random_sample_op_results

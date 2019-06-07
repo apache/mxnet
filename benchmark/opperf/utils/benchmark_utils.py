@@ -21,6 +21,8 @@ import mxnet as mx
 from mxnet import nd
 
 from .ndarray_utils import get_mx_ndarray, nd_forward_and_profile, nd_forward_backward_and_profile
+from .common_utils import merge_map_list
+from .op_registry_utils import prepare_op_inputs
 
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
@@ -29,7 +31,9 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key in ["lhs", "rhs", "data", "base", "exp"]:
+            if key in ["lhs", "rhs", "data", "base", "exp",
+                       "mu", "sigma", "lam", "alpha", "beta", "k", "p",
+                       "low", "high"]:
                 kwargs[key] = get_mx_ndarray(ctx=ctx, in_tensor=value,
                                              dtype=dtype,
                                              initializer=nd.normal,
@@ -108,3 +112,22 @@ def run_performance_test(ops, inputs, run_backward=True,
             raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
         op_benchmark_result.append(benchmark_result)
     return op_benchmark_result
+
+
+def run_op_benchmarks(ops, dtype, ctx, warmup, runs):
+    # For each operator, run benchmarks
+    mx_op_benchmark_results = []
+    for _, op_params in ops.items():
+        # Prepare inputs for the operator
+        inputs = prepare_op_inputs(op_params)
+        # Run benchmarks
+        cur_op_res = run_performance_test(op_params["nd_op_handle"],
+                                          run_backward=op_params["has_backward"],
+                                          dtype=dtype, ctx=ctx,
+                                          inputs=inputs,
+                                          warmup=warmup, runs=runs)
+        mx_op_benchmark_results += cur_op_res
+
+    # Prepare combined results for all operators
+    mx_op_benchmark_results = merge_map_list(mx_op_benchmark_results)
+    return mx_op_benchmark_results
