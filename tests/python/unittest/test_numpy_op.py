@@ -26,10 +26,9 @@ from mxnet.test_utils import check_numeric_gradient
 from common import with_seed
 import random
 
-npx.set_np()
-
 
 @with_seed()
+@npx.use_np_shape
 def test_np_sum():
     class TestSum(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
@@ -134,6 +133,7 @@ def test_np_dot():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_mean():
     @npx.use_np_shape
     class TestMean(HybridBlock):
@@ -198,6 +198,7 @@ def test_np_mean():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_transpose():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
@@ -227,6 +228,7 @@ def test_np_transpose():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_npx_relu():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('data').as_np_ndarray()
@@ -242,6 +244,7 @@ def test_npx_relu():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_npx_sigmoid():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('data').as_np_ndarray()
@@ -257,6 +260,7 @@ def test_npx_sigmoid():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_reshape():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
@@ -272,6 +276,7 @@ def test_np_reshape():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_maximum():
     # TODO(junwu): Add more test cases
     x1, x2 = mx.sym.var('x1').as_np_ndarray(), mx.sym.var('x2').as_np_ndarray()
@@ -292,6 +297,7 @@ def test_np_maximum():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_minimum():
     # TODO(junwu): Add more test cases
     x1, x2 = mx.sym.var('x1').as_np_ndarray(), mx.sym.var('x2').as_np_ndarray()
@@ -312,6 +318,7 @@ def test_np_minimum():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_unary_funcs():
     def check_unary_func(func, ref_grad, shape, low, high):
         @npx.use_np_shape
@@ -389,6 +396,7 @@ def test_np_unary_funcs():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_stack():
     @npx.use_np_shape
     class TestStack(HybridBlock):
@@ -440,6 +448,8 @@ def test_np_stack():
                 assert same(mx_out.asnumpy(), np_out)
 
 
+@with_seed()
+@npx.use_np_shape
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64']
@@ -482,6 +492,7 @@ def test_np_random():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_arange():
     configs = [
         (1, 10, 2),
@@ -545,6 +556,7 @@ def test_np_arange():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_argmax():
     workloads = [
         ((), 0, False),
@@ -606,6 +618,7 @@ def test_np_argmax():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_linalg_norm():
     @npx.use_np
     class TestLinalgNorm(HybridBlock):
