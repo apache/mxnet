@@ -1542,10 +1542,10 @@ int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
   for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
   std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
   for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
-  MXEnginePushAsync(async_func, func_param, deleter, ctx_handle,
-                    const_var_vec.data(), num_const_nds,
-                    mutable_var_vec.data(), num_mutable_nds,
-                    prop_handle, priority, opr_name, wait);
+  return MXEnginePushAsync(async_func, func_param, deleter, ctx_handle,
+                           const_var_vec.data(), num_const_nds,
+                           mutable_var_vec.data(), num_mutable_nds,
+                           prop_handle, priority, opr_name, wait);
   API_END();
 }
 
@@ -1562,10 +1562,10 @@ int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
   for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
   std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
   for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
-  MXEnginePushSync(sync_func, func_param, deleter, ctx_handle,
-                   const_var_vec.data(), num_const_nds,
-                   mutable_var_vec.data(), num_mutable_nds,
-                   prop_handle, priority, opr_name);
+  return MXEnginePushSync(sync_func, func_param, deleter, ctx_handle,
+                          const_var_vec.data(), num_const_nds,
+                          mutable_var_vec.data(), num_mutable_nds,
+                          prop_handle, priority, opr_name);
   API_END();
 }
 
