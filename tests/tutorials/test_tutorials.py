@@ -76,9 +76,6 @@ def test_basic_data():
 def test_basic_reshape_transpose():
        assert _test_tutorial_nb('basic/reshape_transpose')
 
-def test_gluon_multigpu():
-    assert _test_tutorial_nb('gluon/multi_gpu')
-
 def test_gluon_customop():
     assert _test_tutorial_nb('gluon/customop')
 
