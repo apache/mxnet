@@ -228,7 +228,7 @@ def test_np_max():
                 temp[:,:,-1,:] = 1
                 return temp
             elif axis == 3:
-                temp[:,:,:-1] = 1
+                temp[:,:,:,-1] = 1
                 return temp
             elif not axis:
                 temp[-1,-1,-1,-1] = 1
