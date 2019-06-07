@@ -2774,9 +2774,9 @@ MXNET_DLL int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, cons
   * \param ctx_handle Execution context.
   * \param const_vars_handle The variables that current operation will use
   *                          but not mutate.
-  * \param num_const_vars The number of const_vars.
+  * \param num_const_vars The number of const_vars_handle.
   * \param mutable_vars_handle The variables that current operation will mutate.
-  * \param num_mutable_vars The number of mutable_vars.
+  * \param num_mutable_vars The number of mutable_vars_handle.
   * \param prop_handle Property of the function.
   * \param priority Priority of the action, as hint to the engine.
   * \param opr_name The operation name.
@@ -2798,9 +2798,9 @@ MXNET_DLL int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
   * \param ctx_handle Execution context.
   * \param const_vars_handle The variables that current operation will use
   *                          but not mutate.
-  * \param num_const_vars The number of const_vars.
+  * \param num_const_vars The number of const_vars_handle.
   * \param mutable_vars_handle The variables that current operation will mutate.
-  * \param num_mutable_vars The number of mutable_vars.
+  * \param num_mutable_vars The number of mutable_vars_handle.
   * \param prop_handle Property of the function.
   * \param priority Priority of the action, as hint to the engine.
   * \param opr_name The operation name.
@@ -2809,6 +2809,53 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
                                EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
                                EngineVarHandle const_vars_handle, int num_const_vars,
                                EngineVarHandle mutable_vars_handle, int num_mutable_vars,
+                               EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+                               int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
+
+/*!
+  * \brief Push an asynchronous operation to the engine.
+  * \param async_func Execution function whici takes a parameter on_complete
+  *                   that must be called when the execution ompletes.
+  * \param func_param The parameter set on calling async_func, can be NULL.
+  * \param deleter The callback to free func_param, can be NULL.
+  * \param ctx_handle Execution context.
+  * \param const_nds_handle The NDArrays that current operation will use
+  *                          but not mutate.
+  * \param num_const_nds The number of const_nds_handle.
+  * \param mutable_nds_handle The NDArrays that current operation will mutate.
+  * \param num_mutable_nds The number of mutable_nds_handle.
+  * \param prop_handle Property of the function.
+  * \param priority Priority of the action, as hint to the engine.
+  * \param opr_name The operation name.
+  * \param wait Whether this is a WaitForVar operation.
+  */
+MXNET_DLL int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
+                                EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                                NDArrayHandle const_nds_handle, int num_const_nds,
+                                NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL),
+                                bool wait DEFAULT(false));
+
+/*!
+  * \brief Push a synchronous operation to the engine.
+  * \param sync_func Execution function that executes the operation.
+  * \param func_param The parameter set on calling sync_func, can be NULL.
+  * \param deleter The callback to free func_param, can be NULL.
+  * \param ctx_handle Execution context.
+  * \param const_nds_handle The NDArrays that current operation will use
+  *                          but not mutate.
+  * \param num_const_nds The number of const_nds_handle.
+  * \param mutable_nds_handle The NDArrays that current operation will mutate.
+  * \param num_mutable_nds The number of mutable_nds_handle.
+  * \param prop_handle Property of the function.
+  * \param priority Priority of the action, as hint to the engine.
+  * \param opr_name The operation name.
+  */
+MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
+                               EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                               NDArrayHandle const_nds_handle, int num_const_nds,
+                               NDArrayHandle mutable_nds_handle, int num_mutable_nds,
                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
 

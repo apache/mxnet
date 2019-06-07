@@ -254,6 +254,53 @@ TEST(Engine, PushFunc) {
   EXPECT_EQ(res, -1);
 }
 
+TEST(Engine, PushFuncND) {
+  auto ctx = mxnet::Context{};
+  NDArray nd({1}, ctx);
+
+  // Test #1
+  LOG(INFO) << "===== Test #1: PushAsync param and deleter =====";
+  int* a = new int(100);
+  int res = MXEnginePushAsyncND(FooAsyncFunc, a, FooFuncDeleter, &ctx, &nd, 1, nullptr, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #2
+  LOG(INFO) << "===== Test #2: PushAsync NULL param and NULL deleter =====";
+  res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &nd, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #3
+  LOG(INFO) << "===== Test #3: PushAsync invalid number of const nds =====";
+  res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx, &nd, -1, nullptr, 0);
+  EXPECT_EQ(res, -1);
+
+  // Test #4
+  LOG(INFO) << "===== Test #4: PushAsync invalid number of mutable nds =====";
+  res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &nd, -1);
+  EXPECT_EQ(res, -1);
+
+  // Test #5
+  LOG(INFO) << "===== Test #5: PushSync param and deleter =====";
+  int* b = new int(101);
+  res = MXEnginePushSyncND(FooSyncFunc, b, FooFuncDeleter, &ctx, &nd, 1, nullptr, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #6
+  LOG(INFO) << "===== Test #6: PushSync NULL param and NULL deleter =====";
+  res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &nd, 1);
+  EXPECT_EQ(res, 0);
+
+  // Test #7
+  LOG(INFO) << "===== Test #7: PushSync invalid number of const nds =====";
+  res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx, &nd, -1, nullptr, 0);
+  EXPECT_EQ(res, -1);
+
+  // Test #8
+  LOG(INFO) << "===== Test #8: PushSync invalid number of mutable nds =====";
+  res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &nd, -1);
+  EXPECT_EQ(res, -1);
+}
+
 TEST(Engine, basics) {
   auto&& engine = mxnet::Engine::Get();
   auto&& var = engine->NewVariable();
