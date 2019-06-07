@@ -398,8 +398,8 @@ inline mx_float NDArray::At(size_t c, size_t h, size_t w) const {
 inline mx_float NDArray::At(size_t index) const {
   auto shape = GetShape();
   CHECK_EQ(shape.size(), 1) << "The NDArray needs to be 1 dimensional.";
-  auto offset = index * shape[0];
-  return GetData()[offset];
+  CHECK_LT(index, shape[0]) << "Specified index is out of range.";
+  return GetData()[index];
 }
 
 inline size_t NDArray::Size() const {
