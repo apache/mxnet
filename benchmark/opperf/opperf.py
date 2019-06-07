@@ -23,6 +23,8 @@ from benchmark.opperf.nd_operations.unary_operators import run_mx_unary_operator
 from benchmark.opperf.nd_operations.binary_operators import run_mx_binary_broadcast_operators_benchmarks, \
     run_mx_binary_element_wise_operators_benchmarks
 from benchmark.opperf.nd_operations.gemm_operations import run_gemm_operators_benchmarks
+from benchmark.opperf.nd_operations.random_sampling_operators import run_mx_random_sampling_operators_benchmarks
+from benchmark.opperf.nd_operations.nn_activation_operators import run_activation_operators_benchmarks
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 
 
@@ -49,7 +51,14 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
     # Run all GEMM operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_gemm_operators_benchmarks(ctx=ctx,
                                                                           dtype=dtype))
+
+    # Run all Random sampling operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_mx_random_sampling_operators_benchmarks(ctx=ctx, dtype=dtype))
+
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
+
+    # Run all Activation operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_activation_operators_benchmarks(ctx=ctx, dtype=dtype))
 
     # ****************************** PREPARE FINAL RESULTS ********************************
     final_benchmark_result_map = merge_map_list(mxnet_operator_benchmark_results)

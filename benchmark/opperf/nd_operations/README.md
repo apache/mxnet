@@ -21,17 +21,6 @@ Below are list of operators to be added to the benchmarking utility:
 
 **NN Operations**
 
-MXNet NDArray NN Activation Operators
-
-1. LeakyRelu
-2. PRelu
-3. Activation (Sigmoid)
-4. Activation (Softmax)
-5. Activation (Log_Softmax)
-6. Activation (tanh)
-7. Elu
-8. Selu
-
 MXNet NDArray NN Operators
 
 1. FullyConnected (Basic)
