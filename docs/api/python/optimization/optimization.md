@@ -171,6 +171,7 @@ for examples.
 ```eval_rst
 .. automodule:: mxnet.optimizer
     :members:
+    :exclude-members: NDAbs
 .. automodule:: mxnet.lr_scheduler
     :members:
 .. automodule:: mxnet.initializer
