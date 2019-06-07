@@ -23,7 +23,6 @@ from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import image
 from ....base import numeric_types
-from ....util import is_np_array
 from ...utils import _adapt_np_array
 
 
