@@ -1483,7 +1483,8 @@ Install these dependencies using the following commands in any directory:
     sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip
     sudo pip install pip --upgrade
     sudo pip install setuptools numpy --upgrade
-    sudo pip install graphviz jupyter
+    sudo pip install graphviz==0.8.4 \
+                     jupyter
 ```
 
 Clone the MXNet source code repository using the following `git` command in your home directory:

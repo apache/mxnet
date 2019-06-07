@@ -81,7 +81,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install graphviz
 	brew install openblas
 	brew tap homebrew/core
-	brew install opencv
+	brew install opencv@3
 
 	# If building with MKLDNN
 	brew install llvm
@@ -89,7 +89,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	# Get pip
 	easy_install pip
 	# For visualization of network graphs
-	pip install graphviz
+	pip install graphviz==0.8.4
 	# Jupyter notebook
 	pip install jupyter
 ```

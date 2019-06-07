@@ -290,8 +290,8 @@ Note that the `-e` flag is optional. It is equivalent to `--editable` and means 
 You may optionally install ```graphviz``` library that is used for visualizing network graphs you build on MXNet. You may also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
 
 ```bash
-sudo pip install graphviz
-sudo pip install jupyter
+sudo pip install graphviz==0.8.4 \
+                 jupyter
 ```
 <hr>
 
