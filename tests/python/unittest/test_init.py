@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+import json
 
 def test_default_init():
     data = mx.sym.Variable('data')
@@ -69,15 +70,18 @@ def test_bilinear_init():
     assert (bili_2d == bili_weight.asnumpy()).all()
 
 def test_const_init_dumps():
+    shape = tuple(np.random.randint(1, 10, size=np.random.randint(1, 5)))
     # test NDArray input
-    init = mx.init.Constant(mx.nd.ones(5))
-    assert init.dumps() == '["constant", {"value": [1.0, 1.0, 1.0, 1.0, 1.0]}]'
+    init = mx.init.Constant(mx.nd.ones(shape))
+    init._kwargs['value'] = init._kwargs['value'].asnumpy().tolist()
+    assert init.dumps() == json.dumps([init.__class__.__name__.lower(), init._kwargs])
     # test scalar input
     init = mx.init.Constant(1)
     assert init.dumps() == '["constant", {"value": 1}]'
     # test numpy input
-    init = mx.init.Constant(np.ones(5))
-    assert init.dumps() == '["constant", {"value": [1.0, 1.0, 1.0, 1.0, 1.0]}]'
+    init = mx.init.Constant(np.ones(shape))
+    init._kwargs['value'] = init._kwargs['value'].tolist()
+    assert init.dumps() == json.dumps([init.__class__.__name__.lower(), init._kwargs])
 
 
 if __name__ == '__main__':
