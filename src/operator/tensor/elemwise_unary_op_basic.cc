@@ -511,6 +511,7 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
   - lhs shape = (30, 12), rhs shape = (4, 2, 2, 3), lhs_begin=-1, lhs_end=None, rhs_begin=1, rhs_end=None, output shape = (30, 2, 2, 3)
 
 )code" ADD_FILELINE)
+.add_alias("_npx_reshape_like")
 .set_num_inputs(2)
 .set_attr_parser(ParamParser<ReshapeLikeParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",

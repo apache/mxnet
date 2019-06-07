@@ -79,6 +79,14 @@ def set_np_shape(active):
     >>> print(mx.is_np_shape())
     True
     """
+    # TODO(junwu): Consider uncommenting the following lines.
+    # import logging
+    # logging.info('NumPy-shape semantics has been activated in your code global scope. '
+    #              'This is required for using `mxnet.numpy` and `mxnet.numpy_extension` '
+    #              'modules as it enables creating and manipulating scalar and zero-size '
+    #              'tensors, which were not supported in MXNet before, as in the official '
+    #              'NumPy library. Please DO NOT manually deactivate this semantics while '
+    #              'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
     prev = ctypes.c_int()
     check_call(_LIB.MXSetIsNumpyShape(ctypes.c_int(active), ctypes.byref(prev)))
     return bool(prev.value)
