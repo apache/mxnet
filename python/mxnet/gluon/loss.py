@@ -29,7 +29,8 @@ import numpy as np
 from .. import ndarray
 from ..base import numeric_types
 from .block import HybridBlock
-from .utils import _to_classic_arrays, _to_np_arrays
+from .utils import _adapt_np_array
+from ..util import is_np_array
 
 
 def _apply_weighting(F, loss, weight=None, sample_weight=None):
@@ -54,7 +55,10 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
         Weighted loss
     """
     if sample_weight is not None:
-        loss = F.broadcast_mul(loss, sample_weight)
+        if is_np_array():
+            loss = loss * sample_weight
+        else:
+            loss = F.broadcast_mul(loss, sample_weight)
 
     if weight is not None:
         assert isinstance(weight, numeric_types), "weight must be a number"
@@ -65,7 +69,11 @@ def _apply_weighting(F, loss, weight=None, sample_weight=None):
 
 def _reshape_like(F, x, y):
     """Reshapes x to the same shape as y."""
-    return x.reshape(y.shape) if F is ndarray else F.reshape_like(x, y)
+    if F is ndarray:
+        return x.reshape(y.shape)
+    elif is_np_array():
+        F = F.npx
+    return F.reshape_like(x, y)
 
 
 class Loss(HybridBlock):
@@ -136,14 +144,16 @@ class L2Loss(Loss):
         super(L2Loss, self).__init__(weight, batch_axis, **kwargs)
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
-        # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
-        # We should rewrite this with np/npx ops.
-        pred, label, sample_weight = _to_classic_arrays(pred, label, sample_weight)
         label = _reshape_like(F, label, pred)
-        loss = F.square(label - pred)
+        loss = F.np.square(label - pred) if is_np_array() else F.square(label - pred)
         loss = _apply_weighting(F, loss, self._weight / 2, sample_weight)
-        out = F.mean(loss, axis=self._batch_axis, exclude=True)
-        return _to_np_arrays(out)
+        if is_np_array():
+            if F is ndarray:
+                return F.np.mean(loss, axis=tuple(range(1, loss.ndim)))
+            else:
+                return F.npx.batch_flatten(loss).mean(axis=1)
+        else:
+            return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
 class L1Loss(Loss):
@@ -178,15 +188,12 @@ class L1Loss(Loss):
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(L1Loss, self).__init__(weight, batch_axis, **kwargs)
 
+    @_adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None):
-        # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
-        # We should rewrite this with np/npx ops.
-        pred, label, sample_weight = _to_classic_arrays(pred, label, sample_weight)
         label = _reshape_like(F, label, pred)
         loss = F.abs(label - pred)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        out = F.mean(loss, axis=self._batch_axis, exclude=True)
-        return _to_np_arrays(out)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
 class SigmoidBinaryCrossEntropyLoss(Loss):
@@ -251,11 +258,8 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
             weight, batch_axis, **kwargs)
         self._from_sigmoid = from_sigmoid
 
+    @_adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None, pos_weight=None):
-        # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
-        # We should rewrite this with np/npx ops.
-        pred, label, sample_weight, pos_weight =\
-            _to_classic_arrays(pred, label, sample_weight, pos_weight)
         label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
             if pos_weight is None:
@@ -277,8 +281,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
                 loss = -(F.broadcast_mul(F.log(pred + eps) * label, pos_weight)
                          + F.log(1. - pred + eps) * (1. - label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        out = F.mean(loss, axis=self._batch_axis, exclude=True)
-        return _to_np_arrays(out)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
 SigmoidBCELoss = SigmoidBinaryCrossEntropyLoss
@@ -354,10 +357,8 @@ class SoftmaxCrossEntropyLoss(Loss):
         self._sparse_label = sparse_label
         self._from_logits = from_logits
 
+    @_adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None):
-        # TODO(junwu): This is a temp solution to reuse legacy ops for np.ndarray.
-        # We should rewrite this with np/npx ops.
-        pred, label = _to_classic_arrays(pred, label)
         if not self._from_logits:
             pred = F.log_softmax(pred, self._axis)
         if self._sparse_label:
@@ -366,8 +367,7 @@ class SoftmaxCrossEntropyLoss(Loss):
             label = _reshape_like(F, label, pred)
             loss = -F.sum(pred * label, axis=self._axis, keepdims=True)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        out = F.mean(loss, axis=self._batch_axis, exclude=True)
-        return _to_np_arrays(out)
+        return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
 SoftmaxCELoss = SoftmaxCrossEntropyLoss
