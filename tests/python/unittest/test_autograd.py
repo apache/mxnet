@@ -396,6 +396,7 @@ def test_function1():
         for i in range(5):
             f = Foo()
             X = f(X)
+        X.wait_to_read()
 
 
 @with_seed()
