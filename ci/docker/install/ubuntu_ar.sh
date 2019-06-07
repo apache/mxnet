@@ -29,6 +29,7 @@ apt-get install -y \
 
 mkdir /opt/binutils_install && mkdir /opt/binutils_install && mkdir /opt/binutils && cd /opt/binutils
 wget -nv https://mirror.clarkson.edu/gnu/binutils/binutils-2.27.tar.gz
+tar -xvf binutils-2.27.tar.gz && cd binutils-2.27
 ./configure --prefix=/opt/binutils_install --exec-prefix=/opt/binutils_other
 make -j$(nproc)
 make install
