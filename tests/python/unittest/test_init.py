@@ -73,15 +73,15 @@ def test_const_init_dumps():
     shape = tuple(np.random.randint(1, 10, size=np.random.randint(1, 5)))
     # test NDArray input
     init = mx.init.Constant(mx.nd.ones(shape))
-    init._kwargs['value'] = init._kwargs['value'].asnumpy().tolist()
-    assert init.dumps() == json.dumps([init.__class__.__name__.lower(), init._kwargs])
+    val = init.dumps()
+    assert val == json.dumps([init.__class__.__name__.lower(), init._kwargs])
     # test scalar input
     init = mx.init.Constant(1)
     assert init.dumps() == '["constant", {"value": 1}]'
     # test numpy input
     init = mx.init.Constant(np.ones(shape))
-    init._kwargs['value'] = init._kwargs['value'].tolist()
-    assert init.dumps() == json.dumps([init.__class__.__name__.lower(), init._kwargs])
+    val = init.dumps()
+    assert val == json.dumps([init.__class__.__name__.lower(), init._kwargs])
 
 
 if __name__ == '__main__':
