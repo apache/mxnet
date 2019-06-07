@@ -263,6 +263,7 @@ static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
+.add_alias("_npx_batch_flatten")
 .describe(R"code(Flattens the input array into a 2-D array by collapsing the higher dimensions.
 
 .. note:: `Flatten` is deprecated. Use `flatten` instead.

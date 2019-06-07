@@ -952,7 +952,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         proj = proj.as_np_ndarray()
     out = sym * proj
     if is_np_sym:  # convert to classic symbol so that make_loss can be used
-        out = out.as_classic_ndarray()
+        out = out.as_nd_ndarray()
     out = mx.sym.make_loss(out)
 
     location = dict(list(location.items()) +

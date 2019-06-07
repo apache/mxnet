@@ -48,8 +48,8 @@ def _verify_all_np_ndarrays(op_name, func_name, args, out):
         if (arr is not None) and (not isinstance(arr, np_ndarray)):
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                             'This is a numpy operator which can only accept '
-                            'MXNet numpy ndarrays, while received a classic ndarray. '
-                            'Please call `as_np_ndarray()` upon the classic ndarray to '
+                            'MXNet numpy ndarrays, while received a legacy ndarray. '
+                            'Please call `as_np_ndarray()` upon the legacy ndarray to '
                             'convert it to an MXNet numpy ndarray, and then feed the converted '
                             'array to this operator.'
                             .format(op_name, func_name))
@@ -61,15 +61,15 @@ def _verify_all_np_ndarrays(op_name, func_name, args, out):
         if (arr is not None) and (not isinstance(arr, np_ndarray)):
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                             'This is a numpy operator which can only write to MXNet numpy '
-                            'ndarrays, while received a classic ndarray. '
-                            'Please call `as_np_ndarray()` upon the classic ndarray to '
+                            'ndarrays, while received a legacy ndarray. '
+                            'Please call `as_np_ndarray()` upon the legacy ndarray to '
                             'convert it to an MXNet numpy ndarray, and then feed the converted '
                             'array to this operator.'
                             .format(op_name, func_name))
 
 
-def _verify_all_classic_ndarrays(op_name, func_name, args, out):
-    """Verify if all the arrays are classic ndarrays.
+def _verify_all_legacy_ndarrays(op_name, func_name, args, out):
+    """Verify if all the arrays are legacy ndarrays.
 
     Parameters
     ----------
@@ -87,10 +87,10 @@ def _verify_all_classic_ndarrays(op_name, func_name, args, out):
     for arr in args:
         if (arr is not None) and (isinstance(arr, np_ndarray)):
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
-                            'This is a classic operator which can only accept '
-                            'classic ndarrays, while received an MXNet numpy ndarray. '
-                            'Please call `as_classic_ndarray()` upon the numpy ndarray to '
-                            'convert it to a classic ndarray, and then feed the converted '
+                            'This is a legacy operator which can only accept '
+                            'legacy ndarrays, while received an MXNet numpy ndarray. '
+                            'Please call `as_nd_ndarray()` upon the numpy ndarray to '
+                            'convert it to a legacy ndarray, and then feed the converted '
                             'array to this operator.'
                             .format(op_name, func_name))
     if out is None:
@@ -100,10 +100,10 @@ def _verify_all_classic_ndarrays(op_name, func_name, args, out):
     for arr in out:
         if (arr is not None) and (isinstance(arr, np_ndarray)):
             raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
-                            'This is a classic operator which can only write to '
-                            'classic ndarrays, while received an MXNet numpy ndarray. '
-                            'Please call `as_classic_ndarray()` upon the numpy ndarray to '
-                            'convert it to a classic ndarray, and then feed the converted '
+                            'This is a legacy operator which can only write to '
+                            'legacy ndarrays, while received an MXNet numpy ndarray. '
+                            'Please call `as_nd_ndarray()` upon the numpy ndarray to '
+                            'convert it to a legacy ndarray, and then feed the converted '
                             'array to this operator.'
                             .format(op_name, func_name))
 
@@ -175,8 +175,6 @@ def _generate_ndarray_function_code(handle, op_name, func_name, signature_only=F
     doc_str_idx = 1
     if is_np_op:
         doc_str_idx = 2
-        code.append("""
-@use_np_shape""")
     if arr_name:
         code.append("""
 def %s(*%s, **kwargs):"""%(func_name, arr_name))
@@ -233,7 +231,7 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
     verify_ndarrays_fn =\
-        _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_classic_ndarrays.__name__
+        _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_legacy_ndarrays.__name__
     if not signature_only:
         code.append("""
     {verify_fn}("{op_name}", "{func_name}", ndargs, out)

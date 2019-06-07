@@ -20,13 +20,14 @@ from __future__ import absolute_import
 from __future__ import division
 import numpy as _np
 import mxnet as mx
-from mxnet import np, npx
+from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, assert_exception
 from common import with_seed
 
 
 @with_seed()
+@npx.use_np_shape
 def test_array_creation():
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     objects = [
@@ -51,9 +52,9 @@ def test_array_creation():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_zeros():
     # test np.zeros in Gluon
-    @npx.use_np_shape
     class TestZeros(HybridBlock):
         def __init__(self, shape, dtype=None):
             super(TestZeros, self).__init__()
@@ -63,13 +64,11 @@ def test_zeros():
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x + F.np.zeros(shape, dtype)
 
-    @npx.use_np_shape
     class TestZerosOutputType(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x, F.np.zeros(shape=())
 
     # test np.zeros in imperative
-    @npx.use_np_shape
     def check_zero_array_creation(shape, dtype):
         np_out = _np.zeros(shape=shape, dtype=dtype)
         mx_out = np.zeros(shape=shape, dtype=dtype)
@@ -101,9 +100,9 @@ def test_zeros():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_ones():
     # test np.ones in Gluon
-    @npx.use_np_shape
     class TestOnes(HybridBlock):
         def __init__(self, shape, dtype=None):
             super(TestOnes, self).__init__()
@@ -113,13 +112,11 @@ def test_ones():
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x * F.np.ones(shape, dtype)
 
-    @npx.use_np_shape
     class TestOnesOutputType(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x, F.np.ones(shape=())
 
     # test np.ones in imperative
-    @npx.use_np_shape
     def check_ones_array_creation(shape, dtype):
         np_out = _np.ones(shape=shape, dtype=dtype)
         mx_out = np.ones(shape=shape, dtype=dtype)
@@ -314,7 +311,7 @@ def test_hybrid_block_multiple_outputs():
 
     class TestAllClassicOutputs(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.relu(x.as_classic_ndarray()), F.sum(x.as_classic_ndarray())
+            return F.relu(x.as_nd_ndarray()), F.sum(x.as_nd_ndarray())
 
     data_np = np.ones((2, 3))
     for block, expected_out_type in [(TestAllClassicOutputs, mx.nd.NDArray),
@@ -330,7 +327,7 @@ def test_hybrid_block_multiple_outputs():
     @npx.use_np_array
     class TestMixedTypeOutputsFailure(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
-            return F.relu(x.as_classic_ndarray()), F.np.sum(x)
+            return F.relu(x.as_nd_ndarray()), F.np.sum(x)
 
     net = TestMixedTypeOutputsFailure()
     assert_exception(net, TypeError, data_np)
@@ -339,6 +336,7 @@ def test_hybrid_block_multiple_outputs():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_grad_ndarray_type():
     data = np.array(2, dtype=_np.float32)
     data.attach_grad()
@@ -376,6 +374,7 @@ def test_np_ndarray_copy():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_ndarray_indexing():
     def test_getitem(np_array, index):
         """`is_scalar` indicates whether we should expect a scalar for the result.
@@ -443,7 +442,7 @@ def test_np_ndarray_indexing():
     def test_getitem_autograd(np_array, index):
         x = np.array(np_array, dtype=np_array.dtype)
         x.attach_grad()
-        with npx.autograd.record():
+        with autograd.record():
             y = x[index]
         y.backward()
         value = np.ones_like(y)
@@ -457,7 +456,7 @@ def test_np_ndarray_indexing():
         y = np.random.uniform(size=out_shape)
         y.attach_grad()
         try:
-            with npx.autograd.record():
+            with autograd.record():
                 x[index] = y
                 assert False  # should not reach here
         except mx.base.MXNetError as err:

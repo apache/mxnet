@@ -177,7 +177,7 @@ class _Symbol(Symbol):
     def __len__(self):
         raise NotImplementedError
 
-    def as_classic_ndarray(self):
+    def as_nd_ndarray(self):
         """Convert _Symbol to mxnet.symbol.Symbol to use its convenience fluent methods."""
         hdl = SymbolHandle()
         check_call(_LIB.MXShallowCopySymbol(self.handle, ctypes.byref(hdl)))

@@ -22,7 +22,7 @@ __all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish', 'GELU']
 
 from ... import initializer
 from ..block import HybridBlock
-from ..utils import _to_classic_arrays, _to_np_arrays
+from ...util import is_np_array
 
 
 class Activation(HybridBlock):
@@ -49,9 +49,9 @@ class Activation(HybridBlock):
         return self._act_type
 
     def hybrid_forward(self, F, x):
-        x = _to_classic_arrays(x)
-        out = F.Activation(x, act_type=self._act_type, name='fwd')
-        return _to_np_arrays(out)
+        if is_np_array():
+            F = F.npx
+        return F.Activation(x, act_type=self._act_type, name='fwd')
 
     def __repr__(self):
         s = '{name}({_act_type})'
