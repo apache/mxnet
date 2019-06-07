@@ -196,7 +196,7 @@ fixed-size items.
         check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
         return ndarray(handle=hdl, writable=self.writable)
 
-    def as_classic_ndarray(self):
+    def as_nd_ndarray(self):
         """A convenience function for creating a classic ndarray from the current
         ndarray with zero copy. For this class, it just returns itself since it is
         already a classic ndarray."""
@@ -962,7 +962,7 @@ fixed-size items.
                                  % (idx-length, length))
         check_call(_LIB.MXNDArrayAt(
             self.handle, mx_uint(idx), ctypes.byref(handle)))
-        return NDArray(handle=handle, writable=self.writable)
+        return self.__class__(handle=handle, writable=self.writable)
 
     def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.
