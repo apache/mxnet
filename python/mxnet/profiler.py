@@ -158,11 +158,14 @@ def dumps(reset=False, format='table', sort_by='avg', ascending=False):
     format: string
         whether to return the aggregate stats in table of json format
         can take 'table' or 'json'
+        defaults to 'table'
     sort_by: string
         can take 'avg', 'min', 'max', or 'count'
         by which stat to sort the entries in each category
+        defaults to 'avg'
     ascending: boolean
         whether to sort ascendingly
+        defaults to False
     """
     debug_str = ctypes.c_char_p()
     reset_to_int = {False: 0, True: 1}

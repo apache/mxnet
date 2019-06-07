@@ -44,14 +44,14 @@ inline float MicroToMilli(const DType micro) {
 
 template<typename DType>
 inline float ByteToKilobyte(const DType micro) {
-  return static_cast<float>(static_cast<double>(micro) / 100);
+  return static_cast<float>(static_cast<double>(micro) / 1000);
 }
 
 inline std::priority_queue<pi>
-  BuildHeap(const std::unordered_map<std::string, AggregateStats::StatData>& mm,
+  BuildHeap(const std::unordered_map<std::string, AggregateStats::StatData>& map,
             int sort_by, int ascending) {
   std::priority_queue<pi> heap;
-  for (const auto& iter : mm) {
+  for (const auto& iter : map) {
     const std::string& name = iter.first;
     const AggregateStats::StatData &data = iter.second;
     double value = 0;
