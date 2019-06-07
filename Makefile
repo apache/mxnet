@@ -543,7 +543,7 @@ endif
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
 lib/libmxnet.a: $(ALLX_DEP)
 	@mkdir -p $(@D)
-	ar crv $@ $(filter %.o, $?)
+	$(AR) crv $@ $(filter %.o, $?)
 
 lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
