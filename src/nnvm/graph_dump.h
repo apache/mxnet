@@ -35,6 +35,6 @@ namespace nnvm {
 /*!
  * Returns a dot graph
  */
-std::string DumpGraph(const Graph& graph);
+std::string GraphDump(const Graph& graph);
 
 }  // end namespace nnvm

@@ -20,6 +20,7 @@
 #include <iostream>
 #include "./imperative_utils.h"
 #include "./cached_op.h"
+#include "nnvm/graph_dump.h"
 
 namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
@@ -370,6 +371,8 @@ std::vector<NDArray*> Imperative::Backward(
       graph.outputs.push_back(e);
     }
   }
+  GraphDump(g_graph);
+
   const auto& idx = graph.indexed_graph();
   // get number of nodes used in forward pass
   size_t num_forward_nodes = 0;

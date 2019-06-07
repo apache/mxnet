@@ -25,10 +25,22 @@
  */
 
 #include "./graph_dump.h"
+#include <vector>
+#include <string>
+
+using std::vector;
+using std::string;
+using namespace std;
 
 namespace nnvm {
 
-std::string DumpGraph(const Graph& graph) {
+std::string GraphDump(const Graph& graph) {
+    // Find inputs
+    vector<NodeEntry> inputs;
+    DFSVisit(graph.outputs, [](const NodePtr& nodePtr) {
+        cout << "Node: " << nodePtr.get() << " " << nodePtr->attrs.name << endl;
+        cout << "attrs: " << endl;
+    });
     return "";
 }
 
