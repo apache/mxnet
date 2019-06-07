@@ -19,12 +19,15 @@ import argparse
 import logging
 
 import mxnet as mx
+
 from benchmark.opperf.nd_operations.unary_operators import run_mx_unary_operators_benchmarks
 from benchmark.opperf.nd_operations.binary_operators import run_mx_binary_broadcast_operators_benchmarks, \
     run_mx_binary_element_wise_operators_benchmarks
-from benchmark.opperf.nd_operations.gemm_operations import run_gemm_operators_benchmarks
+from benchmark.opperf.nd_operations.gemm_operators import run_gemm_operators_benchmarks
 from benchmark.opperf.nd_operations.random_sampling_operators import run_mx_random_sampling_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_activation_operators import run_activation_operators_benchmarks
+from benchmark.opperf.nd_operations.nn_pooling_operators import run_pooling_operators_benchmarks
+
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 
 
@@ -59,6 +62,9 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
 
     # Run all Activation operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_activation_operators_benchmarks(ctx=ctx, dtype=dtype))
+
+    # Run all Pooling operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_pooling_operators_benchmarks(ctx=ctx, dtype=dtype))
 
     # ****************************** PREPARE FINAL RESULTS ********************************
     final_benchmark_result_map = merge_map_list(mxnet_operator_benchmark_results)

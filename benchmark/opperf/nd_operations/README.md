@@ -35,19 +35,6 @@ MXNet NDArray NN Convolution Operators
 
 (Under the hood uses mx.nd.convolution.)
 
-MXNet NDArray Pooling Operators
-
-1. MaxPool1D
-2. MaxPool2D
-3. AvgPool1D
-4. AvgPool2D
-5. GlobalMaxPool1D
-6. GlobalMaxPool2D
-7. GlobalAvgPool1D
-8. GlobalAvgPool2D
-
-(Under the hood uses mx.nd.pooling)
-
 MXNet NDArray Normalization Operators.
 
 1. Dropout
