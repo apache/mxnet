@@ -32,7 +32,7 @@ from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
-from ..util import _sanity_check_params, set_module, use_np_shape
+from ..util import _sanity_check_params, set_module
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
@@ -82,15 +82,14 @@ def _get_index(idx):
     if isinstance(idx, NDArray) and not isinstance(idx, ndarray):
         raise TypeError('Cannot have mx.nd.NDArray as index')
     if isinstance(idx, ndarray):
-        return idx._as_classic_ndarray()
+        return idx._as_nd_ndarray()
     elif sys.version_info[0] > 2 and isinstance(idx, range):
-        return arange(idx.start, idx.stop, idx.step, dtype='int32')._as_classic_ndarray()
+        return arange(idx.start, idx.stop, idx.step, dtype='int32')._as_nd_ndarray()
     else:
         return idx
 
 
 @set_module('mxnet.numpy')  # pylint: disable=invalid-name
-@use_np_shape
 class ndarray(NDArray):
     """An array object represents a multidimensional, homogeneous array of fixed-size items.
     An associated data-type object describes the format of each element in the array
@@ -105,16 +104,16 @@ class ndarray(NDArray):
                 raise IndexError('scalar tensor can only accept `()` as index')
         if isinstance(key, tuple) and len(key) == 0:
             return self
-        if isinstance(key, integer_types):
-            key = (key,)
         if isinstance(key, tuple) and len(key) == self.ndim\
                 and all(isinstance(idx, integer_types) for idx in key):
-            out = self._as_classic_ndarray()
+            out = self._as_nd_ndarray()
             for idx in key:
                 out = out[idx]
             return out.reshape(()).as_np_ndarray()
+        if isinstance(key, integer_types):
+            return self._at(key)
         if isinstance(key, ndarray):
-            key = key._as_classic_ndarray()
+            key = key._as_nd_ndarray()
         elif isinstance(key, tuple):
             key = [_get_index(idx) for idx in key]
             key = tuple(key)
@@ -122,7 +121,7 @@ class ndarray(NDArray):
             key = [_get_index(idx) for idx in key]
         elif sys.version_info[0] > 2 and isinstance(key, range):
             key = _get_index(key)
-        return self._as_classic_ndarray().__getitem__(key).as_np_ndarray()
+        return self._as_nd_ndarray().__getitem__(key).as_np_ndarray()
 
     def __setitem__(self, key, value):
         # TODO(junwu): calling base class __setitem__ is a temp solution
@@ -132,16 +131,14 @@ class ndarray(NDArray):
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
         if isinstance(value, ndarray):
-            value = value._as_classic_ndarray()
+            value = value._as_nd_ndarray()
         # TODO(junwu): Better handling of this situation
         if isinstance(key, tuple) and len(key) == 0:
-            self._as_classic_ndarray().__setitem__(slice(None), value)
+            self._as_nd_ndarray().__setitem__(slice(None), value)
             return
 
-        if isinstance(key, integer_types):
-            key = (key,)
         if isinstance(key, ndarray):
-            key = key._as_classic_ndarray()
+            key = key._as_nd_ndarray()
         elif isinstance(key, tuple):
             key = [_get_index(idx) for idx in key]
             key = tuple(key)
@@ -149,7 +146,7 @@ class ndarray(NDArray):
             key = [_get_index(idx) for idx in key]
         elif sys.version_info[0] > 2 and isinstance(key, range):
             key = _get_index(key)
-        self._as_classic_ndarray().__setitem__(key, value)
+        self._as_nd_ndarray().__setitem__(key, value)
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -371,28 +368,26 @@ class ndarray(NDArray):
     def _slice(self, start, stop):
         raise NotImplementedError
 
-    def _at(self, idx):
-        raise NotImplementedError
-
     def all(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
     def any(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError
 
-    def _as_classic_ndarray(self):
+    def _as_nd_ndarray(self):
         """This is not a user-facing API."""
         hdl = NDArrayHandle()
         check_call(_LIB.MXShallowCopyNDArray(self.handle, ctypes.byref(hdl)))
         return NDArray(handle=hdl, writable=self.writable)
 
-    def as_classic_ndarray(self):
+    def as_nd_ndarray(self):
         """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
-        if self.ndim == 0:  # TODO(junwu): this costs ~10ns, can be moved to backend
-            raise ValueError('cannot convert a scalar np.ndarray to mx.nd.NDArray')
-        if self.size == 0:  # TODO(junwu): this costs ~10ns, can be moved to backend
-            raise ValueError('cannot convert a zero-size np.ndarray to mx.nd.NDArray')
-        return self._as_classic_ndarray()
+        # TODO(junwu): Uncomment the following lines
+        # if self.ndim == 0:  # TODO(junwu): this costs ~10ns, can be moved to backend
+        #     raise ValueError('cannot convert a scalar np.ndarray to mx.nd.NDArray')
+        # if self.size == 0:  # TODO(junwu): this costs ~10ns, can be moved to backend
+        #     raise ValueError('cannot convert a zero-size np.ndarray to mx.nd.NDArray')
+        return self._as_nd_ndarray()
 
     def as_np_ndarray(self):
         """A convenience function for creating a numpy ndarray from the current ndarray
@@ -514,8 +509,8 @@ class ndarray(NDArray):
                [ 1.,  1.,  1.]], dtype=float32)
         """
         if isinstance(other, ndarray):
-            other = other._as_classic_ndarray()
-        return self._as_classic_ndarray().copyto(other).as_np_ndarray()
+            other = other._as_nd_ndarray()
+        return self._as_nd_ndarray().copyto(other).as_np_ndarray()
 
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
@@ -1229,7 +1224,6 @@ def empty(shape, dtype=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-@use_np_shape
 def array(object, dtype=None, **kwargs):
     """
     Create an array.
