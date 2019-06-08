@@ -26,15 +26,6 @@ MXNet NDArray NN Operators
 1. FullyConnected (Basic)
 3. Embedding
 
-MXNet NDArray NN Convolution Operators
-
-1. Conv2D
-2. Conv1D
-3. Conv1DTranspose
-4. Conv2DTranspose
-
-(Under the hood uses mx.nd.convolution.)
-
 MXNet NDArray Normalization Operators.
 
 1. Dropout

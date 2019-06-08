@@ -33,7 +33,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
         for key, value in inp.items():
             if key in ["lhs", "rhs", "data", "base", "exp",
                        "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
-                       "low", "high"]:
+                       "low", "high", "weight", "bias"]:
                 kwargs[key] = get_mx_ndarray(ctx=ctx, in_tensor=value,
                                              dtype=dtype,
                                              initializer=nd.normal,
