@@ -17,31 +17,12 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2019 by Contributors
- * \file graph_dump.cc
- * \brief Utilities to introspect and print the execution graph
- * \author Pedro Larroy
- */
+#include <gtest/gtest.h>
+#include "common/static_graph.h"
 
-#include "./graph_dump.h"
-#include <vector>
-#include <string>
+using namespace common::graph;
 
-using std::vector;
-using std::string;
-using namespace std;
-
-namespace nnvm {
-
-std::string GraphDump(const Graph& graph) {
-    vector<NodePtr> topo_order;
-    DFSVisit(graph.outputs, [&](const NodePtr& nodePtr) {
-        //cout << "Node: " << nodePtr.get() << " " << nodePtr->attrs.name << endl;
-        topo_order.push_back(nodePtr);
-    });
-
-    return "";
+TEST(StaticGraphTest, basic) {
+  StaticGraph<> g;
+  g.addEdge(0,4);
 }
-
-}  // end namespace nnvm
