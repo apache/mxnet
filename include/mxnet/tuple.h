@@ -483,8 +483,12 @@ class TShape : public Tuple<dim_t> {
   /*! \return total number of elements in the shape */
   inline size_t Size() const {
     CHECK(ndim_is_known(this->ndim())) << "Shape is unknown.";
-    dim_t size = 1;
     const dim_t* start = begin(), *fin = end();
+    // if the shape is () the size is zero
+    if (start == fin) {
+      return 0;
+    }
+    dim_t size = 1;
     for (const dim_t* it = start; it != fin; ++it) {
       CHECK(dim_size_is_known(*it)) << "Shape dim size cannot be a negative value " << *it;
       size *= *it;
