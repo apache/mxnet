@@ -31,6 +31,8 @@ import numpy as np
 from .. import dataset
 from ...utils import download, check_sha1, _get_repo_file_url
 from .... import nd, image, recordio, base
+from .... import numpy as _mx_np  # pylint: disable=reimported
+from ....util import is_np_array
 
 
 class MNIST(dataset._DownloadedDataset):
@@ -87,7 +89,8 @@ class MNIST(dataset._DownloadedDataset):
             data = np.frombuffer(fin.read(), dtype=np.uint8)
             data = data.reshape(len(label), 28, 28, 1)
 
-        self._data = nd.array(data, dtype=data.dtype)
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        self._data = array_fn(data, dtype=data.dtype)
         self._label = label
 
 
