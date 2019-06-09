@@ -84,7 +84,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
     out_.data.resize(2);
   }
   virtual ~MNISTIter(void) {
-    if (img_.dptr_ != nullptr) delete []img_.dptr_;
+    delete []img_.dptr_;
   }
   // intialize iterator loads data in
   virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
