@@ -39,7 +39,7 @@ except ImportError:
 from . import sampler as _sampler
 from ... import nd, context
 from ...util import is_np_array
-from ... import numpy as _mx_np  #pylint: disable=reimported
+from ... import numpy as _mx_np  # pylint: disable=reimported
 
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):
@@ -127,6 +127,7 @@ class SimpleQueue(multiprocessing.queues.SimpleQueue):
         self._send = self._writer.send
         self._recv = self._reader.recv
 
+
 def default_batchify_fn(data):
     """Collate data into batch."""
     if isinstance(data[0], nd.NDArray):
@@ -143,10 +144,10 @@ def default_batchify_fn(data):
 def default_mp_batchify_fn(data):
     """Collate data into batch. Use shared memory for stacking."""
     if isinstance(data[0], nd.NDArray):
-        out = nd.empty((len(data),) + data[0].shape, dtype=data[0].dtype,
+        empty_fn = _mx_np.empty if is_np_array() else nd.empty
+        out = empty_fn((len(data),) + data[0].shape, dtype=data[0].dtype,
                        ctx=context.Context('cpu_shared', 0))
         if is_np_array():
-            out = out.as_np_ndarray()
             return _mx_np.stack(data, out=out)
         else:
             return nd.stack(*data, out=out)
@@ -163,8 +164,7 @@ def default_mp_batchify_fn(data):
 def _as_in_context(data, ctx):
     """Move data into new context."""
     if isinstance(data, nd.NDArray):
-        out = data.as_in_context(ctx)
-        return out.as_np_ndarray() if is_np_array() else out
+        return data.as_in_context(ctx)
     elif isinstance(data, (list, tuple)):
         return [_as_in_context(d, ctx) for d in data]
     return data
