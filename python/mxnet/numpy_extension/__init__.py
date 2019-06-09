@@ -24,8 +24,9 @@ from . import _op
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 from ..context import *  # pylint: disable=wildcard-import
-from ..util import use_np_shape, np_shape, is_np_shape, set_np_shape
-from ..util import use_np_array, np_array, is_np_array, set_np_array
-from ..util import set_np, use_np
+# TODO(junwu): revisit what functions should be exposed to users
+from ..util import use_np_shape, np_shape, is_np_shape
+from ..util import use_np_array, np_array, is_np_array
+from ..util import set_np, use_np, reset_np
 
 __all__ = []
