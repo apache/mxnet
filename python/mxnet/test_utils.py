@@ -462,6 +462,19 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     return ret
 
 
+def find_max_violation(a, b, rtol=None, atol=None):
+    """Finds and returns the location of maximum violation."""
+    rtol = get_rtol(rtol)
+    atol = get_atol(atol)
+    # 'smart' absdiff that considers inf's as equals (to match np.allclose)
+    absdiff = np.where(np.equal(a, b), 0, np.abs(a-b))
+    tol = atol + rtol*np.abs(b)
+    violation = absdiff/(tol+1e-20)
+    loc = np.argmax(violation)
+    idx = np.unravel_index(loc, violation.shape)
+    return idx, np.max(violation)
+
+
 def same(a, b):
     """Test if two NumPy arrays are the same.
 
@@ -519,18 +532,6 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
 
         a = a.asnumpy()
         b = b.asnumpy()
-
-    def find_max_violation(a, b, rtol=None, atol=None):
-        """Finds and returns the location of maximum violation."""
-        rtol = get_rtol(rtol)
-        atol = get_atol(atol)
-        # 'smart' absdiff that considers inf's as equals (to match np.allclose)
-        absdiff = np.where(np.equal(a, b), 0, np.abs(a-b))
-        tol = atol + rtol*np.abs(b)
-        violation = absdiff/(tol+1e-20)
-        loc = np.argmax(violation)
-        idx = np.unravel_index(loc, violation.shape)
-        return idx, np.max(violation)
 
     def locationError(a, b, index, names, maxError=False):
         """Create element mismatch comment
@@ -604,7 +605,6 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('
         equals = np.isclose(a, b, rtol=rtol, atol=atol)
         err = 1 - np.count_nonzero(equals) / equals.size
         if err > etol:
-            #if True:
             index, rel = find_max_violation(a, b, rtol, atol)
             np.set_printoptions(threshold=4, suppress=True)
             msg = npt.build_err_msg([a, b],
