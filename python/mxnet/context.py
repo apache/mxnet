@@ -145,6 +145,24 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
         cls._default_ctx.value = val
     #pylint: enable=no-self-argument
 
+    def empty_cache(self):
+        """Empties the memory cache for the current contexts device.
+
+        MXNet utilizes a memory pool to avoid excessive allocations.
+        Calling empty_cache will empty the memory pool of the contexts
+        device. This will only free the memory of the unreferenced data.
+
+        Examples
+        -------
+        >>> ctx = mx.gpu(0)
+        >>> arr = mx.nd.ones((200,200), ctx=ctx)
+        >>> del arr
+        >>> ctx.empty_cache() # forces release of memory allocated for arr
+        """
+        dev_type = ctypes.c_int(self.device_typeid)
+        dev_id = ctypes.c_int(self.device_id)
+        check_call(_LIB.MXStorageEmptyCache(dev_type, dev_id))
+
 # initialize the default context in Context
 Context._default_ctx.value = Context('cpu', 0)
 

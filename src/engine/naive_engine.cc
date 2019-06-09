@@ -142,6 +142,10 @@ class NaiveEngine final : public Engine {
       opr->opr_name);
   }
 
+/*!
+ * \brief NaiveEngine's PushAsync was intentionally synchronous. 
+ * User should not make any assumption about execution order when using async interface of any engine.
+ */
   void PushAsync(AsyncFn exec_fun,
                  Context exec_ctx,
                  std::vector<VarHandle> const& const_vars,

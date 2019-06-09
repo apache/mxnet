@@ -521,7 +521,7 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     mxnet::TShape s = arr->shape();
-    if (!Imperative::Get()->is_np_comp()) {
+    if (!Imperative::Get()->is_np_shape()) {
       common::ConvertToLegacyShape(&s);
     }
     *out_dim = s.ndim();
@@ -532,7 +532,7 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
       *out_pdata = buffer.data();
     }
   } else {
-    if (Imperative::Get()->is_np_comp()) {
+    if (Imperative::Get()->is_np_shape()) {
       *out_dim = -1;
     } else {
       *out_dim = 0;
@@ -1526,5 +1526,12 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
   Engine::Get()->PushSync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
                           prop, priority, opr_name);
 
+  API_END();
+}
+
+int MXStorageEmptyCache(int dev_type, int dev_id) {
+  API_BEGIN();
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  Storage::Get()->ReleaseAll(ctx);
   API_END();
 }

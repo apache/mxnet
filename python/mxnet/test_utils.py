@@ -430,6 +430,12 @@ def rand_shape_nd(num_dim, dim=10):
     return tuple(rnd.randint(1, dim+1, size=num_dim))
 
 
+def rand_coord_2d(x_low, x_high, y_low, y_high):
+    x = np.random.randint(x_low, x_high, dtype=np.int64)
+    y = np.random.randint(y_low, y_high, dtype=np.int64)
+    return x, y
+
+
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     """Compatible reduce for old version of NumPy.
 

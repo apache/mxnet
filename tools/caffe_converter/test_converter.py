@@ -90,9 +90,9 @@ def main():
         gpus = [-1]
         default_batch_size = 32
     else:
-        gpus = mx.test_utils.list_gpus()
-        assert gpus, 'At least one GPU is needed to run test_converter in GPU mode'
-        default_batch_size = 32 * len(gpus)
+        num_gpus = mx.context.num_gpus()
+        assert num_gpus, 'At least one GPU is needed to run test_converter in GPU mode'
+        default_batch_size = 32 * num_gpus
 
     models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
 

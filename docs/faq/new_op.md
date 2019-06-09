@@ -292,6 +292,28 @@ output or nothing to calculating gradient.
 For more complicated patterns, use `MakeGradNode(op_name, n, heads, dict)` to create gradient entries,
 where heads are input entries to the backward op, composed from ograds and n->inputs.
 
+When assembling a return vector of `std::vector<nnvm::NodeEntry> ret;` a common pattern would be to
+either create nodes in place as in:
+
+```
+ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_xyz_backward",
+    {n->inputs[1]}, nullptr, &n))
+```
+
+Or create the node, modify and then move into NodeEntry's constructor if this node is not to be used
+again. This avoids uneccessary copies of the shared_ptr.
+
+```
+for (size_t i = 0; i < n->inputs.size(); ++i) {
+  nnvm::NodePtr node = nnvm::Node::Create();
+  node->attrs.op = copy_op;
+  node->inputs = {ograds[0]};
+  ret.emplace_back(std::move(node));
+}
+```
+
+The first case uses RVO and the second in place construction.
+
 #### FCompute\<xpu\>
 
 Simple operators can register FCompute<xpu> with `.set_attr<FCompute>("FCompute<cpu>", ...)` and `.set_attr<FCompute>("FCompute<gpu>", ...)` for both CPU and (optionally) GPU computation.

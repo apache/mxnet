@@ -28,7 +28,7 @@ from ..base import py_str
 from ..ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs, array, multiply)
 from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                        mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
-                       signsgd_update, signum_update,
+                       signsgd_update, signum_update, nag_mom_update, mp_nag_mom_update,
                        multi_sgd_update, multi_sgd_mom_update, multi_mp_sgd_update,
                        multi_mp_sgd_mom_update)
 from ..ndarray import sparse
@@ -1029,7 +1029,7 @@ class DCASGD(Optimizer):
 
 @register
 class NAG(Optimizer):
-    """Nesterov accelerated SGD.
+    """Nesterov accelerated gradient.
 
     This optimizer updates each weight by::
 
@@ -1051,33 +1051,59 @@ class NAG(Optimizer):
         super(NAG, self).__init__(**kwargs)
         self.momentum = momentum
 
+    def create_state_multi_precision(self, index, weight):
+        weight_master_copy = None
+        if self.multi_precision and weight.dtype == numpy.float16:
+            weight_master_copy = weight.astype(numpy.float32)
+            return (self.create_state(index, weight_master_copy), weight_master_copy)
+        if weight.dtype == numpy.float16 and not self.multi_precision:
+            warnings.warn("Accumulating with float16 in optimizer can lead to "
+                          "poor accuracy or slow convergence. "
+                          "Consider using multi_precision=True option of the "
+                          "NAG optimizer")
+        return self.create_state(index, weight)
+
     def create_state(self, index, weight):
         momentum = None
         if self.momentum != 0.0:
             momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
         return momentum
 
-    def update(self, index, weight, grad, state):
+    def _update_impl(self, index, weight, grad, state, multi_precision=False):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
-        grad = grad * self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        kwargs = {'rescale_grad': self.rescale_grad}
+        if self.momentum > 0:
+            kwargs['momentum'] = self.momentum
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
 
-        if state is not None:
-            mom = state
-            mom[:] *= self.momentum
-            mom[:] += grad
-            mom[:] += wd * weight
-            grad[:] += self.momentum * mom
-            weight[:] -= lr * grad
+        if not multi_precision:
+            if state is not None:
+                nag_mom_update(weight, grad, state, out=weight, lr=lr, wd=wd, **kwargs)
+            else:
+                sgd_update(weight, grad, out=weight, lr=lr, wd=wd, **kwargs)
         else:
-            assert self.momentum == 0.0
-            weight[:] += -lr * (grad + wd * weight)
+            if state[0] is not None:
+                mp_nag_mom_update(weight, grad, state[0], state[1], out=weight,
+                                  lr=lr, wd=wd, **kwargs)
+            else:
+                mp_sgd_update(weight, grad, state[1], out=weight,
+                              lr=lr, wd=wd, **kwargs)
+
+    def update(self, index, weight, grad, state):
+        self._update_impl(index, weight, grad, state, multi_precision=False)
+
+    def update_multi_precision(self, index, weight, grad, state):
+        use_multi_precision = self.multi_precision and weight.dtype == numpy.float16 \
+                                and isinstance(state, (tuple, list))
+        self._update_impl(index, weight, grad, state,
+                          multi_precision=use_multi_precision)
+
 
 @register
 class SGLD(Optimizer):
@@ -1380,7 +1406,7 @@ class AdaDelta(Optimizer):
         # preprocess grad
         grad *= self.rescale_grad
         if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+            grad = clip(grad, - self.clip_gradient, self.clip_gradient)
 
         # accumulated g and delta initlization
         acc_g, acc_delta = state
