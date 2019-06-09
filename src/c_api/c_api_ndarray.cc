@@ -276,15 +276,15 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
-int MXIsNumpyCompatible(bool* curr) {
+int MXIsNumpyShape(bool* curr) {
   API_BEGIN();
-  *curr = Imperative::Get()->is_np_comp();
+  *curr = Imperative::Get()->is_np_shape();
   API_END();
 }
 
-int MXSetIsNumpyCompatible(int is_np_comp, int* prev) {
+int MXSetIsNumpyShape(int is_np_shape, int* prev) {
   API_BEGIN();
-  *prev = Imperative::Get()->set_is_np_comp(static_cast<bool>(is_np_comp));
+  *prev = Imperative::Get()->set_is_np_shape(static_cast<bool>(is_np_shape));
   API_END();
 }
 

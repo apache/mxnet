@@ -18,7 +18,7 @@
 ## Build the C++ package
 The C++ package has the same prerequisites as the MXNet library.
 
-To enable C++ package, just add `USE_CPP_PACKAGE=1` in the [build from source](build_from_source.html) options when building the MXNet shared library.
+To enable C++ package, just add `USE_CPP_PACKAGE=1` in the [build from source](build_from_source.md) options when building the MXNet shared library.
 
 For example to build MXNet with GPU support and the C++ package, OpenCV, and OpenBLAS, from the project root you would run:
 
@@ -40,7 +40,7 @@ You can find C++ code examples in the `cpp-package/example` folder of the MXNet 
 
 ## Tutorials
 
-* [MXNet C++ API Basics](https://mxnet.incubator.apache.org/tutorials/c++/basics.html)
+* [MXNet C++ API Basics](../tutorials/c++/basics.md)
 
 ## Related Topics
 

@@ -223,11 +223,12 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
     ng->attrs.op = Op::Get("_zeros_without_dtype");
     ng->attrs.name = "zeros_without_dtype";
     ng->attrs.op->attr_parser(&(ng->attrs));
-    return nnvm::NodeEntry{ng, 0, 0};
+    return nnvm::NodeEntry(std::move(ng), 0, 0);
   }
 
   // remove zero in the sum. at least keep 1.
   auto begin = std::remove_if(v.begin(), v.end(), [](const nnvm::NodeEntry& nodeEntry) {
+     CHECK(nodeEntry.node);
      return nodeEntry.node->op() == zeros_op || nodeEntry.node->op() == zeros_like_op;
   });
   if (begin == v.begin()) ++begin;
@@ -244,7 +245,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
       sum_node->attrs.dict["num_args"] = std::to_string(v.size());
       sum_node->attrs.op->attr_parser(&(sum_node->attrs));
       sum_node->inputs = std::move(v);
-      return nnvm::NodeEntry{sum_node, 0, 0};
+      return nnvm::NodeEntry(std::move(sum_node), 0, 0);
     } else {
       // use a stream line of plus instead
       nnvm::NodeEntry ret = v[0];
@@ -274,7 +275,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
         x->attrs.op = ewise_plus_op;
         x->attrs.name = os.str();
         x->inputs = {ret, v[i]};
-        ret = nnvm::NodeEntry{x, 0, 0};
+        ret = nnvm::NodeEntry(std::move(x), 0, 0);
       }
       // identity node is used to avoid exposure of dummy plus node
       // when its output get assigned to another space.
@@ -323,7 +324,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   }
   if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
-    NodeEntry ngrad{nnvm::Node::Create(), 0, 0};
+    NodeEntry ngrad(nnvm::Node::Create(), 0, 0);
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
     head_grad_map_[ngrad.node.get()] = i;
   }
@@ -331,7 +332,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   std::vector<NodeEntry> xs;
   for (size_t i = 0; i < grad_req_types.size(); ++i) {
     if (grad_req_types[i] != kNullOp) {
-      xs.emplace_back(NodeEntry{args[i], 0, 0});
+      xs.emplace_back(args[i]);
     }
   }
 
@@ -1022,8 +1023,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
       auto eid = idx.entry_id(nid, i);
       data_context[eid] = vctx[nid];
-      CHECK_NE(vstorage_type[nid], kUndefinedStorage);
-      data_storage_type[eid] = (NDArrayStorageType) vstorage_type[nid];
+      CHECK_NE(vstorage_type[eid], kUndefinedStorage);
+      data_storage_type[eid] = (NDArrayStorageType) vstorage_type[eid];
     }
   }
 

@@ -379,7 +379,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
 
 inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector *in_attrs,
-                            mxnet::ShapeVector *out_attrs) {
+                             mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
@@ -389,7 +389,7 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
     << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
   mxnet::TShape oshape = param.shape;
   for (int i = 0; i < ishape.ndim(); ++i) {
-    if (oshape[i] != -1) {
+    if (oshape[i] != 0) {
       CHECK(ishape[i] == oshape[i] || ishape[i] == 1)
         << "Array cannot be broadcasted from " << ishape << " to " << param.shape;
     } else {
@@ -1183,9 +1183,14 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
-
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
+                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "for more details.");
+  }
   if (param.ord == 1) {
-    if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+    if (safe_acc) {
       ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
         ctx, inputs, req, outputs, small);
     } else {
@@ -1193,7 +1198,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
         ctx, inputs, req, outputs, small);
     }
   } else if (param.ord == 2) {
-    if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false)) {
+    if (safe_acc) {
       ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, true, false, mshadow_op::identity>(
         ctx, inputs, req, outputs, small);
     } else {

@@ -122,7 +122,7 @@ inline void SetShapeType(const Context& ctx,
   if (!infershape.count(attrs.op)) {
     is_dynamic_shape_existing = true;
   } else {
-    if (!Imperative::Get()->is_np_comp()) {
+    if (!Imperative::Get()->is_np_shape()) {
       common::ConvertToNumpyShape(&in_shapes);
       common::ConvertToNumpyShape(&out_shapes);
     }

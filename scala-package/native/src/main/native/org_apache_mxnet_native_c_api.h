@@ -873,18 +873,18 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxDumpProfile
 
 /*
  * Class:     org_apache_mxnet_LibInfo
- * Method:    mxIsNumpyCompatible
+ * Method:    mxIsNumpyShape
  * Signature: (Lorg/apache/mxnet/Base/RefInt;)I
  */
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyCompatible
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyShape
   (JNIEnv *, jobject, jobject);
 
 /*
  * Class:     org_apache_mxnet_LibInfo
- * Method:    mxSetIsNumpyCompatible
+ * Method:    mxSetIsNumpyShape
  * Signature: (ILorg/apache/mxnet/Base/RefInt;)I
  */
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyCompatible
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyShape
   (JNIEnv *, jobject, jint, jobject);
 
 #ifdef __cplusplus

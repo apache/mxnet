@@ -1067,14 +1067,14 @@ MXNET_DLL int MXAutogradIsTraining(bool* curr);
  * \param curr returns the current status
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXIsNumpyCompatible(bool* curr);
+MXNET_DLL int MXIsNumpyShape(bool* curr);
 /*!
  * \brief set numpy compatibility switch
- * \param is_np_comp 1 when numpy compatibility is on, 0 when off
+ * \param is_np_shape 1 when numpy shape semantics is on, 0 when off
  * \param prev returns the previous status before this set
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXSetIsNumpyCompatible(int is_np_comp, int* prev);
+MXNET_DLL int MXSetIsNumpyShape(int is_np_shape, int* prev);
 /*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
@@ -2746,6 +2746,12 @@ MXNET_DLL int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid,
 MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *shape,
                                            mx_uint ndim, int dtype, NDArrayHandle *out);
 
+/*!
+ * \brief Release all unreferenced memory from the devices storage managers memory pool
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ */
+MXNET_DLL int MXStorageEmptyCache(int dev_type, int dev_id);
 
 /*!
  * \brief Reconstruct NDArray from shared memory handle

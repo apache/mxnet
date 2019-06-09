@@ -95,9 +95,11 @@ def test_tensorrt_inference():
     print("MXNet accuracy: %f" % mx_pct)
     print("MXNet-TensorRT accuracy: %f" % trt_pct)
 
-    assert abs(mx_pct - trt_pct) < 1e-2, \
-        """Diff. between MXNet & TensorRT accuracy too high:
-           MXNet = %f, TensorRT = %f""" % (mx_pct, trt_pct)
+    absolute_accuracy_diff = abs(mx_pct - trt_pct)
+    epsilon = 1.01e-2
+    assert absolute_accuracy_diff < epsilon, \
+        """Absolute diff. between MXNet & TensorRT accuracy (%f) exceeds threshold (%f):
+           MXNet = %f, TensorRT = %f""" % (absolute_accuracy_diff, epsilon, mx_pct, trt_pct)
 
 
 if __name__ == '__main__':

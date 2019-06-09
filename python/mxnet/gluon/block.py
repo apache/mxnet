@@ -354,7 +354,7 @@ class Block(object):
                               'save_parameters may resolve this error.'%e.message)
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
-                        ignore_extra=False):
+                        ignore_extra=False, cast_dtype=False):
         """Load parameters from file previously saved by `save_parameters`.
 
         Parameters
@@ -368,6 +368,9 @@ class Block(object):
         ignore_extra : bool, default False
             Whether to silently ignore parameters from the file that are not
             present in this Block.
+        cast_dtype : bool, default False
+            Cast the data type of the NDArray loaded from the checkpoint to the dtype
+            provided by the Parameter if any.
 
         References
         ----------
@@ -383,7 +386,7 @@ class Block(object):
             # legacy loading
             del loaded
             self.collect_params().load(
-                filename, ctx, allow_missing, ignore_extra, self.prefix)
+                filename, ctx, allow_missing, ignore_extra, self.prefix, cast_dtype=cast_dtype)
             return
 
         if not allow_missing:
@@ -399,7 +402,7 @@ class Block(object):
                     "which contains parameters %s. Set ignore_extra=True to ignore. "%(
                         name, filename, _brief_print_list(self._params.keys())))
             if name in params:
-                params[name]._load_init(loaded[name], ctx)
+                params[name]._load_init(loaded[name], ctx, cast_dtype=cast_dtype)
 
     def load_params(self, filename, ctx=None, allow_missing=False,
                     ignore_extra=False):

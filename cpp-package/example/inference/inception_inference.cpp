@@ -302,13 +302,11 @@ void Predictor::PredictImage(const std::string& image_file) {
 
   // The output is available in executor->outputs.
   auto array = executor->outputs[0].Copy(Context::cpu());
-
   /*
    * Find out the maximum accuracy and the index associated with that accuracy.
    * This is done by using the argmax operator on NDArray.
    */
   auto predicted = array.ArgmaxChannel();
-
   /*
    * Wait until all the previous write operations on the 'predicted'
    * NDArray to be complete before we read it.
@@ -317,7 +315,7 @@ void Predictor::PredictImage(const std::string& image_file) {
    */
   predicted.WaitToRead();
 
-  int best_idx = predicted.At(0, 0);
+  int best_idx = predicted.At(0);
   float best_accuracy = array.At(0, best_idx);
 
   if (output_labels.empty()) {
@@ -331,9 +329,7 @@ void Predictor::PredictImage(const std::string& image_file) {
 
 
 Predictor::~Predictor() {
-  if (executor) {
-    delete executor;
-  }
+  delete executor;
   MXNotifyShutdown();
 }
 
