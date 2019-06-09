@@ -474,6 +474,10 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
                                        "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
+  if (GetMKLDNNCacheSize() != -1) common::LogOnce("MXNET_MKLDNN_CACHE_NUM is set."
+                                       "Should only be set if "
+                                       "your model has variable input shapes, "
+                                       "as cache size may grow unbounded");
 #endif
 }
 
@@ -710,6 +714,23 @@ inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape
   } else {
     // NDArray with non-default storage. Storage allocation is always delayed.
     vec->emplace_back(stype, shape, ctx, true, dtype);
+  }
+}
+
+
+/*!
+ * \brief parallelize copy by OpenMP.
+ */
+template<typename DType>
+inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
+  static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_COPY_SIZE", 200000);
+  if (size >= copy_block_size) {
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] = src[i];
+    }
+  } else {
+    std::memcpy(dst, src, sizeof(DType) * size);
   }
 }
 

@@ -236,15 +236,15 @@ def foreach(body, data, init_states, name="foreach"):
     output data, the body function can return (out, []).
 
     The computation done by this operator is equivalent to the pseudo code below
-    when the input data is NDArray:
+    when the input data is NDArray::
 
-    states = init_states
-    outs = []
-    for i in data.shape[0]:
-        s = data[i]
-        out, states = body(s, states)
-        outs.append(out)
-    outs = stack(*outs)
+        states = init_states
+        outs = []
+        for i in data.shape[0]:
+            s = data[i]
+            out, states = body(s, states)
+            outs.append(out)
+        outs = stack(*outs)
 
 
     Parameters

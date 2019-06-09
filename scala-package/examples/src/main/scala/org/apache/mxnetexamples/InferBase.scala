@@ -21,7 +21,7 @@ import org.apache.mxnet._
 
 trait InferBase {
 
-  def loadModel(context: Array[Context]): Any
+  def loadModel(context: Array[Context], batchInference : Boolean): Any
   def loadSingleData(): Any
   def loadBatchFileList(batchSize: Int): List[Any]
   def loadInputBatch(source: Any): Any

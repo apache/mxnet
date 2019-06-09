@@ -80,7 +80,6 @@ We also adjust our `DataLoader` so that it continuously provides batches of data
 
 
 ```python
-from multiprocessing import cpu_count
 from mxnet.gluon.data.vision import transforms
 
 transform = transforms.Compose([
@@ -109,7 +108,7 @@ class ContinuousBatchSampler():
 
 sampler = mx.gluon.data.RandomSampler(len(dataset))
 batch_sampler = ContinuousBatchSampler(sampler, batch_size=128)
-data_loader = mx.gluon.data.DataLoader(dataset, batch_sampler=batch_sampler, num_workers=cpu_count())
+data_loader = mx.gluon.data.DataLoader(dataset, batch_sampler=batch_sampler)
 ```
 
 ## Implementation
@@ -143,7 +142,7 @@ class LRFinder():
             self.learner.trainer._init_kvstore()
         # Store params and optimizer state for restore after lr_finder procedure
         # Useful for applying the method partway through training, not just for initialization of lr.
-        self.learner.net.save_params("lr_finder.params")
+        self.learner.net.save_parameters("lr_finder.params")
         self.learner.trainer.save_states("lr_finder.state")
         lr = lr_start
         self.results = [] # List of (lr, loss) tuples
@@ -156,7 +155,7 @@ class LRFinder():
                 break
             lr = lr * lr_multiplier
         # Restore params (as finder changed them)
-        self.learner.net.load_params("lr_finder.params", ctx=self.learner.ctx)
+        self.learner.net.load_parameters("lr_finder.params", ctx=self.learner.ctx)
         self.learner.trainer.load_states("lr_finder.state")
         return self.results
         
@@ -231,10 +230,10 @@ As discussed before, we should select a learning rate where the loss is falling 
 
 
 ```python
-learner.net.save_params("net.params")
+learner.net.save_parameters("net.params")
 lr = 0.05
 
-for iter_idx in range(500):
+for iter_idx in range(300):
     learner.iteration(lr=lr)
     if ((iter_idx % 100) == 0):
         print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss))
@@ -247,9 +246,6 @@ Iteration: 100, Loss: 1.6653 <!--notebook-skip-line-->
 
 Iteration: 200, Loss: 1.4891 <!--notebook-skip-line-->
 
-Iteration: 300, Loss: 1.0846 <!--notebook-skip-line-->
-
-Iteration: 400, Loss: 1.0633 <!--notebook-skip-line-->
 
 Final Loss: 1.1812 <!--notebook-skip-line-->
 
@@ -262,10 +258,10 @@ And now we have a baseline, let's see what happens when we train with a learning
 ```python
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
-learner.net.load_params("net.params", ctx=ctx)
+learner.net.load_parameters("net.params", ctx=ctx)
 lr = 0.5
 
-for iter_idx in range(500):
+for iter_idx in range(300):
     learner.iteration(lr=lr)
     if ((iter_idx % 100) == 0):
         print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss))
@@ -278,9 +274,6 @@ Iteration: 100, Loss: 1.9666 <!--notebook-skip-line-->
 
 Iteration: 200, Loss: 1.6919 <!--notebook-skip-line-->
 
-Iteration: 300, Loss: 1.3643 <!--notebook-skip-line-->
-
-Iteration: 400, Loss: 1.4743 <!--notebook-skip-line-->
 
 Final Loss: 1.366 <!--notebook-skip-line-->
 
@@ -293,10 +286,10 @@ And lastly, we see how the model trains with a more conservative learning rate o
 ```python
 net = mx.gluon.model_zoo.vision.resnet18_v2(classes=10)
 learner = Learner(net=net, data_loader=data_loader, ctx=ctx)
-learner.net.load_params("net.params", ctx=ctx)
+learner.net.load_parameters("net.params", ctx=ctx)
 lr = 0.005
 
-for iter_idx in range(500):
+for iter_idx in range(300):
     learner.iteration(lr=lr)
     if ((iter_idx % 100) == 0):
         print("Iteration: {}, Loss: {:.5g}".format(iter_idx, learner.iteration_loss))
@@ -309,9 +302,6 @@ Iteration: 100, Loss: 1.8621 <!--notebook-skip-line-->
 
 Iteration: 200, Loss: 1.6316 <!--notebook-skip-line-->
 
-Iteration: 300, Loss: 1.6295 <!--notebook-skip-line-->
-
-Iteration: 400, Loss: 1.4019 <!--notebook-skip-line-->
 
 Final Loss: 1.2919 <!--notebook-skip-line-->
 

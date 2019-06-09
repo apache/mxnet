@@ -312,18 +312,9 @@ that are already optimized for big operations,
 you can reduce memory consumption roughly *by half*.
 You can reduce memory usage even more
 if you are optimizing a fine-grained computation network
-used by symbolic libraries, such as Theano.
+used by symbolic libraries, such as Theano. Most of the ideas in this article inspired the design of _MXNet_.
 
-Most of the ideas in this article inspired the design of _MXNet_.
-We've also provided a [Memory Cost Estimation Script](https://github.com/dmlc/mxnet/tree/master/example/memcost),
-which you can use to see how much memory you need under different scenarios.
-
-The script has an option called `forward_only`,
-which shows the cost of running only the forward pass.
-You will find that cost when using this option
-is extremely low compared to others.
-This is simply because there's  more memory reuse
-if you run only the forward pass.
+Also, you will notice that memory cost, for forward pass only execution, is extremely low compared to running both forward and backward pass. This is simply because there's  more memory reuse if you run only the forward pass.
 
 So here are two takeaways:
 

@@ -48,6 +48,11 @@ MXNET_REGISTER_OP_PROPERTY(RNN, RNNProp)
 .describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are
 implemented, with both multi-layer and bidirectional support.
 
+When the input data is of type float32 and the environment variables MXNET_CUDA_ALLOW_TENSOR_CORE
+and MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION are set to 1, this operator will try to use
+pseudo-float16 precision (float32 math with float16 I/O) precision in order to use
+Tensor Cores on suitable NVIDIA GPUs. This can sometimes give significant speedups.
+
 **Vanilla RNN**
 
 Applies a single-gate recurrent layer to input X. Two kinds of activation function are supported:

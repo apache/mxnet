@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file elementwise_unary_op-inl.h
- * \brief Function definition of elementwise unary operators
+ * \file broadcast_reduce_op.h
+ * \brief Function definition of broadcast and reduce operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_

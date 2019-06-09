@@ -62,7 +62,7 @@ Community contributions to MXNet have added many new valuable features and funct
 
 ## Model Zoos
 
-* [Gluon Model Zoo](https://github.com/awslabs/mxnet-model-server) - models trained in Gluon and available through Gluon's model zoo API.
+* [Gluon Model Zoo](https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html) - models trained in Gluon and available through Gluon's model zoo API.
 * [ONNX Model Zoo](https://github.com/onnx/models) - ONNX models from a variety of ONNX-supported frameworks.
 
 

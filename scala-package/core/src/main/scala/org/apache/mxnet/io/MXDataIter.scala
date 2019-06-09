@@ -33,7 +33,7 @@ import scala.collection.mutable.ListBuffer
 private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
                                 dataName: String = "data",
                                 labelName: String = "label")
-  extends DataIter with WarnIfNotDisposed {
+  extends DataIter with NativeResource {
 
   private val logger = LoggerFactory.getLogger(classOf[MXDataIter])
 
@@ -67,20 +67,13 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
     }
   }
 
+  override def nativeAddress: CPtrAddress = handle
 
-  private var disposed = false
-  protected def isDisposed = disposed
+  override def nativeDeAllocator: CPtrAddress => MXUint = _LIB.mxDataIterFree
 
-  /**
-   * Release the native memory.
-   * The object shall never be used after it is disposed.
-   */
-  def dispose(): Unit = {
-    if (!disposed) {
-      _LIB.mxDataIterFree(handle)
-      disposed = true
-    }
-  }
+  override val ref: NativeResourceRef = super.register()
+
+  override val bytesAllocated: Long = 0L
 
   /**
    * reset the iterator
@@ -165,11 +158,11 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   }
 
   // The name and shape of data provided by this iterator
-  @deprecated
+  @deprecated("Please use provideDataDesc instead", "1.3.0")
   override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
-  @deprecated
+  @deprecated("Please use provideLabelDesc instead", "1.3.0")
   override def provideLabel: ListMap[String, Shape] = _provideLabel
 
   // Provide type:DataDesc of the data

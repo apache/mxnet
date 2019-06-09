@@ -285,9 +285,9 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     shape_vec.push_back(param_.label_width);
     TShape label_shape(shape_vec.begin(), shape_vec.end());
 
-    out->data.at(0) = NDArray(data_shape, Context::CPUPinned(0), false,
+    out->data.at(0) = NDArray(data_shape, Context::CPU(0), false,
       mshadow::DataType<DType>::kFlag);
-    out->data.at(1) = NDArray(label_shape, Context::CPUPinned(0), false,
+    out->data.at(1) = NDArray(label_shape, Context::CPU(0), false,
       mshadow::DataType<real_t>::kFlag);
     unit_size_[0] = param_.data_shape.Size();
     unit_size_[1] = param_.label_width;

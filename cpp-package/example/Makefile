@@ -16,6 +16,7 @@
 # under the License.
 
 prebuild :
+	@mkdir -p build
 	$(shell ./get_data.sh)
 	$(shell cp -r ../../lib ./)
 CPPEX_SRC = $(wildcard *.cpp)
@@ -38,8 +39,9 @@ debug: CPPEX_CFLAGS += -DDEBUG -g
 debug: prebuild all
 
 
+
 $(CPPEX_EXE):% : %.cpp
-	$(CXX) -std=c++0x $(CFLAGS)  $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
+	$(CXX) -std=c++11 $(CFLAGS)  $(CPPEX_CFLAGS) -o build/$@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
 
 clean:
-	rm -f $(CPPEX_EXE)
+	@rm -rf build

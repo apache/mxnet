@@ -174,7 +174,6 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
     }
 
     // apply nms
-#pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < nkeep; ++i) {
       int offset_i = i * 6;
       if (p_out[offset_i] < 0) continue;  // skip eliminated

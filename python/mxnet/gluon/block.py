@@ -326,8 +326,7 @@ class Block(object):
 
         References
         ----------
-        `Saving and Loading Gluon Models
-
+        `Saving and Loading Gluon Models \
         <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
@@ -372,8 +371,7 @@ class Block(object):
 
         References
         ----------
-        `Saving and Loading Gluon Models
-
+        `Saving and Loading Gluon Models \
         <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         loaded = ndarray.load(filename)

@@ -102,7 +102,7 @@ class CommDeviceTree : public CommDevice {
 
     if (stype == kDefaultStorage) {
       // Copy everything into buf.merged for each gpu
-      for (size_t i = 0; i < src.size(); ++i) {
+      for (const auto& src_gpu_value : src) {
         int start = scan_[root][depth_];
         int end = scan_[root][depth_+1];
 
@@ -110,8 +110,8 @@ class CommDeviceTree : public CommDevice {
           int topo_id = topology[j];
           TreeBufferEntry& buf = tree_merge_buf_[topo_id][key];
 
-          if (devs_[topo_id] == src[i].ctx()) {
-            CopyFromTo(src[i], &(buf.merged[merged_row]), priority);
+          if (devs_[topo_id] == src_gpu_value.ctx()) {
+            CopyFromTo(src_gpu_value, &(buf.merged[merged_row]), priority);
           }
         }
       }
@@ -339,8 +339,9 @@ class CommDeviceTree : public CommDevice {
     int n = static_cast<int>(gpus.size());
     int enabled = 0;
     std::vector<int> p2p(n*n);
+    mxnet::common::cuda::DeviceStore device_store;
     for (int i = 0; i < n; ++i) {
-      cudaSetDevice(gpus[i]);
+      device_store.SetDevice(gpus[i]);
       for (int j = 0; j < n; j++) {
         int access;
         cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);
@@ -400,10 +401,10 @@ class CommDeviceTree : public CommDevice {
     bool delay_alloc = true;
     std::map<int, int> key_dist;
 
-    for (size_t i = 0; i < tree_sorted_key_attrs_.size(); ++i) {
-      const int key  = std::get<0>(tree_sorted_key_attrs_[i]);
-      const TShape& shape = std::get<1>(tree_sorted_key_attrs_[i]);
-      const int type = std::get<2>(tree_sorted_key_attrs_[i]);
+    for (auto& tree_sorted_key_attr : tree_sorted_key_attrs_) {
+      const int key  = std::get<0>(tree_sorted_key_attr);
+      const TShape& shape = std::get<1>(tree_sorted_key_attr);
+      const int type = std::get<2>(tree_sorted_key_attr);
 
       if (key_dist.find(shape.Size()) == key_dist.end())
         key_dist[shape.Size()] = 1;
@@ -484,8 +485,8 @@ class CommDeviceTree : public CommDevice {
       }
     }
 
-    for (auto it = key_dist.begin(); it != key_dist.end(); ++it) {
-      LOG(INFO) << "Size " << it->first << " occurs " << it->second << " times";
+    for (auto& kv : key_dist) {
+      LOG(INFO) << "Size " << kv.first << " occurs " << kv.second << " times";
     }
     inited_ = true;
   }

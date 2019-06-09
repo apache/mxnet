@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file ordering.cc
+ * \file ordering_op.cc
  * \brief CPU Implementation of the ordering operations
  */
 // this will be invoked by gcc and compile CPU version

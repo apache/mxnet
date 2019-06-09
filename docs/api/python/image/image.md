@@ -16,8 +16,11 @@ images provided in
 .. autosummary::
     :nosignatures:
 
+    image.imread
     image.imdecode
+    image.imresize
     image.scale_down
+    image.copyMakeBorder
     image.resize_short
     image.fixed_crop
     image.random_crop
@@ -56,7 +59,7 @@ Iterators support loading image from binary `Record IO` and raw image files.
 
 We use helper function to initialize augmenters
 ```eval_rst
-    .. currentmodule:: mxnet
+.. currentmodule:: mxnet
 .. autosummary::
     :nosignatures:
 
@@ -163,8 +166,11 @@ and a list of augmenters specific for `Object detection` is provided
 .. autoclass:: mxnet.image.ImageIter
     :members:
 
+.. automethod:: mxnet.image.imread
 .. automethod:: mxnet.image.imdecode
+.. automethod:: mxnet.image.imresize
 .. automethod:: mxnet.image.scale_down
+.. automethod:: mxnet.image.copyMakeBorder
 .. automethod:: mxnet.image.resize_short
 .. automethod:: mxnet.image.fixed_crop
 .. automethod:: mxnet.image.random_crop

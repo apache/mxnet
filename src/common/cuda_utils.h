@@ -68,6 +68,110 @@ inline __device__ bool __is_supported_cuda_architecture() {
 }
 #endif  // __CUDACC__
 
+/*!
+ * \brief Check CUDA error.
+ * \param msg Message to print if an error occured.
+ */
+#define CHECK_CUDA_ERROR(msg)                                                \
+  {                                                                          \
+    cudaError_t e = cudaGetLastError();                                      \
+    CHECK_EQ(e, cudaSuccess) << (msg) << " CUDA: " << cudaGetErrorString(e); \
+  }
+
+/*!
+ * \brief Protected CUDA call.
+ * \param func Expression to call.
+ *
+ * It checks for CUDA errors after invocation of the expression.
+ */
+#define CUDA_CALL(func)                                            \
+  {                                                                \
+    cudaError_t e = (func);                                        \
+    CHECK(e == cudaSuccess || e == cudaErrorCudartUnloading)       \
+        << "CUDA: " << cudaGetErrorString(e);                      \
+  }
+
+/*!
+ * \brief Protected cuBLAS call.
+ * \param func Expression to call.
+ *
+ * It checks for cuBLAS errors after invocation of the expression.
+ */
+#define CUBLAS_CALL(func)                                       \
+  {                                                             \
+    cublasStatus_t e = (func);                                  \
+    CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)                          \
+        << "cuBLAS: " << mxnet::common::cuda::CublasGetErrorString(e); \
+  }
+
+/*!
+ * \brief Protected cuSolver call.
+ * \param func Expression to call.
+ *
+ * It checks for cuSolver errors after invocation of the expression.
+ */
+#define CUSOLVER_CALL(func)                                         \
+  {                                                                 \
+    cusolverStatus_t e = (func);                                    \
+    CHECK_EQ(e, CUSOLVER_STATUS_SUCCESS)                            \
+        << "cuSolver: " << mxnet::common::cuda::CusolverGetErrorString(e); \
+  }
+
+/*!
+ * \brief Protected cuRAND call.
+ * \param func Expression to call.
+ *
+ * It checks for cuRAND errors after invocation of the expression.
+ */
+#define CURAND_CALL(func)                                       \
+  {                                                             \
+    curandStatus_t e = (func);                                  \
+    CHECK_EQ(e, CURAND_STATUS_SUCCESS)                          \
+        << "cuRAND: " << mxnet::common::cuda::CurandGetErrorString(e); \
+  }
+
+/*!
+ * \brief Protected NVRTC call.
+ * \param func Expression to call.
+ *
+ * It checks for NVRTC errors after invocation of the expression.
+ */
+#define NVRTC_CALL(x)                                   \
+  {                                                     \
+    nvrtcResult result = x;                             \
+    CHECK_EQ(result, NVRTC_SUCCESS)                     \
+      << #x " failed with error "                       \
+      << nvrtcGetErrorString(result);                   \
+  }
+
+/*!
+ * \brief Protected CUDA driver call.
+ * \param func Expression to call.
+ *
+ * It checks for CUDA driver errors after invocation of the expression.
+ */
+#define CUDA_DRIVER_CALL(func)                                          \
+  {                                                                     \
+    CUresult e = (func);                                                \
+    if (e != CUDA_SUCCESS) {                                            \
+      char const * err_msg = nullptr;                                         \
+      if (cuGetErrorString(e, &err_msg) == CUDA_ERROR_INVALID_VALUE) {  \
+        LOG(FATAL) << "CUDA Driver: Unknown error " << e;               \
+      } else {                                                          \
+        LOG(FATAL) << "CUDA Driver: " << err_msg;                       \
+      }                                                                 \
+    }                                                                   \
+  }
+
+
+#if !defined(_MSC_VER)
+#define CUDA_UNROLL _Pragma("unroll")
+#define CUDA_NOUNROLL _Pragma("nounroll")
+#else
+#define CUDA_UNROLL
+#define CUDA_NOUNROLL
+#endif
+
 namespace mxnet {
 namespace common {
 /*! \brief common utils for cuda */
@@ -179,113 +283,31 @@ inline DType __device__ CudaMin(DType a, DType b) {
     return a < b ? a : b;
 }
 
+class DeviceStore {
+ public:
+  /*! \brief default constructor- only optionally restores previous device */
+  explicit DeviceStore(bool restore = true) : restore_(restore) {
+    if (restore_)
+      CUDA_CALL(cudaGetDevice(&restore_device_));
+  }
+
+  ~DeviceStore() {
+    if (restore_)
+      CUDA_CALL(cudaSetDevice(restore_device_));
+  }
+
+  void SetDevice(int device) {
+    CUDA_CALL(cudaSetDevice(device));
+  }
+
+ private:
+  int restore_device_;
+  bool restore_;
+};
+
 }  // namespace cuda
 }  // namespace common
 }  // namespace mxnet
-
-/*!
- * \brief Check CUDA error.
- * \param msg Message to print if an error occured.
- */
-#define CHECK_CUDA_ERROR(msg)                                                \
-  {                                                                          \
-    cudaError_t e = cudaGetLastError();                                      \
-    CHECK_EQ(e, cudaSuccess) << (msg) << " CUDA: " << cudaGetErrorString(e); \
-  }
-
-/*!
- * \brief Protected CUDA call.
- * \param func Expression to call.
- *
- * It checks for CUDA errors after invocation of the expression.
- */
-#define CUDA_CALL(func)                                            \
-  {                                                                \
-    cudaError_t e = (func);                                        \
-    CHECK(e == cudaSuccess || e == cudaErrorCudartUnloading)       \
-        << "CUDA: " << cudaGetErrorString(e);                      \
-  }
-
-/*!
- * \brief Protected cuBLAS call.
- * \param func Expression to call.
- *
- * It checks for cuBLAS errors after invocation of the expression.
- */
-#define CUBLAS_CALL(func)                                       \
-  {                                                             \
-    cublasStatus_t e = (func);                                  \
-    CHECK_EQ(e, CUBLAS_STATUS_SUCCESS)                          \
-        << "cuBLAS: " << mxnet::common::cuda::CublasGetErrorString(e); \
-  }
-
-/*!
- * \brief Protected cuSolver call.
- * \param func Expression to call.
- *
- * It checks for cuSolver errors after invocation of the expression.
- */
-#define CUSOLVER_CALL(func)                                         \
-  {                                                                 \
-    cusolverStatus_t e = (func);                                    \
-    CHECK_EQ(e, CUSOLVER_STATUS_SUCCESS)                            \
-        << "cuSolver: " << mxnet::common::cuda::CusolverGetErrorString(e); \
-  }
-
-/*!
- * \brief Protected cuRAND call.
- * \param func Expression to call.
- *
- * It checks for cuRAND errors after invocation of the expression.
- */
-#define CURAND_CALL(func)                                       \
-  {                                                             \
-    curandStatus_t e = (func);                                  \
-    CHECK_EQ(e, CURAND_STATUS_SUCCESS)                          \
-        << "cuRAND: " << mxnet::common::cuda::CurandGetErrorString(e); \
-  }
-
-/*!
- * \brief Protected NVRTC call.
- * \param func Expression to call.
- *
- * It checks for NVRTC errors after invocation of the expression.
- */
-#define NVRTC_CALL(x)                                   \
-  {                                                     \
-    nvrtcResult result = x;                             \
-    CHECK_EQ(result, NVRTC_SUCCESS)                     \
-      << #x " failed with error "                       \
-      << nvrtcGetErrorString(result);                   \
-  }
-
-/*!
- * \brief Protected CUDA driver call.
- * \param func Expression to call.
- *
- * It checks for CUDA driver errors after invocation of the expression.
- */
-#define CUDA_DRIVER_CALL(func)                                          \
-  {                                                                     \
-    CUresult e = (func);                                                \
-    if (e != CUDA_SUCCESS) {                                            \
-      char const * err_msg = nullptr;                                         \
-      if (cuGetErrorString(e, &err_msg) == CUDA_ERROR_INVALID_VALUE) {  \
-        LOG(FATAL) << "CUDA Driver: Unknown error " << e;               \
-      } else {                                                          \
-        LOG(FATAL) << "CUDA Driver: " << err_msg;                       \
-      }                                                                 \
-    }                                                                   \
-  }
-
-
-#if !defined(_MSC_VER)
-#define CUDA_UNROLL _Pragma("unroll")
-#define CUDA_NOUNROLL _Pragma("nounroll")
-#else
-#define CUDA_UNROLL
-#define CUDA_NOUNROLL
-#endif
 
 /*!
  * \brief Determine major version number of the gpu's cuda compute architecture.

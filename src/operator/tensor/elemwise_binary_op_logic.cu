@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cu
+ * \file elemwise_binary_op_logic.cu
  * \brief GPU Implementation of unary function.
  */
 #include "./elemwise_unary_op.h"

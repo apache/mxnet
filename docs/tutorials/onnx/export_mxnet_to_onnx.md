@@ -49,7 +49,7 @@ Let us describe the MXNet's `export_model` API.
 help(onnx_mxnet.export_model)
 ```
 
-```python
+```
 Help on function export_model in module mxnet.contrib.onnx.mx2onnx.export_model:
 
 export_model(sym, params, input_shape, input_type=<type 'numpy.float32'>, onnx_file_path=u'model.onnx', verbose=False)

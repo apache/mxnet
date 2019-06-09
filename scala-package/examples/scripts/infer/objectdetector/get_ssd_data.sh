@@ -37,7 +37,7 @@ fi
 if [ ! -f "$data_path" ]; then
     wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json -P $data_path
     wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-0000.params -P $data_path
-    wget https://raw.githubusercontent.com/awslabs/mxnet-model-server/master/examples/ssd/synset.txt -P $data_path
+    wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/synset.txt -P $data_path
     cd $image_path
     wget https://cloud.githubusercontent.com/assets/3307514/20012566/cbb53c76-a27d-11e6-9aaa-91939c9a1cd5.jpg -O 000001.jpg
     wget https://cloud.githubusercontent.com/assets/3307514/20012567/cbb60336-a27d-11e6-93ff-cbc3f09f5c9e.jpg -O dog.jpg

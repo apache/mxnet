@@ -15,16 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import logging
 import os
 import os.path
 
 import numpy as np
-import soundfile
 from numpy.lib.stride_tricks import as_strided
-
-
-logger = logging.getLogger(__name__)
+import soundfile
 
 
 def calc_feat_dim(window, max_freq):

@@ -86,7 +86,7 @@ class Operator {
   * \param symbol the input symbol
   * \return reference of self
   */
-  Operator &SetInput(const std::string &name, Symbol symbol);
+  Operator &SetInput(const std::string &name, const Symbol &symbol);
   /*!
   * \brief add an input symbol
   * \param symbol the input symbol
@@ -133,7 +133,7 @@ class Operator {
   * \param ndarray the input ndarray
   * \return reference of self
   */
-  Operator &SetInput(const std::string &name, NDArray ndarray);
+  Operator &SetInput(const std::string &name, const NDArray &ndarray);
   /*!
   * \brief add an input ndarray
   * \param ndarray the input ndarray

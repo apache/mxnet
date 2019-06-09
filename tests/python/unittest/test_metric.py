@@ -18,6 +18,8 @@
 import mxnet as mx
 import numpy as np
 import json
+from common import with_seed
+from copy import deepcopy
 
 def check_metric(metric, *args, **kwargs):
     metric = mx.metric.create(metric, *args, **kwargs)
@@ -36,6 +38,67 @@ def test_metrics():
     check_metric('loss')
     composite = mx.metric.create(['acc', 'f1'])
     check_metric(composite)
+
+def _check_global_metric(metric, *args, **kwargs):
+    def _create_pred_label():
+        if use_same_shape:
+            pred = mx.nd.random.uniform(0, 1, shape=shape)
+            label = mx.nd.random.uniform(0, 1, shape=shape)
+        else:
+            # Make a random prediction
+            idx = np.random.rand(*shape).argsort(1)
+            pred = mx.nd.array(1 - 0.1 * idx)
+            # Label is half 1 and half 0
+            # Setting all 0s or all 1s would make either
+            # MCC or F1 metrics always produce 0
+            label = mx.nd.ones(shape[0])
+            label[:shape[0] // 2] = 0
+        return pred, label
+
+    shape = kwargs.pop('shape', (10,10))
+    use_same_shape = kwargs.pop('use_same_shape', False)
+    m1 = mx.metric.create(metric, *args, **kwargs)
+    m2 = deepcopy(m1)
+    # check that global stats are not reset when calling
+    # reset_local()
+    for i in range(10):
+        pred, label = _create_pred_label()
+        m1.update([label], [pred])
+        m1.reset_local()
+        m2.update([label], [pred])
+    assert m1.get_global() == m2.get()
+
+    # check that reset_local() properly resets the local state
+    m1.reset_local()
+    m2.reset()
+    pred, label = _create_pred_label()
+    m1.update([label], [pred])
+    m1.reset_local()
+    pred, label = _create_pred_label()
+    m1.update([label], [pred])
+    m2.update([label], [pred])
+    assert m1.get() == m2.get()
+
+@with_seed()
+def test_global_metric():
+    _check_global_metric('acc')
+    _check_global_metric('TopKAccuracy', top_k=3)
+    _check_global_metric('f1', shape=(10,2))
+    _check_global_metric('f1', shape=(10,2), average='micro')
+    _check_global_metric('mcc', shape=(10,2))
+    _check_global_metric('mcc', shape=(10,2), average='micro')
+    _check_global_metric('perplexity', -1)
+    _check_global_metric('pearsonr', use_same_shape=True)
+    _check_global_metric('nll_loss')
+    _check_global_metric('loss')
+    _check_global_metric('ce')
+    _check_global_metric('mae', use_same_shape=True)
+    _check_global_metric('mse', use_same_shape=True)
+    _check_global_metric('rmse', use_same_shape=True)
+    def custom_metric(label, pred):
+        return np.mean(np.abs(label-pred))
+    _check_global_metric(custom_metric, use_same_shape=True)
+    _check_global_metric(['acc', 'f1'], shape=(10,2))
 
 def test_nll_loss():
     metric = mx.metric.create('nll_loss')

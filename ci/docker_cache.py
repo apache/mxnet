@@ -32,7 +32,12 @@ import subprocess
 import json
 from typing import *
 import build as build_util
+from util import retry
 
+DOCKERHUB_LOGIN_NUM_RETRIES = 5
+DOCKERHUB_RETRY_SECONDS = 5
+DOCKER_CACHE_NUM_RETRIES = 3
+DOCKER_CACHE_TIMEOUT_MINS = 5
 
 
 def build_save_containers(platforms, registry, load_cache) -> int:
@@ -78,7 +83,7 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     logging.debug('Building %s as %s', platform, docker_tag)
     try:
         # Increase the number of retries for building the cache.
-        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10, use_cache=True)
+        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10, no_cache=False)
         logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry
@@ -99,24 +104,47 @@ def _upload_image(registry, docker_tag, image_id) -> None:
     :param image_id: Image id
     :return: None
     """
-    _login_dockerhub()
     # We don't have to retag the image since it is already in the right format
     logging.info('Uploading %s (%s) to %s', docker_tag, image_id, registry)
     push_cmd = ['docker', 'push', docker_tag]
     subprocess.check_call(push_cmd)
 
 
+@retry(target_exception=subprocess.CalledProcessError, tries=DOCKERHUB_LOGIN_NUM_RETRIES,
+       delay_s=DOCKERHUB_RETRY_SECONDS)
 def _login_dockerhub():
     """
     Login to the Docker Hub account
     :return: None
     """
     dockerhub_credentials = _get_dockerhub_credentials()
-    login_cmd = ['docker', 'login', '--username', dockerhub_credentials['username'], '--password',
-                 dockerhub_credentials['password']]
-    subprocess.check_call(login_cmd)
+
+    logging.info('Logging in to DockerHub')
+    # We use password-stdin instead of --password to avoid leaking passwords in case of an error.
+    # This method will produce the following output:
+    # > WARNING! Your password will be stored unencrypted in /home/jenkins_slave/.docker/config.json.
+    # > Configure a credential helper to remove this warning. See
+    # > https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+    # Since we consider the restricted slaves a secure environment, that's fine. Also, using this will require
+    # third party applications which would need a review first as well.
+    p = subprocess.run(['docker', 'login', '--username', dockerhub_credentials['username'], '--password-stdin'],
+                       stdout=subprocess.PIPE, input=str.encode(dockerhub_credentials['password']))
+    logging.info(p.stdout)
+    logging.info('Successfully logged in to DockerHub')
 
 
+def _logout_dockerhub():
+    """
+    Log out of DockerHub to delete local credentials
+    :return: None
+    """
+    logging.info('Logging out of DockerHub')
+    subprocess.call(['docker', 'logout'])
+    logging.info('Successfully logged out of DockerHub')
+
+
+@retry(target_exception=subprocess.TimeoutExpired, tries=DOCKER_CACHE_NUM_RETRIES,
+       delay_s=DOCKERHUB_RETRY_SECONDS)
 def load_docker_cache(registry, docker_tag) -> None:
     """
     Load the precompiled docker cache from the registry
@@ -125,9 +153,16 @@ def load_docker_cache(registry, docker_tag) -> None:
     :return: None
     """
     # We don't have to retag the image since it's already in the right format
+    if not registry:
+        return
+    assert docker_tag
+
     logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
-    subprocess.call(pull_cmd)  # Don't throw an error if the image does not exist
+
+    # Don't throw an error if the image does not exist
+    subprocess.run(pull_cmd, timeout=DOCKER_CACHE_TIMEOUT_MINS*60)
+    logging.info('Successfully pulled docker cache')
 
 
 def delete_local_docker_cache(docker_tag):
@@ -213,7 +248,11 @@ def main() -> int:
     args = parser.parse_args()
 
     platforms = build_util.get_platforms()
-    return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True)
+    try:
+        _login_dockerhub()
+        return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True)
+    finally:
+        _logout_dockerhub()
 
 
 if __name__ == '__main__':

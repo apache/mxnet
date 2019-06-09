@@ -51,7 +51,7 @@ class STTMetric(mx.metric.EvalMetric):
     def update(self, labels, preds):
         check_label_shapes(labels, preds)
         if self.is_logging:
-            log = LogUtil().getlogger()
+            log = LogUtil.getInstance().getlogger()
             labelUtil = LabelUtil.getInstance()
         self.batch_loss = 0.
 

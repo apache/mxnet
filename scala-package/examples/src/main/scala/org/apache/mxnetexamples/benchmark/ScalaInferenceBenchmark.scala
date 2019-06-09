@@ -31,9 +31,9 @@ object ScalaInferenceBenchmark {
 
   private val logger = LoggerFactory.getLogger(classOf[CLIParserBase])
 
-  def loadModel(objectToRun: InferBase, context: Array[Context]):
+  def loadModel(objectToRun: InferBase, context: Array[Context], batchInference : Boolean):
   Any = {
-    objectToRun.loadModel(context)
+    objectToRun.loadModel(context, batchInference)
   }
 
   def loadDataSet(objectToRun: InferBase):
@@ -134,7 +134,7 @@ object ScalaInferenceBenchmark {
       logger.info("Running single inference call")
       // Benchmarking single inference call
       NDArrayCollector.auto().withScope {
-        val loadedModel = loadModel(exampleToBenchmark, context)
+        val loadedModel = loadModel(exampleToBenchmark, context, false)
         val dataSet = loadDataSet(exampleToBenchmark)
         val inferenceTimes = runInference(exampleToBenchmark, loadedModel, dataSet, baseCLI.count)
         printStatistics(inferenceTimes, "single_inference")
@@ -144,7 +144,7 @@ object ScalaInferenceBenchmark {
         logger.info("Running for batch inference call")
         // Benchmarking batch inference call
         NDArrayCollector.auto().withScope {
-          val loadedModel = loadModel(exampleToBenchmark, context)
+          val loadedModel = loadModel(exampleToBenchmark, context, true)
           val batchDataSet = loadBatchDataSet(exampleToBenchmark, baseCLI.batchSize)
           val inferenceTimes = runBatchInference(exampleToBenchmark, loadedModel, batchDataSet)
           printStatistics(inferenceTimes, "batch_inference")

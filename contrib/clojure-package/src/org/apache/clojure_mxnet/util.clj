@@ -66,6 +66,9 @@
 (defn ->option [v]
   ($ Option v))
 
+(defn ->int-option [v]
+  (->option (when v (int v))))
+
 (defn option->value [opt]
   ($/view opt))
 
@@ -175,6 +178,12 @@
     (instance? Tuple2 return-val) (tuple->vec return-val)
     (instance? Tuple3 return-val) (tuple->vec return-val)
     :else return-val))
+
+(defn coerce-return-recursive [return-val]
+  (let [coerced-val (coerce-return return-val)]
+    (if (vector? coerced-val)
+      (into [] (map coerce-return-recursive coerced-val))
+      coerced-val)))
 
 (defmacro scala-fn
   "Creates a scala fn from an anonymous clojure fn of the form (fn [x] body)"

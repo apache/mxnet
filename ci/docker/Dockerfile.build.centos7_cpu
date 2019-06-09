@@ -28,6 +28,8 @@ COPY install/centos7_ccache.sh /work/
 RUN /work/centos7_ccache.sh
 COPY install/centos7_python.sh /work/
 RUN /work/centos7_python.sh
+COPY install/centos7_scala.sh /work/
+RUN /work/centos7_scala.sh
 COPY install/ubuntu_mklml.sh /work/
 RUN /work/ubuntu_mklml.sh
 

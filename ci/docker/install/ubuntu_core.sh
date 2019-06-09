@@ -21,7 +21,7 @@
 # the whole docker cache for the image
 
 set -ex
-apt-get update
+apt-get update || true
 apt-get install -y \
     apt-transport-https \
     build-essential \

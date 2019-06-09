@@ -22,7 +22,7 @@
   (:import (nu.pattern OpenCV)
            (org.opencv.core Core CvType Mat Size)
            (org.opencv.imgproc Imgproc)
-           (org.opencv.highgui Highgui)))
+           (org.opencv.imgcodecs Imgcodecs)))
 
 ;;; Viz stuff
 (OpenCV/loadShared)
@@ -83,5 +83,5 @@
         _ (Core/vconcat (java.util.ArrayList. line-mats) result)]
     (do
       (Imgproc/resize result resized-img (new Size (* (.width result) 1.5) (* (.height result) 1.5)))
-      (Highgui/imwrite (str output-path title ".jpg") resized-img)
+      (Imgcodecs/imwrite (str output-path title ".jpg") resized-img)
       (Thread/sleep 1000))))

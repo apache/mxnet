@@ -24,7 +24,8 @@ import mxnet as mx
 def test_print_summary():
     data = mx.sym.Variable('data')
     bias = mx.sym.Variable('fc1_bias', lr_mult=1.0)
-    conv1= mx.symbol.Convolution(data = data, name='conv1', num_filter=32, kernel=(3,3), stride=(2,2))
+    emb1= mx.symbol.Embedding(data = data, name='emb1', input_dim=100, output_dim=28)
+    conv1= mx.symbol.Convolution(data = emb1, name='conv1', num_filter=32, kernel=(3,3), stride=(2,2))
     bn1 = mx.symbol.BatchNorm(data = conv1, name="bn1")
     act1 = mx.symbol.Activation(data = bn1, name='relu1', act_type="relu")
     mp1 = mx.symbol.Pooling(data = act1, name = 'mp1', kernel=(2,2), stride=(2,2), pool_type='max')
@@ -33,7 +34,7 @@ def test_print_summary():
     sc1 = mx.symbol.SliceChannel(data=fc2, num_outputs=10, name="slice_1", squeeze_axis=0)
     mx.viz.print_summary(sc1)
     shape = {}
-    shape["data"]=(1,3,28,28)
+    shape["data"]=(1,3,28)
     mx.viz.print_summary(sc1, shape)
 
 def graphviz_exists():

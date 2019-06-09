@@ -21,6 +21,7 @@ import scala.util.parsing.json._
 import java.io.File
 import java.io.PrintWriter
 import scala.collection.mutable.ArrayBuffer
+import scala.language.postfixOps
 
 object Visualization {
 

@@ -1,0 +1,11 @@
+include README
+include mxnet/COMMIT_HASH
+recursive-include mxnet/tools *
+recursive-include mxnet *.py
+recursive-include mxnet *.so
+recursive-include mxnet *.so.*
+recursive-include mxnet *.dylib
+recursive-include mxnet *_LICENSE
+recursive-include mxnet *.h
+recursive-include mxnet *.cuh
+recursive-include dmlc_tracker *.py

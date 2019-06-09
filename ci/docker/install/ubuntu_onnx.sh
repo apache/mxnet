@@ -27,6 +27,7 @@ set -e
 set -x
 
 echo "Installing libprotobuf-dev and protobuf-compiler ..."
+apt-get update || true
 apt-get install -y libprotobuf-dev protobuf-compiler
 
 echo "Installing pytest, pytest-cov, protobuf, Pillow, ONNX and tabulate ..."

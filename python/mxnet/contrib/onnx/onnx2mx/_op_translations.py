@@ -266,6 +266,11 @@ def _prelu(attrs, inputs, proto_obj):
     new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'prelu'})
     return 'LeakyReLU', new_attrs, inputs
 
+def _selu(attrs, inputs, proto_obj):
+    """Selu function"""
+    new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'selu'})
+    return 'LeakyReLU', new_attrs, inputs
+
 def softmax(attrs, inputs, proto_obj):
     """Softmax function."""
     if 'axis' not in attrs:
@@ -534,10 +539,15 @@ def squareroot(attrs, inputs, proto_obj):
 def power(attrs, inputs, proto_obj):
     """Returns element-wise result of base element raised to powers from exp element."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'exponent':'exp'})
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+    if 'broadcast' in attrs:
         new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
-        return 'broadcast_power', new_attrs, inputs
-    return 'pow', new_attrs, inputs
+        if attrs['broadcast'] == 1:
+            return 'broadcast_power', new_attrs, inputs
+        else:
+            mxnet_op = symbol.pow(inputs[0], inputs[1])
+            return mxnet_op, new_attrs, inputs
+    mxnet_op = symbol.broadcast_power(inputs[0], inputs[1])
+    return mxnet_op, new_attrs, inputs
 
 def exponent(attrs, inputs, proto_obj):
     """Elementwise exponent of input array."""
@@ -632,6 +642,10 @@ def shape(attrs, inputs, proto_obj):
     """Returns shape of input array."""
     return 'shape_array', attrs, inputs
 
+def size(attrs, inputs, proto_obj):
+    """Returns array containing size of data."""
+    return "size_array", attrs, inputs
+
 def reduce_l2(attrs, inputs, proto_obj):
     """Reduce input tensor by l2 normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
@@ -688,3 +702,41 @@ def max_roi_pooling(attrs, inputs, proto_obj):
                                                         'spatial_scale': 'spatial_scale'
                                                        })
     return 'ROIPooling', new_attrs, inputs
+
+def depthtospace(attrs, inputs, proto_obj):
+    """Rearranges data from depth into blocks of spatial data."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
+
+    return "depth_to_space", new_attrs, inputs
+
+def spacetodepth(attrs, inputs, proto_obj):
+    """Rearranges blocks of spatial data into depth."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
+
+    return "space_to_depth", new_attrs, inputs
+
+
+def hardmax(attrs, inputs, proto_obj):
+    """Returns batched one-hot vectors."""
+    input_tensor_data = proto_obj.model_metadata.get('input_tensor_data')[0]
+    input_shape = input_tensor_data[1]
+
+    axis = int(attrs.get('axis', 1))
+    axis = axis if axis >= 0 else len(input_shape) + axis
+
+    if axis == len(input_shape) - 1:
+        amax = symbol.argmax(inputs[0], axis=-1)
+        one_hot = symbol.one_hot(amax, depth=input_shape[-1])
+        return one_hot, attrs, inputs
+
+    # since reshape doesn't take a tensor for shape,
+    # computing with np.prod. This needs to be changed to
+    # to use mx.sym.prod() when mx.sym.reshape() is fixed.
+    # (https://github.com/apache/incubator-mxnet/issues/10789)
+    new_shape = (int(np.prod(input_shape[:axis])),
+                 int(np.prod(input_shape[axis:])))
+    reshape_op = symbol.reshape(inputs[0], new_shape)
+    amax = symbol.argmax(reshape_op, axis=-1)
+    one_hot = symbol.one_hot(amax, depth=new_shape[-1])
+    hardmax_op = symbol.reshape(one_hot, input_shape)
+    return hardmax_op, attrs, inputs

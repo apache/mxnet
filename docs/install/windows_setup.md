@@ -108,7 +108,7 @@ To get further enhancements for deep neural networks, you may want to enable MKL
 
 Check the chart below for other options or refer to [PyPI for other MXNet pip packages](https://pypi.org/project/mxnet/).
 
-![pip packages](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png)
+![pip packages](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
 
 
 ## Build from Source

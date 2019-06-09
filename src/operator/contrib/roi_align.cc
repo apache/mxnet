@@ -515,8 +515,8 @@ input features at four regularly sampled locations in each RoI bin.
 Then the feature map can be aggregated by avgpooling.
 
 
-Reference
----------
+References
+----------
 
 He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
 )code" ADD_FILELINE)

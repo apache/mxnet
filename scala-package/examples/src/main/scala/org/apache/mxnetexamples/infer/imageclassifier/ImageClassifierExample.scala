@@ -175,9 +175,11 @@ class CLIParser extends CLIParserBase{
 
 class ImageClassifierExample(CLIParser: CLIParser) extends InferBase{
 
-  override def loadModel(context: Array[Context]): Classifier = {
+  override def loadModel(context: Array[Context],
+                         batchInference : Boolean = false): Classifier = {
     val dType = DType.Float32
-    val inputShape = Shape(1, 3, 224, 224)
+    val batchSize = if (batchInference) CLIParser.batchSize else 1
+    val inputShape = Shape(batchSize, 3, 224, 224)
 
     val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
 

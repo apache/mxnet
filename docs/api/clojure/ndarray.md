@@ -91,8 +91,9 @@ You can use MXNet functions to save and load a list or dictionary of NDArrays fr
 ```clojure
 (ndarray/save "filename" {"arr1" arr1 "arr2" arr2})
 ;; you can also do "s3://path" or "hdfs"
+```
 
-To load
+To load:
 
 ```clojure
 (def from-file (ndarray/load "filename"))

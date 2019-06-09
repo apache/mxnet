@@ -7,7 +7,6 @@ Topics:
 * [Group Multiple Symbols](#group-multiple-symbols)
 * [Serialization](#serialization)
 * [Executing Symbols](#executing-symbols)
-* [Multiple Outputs](#multiple-outputs)
 * [Symbol API Reference](http://mxnet.incubator.apache.org/api/clojure/docs/org.apache.clojure-mxnet.symbol.html)
 
 
@@ -127,23 +126,6 @@ _To do this you must have the correct native library jar defined as a dependency
 ```clojure
 (def ex (sym/bind c (context/gpu 0) {"a" (ndarray/ones [2 2]) "b" (ndarray/ones [2 2])}))
 ```
-
-## Multiple Outputs
-
-To construct neural networks with multiple loss layers, we can use mxnet.sym.Group to group multiple symbols together. The following example groups two outputs:
-
-```clojure
-(def net (sym/variable "data"))
-(def fc1 (sym/fully-connected {:data net :num-hidden 128}))
-(def net2 (sym/activation {:data fc1 :act-type "relu"}))
-(def out1 (sym/softmax-output {:data net2}))
-(def out2 (sym/linear-regression-output {:data net2}))
-(def group (sym/group [out1 out2]))
-(sym/list-outputs group);=> ["softmaxoutput0_output" "linearregressionoutput0_output"]
-```
-
-After you get the ```group```, you can bind on ```group``` instead.
-The resulting executor will have two outputs, one for `linerarregressionoutput_output` and one for `softmax_output`.
 
 ## Next Steps
 * See [NDArray API](ndarray.md) for vector/matrix/tensor operations.

@@ -34,8 +34,8 @@ NULL
 .onLoad <- function(libname, pkgname) {
   # Require methods for older versions of R
   require(methods)
-  library.dynam("libmxnet", pkgname, libname, local=FALSE)
-  library.dynam("mxnet", pkgname, libname)
+  tryCatch(library.dynam("libmxnet", pkgname, libname, local=FALSE), error = function(e) { print('Loading local: inst/libs/libmxnet.so'); dyn.load("R-package/inst/libs/libmxnet.so", local=FALSE) })
+  tryCatch(library.dynam("mxnet", pkgname, libname), error = function(e) { print('Loading local: src/mxnet.so'); dyn.load("R-package/src/mxnet.so") })
   loadModule("mxnet", TRUE)
   init.symbol.methods()
   init.context.default()

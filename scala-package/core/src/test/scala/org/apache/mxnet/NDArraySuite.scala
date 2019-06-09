@@ -576,4 +576,21 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(arr.internal.toDoubleArray === Array(2d, 2d))
     assert(arr.internal.toByteArray === Array(2.toByte, 2.toByte))
   }
+
+  test("NDArray random module is generated properly") {
+    val lam = NDArray.ones(1, 2)
+    val rnd = NDArray.random.poisson(lam = Some(lam), shape = Some(Shape(3, 4)))
+    val rnd2 = NDArray.random.poisson(lam = Some(1f), shape = Some(Shape(3, 4)))
+    assert(rnd.shape === Shape(1, 2, 3, 4))
+    assert(rnd2.shape === Shape(3, 4))
+  }
+
+  test("NDArray random module is generated properly - special case of 'normal'") {
+    val mu = NDArray.ones(1, 2)
+    val sigma = NDArray.ones(1, 2) * 2
+    val rnd = NDArray.random.normal(mu = Some(mu), sigma = Some(sigma), shape = Some(Shape(3, 4)))
+    val rnd2 = NDArray.random.normal(mu = Some(1f), sigma = Some(2f), shape = Some(Shape(3, 4)))
+    assert(rnd.shape === Shape(1, 2, 3, 4))
+    assert(rnd2.shape === Shape(3, 4))
+  }
 }

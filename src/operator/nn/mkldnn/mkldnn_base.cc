@@ -70,9 +70,10 @@ mkldnn::memory *TmpMemMgr::Alloc(const mkldnn::memory::primitive_desc &pd) {
   } else {
     // If curr_mem has been initialized and we still reach here. It means
     // the current allocated memory isn't enough.
-    if (this->curr_mem)
+    if (this->curr_mem && dmlc::GetEnv("MXNET_MKLDNN_DEBUG", false)) {
       LOG(WARNING) << "Allocate " << pd.get_size()
           << " bytes with malloc directly";
+    }
     mkldnn_mem_ptr ret(new mkldnn::memory(pd));
     MKLDNNStream::Get()->RegisterMem(ret);
     return ret.get();
@@ -311,9 +312,12 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_oihw:
       case mkldnn_ihwo:
       case mkldnn_hwio:
+      case mkldnn_oIhw8i:
+      case mkldnn_oIhw16i:
       case mkldnn_OIhw8i8o:
       case mkldnn_OIhw16i16o:
       case mkldnn_OIhw4i16o4i:
+      case mkldnn_OIhw4i16o4i_s8s8:
       case mkldnn_OIhw8i16o2i:
       case mkldnn_OIhw8o16i2o:
       case mkldnn_OIhw8o8i:

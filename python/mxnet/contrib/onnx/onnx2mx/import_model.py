@@ -41,6 +41,11 @@ def import_model(model_file):
 
     aux_params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
         Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
+
+    Notes
+    -----
+    This method is available when you ``import mxnet.contrib.onnx``
+
     """
     graph = GraphProto()
 
@@ -58,6 +63,10 @@ def get_model_metadata(model_file):
     """
     Returns the name and shape information of input and output tensors of the given ONNX model file.
 
+    Notes
+    -----
+    This method is available when you ``import mxnet.contrib.onnx``
+
     Parameters
     ----------
     model_file : str
@@ -67,15 +76,13 @@ def get_model_metadata(model_file):
     -------
     model_metadata : dict
         A dictionary object mapping various metadata to its corresponding value.
-        The dictionary will have the following template.
-        {
-            'input_tensor_data' : <list of tuples representing the shape of the input paramters>,
-            'output_tensor_data' : <list of tuples representing the shape of the output
-                                    of the model>
-        }
+        The dictionary will have the following template::
 
+          'input_tensor_data' : list of tuples representing the shape of the input paramters
+          'output_tensor_data' : list of tuples representing the shape of the output of the model
     """
     graph = GraphProto()
+
     try:
         import onnx
     except ImportError:

@@ -21,7 +21,7 @@ import os
 import mxnet as mx
 import numpy as np
 import unittest
-from mxnet.test_utils import assert_almost_equal, default_context
+from mxnet.test_utils import assert_almost_equal, default_context, EnvManager
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown
@@ -29,22 +29,6 @@ from common import setup_module, with_seed, teardown
 shape = (4, 4)
 keys = [5, 7, 11]
 str_keys = ['b', 'c', 'd']
-
-class EnvManager:
-    def __init__(self, key, val):
-        self._key = key
-        self._next_val = val
-        self._prev_val = None
-
-    def __enter__(self):
-        try:
-            self._prev_val = os.environ[self._key]
-        except KeyError:
-            self._prev_val = ''
-        os.environ[self._key] = self._next_val
-
-    def __exit__(self, ptype, value, trace):
-        os.environ[self._key] = self._prev_val
 
 def init_kv_with_str(stype='default', kv_type='local'):
     """init kv """

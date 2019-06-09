@@ -62,13 +62,24 @@ To join the MXNet slack channel send request to the contributor mailing list.
 
 ### Social Media
 
-Keep connected with the latest MXNet news and updates on [Twitter](https://twitter.com/apachemxnet) and [Reddit](https://reddit.com/r/mxnet). Also, subscribe to the [MXNet YouTube channel](https://www.youtube.com/channel/UCQua2ZAkbr_Shsgfk1LCy6A).
+Keep connected with the latest MXNet news and updates.
 
-<div class="g-ytsubscribe" data-channelid="UCQua2ZAkbr_Shsgfk1LCy6A" data-layout="full" data-count="hidden"></div>
-<br/><br/>
-<a href="https://twitter.com/apachemxnet?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @apachemxnet</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-<br/><br/>
-<a href="https://reddit.com/r/mxnet"><img src="https://www.redditstatic.com/spreddit5.gif" alt="reddit" border="0"/> r/mxnet</a>
+<p>
+<a id="medium">
+<a href="https://medium.com/apache-mxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/medium_black.svg?sanitize=true" height="30px"/> Contributor and guest blogs about MXNet</a>
+</p>
+<p>
+<a id="reddit">
+<a href="https://reddit.com/r/mxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/reddit_blue.svg?sanitize=true" height="30px" alt="reddit"/> Discuss MXNet on r/mxnet</a>
+</p>
+<p>
+<a id="twitter">
+<a href="https://twitter.com/apachemxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/twitter.svg?sanitize=true" height="30px"/> Apache MXNet on Twitter</a>
+</p>
+<p>
+<a id="youtube">
+<a href="https://www.youtube.com/apachemxnet"><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/social/youtube_red.svg?sanitize=true" height="30px"/> MXNet YouTube channel</a>
+</p>
 
 
 ## JIRA
@@ -81,9 +92,9 @@ MXNet uses Apache's JIRA to track issues and larger projects. Anyone can review 
 
 ## Confluence Wiki
 
-The [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Home) has detailed development environment setup info, design proposals, release process info, and more. This is generally where contributor information is maintained.
+The [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+Home) has detailed development environment setup info, design proposals, release process info, and more. This is generally where contributor information is maintained.
 
-* [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Home) <i class="fas fa-external-link-alt"></i>
+* [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+Home) <i class="fas fa-external-link-alt"></i>
 
 
 ## Setup MXNet for Development

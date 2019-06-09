@@ -459,7 +459,7 @@ Note that warning messages will be printed when such a storage fallback event ha
 
 ## Sparse Optimizers
 
-In MXNet, sparse gradient updates are applied when weight, state and gradient are all in `row_sparse` storage.
+In MXNet, sparse gradient updates are applied when gradient is in `row_sparse` storage and the optimizer is created with `lazy_update=True`.
 The sparse optimizers only update the row slices of the weight and the states whose indices appear
 in `gradient.indices`. For example, the default update rule for SGD optimizer is:
 

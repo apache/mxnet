@@ -82,10 +82,10 @@ class Cast(HybridBlock):
 
 
     Inputs:
-        - **data**: input tensor with arbitrary shape.
+        - **data**: input tensor with arbitrary shape and dtype.
 
     Outputs:
-        - **out**: output tensor with the same shape as `data`.
+        - **out**: output tensor with the same shape as `data` and data type as dtype.
     """
     def __init__(self, dtype='float32'):
         super(Cast, self).__init__()

@@ -133,18 +133,18 @@ straightforward.
 For `initializer`, create a subclass of ``Initializer`` and define the
 `_init_weight` method. We can also change the default behaviors to initialize
 other parameters such as `_init_bias`. See
-[`initializer.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/initializer.py)
+[`initializer.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/initializer.py)
 for examples.
 
 For ``optimizer``, create a subclass of ``Optimizer``
 and implement two methods ``create_state`` and ``update``. Also add
 ``@mx.optimizer.Optimizer.register`` before this class. See
-[`optimizer.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/optimizer.py)
+[`optimizer.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/optimizer/optimizer.py)
 for examples.
 
 For `lr_scheduler`, create a subclass of `LRScheduler` and then implement the
 `__call__` method. See
-[`lr_scheduler.py`](https://github.com/dmlc/mxnet/blob/master/python/mxnet/lr_scheduler.py)
+[`lr_scheduler.py`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/lr_scheduler.py)
 for examples.
 
 ## API Reference

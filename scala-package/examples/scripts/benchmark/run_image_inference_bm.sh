@@ -22,14 +22,14 @@ set -e
 echo $OSTYPE
 
 hw_type=cpu
-if [ "$1" = "gpu" ]
+if [[ $1 = gpu ]]
 then
     hw_type=gpu
 fi
 
 platform=linux-x86_64
 
-if [ "$OSTYPE" == "darwin"* ]
+if [[ $OSTYPE = [darwin]* ]]
 then
     platform=osx-x86_64
 fi

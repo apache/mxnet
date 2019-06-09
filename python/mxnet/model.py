@@ -62,6 +62,11 @@ def _create_sparse_kvstore(kvstore):
     ----------
     kvstore : KVStore or str
         The kvstore.
+
+    Returns
+    -------
+    kvstore : KVStore
+    update_on_kvstore : bool. Always True.
     """
     # always update on kvstore
     update_on_kvstore = True

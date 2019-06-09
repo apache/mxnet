@@ -20,7 +20,7 @@
 /*!
 * Copyright (c) 2015 by Contributors
 * \file diag_op-inl.h
-* \brief CPU Implementation of the diag op
+* \brief Function definition of the diag op
 * \author Istvan Fehervari, Zhijingcheng Yu
 */
 

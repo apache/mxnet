@@ -34,11 +34,18 @@ parser.add_argument('--network', '-n', type=str, default='vgg16_reduced')
 parser.add_argument('--batch_size', '-b', type=int, default=0)
 parser.add_argument('--shape', '-w', type=int, default=300)
 parser.add_argument('--class_num', '-class', type=int, default=20)
+parser.add_argument('--prefix', dest='prefix', help='load model prefix',
+                    default=os.path.join(os.getcwd(), 'model', 'ssd_'), type=str)
+parser.add_argument('--deploy', dest='deploy', help='Load network from model',
+                    action='store_true', default=False)
 
 
 def get_data_shapes(batch_size):
     image_shape = (3, 300, 300)
     return [('data', (batch_size,)+image_shape)]
+
+def get_label_shapes(batch_size):
+    return [('label', (batch_size,) + (42, 6))]
 
 def get_data(batch_size):
     data_shapes = get_data_shapes(batch_size)
@@ -53,6 +60,7 @@ if __name__ == '__main__':
     image_shape = args.shape
     num_classes = args.class_num
     b = args.batch_size
+    prefix = args.prefix
     supported_image_shapes = [300, 512]
     supported_networks = ['vgg16_reduced', 'inceptionv3', 'resnet50']
 
@@ -68,18 +76,27 @@ if __name__ == '__main__':
         batch_sizes = [b]
 
     data_shape = (3, image_shape, image_shape)
-    net = get_symbol(network, data_shape[1], num_classes=num_classes,
-                     nms_thresh=0.4, force_suppress=True)
+
+    if args.deploy == True:
+        prefix += network + '_' + str(data_shape[1]) + '-symbol.json'
+        net = mx.sym.load(prefix)
+    else:
+        net = get_symbol(network, data_shape[1], num_classes=num_classes,
+                         nms_thresh=0.4, force_suppress=True)
+    if not 'label' in net.list_arguments():
+        label = mx.sym.Variable(name='label')
+        net = mx.sym.Group([net, label])
     
     num_batches = 100
     dry_run = 5   # use 5 iterations to warm up
     
     for bs in batch_sizes:
         batch = get_data(bs)
-        mod = mx.mod.Module(net, label_names=None, context=mx.cpu())
+        mod = mx.mod.Module(net, label_names=('label',), context=mx.cpu())
         mod.bind(for_training = False,
                  inputs_need_grad = False,
-                 data_shapes = get_data_shapes(bs))
+                 data_shapes = get_data_shapes(bs),
+                 label_shapes = get_label_shapes(bs))
         mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
 
         # get data

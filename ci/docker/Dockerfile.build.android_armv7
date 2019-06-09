@@ -18,7 +18,7 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
-FROM mxnetci/dockcross-linux-base:08212018
+FROM mxnetcipinned/dockcross-base:11262018
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 
 # The cross-compiling emulator
@@ -74,6 +74,11 @@ ENV OpenBLAS_HOME=${CROSS_ROOT}
 ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 WORKDIR /work
+
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet

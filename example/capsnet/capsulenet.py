@@ -18,13 +18,12 @@ import mxnet as mx
 import numpy as np
 import os
 import re
-import urllib
 import gzip
 import struct
 import scipy.ndimage as ndi
 from capsulelayers import primary_caps, CapsuleLayer
 
-from tensorboard import SummaryWriter
+from mxboard import SummaryWriter
 
 def margin_loss(y_true, y_pred):
     loss = y_true * mx.sym.square(mx.sym.maximum(0., 0.9 - y_pred)) +\
@@ -98,7 +97,7 @@ def capsnet(batch_size, n_class, num_routing,recon_loss_weight):
 def download_data(url, force_download=False):
     fname = url.split("/")[-1]
     if force_download or not os.path.exists(fname):
-        urllib.urlretrieve(url, fname)
+        mx.test_utils.download(url, fname)
     return fname
 
 
@@ -330,12 +329,12 @@ if __name__ == "__main__":
         raise Exception('num_gpu should be positive divisor of batch_size')
 
     # generate train_iter, val_iter
-    train_iter = MNISTCustomIter(data=to4d(train_img), label=train_lbl, batch_size=args.batch_size, shuffle=True)
+    train_iter = MNISTCustomIter(data=to4d(train_img), label=train_lbl, batch_size=int(args.batch_size), shuffle=True)
     train_iter.set_is_train(True)
-    val_iter = MNISTCustomIter(data=to4d(val_img), label=val_lbl, batch_size=args.batch_size,)
+    val_iter = MNISTCustomIter(data=to4d(val_img), label=val_lbl, batch_size=int(args.batch_size),)
     val_iter.set_is_train(False)
     # define capsnet
-    final_net = capsnet(batch_size=args.batch_size/num_gpu, n_class=10, num_routing=args.num_routing, recon_loss_weight=args.recon_loss_weight)
+    final_net = capsnet(batch_size=int(args.batch_size/num_gpu), n_class=10, num_routing=args.num_routing, recon_loss_weight=args.recon_loss_weight)
     # set metric
     loss_metric = LossMetric(args.batch_size/num_gpu, 1)
 

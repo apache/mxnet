@@ -462,7 +462,7 @@
         test (sym/transpose data)
         shape-vec [3 4]
         ctx (context/default-context)
-        arr-data (random/uniform 0 100 shape-vec ctx)
+        arr-data (random/uniform 0 100 shape-vec {:ctx ctx})
         trans (ndarray/transpose (ndarray/copy arr-data))
         exec-test (sym/bind test ctx {"data" arr-data})
         out     (->  (executor/forward exec-test)

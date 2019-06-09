@@ -29,7 +29,7 @@ The dataset used in the following examples is [text8](http://mattmahoney.net/dc/
 * word2vec.py: a CBOW word2vec example using nce loss. You need to [download the text8 dataset](#dataset-download) before running this script. Command to start training on CPU (pass -g for training on GPU):
 
 ```
-python word2vec.py
+python wordvec.py
 
 ```
 

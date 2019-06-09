@@ -21,6 +21,8 @@
 # the whole docker cache for the image
 
 set -ex
+
+apt-get update || true
 # Install clang 3.9 (the same version as in XCode 8.*) and 6.0 (latest major release)
 wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
     apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-3.9 main" && \

@@ -17,6 +17,7 @@
 
 # pylint: skip-file
 import mxnet as mx
+import mxnet.ndarray as nd
 from mxnet.test_utils import *
 from mxnet.base import MXNetError
 import numpy as np
@@ -106,79 +107,139 @@ def test_image_iter_exception():
             pass
     assertRaises(MXNetError, check_cifar10_exception)
 
-def test_NDArrayIter():
-    data = np.ones([1000, 2, 2])
-    label = np.ones([1000, 1])
+def _init_NDArrayIter_data(data_type, is_image=False):
+    if is_image:
+        data = nd.random.uniform(0, 255, shape=(5000, 1, 28, 28))
+        labels = nd.ones((5000, 1))
+        return data, labels
+    if data_type == 'NDArray':
+        data = nd.ones((1000, 2, 2))
+        labels = nd.ones((1000, 1))
+    else:
+        data = np.ones((1000, 2, 2))
+        labels = np.ones((1000, 1))
     for i in range(1000):
         data[i] = i / 100
-        label[i] = i / 100
-    dataiter = mx.io.NDArrayIter(
-        data, label, 128, True, last_batch_handle='pad')
-    batchidx = 0
-    for batch in dataiter:
-        batchidx += 1
-    assert(batchidx == 8)
-    dataiter = mx.io.NDArrayIter(
-        data, label, 128, False, last_batch_handle='pad')
-    batchidx = 0
-    labelcount = [0 for i in range(10)]
-    for batch in dataiter:
-        label = batch.label[0].asnumpy().flatten()
-        assert((batch.data[0].asnumpy()[:, 0, 0] == label).all())
-        for i in range(label.shape[0]):
-            labelcount[int(label[i])] += 1
+        labels[i] = i / 100
+    return data, labels
 
-    for i in range(10):
-        if i == 0:
-            assert(labelcount[i] == 124)
-        else:
-            assert(labelcount[i] == 100)
+
+def _test_last_batch_handle(data, labels=None, is_image=False):
+    # Test the three parameters 'pad', 'discard', 'roll_over'
+    last_batch_handle_list = ['pad', 'discard', 'roll_over']
+    if labels is not None and not is_image and len(labels) != 0:
+        labelcount_list = [(124, 100), (100, 96), (100, 96)]
+    if is_image:
+        batch_count_list = [40, 39, 39]
+    else:
+        batch_count_list = [8, 7, 7]
+    
+    for idx in range(len(last_batch_handle_list)):
+        dataiter = mx.io.NDArrayIter(
+            data, labels, 128, False, last_batch_handle=last_batch_handle_list[idx])
+        batch_count = 0
+        if labels is not None and len(labels) != 0 and not is_image:
+            labelcount = [0 for i in range(10)]
+        for batch in dataiter:
+            if len(data) == 2:
+                assert len(batch.data) == 2
+            if labels is not None and len(labels) != 0:
+                if not is_image:
+                    label = batch.label[0].asnumpy().flatten()
+                    # check data if it matches corresponding labels
+                    assert((batch.data[0].asnumpy()[:, 0, 0] == label).all())
+                    for i in range(label.shape[0]):
+                       labelcount[int(label[i])] += 1
+            else:
+                assert not batch.label, 'label is not empty list'
+            # keep the last batch of 'pad' to be used later 
+            # to test first batch of roll_over in second iteration
+            batch_count += 1
+            if last_batch_handle_list[idx] == 'pad' and \
+                batch_count == batch_count_list[0]:
+                cache = batch.data[0].asnumpy()
+        # check if batchifying functionality work properly
+        if labels is not None and len(labels) != 0 and not is_image:
+            assert labelcount[0] == labelcount_list[idx][0], last_batch_handle_list[idx]
+            assert labelcount[8] == labelcount_list[idx][1], last_batch_handle_list[idx]
+        assert batch_count == batch_count_list[idx]
+    # roll_over option
+    dataiter.reset()
+    assert np.array_equal(dataiter.next().data[0].asnumpy(), cache)
+
+
+def _test_shuffle(data, labels=None):
+    dataiter = mx.io.NDArrayIter(data, labels, 1, False)
+    batch_list = []
+    for batch in dataiter:
+        # cache the original data
+        batch_list.append(batch.data[0].asnumpy())
+    dataiter = mx.io.NDArrayIter(data, labels, 1, True)
+    idx_list = dataiter.idx
+    i = 0
+    for batch in dataiter:
+        # check if each data point have been shuffled to corresponding positions
+        assert np.array_equal(batch.data[0].asnumpy(), batch_list[idx_list[i]])
+        i += 1
+
+
+def test_NDArrayIter():
+    dtype_list = ['NDArray', 'ndarray']
+    tested_data_type = [False, True]
+    for dtype in dtype_list:
+        for is_image in tested_data_type:
+            data, labels = _init_NDArrayIter_data(dtype, is_image)
+            _test_last_batch_handle(data, labels, is_image)
+            _test_last_batch_handle([data, data], labels, is_image)
+            _test_last_batch_handle(data=[data, data], is_image=is_image)
+            _test_last_batch_handle(
+                {'data1': data, 'data2': data}, labels, is_image)
+            _test_last_batch_handle(data={'data1': data, 'data2': data}, is_image=is_image)
+            _test_last_batch_handle(data, [], is_image)
+            _test_last_batch_handle(data=data, is_image=is_image)
+            _test_shuffle(data, labels)
+            _test_shuffle([data, data], labels)
+            _test_shuffle([data, data])
+            _test_shuffle({'data1': data, 'data2': data}, labels)
+            _test_shuffle({'data1': data, 'data2': data})
+            _test_shuffle(data, [])
+            _test_shuffle(data)
 
 
 def test_NDArrayIter_h5py():
     if not h5py:
         return
 
-    data = np.ones([1000, 2, 2])
-    label = np.ones([1000, 1])
-    for i in range(1000):
-        data[i] = i / 100
-        label[i] = i / 100
+    data, labels = _init_NDArrayIter_data('ndarray')
 
     try:
-        os.remove("ndarraytest.h5")
+        os.remove('ndarraytest.h5')
     except OSError:
         pass
-    with h5py.File("ndarraytest.h5") as f:
-        f.create_dataset("data", data=data)
-        f.create_dataset("label", data=label)
-
-        dataiter = mx.io.NDArrayIter(
-            f["data"], f["label"], 128, True, last_batch_handle='pad')
-        batchidx = 0
-        for batch in dataiter:
-            batchidx += 1
-        assert(batchidx == 8)
-
-        dataiter = mx.io.NDArrayIter(
-            f["data"], f["label"], 128, False, last_batch_handle='pad')
-        labelcount = [0 for i in range(10)]
-        for batch in dataiter:
-            label = batch.label[0].asnumpy().flatten()
-            assert((batch.data[0].asnumpy()[:, 0, 0] == label).all())
-            for i in range(label.shape[0]):
-                labelcount[int(label[i])] += 1
-
+    with h5py.File('ndarraytest.h5') as f:
+        f.create_dataset('data', data=data)
+        f.create_dataset('label', data=labels)
+        
+        _test_last_batch_handle(f['data'], f['label'])
+        _test_last_batch_handle(f['data'], [])
+        _test_last_batch_handle(f['data'])
     try:
         os.remove("ndarraytest.h5")
     except OSError:
         pass
 
-    for i in range(10):
-        if i == 0:
-            assert(labelcount[i] == 124)
-        else:
-            assert(labelcount[i] == 100)
+
+def _test_NDArrayIter_csr(csr_iter, csr_iter_empty_list, csr_iter_None, num_rows, batch_size):
+    num_batch = 0
+    for _, batch_empty_list, batch_empty_None in zip(csr_iter, csr_iter_empty_list, csr_iter_None):
+        assert not batch_empty_list.label, 'label is not empty list'
+        assert not batch_empty_None.label, 'label is not empty list'
+        num_batch += 1
+
+    assert(num_batch == num_rows // batch_size)
+    assertRaises(StopIteration, csr_iter.next)
+    assertRaises(StopIteration, csr_iter_empty_list.next)
+    assertRaises(StopIteration, csr_iter_None.next)
 
 
 def test_NDArrayIter_csr():
@@ -200,15 +261,26 @@ def test_NDArrayIter_csr():
                      {'data': train_data}, dns, batch_size)
     except ImportError:
         pass
+    
+    # scipy.sparse.csr_matrix with shuffle
+    csr_iter = iter(mx.io.NDArrayIter({'data': train_data}, dns, batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    csr_iter_empty_list = iter(mx.io.NDArrayIter({'data': train_data}, [], batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    csr_iter_None = iter(mx.io.NDArrayIter({'data': train_data}, None, batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    _test_NDArrayIter_csr(csr_iter, csr_iter_empty_list,
+                          csr_iter_None, num_rows, batch_size)
 
     # CSRNDArray with shuffle
     csr_iter = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, dns, batch_size,
                                       shuffle=True, last_batch_handle='discard'))
-    num_batch = 0
-    for batch in csr_iter:
-        num_batch += 1
-
-    assert(num_batch == num_rows // batch_size)
+    csr_iter_empty_list = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, [], batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    csr_iter_None = iter(mx.io.NDArrayIter({'csr_data': csr, 'dns_data': dns}, None, batch_size,
+                                      shuffle=True, last_batch_handle='discard'))
+    _test_NDArrayIter_csr(csr_iter, csr_iter_empty_list,
+                          csr_iter_None, num_rows, batch_size)
 
     # make iterators
     csr_iter = iter(mx.io.NDArrayIter(

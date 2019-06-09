@@ -19,6 +19,8 @@ package org.apache.mxnet
 
 import java.io._
 
+import org.apache.mxnet.Base.CPtrAddress
+
 import scala.collection.mutable
 import scala.util.Either
 
@@ -38,8 +40,10 @@ object Optimizer {
       }
 
       override def dispose(): Unit = {
-        states.values.foreach(optimizer.disposeState)
-        states.clear()
+        if (!super.isDisposed) {
+          states.values.foreach(optimizer.disposeState)
+          states.clear()
+        }
       }
 
       override def serializeState(): Array[Byte] = {
@@ -140,7 +144,7 @@ abstract class Optimizer extends Serializable {
   def deserializeState(bytes: Array[Byte]): AnyRef
 
   // Set individual learning rate scale for parameters
-  @deprecated("Use setLrMult instead.")
+  @deprecated("Use setLrMult instead.", "0.10.0")
   def setLrScale(lrScale: Map[Int, Float]): Unit = {
     val argsLrScale: Map[Either[Int, String], Float] = lrScale.map { case (k, v) => Left(k) -> v }
     setLrMult(argsLrScale)
@@ -285,7 +289,8 @@ abstract class Optimizer extends Serializable {
   }
 }
 
-trait MXKVStoreUpdater {
+trait MXKVStoreUpdater extends
+  NativeResource {
   /**
    * user-defined updater for the kvstore
    * It's this updater's responsibility to delete recv and local
@@ -294,9 +299,14 @@ trait MXKVStoreUpdater {
    * @param local the value stored on local on this key
    */
   def update(key: Int, recv: NDArray, local: NDArray): Unit
-  def dispose(): Unit
-  // def serializeState(): Array[Byte]
-  // def deserializeState(bytes: Array[Byte]): Unit
+
+  // This is a hack to make Optimizers work with ResourceScope
+  // otherwise the user has to manage calling dispose on this object.
+  override def nativeAddress: CPtrAddress = hashCode()
+  override def nativeDeAllocator: CPtrAddress => Int = doNothingDeAllocator
+  private def doNothingDeAllocator(dummy: CPtrAddress): Int = 0
+  override val ref: NativeResourceRef = super.register()
+  override val bytesAllocated: Long = 0L
 }
 
 trait MXKVStoreCachedStates {

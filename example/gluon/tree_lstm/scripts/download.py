@@ -24,7 +24,6 @@ Downloads the following:
 """
 
 from __future__ import print_function
-import urllib2
 import sys
 import os
 import shutil

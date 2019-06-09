@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory
 import scala.annotation.varargs
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
+import scala.language.implicitConversions
 /**
  * IO iterators for loading training & validation data
  */
@@ -340,11 +341,11 @@ abstract class DataIter extends Iterator[DataBatch] {
   def getIndex(): IndexedSeq[Long]
 
   // The name and shape of data provided by this iterator
-  @deprecated
+  @deprecated("Use provideDataDesc instead", "1.3.0")
   def provideData: ListMap[String, Shape]
 
   // The name and shape of label provided by this iterator
-  @deprecated
+  @deprecated("Use provideLabelDesc instead", "1.3.0")
   def provideLabel: ListMap[String, Shape]
 
   // Provide type:DataDesc of the data
@@ -404,7 +405,7 @@ object DataDesc {
     }
   }
 
-  @deprecated
+  @deprecated("Please use DataDesc methods instead", "1.3.0")
   implicit def ListMap2Descs(shapes: ListMap[String, Shape]): IndexedSeq[DataDesc] = {
     if (shapes != null) {
       shapes.map { case (k, s) => new DataDesc(k, s) }.toIndexedSeq

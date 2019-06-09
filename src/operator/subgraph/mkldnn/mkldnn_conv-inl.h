@@ -36,9 +36,6 @@ struct MKLDNNConvFusionParam {
   std::shared_ptr<BatchNormParam> bn_param;
 };
 
-static const size_t uint8_range = 255;
-static const size_t int8_range = 127;
-
 enum MKLDNNConvOpOutputs { kOut, kMin, kMax };
 
 }  // namespace op

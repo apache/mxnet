@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full-parent_2.11</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -14,22 +14,26 @@
   <name>MXNet Scala Package - Full Linux-x86_64 GPU</name>
   <packaging>jar</packaging>
 
+  <properties>
+    <MXNET_DIR>${project.parent.parent.basedir}/..</MXNET_DIR>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-core_${scala.binary.version}</artifactId>
-      <version>1.3.1-SNAPSHOT</version>
+      <version>1.5.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>libmxnet-scala-linux-x86_64-gpu</artifactId>
-      <version>1.3.1-SNAPSHOT</version>
+      <version>1.5.0-SNAPSHOT</version>
       <type>so</type>
     </dependency>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-infer_${scala.binary.version}</artifactId>
-      <version>1.3.1-SNAPSHOT</version>
+      <version>1.5.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
 

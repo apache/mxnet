@@ -17,7 +17,7 @@
 
 package org.apache.mxnet.optimizer
 
-import org.apache.mxnet.{Optimizer, LRScheduler, NDArray}
+import org.apache.mxnet._
 import org.apache.mxnet.NDArrayConversions._
 
 /**
@@ -92,7 +92,13 @@ class SGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
     if (momentum == 0.0f) {
       null
     } else {
-      NDArray.zeros(weight.shape, weight.context)
+      val s = NDArray.zeros(weight.shape, weight.context)
+      // this is created on the fly and shared between runs,
+      // we don't want it to be dispose from the scope
+      // and should be handled by the dispose
+      val scope = ResourceScope.getCurrentScope()
+      if (scope.isDefined) scope.get.remove(s)
+      s
     }
   }
 

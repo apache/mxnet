@@ -125,6 +125,7 @@ with other language front-ends like C, C++ and Scala. To this end, we simply
 use `export` and `SymbolBlock.imports`:
 
 ```python
+net(x)
 net.export('model', epoch=1)
 ```
 

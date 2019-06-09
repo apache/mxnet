@@ -6,7 +6,8 @@ To enable C++ package, just add `USE_CPP_PACKAGE=1` in the [build from source](b
 For example to build MXNet with GPU support and the C++ package, OpenCV, and OpenBLAS, from the project root you would run:
 
 ```bash
-make -j USE_CPP_PACKAGE=1 USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1
+cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -DUSE_CPP_PACKAGE=1 -GNinja .
+ninja -v
 ```
 
 You may also want to add the MXNet shared library to your `LD_LIBRARY_PATH`:

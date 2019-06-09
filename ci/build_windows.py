@@ -160,9 +160,6 @@ def windows_package(args):
         copy_tree('python', j(pkgdir, 'python'))
         logging.info('packing headers')
         copy_tree('include', j(pkgdir, 'include'))
-        copy_tree(j('3rdparty','dmlc-core','include'), j(pkgdir, 'include'))
-        copy_tree(j('3rdparty','mshadow', 'mshadow'), j(pkgdir, 'include', 'mshadow'))
-        copy_tree(j('3rdparty','tvm','nnvm', 'include'), j(pkgdir,'include', 'nnvm', 'include'))
         logging.info("Compressing package: %s", pkgfile)
         check_call(['7z', 'a', pkgfile, pkgdir])
 

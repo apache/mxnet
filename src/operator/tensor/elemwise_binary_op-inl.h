@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file elemwise_binary_op.h
+ * \file elemwise_binary_op-inl.h
  * \brief Function definition of elementwise binary operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_INL_H_

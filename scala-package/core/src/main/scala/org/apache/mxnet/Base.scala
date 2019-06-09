@@ -153,3 +153,21 @@ private[mxnet] object Base {
 }
 
 class MXNetError(val err: String) extends Exception(err)
+
+// Some type-classes to ease the work in Symbol.random and NDArray.random modules
+
+class SymbolOrScalar[T](val isScalar: Boolean)
+object SymbolOrScalar {
+  def apply[T](implicit ev: SymbolOrScalar[T]): SymbolOrScalar[T] = ev
+  implicit object FloatWitness extends SymbolOrScalar[Float](true)
+  implicit object IntWitness extends SymbolOrScalar[Int](true)
+  implicit object SymbolWitness extends SymbolOrScalar[Symbol](false)
+}
+
+class NDArrayOrScalar[T](val isScalar: Boolean)
+object NDArrayOrScalar {
+  def apply[T](implicit ev: NDArrayOrScalar[T]): NDArrayOrScalar[T] = ev
+  implicit object FloatWitness extends NDArrayOrScalar[Float](true)
+  implicit object IntWitness extends NDArrayOrScalar[Int](true)
+  implicit object NDArrayWitness extends NDArrayOrScalar[NDArray](false)
+}

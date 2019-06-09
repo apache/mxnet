@@ -182,9 +182,9 @@ object SSDClassifierExample {
   def checkExist(arr : Array[String]) : Boolean = {
     var exist : Boolean = true
     for (item <- arr) {
-      exist = Files.exists(Paths.get(item)) && exist
-      if (!exist) {
+      if (!(Files.exists(Paths.get(item)))) {
         logger.error("Cannot find: " + item)
+        exist = false
       }
     }
     exist
@@ -203,9 +203,10 @@ class CLIParser extends CLIParserBase {
 
 class SSDClassifierExample(CLIParser: CLIParser)
   extends InferBase {
-  override def loadModel(context: Array[Context]): Any = {
+  override def loadModel(context: Array[Context], batchInference: Boolean = false): Any = {
     val dType = DType.Float32
-    val inputShape = Shape(1, 3, 512, 512)
+    val batchSize = if (batchInference) CLIParser.batchSize else 1
+    val inputShape = Shape(batchSize, 3, 512, 512)
     val inputDescriptors = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
     new ObjectDetector(CLIParser.modelPathPrefix, inputDescriptors, context)
   }

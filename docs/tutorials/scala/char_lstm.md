@@ -129,7 +129,7 @@ To prepare the data:
     ```scala
         scala> // Build  a vocabulary of what char we have in the content
         scala> def buildVocab(path: String): Map[String, Int] = {
-                val content = readContent(dataPath).split("\n")
+                val content = readContent(path).split("\n")
                 var idx = 1 // 0 is left for zero padding
                 var theVocab = Map[String, Int]()
                 for (line <- content) {

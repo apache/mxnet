@@ -103,7 +103,18 @@ class NDArray {
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
           std::vector<int> aux_types = {}, std::vector<TShape> aux_shapes = {},
           TShape storage_shape = TShape(mshadow::Shape1(0)));
-
+  /*!
+   * \brief constructs a new dynamic NDArray whose shape is unknown,
+   *        hence the NDArray is inherently lazily created
+   * \param ctx context of NDArray
+   * \param dtype data type of this ndarray
+   */
+  explicit NDArray(Context ctx, int dtype = mshadow::default_type_flag) {
+    ptr_ = std::make_shared<Chunk>(TShape(mshadow::Shape1(0)), ctx, true, dtype);
+    dtype_ = dtype;
+    storage_type_ = kDefaultStorage;
+    entry_ = {nullptr, 0, 0};
+  }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
    *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
@@ -157,7 +168,20 @@ class NDArray {
       : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
         dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
   }
-
+  /*!
+   * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
+   * \param shape the shape of the NDArray
+   */
+  void Init(const TShape &shape) {
+    ptr_->Init(shape, this->dtype_);
+    this->shape_ = shape;
+  }
+  /*!
+   * \brief set the correct shape of NDArray directly from the storage_shape of its own chunk.
+   */
+  void SetShapeFromChunk() {
+    shape_ = ptr_->storage_shape;
+  }
   /*
    * This indicates whether an array is a view of another array (created by
    * reshape or slice). If an array is a view and the the data is stored in
@@ -960,7 +984,13 @@ class NDArray {
 #endif
       }
     }
-
+    /*! \brief initialize the shape and dtype, assuming it is not initialized before. */
+    void Init(const TShape &shape, int dtype) {
+      auto size = shape.Size();
+      storage_shape = shape;
+      shandle.size = size * mshadow::mshadow_sizeof(dtype);
+      this->CheckAndAlloc();
+    }
     inline void CheckAndAlloc(const TShape &shape, const std::vector<TShape> &aux_shapes,
                               int dtype) {
       // calculate size, perform allocation

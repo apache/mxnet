@@ -1,6 +1,11 @@
 Recurrent Neural Network Examples
 ===========
 
+For more current implementations of NLP and RNN models with MXNet, please visit [gluon-nlp](http://gluon-nlp.mxnet.io/index.html)
+
+------
+
+
 This directory contains functions for creating recurrent neural networks
 models using high level mxnet.rnn interface.
 
