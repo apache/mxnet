@@ -519,7 +519,24 @@ class ndarray(NDArray):
         return _mx_nd_np.argmax(self, axis, out)
 
     def as_in_context(self, context):
-        return super(ndarray, self).as_in_context(context).as_np_ndarray()
+        """Returns an array on the target device with the same value as this array.
+
+        If the target context is the same as ``self.context``, then ``self`` is
+        returned.  Otherwise, a copy is made.
+
+        Parameters
+        ----------
+        context : Context
+            The target context.
+
+        Returns
+        -------
+        ndarray
+            The target array.
+        """
+        if self.context == context:
+            return self
+        return self.copyto(context)
 
     def copy(self, order='C'):  # pylint: disable=arguments-differ
         if order != 'C':
