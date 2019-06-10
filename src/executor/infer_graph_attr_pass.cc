@@ -686,8 +686,8 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
               std::vector<std::vector<AttrType>> in_attrs;
               std::vector<std::vector<AttrType>> out_attrs;
               for (const auto& dep_node : inode.source->control_deps) {
-                in_attrs.push_back({});
-                out_attrs.push_back({});
+                in_attrs.emplace_back();
+                out_attrs.emplace_back();
                 auto &current_in_attrs = in_attrs.back();
                 auto &current_out_attrs = out_attrs.back();
                 uint32_t dep_node_id = idx.node_id(dep_node.get());
