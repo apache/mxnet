@@ -921,10 +921,10 @@ class ParameterDict(object):
                     "with '%s'"%(restore_prefix, name, restore_prefix)
         ndarray_load = ndarray.load(filename)
         self.load_dict(ndarray_load, ctx, allow_missing,
-                       ignore_extra, restore_prefix, filename)
+                       ignore_extra, restore_prefix, filename, cast_dtype)
 
     def load_dict(self, param_dict, ctx=None, allow_missing=False,
-                  ignore_extra=False, restore_prefix='', filename=None):
+                  ignore_extra=False, restore_prefix='', filename=None, cast_dtype=False):
         """Load parameters from dict
 
         Parameters
@@ -941,6 +941,9 @@ class ParameterDict(object):
         restore_prefix : str, default ''
             prepend prefix to names of stored parameters before loading
         filename : str, default None
+        cast_dtype : bool, default False
+            Cast the data type of the NDArray loaded from the checkpoint to the dtype
+            provided by the Parameter if any
         """
         lprefix = len(restore_prefix)
         loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
