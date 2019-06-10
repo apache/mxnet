@@ -40,10 +40,10 @@ NNVM_REGISTER_OP(_backward_np_mean)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu, true>);
 
 NNVM_REGISTER_OP(_np_max)
-.set_attr<FCompute>("FCompute<gpu>", NumpyMaxCompute<gpu, mshadow_op::max>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyMaxCompute<gpu, mshadow::red::maximum>);
 
 NNVM_REGISTER_OP(_backward_np_max)
-.set_attr<FCompute>("FCompute<gpu>", NumpyMaxBackward<gpu, mshadow_op::eq>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyMaxBackward<gpu, mshadow::red::maximum>);
 
 }  // namespace op
 }  // namespace mxnet
