@@ -309,3 +309,23 @@ def get_all_reduction_operators():
                 and op_name not in unique_ops:
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
+
+
+def get_operators_with_no_benchmark(operators_with_benchmark):
+    """Gets all MXNet operators with not benchmark.
+
+    Retrieve all operators registered with MXNet and prepares a list of operators that are not part of given
+    operators with benchmark list.
+
+    Parameters
+    ----------
+    operators_with_benchmark: list[Str]
+        List of operator names that has benchmarks
+
+    Returns
+    -------
+    list[Str]
+        List of operator names that is registered with MXNet but has no benchmarks.
+    """
+    all_mxnet_operators = _get_all_mxnet_operators().keys()
+    return list(set(all_mxnet_operators) - set(operators_with_benchmark))
