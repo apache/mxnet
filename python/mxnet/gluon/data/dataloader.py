@@ -421,6 +421,7 @@ class _MultiWorkerIter(object):
         self._pin_memory = pin_memory
         self._pin_device_id = pin_device_id
         self._dataset = dataset
+        self._data_loader = data_loader
         # pre-fetch
         for _ in range(prefetch):
             self._push_next()
@@ -582,7 +583,8 @@ class DataLoader(object):
                                 pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
                                 worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
                                 prefetch=self._prefetch,
-                                dataset=self._dataset if self._thread_pool else None)
+                                dataset=self._dataset if self._thread_pool else None,
+                                dataloader=self)
 
     def __len__(self):
         return len(self._batch_sampler)
