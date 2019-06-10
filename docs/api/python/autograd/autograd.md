@@ -85,17 +85,17 @@ Detailed tutorials are available in Part 1 of
 # Higher order gradient
 
 Some operators support higher order gradients. Meaning that you calculate the gradient of the
-gradient. For this the operator's backward must be as well differentiable. Some operators support
+gradient. For this the operator's backward must be differentiable as well. Some operators support
 differentiating multiple times, and others two, most just once.
 
 For calculating higher order gradients, we can use the `mx.autograd.grad` function while recording
-and then call backward, or call `mx.autograd.grad` two times. If we do the later is important that
+and then call backward, or call `mx.autograd.grad` two times. If we do the latter, is important that
 the first call uses `create_graph=True` and `retain_graph=True` and the second call uses
 `create_graph=False` and `retain_graph=True`. Otherwise we will not get the results that we want. If
 we would be to recreate the graph in the second call, we would end up with a graph of just the
 backward nodes, not the full initial graph that includes the forward nodes.
 
-The idiom to calculate higher order gradients is the following:
+The pattern to calculate higher order gradients is the following:
 
 ```python
 from mxnet import ndarray as nd
