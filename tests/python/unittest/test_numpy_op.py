@@ -87,14 +87,6 @@ def test_np_sum():
                         mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims)
                         np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-    # test zero and zero dim
-    shapes = [(), (0), (2, 0), (0, 2, 1)]
-    dims = [0] * len(shapes)
-    for shape, dim in zip(shapes, dims):
-        x = _np.random.uniform(-1.0, 1.0, shape)
-        x = mx.nd.array(x).as_np_ndarray()
-        out = mx.np.sum(x)
-        assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
 
 
 @with_seed()
@@ -203,14 +195,6 @@ def test_np_mean():
                         mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
                         np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-    # test zero and zero dim
-    shapes = [(), (0), (2, 0), (0, 2, 1)]
-    dims = [0] * len(shapes)
-    for shape, dim in zip(shapes, dims):
-        x = _np.random.uniform(-1.0, 1.0, shape)
-        x = mx.nd.array(x).as_np_ndarray()
-        out = mx.np.mean(x)
-        assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
 
 
 @with_seed()
