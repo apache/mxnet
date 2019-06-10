@@ -31,6 +31,7 @@ from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operato
     run_convolution_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
+from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark
 
 
 def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
@@ -121,3 +122,8 @@ if __name__ == '__main__':
 
     # 3. PREPARE OUTPUTS
     save_to_file(final_benchmark_results, user_options.output_file, user_options.output_format)
+
+    # 4. Generate list of MXNet operators not covered in benchmarks
+    ops_not_covered = get_operators_with_no_benchmark(final_benchmark_results.keys())
+    for idx, op in enumerate(ops_not_covered):
+        print(f"{idx}. {op}")
