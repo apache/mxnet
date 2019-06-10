@@ -584,7 +584,7 @@ class DataLoader(object):
                                 worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
                                 prefetch=self._prefetch,
                                 dataset=self._dataset if self._thread_pool else None,
-                                dataloader=self)
+                                data_loader=self)
 
     def __len__(self):
         return len(self._batch_sampler)
