@@ -19,7 +19,8 @@
 """Functions for enabling AMP (automatic mixed precision)."""
 __all__ = ['init', 'init_trainer', 'scale_loss', 'unscale', 'convert_model',
            'convert_hybrid_block', 'list_fp16_ops', 'list_fp32_ops',
-           'list_fp16_fp32_ops', 'list_conditional_fp32_ops']
+           'list_fp16_fp32_ops', 'list_conditional_fp32_ops',
+           'convert_symbol']
 
 from types import MethodType
 from array import array
