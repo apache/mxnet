@@ -215,8 +215,10 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
       code += "store(" + var + ", i, output" + std::to_string(counter) + ");\n";
     } else if (req[counter] == kAddTo) {
       code += "storeadd(" + var + ", i, output" + std::to_string(counter) + ");\n";
+    } else if (req[counter] == kNullOp) {
+      // NULL req, do not do anything
     } else {
-      LOG(FATAL) << "Encountered unexpected req";
+      LOG(FATAL) << "Encountered unexpected req.";
     }
     ++counter;
   }
@@ -261,6 +263,9 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   initialized_ = initialized_ && cc_minor == this->cc_minor_;
   this->cc_major_ = cc_major;
   this->cc_minor_ = cc_minor;
+
+  initialized_ = initialized_ && (req == saved_reqs_);
+  saved_reqs_ = req;
 
   if (!initialized_) {
     this->GenerateCode(req);
@@ -386,10 +391,12 @@ template <>
 bool FusedOp::InferShape<gpu>(const nnvm::NodeAttrs &attrs,
                               std::vector<mxnet::TShape> *in_attrs,
                               std::vector<mxnet::TShape> *out_attrs) {
+  std::cout << "InferShape in FusedOp!" << std::endl;
   std::vector<mxnet::TShape> input_shapes(*in_attrs);
   this->symbol_ = mxnet::exec::InferShape(std::move(this->symbol_),
                                           std::move(input_shapes),
                                           "__shape__");
+  std::cout << "END: InferShape in FusedOp!" << std::endl;
 
   const auto& g = this->symbol_.indexed_graph();
   const auto& input_nids = g.input_nodes();

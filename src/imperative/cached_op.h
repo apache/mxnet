@@ -193,7 +193,6 @@ class CachedOp {
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;
-  nnvm::Graph grad_graph_;
   nnvm::Graph full_graph_;
   bool inlining_;
   std::vector<nnvm::NodeEntry> ograd_entries_;

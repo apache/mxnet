@@ -83,6 +83,7 @@ struct GradEntry {
 };
 
 Graph Gradient(Graph src) {
+  std::cout << "Gradient!" << std::endl;
   using nnvm::FGradient;
   using MirrorFun = std::function<int (const Node& node)>;
   using AttrHintFun = std::function<NodeEntry (const NodeEntry& src, const NodeEntry &like)>;
@@ -172,7 +173,10 @@ Graph Gradient(Graph src) {
   std::vector<NodeEntry> out_agg_grads;
   for (auto rit = topo_order.rbegin(); rit != topo_order.rend(); ++rit) {
     const NodePtr& ptr = *rit;
+    std::cout << "Node ptr"<< std::endl;
+    if (ptr->is_variable()) std::cout << "Variable!" << std::endl;
     if (ptr->is_variable()) continue;
+    std::cout << "Op: " << ptr->op()->name << std::endl;
     out_agg_grads.clear();
     auto& out_grad_vec = output_grads.at(ptr.get());
     for (uint32_t i = 0; i < out_grad_vec.size(); ++i) {
