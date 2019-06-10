@@ -667,7 +667,6 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDNN=1                               \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
-        AR=/usr/local/bin/ar                      \
         -j$(nproc)
 }
 
