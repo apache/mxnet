@@ -25,6 +25,7 @@ from benchmark.opperf.nd_operations.binary_operators import run_mx_binary_broadc
     run_mx_binary_element_wise_operators_benchmarks
 from benchmark.opperf.nd_operations.gemm_operators import run_gemm_operators_benchmarks
 from benchmark.opperf.nd_operations.random_sampling_operators import run_mx_random_sampling_operators_benchmarks
+from benchmark.opperf.nd_operations.reduction_operators import run_mx_reduction_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_activation_operators import run_activation_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operators_benchmarks, \
     run_convolution_operators_benchmarks
@@ -58,6 +59,9 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
 
     # Run all Random sampling operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_random_sampling_operators_benchmarks(ctx=ctx, dtype=dtype))
+
+    # Run all Reduction operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_mx_reduction_operators_benchmarks(ctx=ctx, dtype=dtype))
 
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
 

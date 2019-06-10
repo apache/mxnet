@@ -74,17 +74,6 @@ MXNet NDArray Join and Split Operations
 2. split
 3. stack
 
-MXNet NDArray Reduction Operations
-
-1. sum
-2. nansum
-3. prod
-4. nanprod
-5. mean
-6. max
-7. min
-8. norm
-
 MXNet NDArray Shape change Operations
 
 1. Transpose

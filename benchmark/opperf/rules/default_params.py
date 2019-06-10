@@ -48,6 +48,10 @@ DEFAULT_LAM = [[1.0, 8.5]]
 DEFAULT_K_ND = [[20, 49]]
 DEFAULT_P_ND = [[0.4, 0.77]]
 
+# For reduction operators
+# NOTE: Data used is DEFAULT_DATA
+DEFAULT_AXIS = [(), 0, (0, 1)]
+
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "lhs": DEFAULT_LHS,
@@ -65,4 +69,5 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "k": DEFAULT_K,
                    "p": DEFAULT_P,
                    "k_nd": DEFAULT_K_ND,
-                   "p_nd": DEFAULT_P_ND}
+                   "p_nd": DEFAULT_P_ND,
+                   "axis": DEFAULT_AXIS}

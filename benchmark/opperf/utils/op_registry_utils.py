@@ -22,7 +22,6 @@ from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
 
 from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS
 
-
 # We will use all operators inside NDArray Module
 mx_nd_module = sys.modules["mxnet.ndarray.op"]
 
@@ -290,3 +289,23 @@ def get_all_random_sampling_operators():
         if op_name.startswith(("random_", "sample_")) and op_name not in unique_ops:
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
+
+
+def get_all_reduction_operators():
+    """Gets all Reduction operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Reduction operators
+    reduction_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_params["params"]["narg"] == 4 and \
+                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])) \
+                and op_name not in unique_ops:
+            reduction_mx_operators[op_name] = mx_operators[op_name]
+    return reduction_mx_operators
