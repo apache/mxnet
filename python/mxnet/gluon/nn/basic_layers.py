@@ -305,10 +305,10 @@ class BatchNorm(HybridBlock):
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
         Initializer for the gamma weight.
-    moving_mean_initializer: str or `Initializer`, default 'zeros'
-        Initializer for the moving mean.
-    moving_variance_initializer: str or `Initializer`, default 'ones'
-        Initializer for the moving variance.
+    running_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the running mean.
+    running_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the running variance.
     in_channels : int, default 0
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called

@@ -102,7 +102,7 @@ class L2NormalizationOp : public Operator {
       norm = F<mxnet::op::mshadow_op::square_root>(norm);
       out = data / broadcast<0>(norm, out.shape_);
     } else if (param_.mode == l2_normalization::kChannel) {
-      CHECK_GE(orig_shape.ndim(), 3U);
+      CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<xpu, 3, DType> data = in_data[l2_normalization::kData]
@@ -120,7 +120,7 @@ class L2NormalizationOp : public Operator {
       norm = F<mxnet::op::mshadow_op::square_root>(norm);
       out = data / broadcast_with_axis(norm, 0, orig_shape[1]);
     } else if (param_.mode == l2_normalization::kSpatial) {
-      CHECK_GE(orig_shape.ndim(), 3U);
+      CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<xpu, 3, DType> data = in_data[l2_normalization::kData]
@@ -174,7 +174,7 @@ class L2NormalizationOp : public Operator {
         (grad_out - data * broadcast<0>(temp, data.shape_)) /
         broadcast<0>(norm, data.shape_));
     } else if (param_.mode == l2_normalization::kChannel) {
-      CHECK_GE(orig_shape.ndim(), 3U);
+      CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<xpu, 3, DType> data = out_data[l2_normalization::kOut]
@@ -193,7 +193,7 @@ class L2NormalizationOp : public Operator {
         (grad_out - data * broadcast_with_axis(temp, 0, orig_shape[1])) /
         broadcast_with_axis(norm, 0, orig_shape[1]));
     } else if (param_.mode == l2_normalization::kSpatial) {
-      CHECK_GE(orig_shape.ndim(), 3U);
+      CHECK_GE(orig_shape.ndim(), 3);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
         orig_shape.ProdShape(2, orig_shape.ndim()));
       Tensor<xpu, 3, DType> data = out_data[l2_normalization::kOut]
@@ -273,12 +273,12 @@ class L2NormalizationProp : public OperatorProperty {
     if (param_.mode == l2_normalization::kInstance) {
       out_shape->push_back(Shape1(dshape[0]));
     } else if (param_.mode == l2_normalization::kChannel) {
-      CHECK_GE(dshape.ndim(), 3U) << "At lease 3 dimensions required in channel mode";
+      CHECK_GE(dshape.ndim(), 3) << "At lease 3 dimensions required in channel mode";
       mxnet::TShape norm_shape = dshape;
       norm_shape[1] = 1;
       out_shape->push_back(norm_shape);
     } else if (param_.mode == l2_normalization::kSpatial) {
-      CHECK_GE(dshape.ndim(), 3U) << "At lease 3 dimensions required in spatial mode";
+      CHECK_GE(dshape.ndim(), 3) << "At lease 3 dimensions required in spatial mode";
       out_shape->push_back(Shape2(dshape[0], dshape[1]));
     } else {
       return false;

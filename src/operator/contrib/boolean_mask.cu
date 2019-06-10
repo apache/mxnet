@@ -36,6 +36,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
+  CHECK(req[0] == kWriteTo || req[0] == kWriteInplace);
   const BooleanMaskParam& param = nnvm::get<BooleanMaskParam>(attrs.parsed);
   const int axis = param.axis;
   const NDArray &data = inputs[0];
@@ -101,6 +102,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
+  if (req[0] == kNullOp) return;
   // inputs: {ograd, data, idx}
   // outputs: {igrad_data, igrad_idx}
   const NDArray& ograd = inputs[0];
@@ -142,7 +144,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
   // Backward pass
   MSHADOW_TYPE_SWITCH(igrad_data.dtype(), DType, {
     mxnet_op::Kernel<BooleanMaskBackwardKernel, gpu>::Launch(
-      s, input_size, igrad_data.data().dptr<DType>(), ograd.data().dptr<DType>(),
+      s, input_size, igrad_data.data().dptr<DType>(), req[0], ograd.data().dptr<DType>(),
       prefix_sum, col_size);
   });
 }

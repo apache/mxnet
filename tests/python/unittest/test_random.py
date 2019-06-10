@@ -867,6 +867,8 @@ def test_shuffle():
     # Test larger arrays
     testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
     testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
+    testLarge(mx.nd.arange(0, 100000), 10)
+
 
 @with_seed()
 def test_randint():
@@ -915,6 +917,18 @@ def test_randint_generator():
 def test_randint_without_dtype():
     a = mx.nd.random.randint(low=50000000, high=50000010, ctx=mx.context.current_context())
     assert a.dtype == np.int32
+
+
+@with_seed()
+def test_sample_multinomial_num_outputs():
+    ctx = mx.context.current_context()
+    probs = [[0.125, 0.25, 0.25], [0.0625, 0.125, 0.1875]]
+    out = mx.nd.random.multinomial(data=mx.nd.array(probs, ctx=ctx), shape=10000, get_prob=False)
+    assert isinstance(out, mx.nd.NDArray)
+    out = mx.nd.random.multinomial(data=mx.nd.array(probs, ctx=ctx), shape=10000, get_prob=True)
+    assert isinstance(out, list)
+    assert len(out) == 2
+
 
 if __name__ == '__main__':
     import nose

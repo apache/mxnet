@@ -38,9 +38,9 @@ namespace op {
 
 struct MKLDNNConvParam : public dmlc::Parameter<MKLDNNConvParam> {
   bool with_bn;
-  bool with_relu;
+  bool with_act;
   bool with_sum;
-  bool with_postsum_relu;
+  bool with_postsum_act;
   bool quantized;
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
@@ -49,12 +49,12 @@ struct MKLDNNConvParam : public dmlc::Parameter<MKLDNNConvParam> {
   DMLC_DECLARE_PARAMETER(MKLDNNConvParam) {
     DMLC_DECLARE_FIELD(with_bn).set_default(false)
     .describe("Add post batchnorm.");
-    DMLC_DECLARE_FIELD(with_relu).set_default(false)
-    .describe("Add post relu");
+    DMLC_DECLARE_FIELD(with_act).set_default(false)
+    .describe("Add post activation");
     DMLC_DECLARE_FIELD(with_sum).set_default(false)
     .describe("Add post sum");
-    DMLC_DECLARE_FIELD(with_postsum_relu).set_default(false)
-    .describe("Add post relu after sum");
+    DMLC_DECLARE_FIELD(with_postsum_act).set_default(false)
+    .describe("Add post activation after sum");
     DMLC_DECLARE_FIELD(quantized).set_default(false)
     .describe("enable quantization");
     DMLC_DECLARE_FIELD(min_calib_range)
@@ -70,17 +70,21 @@ struct MKLDNNConvParam : public dmlc::Parameter<MKLDNNConvParam> {
   }
 };
 
+struct MKLDNNPostActParam {
+  mkldnn::algorithm alg = mkldnn::algorithm::algorithm_undef;
+  float scale = 1.f;
+  float alpha = 0.f;
+  float beta = 1.f;
+};
+
 struct MKLDNNConvFullParam {
   ConvolutionParam conv_param;
   MKLDNNConvParam mkldnn_param;
-  float sum_scale;
+  float sum_scale = 1.f;
   std::vector<float> requantize_scales;
+  MKLDNNPostActParam act_param;
+  MKLDNNPostActParam postsum_act_param;
 };
-
-static inline bool IsOutputUInt8(const MKLDNNConvParam &mkldnn_param) {
-  return ((!mkldnn_param.with_sum) && mkldnn_param.with_relu) ||
-         mkldnn_param.with_postsum_relu;
-}
 
 mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullParam &param,
                                                            const bool is_train,

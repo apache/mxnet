@@ -35,8 +35,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-gpu') {
           utils.init_git()
-          //sh "ci/build.py --platform ubuntu_build_cuda /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7"
-          utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
+          utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda100_cudnn7', false)
           utils.pack_lib('gpu', mx_lib)
         }
       }
@@ -46,7 +45,7 @@ core_logic: {
         ws('workspace/build-cpu-int64') {
           utils.init_git()
           utils.docker_run('ubuntu_nightly_cpu', 'build_ubuntu_cpu_large_tensor', false)
-          utils.pack_lib('ubuntu_cpu_int64', mx_cmake_lib, true)
+          utils.pack_lib('cpu_int64', mx_cmake_lib, true)
         }
       }
     },
@@ -55,7 +54,7 @@ core_logic: {
         ws('workspace/build-gpu-int64') {
           utils.init_git()
           utils.docker_run('ubuntu_nightly_gpu', 'build_ubuntu_gpu_large_tensor', true)
-          utils.pack_lib('ubuntu_gpu_int64', mx_cmake_lib, true)
+          utils.pack_lib('gpu_int64', mx_cmake_lib, true)
         }
       }
     }
@@ -78,22 +77,24 @@ core_logic: {
         }
       }
     },
-    'Test Large Tensor Size: CPU': {
+    // https://github.com/apache/incubator-mxnet/issues/14980
+    /*'Test Large Tensor Size: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/large_tensor-cpu') {
             utils.unpack_and_init('cpu_int64', mx_cmake_lib)
             utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_large_tensor', false)
         }
       }
-    },
-    'Test Large Tensor Size: GPU': {
+    },*/
+    // https://github.com/apache/incubator-mxnet/issues/14981
+    /*'Test Large Tensor Size: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/large_tensor-gpu') {
             utils.unpack_and_init('gpu_int64', mx_cmake_lib)
             utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_tensor', true)
         }
       }
-    },
+    },*/
     'StraightDope: Python2 Single-GPU': {
       node(NODE_LINUX_GPU_P3) {
         ws('workspace/straight_dope-single_gpu') {
@@ -127,7 +128,7 @@ core_logic: {
       }
     },
     'Tutorial: Python2': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/tutorial-test-python2') {
           utils.unpack_and_init('gpu', mx_lib)
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python2_gpu', true, '1500m')
@@ -135,10 +136,18 @@ core_logic: {
       }
     },
     'Tutorial: Python3': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/tutorial-test-python3') {
           utils.unpack_and_init('gpu', mx_lib)
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python3_gpu', true, '1500m')
+        }
+      }
+    },
+    'Gluon estimator: GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/estimator-test-gpu') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator', true)
         }
       }
     }

@@ -67,7 +67,7 @@ def pack_lib(name, libs, include_gcov_data = false) {
   sh returnStatus: true, script: """
 set +e
 echo "Packing ${libs} into ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
 return 0
 """
   stash includes: libs, name: name
@@ -86,7 +86,7 @@ def unpack_and_init(name, libs, include_gcov_data = false) {
   sh returnStatus: true, script: """
 set +e
 echo "Unpacked ${libs} from ${name}"
-echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
 return 0
 """
   if (include_gcov_data) {

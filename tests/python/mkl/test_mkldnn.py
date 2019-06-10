@@ -107,8 +107,8 @@ def test_mkldnn_reshape():
         res = mx.symbol.reshape(data=conv, shape=dst_shape)
         exe = res.simple_bind(mx.cpu(), data=shape, grad_req='null')
 
-        val1 = np.random.uniform(-1, 1, (4, 4))
-        val2 = np.random.uniform(-1, 1, (1, 1, 1, 1))
+        val1 = np.random.uniform(-1, 1, shape)
+        val2 = np.random.uniform(-1, 1, (16, 1, 1, 1))
         val3 = np.random.uniform(-1 ,1, (1))
 
         exe.arg_arrays[0][:] = val1
@@ -488,6 +488,43 @@ def test_conv_transpose():
         n = np.transpose(s, axis)
         np.allclose(t.asnumpy(), n)
 
+
+# This test case is contributed by @awsbillz in https://github.com/apache/incubator-mxnet/issues/14766
+@with_seed()
+def test_reshape_transpose_6d():
+    class Reshape2D(gluon.HybridBlock):
+        def __init__(self, factor):
+            super(Reshape2D, self).__init__()
+            self._factors = (int(factor),) * 2
+     
+        def hybrid_forward(self, F, x):
+            f1, f2 = self._factors
+                                                          # (N, f1*f2*C, H, W)
+            x = F.reshape(x, (0, -4, -1, f1 * f2, 0, 0))  # (N, C, f1*f2, H, W)
+            x = F.reshape(x, (0, 0, -4, f1, f2, 0, 0))    # (N, C, f1, f2, H, W)
+            x = F.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+            x = F.reshape(x, (0, 0, -3, -3))              # (N, C, H*f1, W*f2)
+            return x
+     
+     
+    class Net(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.conv1 = nn.Conv2D(8, kernel_size=5)
+                self.reshape2D = Reshape2D(2)
+     
+        def hybrid_forward(self, F, x):
+            x = self.conv1(x)
+            x = self.reshape2D(x)
+            return x
+     
+    net = Net()
+    net.initialize(mx.init.Xavier(), ctx=mx.cpu())
+    net.hybridize()
+    data = mx.nd.random_normal(shape=(1, 3, 600, 600))
+    output = net(data)
+    a = output.asnumpy()
 
 if __name__ == '__main__':
     install.test_mkldnn_install()

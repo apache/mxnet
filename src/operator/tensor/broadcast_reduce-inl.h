@@ -239,6 +239,8 @@ void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
       N, M, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(),
       big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
   } else {
+    // TODO(haojin2): Use real-only type swtich for windows temporarily due to CI issues.
+#ifndef _WIN32
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
@@ -248,6 +250,17 @@ void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
           big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
       });
     });
+#else
+    MXNET_REAL_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
+      typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
+      MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+        typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
+        seq_reduce_compute<Reducer, ndim, AccType, DataType, OutType, OP>(
+          N, M, req == kAddTo, big.dptr<DataType>(), small.dptr<OutType>(),
+          big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
+      });
+    });
+#endif
   }
 }
 

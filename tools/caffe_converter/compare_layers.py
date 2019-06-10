@@ -143,8 +143,6 @@ def convert_and_compare_caffe_to_mxnet(image_url, gpu, caffe_prototxt_path, caff
     compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_to_record,
                              top_to_layers, mean_diff_allowed, max_diff_allowed)
 
-    return
-
 
 def _bfs(root_node, process_node):
     """
@@ -280,7 +278,6 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
             warnings.warn('No handling for layer %s of type %s, should we ignore it?', layer.name,
                           layer.type)
 
-        return
 
     def _process_layer_output(caffe_blob_name):
 
@@ -331,8 +328,6 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
     logging.info(log_format.format('CAFFE', 'MXNET', 'Type', 'Mean(diff)', 'Max(diff)', 'Note'))
     for caffe_blob_name in caffe_net.blobs.keys():
         _process_layer_output(caffe_blob_name)
-
-    return
 
 
 def main():

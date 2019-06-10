@@ -53,7 +53,7 @@ namespace mxnet {
 NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
     bool delay_alloc, int dtype, std::vector<int> aux_types,
     mxnet::ShapeVector aux_shapes, mxnet::TShape storage_shape) : shape_(shape),
-  dtype_(dtype), storage_type_(stype), entry_({nullptr, 0, 0}) {
+  dtype_(dtype), storage_type_(stype), entry_(nullptr) {
   // Assign default aux types if not given
   if (aux_types.size() == 0
       && stype != kDefaultStorage) {
@@ -171,7 +171,7 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 #if MXNET_USE_MKLDNN == 1
 
 NDArray::NDArray(mkldnn::memory::primitive_desc mem_pd)
-    : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
+    : storage_type_(kDefaultStorage), entry_(nullptr) {
   auto mem_desc = mem_pd.desc();
   shape_ = mxnet::TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
   dtype_ = get_mxnet_type(mem_desc.data.data_type);
@@ -181,7 +181,7 @@ NDArray::NDArray(mkldnn::memory::primitive_desc mem_pd)
 }
 
 NDArray::NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem)
-    : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
+    : storage_type_(kDefaultStorage), entry_(nullptr) {
   auto mem_pd = mkldnn_mem->get_primitive_desc();
   auto mem_desc = mem_pd.desc();
   shape_ = mxnet::TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
@@ -339,8 +339,8 @@ NDArray NDArray::data_ndarray() const {
 }
 
 struct NDArrayDLManager {
-    NDArray handle;  // ref NDArray
-    DLManagedTensor tensor;
+  NDArray handle;  // ref NDArray
+  DLManagedTensor tensor;
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {
@@ -355,14 +355,19 @@ DLManagedTensor* NDArray::ToDLPack() const {
   return &(dlmanager->tensor);
 }
 
-NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
-  const DLTensor &dl_tensor = tensor->dl_tensor;
-  auto deleter = [tensor](){
-    if (tensor->deleter != nullptr) {
-      tensor->deleter(const_cast<DLManagedTensor*>(tensor));
+NDArray NDArray::FromDLPack(const DLManagedTensor* tensor, bool transient_handle) {
+  DLManagedTensor *tensor_copy = transient_handle
+                               ? new DLManagedTensor(*tensor)
+                               : const_cast<DLManagedTensor*>(tensor);
+  auto deleter = [tensor_copy, transient_handle](){
+    if (tensor_copy->deleter != nullptr) {
+      tensor_copy->deleter(tensor_copy);
+    }
+    if (transient_handle) {
+      delete tensor_copy;
     }
   };
-  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id, deleter);
+  return NDArray(TBlob(tensor_copy->dl_tensor), tensor_copy->dl_tensor.ctx.device_id, deleter);
 }
 
 bool NDArray::fresh_out_grad() const {
@@ -1195,6 +1200,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
   CHECK(!mxnet::op::shape_is_none(from.shape()))
       << "source operands have undefined shape";
+  if (from.shape().Size() == 0U) return;
   // important: callback must always capture by value
   const Context from_ctx = from.ctx();
   const int a = from_ctx.dev_mask();
@@ -1575,10 +1581,20 @@ static const uint32_t NDARRAY_V1_MAGIC = 0xF993fac8;
 /* magic number for ndarray version 2, with storage type */
 static const uint32_t NDARRAY_V2_MAGIC = 0xF993fac9;
 
+// magic number for ndarray version 3, with np shape semantics.
+// The ndarray must be saved and loaded within np shape semantics.
+static const uint32_t NDARRAY_V3_MAGIC = 0xF993faca;
+
 void NDArray::Save(dmlc::Stream *strm) const {
-  // write magic number to mark this version
-  // for storage type
-  strm->Write(NDARRAY_V2_MAGIC);
+  if (Imperative::Get()->is_np_shape()) {
+    CHECK_EQ(storage_type(), kDefaultStorage)
+        << "only allow serializing ndarray of default storage type in np shape semantics";
+    strm->Write(NDARRAY_V3_MAGIC);
+  } else {
+    // write magic number to mark this version
+    // for storage type
+    strm->Write(NDARRAY_V2_MAGIC);
+  }
 
   // save storage type
   int32_t stype = storage_type();
@@ -1695,13 +1711,28 @@ bool NDArray::LegacyLoad(dmlc::Stream *strm, const uint32_t magic) {
 bool NDArray::Load(dmlc::Stream *strm) {
   uint32_t magic;
   if (strm->Read(&magic, sizeof(uint32_t)) != sizeof(uint32_t)) return false;
-  if (magic != NDARRAY_V2_MAGIC) {
+  if (magic == NDARRAY_V3_MAGIC) {
+    CHECK(Imperative::Get()->is_np_shape())
+        << "ndarray was saved in np shape semantics, must be loaded in the same semantics."
+           " Please turn on np shape semantics in Python using `with np_shape(True)`"
+           " or decorator `use_np_shape` to scope the code of loading the ndarray.";
+  } else {
+    CHECK(!Imperative::Get()->is_np_shape())
+        << "ndarray was not saved in np shape semantics, but being loaded in np shape semantics."
+           " Please turn off np shape semantics in Python using `with np_shape(False)`"
+           " to scope of the code of loading the ndarray.";
+  }
+  if (magic != NDARRAY_V2_MAGIC && magic != NDARRAY_V3_MAGIC) {
     return LegacyLoad(strm, magic);
   }
 
   // load storage type
   int32_t stype;
   if (strm->Read(&stype, sizeof(stype)) != sizeof(stype)) return false;
+  if (Imperative::Get()->is_np_shape()) {
+    CHECK_EQ(stype, kDefaultStorage)
+        << "only allow deserializing ndarray of default storage type in np shape semantics";
+  }
   const int32_t nad = num_aux_data(static_cast<NDArrayStorageType>(stype));
 
   // load storage shape
@@ -1713,10 +1744,12 @@ bool NDArray::Load(dmlc::Stream *strm) {
   // load shape
   mxnet::TShape shape;
   if (!shape.Load(strm)) return false;
-  if (!Imperative::Get()->is_np_comp()) {
-    common::ConvertToNumpyShape(&shape);
-  }
-  if (mxnet::op::shape_is_none(shape)) {
+  if (Imperative::Get()->is_np_shape()) {
+    if (!shape_is_known(shape)) {
+      *this = NDArray();
+      return true;
+    }
+  } else if (shape.ndim() == 0) {
     *this = NDArray(); return true;
   }
 

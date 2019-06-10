@@ -121,9 +121,56 @@ struct UpSamplingGrad {
 DMLC_REGISTER_PARAMETER(UpSamplingParam);
 
 NNVM_REGISTER_OP(UpSampling)
-.describe("Performs nearest neighbor/bilinear up sampling to inputs. "
-          "Bilinear upsampling makes use of deconvolution. Therefore, "
-          "provide 2 inputs - data and weight. ")
+.describe(R"code(Upsamples the given input data.
+
+Two algorithms (``sample_type``) are available for upsampling:
+
+- Nearest Neighbor
+- Bilinear
+
+**Nearest Neighbor Upsampling**
+
+Input data is expected to be NCHW.
+
+Example::
+
+  x = [[[[1. 1. 1.]
+         [1. 1. 1.]
+         [1. 1. 1.]]]]
+
+  UpSampling(x, scale=2, sample_type='nearest') = [[[[1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]
+                                                     [1. 1. 1. 1. 1. 1.]]]]
+
+**Bilinear Upsampling**
+
+Uses `deconvolution` algorithm under the hood. You need provide both input data and the kernel.
+
+Input data is expected to be NCHW.
+
+`num_filter` is expected to be same as the number of channels.
+
+Example::
+
+  x = [[[[1. 1. 1.]
+         [1. 1. 1.]
+         [1. 1. 1.]]]]
+
+  w = [[[[1. 1. 1. 1.]
+         [1. 1. 1. 1.]
+         [1. 1. 1. 1.]
+         [1. 1. 1. 1.]]]]
+  
+  UpSampling(x, w, scale=2, sample_type='bilinear', num_filter=1) = [[[[1. 2. 2. 2. 2. 1.]
+                                                                       [2. 4. 4. 4. 4. 2.]
+                                                                       [2. 4. 4. 4. 4. 2.]
+                                                                       [2. 4. 4. 4. 4. 2.]
+                                                                       [2. 4. 4. 4. 4. 2.]
+                                                                       [1. 2. 2. 2. 2. 1.]]]]
+)code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
   const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
   return params.sample_type == up_enum::kNearest ? params.num_args : 2;

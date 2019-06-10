@@ -452,7 +452,7 @@ void BinaryBroadcastComputeSparseEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  CHECK_LE(inputs[1].shape().ndim(), 2U)
+  CHECK_LE(inputs[1].shape().ndim(), 2)
     << "input dense matrix should have less than or equal to 2 dimensions";
   if (req[0] == kNullOp) return;
   const NDArray& lhs = inputs[0];
@@ -488,7 +488,7 @@ void BinaryBroadcastComputeDenseEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  CHECK_LE(inputs[1].shape().ndim(), 2U)
+  CHECK_LE(inputs[1].shape().ndim(), 2)
     << "input dense matrix should have less than or equal to 2 dimensions";
   if (req[0] == kNullOp) return;
   const NDArray& lhs = inputs[0];

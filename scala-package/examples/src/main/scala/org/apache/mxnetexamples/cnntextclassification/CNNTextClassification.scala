@@ -18,7 +18,7 @@
 package org.apache.mxnetexamples.cnntextclassification
 
 import org.apache.mxnet.optimizer.RMSProp
-import org.apache.mxnet.{Context, Executor, Model, NDArray, NDArrayCollector, Optimizer, Shape, Symbol, Uniform}
+import org.apache.mxnet.{Context, Executor, Model, NDArray, Optimizer, ResourceScope, Shape, Symbol, Uniform}
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
@@ -131,7 +131,7 @@ object CNNTextClassification {
       numTotal = 0f
       updateRate = 0
 
-      NDArrayCollector.auto().withScope {
+      ResourceScope.using() {
         for (begin <- 0 until trainBatches.length by batchSize) {
           val (batchD, batchL) = {
             if (begin + batchSize <= trainBatches.length) {
@@ -239,7 +239,7 @@ object CNNTextClassification {
 
   def test(w2vFilePath : String, mrDatasetPath: String,
            ctx : Context, saveModelPath: String) : Float = {
-    val output = NDArrayCollector.auto().withScope {
+    val output = ResourceScope.using() {
       val (numEmbed, word2vec) = DataHelper.loadGoogleModel(w2vFilePath)
       val (datas, labels) = DataHelper.loadMSDataWithWord2vec(
         mrDatasetPath, numEmbed, word2vec)

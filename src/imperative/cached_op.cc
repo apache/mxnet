@@ -98,7 +98,7 @@ CachedOp::CachedOp(
   using namespace nnvm;
   using namespace imperative;
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
-  static const auto _copy = Op::Get("_copy");
+  static const auto _copy_op = Op::Get("_copy");
   config_.Init(flags);
 
   if (config_.static_shape) {
@@ -107,21 +107,21 @@ CachedOp::CachedOp(
 
   // construct forward graph
   {
-    NodeEntryMap<int> dedup_out;
-    for (const auto& i : sym.outputs) {
-      if (dedup_out.count(i)) {
+    NodeEntryMap<size_t> dedup_out;
+    for (const NodeEntry& nodeEntry : sym.outputs) {
+      if (dedup_out.find(nodeEntry) != dedup_out.end()) {
         NodePtr copy_node = Node::Create();
-        copy_node->attrs.op = _copy;
+        copy_node->attrs.op = _copy_op;
         copy_node->attrs.name =
-            i.node->attrs.name + "_copy" + std::to_string(dedup_out[i]++);
-        copy_node->inputs.emplace_back(i);
-        if (_copy->attr_parser != nullptr) {
-          _copy->attr_parser(&(copy_node->attrs));
+            nodeEntry.node->attrs.name + "_copy" + std::to_string(dedup_out[nodeEntry]++);
+        copy_node->inputs.emplace_back(nodeEntry);
+        if (_copy_op->attr_parser != nullptr) {
+          _copy_op->attr_parser(&(copy_node->attrs));
         }
-        fwd_graph_.outputs.push_back(NodeEntry{copy_node, 0, 0});
+        fwd_graph_.outputs.emplace_back(std::move(copy_node));
       } else {
-        dedup_out.insert({i, 0});
-        fwd_graph_.outputs.push_back(i);
+        dedup_out.emplace(nodeEntry, 0);
+        fwd_graph_.outputs.push_back(nodeEntry);
       }
     }
     const auto& idx = fwd_graph_.indexed_graph();
@@ -143,14 +143,15 @@ CachedOp::CachedOp(
 
   // Set params
   {
-    const auto& idx = fwd_graph_.indexed_graph();
+    const auto& indexed_graph = fwd_graph_.indexed_graph();
     if (config_.data_indices.ndim() || config_.param_indices.ndim()) {
       CHECK_EQ(config_.data_indices.ndim() + config_.param_indices.ndim(),
-               idx.input_nodes().size());
+               indexed_graph.input_nodes().size());
     } else {
       std::vector<uint32_t> tmp;
-      for (size_t i = 0; i < idx.input_nodes().size(); ++i) {
-        tmp.push_back(i);
+      tmp.reserve(indexed_graph.input_nodes().size());
+      for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
+        tmp.emplace_back(i);
       }
       config_.data_indices.assign(tmp.begin(), tmp.end());
     }
@@ -159,20 +160,20 @@ CachedOp::CachedOp(
   // construct backward graph
   {
     ograd_entries_.reserve(fwd_graph_.outputs.size());
-    for (size_t i = 0; i < fwd_graph_.outputs.size(); ++i) {
-      ograd_entries_.emplace_back(NodeEntry{Node::Create(), 0, 0});
-    }
+    for (size_t i = 0; i < fwd_graph_.outputs.size(); ++i)
+      ograd_entries_.emplace_back(Node::Create());
 
     std::vector<NodeEntry> xs;
-    const auto& idx = fwd_graph_.indexed_graph();
-    for (size_t i = 0; i < idx.input_nodes().size(); ++i) {
-      auto nid = idx.input_nodes()[i];
-      if (idx.mutable_input_nodes().count(nid)) continue;
+    const IndexedGraph& indexed_graph = fwd_graph_.indexed_graph();
+    for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
+      const uint32_t node_id = indexed_graph.input_nodes()[i];
+      if (indexed_graph.mutable_input_nodes().count(node_id))
+        continue;
       fwd_input_to_grad_output_[i] = xs.size();
-      xs.emplace_back(NodeEntry{idx[nid].weak_ref.lock(), 0, 0});
+      xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
     }
 
-    CHECK_GT(xs.size(), 0)
+    CHECK(!xs.empty())
         << "There are no inputs in computation graph that require gradients.";
 
     grad_graph_ = pass::MXGradient(
@@ -199,7 +200,7 @@ CachedOp::CachedOp(
     }
 
     auto full_ref_count = fwd_graph_.GetAttr<std::vector<uint32_t> >("forward_ref_count");
-    for (size_t i = 0; i < num_forward_entries; ++i) full_ref_count[i] += ref_count[i];
+    for (size_t i = 0; i < num_forward_entries; ++i) full_ref_count.at(i) += ref_count[i];
     fwd_graph_.attrs["full_ref_count"] =
         std::make_shared<dmlc::any>(std::move(full_ref_count));
 
@@ -238,9 +239,12 @@ std::vector<nnvm::NodeEntry> CachedOp::Gradient(
   p->attrs.parsed = node->attrs.parsed;
   p->control_deps.push_back(node);
   p->inputs.reserve(bwd_ograd_dep_.size() + bwd_in_dep_.size() + bwd_out_dep_.size());
-  for (auto i : bwd_ograd_dep_) p->inputs.push_back(ograds[i]);
-  for (auto i : bwd_in_dep_) p->inputs.push_back(node->inputs[i]);
-  for (auto i : bwd_out_dep_) p->inputs.emplace_back(NodeEntry{node, i, 0});
+  for (auto i : bwd_ograd_dep_)
+    p->inputs.push_back(ograds[i]);
+  for (auto i : bwd_in_dep_)
+    p->inputs.push_back(node->inputs[i]);
+  for (auto i : bwd_out_dep_)
+    p->inputs.emplace_back(node, i, 0);
   std::vector<NodeEntry> ret;
   ret.reserve(num_inputs());
   const auto& auxs = mutable_input_nodes();
@@ -251,13 +255,14 @@ std::vector<nnvm::NodeEntry> CachedOp::Gradient(
     uint32_t k = 0;
     for (const auto& i : fwd_graph_.indexed_graph().input_nodes()) {
       if (auxs.count(i)) {
-        ret.emplace_back(NodeEntry{nop, 0, 0});
+        ret.emplace_back(nop);
       } else {
-        ret.emplace_back(NodeEntry{p, k++, 0});
+        ret.emplace_back(p, k++, 0);
       }
     }
   } else {
-    for (uint32_t i = 0; i < num_inputs(); ++i) ret.emplace_back(NodeEntry{p, i, 0});
+    for (uint32_t i = 0; i < num_inputs(); ++i)
+        ret.emplace_back(p, i, 0);
   }
   return ret;
 }
@@ -285,7 +290,7 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   CheckAndInferShape(&g, std::move(shape_inputs), true,
                      {0, 0}, {0, 0},
                      &contain_dynamic_shape);
-  if (erase_result) {
+  if (contain_dynamic_shape && erase_result) {
     g.attrs.erase("shape");
     g.attrs.erase("shape_inputs");
   }
@@ -603,7 +608,7 @@ void CachedOp::StaticInitExec(
     }
   } else {
     for (size_t i = start_nid; i < end_nid; ++i) {
-      exec::CreateOpExecs(g, &state.execs, i);
+      exec::CreateOpExecs(g, &state.execs, &state.op_states, i);
     }
     exec::AttachOpResources(g, state.execs, start_nid, end_nid);
 
@@ -705,8 +710,10 @@ void CachedOp::StaticRunOps(
           arg_shapes.emplace_back(ndinput->shape());
           arg_dtypes.emplace_back(ndinput->dtype());
         }
-        state.op_states[i] = createop[node.source->op()](
-            node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
+        if (!config_.static_shape) {
+          state.op_states[i] =
+              createop[node.source->op()](node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
+        }
         Imperative::Get()->InvokeOp(
             default_ctx, node.source->attrs, ndinputs, ndoutputs, req,
             dispatch_mode, state.op_states[i]);

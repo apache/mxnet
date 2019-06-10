@@ -299,6 +299,7 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
       }
       LOG(INFO) << "Found a cycle when BFS from node " << simple_nodes[snid]->node->attrs.name
                 << ". Excluding nodes " << excluded_node_names << "and retrying";
+      subgraph_selector->Reset();
     }
     ++count;
   }

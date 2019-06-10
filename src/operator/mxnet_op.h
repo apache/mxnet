@@ -335,24 +335,28 @@ inline int get_num_threads<cpu>(const int N) {
     {                                                      \
       typedef uint8_t DType;                               \
       typedef uint32_t AType;                              \
+      {__VA_ARGS__}                                        \
     }                                                      \
     break;                                                 \
   case mshadow::kInt8:                                     \
     {                                                      \
       typedef int8_t DType;                                \
       typedef int32_t AType;                               \
+      {__VA_ARGS__}                                        \
     }                                                      \
     break;                                                 \
   case mshadow::kInt32:                                    \
     {                                                      \
       typedef int32_t DType;                               \
       typedef int64_t AType;                               \
+      {__VA_ARGS__}                                        \
     }                                                      \
     break;                                                 \
   case mshadow::kInt64:                                    \
     {                                                      \
       typedef int64_t DType;                               \
       typedef int64_t AType;                               \
+      {__VA_ARGS__}                                        \
     }                                                      \
     break;                                                 \
   default:                                                 \
