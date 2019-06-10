@@ -3384,7 +3384,6 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
 
 
 @with_seed()
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/15004")
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
         for mode in ['channel', 'spatial', 'instance']:
@@ -4859,7 +4858,6 @@ def test_where():
     test_1d_cond()
 
 
-@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13600")
 @with_seed()
 def test_softmin():
     for ndim in range(1, 5):
@@ -5338,6 +5336,30 @@ def test_boolean_mask():
     expected_grad = np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]])
     assert same(out.asnumpy(), expected)
     assert same(data.grad.asnumpy(), expected_grad)
+
+    # test gradient
+    shape = (100, 30)
+    a = mx.nd.random.randint(0, 100, shape=shape)
+    a.attach_grad()
+    bi = mx.nd.random.randint(0, 100, shape=shape[0:1]) > 50
+    ci = mx.nd.random.randint(0, 100, shape=shape[0:1]) < 50
+    mx_grad = mx.nd.zeros_like(a)
+    mx.autograd.mark_variables([a], [mx_grad], grad_reqs='add')
+    T = 3
+    for _ in range(T):
+        with mx.autograd.record():
+            b = mx.nd.contrib.boolean_mask(a, bi)
+            c = mx.nd.contrib.boolean_mask(a, ci)
+            su = b.sum() + c.sum()
+            su.backward()
+    grad = (bi + ci).asnumpy().reshape((-1,) + (1,) * (len(shape)-1))
+    grad = np.tile(grad, (1,) + shape[1:])
+    # T times
+    grad *= T
+    assert_allclose(a.grad.asnumpy(), grad)
+    a_np = a.asnumpy()
+    assert same(b.asnumpy(), a_np[bi.asnumpy().astype('bool')])
+    assert same(c.asnumpy(), a_np[ci.asnumpy().astype('bool')])
 
 
 @with_seed()
