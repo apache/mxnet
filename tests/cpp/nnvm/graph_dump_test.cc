@@ -27,7 +27,9 @@ using namespace std;
  * Test that enum and string values are in sync
  */
 TEST(Graph_dump, basic) {
-    Graph g;
-    //g.outputs.emplace_back(Node::Create(), 0, 0);
-
+  Graph g;
+  auto x = NodeEntry(Node::Create(nullptr, "x"));
+  auto w = NodeEntry(Node::Create(nullptr, "w"));
+  auto x_mul_w = MakeNode("dot", "x_mul_w", {x,w});
+  g.outputs.emplace_back(std::move(x_mul_w));
 }
