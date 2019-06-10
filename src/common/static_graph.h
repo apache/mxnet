@@ -35,21 +35,22 @@ struct Empty {};
 template<class Node_=Empty, class EdgeAttrs_=Empty, typename NodeKey_t_=size_t, typename EdgeKey_t_=size_t>
 class StaticGraph {
  protected:
-  const Empty empty = Empty();
+  const EdgeAttrs_ default_edge = EdgeAttrs_();
  public:
   typedef Node_ Node;
   typedef NodeKey_t_ NodeKey_t;
   typedef EdgeKey_t_ EdgeKey_t;
   typedef EdgeAttrs_ EdgeAttrs;
 
-  struct Edge {
+  struct Edge : EdgeAttrs {
     Edge(NodeKey_t src, NodeKey_t dst, const EdgeAttrs& attrs) :
+        EdgeAttrs(attrs),
         src(src),
-        dst(dst),
-        attrs(attrs) {}
+        dst(dst)
+     {
+     }
     NodeKey_t src;
     NodeKey_t dst;
-    EdgeAttrs attrs;
     bool operator<(const Edge &other) const {
       if (src != other.src)
         return src < other.src;
@@ -71,12 +72,8 @@ class StaticGraph {
     nodes.emplace_back(node_attrs);
   }
 
-  const Node& node(NodeKey_t node_key) {
+  Node& node(NodeKey_t node_key) {
     return nodes.at(node_key);
-  }
-
-  const Edge& edge(EdgeKey_t edge_key) {
-    return edges.at(edge_key);
   }
 
   EdgeKey_t numEdges() const {
@@ -94,11 +91,11 @@ class StaticGraph {
     edges.emplace(src, Edge{src, dst, edge_attrs});
   }
   void addEdge(NodeKey_t src, NodeKey_t dst) {
-    addEdge(src, dst, empty);
+    addEdge(src, dst, default_edge);
   }
 
-  typedef typename std::vector<Node>::iterator EdgeIterator;
-  typedef typename std::multimap<NodeKey_t, Edge>::iterator NodeIterator;
+  typedef typename std::vector<Node>::const_iterator NodeIterator;
+  typedef typename std::multimap<NodeKey_t, Edge>::const_iterator EdgeIterator;
 
   EdgeIterator edgesBegin() const {
     return edges.begin();
@@ -119,12 +116,11 @@ class StaticGraph {
   NodeIterator nodesBegin() const {
     return nodes.begin();
   }
+
   NodeIterator nodesEnd() const {
     return nodes.end();
   }
 
-  //iterator begin();
-  //iterator end();
  protected:
   std::vector<Node> nodes;
   std::multimap<NodeKey_t, Edge> edges;
