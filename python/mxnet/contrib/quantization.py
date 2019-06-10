@@ -759,7 +759,7 @@ def static_net_forward(sym, arg_params, aux_params, collector,
                     % num_batches)
     return collector, data_names
 
-def quantize_net(network, quantized_dtype='auto', exclude_layers=None, calib_data=None,
+def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_layers_match=None, calib_data=None,
                  data_shapes=None, calib_mode='none', ctx=cpu(), logger=logging):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
@@ -780,6 +780,8 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, calib_dat
         Default value is 'int8'.
     exclude_layers : list of strings
         A list of strings representing the names of the symbols that users want to excluding
+    exclude_layers_match : list of strings
+        A list of strings wildcard matching the names of the symbols that users want to excluding
         from being quantized.
     calib_data : list
         A list containing several batches of input data for calibration.
@@ -827,14 +829,15 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, calib_dat
         network.export(prefix, epoch=0)
         symnet, args, auxs = mx.model.load_checkpoint(prefix, 0)
 
-    logger.info('Exclude all FullyConnect and Flatten layers.')
     if exclude_layers is None:
         exclude_layers = []
-    for layers in list(symnet.get_internals()):
-        if layers.name.find('dense') != -1\
-                or layers.name.find('fc') != -1\
-                or layers.name.find('flatten') != -1:
-            exclude_layers.append(layers.name)
+    if exclude_layers_match is None:
+        exclude_layers_match = []
+    for name_match in exclude_layers_match:
+        for layers in list(symnet.get_internals()):
+            if layers.name.find(name_match) != -1:
+                exclude_layers.append(layers.name)
+    logger.info('These layers have been excluded %s' % exclude_layers)
 
     if ctx == mx.cpu():
         symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
