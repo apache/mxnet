@@ -33,7 +33,7 @@ namespace graph {
 struct Empty {};
 
 template<class Node_=Empty, class EdgeAttrs_=Empty, typename NodeKey_t_=size_t, typename EdgeKey_t_=size_t>
-class StaticGraph {
+class DirectedGraph {
  protected:
   const EdgeAttrs_ default_edge = EdgeAttrs_();
  public:
@@ -63,7 +63,7 @@ class StaticGraph {
     }
   };
 
-  StaticGraph(NodeKey_t num_nodes = 0) :
+  DirectedGraph(NodeKey_t num_nodes = 0) :
       edges() {
     nodes.reserve(num_nodes);
   }

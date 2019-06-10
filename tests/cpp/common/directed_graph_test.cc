@@ -18,13 +18,13 @@
  */
 
 #include <gtest/gtest.h>
-#include "common/static_graph.h"
+#include "common/directed_graph.h"
 
 using namespace common::graph;
 using namespace std;
 
-TEST(StaticGraphTest, basic) {
-  StaticGraph<> g;
+TEST(DirectedGraphTest, basic) {
+  DirectedGraph<> g;
   g.addEdge(0,4);
   g.addEdge(3,5);
   g.addEdge(2,1);
@@ -54,8 +54,8 @@ struct Edge {
 
 };
 
-TEST(StaticGraphTest, withPayload) {
-  StaticGraph<Node, Edge> g;
+TEST(DirectedGraphTest, withPayload) {
+  DirectedGraph<Node, Edge> g;
   auto x = Node{"x", 0};
   auto w = Node{"w", 0};
   auto b = Node{"b", 0};
@@ -80,8 +80,8 @@ TEST(StaticGraphTest, withPayload) {
   EXPECT_EQ(g.node(4), (Node{"add", 2}));
 }
 
-TEST(StaticGraphTest, iterators) {
-  StaticGraph<Node, Edge> g;
+TEST(DirectedGraphTest, iterators) {
+  DirectedGraph<Node, Edge> g;
   auto x = Node{"x", 0};
   auto w = Node{"w", 0};
   auto b = Node{"b", 0};
@@ -113,8 +113,8 @@ TEST(StaticGraphTest, iterators) {
   EXPECT_EQ(node_cnt, 5);
 }
 
-TEST(StaticGraphTest, iterators2) {
-  StaticGraph<> g;
+TEST(DirectedGraphTest, iterators2) {
+  DirectedGraph<> g;
   g.addEdge(3,5);
   g.addEdge(0,1);
   g.addEdge(0,1);
@@ -122,7 +122,7 @@ TEST(StaticGraphTest, iterators2) {
   g.addEdge(0,1);
   g.addEdge(2,5);
 
-  typedef StaticGraph<>::NodeKey_t node_t;
+  typedef DirectedGraph<>::NodeKey_t node_t;
   vector<pair<node_t, node_t>> edges;
   for (auto ei = g.outEdgesBegin(0); ei != g.outEdgesEnd(0); ++ei)
     edges.emplace_back(ei->second.src, ei->second.dst);
