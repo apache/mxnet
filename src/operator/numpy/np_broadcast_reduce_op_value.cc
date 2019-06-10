@@ -153,7 +153,7 @@ NNVM_REGISTER_OP(_np_max)
   })
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyMaxParam::__FIELDS__())
-.set_attr<FCompute>("FCompute<cpu>", NumpyMaxCompute<cpu, mshadow_op::max>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyMaxCompute<cpu, mshadow::red::maximum>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
