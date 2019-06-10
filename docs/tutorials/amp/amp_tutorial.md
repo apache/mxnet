@@ -259,7 +259,7 @@ To do inference with mixed precision for a trained model in FP32, you can use th
 with mx.Context(mx.gpu(0)):
     # Below is an example of converting a gluon hybrid block to a mixed precision block
     model = get_model("resnet50_v1")
-        model.collect_params().initialize(ctx=mx.gpu())
+    model.collect_params().initialize(ctx=mx.current_context())
     model.hybridize()
     model(mx.nd.zeros((1, 3, 224, 224)))
     converted_model = amp.convert_hybrid_block(model)
@@ -280,7 +280,7 @@ with mx.Context(mx.gpu(0)):
                                                                          aux_params)
 
     # Run dummy inference with the converted symbolic model
-    mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.gpu())
+    mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.current_context())
     mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
     mod.set_params(result_arg_params, result_aux_params)
     mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
