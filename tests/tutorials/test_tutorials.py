@@ -82,6 +82,9 @@ def test_gluon_customop():
 def test_gluon_custom_layer():
     assert _test_tutorial_nb('gluon/custom_layer')
 
+def test_gluon_transforms():
+    assert _test_tutorial_nb('gluon/transforms')
+
 def test_gluon_data_augmentation():
     assert _test_tutorial_nb('gluon/data_augmentation')
 

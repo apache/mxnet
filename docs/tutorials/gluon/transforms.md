@@ -39,7 +39,7 @@ Our sample looks fine, but we need to need to make a few changes before using th
 
 Ordering of dimensions (sometimes called the data layout) is important for correct usage of a neural network. Currently our samples are ordered (height, width, channel) but we need to change this to (channel, height, width) before passing to our network. We also need to change our data type. Currently it's `uint8`, but we need to change this to `float32`.
 
-MXNet Gluon provides a number of useful `transform`s for common computer vision cases like this. We will use [`ToTensor`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=totens#mxnet.gluon.data.vision.transforms.ToTensor to change the data layout and convert integers (between 0 and 255) to floats (between 0 and 1). We apply the transform to our `dataset` using the [`transform_first`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=transform_first#mxnet.gluon.data.Dataset.transform_first) method. We have 2 elements per sample here (i.e. data and label), so the transform is only applied to the first element (i.e. data).
+MXNet Gluon provides a number of useful transforms for common computer vision cases like this. We will use [`ToTensor`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=totens#mxnet.gluon.data.vision.transforms.ToTensor) to change the data layout and convert integers (between 0 and 255) to floats (between 0 and 1). We apply the transform to our `dataset` using the [`transform_first`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=transform_first#mxnet.gluon.data.Dataset.transform_first) method. We have 2 elements per sample here (i.e. data and label), so the transform is only applied to the first element (i.e. data).
 
 Advanced: `transform` (instead of [`transform_first`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=transform_first#mxnet.gluon.data.Dataset.transform_first)) can be used to transform all elements in the sample.
 
@@ -63,7 +63,7 @@ Our data has changed, while the label has been left untouched.
 
 ### `Normalize`
 
-We scaled the values of our data samples between 0 and 1 as part of [`ToTensor`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=totens#mxnet.gluon.data.vision.transforms.ToTensor but we may want or need to normalize our data instead: i.e. shift to zero-center and scale to unit variance. You can do this with the following steps:
+We scaled the values of our data samples between 0 and 1 as part of [`ToTensor`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=totens#mxnet.gluon.data.vision.transforms.ToTensor) but we may want or need to normalize our data instead: i.e. shift to zero-center and scale to unit variance. You can do this with the following steps:
 
 * **Step 1** is to calculate the mean and standard deviation of each channel for the entire training dataset.
 * **Step 2** is to use these statistics to normalize each sample for training and for inference too.
@@ -105,7 +105,7 @@ print("data range: {} to {}".format(sample_data.min().asscalar(),
 
 ### `Compose`
 
-We've now seen two examples of transforms: [`ToTensor`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=totens#mxnet.gluon.data.vision.transforms.ToTensor and `Normalize`. We applied both transforms to our `dataset` through repeated calls to `transform_first`, but Gluon has a dedicated transform to stack other transforms that's preferred. With [`Compose`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=compose#mxnet.gluon.data.vision.transforms.Compose) we can choose and order the transforms we want to apply.
+We've now seen two examples of transforms: [`ToTensor`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=totens#mxnet.gluon.data.vision.transforms.ToTensor) and `Normalize`. We applied both transforms to our `dataset` through repeated calls to `transform_first`, but Gluon has a dedicated transform to stack other transforms that's preferred. With [`Compose`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=compose#mxnet.gluon.data.vision.transforms.Compose) we can choose and order the transforms we want to apply.
 
 Caution: ordering of transforms is important. e.g. [`ToTensor`](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=totens#mxnet.gluon.data.vision.transforms.ToTensor) should be applied before `Normalize`, but after `Resize` and `CenterCrop`.
 
