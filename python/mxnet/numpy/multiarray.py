@@ -22,6 +22,12 @@
 
 from __future__ import absolute_import
 from __future__ import division
+
+try:
+    from __builtin__ import slice as py_slice
+except ImportError:
+    from builtins import slice as py_slice
+
 from array import array as native_array
 import sys
 import ctypes
@@ -98,24 +104,36 @@ class ndarray(NDArray):
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
 
     def __getitem__(self, key):
-        # TODO(junwu): calling base class __setitem__ is a temp solution
-        if self.ndim == 0:
+        # TODO(junwu): calling base class __getitem__ is a temp solution
+        ndim = self.ndim
+        shape = self.shape
+        if ndim == 0:
             if key != ():
                 raise IndexError('scalar tensor can only accept `()` as index')
         if isinstance(key, tuple) and len(key) == 0:
             return self
-        if isinstance(key, tuple) and len(key) == self.ndim\
+        elif isinstance(key, tuple) and len(key) == ndim\
                 and all(isinstance(idx, integer_types) for idx in key):
-            out = self._as_nd_ndarray()
+            out = self
             for idx in key:
                 out = out[idx]
-            return out.reshape(()).as_np_ndarray()
-        if isinstance(key, integer_types):
-            if key > self.shape[0] - 1:
+            return out
+        elif isinstance(key, integer_types):
+            if key > shape[0] - 1:
                 raise IndexError(
                     'index {} is out of bounds for axis 0 with size {}'.format(
-                        key, self.shape[0]))
+                        key, shape[0]))
             return self._at(key)
+        elif isinstance(key, py_slice):
+            if key.step is not None and key.step != 1:
+                if key.step == 0:
+                    raise ValueError("slice step cannot be zero")
+                return self.as_nd_ndarray()._get_nd_basic_indexing(key).as_np_ndarray()
+            elif key.start is not None or key.stop is not None:
+                return self._slice(key.start, key.stop)
+            else:
+                return self
+
         if isinstance(key, ndarray):
             key = key._as_nd_ndarray()
         elif isinstance(key, tuple):
@@ -368,9 +386,6 @@ class ndarray(NDArray):
         """Same as self.transpose(). This always returns a copy of self."""
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
-
-    def _slice(self, start, stop):
-        raise NotImplementedError
 
     def all(self, axis=None, out=None, keepdims=False):
         raise NotImplementedError

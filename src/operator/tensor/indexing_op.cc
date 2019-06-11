@@ -764,6 +764,7 @@ Examples::
 .add_argument("indices", "NDArray-or-Symbol", "The index array");
 
 NNVM_REGISTER_OP(one_hot)
+.add_alias("_npx_one_hot")
 .describe(R"code(Returns a one-hot array.
 
 The locations represented by `indices` take value `on_value`, while all
