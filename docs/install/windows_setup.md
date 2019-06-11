@@ -270,6 +270,9 @@ To install MXNet on a computer with a CPU processor, choose from two options:
 For Windows users, MXNet provides prebuilt binary packages.
 You can install the package directly in the R console.
 
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
+
 For CPU-only package:
 
 ```r
@@ -378,6 +381,9 @@ Note: A pre-requisite to above softwares is [Nvidia-drivers](http://www.nvidia.c
 #### Installing MXNet-R with the Prebuilt Binary Package(GPU)
 For Windows users, MXNet provides prebuilt binary packages.
 You can install the package directly in the R console after you have the above software installed.
+
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
 
 For GPU package:
 
@@ -497,6 +503,6 @@ MXNet-Scala is not yet available for Windows.
 
 ## Next Steps
 
-* [Tutorials](http://mxnet.io/tutorials/index.html)
-* [How To](http://mxnet.io/faq/index.html)
-* [Architecture](http://mxnet.io/architecture/index.html)
+* [Tutorials](../tutorials/index.md)
+* [How To](../faq/index.md)
+* [Architecture](../architecture/index.md)

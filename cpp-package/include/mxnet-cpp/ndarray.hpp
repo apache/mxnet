@@ -375,11 +375,15 @@ inline void NDArray::Save(const std::string &file_name,
 }
 
 inline size_t NDArray::Offset(size_t h, size_t w) const {
-  return (h * GetShape()[1]) + w;
+  auto const shape = GetShape();
+  CHECK_EQ(shape.size(), 2) << "The NDArray needs to be 2 dimensional.";
+
+  return (h * shape[1]) + w;
 }
 
 inline size_t NDArray::Offset(size_t c, size_t h, size_t w) const {
   auto const shape = GetShape();
+  CHECK_EQ(shape.size(), 3) << "The NDArray needs to be 3 dimensional.";
   return h * shape[0] * shape[2] + w * shape[0] + c;
 }
 
@@ -389,6 +393,13 @@ inline mx_float NDArray::At(size_t h, size_t w) const {
 
 inline mx_float NDArray::At(size_t c, size_t h, size_t w) const {
   return GetData()[Offset(c, h, w)];
+}
+
+inline mx_float NDArray::At(size_t index) const {
+  auto shape = GetShape();
+  CHECK_EQ(shape.size(), 1) << "The NDArray needs to be 1 dimensional.";
+  CHECK_LT(index, shape[0]) << "Specified index is out of range.";
+  return GetData()[index];
 }
 
 inline size_t NDArray::Size() const {

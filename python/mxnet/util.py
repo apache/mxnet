@@ -89,6 +89,10 @@ def is_np_shape():
     the shapes of zero-size tensors. This is turned off by default for keeping
     backward compatibility.
 
+    In the NumPy shape semantics, `-1` indicates an unknown size. For example,
+    `(-1, 2, 2)` means that the size of the first dimension is unknown. Its size
+    may be inferred during shape inference.
+
     Please note that this is designed as an infrastructure for the incoming
     MXNet-NumPy operators. Legacy operators registered in the modules
     `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts

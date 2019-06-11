@@ -1950,10 +1950,10 @@ struct ReverseParam : public dmlc::Parameter<ReverseParam> {
 #define REVERSE_MAX_DIM 10U
 
 struct reverse {
-  MSHADOW_XINLINE static int ReverseIndex(index_t idx,
-                                          index_t nreversedim,
-                                          const index_t * stride_,
-                                          const index_t * trailing_) {
+  MSHADOW_XINLINE static index_t ReverseIndex(index_t idx,
+                                              index_t nreversedim,
+                                              const index_t * stride_,
+                                              const index_t * trailing_) {
     index_t outputIndex = idx;
     for (index_t i = 0; i < nreversedim; ++i) {
       const index_t low = outputIndex % trailing_[i];

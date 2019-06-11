@@ -30,7 +30,8 @@ from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent, _brief_print_list
+from .utils import _indent, _brief_print_list, shape_is_known
+from .. import is_np_shape
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -156,7 +157,20 @@ class Parameter(object):
 
     @property
     def shape(self):
-        return self._shape
+        """The shape of the parameter.
+
+        By default, an unknown dimension size is 0. However, when the NumPy semantic
+        is turned on, unknown dimension size is -1.
+        """
+        if self._shape is None:
+            return None
+        elif is_np_shape():
+            # Parameters shouldn't be zero-size. If one of its dimension is 0,
+            # it means the parameter isn't initialized. In the NumPy semantics,
+            # the unknown dimension should be marked with -1.
+            return tuple(i if i != 0 else -1 for i in self._shape)
+        else:
+            return self._shape
 
     @shape.setter
     def shape(self, new_shape):
@@ -227,7 +241,7 @@ class Parameter(object):
         self._trainer._row_sparse_pull(self, results, row_id)
         return results
 
-    def _load_init(self, data, ctx):
+    def _load_init(self, data, ctx, cast_dtype=False):
         """(Re)initializes by loading from data."""
         if self.shape:
             for self_dim, data_dim in zip(self.shape, data.shape):
@@ -237,9 +251,12 @@ class Parameter(object):
                         self.name, str(self.shape), str(data.shape))
             self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
         if self.dtype:
+            if cast_dtype and np.dtype(self.dtype).type != data.dtype:
+                data = data.astype(self.dtype, copy=False)
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter '%s' from saved params: " \
-                "dtype incompatible expected %s vs saved %s"%(
+                "dtype incompatible expected %s vs saved %s. " \
+                "Set cast_dtype=True to cast the dtype of saved params."%(
                     self.name, str(self.dtype), str(data.dtype))
         if self._stype != data.stype:
             data = data.tostype(self._stype)
@@ -269,7 +286,7 @@ class Parameter(object):
             return
         init, ctx, default_init, data = self._deferred_init
         self._deferred_init = ()
-        assert self.shape is not None and np.prod(self.shape) > 0, \
+        assert shape_is_known(self.shape), \
             "Cannot initialize Parameter '%s' because it has " \
             "invalid shape: %s. Please specify in_units, " \
             "in_channels, etc for `Block`s."%(
@@ -380,7 +397,7 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
-        if not self.shape or np.prod(self.shape) <= 0:
+        if not shape_is_known(self.shape):
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init, None)
                 return
@@ -877,7 +894,7 @@ class ParameterDict(object):
         ndarray.save(filename, arg_dict)
 
     def load(self, filename, ctx=None, allow_missing=False,
-             ignore_extra=False, restore_prefix=''):
+             ignore_extra=False, restore_prefix='', cast_dtype=False):
         """Load parameters from file.
 
         Parameters
@@ -893,6 +910,9 @@ class ParameterDict(object):
             present in this ParameterDict.
         restore_prefix : str, default ''
             prepend prefix to names of stored parameters before loading.
+        cast_dtype : bool, default False
+            Cast the data type of the NDArray loaded from the checkpoint to the dtype
+            provided by the Parameter if any.
         """
         if restore_prefix:
             for name in self.keys():
@@ -918,4 +938,4 @@ class ParameterDict(object):
                     "Please make sure source and target networks have the same prefix."%(
                         name[lprefix:], filename, _brief_print_list(self._params.keys()))
                 continue
-            self[name]._load_init(arg_dict[name], ctx)
+            self[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype)
