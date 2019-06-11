@@ -1446,7 +1446,7 @@ def test_ndarray_indexing():
         try:
             with mx.autograd.record():
                 x[index] = y
-                # TODO: figure out why `None` doesn't raise
+                # `a[None] = v` is equivalent to `a[...] = v` which doesn't raise
                 if index is not None:
                     assert False, 'failed with index = {}'.format(index)  # should not reach here
         except mx.base.MXNetError as err:
