@@ -18,19 +18,19 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
- * \file sample_multinomial_op.h
+ * Copyright (c) 2019 by Contributors
+ * \file np_multinomial_op.h
  * \brief Operator for sampling from multinomial distributions
  */
-#ifndef MXNET_OPERATOR_NUMPY_NP_RANDOM_SAMPLE_MULTINOMIAL_OP_H_
-#define MXNET_OPERATOR_NUMPY_NP_RANDOM_SAMPLE_MULTINOMIAL_OP_H_
+#ifndef MXNET_OPERATOR_NUMPY_NP_RANDOM_MULTINOMIAL_OP_H_
+#define MXNET_OPERATOR_NUMPY_NP_RANDOM_MULTINOMIAL_OP_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
-#include "../operator_common.h"
-#include "../elemwise_op_common.h"
+#include "../../operator_common.h"
+#include "../../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -64,10 +64,17 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  if (param.pvals.has_value()) {
-    
+  TShape oshape;
+  if (param.size.has_value()) {
+    const mxnet::Tuple<int>& size = param.size.value();
+    for (int i = 0; i < size.ndim(); ++i) {
+      oshape[i] = size[i];
+    }
+    oshape[size.ndim()] = param.pvals.ndim();
+  } else {
+    oshape[0] = param.pvals.ndim();
   }
-  // TODO calculate the output shape
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return true;
 }
 
@@ -110,15 +117,15 @@ struct SampleMultinomialKernel {
 
 
 template<typename xpu>
-void SampleMultinomialForward(const nnvm::NodeAttrs& attrs,
+void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<TBlob>& inputs,
                               const std::vector<OpReqType>& req,
                               const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
-  const SampleMultinomialParam& param = nnvm::get<SampleMultinomialParam>(attrs.parsed);
-
+  const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);
+  // inputs -> 
   index_t K = inputs[0].shape_[inputs[0].ndim()-1];
   index_t N = inputs[0].Size()/K;
   index_t M = outputs[0].Size()/N;

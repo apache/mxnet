@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file np_sample_multinomial_op.h
+ * \file np_multinomial_op.h
  * \brief Operator for sampling from multinomial distributions
  */
 #include "./np_multinomial_op.h"
@@ -62,7 +62,7 @@ NNVM_REGISTER_OP(_np_multinomial)
 .set_attr<FCompute>("FCompute<cpu>", NumpyMultinomialForward<cpu>)
 .add_argument("data", "NDArray-or-Symbol",
               "Distribution probabilities. Must sum to one on the last axis.")
-.add_arguments(SampleMultinomialParam::__FIELDS__());
+.add_arguments(NumpyMultinomialParam::__FIELDS__());
 
 
 struct SampleMultinomialBackwardCPUKernel {
