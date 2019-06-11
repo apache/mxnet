@@ -187,6 +187,7 @@ inline bool NumpyMaxShape(const nnvm::NodeAttrs& attrs,
     for (int i = 0; i < axes.ndim(); ++i) {
       if (ishape[axes[i]] == 0) {
         is_all_reducded_axes_not_zero = false;
+        break;
       }
     }
   } else {

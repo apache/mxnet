@@ -253,7 +253,7 @@ def test_np_max():
                     if hybridize:
                         test_max.hybridize()
                     if is_int(itype):
-                        x = mx.nd.arange(120).reshape((2 ,3 ,4 ,5))
+                        x = mx.nd.arange(120).reshape((2, 3, 4, 5))
                         x = mx.nd.array(x)
                     else:
                         x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
