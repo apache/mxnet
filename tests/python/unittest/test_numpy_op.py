@@ -20,10 +20,11 @@ from __future__ import absolute_import
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx
+from mxnet.base import MXNetError
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient
-from common import with_seed
+from common import assertRaises, with_seed
 import random
 
 
@@ -235,6 +236,12 @@ def test_np_max():
                 return temp
             raise ValueError('axis should be int or None or ()')
 
+    def _test_np_max_exception(shape, dim):
+        x = _np.random.uniform(-1.0, 1.0, shape)
+        x = mx.nd.array(x).as_np_ndarray()
+        out = mx.np.max(x)
+        assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
+
     in_data_dim = random.choice([2, 3, 4])
     shape = rand_shape_nd(in_data_dim, dim=3)
     for hybridize in [False, True]:
@@ -278,12 +285,13 @@ def test_np_max():
 
     # test zero and zero dim
     shapes = [(), (0), (2, 0), (0, 2, 1)]
+    exceptions = [False, True, True, True]
     dims = [0] * len(shapes)
-    for shape, dim in zip(shapes, dims):
-        x = _np.random.uniform(-1.0, 1.0, shape)
-        x = mx.nd.array(x).as_np_ndarray()
-        out = mx.np.max(x)
-        assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
+    for shape, exception, dim in zip(shapes, exceptions, dims):
+        if exception:
+            assertRaises(MXNetError, _test_np_max_exception, shape, dim)
+        else:
+            _test_np_max_exception(shape, dim)
 
 
 @with_seed()
