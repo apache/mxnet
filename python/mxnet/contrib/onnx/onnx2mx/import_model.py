@@ -24,7 +24,7 @@ from .import_onnx import GraphProto
 def import_model(model_file):
     """Imports the ONNX model file, passed as a parameter, into MXNet symbol and parameters.
     Operator support and coverage -
-    https://cwiki.apache.org/confluence/display/MXNET/MXNet-ONNX+Integration
+    https://cwiki.apache.org/confluence/display/MXNET/ONNX+Operator+Coverage
 
     Parameters
     ----------
