@@ -343,9 +343,9 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 retries -= 1
                 if retries <= 0:
                     raise e
-                else:
-                    print('download failed due to {}, retrying, {} attempt{} left'
-                          .format(repr(e), retries, 's' if retries > 1 else ''))
+
+                print('download failed due to {}, retrying, {} attempt{} left'
+                      .format(repr(e), retries, 's' if retries > 1 else ''))
 
     return fname
 
