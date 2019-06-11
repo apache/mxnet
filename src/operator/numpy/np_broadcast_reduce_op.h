@@ -180,22 +180,22 @@ inline bool NumpyMaxShape(const nnvm::NodeAttrs& attrs,
   }
   const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
   // check the case where the reduction axis should not be zero
-  bool is_all_reducded_axis_not_zero = true;
+  bool is_all_reducded_axes_not_zero = true;
   const TShape& ishape = (*in_attrs)[0];
   if (param.axis.has_value()) {
     const mxnet::Tuple<int>& axes = param.axis.value();
     for (int i = 0; i < axes.ndim(); ++i) {
       if (ishape[axes[i]] == 0) {
-        is_all_reducded_axis_not_zero = false;
+        is_all_reducded_axes_not_zero = false;
       }
     }
   } else {
     if (ishape.Size() == 0) {
       // global reduction should excuted only when input have size more than 0
-      is_all_reducded_axis_not_zero = false;
+      is_all_reducded_axes_not_zero = false;
     }
   }
-  CHECK(is_all_reducded_axis_not_zero)
+  CHECK(is_all_reducded_axes_not_zero)
     << "zero-size array to reduction operation maximum which has no identity";
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      NumpyReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims));
