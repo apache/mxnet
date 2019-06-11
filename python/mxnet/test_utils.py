@@ -215,8 +215,8 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     if unused_nnz > 0:
         raise ValueError("not supported for this density: %s"
                          " for this shape (%s,%s)" % (density, num_rows, num_cols))
-    else:
-        return mx.nd.array(output_arr).tostype("csr")
+
+    return mx.nd.array(output_arr).tostype("csr")
 
 
 def assign_each(the_input, function):
@@ -1409,8 +1409,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 traceback.print_exc()
                 if raise_on_err:
                     raise e
-                else:
-                    print(str(e))
+
+                print(str(e))
 
     # train
     if grad_req != 'null':
@@ -1436,8 +1436,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                     traceback.print_exc()
                     if raise_on_err:
                         raise e
-                    else:
-                        print(str(e))
+
+                    print(str(e))
 
     return gt
 
@@ -1516,9 +1516,9 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
             retries -= 1
             if retries <= 0:
                 raise e
-            else:
-                print("download failed, retrying, {} attempt{} left"
-                      .format(retries, 's' if retries > 1 else ''))
+
+            print("download failed, retrying, {} attempt{} left"
+                  .format(retries, 's' if retries > 1 else ''))
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
 
