@@ -295,6 +295,7 @@ def test_np_max():
 
 
 @with_seed()
+@npx.use_np_shape
 def test_np_transpose():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
