@@ -71,3 +71,12 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "k_nd": DEFAULT_K_ND,
                    "p_nd": DEFAULT_P_ND,
                    "axis": DEFAULT_AXIS}
+
+# These are names of MXNet operator parameters that is of type NDArray.
+# We maintain this list to automatically recognize these parameters are to be
+# given as NDArray and translate users inputs such as a shape tuple, Numpy Array or
+# a list to MXNet NDArray. This is just a convenience added so benchmark utility users
+# can just say shape of the tensor, and we automatically create Tensors.
+PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp",
+                          "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
+                          "low", "high", "weight", "bias", "moving_mean", "moving_var"]

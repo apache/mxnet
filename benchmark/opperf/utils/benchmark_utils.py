@@ -23,6 +23,7 @@ from mxnet import nd
 from .ndarray_utils import get_mx_ndarray, nd_forward_and_profile, nd_forward_backward_and_profile
 from .common_utils import merge_map_list
 from .op_registry_utils import prepare_op_inputs
+from benchmark.opperf.rules.default_params import PARAMS_OF_TYPE_NDARRAY
 
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
@@ -31,9 +32,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key in ["lhs", "rhs", "data", "base", "exp",
-                       "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
-                       "low", "high", "weight", "bias"]:
+            if key in PARAMS_OF_TYPE_NDARRAY:
                 kwargs[key] = get_mx_ndarray(ctx=ctx, in_tensor=value,
                                              dtype=dtype,
                                              initializer=nd.normal,

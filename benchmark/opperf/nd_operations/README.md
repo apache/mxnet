@@ -61,7 +61,6 @@
 39. linalg_gemm2
 40. crop
 41. rmsprop_update
-42. FullyConnected
 43. RNN
 44. argmin
 45. SoftmaxOutput
@@ -119,14 +118,12 @@
 97. transpose
 98. linalg_syrk
 99. squeeze
-100. Dropout
 101. ROIPooling
 102. ftrl_update
 103. SliceChannel
 104. slice_like
 105. depth_to_space
 106. linalg_maketrian
-107. BatchNorm
 108. pad
 109. LayerNorm
 110. split
