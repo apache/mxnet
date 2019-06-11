@@ -1574,7 +1574,12 @@ def test_ndarray_indexing():
                   ((1, Ellipsis, -1), False),
                   ((slice(2), Ellipsis, None, 0), False),
                   (None, False),
-                  ((1, None, -2, 3, -4), False)]
+                  ((1, None, -2, 3, -4), False),
+                  (([1, 2], slice(3, 5), None, None, [3, 4]), False),
+                  ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
+                  ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
+                  ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
+            ]
     for index in index_list:
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
