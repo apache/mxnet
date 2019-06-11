@@ -114,6 +114,7 @@
                 <include>NDArrayRandomAPIBase.scala</include>
                 <include>javaapi/NDArrayBase.scala</include>
                 <include>SymbolAPIBase.scala</include>
+                <include>SymbolBase.scala</include>
                 <include>SymbolRandomAPIBase.scala</include>
               </includes>
               <followSymlinks>false</followSymlinks>
