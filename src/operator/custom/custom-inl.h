@@ -43,6 +43,7 @@
 #include <condition_variable>
 #include <queue>
 #include "../operator_common.h"
+#include "../../profiler/custom_op_profiler.h"
 
 namespace mxnet {
 namespace op {
@@ -76,7 +77,8 @@ class CustomOperator {
             bool training, const std::vector<NDArray>& arrs,
             const std::vector<int>& tags,
             const std::unordered_set<int>& output_tags,
-            const std::vector<NDArray>& outputs) {
+            const std::vector<NDArray>& outputs,
+	          const std::string op_type = "") {
     if (naive_engine_) {
       func();
       for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
@@ -97,7 +99,9 @@ class CustomOperator {
       bool prev_training = Imperative::Get()->set_is_training(training);
 
       try {
+        profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
         func();
+        profiler::CustomOpProfiler::Get()->OnCustomEnd();
       } catch (dmlc::Error& e) {
         exception_ =
             std::make_shared<std::exception_ptr>(std::current_exception());
