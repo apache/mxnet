@@ -42,24 +42,24 @@ def load_module(sym_filepath, params_filepath):
     """
     if not (os.path.isfile(sym_filepath) and os.path.isfile(params_filepath)):
         raise ValueError("Symbol and params files provided are invalid")
-    else:
-        try:
-            # reads symbol.json file from given path and
-            # retrieves model prefix and number of epochs
-            model_name = sym_filepath.rsplit('.', 1)[0].rsplit('-', 1)[0]
-            params_file_list = params_filepath.rsplit('.', 1)[0].rsplit('-', 1)
-            # Setting num_epochs to 0 if not present in filename
-            num_epochs = 0 if len(params_file_list) == 1 else int(params_file_list[1])
-        except IndexError:
-            logging.info("Model and params name should be in format: "
-                         "prefix-symbol.json, prefix-epoch.params")
-            raise
 
-        sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
+    try:
+        # reads symbol.json file from given path and
+        # retrieves model prefix and number of epochs
+        model_name = sym_filepath.rsplit('.', 1)[0].rsplit('-', 1)[0]
+        params_file_list = params_filepath.rsplit('.', 1)[0].rsplit('-', 1)
+        # Setting num_epochs to 0 if not present in filename
+        num_epochs = 0 if len(params_file_list) == 1 else int(params_file_list[1])
+    except IndexError:
+        logging.info("Model and params name should be in format: "
+                     "prefix-symbol.json, prefix-epoch.params")
+        raise
 
-        # Merging arg and aux parameters
-        params = {}
-        params.update(arg_params)
-        params.update(aux_params)
+    sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, num_epochs)
 
-        return sym, params
+    # Merging arg and aux parameters
+    params = {}
+    params.update(arg_params)
+    params.update(aux_params)
+
+    return sym, params
