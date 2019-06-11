@@ -126,8 +126,8 @@ class Predictor {
  * 3. input_shape: Shape of input data to the model. Since this class will be running one inference at a time,
  *                 the input shape is required to be in format Shape(1, number_of_channels, height, width)
  *                 The input image will be resized to (height x width) size before running the inference.
- * 4. use_gpu: if run inference on GPU
- * 5. dataset: data file to be used for inference
+ * 4. use_gpu: determine if run inference on GPU
+ * 5. dataset: data file (.rec) to be used for inference
  * 6. data_nthreads: number of threads for data loading
  * 7. data_layer_type: data type for data layer
  * 8. rgb_mean: mean value to be subtracted on R/G/B channel
@@ -137,8 +137,8 @@ class Predictor {
  * 12. benchmark: use dummy data for inference
  *
  * The constructor will:
- *  1. Load the model and parameter files.
- *  2. Create ImageRecordIter by using the given dataset file.
+ *  1. Create ImageRecordIter based on the given dataset file.
+ *  2. Load the model and parameter files.
  *  3. Infer and construct NDArrays according to the input argument and create an executor.
  */
 Predictor::Predictor(const std::string& model_json_file,
@@ -175,8 +175,8 @@ Predictor::Predictor(const std::string& model_json_file,
   // Load the model
   LoadModel(model_json_file);
   // Initilize the parameters
-  // benchmark=false, load from params file
-  // benchmark=true, randomly initializes parameters
+  // benchmark=false, load parameters from file
+  // benchmark=true, randomly initialize parameters
   if (!benchmark_) {
     LoadParameters(model_params_file);
   } else {
@@ -206,7 +206,7 @@ Predictor::Predictor(const std::string& model_json_file,
 }
 
 /*
- * The following function is used to get the data type for input data
+ * The following function is used to get the data layer type for input data
  */
 int Predictor::GetDataLayerType() {
   int ret_type = -1;
@@ -347,8 +347,8 @@ void Predictor::InitParameters() {
 }
 
 /*
- * The following function runs the forward pass on the model.
- * for dummy data
+ * The following function runs the forward pass on the model
+ * and use dummy data for benchmark.
  */
 void Predictor::BenchmarkScore(int num_inference_batches) {
   // Create dummy data
@@ -400,8 +400,8 @@ bool Predictor::AdvanceDataIter(int skipped_batches) {
 }
 
 /*
- * The following function runs the forward pass on the model.
- * for real data
+ * The following function runs the forward pass on the model
+ * and use real data for testing accuracy and performance.
  */
 void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
   // Create metrics
