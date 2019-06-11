@@ -149,8 +149,8 @@ void AggregateStats::DumpTable(std::ostream& os, int sort_by, int ascending) {
            << (is_memory ? ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
                     MicroToMilli(static_cast<double>(data.total_aggregate_)/ data.total_count_));
         os << std::endl;
-        heap.pop();
       }
+      heap.pop();
     }
     os << std::endl;
   }
