@@ -812,20 +812,20 @@ class ImageDetIter(ImageIter):
             if self.last_batch_handle == 'discard':
                 raise StopIteration
             # if the option is 'roll_over', throw StopIteration and cache the data
-            elif self.last_batch_handle == 'roll_over' and \
+            if self.last_batch_handle == 'roll_over' and \
                 self._cache_data is None:
                 self._cache_data = batch_data
                 self._cache_label = batch_label
                 self._cache_idx = i
                 raise StopIteration
+
+            _ = self._batchify(batch_data, batch_label, i)
+            if self.last_batch_handle == 'pad':
+                self._allow_read = False
             else:
-                _ = self._batchify(batch_data, batch_label, i)
-                if self.last_batch_handle == 'pad':
-                    self._allow_read = False
-                else:
-                    self._cache_data = None
-                    self._cache_label = None
-                    self._cache_idx = None
+                self._cache_data = None
+                self._cache_label = None
+                self._cache_idx = None
 
         return io.DataBatch([batch_data], [batch_label], pad=pad)
 
