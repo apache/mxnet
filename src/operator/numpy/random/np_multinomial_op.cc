@@ -22,45 +22,27 @@
  * \file np_sample_multinomial_op.h
  * \brief Operator for sampling from multinomial distributions
  */
-#include "./np_sample_multinomial_op.h"
+#include "./np_multinomial_op.h"
 
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(SampleMultinomialParam);
+DMLC_REGISTER_PARAMETER(NumpyMultinomialParam);
 
 
-NNVM_REGISTER_OP(_sample_multinomial)
-.add_alias("sample_multinomial")
-.describe(R"code(Concurrent sampling from multiple multinomial distributions.
-*data* is an *n* dimensional array whose last dimension has length *k*, where
-*k* is the number of possible outcomes of each multinomial distribution. This
-operator will draw *shape* samples from each distribution. If shape is empty
-one sample will be drawn from each distribution.
-If *get_prob* is true, a second array containing log likelihood of the drawn
-samples will also be returned. This is usually used for reinforcement learning
-where you can provide reward as head gradient for this array to estimate
-gradient.
-Note that the input distribution must be normalized, i.e. *data* must sum to
-1 along its last axis.
-Examples::
-   probs = [[0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0]]
-   // Draw a single sample for each distribution
-   sample_multinomial(probs) = [3, 0]
-   // Draw a vector containing two samples for each distribution
-   sample_multinomial(probs, shape=(2)) = [[4, 2],
-                                           [0, 0]]
-   // requests log likelihood
-   sample_multinomial(probs, get_prob=True) = [2, 1], [0.2, 0.3]
+NNVM_REGISTER_OP(_np_multinomial)
+.describe(R"Draw samples from a multinomial distribution. "
+"The multinomial distribution is a multivariate generalisation of the binomial distribution. "
+"Take an experiment with one of p possible outcomes. "
+"An example of such an experiment is throwing a dice, where the outcome can be 1 through 6. "
+"Each sample drawn from the distribution represents n such experiments. "
+"Its values, X_i = [X_0, X_1, ..., X_p], represent the number of times the outcome was i.
 )code")
-.set_num_inputs(1)
-.set_num_outputs([](const nnvm::NodeAttrs& attrs) {
-    const SampleMultinomialParam& param = nnvm::get<SampleMultinomialParam>(attrs.parsed);
-    return param.get_prob ? 2U : 1U;
-  })
-.set_attr_parser(ParamParser<SampleMultinomialParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", SampleMultinomialOpShape)
-.set_attr<nnvm::FInferType>("FInferType", SampleMultinomialOpType)
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyMultinomialParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyMultinomialOpShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyMultinomialOpType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {
       return std::vector<ResourceRequest>{
@@ -77,7 +59,7 @@ Examples::
       return MakeZeroGradNodes(n, ograds);
     }
   })
-.set_attr<FCompute>("FCompute<cpu>", SampleMultinomialForward<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyMultinomialForward<cpu>)
 .add_argument("data", "NDArray-or-Symbol",
               "Distribution probabilities. Must sum to one on the last axis.")
 .add_arguments(SampleMultinomialParam::__FIELDS__());
