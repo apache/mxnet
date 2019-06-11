@@ -78,7 +78,7 @@ class CustomOperator {
             const std::vector<int>& tags,
             const std::unordered_set<int>& output_tags,
             const std::vector<NDArray>& outputs,
-	          const std::string op_type = "") {
+            const std::string op_type = "") {
     if (naive_engine_) {
       func();
       for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
