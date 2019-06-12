@@ -43,8 +43,8 @@ inline float MicroToMilli(const DType micro) {
 }
 
 template<typename DType>
-inline float ByteToKilobyte(const DType micro) {
-  return static_cast<float>(static_cast<double>(micro) / 1000);
+inline float ByteToKilobyte(const DType byte) {
+  return static_cast<float>(static_cast<double>(byte) / 1000);
 }
 
 inline std::priority_queue<pi>

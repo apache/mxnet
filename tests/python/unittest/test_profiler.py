@@ -22,6 +22,7 @@ from mxnet import profiler
 import time
 import os
 import json
+from collections import OrderedDict
 
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
     profiler.set_config(profile_symbolic=True,
@@ -254,7 +255,7 @@ def test_aggregate_stats_sorting():
         assert(lst == sorted(lst, reverse = not asc))
 
     def check_sorting(debug_str, sort_by, ascending):
-        target_dict = json.loads(debug_str)
+        target_dict = json.loads(debug_str, object_pairs_hook=OrderedDict)
         lst = []
         for domain_name, domain in target_dict['Time'].items():
             lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
