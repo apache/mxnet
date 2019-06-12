@@ -240,8 +240,10 @@ def test_aggregate_stats_valid_json_return():
     debug_str = profiler.dumps(format = 'json')
     assert(len(debug_str) > 0)
     print(debug_str)
-    # if the format is wrong, an exception will be thrown
+    # try:
     target_dict = json.loads(debug_str)
+    # except:
+    # print("Invalid json string")
     profiler.set_state('stop')
 
 def test_aggregate_stats_sorting():
@@ -267,6 +269,8 @@ def test_aggregate_stats_sorting():
     for sb in sort_by_options:
         for asc in ascending_options:
             debug_str = profiler.dumps(format = 'json', sort_by = sb, ascending = asc)
+            print(debug_str)
+            print(sb, asc)
             check_sorting(debug_str, sb, asc)
     profiler.set_state('stop')
 

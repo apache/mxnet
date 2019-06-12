@@ -203,7 +203,6 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
                 MicroToMilli(data.max_aggregate_))
             << "," << std::endl
             << "                \"Avg\": "
-            << std::setprecision(4)
             << (data.type_ == AggregateStats::StatData::kCounter ?
                  ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
                  MicroToMilli(static_cast<double>(data.total_aggregate_) /  data.total_count_))
