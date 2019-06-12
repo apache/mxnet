@@ -29,55 +29,53 @@ namespace mxnet {
 namespace profiler {
 
 using Tid = std::thread::id;
-using TaskPtr = std::shared_ptr<ProfileTask>;
+using TaskPtr = std::unique_ptr<ProfileTask>;
 
 class CustomOpProfiler {
 public:
     static CustomOpProfiler* Get() {
-        static std::mutex mtx;
-        static std::shared_ptr<CustomOpProfiler> prof = nullptr;
-        if (!prof) {
-            std::unique_lock<std::mutex> lk(mtx);
-            if (!prof)
-                prof = std::make_shared<CustomOpProfiler>();
-            }
-        return prof.get();
+        static CustomOpProfiler inst;
+        return &inst;
     }
 
     void OnCustomBegin(const std::string& op_type) {
-    Tid tid = std::this_thread::get_id();
-    const std::string task_name = op_type + "::pure_python" ;
-    std::lock_guard<std::mutex> lock(mutex_);
-    tid_to_op_type_[tid] = op_type;
-    tasks_[tid] = std::make_shared<ProfileTask>(task_name.c_str(), &custom_op_domain);
-    tasks_[tid]->start();
+        const Tid tid = std::this_thread::get_id();
+        const std::string task_name = op_type + "::pure_python" ;
+        std::lock_guard<std::mutex> lock(mutex_);
+        tid_to_op_type_[tid] = op_type;
+        tasks_[tid] = std::make_unique<ProfileTask>(task_name.c_str(), &custom_op_domain);
+        tasks_[tid]->start();
     }
 
     void OnCustomEnd() {
-    Tid tid = std::this_thread::get_id();
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (tasks_.find(tid) == tasks_.end()) {
-        LOG(WARNING) << "This should never happen";
-    }
-    tasks_[tid]->stop();
-    tasks_.erase(tid);
-    tid_to_op_type_.erase(tid);
+        const Tid tid = std::this_thread::get_id();
+        std::lock_guard<std::mutex> lock(mutex_);
+        CHECK(tasks_.find(tid) != tasks_.end());
+        tasks_[tid]->stop();
+        tasks_.erase(tid);
+        tid_to_op_type_.erase(tid);
     }
 
 
-    const char* GetDisplayName(const std::string& op_type) {
-    Tid tid = std::this_thread::get_id();
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
-        return NULL;
+    const char* GenerateDisplayName(const char* op_type_ptr) {
+        if (!op_type_ptr) {
+            return NULL;
+        }
+        Tid tid = std::this_thread::get_id(); 
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
+            return NULL;
+        }
+        std::string op_type = std::string(op_type_ptr);
+        std::string name = tid_to_op_type_[tid] + "::" + op_type;
+        display_names_.insert(name);
+        return display_names_.find(name)->c_str();
     }
-    std::string name = tid_to_op_type_[tid] + "::" + op_type;
-    display_names_.insert(name);
-    return display_names_.find(name)->c_str();
-    }
+
+protected:
+    CustomOpProfiler(){};
 
 private:
-
     /*! \brief */
     std::mutex mutex_;
     /* !\brief task names for sub-operators in custom ops */

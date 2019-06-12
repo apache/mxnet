@@ -334,7 +334,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
   }
 #endif
   const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
-	const char* d_name = profiling ? profiler::CustomOpProfiler::Get()->GetDisplayName(opr_name) : NULL;
+	const char* d_name = profiling && opr_name ? profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) : NULL;
 	const char* display_name = d_name ? d_name : opr_name;
 	ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, display_name, wait);
 	opr->temporary = true;
