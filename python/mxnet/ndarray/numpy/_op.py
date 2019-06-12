@@ -26,7 +26,7 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip']
+           'clip', 'swapaxes']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -495,3 +495,24 @@ def clip(a, a_min, a_max, out=None):
     if a_max is None:
         a_max = float('inf')
     return _npi.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : ndarray
+        Swapped array. This is always a copy of the input array.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)

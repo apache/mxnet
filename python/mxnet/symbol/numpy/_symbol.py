@@ -22,7 +22,7 @@ from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
-from ...base import _LIB, SymbolHandle, numeric_types
+from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
 from ...util import _sanity_check_params, check_call, set_module
 from ...context import current_context
 from ..symbol import Symbol
@@ -30,13 +30,28 @@ from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
-           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power']
+           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'swapaxes']
+
+
+def _num_outputs(sym):
+    return len(sym.as_nd_ndarray())
 
 
 @set_module('mxnet.symbol.numpy')
 class _Symbol(Symbol):
-    def __getitem__(self, item):
-        raise NotImplementedError
+    def __getitem__(self, key):
+        num_outputs = _num_outputs(self)
+        if num_outputs == 1:
+            raise NotImplementedError
+        if not isinstance(key, int):
+            raise NotImplementedError
+        if key >= num_outputs:
+            # Important, python determines the end by this exception
+            raise IndexError
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetOutput(
+            self.handle, mx_uint(key), ctypes.byref(handle)))
+        return _Symbol(handle=handle)
 
     def __setitem__(self, key, value):
         raise NotImplementedError
@@ -1171,6 +1186,27 @@ def clip(a, a_min, a_max, out=None):
     if a_max is None:
         a_max = float('inf')
     return _npi.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : _Symbol
+        Swapped array symbol.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
 
 
 _set_np_symbol_class(_Symbol)
