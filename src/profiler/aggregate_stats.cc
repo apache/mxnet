@@ -146,7 +146,8 @@ void AggregateStats::DumpTable(std::ostream& os, int sort_by, int ascending) {
            << (is_memory ? ByteToKilobyte(data.max_aggregate_) : MicroToMilli(data.max_aggregate_))
            << " "
            << std::fixed << std::setw(16) << std::setprecision(4) << std::right
-           << (is_memory ? ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
+           << (data.type_ == AggregateStats::StatData::kCounter ?
+                    ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
                     MicroToMilli(static_cast<double>(data.total_aggregate_)/ data.total_count_));
         os << std::endl;
       }
@@ -202,9 +203,10 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
                 MicroToMilli(data.max_aggregate_))
             << "," << std::endl
             << "                \"Avg\": "
-            << (is_memory ?
-                ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
-                MicroToMilli(static_cast<double>(data.total_aggregate_) /  data.total_count_))
+            << std::setprecision(4)
+            << (data.type_ == AggregateStats::StatData::kCounter ?
+                 ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
+                 MicroToMilli(static_cast<double>(data.total_aggregate_) /  data.total_count_))
             << std::endl
             << "            }" << std::endl;
       }
@@ -223,7 +225,8 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
      << "," << std::endl
      << "    \"Unit\": {" << std::endl
      << "        \"Time\": \"ms\"," << std::endl
-     << "        \"Memory\": \"kb\"," << std::endl
+     << "        \"Memory\": \"kb\"" << std::endl
+     << "    }" << std::endl
      << "}" << std::endl
      << std::flush;
   os.copyfmt(state);
