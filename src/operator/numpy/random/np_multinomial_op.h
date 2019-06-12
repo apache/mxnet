@@ -56,7 +56,6 @@ struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
   }
 };
 
-
 inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
                                      std::vector<TShape> *in_attrs,
                                      std::vector<TShape> *out_attrs) {
@@ -76,7 +75,6 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
   return true;
 }
-
 
 inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
                                     std::vector<int>* in_attrs,
@@ -98,7 +96,7 @@ struct multinomial_kernel {
       float loc = uniform[i * num_exp + j];
       float acc = 0.0;
       bool found = false;
-      for (uint32_t k = 0; k < pvals.ndim(); ++k) {
+      for (int k = 0; k < pvals.ndim(); ++k) {
         acc += pvals[k];
         if (acc > loc) {
           found = true;
@@ -112,7 +110,6 @@ struct multinomial_kernel {
     }
   }
 };
-
 
 template<typename xpu>
 void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
