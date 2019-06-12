@@ -21,7 +21,7 @@ It is often helpful to check the execution time of each operation in a neural ne
 
 ## The incorrect way to profile
 
-If you have just start to use MXNet, you might be tempted to measure the execution time of your model using Python's `time` module like shown below:
+If you have just started to use MXNet, you might be tempted to measure the execution time of your model using Python's `time` module like shown below:
 
 ```python
 from time import time
@@ -45,7 +45,7 @@ print('Time for converting to numpy: %f sec' % (time() - start))
 
 From the timings above, it seems as if converting to numpy takes lot more time than multiplying two large matrices. That doesn't feel right.
 
-This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. `asnumpy` however, waits for the result to be computed and hence takes longer time. Other examples of 'blocking' operations include `asscalar` and `wait_to_read`.
+This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. `asnumpy` however, has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include `asscalar` and `wait_to_read`.
 
 While it is possible to use `NDArray.waitall()` before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a Sequential or Hybrid network.
 
