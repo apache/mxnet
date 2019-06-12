@@ -22,14 +22,14 @@
  * \file np_multinomial_op.cu
  * \brief Operator for numpy sampling from multinomial distributions
  */
- #include "./sample_multinomial_op.h"
+#include "./sample_multinomial_op.h"
 
- namespace mxnet {
- namespace op {
- 
- NNVM_REGISTER_OP(_np_multinomial)
- .set_attr<FCompute>("FCompute<gpu>", NumpyMultinomialForward<gpu>);
+namespace mxnet {
+namespace op {
 
- }  // namespace op
- }  // namespace mxnet
+NNVM_REGISTER_OP(_np_multinomial)
+.set_attr<FCompute>("FCompute<gpu>", NumpyMultinomialForward<gpu>);
+
+}  // namespace op
+}  // namespace mxnet
  
