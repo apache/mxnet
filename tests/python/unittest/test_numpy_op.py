@@ -701,6 +701,38 @@ def test_np_concat():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@npx.use_np_shape
+def test_np_swapaxes():
+    config = [((0, 1, 2), 0, 1),
+              ((0, 1, 2), -1, -2),
+              ((4, 5, 6, 7), 2, 3),
+              ((4, 5, 6, 7), -2, -3)]
+
+    class TestSwapaxes(HybridBlock):
+        def __init__(self, axis1, axis2):
+            super(TestSwapaxes, self).__init__()
+            self._axis1 = axis1
+            self._axis2 = axis2
+
+        def hybrid_forward(self, F, x):
+            return F.np.swapaxes(x, self._axis1, self._axis2)
+
+    for shape, axis1, axis2 in config:
+        data_np = _np.random.uniform(size=shape)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = _np.swapaxes(data_np, axis1=axis1, axis2=axis2)
+        ret_mx = np.swapaxes(data_mx, axis1=axis1, axis2=axis2)
+        assert same(ret_mx.asnumpy(), ret_np)
+
+        net = TestSwapaxes(axis1, axis2)
+        for hybrid in [False, True]:
+            if hybrid:
+                net.hybridize()
+            ret_mx = net(data_mx)
+            assert same(ret_mx.asnumpy(), ret_np)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
