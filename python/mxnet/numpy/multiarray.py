@@ -1260,13 +1260,13 @@ def empty(shape, dtype=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def array(object, dtype=None, **kwargs):
+def array(object, dtype=None, ctx=None):
     """
     Create an array.
 
     Parameters
     ----------
-    object : array_like or `mxnet.ndarray.NDArray` or `mxnet.numpy.ndarray`
+    object : array_like or `numpy.ndarray` or `mxnet.numpy.ndarray`
         An array, any object exposing the array interface, an object whose
         __array__ method returns an array, or any (nested) sequence.
     dtype : data-type, optional
@@ -1280,17 +1280,18 @@ def array(object, dtype=None, **kwargs):
     out : ndarray
         An array object satisfying the specified requirements.
     """
-    _sanity_check_params('array', ['copy', 'order', 'subok', 'ndim'], kwargs)
-    ctx = kwargs.get('ctx', current_context())
     if ctx is None:
         ctx = current_context()
-    if dtype is None:
-        dtype = _np.float32
-    if not isinstance(object, (ndarray, NDArray, _np.ndarray)):
-        try:
-            object = _np.array(object, dtype=dtype)
-        except:
-            raise TypeError('source array must be an array like object')
+    if isinstance(object, ndarray):
+        dtype = object.dtype if dtype is None else dtype
+    else:
+        dtype = mx_real_t if dtype is None else dtype
+        if not isinstance(object, (ndarray, _np.ndarray)):
+            try:
+                object = _np.array(object, dtype=dtype)
+            except Exception as e:
+                print(e)
+                raise TypeError('source array must be an array like object')
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:
         ret[()] = object
