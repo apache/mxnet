@@ -271,13 +271,6 @@ def test_np_max():
                         assert same(x.grad.asnumpy(), get_grad(axis)), \
                             'x={}\ny={}\nx.grad={}\nnumpy={}'.format(x.asnumpy(), y.asnumpy(), x.grad.asnumpy(), get_grad(axis))
 
-                    # test numeric
-                    if itype == 'float32':
-                        x_sym = mx.sym.Variable("x").as_np_ndarray()
-                        mx_sym = mx.sym.np.max(x_sym, axis=axis, keepdims=keepdims).as_nd_ndarray()
-                        check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
-                                                numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
-
                     # test imperative
                     mx_out = np.max(x, axis=axis, keepdims=keepdims)
                     np_out = _np.amax(x.asnumpy(), axis=axis, keepdims=keepdims)
