@@ -135,6 +135,7 @@ int _CreatePartialOut(const char* symbol_json_str,
 
   // load the parameters
   std::unordered_map<std::string, NDArray> arg_params, aux_params;
+  std::unordered_map<std::string, int> arg_types, aux_types;
   {
     std::unordered_set<std::string> arg_names, aux_names;
     std::vector<std::string> arg_names_vec = sym.ListInputNames(Symbol::kReadOnlyArgs);
@@ -156,15 +157,19 @@ int _CreatePartialOut(const char* symbol_json_str,
         std::string name(names[i].c_str() + 4);
         if (aux_names.count(name) != 0) {
           aux_params[name] = data[i];
+          aux_types[name] = data[i].dtype();
         }
       }
       if (!strncmp(names[i].c_str(), "arg:", 4)) {
         std::string name(names[i].c_str() + 4);
         if (arg_names.count(name) != 0) {
           arg_params[name] = data[i];
+          arg_types[name] = data[i].dtype();
         }
       }
     }
+
+
   }
 
   // shape inference and bind
@@ -179,6 +184,7 @@ int _CreatePartialOut(const char* symbol_json_str,
   mxnet::ShapeVector out_shapes(sym.ListOutputNames().size());
   mxnet::ShapeVector aux_shapes(aux_names.size());
   mxnet::ShapeVector arg_shapes;
+  nnvm::DTypeVector result_arg_types, result_out_types, result_aux_types;
   std::unordered_map<std::string, size_t> key2arg;
   for (size_t i = 0; i < arg_names.size(); ++i) {
     std::string key = arg_names[i];
@@ -187,6 +193,7 @@ int _CreatePartialOut(const char* symbol_json_str,
 
   try {
     mxnet::ShapeVector in_shapes;
+    nnvm::DTypeVector in_types;
     for (std::string key : sym.ListInputNames(Symbol::kAll)) {
       if (known_shape.count(key) != 0) {
         in_shapes.push_back(known_shape[key]);
@@ -194,14 +201,29 @@ int _CreatePartialOut(const char* symbol_json_str,
         in_shapes.emplace_back();
       }
     }
+
+    for (std::string key : sym.ListInputNames(Symbol::kAll)) {
+      if (arg_types.count(key) != 0) {
+        in_types.push_back(arg_types[key]);
+      } else if (aux_types.count(key) != 0) {
+        in_types.push_back(aux_types[key]);
+      }
+    }
     nnvm::Graph g; g.outputs = sym.outputs;
     g = mxnet::exec::InferShape(std::move(g), std::move(in_shapes), "__shape__");
+    g = mxnet::exec::InferType(std::move(g), std::move(in_types, "__dtype__");
     bool infer_complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
+    bool infer_type_complete = (g.GetAttr<size_t>("dtype_num_unknown_nodes") == 0);
     CHECK(infer_complete)
       << "The shape information of is not enough to get the shapes";
+    CHECK(infer_type_complete)
+      << "The infer type information is not enough to get the types";
     CopyAttr(g.indexed_graph(),
              g.GetAttr<mxnet::ShapeVector>("shape"),
              &arg_shapes, &out_shapes, &aux_shapes);
+    CopyAttr(g.indexed_graph(),
+             g.GetAttr<nnvm::DTypeVector>("dtype"),
+             &result_arg_types, &result_out_types, &result_aux_types);
   } catch (const mxnet::op::InferShapeError &err) {
     throw dmlc::Error(err.msg);
   }
@@ -210,14 +232,14 @@ int _CreatePartialOut(const char* symbol_json_str,
 
   std::vector<NDArray> arg_arrays, aux_arrays;
   for (size_t i = 0; i < arg_shapes.size(); ++i) {
-    NDArray nd = NDArray(arg_shapes[i], ctx);
+    NDArray nd = NDArray(arg_shapes[i], ctx, false, result_arg_types[i]);
     if (arg_params.count(arg_names[i]) != 0) {
       CopyFromTo(arg_params[arg_names[i]], &nd);
     }
     arg_arrays.push_back(nd);
   }
   for (size_t i = 0; i < aux_shapes.size(); ++i) {
-    NDArray nd = NDArray(aux_shapes[i], ctx);
+    NDArray nd = NDArray(aux_shapes[i], ctx, false, result_aux_types[i]);
     if (aux_params.count(aux_names[i]) != 0) {
       CopyFromTo(aux_params[aux_names[i]], &nd);
     }
