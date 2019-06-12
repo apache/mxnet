@@ -27,7 +27,6 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
-#include <algorithm>
 #include "math.h"
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
