@@ -19,6 +19,7 @@ import mxnet as mx
 from mxnet import nd
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
+from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
 """Performance benchmark tests for MXNet NDArray Activation Operators.
 
@@ -56,7 +57,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
 
     """
     # Relu and its variation
-    relu_benchmark_res = run_performance_test([nd.LeakyReLU],
+    relu_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "LeakyReLU")],
                                               run_backward=True,
                                               dtype=dtype,
                                               ctx=ctx,
@@ -78,7 +79,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
 
     # Sigmoid => Covered as part of Unary ops
     # Hard_Sigmoid
-    hard_sigmoid_benchmark_res = run_performance_test([nd.hard_sigmoid],
+    hard_sigmoid_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "hard_sigmoid")],
                                                       run_backward=True,
                                                       dtype=dtype,
                                                       ctx=ctx,
@@ -90,7 +91,8 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10
                                                       runs=runs)
 
     # Softmax, LogSoftmax
-    softmax_benchmark_res = run_performance_test([nd.softmax, nd.log_softmax],
+    softmax_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "softmax"),
+                                                  getattr(MX_OP_MODULE, "log_softmax")],
                                                  run_backward=True,
                                                  dtype=dtype,
                                                  ctx=ctx,

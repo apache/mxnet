@@ -102,17 +102,18 @@ def _parse_mxnet_context(ctx):
         device_id = int(ctx[4:-1])
         return mx.gpu(device_id)
 
+
 def main():
     # 1. GET USER INPUTS
-    parser = argparse.ArgumentParser(
-        description='Run all the MXNet operators (NDArray) benchmarks')
+    parser = argparse.ArgumentParser(description='Run all the MXNet operators (NDArray) benchmarks')
 
     parser.add_argument('--ctx', type=str, default='cpu',
                         help='Global context to run all benchmarks. By default, cpu on a '
                              'CPU machine, gpu(0) on a GPU machine. '
                              'Valid Inputs - cpu, gpu, gpu(0), gpu(1)...')
     parser.add_argument('--dtype', type=str, default='float32', help='DType (Precision) to run benchmarks. By default, '
-                                                                     'float32. Valid Inputs - float32, float64.')
+                                                                     'float32. Valid Inputs - float32, float64, int32, '
+                                                                     'int64')
     parser.add_argument('-f', '--output-format', type=str, default='json',
                         choices=['json', 'md'],
                         help='Benchmark result output format. By default, json. '
@@ -139,6 +140,7 @@ def main():
     for idx, op in enumerate(ops_not_covered):
         print(f"{idx}. {op}")
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())

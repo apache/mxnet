@@ -19,6 +19,7 @@ import mxnet as mx
 from mxnet import nd
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
+from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
 """Performance benchmark tests for MXNet NDArray Convolution and Pooling Operators.
 
@@ -61,7 +62,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, r
     for pool_type in pool_types:
         for global_pool in global_pool_types:
             for pool1d_data in [(32, 3, 256), (32, 3, 64)]:
-                pool1d_benchmark_res += run_performance_test([nd.Pooling],
+                pool1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
                                                              run_backward=True,
                                                              dtype=dtype,
                                                              ctx=ctx,
@@ -76,7 +77,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, r
                                                              warmup=warmup,
                                                              runs=runs)
             for pool2d_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
-                pool2d_benchmark_res += run_performance_test([nd.Pooling],
+                pool2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
                                                              run_backward=True,
                                                              dtype=dtype,
                                                              ctx=ctx,
@@ -99,7 +100,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=1
     # Conv1D Benchmarks
     conv1d_benchmark_res = []
     for conv_data in [(32, 3, 256), (32, 3, 64)]:
-        conv1d_benchmark_res += run_performance_test([nd.Convolution],
+        conv1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
                                                      run_backward=True,
                                                      dtype=dtype,
                                                      ctx=ctx,
@@ -118,7 +119,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=1
     # Conv2D Benchmarks
     conv2d_benchmark_res = []
     for conv_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
-        conv2d_benchmark_res += run_performance_test([nd.Convolution],
+        conv2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
                                                      run_backward=True,
                                                      dtype=dtype,
                                                      ctx=ctx,

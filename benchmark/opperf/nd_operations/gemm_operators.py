@@ -19,7 +19,7 @@ import mxnet as mx
 from mxnet import nd
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
-
+from benchmark.opperf.rules.default_params import MX_OP_MODULE
 """Performance benchmark tests for MXNet NDArray GEMM Operators.
 
 1. dot
@@ -57,7 +57,7 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs
     """
     # Benchmark tests for dot and batch_dot operators
     dot_benchmark_res = run_performance_test(
-        [nd.dot], run_backward=True,
+        [getattr(MX_OP_MODULE, "dot")], run_backward=True,
         dtype=dtype, ctx=ctx,
         inputs=[{"lhs": (1024, 1024),
                  "rhs": (1024, 1024)},
@@ -71,7 +71,7 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs
         warmup=warmup, runs=runs)
 
     batch_dot_benchmark_res = run_performance_test(
-        [nd.batch_dot], run_backward=True,
+        [getattr(MX_OP_MODULE, "batch_dot")], run_backward=True,
         dtype=dtype, ctx=ctx,
         inputs=[{"lhs": (32, 1024, 1024),
                  "rhs": (32, 1024, 1024)},
