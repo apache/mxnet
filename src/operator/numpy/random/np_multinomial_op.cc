@@ -29,7 +29,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyMultinomialParam);
 
-NNVM_REGISTER_OP(_np_multinomial)
+NNVM_REGISTER_OP(_np__random_multinomial)
 .describe(R"code(Draw samples from a multinomial distribution. "
 "The multinomial distribution is a multivariate generalisation of the binomial distribution. "
 "Take an experiment with one of p possible outcomes. "

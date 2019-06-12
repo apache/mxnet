@@ -680,7 +680,7 @@ def test_np_multinomial():
         for pvals in pvals_list:
             if have_size:
                 for size in sizes:
-                    freq = mx.nd.np.multinomial(experiements, pvals, size=size).asnumpy() / _np.float32(experiements)
+                    freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy() / _np.float32(experiements)
                     # for those cases that didn't need reshape
                     if size in [None, ()]:
                         mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
@@ -692,14 +692,15 @@ def test_np_multinomial():
                         for i in range(freq.shape[0]):
                             mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
             else:
-                freq = mx.nd.np.multinomial(experiements, pvals).asnumpy() / _np.float32(experiements)
+                freq = mx.np.random.multinomial(experiements, pvals).asnumpy() / _np.float32(experiements)
                 mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
     # check the zero dimension
     sizes = [(0), (0, 2), (4, 0, 2), (3, 0, 1, 2, 0)]
     for pvals in pvals_list:
         for size in sizes:
-            freq = mx.nd.np.multinomial(experiements, pvals, size=size).asnumpy()
+            freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
             assert freq.size == 0
+
 
 
 if __name__ == '__main__':
