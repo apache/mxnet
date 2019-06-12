@@ -64,17 +64,15 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  TShape oshape;
+  std::vector<dim_t> oshape_vec;
   if (param.size.has_value()) {
     const mxnet::Tuple<int>& size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
-      oshape[i] = size[i];
+      oshape_vec.emplace_back(size[i]);
     }
-    oshape[size.ndim()] = param.pvals.ndim();
-  } else {
-    oshape[0] = param.pvals.ndim();
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  oshape_vec.emplace_back(param.pvals.ndim());
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
   return true;
 }
 
@@ -124,7 +122,7 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);
-  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(inputs.size(), 0U);
   CHECK_EQ(outputs.size(), 1U);
   index_t prob_length = param.pvals.ndim();
   index_t num_output = outputs[0].Size() / prob_length;
