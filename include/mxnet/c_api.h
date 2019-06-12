@@ -809,7 +809,8 @@ MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
                                        DLManagedTensorHandle *out_dlpack);
 
 /*!
-* \brief Create a NDArray backed by a dlpack tensor.
+* \brief DEPRECATED. Use MXNDArrayFromDLPackEx instead.
+
 *
 * This allows us to create a NDArray using the memory
 * allocated by an external deep learning framework
@@ -826,7 +827,7 @@ MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
                                   NDArrayHandle *out_handle);
 
 /*!
-* \brief DEPRECATED. Use MXNDArrayFromDLPackEx instead.
+* \brief Create a NDArray backed by a dlpack tensor.
 *
 * This allows us to create a NDArray using the memory
 * allocated by an external deep learning framework
