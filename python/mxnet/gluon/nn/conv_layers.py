@@ -30,6 +30,7 @@ from ..block import HybridBlock
 from ... import symbol
 from ...base import numeric_types
 from .activations import Activation
+from ...util import is_np_array
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
@@ -109,7 +110,11 @@ class _Conv(HybridBlock):
             if adj is not None:
                 self._kwargs['adj'] = adj
 
-            dshape = [0]*(len(kernel_size) + 2)
+            if is_np_array():
+                dshape = [-1]*(len(kernel_size) + 2)
+            else:
+                dshape = [0]*(len(kernel_size) + 2)
+
             dshape[layout.find('N')] = 1
             dshape[layout.find('C')] = in_channels
             wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
@@ -129,6 +134,8 @@ class _Conv(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
+        if is_np_array():
+            F = F.npx
         if bias is None:
             act = getattr(F, self._op_name)(x, weight, name='fwd', **self._kwargs)
         else:
@@ -693,6 +700,8 @@ class _Pooling(HybridBlock):
         return 'pool'
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.Pooling(x, name='fwd', **self._kwargs)
 
     def __repr__(self):
