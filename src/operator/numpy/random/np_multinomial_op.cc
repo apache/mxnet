@@ -31,7 +31,7 @@ DMLC_REGISTER_PARAMETER(NumpyMultinomialParam);
 
 
 NNVM_REGISTER_OP(_np_multinomial)
-.describe(R"Draw samples from a multinomial distribution. "
+.describe(R"code(Draw samples from a multinomial distribution. "
 "The multinomial distribution is a multivariate generalisation of the binomial distribution. "
 "Take an experiment with one of p possible outcomes. "
 "An example of such an experiment is throwing a dice, where the outcome can be 1 through 6. "
@@ -48,41 +48,39 @@ NNVM_REGISTER_OP(_np_multinomial)
       return std::vector<ResourceRequest>{
         ResourceRequest::kRandom, ResourceRequest::kTempSpace};
     })
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    const SampleMultinomialParam& param = nnvm::get<SampleMultinomialParam>(n->attrs.parsed);
-    if (param.get_prob) {
-      return MakeGradNode("_backward_sample_multinomial", n,
-                          {ograds[1], n->inputs[0], nnvm::NodeEntry{n, 0, 0}},
-                          std::unordered_map<std::string, std::string>());
-    } else {
-      return MakeZeroGradNodes(n, ograds);
-    }
-  })
+// .set_attr<nnvm::FGradient>("FGradient",
+//   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+//     const SampleMultinomialParam& param = nnvm::get<SampleMultinomialParam>(n->attrs.parsed);
+//     if (param.get_prob) {
+//       return MakeGradNode("_backward_sample_multinomial", n,
+//                           {ograds[1], n->inputs[0], nnvm::NodeEntry{n, 0, 0}},
+//                           std::unordered_map<std::string, std::string>());
+//     } else {
+//       return MakeZeroGradNodes(n, ograds);
+//     }
+//   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyMultinomialForward<cpu>)
-.add_argument("data", "NDArray-or-Symbol",
-              "Distribution probabilities. Must sum to one on the last axis.")
 .add_arguments(NumpyMultinomialParam::__FIELDS__());
 
 
-struct SampleMultinomialBackwardCPUKernel {
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, index_t K, index_t M,
-                                  DType* ograd, DType* dist, IType* out,
-                                  DType* igrad) {
-    for (index_t j = 0; j < M; ++j) {
-      igrad[i*K + static_cast<size_t>(out[i*M + j])] +=
-        ograd[i*M + j] / dist[i*K + static_cast<size_t>(out[i*M + j])];
-    }
-  }
-};
+// struct SampleMultinomialBackwardCPUKernel {
+//   template<typename DType, typename IType>
+//   MSHADOW_XINLINE static void Map(int i, index_t K, index_t M,
+//                                   DType* ograd, DType* dist, IType* out,
+//                                   DType* igrad) {
+//     for (index_t j = 0; j < M; ++j) {
+//       igrad[i*K + static_cast<size_t>(out[i*M + j])] +=
+//         ograd[i*M + j] / dist[i*K + static_cast<size_t>(out[i*M + j])];
+//     }
+//   }
+// };
 
-NNVM_REGISTER_OP(_backward_sample_multinomial)
-.set_num_inputs(3)
-.set_num_outputs(1)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>",
-  SampleMultinomialBackward<SampleMultinomialBackwardCPUKernel, cpu>);
+// NNVM_REGISTER_OP(_backward_sample_multinomial)
+// .set_num_inputs(3)
+// .set_num_outputs(1)
+// .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+// .set_attr<FCompute>("FCompute<cpu>",
+//   SampleMultinomialBackward<SampleMultinomialBackwardCPUKernel, cpu>);
 
 }  // namespace op
 }  // namespace mxnet

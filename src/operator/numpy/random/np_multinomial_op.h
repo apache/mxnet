@@ -27,8 +27,8 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
-#include "../mshadow_op.h"
-#include "../mxnet_op.h"
+#include "../../mshadow_op.h"
+#include "../../mxnet_op.h"
 #include "../../operator_common.h"
 #include "../../elemwise_op_common.h"
 
@@ -89,27 +89,26 @@ inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-struct SampleMultinomialKernel {
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, index_t K, index_t M,
-                                  DType* dist, float* uniform, IType* out,
-                                  DType* prob) {
-    for (index_t j = 0; j < M; ++j) {
-      DType loc = static_cast<DType>(uniform[i*M + j]);
-      DType acc = 0;
+struct MultinomialKernel {
+  MSHADOW_XINLINE static void Map(int i,
+                                  const int num_exp,
+                                  const mxnet::Tuple<float>& pvals,
+                                  float* uniform,
+                                  int* out) {
+    for (int j = 0; j < num_exp; ++j) {
+      float loc = uniform[i * num_exp + j];
+      float acc = 0.0;
       bool found = false;
-      for (index_t k = 0; k < K; ++k) {
-        acc += dist[i*K + k];
+      for (uint32_t k = 0; k < pvals.ndim(); ++k) {
+        acc += pvals[k];
         if (acc > loc) {
           found = true;
-          out[i*M + j] = static_cast<IType>(k);
-          if (prob != nullptr) prob[i*M + j] = logf(dist[i*K + k]);
+          out[i * pvals.ndim() + k] += 1;
           break;
         }
       }
       if (!found) {
-        out[i*M + j] = static_cast<IType>(K-1);
-        if (prob != nullptr) prob[i*M + j] = logf(dist[i*K + K - 1]);
+        out[i * pvals.ndim() + (pvals.ndim() - 1)] += 1;
       }
     }
   }
@@ -125,23 +124,21 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);
-  // inputs -> 
-  index_t K = inputs[0].shape_[inputs[0].ndim()-1];
-  index_t N = inputs[0].Size()/K;
-  index_t M = outputs[0].Size()/N;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  index_t prob_length = param.pvals.ndim();
+  index_t num_output = outputs[0].Size() / prob_length;
+  index_t num_exp = param.n;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
-    Tensor<xpu, 1, float> uniform =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(N*M), s);
-    prnd->SampleUniform(&uniform, 0, 1);
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
-      Kernel<SampleMultinomialKernel, xpu>::Launch(
-        s, N, K, M, inputs[0].dptr<DType>(), uniform.dptr_, outputs[0].dptr<IType>(),
-        param.get_prob ? outputs[1].dptr<DType>() : nullptr);
-    });
-  });
+  Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
+  Tensor<xpu, 1, float> uniform =
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(num_output * param.n), s);
+  prnd->SampleUniform(&uniform, 0, 1);
+  // set zero for the outputs
+  Kernel<set_zero, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<int>());
+  Kernel<MultinomialKernel, xpu>::Launch(
+        s, num_output, num_exp, param.pvals, uniform.dptr_, outputs[0].dptr<int>());
 }
 
 
@@ -173,8 +170,7 @@ void SampleMultinomialBackward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_NP_RANDOM_SAMPLE_MULTINOMIAL_OP_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_RANDOM_MULTINOMIAL_OP_H_
