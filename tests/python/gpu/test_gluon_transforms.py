@@ -24,7 +24,7 @@ from mxnet import gluon
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal, set_default_context
-from mxnet.test_utils import almost_equal
+from mxnet.test_utils import almost_equal, same
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import assertRaises, setup_module, with_seed, teardown
@@ -89,6 +89,15 @@ def test_to_tensor():
     invalid_data_in = nd.random.uniform(0, 255, (5, 5, 300, 300, 3)).astype(dtype=np.uint8)
     transformer = transforms.ToTensor()
     assertRaises(MXNetError, transformer, invalid_data_in)
+
+    # Bounds (0->0, 255->1)
+    data_in = np.zeros((10, 20, 3)).astype(dtype=np.uint8)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert same(out_nd.asnumpy(), np.transpose(np.zeros(data_in.shape, dtype=np.float32), (2, 0, 1)))
+
+    data_in = np.full((10, 20, 3), 255).astype(dtype=np.uint8)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert same(out_nd.asnumpy(), np.transpose(np.ones(data_in.shape, dtype=np.float32), (2, 0, 1)))
 
 @with_seed()
 def test_resize():

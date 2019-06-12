@@ -573,7 +573,7 @@ class FastText(_TokenEmbedding):
     https://fasttext.cc/
 
     To get the updated URLs to the externally hosted pre-trained token embedding files, visit
-    https://github.com/facebookresearch/fastText/blob/master/pretrained-vectors.md
+    https://github.com/facebookresearch/fastText/blob/master/docs/pretrained-vectors.md
 
     License for pre-trained embeddings:
 

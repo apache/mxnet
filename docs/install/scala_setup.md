@@ -19,7 +19,7 @@
 
 The following instructions are provided for macOS and Ubuntu. Windows is not yet available.
 
-**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.html) instead of these instructions.
+**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.md) instead of these instructions.
 **Note:** Currently, we only support scala 2.11
 
 <hr>
@@ -101,8 +101,8 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 
 | OS | Step 1 | Step 2 |
 |---|---|---|
-|macOS | [Shared Library for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#build-the-shared-library) | [Scala Package for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#install-the-mxnet-package-for-scala) |
-| Ubuntu | [Shared Library for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-scala) |
+|macOS | [Shared Library for macOS](osx_setup.html#build-the-shared-library) | [Scala Package for macOS](osx_setup.html#install-the-mxnet-package-for-scala) |
+| Ubuntu | [Shared Library for Ubuntu](ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](ubuntu_setup.html#install-the-mxnet-package-for-scala) |
 | Windows | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub"> | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Call for Contribution</a> |
 
 
@@ -144,7 +144,7 @@ If you receive a "NumberFormatException" when running the interpreter, run `expo
 
 ## Documentation
 
-Scaladocs are generated as part of the docs build pipeline. You can find them published in the [Scala API](http://mxnet.incubator.apache.org/api/scala/index.html) section of the website or by going to the [scaladocs output](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package) directly.
+Scaladocs are generated as part of the docs build pipeline. You can find them published in the [Scala API](../api/scala/index.md) section of the website or by going to the [scaladocs output](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package) directly.
 
 To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions).
 
@@ -152,6 +152,6 @@ To build the docs yourself, follow the [developer build docs instructions](https
 
 ## Resources
 
-* [Scala API](http://mxnet.incubator.apache.org/api/scala/index.html)
+* [Scala API](../api/scala/)
 * [scaladocs](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package)
-* [MXNet-Scala Tutorials](../tutorials/scala)
+* [MXNet-Scala Tutorials](../tutorials/scala/)

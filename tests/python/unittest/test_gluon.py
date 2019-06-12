@@ -2742,6 +2742,15 @@ def test_np_shape_parameters():
         foo.initialize()
         print(foo(z).shape)
 
+@with_seed()
+def test_gluon_param_load():
+    net = mx.gluon.nn.Dense(10, in_units=10)
+    net.initialize()
+    net.save_parameters('test_gluon_param_load.params')
+    net.cast('float16')
+    net.load_parameters('test_gluon_param_load.params', cast_dtype=True)
+    mx.nd.waitall()
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
