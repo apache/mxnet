@@ -22,8 +22,8 @@
  * \file np_multinomial_op.h
  * \brief Operator for sampling from multinomial distributions
  */
-#ifndef MXNET_OPERATOR_NUMPY_NP_RANDOM_MULTINOMIAL_OP_H_
-#define MXNET_OPERATOR_NUMPY_NP_RANDOM_MULTINOMIAL_OP_H_
+#ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_MULTINOMIAL_OP_H_
+#define MXNET_OPERATOR_NUMPY_RANDOM_NP_MULTINOMIAL_OP_H_
 
 #include <mxnet/operator_util.h>
 #include <vector>
@@ -45,7 +45,8 @@ struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
     DMLC_DECLARE_FIELD(pvals)
       .set_default(mxnet::Tuple<float>())
       .describe("Probabilities of each of the p different outcomes. "
-      "These should sum to 1 ""(however, the last element is always assumed to account for the remaining probability, "
+      "These should sum to 1 "
+      "(however, the last element is always assumed to account for the remaining probability, "
       "as long as sum(pvals[:-1]) <= 1).");
     DMLC_DECLARE_FIELD(size)
       .set_default(dmlc::optional<mxnet::Tuple<int>>())
@@ -83,7 +84,7 @@ inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  (*out_attrs)[0] = mshadow::kInt64;  
+  (*out_attrs)[0] = mshadow::kInt64;
   return true;
 }
 
@@ -145,4 +146,4 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_NP_RANDOM_MULTINOMIAL_OP_H_
+#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_MULTINOMIAL_OP_H_
