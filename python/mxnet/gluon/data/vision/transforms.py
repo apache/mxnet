@@ -370,6 +370,7 @@ class Resize(HybridBlock):
         self._size = size
         self._interpolation = interpolation
 
+    @_adapt_np_array
     def hybrid_forward(self, F, x):
         return F.image.resize(x, self._size, self._keep, self._interpolation)
 

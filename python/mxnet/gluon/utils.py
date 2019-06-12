@@ -516,7 +516,7 @@ def _adapt_np_array(func):
         assert len(args) > 2, "expect at least three arguments in args"
         if is_np_array():
             input_args, kwargs = _to_classic_arrays(*args[2:], **kwargs)
-            input_args = list(args[0:2]) + input_args
+            input_args = list(args[0:2]) + list(input_args)
             out = func(*input_args, **kwargs)
             return _to_np_arrays(out)
         else:
