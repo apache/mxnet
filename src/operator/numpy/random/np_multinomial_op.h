@@ -83,16 +83,16 @@ inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  (*out_attrs)[0] = mshadow::kInt32;  
+  (*out_attrs)[0] = mshadow::kInt64;  
   return true;
 }
 
-struct MultinomialKernel {
+struct multinomial_kernel {
   MSHADOW_XINLINE static void Map(int i,
                                   const int num_exp,
                                   const mxnet::Tuple<float>& pvals,
                                   float* uniform,
-                                  int* out) {
+                                  int64_t* out) {
     for (int j = 0; j < num_exp; ++j) {
       float loc = uniform[i * num_exp + j];
       float acc = 0.0;
@@ -124,6 +124,9 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
   const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 0U);
   CHECK_EQ(outputs.size(), 1U);
+
+  // if size contains 0 dimension
+  if (outputs[0].shape_.Size() == 0) return;
   index_t prob_length = param.pvals.ndim();
   index_t num_output = outputs[0].Size() / prob_length;
   index_t num_exp = param.n;
@@ -134,38 +137,9 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
       ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(num_output * param.n), s);
   prnd->SampleUniform(&uniform, 0, 1);
   // set zero for the outputs
-  Kernel<set_zero, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<int>());
-  Kernel<MultinomialKernel, xpu>::Launch(
-        s, num_output, num_exp, param.pvals, uniform.dptr_, outputs[0].dptr<int>());
-}
-
-
-template<typename kernel, typename xpu>
-void SampleMultinomialBackward(const nnvm::NodeAttrs& attrs,
-                               const OpContext& ctx,
-                               const std::vector<TBlob>& inputs,
-                               const std::vector<OpReqType>& req,
-                               const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  if (req[0] == kNullOp) return;
-
-  index_t K = outputs[0].shape_[outputs[0].ndim()-1];
-  index_t N = outputs[0].Size()/K;
-  index_t M = inputs[0].Size()/N;
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    if (req[0] != kAddTo) {
-      Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
-      out = 0;
-    }
-    MSHADOW_TYPE_SWITCH(inputs[2].type_flag_, IType, {
-      Kernel<kernel, xpu>::Launch(
-        s, N, K, M, inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
-        inputs[2].dptr<IType>(), outputs[0].dptr<DType>());
-    });
-  });
+  Kernel<set_zero, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<int64_t>());
+  Kernel<multinomial_kernel, xpu>::Launch(
+        s, num_output, num_exp, param.pvals, uniform.dptr_, outputs[0].dptr<int64_t>());
 }
 
 }  // namespace op
