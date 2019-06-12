@@ -17,19 +17,19 @@
 
 # Multiple GPUs training with Gluon API
 
-In this tutorial we will walk through how one can train deep learning neural networks on multiple GPUs within a single machine. This tutorial focuses on data parallelism oppose to model parallelism. The latter is not supported by Apache MXNet out of the box, and one have to manually route the data among different devices to achieve model parallelism. Check out [model parallelism tutorial](https://mxnet.incubator.apache.org/versions/master/faq/model_parallel_lstm.html) to learn more about it.
-Here we will focus on implementing data parallel training for a convolutional neural network LeNet.
+In this tutorial we will walk through how one can train deep learning neural networks on multiple GPUs within a single machine. This tutorial focuses on data parallelism as opposed to model parallelism. Data parallelism approach assumes, that you can fit whole your model in a GPU and only training data needs to be partitioned. This is different from model parallelism, where the model is so big, that it doesn't fit into a single GPU, so it needs to be partitioned as well. Model parallelism is not supported by Apache MXNet out of the box, and one has to manually route the data among different devices to achieve model parallelism. Check out [model parallelism tutorial](https://mxnet.incubator.apache.org/versions/master/faq/model_parallel_lstm.html) to learn more about it.
+Here we will focus on implementing data parallel training for a convolutional neural network called LeNet.
 
 ## Prerequisites
 
 - Two or more GPUs 
-- Cuda 9 or higher
-- CUDNN v7 or higher
+- CUDA 9 or higher
+- cuDNN v7 or higher
 - Knowledge of how to train a model using Gluon API
 
 ## Storing data on GPU
 
-The basic primitive in Apache MXNet to specify a tensor is [NDArray](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#module-mxnet.ndarray). When one creates NDArray it has to provide the context - a place where this tensor is going to be stored. The context can be either CPU or GPU and both can be indexed: if your machine has multiple GPUs, you can provide an index to specify which GPU to use. By default, CPU context is used, and that means that the tensor will live in main RAM. Below is an example how to create two tensors where one is stored on the first GPU and the second is stored on the second GPU.
+The basic primitive in Apache MXNet to specify a tensor is [NDArray](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#module-mxnet.ndarray). When you create NDArray you have to provide the context - the device where this tensor is going to be stored. The context can be either CPU or GPU and both can be indexed: if your machine has multiple GPUs, you can provide an index to specify which GPU to use. By default, CPU context is used, and that means that the tensor will live in main RAM. Below is an example how to create two tensors where one is stored on the first GPU and the second is stored on the second GPU.
 
 ```python
 import mxnet as mx
@@ -46,11 +46,11 @@ We can manually copy data between GPUs using [as_in_context method](https://mxne
 c = a + b.as_in_context(a.context)
 ```
 
-Using this example we have learnt that we can perform operations with NDArrays only if they are stored on the same GPU. So, how can we split the data between GPUs, but use the same model for training? We will answer this question in the next session.
+Using this example, we have learnt that we can perform operations with NDArrays only if they are stored on the same GPU. So, how can we split the data between GPUs, but use the same model for training? We will answer this question in the next section.
 
 ## Storing the network on multiple GPUs
 
-When you create a network using [Blocks](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block) the parameters of blocks are also stored in a form of NDArray. When you initialize your network, you have to specify which context you are going to use for the underlying NDArrays. The feature of the [initialize method](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.initialize) is that it can accept the list of contexts, meaning that you can provide more than one context to store underlying parameters. In the example below we create the LeNet network and initialize it to be stored on GPU(0) and GPU(1) simultaneously. Each GPU will receive its own copy of the parameters:
+When you create a network using [Blocks](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block) the parameters of blocks are also stored in NDArrays. When you initialize your network, you have to specify which context you are going to use for the underlying NDArrays. The feature of the [initialize method](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.initialize) is that it can accept the list of contexts, meaning that you can provide more than one context to store underlying parameters. In the example below, we create the LeNet network and initialize it to be stored on GPU(0) and GPU(1) simultaneously. Each GPU will receive its own copy of the parameters:
 
 ```python
 from mxnet import init
@@ -75,11 +75,11 @@ The actual initialization will happen once we do the first forward pass on the n
 
 ## Multiple GPUs training schema
 
-At this moment, we have data that is loaded from the external source and is stored as NDArrays in CPU memory and the network which is initialized on two GPUs (it could be a larger number depending on which machine you have).
+At this moment, we have learnt how to define NDArrays in different contexts and that a network can be initialized on two GPUs at the same time.
 
 To do multiple GPU training with a given batch of the data, we divide the examples in the batch into number of portions equal to the number of GPUs we use and distribute one to each GPU. Then, each GPU will individually calculate the local gradient of the model parameters based on the batch subset it was assigned and the model parameters it maintains. Next, we sum together the local gradients on the GPUs to get the current batch stochastic gradient. After that, each GPU uses this batch stochastic gradient to update the complete set of model parameters that it maintains. Figure below depicts the batch stochastic gradient calculation using data parallelism and two GPUs.
 
-![data-parallel](https://www.d2l.ai/_images/data-parallel.svg)
+![data-parallel](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/data-parallel.svg)
 
 This approach allows us to avoid the limitation of doing operations on different GPUs - we move subsets of data to each GPU and the operations are happening inside each individual GPU only. After that we aggregate the resulting gradients and each GPU receives a copy of the gradients to do model parameters update.
 
@@ -96,30 +96,26 @@ result = mx.gluon.utils.split_and_load(data, ctx_list=context)
 
 If we explore the result, we will notice, that `split_and_load` method divided the data in two chunks of the same shape `(50, 10)`. If the number of elements is uneven, we have to specify `even_split=False` to instruct the method to do uneven split.
 
-At this point we are ready to assemble a complete multiple GPUs training example
+At this point we are ready to assemble a complete multiple GPUs training example.
 
 ## Multiple GPUs classification of MNIST images
 
-In the first step, we are going to load the MNIST images, switch the format of data from `height x width x channel` to `channel x height x width` and normalize the data
+In the first step, we are going to load the MNIST imagesa and use [ToTensor](https://mxnet.apache.org/api/python/gluon/data.html#mxnet.gluon.data.vision.transforms.ToTensor) to convert the format of the data from `height x width x channel` to `channel x height x width` and divide it by 255.
 
 ```python
-def data_transform(data):
-    """Move channel axis to the beginning, cast to float32, and normalize to [0, 1]."""
-    return mx.nd.moveaxis(data, 2, 0).astype('float32') / 255
-
-train_data = mx.gluon.data.vision.MNIST(train=True).transform_first(data_transform)
-val_data = mx.gluon.data.vision.MNIST(train=False).transform_first(data_transform)
+train_data = mx.gluon.data.vision.MNIST(train=True).transform_first(mx.gluon.data.vision.transforms.ToTensor())
+val_data = mx.gluon.data.vision.MNIST(train=False).transform_first(mx.gluon.data.vision.transforms.ToTensor())
 ```
 
-The next step is to create [DataLoader](https://mxnet.incubator.apache.org/api/python/gluon/data.html#mxnet.gluon.data.DataLoader) which slices whole dataset into batches. We create one for the training and one for the validation datasets.
+The next step is to create a [DataLoader](https://mxnet.incubator.apache.org/api/python/gluon/data.html#mxnet.gluon.data.DataLoader) which constructs batches from the dataset. We create one for the training and one for the validation datasets.
 
 ```python
-batch_size = 30000
+batch_size = 128
 train_loader = mx.gluon.data.DataLoader(train_data, shuffle=True, batch_size=batch_size)
 val_loader = mx.gluon.data.DataLoader(val_data, shuffle=False, batch_size=batch_size)
 ```
 
-After that we define the [Trainer](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#trainer) that defines optimization algorithm to be used and hyperparameters as well as [Loss](https://mxnet.incubator.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SoftmaxCrossEntropyLoss) function and a [metric](https://mxnet.incubator.apache.org/api/python/metric/metric.html#mxnet.metric.Accuracy) to track:
+After that we define the [Trainer](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#trainer) that defines the optimization algorithm to be used and hyperparameters as well as the [Loss](https://mxnet.incubator.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SoftmaxCrossEntropyLoss) function and a [metric](https://mxnet.incubator.apache.org/api/python/metric/metric.html#mxnet.metric.Accuracy) to track:
 
 ```python
 trainer = mx.gluon.Trainer(
@@ -171,24 +167,24 @@ for epoch in range(num_epochs):
     metric.reset()
 ```
 
-If you run this example and run `nvidia-smi` tool from nVidia, you will notice that both GPUs are used to perform calculations.
+If you run this example and run `nvidia-smi` tool from NVIDIA, you will notice that both GPUs are used to perform calculations.
 
 ## Advanced topic
 
 As we mentioned above, the gradients for each data split are calculated independently and then later summed together. We haven't mentioned yet where exactly this aggregation happens.
 
-Apache MXNet uses [KVStore](https://mxnet.incubator.apache.org/versions/master/api/scala/kvstore.html) - a virtual place for data sharing between different devices, including machines and GPUs. The KVStore is responsible for storing and, by default, aggregating the gradients of the model. The physical location of the KVStore is defined when we create a [trainer](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.Trainer) and by default is set to `device`, which mean it will aggregate gradients and update weights on GPUs. The actual data is distributed in round-robin fashion among available GPUs per block. This statement means two things, which are important to know from practical perspective.
+Apache MXNet uses [KVStore](https://mxnet.incubator.apache.org/versions/master/api/scala/kvstore.html) - a virtual place for data sharing between different devices, including machines and GPUs. The KVStore is responsible for storing and, by default, aggregating the gradients of the model. The physical location of the KVStore is defined when we create a [Trainer](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.Trainer) and by default is set to `device`, which mean it will aggregate gradients and update weights on GPUs. The actual data is distributed in round-robin fashion among available GPUs per block. This statement means two things, which are important to know from practical perspective.
 
-The first thing is there is an additional memory allocation happens on GPUs that is not directly related to your data and your model to store auxiliary information for GPUs sync-up. Depending on the complexity of your model, the amount of required memory can be significant, and you may even experience CUDA out of memory exceptions. If that is the case, and you cannot decrease batch size anymore, you may want to consider switching `KVStore` storage to RAM by setting `kvstore` argument to `local` during instantiation of the `Trainer`. That most probably will decrease the wall-clock performance time of your model, because the gradients and parameters would need to be copied to RAM and back.
+The first thing is there is an additional memory allocation that happens on GPUs that is not directly related to your data and your model to store auxiliary information for GPUs sync-up. Depending on the complexity of your model, the amount of required memory can be significant, and you may even experience CUDA out of memory exceptions. If that is the case, and you cannot decrease batch size anymore, you may want to consider switching `KVStore` storage to RAM by setting `kvstore` argument to `local` during instantiation of the `Trainer`. Often this decreases the wall-clock performance time of your model, because the gradients and parameters would need to be copied to RAM and back.
 
-The second thing is that since that auxiliary information distributed among GPUs in round-robin fashion on per block level, `KVStore` may use more memory on some GPUs and less on others. For example, if your model has a very big embedding layer, you may see that your first GPU uses 90% of your memory while others use only 50%. That affects how much data you actually can load in a single batch, because the data between devices is split evenly. If that is the case, again, and you have to keep or increase your batch size, you, again, may want to switch to the `local` mode.
+The second thing is that since  the auxiliary information is distributed among GPUs in round-robin fashion on per block level, `KVStore` may use more memory on some GPUs and less on others. For example, if your model has a very big embedding layer, you may see that your first GPU uses 90% of your memory while others use only 50%. That affects how much data you actually can load in a single batch, because the data between devices is split evenly. If that is the case and you have to keep or increase your batch size, you may want to switch to the `local` mode.
 
 ## Conclusion
 
-With Apache MXNet training using multiple GPUs doesn't need a lot of extra code. To do the multiple GPUs training one needs to initialize a model on all GPUs, split the batches of data into separate splits where each is stored on a different GPU and run the model separately on every split. The synchronization of gradients and parameters between GPUs is done automatically by Apache MXNet.
+With Apache MXNet training using multiple GPUs doesn't need a lot of extra code. To do the multiple GPUs training you need to initialize a model on all GPUs, split the batches of data into separate splits where each is stored on a different GPU and run the model separately on every split. The synchronization of gradients and parameters between GPUs is done automatically by Apache MXNet.
 
 ## Recommended Next Steps
 
-* Check out our two video tutorial on improving your code performance. In the [first video](https://www.youtube.com/watch?v=n8tN6pRZBdE) we explain how to visualize the performance, and in the [second video](https://www.youtube.com/watch?v=Cqo7FPftNyo) we show how to optimize it
+* Check out our two video tutorial on improving your code performance. In the [first video](https://www.youtube.com/watch?v=n8tN6pRZBdE) we explain how to visualize the performance, and in the [second video](https://www.youtube.com/watch?v=Cqo7FPftNyo) we show how to optimize it.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
