@@ -248,17 +248,18 @@ def test_aggregate_stats_sorting():
     sort_by_options = {'avg': "Avg", 'min': "Min", 'max': "Max", 'count': "Count"}
     ascending_options = [False, True]
     def check_ascending(lst, asc):
+        print(lst, sorted(lst, reverse = not asc))
         assert(lst == sorted(lst, reverse = not asc))
 
-    def check_sorting(str, sb, asc):
+    def check_sorting(debug_str, sort_by, ascending):
         target_dict = json.loads(debug_str)
         lst = []
         for domain_name, domain in target_dict['Time'].items():
-            lst = [item[sort_by_options[sb]] for item_name, item in domain.items()]
-            check_ascending(lst, asc)
+            lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
+            check_ascending(lst, ascending)
         for domain_name, domain in target_dict['Memory'].items():
-            lst = [item[sort_by_options[sb]] for item_name, item in domain.items()]
-            check_ascending(lst, asc)
+            lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
+            check_ascending(lst, ascending)
 
     file_name = 'test_aggregate_stats_sorting.json'
     enable_profiler(file_name, True, True, True)
