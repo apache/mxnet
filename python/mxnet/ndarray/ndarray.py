@@ -4269,5 +4269,5 @@ def from_numpy(ndarray, zero_copy=True):
     ndarray.flags['WRITEABLE'] = False
     c_obj = _make_dl_managed_tensor(ndarray)
     handle = NDArrayHandle()
-    check_call(_LIB.MXNDArrayFromDLPack(ctypes.byref(c_obj), True, ctypes.byref(handle)))
+    check_call(_LIB.MXNDArrayFromDLPackEx(ctypes.byref(c_obj), True, ctypes.byref(handle)))
     return NDArray(handle=handle)
