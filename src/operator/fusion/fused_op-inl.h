@@ -202,7 +202,9 @@ const std::map<std::string, std::vector<std::string>> fused_op_special_ops = {
   {"_backward_div_scalar", {"(% / %)", "_0", "scalar"}},
   {"_backward_rdiv_scalar", {"(-% * % / (% * %))", "_0", "scalar", "_1", "_1"}},
   {"_backward_hypot_scalar", {"(% * % / hypot(%, %))", "_0", "_1", "_1", "scalar"}},
-  {"_backward_radians", {"radians(%)", "_0"}}
+  {"_backward_radians", {"radians(%)", "_0"}},
+  {"_backward_erf", {"backward_erf(%, %)", "_1", "_0"}},
+  {"_backward_erfinv", {"backward_erfinv(%, %)", "_1", "_0"}}
   // TODO(ptredak): arange
 };
 
@@ -715,8 +717,18 @@ inline DType erf(const DType val) {
 }
 
 template <typename DType>
+inline DType backward_erf(const DType val, const DType grad) {
+  return 2.0f / sqrt(pi) * exp(-(val*val)) * grad;
+}
+
+template <typename DType>
 inline DType erfinv(const DType val) {
   return erfinvf(val);
+}
+
+template <typename DType>
+inline DType backward_erfinv(const DType val, const DType grad) {
+  return 0.5f * sqrt(pi) * exp(val * val) * grad;
 }
 
 )code";
