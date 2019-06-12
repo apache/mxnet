@@ -285,5 +285,4 @@ b.asnumpy()
 ```
 
 If everything is working, it will report the version number.
-
 For assistance, head over to the [MXNet Forum](https://discuss.mxnet.io/).
