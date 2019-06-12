@@ -180,6 +180,20 @@
     (println "Running example with " dev " and " num-epoch " epochs ")
     (train dev num-epoch)))
 
+;; For evaluating the model
+(defn predict-equivalence
+  "Get the fine-tuned model's opinion on whether two sentences are equivalent:"
+  [predictor sentence1 sentence2]
+  (let [vocab (bert.util/get-vocab)
+        processed-test-data (mapv #(pre-processing (:idx->token vocab)
+                                                   (:token->idx vocab) %)
+                                  [[sentence1 sentence2]])
+        prediction (infer/predict-with-ndarray predictor
+                                               [(ndarray/array (slice-inputs-data processed-test-data 0) [1 seq-length])
+                                                (ndarray/array (slice-inputs-data processed-test-data 1) [1 seq-length])
+                                                (ndarray/array (slice-inputs-data processed-test-data 2) [1])])]
+    (ndarray/->vec (first prediction))))
+
 (comment
 
   (train (context/cpu 0) 3)
@@ -197,19 +211,6 @@
                                                   {:name "data1" :shape [1 seq-length] :dtype dtype/FLOAT32 :layout layout/NT}
                                                   {:name "data2" :shape [1]            :dtype dtype/FLOAT32 :layout layout/N}])
                             {:epoch 3}))
-  
-  ;; Get the fine-tuned model's opinion on whether two sentences are equivalent:
-  (defn predict-equivalence
-    [predictor sentence1 sentence2]
-    (let [vocab (bert.util/get-vocab)
-          processed-test-data (mapv #(pre-processing (:idx->token vocab)
-                                                     (:token->idx vocab) %)
-                                    [[sentence1 sentence2]])
-          prediction (infer/predict-with-ndarray predictor
-                                                 [(ndarray/array (slice-inputs-data processed-test-data 0) [1 seq-length])
-                                                  (ndarray/array (slice-inputs-data processed-test-data 1) [1 seq-length])
-                                                  (ndarray/array (slice-inputs-data processed-test-data 2) [1])])]
-      (ndarray/->vec (first prediction))))
 
   ;; Modify an existing sentence pair to test:
   ;; ["1"
