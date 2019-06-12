@@ -111,6 +111,10 @@ class ndarray(NDArray):
                 out = out[idx]
             return out.reshape(()).as_np_ndarray()
         if isinstance(key, integer_types):
+            if key > self.shape[0] - 1:
+                raise IndexError(
+                    'index {} is out of bounds for axis 0 with size {}'.format(
+                        key, self.shape[0]))
             return self._at(key)
         if isinstance(key, ndarray):
             key = key._as_nd_ndarray()
