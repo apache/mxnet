@@ -1358,7 +1358,12 @@ def array(object, dtype=None, ctx=None):
             try:
                 object = _np.array(object, dtype=dtype)
             except Exception as e:
+<<<<<<< a95c4bc5f389af8e4fd3a7b4120f5040bd8cc89d
                 raise TypeError('{}'.format(str(e)))
+=======
+                print(e)
+                raise TypeError('source array must be an array like object')
+>>>>>>> [numpy] Fix d2l chapter8 (#15237)
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:
         ret[()] = object
