@@ -414,8 +414,9 @@ class Embedding(HybridBlock):
                                       init=weight_initializer, dtype=dtype,
                                       allow_deferred_init=True, grad_stype=grad_stype)
 
-    @_adapt_np_array
     def hybrid_forward(self, F, x, weight):
+        if is_np_array():
+            F = F.npx
         return F.Embedding(x, weight, name='fwd', **self._kwargs)
 
     def __repr__(self):

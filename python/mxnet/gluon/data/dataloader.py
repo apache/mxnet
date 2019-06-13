@@ -470,9 +470,6 @@ class _MultiWorkerIter(object):
             batch = _as_in_context(batch, context.cpu_pinned(self._pin_device_id))
         batch = batch[0] if len(batch) == 1 else batch
         self._rcvd_idx += 1
-        if is_np_array():
-            new_batch = [member.as_np_ndarray() for member in batch]
-            batch = new_batch
         return batch
 
     def next(self):

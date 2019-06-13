@@ -791,6 +791,7 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
     make_op_func : function
         Function for creating op functions.
     """
+    from . import _numpy_op_doc as _np_op_doc
     if np_module_name == 'numpy':
         op_name_prefix = _NP_OP_PREFIX
         submodule_name_list = _NP_OP_SUBMODULE_LIST
@@ -852,3 +853,6 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
         function.__module__ = module_name_local
         setattr(cur_module, function.__name__, function)
         cur_module.__all__.append(function.__name__)
+
+        if hasattr(_np_op_doc, name):
+            function.__doc__ = getattr(_np_op_doc, name).__doc__
