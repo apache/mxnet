@@ -240,11 +240,9 @@ def test_aggregate_stats_valid_json_return():
     test_profile_event(False)
     debug_str = profiler.dumps(format = 'json')
     assert(len(debug_str) > 0)
-    print(debug_str)
-    # try:
     target_dict = json.loads(debug_str)
-    # except:
-    # print("Invalid json string")
+    print(target_dict)
+    assert "Memory" in target_dict and "Time" in target_dict and "Unit" in target_dict
     profiler.set_state('stop')
 
 def test_aggregate_stats_sorting():
