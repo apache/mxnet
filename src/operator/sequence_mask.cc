@@ -191,5 +191,8 @@ Example::
                   "vector of sequence lengths of the form [batch_size]")
     .add_arguments(SequenceMaskParam::__FIELDS__());
 
+NNVM_REGISTER_OP(SequenceMask)
+.add_alias("_npx_SequenceMask");
+
 }  // namespace op
 }  // namespace mxnet

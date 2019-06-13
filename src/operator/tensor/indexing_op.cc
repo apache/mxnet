@@ -466,6 +466,7 @@ DMLC_REGISTER_PARAMETER(ScatterNDParam);
 
 NNVM_REGISTER_OP(Embedding)
 MXNET_ADD_SPARSE_OP_ALIAS(Embedding)
+.add_alias("_npx_Embedding")
 .describe(R"code(Maps integer indices to vector representations (embeddings).
 
 This operator maps words to real-valued vectors in a high-dimensional space,
@@ -764,6 +765,7 @@ Examples::
 .add_argument("indices", "NDArray-or-Symbol", "The index array");
 
 NNVM_REGISTER_OP(one_hot)
+.add_alias("_npx_one_hot")
 .describe(R"code(Returns a one-hot array.
 
 The locations represented by `indices` take value `on_value`, while all
