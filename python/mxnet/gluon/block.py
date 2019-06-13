@@ -373,7 +373,7 @@ class Block(object):
             Cast the data type of the NDArray loaded from the checkpoint to the dtype
             provided by the Parameter if any.
         dtype_source : str, default 'current'
-            must be \in {'current', 'saved'}
+            must be in {'current', 'saved'}
             Only valid if cast_dtype=True, specify the source of the dtype for casting
             the parameters
         References

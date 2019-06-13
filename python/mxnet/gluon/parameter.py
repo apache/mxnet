@@ -265,7 +265,7 @@ class Parameter(object):
         cast_dtype : bool, default False
             Cast the data type of the parameter
         dtype_source : str, default 'current'
-            must be \in {'current', 'saved'}
+            must be in {'current', 'saved'}
             Only valid if cast_dtype=True, specify the source of the dtype for casting
             the parameters
         """
@@ -926,7 +926,7 @@ class ParameterDict(object):
         ndarray.save(filename, arg_dict)
 
     def load(self, filename, ctx=None, allow_missing=False,
-             ignore_extra=False, restore_prefix='', cast_dtype=False, 
+             ignore_extra=False, restore_prefix='', cast_dtype=False,
              dtype_source="current"):
         """Load parameters from file.
 
@@ -946,7 +946,7 @@ class ParameterDict(object):
         cast_dtype : bool, default False
             Cast the data type of the parameter
         dtype_source : str, default 'current'
-            must be \in {'current', 'saved'}
+            must be in {'current', 'saved'}
             Only valid if cast_dtype=True, specify the source of the dtype for casting
             the parameters
         """
