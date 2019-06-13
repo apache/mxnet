@@ -126,7 +126,6 @@ def _np_zeros_like(a):
     """
     pass
 
-
 def _np_repeat(a, repeats, axis=None):
     """Repeat elements of an array.
 
