@@ -42,7 +42,6 @@ print('Time for converting to numpy: %f sec' % (time() - start))
 
 **Time for converting to numpy: 0.167693 sec**<!--notebook-skip-line-->
 
-
 From the timings above, it seems as if converting to numpy takes lot more time than multiplying two large matrices. That doesn't feel right.
 
 This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. `asnumpy` however, has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include `asscalar` and `wait_to_read`.
@@ -209,7 +208,7 @@ The above picture visualizes the sequence in which the operators were executed a
 
 ## Advanced: Using NVIDIA Profiling Tools
 
-MXNet’s Profiler is definitely the recommended starting point for profiling MXNet code, but NVIDIA also provides a couple of tools for low-level profiling of CUDA code: NVProf, Visual Profiler and Nsight Compute. You can use these tools to profile all kinds of executables, so they can be used for profiling Python scripts running MXNet. And you can use these in conjunction with the MXNet Profiler to see high-level information from MXNet alongside the low-level CUDA kernel information.
+MXNet's Profiler is definitely the recommended starting point for profiling MXNet code, but NVIDIA also provides a couple of tools for low-level profiling of CUDA code: NVProf, Visual Profiler and Nsight Compute. You can use these tools to profile all kinds of executables, so they can be used for profiling Python scripts running MXNet. And you can use these in conjunction with the MXNet Profiler to see high-level information from MXNet alongside the low-level CUDA kernel information.
 
 #### NVProf and Visual Profiler
 
@@ -241,7 +240,7 @@ Selecting any of these kernel calls (the winograd convolution call shown here) w
 
 #### Nsight Compute
 
-Nsight Compute is available in CUDA 10 toolkit, but can be used to profile code running CUDA 9. You don’t get a timeline view, but you get many low level statistics about each individual kernel executed and can compare multiple runs (i.e. create a baseline).
+Nsight Compute is available in CUDA 10 toolkit, but can be used to profile code running CUDA 9. You don't get a timeline view, but you get many low level statistics about each individual kernel executed and can compare multiple runs (i.e. create a baseline).
 
 ![Nsight Compute](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profile_nsight_compute.png)
 
