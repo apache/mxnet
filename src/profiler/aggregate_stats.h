@@ -76,7 +76,7 @@ class AggregateStats {
   enum class SortBy {
     Avg, Min, Max, Count
   };
-  
+
  private:
   /*! \brief Should rarely collide, so most locks should occur only in user-space (futex) */
   std::mutex m_;
