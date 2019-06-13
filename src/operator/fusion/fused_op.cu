@@ -391,12 +391,12 @@ template <>
 bool FusedOp::InferShape<gpu>(const nnvm::NodeAttrs &attrs,
                               std::vector<mxnet::TShape> *in_attrs,
                               std::vector<mxnet::TShape> *out_attrs) {
-  std::cout << "InferShape in FusedOp!" << std::endl;
+  this->symbol_.attrs.erase("shape");
+  this->symbol_.attrs.erase("shape_inputs");
   std::vector<mxnet::TShape> input_shapes(*in_attrs);
   this->symbol_ = mxnet::exec::InferShape(std::move(this->symbol_),
                                           std::move(input_shapes),
                                           "__shape__");
-  std::cout << "END: InferShape in FusedOp!" << std::endl;
 
   const auto& g = this->symbol_.indexed_graph();
   const auto& input_nids = g.input_nodes();
@@ -431,6 +431,8 @@ template <>
 bool FusedOp::InferType<gpu>(const nnvm::NodeAttrs &attrs,
                              std::vector<int> *in_attrs,
                              std::vector<int> *out_attrs) {
+  this->symbol_.attrs.erase("dtype");
+  this->symbol_.attrs.erase("dtype_inputs");
   std::vector<int> input_types(*in_attrs);
   this->symbol_ = mxnet::exec::InferType(std::move(this->symbol_),
                                          std::move(input_types),
