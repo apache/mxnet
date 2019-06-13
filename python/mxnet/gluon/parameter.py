@@ -284,7 +284,6 @@ class Parameter(object):
                 if dtype_source == 'current':
                     data = data.astype(self.dtype, copy=False)
                 elif dtype_source == 'saved':
-                    print("here1")
                     self.dtype = data.dtype
             else:
                 assert np.dtype(self.dtype).type == data.dtype, \
