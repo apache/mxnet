@@ -1161,13 +1161,13 @@ struct ProfileOperator : public ProfileEvent {
     dev_type_ = dev_type;
     dev_id_ = dev_id;
     ProfileEvent::start();
-    as_task_.start();
+    // as_task_.start();
   }
   /*!
    * \brief Stop the profiling scope
    */
   void stop() override {
-    as_task_.stop();
+    // as_task_.stop();
     ProfileEvent::stop();
   }
 
