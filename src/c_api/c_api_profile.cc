@@ -198,6 +198,10 @@ enum class ProfileProcess {
   kWorker, kServer
 };
 
+enum class PrintFormat {
+  table, json
+};
+
 struct ProfileConfigParam : public dmlc::Parameter<ProfileConfigParam> {
   bool profile_all;
   bool profile_symbolic;
@@ -319,12 +323,12 @@ int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format, 
     std::shared_ptr<profiler::AggregateStats> stats = profiler->GetAggregateStats();
     std::ostringstream os;
     if (stats) {
-      if (format == 0)
+      if (static_cast<PrintFormat>(format) == PrintFormat::table)
         stats->DumpTable(os, sort_by, ascending);
-      else if (format == 1)
+      else if (static_cast<PrintFormat>(format) == PrintFormat::json)
         stats->DumpJson(os, sort_by, ascending);
     }
-    if (reset == 1)
+    if (reset != 0)
       stats->clear();
     ret->ret_str = os.str();
     *out_str = (ret->ret_str).c_str();

@@ -322,7 +322,8 @@ MXNET_DLL int MXDumpProfile(int finished);
 
 
 /*!
- * \brief Print aggregate stats to the a string
+ * \brief Print sorted aggregate stats to the a string
+ *        How aggregate stats are stored will not change
  * \param out_str Will receive a pointer to the output string
  * \param reset Clear the aggregate stats after printing
  * \return 0 when success, -1 when failure happens.
@@ -331,7 +332,8 @@ MXNET_DLL int MXDumpProfile(int finished);
 MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
 
 /*!
- * \brief Print aggregate stats to the a string
+ * \brief Print sorted aggregate stats to the a string
+ *        How aggregate stats are stored will not change
  * \param out_str will receive a pointer to the output string
  * \param reset clear the aggregate stats after printing
  * \param format whether to return in tabular or json format

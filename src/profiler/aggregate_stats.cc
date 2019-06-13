@@ -55,25 +55,25 @@ inline std::priority_queue<pi>
     const std::string& name = iter.first;
     const AggregateStats::StatData& data = iter.second;
     double value = 0;
-    switch (sort_by) {
-      case 0:
+    switch (static_cast<AggregateStats::SortBy>(sort_by)) {
+      case AggregateStats::SortBy::Avg:
         if (data.type_ == AggregateStats::StatData::kCounter)
           value = (data.max_aggregate_ - data.min_aggregate_) / 2;
         else
           value = static_cast<double>(data.total_aggregate_)
                                 / data.total_count_;
         break;
-      case 1:
+      case AggregateStats::SortBy::Min:
         value = data.min_aggregate_;
         break;
-      case 2:
+      case AggregateStats::SortBy::Max:
         value = data.max_aggregate_;
         break;
-      case 3:
+      case AggregateStats::SortBy::Count:
         value = data.total_count_;
         break;
     }
-    if (ascending == 1)
+    if (ascending != 0)
       value = -value;
     heap.push(std::make_pair(value, name));
   }
@@ -105,13 +105,13 @@ void AggregateStats::DumpTable(std::ostream& os, int sort_by, int ascending) {
         << (is_memory ? "" : "Time (ms)")
         << (is_memory ? "" : " ")
         << std::setw(16) << std::right
-        << (is_memory ? "Min Use  (kb)" : "Min Time (ms)")
+        << (is_memory ? "Min Use  (kB)" : "Min Time (ms)")
         << " "
         << std::setw(16) << std::right
-        << (is_memory ? "Max Use  (kb)" : "Max Time (ms)")
+        << (is_memory ? "Max Use  (kB)" : "Max Time (ms)")
         << " "
         << std::setw(16) << std::right
-        << (is_memory ? "Avg Use  (kb)" : "Avg Time (ms)")
+        << (is_memory ? "Avg Use  (kB)" : "Avg Time (ms)")
         << std::endl;
     os << std::setw(25) << std::left  << "----"
         << std::setw(16) << std::right << "-----------"
@@ -228,7 +228,7 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
      << "," << std::endl
      << "    \"Unit\": {" << std::endl
      << "        \"Time\": \"ms\"," << std::endl
-     << "        \"Memory\": \"kb\"" << std::endl
+     << "        \"Memory\": \"kB\"" << std::endl
      << "    }" << std::endl
      << "}" << std::endl
      << std::flush;

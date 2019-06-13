@@ -249,7 +249,6 @@ def test_aggregate_stats_sorting():
     sort_by_options = {'avg': "Avg", 'min': "Min", 'max': "Max", 'count': "Count"}
     ascending_options = [False, True]
     def check_ascending(lst, asc):
-        print(lst, sorted(lst, reverse = not asc))
         assert(lst == sorted(lst, reverse = not asc))
 
     def check_sorting(debug_str, sort_by, ascending):
@@ -268,8 +267,6 @@ def test_aggregate_stats_sorting():
     for sb in sort_by_options:
         for asc in ascending_options:
             debug_str = profiler.dumps(format = 'json', sort_by = sb, ascending = asc)
-            print(debug_str)
-            print(sb, asc)
             check_sorting(debug_str, sb, asc)
     profiler.set_state('stop')
 
