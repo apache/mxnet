@@ -180,7 +180,7 @@ struct CachedOp::CachedOpState {
     context = context_;
     nnvm::Symbol sym;
     sym.outputs = fwd_graph_.outputs;
-    CreateFullGraph(sym, &info.fwd_graph, &info.grad_graph,
+    CreateFullGraph(sym.Copy(), &info.fwd_graph, &info.grad_graph,
                     &info.full_graph, &info.ograd_entries,
                     &info.fwd_input_to_grad_output);
 
