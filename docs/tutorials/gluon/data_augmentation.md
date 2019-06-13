@@ -17,9 +17,9 @@
 
 # Image Augmentation
 
-Augmentation is the process of randomly adjusting samples of your dataset to create new samples that can also be used for neural network training. It increases the variety of samples seen during training and this helps the network avoid overfitting and using spurious characteristics of the dataset.
+Augmentation is the process of randomly adjusting the dataset samples used for training. As a result, a greater diversity of samples will be seen by the network and it is therefore less likely to overfit the training dataset. Some of the spurious characteristics of the dataset can be reduced using this technique. One example would be a dataset of images from the same camera having the same color tint: it's unhelpful when you want to apply this model to images from other cameras. You can avoid this by randomly shifting the colours of each image slightly and training your network on these augmented images.
 
-Although the technique can be applied in a variety of domains, it's very common in Computer Vision, and we will focus on image augmentations in this tutorial. Some example image augmentations include random crops and flips, and adjustments to the brightness and contrast.
+Although this technique can be applied in a variety of domains, it's very common in Computer Vision, and we will focus on image augmentations in this tutorial. Some example image augmentations include random crops and flips, and adjustments to the brightness and contrast.
 
 #### What are the prerequisites?
 
@@ -56,6 +56,7 @@ Since these augmentations are random, we'll apply the same augmentation a few ti
 
 ```python
 def show_images(imgs, num_rows, num_cols, scale=2):
+    # show augmented images in a grid layout 
     aspect_ratio = imgs[0].shape[0]/imgs[0].shape[1]
     figsize = (num_cols * scale, num_rows * scale * aspect_ratio)
     _, axes = plt.subplots(num_rows, num_cols, figsize=figsize)
@@ -65,10 +66,10 @@ def show_images(imgs, num_rows, num_cols, scale=2):
             axes[i][j].axes.get_xaxis().set_visible(False)
             axes[i][j].axes.get_yaxis().set_visible(False)
     plt.subplots_adjust(hspace=0.1, wspace=0)
-    #print(aspect_ratio)
     return axes
 
 def apply(img, aug, num_rows=2, num_cols=4, scale=3):
+    # apply augmentation multiple times to obtain different samples
     Y = [aug(img) for _ in range(num_rows * num_cols)]
     show_images(Y, num_rows, num_cols, scale)
 ```
