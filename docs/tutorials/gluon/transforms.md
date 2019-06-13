@@ -153,7 +153,6 @@ Some networks require an input of a certain size (e.g. convolutional neural netw
 ```python
 dataset = mx.gluon.data.vision.CIFAR10()
 transform_fn = mx.gluon.data.vision.transforms.Resize(size=(10, 10))
-#transform_fn = mx.gluon.data.vision.transforms.CenterCrop(size=(10, 10))
 dataset = dataset.transform_first(transform_fn)
 sample_data, sample_label = dataset[sample_idx]
 plt.imshow(sample_data.asnumpy())
