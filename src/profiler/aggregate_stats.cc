@@ -53,7 +53,7 @@ inline std::priority_queue<pi>
   std::priority_queue<pi> heap;
   for (const auto& iter : map) {
     const std::string& name = iter.first;
-    const AggregateStats::StatData &data = iter.second;
+    const AggregateStats::StatData& data = iter.second;
     double value = 0;
     switch (sort_by) {
       case 0:
@@ -190,19 +190,23 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
             << "," << std::endl;
         if (!is_memory)
           *ss << "                \"Total\": "
+              << std::setprecision(4)
               << MicroToMilli(data.total_aggregate_)
               << "," << std::endl;
         *ss << "                \"Min\": "
+            << std::setprecision(4)
             << (is_memory ?
                 ByteToKilobyte(data.min_aggregate_) :
                 MicroToMilli(data.min_aggregate_))
             << "," << std::endl
             << "                \"Max\": "
+            << std::setprecision(4)
             << (is_memory ?
                 ByteToKilobyte(data.max_aggregate_) :
                 MicroToMilli(data.max_aggregate_))
             << "," << std::endl
             << "                \"Avg\": "
+            << std::setprecision(4)
             << (data.type_ == AggregateStats::StatData::kCounter ?
                  ByteToKilobyte((data.max_aggregate_ - data.min_aggregate_) / 2) :
                  MicroToMilli(static_cast<double>(data.total_aggregate_) /  data.total_count_))
