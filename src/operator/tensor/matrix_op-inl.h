@@ -2183,7 +2183,7 @@ inline size_t SqueezeShapeHelper(mxnet::TShape* shape) {
   CHECK(shape != nullptr);
   size_t count = 0;
   for (int i = 0; i < shape->ndim(); ++i) {
-    if ((*shape)[i] == 0) {
+    if ((*shape)[i] == -1) {
       ++count;
     } else {
       std::swap((*shape)[i], (*shape)[i-count]);
@@ -2216,12 +2216,12 @@ inline bool SqueezeShape(const nnvm::NodeAttrs& attrs,
       CHECK_EQ(dshape[axes[i]], 1)
         << "cannot select an axis to squeeze out which has size="
         << dshape[axes[i]] << " not equal to one";
-      CHECK_NE(oshape[axes[i]], 0) << "duplicate value in axis";
-      oshape[axes[i]] = 0;
+      CHECK_NE(oshape[axes[i]], -1) << "duplicate value in axis";
+      oshape[axes[i]] = -1;
     }
   } else {
     for (int i = 0; i < oshape.ndim(); ++i) {
-      if (oshape[i] == 1) oshape[i] = 0;
+      if (oshape[i] == 1) oshape[i] = -1;
     }
   }
   size_t oshape_size = SqueezeShapeHelper(&oshape);
