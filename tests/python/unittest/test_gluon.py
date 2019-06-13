@@ -137,16 +137,20 @@ def test_parameter_dict():
     
     # test the dtype casting functionality
     params0 = gluon.ParameterDict('')
-    params0.get('w0', shape=(10, 10), dtype='float32')    
-    params0.initialize(ctx=ctx)    
+    params0.get('w0', shape=(10, 10), dtype='float32')
+    params0.get('w1', shape=(10, 10), dtype='int8')
+    params0.initialize(ctx=ctx)
     params0.save('test_parameter_dict.params')
 
     params1 = gluon.ParameterDict('')
     params1.get('w0', shape=(10, 10), dtype='float16')
+    params1.get('w1', shape=(10, 10), dtype='float64')
     params1.load('test_parameter_dict.params', cast_dtype=True, dtype_source='current')
     assert params1['w0'].data().dtype == np.float16
+    assert params1['w1'].data().dtype == np.float64
     params1.load('test_parameter_dict.params', cast_dtype=True, dtype_source='saved')
     assert params1['w0'].data().dtype == np.float32
+    assert params1['w1'].data().dtype == np.int8
 
 
 @with_seed()

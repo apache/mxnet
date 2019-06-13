@@ -373,7 +373,7 @@ class Block(object):
             Cast the data type of the NDArray loaded from the checkpoint to the dtype
             provided by the Parameter if any.
         dtype_source : str, default 'current'
-            \in {'current', 'saved'}
+            must be \in {'current', 'saved'}
             Only valid if cast_dtype=True, specify the source of the dtype for casting
             the parameters
         References
@@ -390,7 +390,7 @@ class Block(object):
             # legacy loading
             del loaded
             self.collect_params().load(
-                filename, ctx, allow_missing, ignore_extra, self.prefix, 
+                filename, ctx, allow_missing, ignore_extra, self.prefix,
                 cast_dtype=cast_dtype, dtype_source=dtype_source)
             return
 
@@ -1171,7 +1171,6 @@ def _infer_param_types(in_params, out_params, arg_params, aux_params, default_dt
         except MXNetError:
             # Cannot infer type with current input
             arg_types, aux_types = None, None
-            
 
     if arg_types is None or len(arg_types) != len(arg_params):
         arg_types = []

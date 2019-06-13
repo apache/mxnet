@@ -155,11 +155,10 @@ class Parameter(object):
         elif self._data is not None:
             self._init_grad()
 
-        
     @property
     def dtype(self):
         """The type of the parameter.
-        
+
         Setting the dtype value is equivalent to casting the value of the parameter
         """
         return self._dtype
@@ -167,7 +166,7 @@ class Parameter(object):
     @dtype.setter
     def dtype(self, dtype):
         self.cast(dtype)
-    
+
     @property
     def shape(self):
         """The shape of the parameter.
@@ -266,7 +265,7 @@ class Parameter(object):
         cast_dtype : bool, default False
             Cast the data type of the parameter
         dtype_source : str, default 'current'
-            \in {'current', 'saved'}
+            must be \in {'current', 'saved'}
             Only valid if cast_dtype=True, specify the source of the dtype for casting
             the parameters
         """
@@ -947,7 +946,7 @@ class ParameterDict(object):
         cast_dtype : bool, default False
             Cast the data type of the parameter
         dtype_source : str, default 'current'
-            \in {'current', 'saved'}
+            must be \in {'current', 'saved'}
             Only valid if cast_dtype=True, specify the source of the dtype for casting
             the parameters
         """
