@@ -100,6 +100,8 @@ def test_np_dot():
         ((3, 4, 5), ()),     # Case 3.5.1
         ((), (3, 4, 5)),     # Case 3.5.2
         ((3, 4, 5), (5, )),  # Case 4
+        ((3, 4, 5), (5, 2)),
+        ((5,), (5, 2))
     ]
 
     eps = 1e-3
@@ -697,6 +699,72 @@ def test_np_concat():
                 mx_out = np.concatenate([a, b, c, d], axis=axis)
                 np_out = _np.concatenate([a.asnumpy(), b.asnumpy(), c.asnumpy(), d.asnumpy()], axis=axis)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@npx.use_np_shape
+def test_np_swapaxes():
+    config = [((0, 1, 2), 0, 1),
+              ((0, 1, 2), -1, -2),
+              ((4, 5, 6, 7), 2, 3),
+              ((4, 5, 6, 7), -2, -3)]
+
+    class TestSwapaxes(HybridBlock):
+        def __init__(self, axis1, axis2):
+            super(TestSwapaxes, self).__init__()
+            self._axis1 = axis1
+            self._axis2 = axis2
+
+        def hybrid_forward(self, F, x):
+            return F.np.swapaxes(x, self._axis1, self._axis2)
+
+    for shape, axis1, axis2 in config:
+        data_np = _np.random.uniform(size=shape)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = _np.swapaxes(data_np, axis1=axis1, axis2=axis2)
+        ret_mx = np.swapaxes(data_mx, axis1=axis1, axis2=axis2)
+        assert same(ret_mx.asnumpy(), ret_np)
+
+        net = TestSwapaxes(axis1, axis2)
+        for hybrid in [False, True]:
+            if hybrid:
+                net.hybridize()
+            ret_mx = net(data_mx)
+            assert same(ret_mx.asnumpy(), ret_np)
+
+
+@with_seed()
+@npx.use_np_shape
+def test_np_squeeze():
+    config = [((), None),
+              ((), -1),
+              ((), 0),
+              ((4, 1, 2), None),
+              ((1, 1, 1), None),
+              ((1, 0, 1, 5), 2),
+              ((1, 0, 1, 1), (-1, -4))]
+
+    class TestSqueeze(HybridBlock):
+        def __init__(self, axis):
+            super(TestSqueeze, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return F.np.squeeze(x, axis=self._axis)
+
+    for shape, axis in config:
+        data_np = _np.random.uniform(size=shape)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = _np.squeeze(data_np, axis=axis)
+        ret_mx = np.squeeze(data_mx, axis=axis)
+        assert same(ret_mx.asnumpy(), ret_np)
+
+        net = TestSqueeze(axis)
+        for hybrid in [False, True]:
+            if hybrid:
+                net.hybridize()
+            ret_mx = net(data_mx)
+            assert same(ret_mx.asnumpy(), ret_np)
 
 
 if __name__ == '__main__':

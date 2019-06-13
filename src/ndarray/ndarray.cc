@@ -312,7 +312,7 @@ NDArray NDArray::AtWithRecord(index_t idx) {
   CHECK(storage_type() == kDefaultStorage)
       << "Storage type " << storage_type() << " doesn't support At()";
   NDArray ret = this->SliceWithRecord(idx, idx+1);
-  if (shape_.ndim() > 1) {
+  if (shape_.ndim() > 1 || Imperative::Get()->is_np_shape()) {
     return ret.ReshapeWithRecord(mxnet::TShape(shape_.data()+1, shape_.data()+shape_.ndim()));
   } else {
     return ret;
