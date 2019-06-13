@@ -172,6 +172,10 @@ def dumps(reset=False, format='table', sort_by='avg', ascending=False):
     format_to_int = {'table': 0, 'json': 1}
     sort_by_to_int = {'avg': 0, 'min': 1, 'max': 2, 'count': 3}
     asc_to_int = {False: 0, True: 1}
+    assert format in format_to_int, "Invalid parameter value provided for format. Support: 'table', 'json'"
+    assert sort_by in sort_by_to_int, "Invalid parameter value provided for sort_by. Support: 'avg', 'min', 'max', 'count'"
+    assert  ascending in asc_to_int, "Invalid parameter value provided for ascending. Support: False, True"
+    assert  reset in reset_to_int, "Invalid parameter value provided for reset. Support: False, True"
     check_call(_LIB.MXAggregateProfileStatsPrintEx(ctypes.byref(debug_str),
                                                    reset_to_int[reset],
                                                    format_to_int[format],
