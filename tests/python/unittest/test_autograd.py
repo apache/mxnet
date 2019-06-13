@@ -379,6 +379,27 @@ def test_function():
 
 
 @with_seed()
+def test_function1():
+    class Foo(mx.autograd.Function):
+        def __init__(self):
+            super(Foo, self).__init__()
+
+        def forward(self, X):
+            return X + 1;
+
+        def backward(self, dY):
+            return dY
+
+    with mx.autograd.record():
+        X = mx.nd.zeros((3, 4))
+        #X.attach_grad()  # uncommenting this line works
+        for i in range(5):
+            f = Foo()
+            X = f(X)
+        X.wait_to_read()
+
+
+@with_seed()
 def test_get_symbol():
     x = mx.nd.ones((1,))
     x.attach_grad()

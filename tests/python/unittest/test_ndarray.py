@@ -123,7 +123,7 @@ def test_ndarray_setitem():
     # numpy assignment for empty axis
     for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
         if trivial_shape == tuple():
-            with mx.np_compat():
+            with mx.np_shape():
                 x = mx.nd.zeros(trivial_shape)
         else:
             x = mx.nd.zeros(trivial_shape)
@@ -1699,6 +1699,33 @@ def test_zero_from_numpy():
         pass
     else:
         assert False
+
+
+@with_seed()
+def test_save_load_scalar_zero_size_ndarrays():
+    def check_save_load(save_is_np_shape, load_is_np_shape, shapes, save_throw_exception, load_throw_exception):
+        with mx.np_shape(save_is_np_shape):
+            array_list = [np.random.randint(0, 10, size=shape) for shape in shapes]
+            array_list = [mx.nd.array(arr) for arr in array_list]
+            with TemporaryDirectory() as work_dir:
+                fname = os.path.join(work_dir, 'dataset')
+                if save_throw_exception:
+                    assert_exception(mx.nd.save, mx.MXNetError, fname, array_list)
+                else:
+                    mx.nd.save(fname, array_list)
+                with mx.np_shape(load_is_np_shape):
+                    if load_throw_exception:
+                        assert_exception(mx.nd.load, mx.MXNetError, fname)
+                    else:
+                        array_list_loaded = mx.nd.load(fname)
+                        assert len(array_list) == len(array_list_loaded)
+                        for a1, a2 in zip(array_list, array_list_loaded):
+                            assert np.array_equal(a1.asnumpy(), a2.asnumpy())
+
+    check_save_load(False, False, [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False, False)
+    check_save_load(True, False, [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False, True)
+    check_save_load(False, True, [(2, 0, 1), (0,), (0, 4), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False, True)
+    check_save_load(True, True, [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0)], False, False)
 
 
 if __name__ == '__main__':

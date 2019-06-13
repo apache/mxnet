@@ -239,6 +239,7 @@ List of Contributors
 * [Zhennan Qin](https://github.com/ZhennanQin)
 * [Zhiyuan Huang](https://github.com/huangzhiyuan)
 * [Zak Jost](https://github.com/zjost)
+* [Nick Guletskii](https://github.com/nickguletskii)
 * [Shoubhik Bhattacharya](https://github.com/shoubhik)
 * [Rohit Srivastava](https://github.com/access2rohit)
 * [Caner Turkmen](https://github.com/canerturkmen)

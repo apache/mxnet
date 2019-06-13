@@ -350,6 +350,6 @@ private[mxnet] class LibInfo {
   @native def mxDumpProfile(finished: Int): Int
 
   // Numpy
-  @native def mxIsNumpyCompatible(compatible: RefInt): Int
-  @native def mxSetIsNumpyCompatible(isNpComp: Int, prev: RefInt): Int
+  @native def mxIsNumpyShape(compatible: RefInt): Int
+  @native def mxSetIsNumpyShape(isNpComp: Int, prev: RefInt): Int
 }

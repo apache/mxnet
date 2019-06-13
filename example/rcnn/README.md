@@ -43,8 +43,8 @@ Make a directory `data` and follow `py-faster-rcnn` for data preparation instruc
 * [MSCOCO](http://mscoco.org/dataset/) should be in `data/coco` containing `train2017`, `val2017` and `annotations/instances_train2017.json`, `annotations/instances_val2017.json`.
 
 ### Download pretrained ImageNet models
-* [VGG16](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) should be at `model/vgg16-0000.params` from [MXNet model zoo](http://data.dmlc.ml/models/imagenet/vgg/).
-* [ResNet](https://github.com/tornadomeet/ResNet) should be at `model/resnet-101-0000.params` from [MXNet model zoo](http://data.dmlc.ml/models/imagenet/resnet/).
+* [VGG16](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) should be at [/vgg/vgg16-0000.params](http://data.mxnet.io/mxnet/models/imagenet/vgg/vgg16-0000.params) from MXNet model zoo.
+* [ResNet](https://github.com/tornadomeet/ResNet) should be at [/resnet/101-layers/resnet-101-0000.params](http://data.mxnet.io/mxnet/models/imagenet/resnet/101-layers/resnet-101-0000.params) from MXNet model zoo.
 
 ### Training and evaluation
 Use `python3 train.py --dataset $Dataset$ --network $Network$ --pretrained $IMAGENET_MODEL_FILE$ --gpus $GPUS$` to train,

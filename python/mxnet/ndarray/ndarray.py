@@ -4156,7 +4156,7 @@ def from_dlpack(dlpack):
     assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
         'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
     dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
-    check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
+    check_call(_LIB.MXNDArrayFromDLPackEx(dlpack_handle, False, ctypes.byref(handle)))
     # Rename PyCapsule (DLPack)
     ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
     # delete the deleter of the old dlpack
@@ -4268,8 +4268,6 @@ def from_numpy(ndarray, zero_copy=True):
         raise ValueError("Only c-contiguous arrays are supported for zero-copy")
     ndarray.flags['WRITEABLE'] = False
     c_obj = _make_dl_managed_tensor(ndarray)
-    address = ctypes.addressof(c_obj)
-    address = ctypes.cast(address, ctypes.c_void_p)
     handle = NDArrayHandle()
-    check_call(_LIB.MXNDArrayFromDLPack(address, ctypes.byref(handle)))
+    check_call(_LIB.MXNDArrayFromDLPackEx(ctypes.byref(c_obj), True, ctypes.byref(handle)))
     return NDArray(handle=handle)
