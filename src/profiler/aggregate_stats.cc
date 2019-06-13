@@ -72,6 +72,9 @@ inline std::priority_queue<pi>
       case AggregateStats::SortBy::Count:
         value = data.total_count_;
         break;
+      default:
+        LOG(FATAL) << "Invliad value for parameter sort_by";
+        break;
     }
     if (ascending != 0)
       value = -value;
