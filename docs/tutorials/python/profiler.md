@@ -42,11 +42,11 @@ print('Time for converting to numpy: %f sec' % (time() - start))
 
 **Time for converting to numpy: 0.167693 sec**<!--notebook-skip-line-->
 
-From the timings above, it seems as if converting to numpy takes lot more time than multiplying two large matrices. That doesn't feel right.
+From the timings above, it seems as if converting to numpy takes lot more time than multiplying two large matrices. That doesn't seem right.
 
-This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. `asnumpy` however, has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include `asscalar` and `wait_to_read`.
+This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [`asnumpy`](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=asnumpy#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [`asscalar`](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=asscalar#mxnet.ndarray.NDArray.asscalar) and [`wait_to_read`](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=wait_to_read#mxnet.ndarray.NDArray.wait_to_read).
 
-While it is possible to use `NDArray.waitall()` before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a Sequential or Hybrid network.
+While it is possible to use [`NDArray.waitall()`](http://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=waitall#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [`Sequential`](http://mxnet.incubator.apache.org/api/python/gluon/gluon.html?highlight=sequential#mxnet.gluon.nn.Sequential) or hybridized network.
 
 ## The correct way to profile
 
@@ -172,7 +172,7 @@ Note that the profiler output could be large depending on your code. It might be
 
 MXNet executes computation graphs in 'bulk mode' which reduces kernel launch gaps in between symbolic operators for faster execution. This could reduce the granularity of the profiler output. If you need profiling result of every operator, please set the environment variables `MXNET_EXEC_BULK_EXEC_INFERENCE` and `MXNET_EXEC_BULK_EXEC_TRAIN` to `0` to disable the bulk execution mode.
 
-When working with Gluon networks, you will get a more granular output if you profile without hybridization.
+When working with networks created using the Gluon API, you will get a more granular profiling outputs if you profile networks that haven't been hybridized. Operations can appear fused together in the profiling outputs after hybridization, which can make debugging tricky.
 
 ### Viewing profiler output
 
@@ -208,7 +208,7 @@ The above picture visualizes the sequence in which the operators were executed a
 
 ## Advanced: Using NVIDIA Profiling Tools
 
-MXNet's Profiler is definitely the recommended starting point for profiling MXNet code, but NVIDIA also provides a couple of tools for low-level profiling of CUDA code: NVProf, Visual Profiler and Nsight Compute. You can use these tools to profile all kinds of executables, so they can be used for profiling Python scripts running MXNet. And you can use these in conjunction with the MXNet Profiler to see high-level information from MXNet alongside the low-level CUDA kernel information.
+MXNet's Profiler is the recommended starting point for profiling MXNet code, but NVIDIA also provides a couple of tools for low-level profiling of CUDA code: [NVProf](https://devblogs.nvidia.com/cuda-pro-tip-nvprof-your-handy-universal-gpu-profiler/), [Visual Profiler](https://developer.nvidia.com/nvidia-visual-profiler) and [Nsight Compute](https://developer.nvidia.com/nsight-compute). You can use these tools to profile all kinds of executables, so they can be used for profiling Python scripts running MXNet. And you can use these in conjunction with the MXNet Profiler to see high-level information from MXNet alongside the low-level CUDA kernel information.
 
 #### NVProf and Visual Profiler
 
