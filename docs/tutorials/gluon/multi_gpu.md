@@ -100,7 +100,7 @@ At this point we are ready to assemble a complete multiple GPUs training example
 
 ## Multiple GPUs classification of MNIST images
 
-In the first step, we are going to load the MNIST imagesa and use [ToTensor](https://mxnet.apache.org/api/python/gluon/data.html#mxnet.gluon.data.vision.transforms.ToTensor) to convert the format of the data from `height x width x channel` to `channel x height x width` and divide it by 255.
+In the first step, we are going to load the MNIST images and use [ToTensor](https://mxnet.apache.org/api/python/gluon/data.html#mxnet.gluon.data.vision.transforms.ToTensor) to convert the format of the data from `height x width x channel` to `channel x height x width` and divide it by 255.
 
 ```python
 train_data = mx.gluon.data.vision.MNIST(train=True).transform_first(mx.gluon.data.vision.transforms.ToTensor())
