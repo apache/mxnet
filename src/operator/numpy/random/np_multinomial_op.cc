@@ -37,7 +37,7 @@ NNVM_REGISTER_OP(_np__random_multinomial)
 "Each sample drawn from the distribution represents n such experiments. "
 "Its values, X_i = [X_0, X_1, ..., X_p], represent the number of times the outcome was i.
 )code")
-.set_num_inputs(0)
+.set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyMultinomialParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyMultinomialOpShape)
