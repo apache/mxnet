@@ -576,7 +576,7 @@ class DataLoader(object):
                                                initializer=_thread_worker_initializer,
                                                initargs=(is_np_shape(), is_np_array()))
             else:
-                self._worker_pool = multiprocessing.get_context('spawn').Pool(
+                self._worker_pool = multiprocessing.Pool(
                     self._num_workers, initializer=_worker_initializer,
                     initargs=[self._dataset, is_np_shape(), is_np_array()])
         if batchify_fn is None:
