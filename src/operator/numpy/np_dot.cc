@@ -80,7 +80,23 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
   } else {
     // Case 5: a is N-D array and b is M-D array, sum product over the last axis
     //         of a and the 2nd-to-last axis of b
-    LOG(FATAL) << "Case 5 not implemented yet...";
+    TShape tmp_shape(a_shape.ndim(), -1);
+    tmp_shape[a_shape.ndim() - 1] = b_shape[b_shape.ndim() - 2];
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, tmp_shape);
+
+    tmp_shape = TShape(b_shape.ndim(), -1);
+    tmp_shape[b_shape.ndim() - 2] = a_shape[a_shape.ndim() - 1];
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, tmp_shape);
+
+    tmp_shape = TShape(a_shape.ndim() + b_shape.ndim() - 2, -1);
+    for (int i = 0; i < a_shape.ndim() - 1; ++i) {
+      tmp_shape[i] = a_shape[i];
+    }
+    for (int i = 0; i < b_shape.ndim() - 2; ++i) {
+      tmp_shape[i + a_shape.ndim() - 1] = b_shape[i];
+    }
+    tmp_shape[tmp_shape.ndim() - 1] = b_shape[b_shape.ndim() - 1];
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, tmp_shape);
   }
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }

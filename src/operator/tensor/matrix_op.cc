@@ -409,6 +409,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(expand_dims)
+.add_alias("_npi_expand_dims")
 .describe(R"code(Inserts a new axis of size 1 into the array shape
 
 For example, given ``x`` with shape ``(2,3,4)``, then ``expand_dims(x, axis=1)``

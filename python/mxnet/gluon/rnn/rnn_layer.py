@@ -28,6 +28,8 @@ __all__ = ['RNN', 'LSTM', 'GRU']
 from ... import ndarray, symbol
 from .. import HybridBlock, tensor_types
 from . import rnn_cell
+from ...util import is_np_array
+
 
 class _RNNLayer(HybridBlock):
     """Implementation of recurrent layers."""
@@ -217,7 +219,10 @@ class _RNNLayer(HybridBlock):
                 info.update(kwargs)
             else:
                 info = kwargs
-            states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
+            state = func(name='%sh0_%d' % (self.prefix, i), **info)
+            if is_np_array():
+                state = state.as_np_ndarray()
+            states.append(state)
         return states
 
     def __call__(self, inputs, states=None, sequence_length=None, **kwargs):
@@ -236,7 +241,6 @@ class _RNNLayer(HybridBlock):
         else:
             return super(_RNNLayer, self).__call__(inputs, states, **kwargs)
 
-
     def hybrid_forward(self, F, inputs, states, sequence_length=None, **kwargs):
         if F is ndarray:
             batch_size = inputs.shape[self._layout.find('N')]
@@ -254,8 +258,9 @@ class _RNNLayer(HybridBlock):
 
     def _forward_kernel(self, F, inputs, states, sequence_length, **kwargs):
         """ forward using CUDNN or CPU kenrel"""
+        swapaxes = F.np.swapaxes if is_np_array() else F.swapaxes
         if self._layout == 'NTC':
-            inputs = F.swapaxes(inputs, dim1=0, dim2=1)
+            inputs = swapaxes(inputs, 0, 1)
         if self._projection_size is None:
             params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
                       for t in ['weight', 'bias']
@@ -270,21 +275,23 @@ class _RNNLayer(HybridBlock):
                       for g in ['i2h', 'h2h', 'h2r']
                       if g != 'h2r' or t != 'bias')
 
-        params = F._internal._rnn_param_concat(*params, dim=0)
+        rnn_param_concat = F.np._internal.rnn_param_concat if is_np_array()\
+            else F._internal._rnn_param_concat
+        params = rnn_param_concat(*params, dim=0)
 
         if self._use_sequence_length:
             rnn_args = states + [sequence_length]
         else:
             rnn_args = states
 
-        rnn = F.RNN(inputs, params, *rnn_args, use_sequence_length=self._use_sequence_length,
-                    state_size=self._hidden_size, projection_size=self._projection_size,
-                    num_layers=self._num_layers, bidirectional=self._dir == 2,
-                    p=self._dropout, state_outputs=True, mode=self._mode,
-                    lstm_state_clip_min=self._lstm_state_clip_min,
-                    lstm_state_clip_max=self._lstm_state_clip_max,
-                    lstm_state_clip_nan=self._lstm_state_clip_nan)
-
+        rnn_fn = F.npx.RNN if is_np_array() else F.RNN
+        rnn = rnn_fn(inputs, params, *rnn_args, use_sequence_length=self._use_sequence_length,
+                     state_size=self._hidden_size, projection_size=self._projection_size,
+                     num_layers=self._num_layers, bidirectional=self._dir == 2,
+                     p=self._dropout, state_outputs=True, mode=self._mode,
+                     lstm_state_clip_min=self._lstm_state_clip_min,
+                     lstm_state_clip_max=self._lstm_state_clip_max,
+                     lstm_state_clip_nan=self._lstm_state_clip_nan)
 
         if self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]
@@ -292,7 +299,7 @@ class _RNNLayer(HybridBlock):
             outputs, states = rnn[0], [rnn[1]]
 
         if self._layout == 'NTC':
-            outputs = F.swapaxes(outputs, dim1=0, dim2=1)
+            outputs = swapaxes(outputs, 0, 1)
 
         return outputs, states
 

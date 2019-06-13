@@ -22,7 +22,7 @@ from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
-from ...base import _LIB, SymbolHandle, numeric_types
+from ...base import _LIB, SymbolHandle, numeric_types, mx_uint
 from ...util import _sanity_check_params, check_call, set_module
 from ...context import current_context
 from ..symbol import Symbol
@@ -30,13 +30,29 @@ from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
-           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power']
+           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'swapaxes',
+           'expand_dims']
+
+
+def _num_outputs(sym):
+    return len(sym.as_nd_ndarray())
 
 
 @set_module('mxnet.symbol.numpy')
 class _Symbol(Symbol):
-    def __getitem__(self, item):
-        raise NotImplementedError
+    def __getitem__(self, key):
+        num_outputs = _num_outputs(self)
+        if num_outputs == 1:
+            raise NotImplementedError
+        if not isinstance(key, int):
+            raise NotImplementedError
+        if key >= num_outputs:
+            # Important, python determines the end by this exception
+            raise IndexError
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetOutput(
+            self.handle, mx_uint(key), ctypes.byref(handle)))
+        return _Symbol(handle=handle)
 
     def __setitem__(self, key, value):
         raise NotImplementedError
@@ -257,13 +273,11 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute pad')
 
-    def swapaxes(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`swapaxes`.
-
-        The arguments are the same as for :py:func:`swapaxes`, with
-        this array as data.
+    def swapaxes(self, axis1, axis2):  # pylint: disable=arguments-differ
+        """Return a copy of the array with axis1 and axis2 interchanged.
+        Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
-        raise NotImplementedError
+        return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -831,13 +845,10 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute softmin')
 
-    def squeeze(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`squeeze`.
-
-        The arguments are the same as for :py:func:`squeeze`, with
-        this array as data.
+    def squeeze(self, axis=None):  # pylint: disable=arguments-differ
+        """Remove single-dimensional entries from the shape of a.
         """
-        raise NotImplementedError
+        return _mx_np_op.squeeze(self, axis=axis)
 
     def broadcast_to(self, *args, **kwargs):
         raise AttributeError('_Symbol object has no attribute broadcast_to')
@@ -1171,6 +1182,49 @@ def clip(a, a_min, a_max, out=None):
     if a_max is None:
         a_max = float('inf')
     return _npi.clip(a, a_min, a_max, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def swapaxes(a, axis1, axis2):
+    """Interchange two axes of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis1 : int
+        First axis.
+    axis2 : int
+        Second axis.
+
+    Returns
+    -------
+    a_swapped : _Symbol
+        Swapped array symbol.
+    """
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
+
+
+@set_module('mxnet.symbol.numpy')
+def expand_dims(a, axis):
+    """Expand the shape of an array.
+
+    Insert a new axis that will appear at the `axis` position in the expanded
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis : int
+        Position in the expanded axes where the new axis is placed.
+
+    Returns
+    -------
+    res : _Symbol
+        Output array. The number of dimensions is one greater than that of
+        the input array.
+    """
+    return _npi.expand_dims(a, axis)
 
 
 _set_np_symbol_class(_Symbol)
