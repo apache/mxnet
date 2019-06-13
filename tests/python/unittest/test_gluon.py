@@ -139,7 +139,7 @@ def test_parameter_dict():
     params0 = gluon.ParameterDict('')
     params0.get('w0', shape=(10, 10), dtype='float32')
     params0.get('w1', shape=(10, 10), dtype='int8')
-    params0.initialize(ctx=ctx)
+    params0.initialize(mx.init.One(), ctx=ctx)
     params0.save('test_parameter_dict.params')
 
     params1 = gluon.ParameterDict('')
