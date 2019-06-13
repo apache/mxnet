@@ -29,13 +29,18 @@ Here we will focus on implementing data parallel training for a convolutional ne
 
 ## Storing data on GPU
 
-The basic primitive in Apache MXNet to specify a tensor is [NDArray](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#module-mxnet.ndarray). When you create NDArray you have to provide the context - the device where this tensor is going to be stored. The context can be either CPU or GPU and both can be indexed: if your machine has multiple GPUs, you can provide an index to specify which GPU to use. By default, CPU context is used, and that means that the tensor will live in main RAM. Below is an example how to create two tensors where one is stored on the first GPU and the second is stored on the second GPU.
+The basic primitive in Apache MXNet to specify a tensor is [NDArray](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html#module-mxnet.ndarray). When you create NDArray you have to provide the context - the device where this tensor is going to be stored. The context can be either CPU or GPU and both can be indexed: if your machine has multiple GPUs, you can provide an index to specify which GPU to use. By default, CPU context is used, and that means that the tensor will live in main RAM. Below is an example how to create two tensors where one is stored on the first GPU and the second is stored on the second GPU. Notice, that this example will work even when you have one or no GPUs at all. We use [mx.context.num_gpus](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/context.py#L262) to find the number of available GPUs.
 
 ```python
 import mxnet as mx
 
-a = mx.nd.array([1, 2, 3], ctx=mx.gpu(0))
-b = mx.nd.array([5, 6, 7], ctx=mx.gpu(1))
+n_gpu = mx.context.num_gpus()
+context = [mx.gpu(0), mx.gpu(1)] if n_gpu >= 2 else \
+          [mx.gpu(), mx.gpu()] if n_gpu == 1 else \
+          [mx.cpu(), mx.cpu()]
+
+a = mx.nd.array([1, 2, 3], ctx=context[0])
+b = mx.nd.array([5, 6, 7], ctx=context[1])
 ```
 
 The next step would be to do operations on these 2 NDArrays. But, unfortunately, if we try to do any operation involved both these arrays, Apache MXNet will return an error: `Check failed: e == cudaSuccess CUDA: an illegal memory access was encountered`. This error is returned because we tried to use arrays that are stored on different contexts: Apache MXNet wants users to explicitly control memory allocation and doesn't automatically copy data between GPUs. If we want to do an operation on these arrays we have to have them in the same GPU. The result of the operation is going to be also stored on that GPU as well.
@@ -55,8 +60,6 @@ When you create a network using [Blocks](https://mxnet.incubator.apache.org/api/
 ```python
 from mxnet import init
 from mxnet.gluon import nn
-
-context = [mx.gpu(0), mx.gpu(1)]
 
 net = nn.Sequential()
 net.add(nn.Conv2D(channels=6, kernel_size=5, activation='relu'),
