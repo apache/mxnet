@@ -32,4 +32,3 @@ NNVM_REGISTER_OP(_np_multinomial)
 
 }  // namespace op
 }  // namespace mxnet
- 

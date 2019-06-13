@@ -145,7 +145,8 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
     // set zero for the outputs
     Kernel<set_zero, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<int64_t>());
     Kernel<multinomial_kernel, xpu>::Launch(
-          s, num_output, num_exp, prob_length, inputs[0].dptr<DType>(), uniform.dptr_, outputs[0].dptr<int64_t>());
+      s, num_output, num_exp, prob_length, 
+      inputs[0].dptr<DType>(), uniform.dptr_, outputs[0].dptr<int64_t>());
   });
 }
 
