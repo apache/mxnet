@@ -543,7 +543,12 @@ endif
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
 lib/libmxnet.a: $(ALLX_DEP)
 	@mkdir -p $(@D)
+	set +e
 	ar crv $@ $(filter %.o, $?)
+	if [ $? -ne 0  ]; then \
+	    $(info INFO: ar utility failed. If the issue is related to https://github.com/apache/incubator-mxnet/issues/15084, please upgrade archive utility to 2.27 or greater)
+	set -e
+	fi
 
 lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
