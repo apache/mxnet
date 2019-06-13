@@ -928,7 +928,7 @@ fixed-size items.
 
         check_call(_LIB.MXNDArraySlice(
             self.handle, mx_uint(start), mx_uint(stop), ctypes.byref(handle)))
-        return NDArray(handle=handle, writable=self.writable)
+        return self.__class__(handle=handle, writable=self.writable)
 
     def _at(self, idx):
         """Returns a view of the array sliced at `idx` in the first dim.
@@ -1085,7 +1085,7 @@ fixed-size items.
                                            c_array(ctypes.c_int64, shape),
                                            reverse,
                                            ctypes.byref(handle)))
-        return NDArray(handle=handle, writable=self.writable)
+        return self.__class__(handle=handle, writable=self.writable)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
