@@ -683,21 +683,16 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, exec::DevMaskVector&& dev
                                      std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
   using namespace nnvm;
   nnvm::Graph& g = *p_g;
-  std::cout << "Checkandinferstoragetype" << std::endl;
   bool dev_match = g.attrs.count("dev_mask") &&
                    g.GetAttr<exec::DevMaskVector>("dev_mask") == dev_mask;
-  std::cout << "count(dev_mask) " << g.attrs.count("dev_mask") << std::endl;
-  std::cout << "dev_match: " << dev_match << std::endl;
   if (!dev_match) {
     g.attrs["dev_mask"] = std::make_shared<dmlc::any>(std::move(dev_mask));
   }
 
   if (dev_match && use_inputs) {
-    std::cout << "dev match & use_inputs" << std::endl;
     if (g.attrs.count("storage_type_inputs") &&
         g.GetAttr<StorageTypeVector>("storage_type_inputs") == storage_types) return true;
   } else if (dev_match && g.attrs.count("storage_type")) {
-    std::cout << "dev_match && storage_type" << std::endl;
     const auto& prev_storage_types = g.GetAttr<StorageTypeVector>("storage_type");
     CHECK_EQ(prev_storage_types.size(), storage_types.size());
     bool match = true;
@@ -715,17 +710,8 @@ inline bool CheckAndInferStorageType(nnvm::Graph* p_g, exec::DevMaskVector&& dev
   g.attrs.erase("dispatch_mode");
   g.attrs.erase("storage_type");
   g.attrs.erase("storage_type_inputs");
-  std::cout << "Node range: " << node_range.first << " " << node_range.second << std::endl;
   if (node_range.second > node_range.first) {
     g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
-  }
-  std::cout << g.attrs.size() << std::endl;
-  for (const auto& attr : g.attrs) {
-    std::cout << attr.first << std::endl;
-  }
-  std::cout << storage_types.size() << std::endl;
-  for (const auto& st : storage_types) {
-    std::cout << st << std::endl;
   }
   if (use_inputs) {
     g = exec::InferStorageType(std::move(g), std::move(storage_types));

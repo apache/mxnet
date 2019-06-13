@@ -197,10 +197,8 @@ class CachedOp {
   bool inlining_;
   std::vector<nnvm::NodeEntry> ograd_entries_;
   std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
-  std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output_;
   std::vector<bool> save_inputs_, save_outputs_;
   std::vector<OpReqType> bwd_output_reqs_;
-
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
 };

@@ -245,7 +245,6 @@ CachedOp::CachedOp(
     bwd_output_reqs_ = std::vector<OpReqType>(grad_graph.outputs.size(), kWriteTo);
     inlining_ = !config_.static_alloc &&
         (idx.num_nodes() - idx.input_nodes().size()) <= config_.inline_limit;
-    std::cout << "Inlining: " << inlining_ << std::endl;
   }
 
   // Set params
@@ -1019,7 +1018,6 @@ void CachedOp::DynamicBackward(
     const std::vector<NDArray*>& inputs,
     const std::vector<OpReqType>& reqs,
     const std::vector<NDArray*>& outputs) {
-  std::cout << "HAHA" << std::endl;
   using namespace nnvm;
   using namespace imperative;
 
@@ -1035,7 +1033,6 @@ void CachedOp::DynamicBackward(
     runtime.info.full_graph = state.info.full_graph;
     runtime.info.bwd_input_eid = state.info.bwd_input_eid;
   }
-  std::cout << "HOHO" << std::endl;
   nnvm::Graph& g = runtime.info.full_graph;
   const auto& idx = g.indexed_graph();
   auto& buff = runtime.buff;
@@ -1044,7 +1041,6 @@ void CachedOp::DynamicBackward(
   size_t num_forward_outputs = runtime.info.fwd_graph.outputs.size();
   size_t num_forward_nodes = runtime.info.fwd_graph.indexed_graph().num_nodes();
   size_t num_forward_entries = runtime.info.fwd_graph.indexed_graph().num_node_entries();
-  std::cout << "HIHI" << std::endl;
   buff.resize(idx.num_node_entries());
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
@@ -1065,7 +1061,6 @@ void CachedOp::DynamicBackward(
       *outputs[i] = arrays[eid]->Detach();
     arrays[eid] = outputs[i];
   }
-  std::cout << "HOWHOW" << std::endl;
 
   // Allocate NDArrays
   auto ref_count = g.GetAttr<std::vector<uint32_t> >("backward_ref_count");
@@ -1085,14 +1080,11 @@ void CachedOp::DynamicBackward(
   }
 
   const auto& mem_plan = g.GetAttr<MemoryPlanVector >("backward_mem_plan");
-  std::cout << "before allocatememory" << std::endl;
   AllocateMemory(g, idx, default_ctx, num_forward_entries, idx.num_node_entries(),
                  mem_plan, arrays, &array_reqs);
-  std::cout << "after allocatememory" << std::endl;
 
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
 
-  std::cout << "Run graph!" << std::endl;
   RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
            std::move(array_reqs), std::move(ref_count), &states, dispatch_modes,
            Imperative::Get()->is_recording());
@@ -1198,20 +1190,17 @@ void CachedOp::Backward(
     const std::vector<OpReqType>& reqs,
     const std::vector<NDArray*>& outputs) {
   using namespace imperative;
-  std::cout << "BACKWARD" << std::endl;
   CHECK(!Imperative::Get()->is_recording())
       << "CachedOp does not support higher order gradients. "
       << "If you want to do backward with create_graph=True please "
       << "do not use hybridize.";
 
-  std::cout << "Get bulk size" << std::endl;
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.backward_bulk_size);
 
   try {
     if (config_.static_alloc) {
       StaticBackward(retain_graph, state, inputs, reqs, outputs);
     } else {
-      std::cout << "Dynamic backward?" << std::endl;
       DynamicBackward(retain_graph, state, inputs, reqs, outputs);
     }
   } catch (const dmlc::Error& e) {
@@ -1292,7 +1281,6 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
                       const std::vector<NDArray>& outputs) {
   using namespace nnvm;
   using namespace imperative;
-  std::cout << "CachedOpBackward!" << std::endl;
   CachedOpActualState &s = state_ptr.get_state<CachedOpActualState>();
   std::vector<NDArray> in_bufs = inputs;
   std::vector<NDArray> out_bufs = outputs;
@@ -1459,7 +1447,6 @@ NNVM_REGISTER_OP(_CachedOp)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(n->attrs.parsed);
-    std::cout << "Called FGradient!" << std::endl;
     return op->Gradient(n, ograds);
   })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
