@@ -103,6 +103,7 @@ class ndarray(NDArray):
     floating point number, or something else, etc.). Arrays should be constructed using
     `array`, `zeros` or `empty`. Currently, only c-contiguous arrays are supported."""
 
+    # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
         # TODO(junwu): calling base class __getitem__ is a temp solution
         ndim = self.ndim
@@ -144,6 +145,7 @@ class ndarray(NDArray):
         elif sys.version_info[0] > 2 and isinstance(key, range):
             key = _get_index(key)
         return self._as_nd_ndarray().__getitem__(key).as_np_ndarray()
+    # pylint: enable=too-many-return-statements
 
     def __setitem__(self, key, value):
         # TODO(junwu): calling base class __setitem__ is a temp solution
@@ -621,7 +623,7 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pad')
 
-    def swapaxes(self, axis1, axis2):
+    def swapaxes(self, axis1, axis2):  # pylint: disable=arguments-differ
         """Return a copy of the array with axis1 and axis2 interchanged.
         Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
@@ -1193,7 +1195,7 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute softmin')
 
-    def squeeze(self, axis=None):
+    def squeeze(self, axis=None):  # pylint: disable=arguments-differ
         """Remove single-dimensional entries from the shape of a.
         """
         return _mx_np_op.squeeze(self, axis=axis)

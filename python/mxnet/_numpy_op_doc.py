@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# pylint: skip-file
+
 """Doc placeholder for numpy ops with prefix _np."""
 
 

@@ -29,7 +29,7 @@ from ... import ndarray, symbol
 from .. import HybridBlock, tensor_types
 from . import rnn_cell
 from ...util import is_np_array
-from ... import numpy as _mx_np
+
 
 class _RNNLayer(HybridBlock):
     """Implementation of recurrent layers."""

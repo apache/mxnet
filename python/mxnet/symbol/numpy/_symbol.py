@@ -273,7 +273,7 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute pad')
 
-    def swapaxes(self, axis1, axis2):
+    def swapaxes(self, axis1, axis2):  # pylint: disable=arguments-differ
         """Return a copy of the array with axis1 and axis2 interchanged.
         Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
@@ -845,7 +845,7 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute softmin')
 
-    def squeeze(self, axis=None):
+    def squeeze(self, axis=None):  # pylint: disable=arguments-differ
         """Remove single-dimensional entries from the shape of a.
         """
         return _mx_np_op.squeeze(self, axis=axis)
