@@ -45,7 +45,7 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'swapaxes']
+           'clip', 'swapaxes', 'expand_dims']
 
 
 # This function is copied from ndarray.py since pylint
@@ -621,13 +621,11 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pad')
 
-    def swapaxes(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`swapaxes`.
-
-        The arguments are the same as for :py:func:`swapaxes`, with
-        this array as data.
+    def swapaxes(self, axis1, axis2):
+        """Return a copy of the array with axis1 and axis2 interchanged.
+        Refer to `mxnet.numpy.swapaxes` for full documentation.
         """
-        raise NotImplementedError
+        return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`split`.
@@ -1195,13 +1193,10 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute softmin')
 
-    def squeeze(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`squeeze`.
-
-        The arguments are the same as for :py:func:`squeeze`, with
-        this array as data.
+    def squeeze(self, axis=None):
+        """Remove single-dimensional entries from the shape of a.
         """
-        raise NotImplementedError
+        return _mx_np_op.squeeze(self, axis=axis)
 
     def broadcast_to(self, shape):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_to')
@@ -1699,3 +1694,25 @@ def swapaxes(a, axis1, axis2):
         Swapped array. This is always a copy of the input array.
     """
     return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
+
+
+@set_module('mxnet.numpy')
+def expand_dims(a, axis):
+    """Expand the shape of an array.
+
+    Insert a new axis that will appear at the `axis` position in the expanded
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis : int
+        Position in the expanded axes where the new axis is placed.
+
+    Returns
+    -------
+    res : ndarray
+        Output array. The number of dimensions is one greater than that of
+        the input array.
+    """
+    return _npi.expand_dims(a, axis)

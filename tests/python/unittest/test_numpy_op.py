@@ -733,6 +733,40 @@ def test_np_swapaxes():
             assert same(ret_mx.asnumpy(), ret_np)
 
 
+@with_seed()
+@npx.use_np_shape
+def test_np_squeeze():
+    config = [((), None),
+              ((), -1),
+              ((), 0),
+              ((4, 1, 2), None),
+              ((1, 1, 1), None),
+              ((1, 0, 1, 5), 2),
+              ((1, 0, 1, 1), (-1, -4))]
+
+    class TestSqueeze(HybridBlock):
+        def __init__(self, axis):
+            super(TestSqueeze, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return F.np.squeeze(x, axis=self._axis)
+
+    for shape, axis in config:
+        data_np = _np.random.uniform(size=shape)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = _np.squeeze(data_np, axis=axis)
+        ret_mx = np.squeeze(data_mx, axis=axis)
+        assert same(ret_mx.asnumpy(), ret_np)
+
+        net = TestSqueeze(axis)
+        for hybrid in [False, True]:
+            if hybrid:
+                net.hybridize()
+            ret_mx = net(data_mx)
+            assert same(ret_mx.asnumpy(), ret_np)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

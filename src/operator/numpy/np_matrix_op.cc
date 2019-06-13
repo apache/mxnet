@@ -310,5 +310,68 @@ NNVM_REGISTER_OP(_backward_np_concat)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);
 
+bool NumpySqueezeShape(const nnvm::NodeAttrs& attrs,
+                       mxnet::ShapeVector *in_attrs,
+                       mxnet::ShapeVector *out_attrs) {
+  const SqueezeParam& param = nnvm::get<SqueezeParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U) << "Input: [a]";
+  CHECK_EQ(out_attrs->size(), 1U);
+  const mxnet::TShape& dshape = in_attrs->at(0);
+  const int dndim = dshape.ndim();
+  if (!shape_is_known(dshape)) return false;
+  mxnet::TShape oshape = dshape;
+  // special case, scalar tensor
+  if (dshape.ndim() == 0) {
+    if (param.axis.has_value()) {
+      mxnet::Tuple<int> axes = param.axis.value();
+      CHECK_EQ(axes.ndim(), 1) << "cannot specify more than one axis for a scalar tensor";
+      CHECK(axes[0] == 0 || axes[0] == -1) << "axis " << axes[0]
+                                           << " is out of bounds of array of dimension 0";
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(0, -1));
+    return true;
+  }
+  if (param.axis.has_value()) {
+    // preprocess axis
+    mxnet::Tuple<int> axes = param.axis.value();
+    for (int i = 0; i < axes.ndim(); ++i) {
+      if (axes[i] < 0) {
+        axes[i] += dndim;
+        CHECK_GE(axes[i], 0)
+            << "axis " << axes[i] - dndim << " is out of bounds for array of dimension " << dndim;
+      }
+      CHECK_LT(axes[i], dndim)
+          << "axis " << axes[i] << " is out of bounds for array of dimension " << dndim;
+      CHECK_EQ(dshape[axes[i]], 1)
+          << "cannot select an axis to squeeze out which has size="
+          << dshape[axes[i]] << " not equal to one";
+      CHECK_NE(oshape[axes[i]], 0) << "duplicate value in axis";
+      oshape[axes[i]] = -1;
+    }
+  } else {
+    for (int i = 0; i < oshape.ndim(); ++i) {
+      if (oshape[i] == 1) oshape[i] = -1;
+    }
+  }
+  size_t oshape_size = SqueezeShapeHelper(&oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(oshape.data(), oshape.data()+oshape_size));
+  return true;
+}
+
+NNVM_REGISTER_OP(_np_squeeze)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<SqueezeParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", NumpySqueezeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
+.add_argument("a", "NDArray-or-Symbol[]", "data to squeeze")
+.add_arguments(SqueezeParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet
