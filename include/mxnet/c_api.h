@@ -322,8 +322,7 @@ MXNET_DLL int MXDumpProfile(int finished);
 
 
 /*!
- * \brief Print sorted aggregate stats to the a string
- *        How aggregate stats are stored will not change
+ * \brief Deprecated, use MXAggregateProfileStatsPrintEx instead.
  * \param out_str Will receive a pointer to the output string
  * \param reset Clear the aggregate stats after printing
  * \return 0 when success, -1 when failure happens.

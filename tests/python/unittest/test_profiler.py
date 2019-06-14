@@ -241,7 +241,6 @@ def test_aggregate_stats_valid_json_return():
     debug_str = profiler.dumps(format = 'json')
     assert(len(debug_str) > 0)
     target_dict = json.loads(debug_str)
-    print(target_dict)
     assert "Memory" in target_dict and "Time" in target_dict and "Unit" in target_dict
     profiler.set_state('stop')
 
