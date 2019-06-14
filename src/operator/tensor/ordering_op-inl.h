@@ -580,21 +580,23 @@ void ArgSort(const nnvm::NodeAttrs& attrs,
              const std::vector<OpReqType>& req,
              const std::vector<TBlob>& outputs) {
   const ArgSortParam& param = nnvm::get<ArgSortParam>(attrs.parsed);
+
   if (inputs[0].shape_.ndim() == 0) {
-// Scalar tensor only accept axis of value 0, -1 or None
+  // Scalar tensor only accept axis of value 0, -1 or None
     CHECK(!static_cast<bool>(param.axis) || param.axis.value() == -1 || param.axis.value() == 0)
-    << "Axis can only be -1 or 0 for scalor tensor";
+      << "Axis can only be -1 or 0 for scalor tensor";
     MSHADOW_TYPE_SWITCH(param.dtype, DType, {
       Stream<xpu> *s = ctx.get_stream<xpu>();
       Tensor<xpu, 1, DType> outdata = outputs[0].get_with_shape<xpu, 1, DType>(Shape1(1), s);
       ASSIGN_DISPATCH(outdata, OpReqType::kWriteTo, 0);
     });
   } else if (inputs[0].shape_.Size() == 0) {
+    // If the input tensor is zero size, only a check on axis is needed
     if (static_cast<bool>(param.axis)) {
       int axis = param.axis.value();
       if (axis < 0) axis += inputs[0].shape_.ndim();
-      CHECK(axis >=0 && axis < inputs[0].shape_.ndim())
-      << "Axis must be within the range of input tensor's dimension";
+      CHECK(axis >= 0 && axis < inputs[0].shape_.ndim())
+        << "Axis must be within the range of input tensor's dimension";
     }
   } else {
     TopKParam topk_param;
@@ -606,7 +608,7 @@ void ArgSort(const nnvm::NodeAttrs& attrs,
     MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
         TopKImpl<xpu, DType, IDType>(ctx.run_ctx,
-                                    ctx.requested[0], req, inputs[0], outputs, topk_param);
+                                     ctx.requested[0], req, inputs[0], outputs, topk_param);
       });
     });
   }
@@ -845,6 +847,7 @@ inline bool ArgSortShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& in_shape = (*in_attrs)[0];
+
   if (in_shape.ndim() == 0) {
     mxnet::TShape target_shape({1});
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
@@ -854,6 +857,7 @@ inline bool ArgSortShape(const nnvm::NodeAttrs& attrs,
   } else {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_shape);
   }
+
   return true;
 }
 }  // namespace op
