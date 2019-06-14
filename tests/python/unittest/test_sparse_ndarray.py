@@ -964,9 +964,9 @@ def test_sparse_nd_check_format():
     a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
     assertRaises(mx.base.MXNetError, a.check_format)
     # CSR format should be 2 Dimensional.
-    a = mx.nd.array([1, 2, 3]).tostype('csr')
+    a = mx.nd.array([1, 2, 3])
     assertRaises(ValueError, a.tostype, 'csr')
-    a = mx.nd.array([[[1, 2, 3]]]).tostype('csr')
+    a = mx.nd.array([[[1, 2, 3]]])
     assertRaises(ValueError, a.tostype, 'csr')
     # Row Sparse format indices should be less than the number of rows
     shape = (3, 2)
