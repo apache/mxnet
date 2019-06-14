@@ -32,7 +32,8 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
-           'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin']
+           'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
+           'argsort']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -424,6 +425,21 @@ def argmax(a, axis=None, out=None):
     """
     return _npi.argmax(a, axis=axis, keepdims=False, out=out)
 
+@set_module('mxnet.ndarray.numpy')
+def argsort(a, axis=-1, kind='quicksort',order=None):
+    """
+    Returns the indices that would sort an input array along the given axis.
+
+    This function performs sorting along the given axis and returns an array of indices having same shape as an input array that index data in sorted order.
+
+    Examples:
+    TODO
+    """
+    if kind != 'quicksort':
+        raise AttributeError('mxnet.numpy.argsort does not support other sorting methods')
+    if order != None:
+        raise AttributeError('mxnet.numpy.argsort does not support sorting with fields ordering')
+    return _npi.argsort(a,axis)
 
 @set_module('mxnet.ndarray.numpy')
 def concatenate(seq, axis=0, out=None):
