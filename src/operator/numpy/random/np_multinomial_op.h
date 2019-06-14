@@ -154,7 +154,7 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
   Kernel<set_zero, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<int64_t>());
 
   if (param.pvals.has_value()) {
-    // create a tensor to copy the param.pvals tuple to avoid 
+    // create a tensor to copy the param.pvals tuple to avoid
     // error: calling a __host__ function from a __host__ __device__ function is not allowed
     Tensor<xpu, 1, double> pvals =
       ctx.requested[1].get_space_typed<xpu, 1, double>(Shape1(prob_length), s);
