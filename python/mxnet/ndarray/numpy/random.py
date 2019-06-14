@@ -19,7 +19,11 @@
 from __future__ import absolute_import
 from ...base import numeric_types
 from ...context import current_context
+from ..ndarray import NDArray
 from . import _internal as _npi
+
+import numpy as np
+
 
 __all__ = ['uniform', 'normal', 'multinomial']
 
@@ -137,7 +141,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
                           [loc, scale], size, dtype, ctx, out, kwargs)
 
 
-def multinomial(n, pvals, size=None):
+def multinomial(n, pvals, size=None, **kwargs):
     """Draw samples from a multinomial distribution.
 
     The multinomial distribution is a multivariate generalisation of the binomial distribution. 
@@ -164,5 +168,11 @@ def multinomial(n, pvals, size=None):
         The drawn samples, of shape size, if that was provided. If not, the shape is ``(N,)``.
         In other words, each entry ``out[i,j,...,:]`` is an N-dimensional value drawn from the distribution.
     """
-    pvals = mx.np.array(pvals)
-    return _npi.random_multinomial(pvals, n, size)
+    if isinstance(pvals, NDArray):
+        return _npi.multinomial(pvals, pvals=None, n=n, size=size)
+    else:
+        if isinstance(pvals, np.ndarray):
+            pvals = pvals.tolist()
+        if any(isinstance(i, list) for i in pvals):
+            raise ValueError('object too deep for desired array')
+        return _npi.multinomial(n=n, pvals=pvals, size=size)

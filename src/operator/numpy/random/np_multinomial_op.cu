@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_np_multinomial)
+NNVM_REGISTER_OP(_npi_multinomial)
 .set_attr<FCompute>("FCompute<gpu>", NumpyMultinomialForward<gpu>);
 
 }  // namespace op
