@@ -549,7 +549,6 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
-
 ifeq ($(USE_MKLDNN), 1)
 ifeq ($(UNAME_S), Darwin)
 	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' $@
