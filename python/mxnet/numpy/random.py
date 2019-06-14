@@ -102,7 +102,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
 def multinomial(n, pvals, size=None, **kwargs):
     """Draw samples from a multinomial distribution.
 
-    The multinomial distribution is a multivariate generalisation of the binomial distribution. 
+    The multinomial distribution is a multivariate generalisation of the binomial distribution.
     Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
     where the outcome can be 1 through 6. Each sample drawn from the distribution represents n such experiments.
     Its values, ``X_i = [X_0, X_1, ..., X_p]``, represent the number of times the outcome was ``i``.

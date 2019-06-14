@@ -17,12 +17,11 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 from __future__ import absolute_import
+import numpy as np
 from ...base import numeric_types
 from ...context import current_context
 from ..ndarray import NDArray
 from . import _internal as _npi
-
-import numpy as np
 
 
 __all__ = ['uniform', 'normal', 'multinomial']
@@ -141,10 +140,10 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
                           [loc, scale], size, dtype, ctx, out, kwargs)
 
 
-def multinomial(n, pvals, size=None, **kwargs):
+def multinomial(n, pvals, size=None):
     """Draw samples from a multinomial distribution.
 
-    The multinomial distribution is a multivariate generalisation of the binomial distribution. 
+    The multinomial distribution is a multivariate generalisation of the binomial distribution.
     Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
     where the outcome can be 1 through 6. Each sample drawn from the distribution represents n such experiments.
     Its values, ``X_i = [X_0, X_1, ..., X_p]``, represent the number of times the outcome was ``i``.

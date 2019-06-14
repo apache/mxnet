@@ -91,7 +91,7 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
 inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
                                     std::vector<int>* in_attrs,
                                     std::vector<int>* out_attrs) {
-  const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);      
+  const NumpyMultinomialParam& param = nnvm::get<NumpyMultinomialParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), (param.pvals.has_value()) ? 0U : 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -199,9 +199,9 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
           << "sum(pvals[:-1]) > 1.0";
       }
       Kernel<multinomial_kernel_from_input, xpu>::Launch(
-        s, num_output, num_exp, prob_length, 
+        s, num_output, num_exp, prob_length,
         inputs[0].dptr<DType>(), uniform.dptr_, outputs[0].dptr<int64_t>());
-    }); 
+    });
   }
 }
 
