@@ -83,7 +83,8 @@ class _BlockScope(object):
     def __exit__(self, ptype, value, trace):
         if self._block._empty_prefix:
             return
-        self._name_scope.__exit__(ptype, value, trace)
+        if self._name_scope is not None:
+            self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
         _BlockScope._current.value = self._old_scope
 
