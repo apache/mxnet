@@ -83,7 +83,7 @@ namespace {
     params_names.pop_back();
     node->attrs.dict["num_inputs"] = std::to_string(inputs_size);
     node->attrs.dict["num_outputs"] = std::to_string(subgraph.outputs.size());
-    node->attrs.op = Op::Get("FusedOp");
+    node->attrs.op = Op::Get("_FusedOp");
     node->op()->attr_parser(&(node->attrs));
     return node;
   }
