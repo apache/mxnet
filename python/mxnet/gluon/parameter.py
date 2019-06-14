@@ -369,7 +369,7 @@ class Parameter(object):
         ctx = context.cpu()
         if self._stype == 'default':
             block = self.list_data()
-            data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
+            data = ndarray.add_n(*(w.copyto(ctx).as_nd_ndarray() for w in block)) / len(block)
         else:
             # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
