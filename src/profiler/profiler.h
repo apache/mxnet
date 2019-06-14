@@ -1115,10 +1115,7 @@ struct ProfileMarker {
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneInstantMarker> vtune_instant_marker_);
 };
 
-
-class CustomOpProfiler;
 static ProfileDomain custom_op_domain("Custom Operator");
-
 
 /*!
  * \brief Operator profiler object. Logs as both an independent event and a task in
@@ -1178,13 +1175,13 @@ struct ProfileOperator : public ProfileEvent {
     SetCategories(domain_.name());
 =======
       , attributes_(attributes)
-      , profiling_operator(true)
-      , profiling_task(true) {
-    if (strcmp(name, "CustomOperator") == 0) {
-      profiling_operator = false;
-      profiling_task = false;
+      , profiling_operator_(true)
+      , profiling_task_(true) {
+    if (strcmp(name, "Dummy_Wait") == 0) {
+      profiling_operator_ = false;
+      profiling_task_ = false;
     } else if (strcmp(name, "Custom") == 0) {
-      profiling_task = false;
+      profiling_task_ = false;
     } else if (std::string(name).find("::") != std::string::npos) {
       as_task_.setDomain(&custom_op_domain);
       SetCategories(custom_op_domain.name());
@@ -1201,18 +1198,18 @@ struct ProfileOperator : public ProfileEvent {
   void start(mxnet::Context::DeviceType dev_type, uint32_t dev_id) {
     dev_type_ = dev_type;
     dev_id_ = dev_id;
-    if (profiling_operator)
+    if (profiling_operator_)
       ProfileEvent::start();
-    if (profiling_task)
+    if (profiling_task_)
       as_task_.start();
   }
   /*!
    * \brief Stop the profiling scope
    */
   void stop() override {
-    if (profiling_task)
+    if (profiling_task_)
       as_task_.stop();
-    if (profiling_operator)
+    if (profiling_operator_)
       ProfileEvent::stop();
   }
 
@@ -1238,7 +1235,12 @@ struct ProfileOperator : public ProfileEvent {
       if (attributes) {
         name_.append(attributes->to_string().c_str());
       }
-      categories_.set("operator");
+      if (std::string(name).find("::") != std::string::npos) {
+        categories_.set(custom_op_domain.name());
+      }
+      else {
+        categories_.set("operator");
+      }
       items_[kStart].timestamp_ = start_time;
       items_[kStop].timestamp_ = stop_time;
     }
@@ -1270,10 +1272,10 @@ struct ProfileOperator : public ProfileEvent {
   static ProfileDomain domain_;
   /*! \brief Optional operator attributes */
   std::unique_ptr<Attributes> attributes_;
-
-  bool profiling_operator;
-
-  bool profiling_task;
+  /*! \brief Whether to profile as operator */
+  bool profiling_operator_;
+  /*! \brief Whether to profile as task */
+  bool profiling_task_;
 };
 
 /*

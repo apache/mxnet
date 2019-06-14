@@ -334,7 +334,15 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
   }
 #endif
   const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
+  // auto start = std::chrono::duration_cast<std::chrono::microseconds>(
+  //     std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	const char* d_name = profiling && opr_name ? profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) : NULL;
+  // auto end = std::chrono::duration_cast<std::chrono::microseconds>(
+  //     std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+  // LOG(WARNING) << opr_name;
+  // LOG(WARNING) << start;
+  // LOG(WARNING) << end;
+  // LOG(WARNING) << static_cast<double>(end-start) / 1000;
 	const char* display_name = d_name ? d_name : opr_name;
 	ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, display_name, wait);
 	opr->temporary = true;

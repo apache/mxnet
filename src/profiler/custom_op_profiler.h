@@ -31,59 +31,80 @@ namespace profiler {
 using Tid = std::thread::id;
 using TaskPtr = std::unique_ptr<ProfileTask>;
 
+  /*!
+   * \brief Singleton class to assist profiling python callback of custom operators
+   *        and to assist linking sub-operators to custom operators
+   */
 class CustomOpProfiler {
-public:
-    static CustomOpProfiler* Get() {
-        static CustomOpProfiler inst;
-        return &inst;
+ public:
+
+  static CustomOpProfiler* Get() {
+    static CustomOpProfiler inst;
+    return &inst;
+  }
+  /*!
+   * \brief Called before the callback of custom operators to start a profile task for python 
+   *        code execution time
+   * \param op_type The registed name of the custom operator
+   */
+  void OnCustomBegin(const std::string& op_type) {
+    const Tid tid = std::this_thread::get_id();
+    const std::string task_name = op_type + "::pure_python" ;
+    std::lock_guard<std::mutex> lock(mutex_);
+    tid_to_op_type_[tid] = op_type;
+    tasks_[tid] = std::make_unique<ProfileTask>(task_name.c_str(), &custom_op_domain);
+    tasks_[tid]->start();
+  }
+
+  /*!
+   * \brief Called after the callback of custom operators to stop the profile task for python 
+   *        code execution time
+   */
+  void OnCustomEnd() {
+    const Tid tid = std::this_thread::get_id();
+    std::lock_guard<std::mutex> lock(mutex_);
+    CHECK(tasks_.find(tid) != tasks_.end());
+    tasks_[tid]->stop();
+    tasks_.erase(tid);
+    tid_to_op_type_.erase(tid);
+  }
+
+  /*!
+   * \brief Generate a display name for sub-operators, which is the name used for OprBlock
+   *        and later by profiler, and store it in a unordered_set so that it can be referenced 
+   *        in the future
+   * \param op_type_ptr The registed name of the operator
+   * \return Returns a pointer to the display name generated
+   */
+  const char* GenerateDisplayName(const char* op_type_ptr) {
+    if (!op_type_ptr) {
+      return NULL;
     }
-
-    void OnCustomBegin(const std::string& op_type) {
-        const Tid tid = std::this_thread::get_id();
-        const std::string task_name = op_type + "::pure_python" ;
-        std::lock_guard<std::mutex> lock(mutex_);
-        tid_to_op_type_[tid] = op_type;
-        tasks_[tid] = std::make_unique<ProfileTask>(task_name.c_str(), &custom_op_domain);
-        tasks_[tid]->start();
+    Tid tid = std::this_thread::get_id(); 
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
+      return NULL;
     }
+    std::string op_type = std::string(op_type_ptr);
+    std::string name = tid_to_op_type_[tid] + "::" + op_type;
+    display_names_.insert(name);
+    return display_names_.find(name)->c_str();
+  }
 
-    void OnCustomEnd() {
-        const Tid tid = std::this_thread::get_id();
-        std::lock_guard<std::mutex> lock(mutex_);
-        CHECK(tasks_.find(tid) != tasks_.end());
-        tasks_[tid]->stop();
-        tasks_.erase(tid);
-        tid_to_op_type_.erase(tid);
-    }
+ protected:
+  CustomOpProfiler(){};
 
-
-    const char* GenerateDisplayName(const char* op_type_ptr) {
-        if (!op_type_ptr) {
-            return NULL;
-        }
-        Tid tid = std::this_thread::get_id(); 
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
-            return NULL;
-        }
-        std::string op_type = std::string(op_type_ptr);
-        std::string name = tid_to_op_type_[tid] + "::" + op_type;
-        display_names_.insert(name);
-        return display_names_.find(name)->c_str();
-    }
-
-protected:
-    CustomOpProfiler(){};
-
-private:
-    /*! \brief */
-    std::mutex mutex_;
-    /* !\brief task names for sub-operators in custom ops */
-    std::unordered_set<std::string> display_names_;
-    /* */
-    std::unordered_map<Tid, TaskPtr> tasks_;
-    /* */
-    std::unordered_map<Tid, std::string> tid_to_op_type_;
+ private:
+  /*! \brief class mutex*/
+  std::mutex mutex_;
+  /* !\brief display names for sub-operators in custom ops */
+  std::unordered_set<std::string> display_names_;
+  /* !\brief profiling tasks for pure python code in custom operators*/
+  std::unordered_map<Tid, TaskPtr> tasks_;
+  /* !\brief the maping from thread id to the registered name op the custom operator
+   *         that is runnin on that thread
+   */
+  std::unordered_map<Tid, std::string> tid_to_op_type_;
 };	
 }  // namespace profiler
 }  // namespace mxnet

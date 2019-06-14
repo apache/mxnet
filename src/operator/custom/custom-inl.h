@@ -148,7 +148,7 @@ class CustomOperator {
             ctx.async_on_complete();
           },
           ctx.run_ctx.ctx, vars, vars2, FnProperty::kNoSkip, 0,
-          "CustomOperator");
+          "Dummy_Wait");
     });
     // increase num_threads if there is not enough threads to execute custom operator
     if (q_.size() > num_free_threads_)
