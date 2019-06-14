@@ -41,7 +41,7 @@ import numpy as np
 
 from .. import ndarray
 from ..util import is_np_shape, is_np_array, wraps_safely
-from .. import numpy as _mx_np
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
