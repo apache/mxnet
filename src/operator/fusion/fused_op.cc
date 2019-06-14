@@ -27,6 +27,8 @@ namespace mxnet {
 
 DMLC_REGISTER_PARAMETER(FusedOpConfig);
 
+std::mutex FusedOp::mutex_;
+
 void FusedOpParamParser(nnvm::NodeAttrs* attrs) {
   FusedOpConfig param;
   try {

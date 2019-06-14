@@ -21,6 +21,7 @@
 #include <cuda.h>
 #include <nnvm/pass_functions.h>
 #include <algorithm>
+#include <mutex>
 #include "./fused_op.h"
 #include "./fused_op-inl.h"
 #include "../operator_common.h"
@@ -233,6 +234,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
                            const std::vector<OpReqType> &req,
                            const std::vector<TBlob> &outputs) {
   using namespace mshadow;
+  std::lock_guard<std::mutex> lock(my_mutex_);
   CHECK_GE(outputs.size(), 1) << "There needs to be at least 1 output.";
 
   std::vector<int> in_dtypes;
@@ -305,6 +307,8 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
             detail::fused_op_kernel_begin + "\n" +
             code_ + "\n" +
             detail::fused_op_kernel_end;
+    // Guard NVRTC calls
+    std::lock_guard<std::mutex> lock_nvrtc(mutex_);
     nvrtcProgram program;
     NVRTC_CALL(
         nvrtcCreateProgram(&program,                                 // prog

@@ -26,6 +26,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <mutex>
 
 #if MXNET_USE_CUDA
 
@@ -123,6 +124,9 @@ class FusedOp {
   CUfunction kernel_;
   int cc_major_;
   int cc_minor_;
+
+  static std::mutex mutex_;
+  std::mutex my_mutex_;
 };
 
 using FusedOpPtr = std::shared_ptr<FusedOp>;
