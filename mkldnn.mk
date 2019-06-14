@@ -18,6 +18,7 @@
 ifeq ($(USE_MKLDNN), 1)
 	MKLDNN_SUBMODDIR = $(ROOTDIR)/3rdparty/mkldnn
 	MKLDNN_BUILDDIR = $(MKLDNN_SUBMODDIR)/build
+	MKLDNN_INCLDIR = $(MKLDNN_SUBMODDIR)/include
 	MXNET_LIBDIR = $(ROOTDIR)/lib
 ifeq ($(UNAME_S), Darwin)
 	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.dylib
@@ -49,7 +50,7 @@ $(MKLDNN_LIBFILE):
 	cp $(OMP_LIBFILE) $(MXNET_LIBDIR)
 	cp $(MKLML_LIBFILE) $(MXNET_LIBDIR)
 	cp $(MKLDNN_LIBFILE) $(MXNET_LIBDIR)
-
+	cp $(MKLDNN_BUILDDIR)/include/mkldnn_version.h $(MKLDNN_INCLDIR)/.
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
 	$(RM) -r $(MKLDNNROOT)

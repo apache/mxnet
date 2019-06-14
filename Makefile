@@ -549,10 +549,6 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
-	if [ -e "lib/libmkldnn.so.0" ]; then \
-                mkdir -p $(ROOTDIR)/include/mxnet/mkldnn; \
-                cp -rf 3rdparty/mkldnn/build/install/include/* $(ROOTDIR)/include/mxnet/mkldnn/; \
-        fi
 
 ifeq ($(USE_MKLDNN), 1)
 ifeq ($(UNAME_S), Darwin)
