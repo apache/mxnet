@@ -128,6 +128,9 @@ struct ProfileStat {
   /*! \brief operation categories (comma-delimited) */
   profile_stat_string categories_;
 
+  /*! \breif whether to add this stat to AggregateStats */
+  bool enable_aggregate_ = true;
+
   /* !\brief Process id */
   size_t process_id_ = current_process_id();
 
@@ -807,6 +810,13 @@ struct ProfileTask : public ProfileDuration {
 
   ProfileObjectType type() const override { return kTask; }
 
+  /*!
+   * \brief Whether to add stat to AggregateStats
+   */
+  void enableAggregateStats(bool enabled) {
+    enable_aggregate_ = enabled;
+  }
+
  protected:
   /*!
    * \brief Task statistic object
@@ -831,6 +841,7 @@ struct ProfileTask : public ProfileDuration {
   inline void SendStat() {
     Profiler::Get()->AddNewProfileStat<ProfileTaskStat>([this](ProfileTaskStat *stat) {
       stat->categories_.set(domain_->name());
+      stat->enable_aggregate_ = enable_aggregate_;
     }, name_.c_str(), start_time_, ProfileStat::NowInMicrosec());
   }
   /*! \brief Task name */
@@ -843,6 +854,8 @@ struct ProfileTask : public ProfileDuration {
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneTask> vtune_task_);
   /*! \brief NVTX duration object */
   NVTX_ONLY_CODE(std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_);
+  /*! \breif not to add this stat to AggregateStats */
+  bool enable_aggregate_ = true;
 
  protected:
   /*! \brief Task's start tick */
@@ -1150,6 +1163,8 @@ struct ProfileOperator : public ProfileEvent {
       , as_task_(name, &domain_)
       , name_(name)
       , attributes_(attributes) {
+    // make as_task_ not to add stat to AggregateStats; otherwise we will add twice
+    as_task_.enableAggregateStats(false);
     SetCategories(domain_.name());
   }
   /*!
@@ -1161,13 +1176,13 @@ struct ProfileOperator : public ProfileEvent {
     dev_type_ = dev_type;
     dev_id_ = dev_id;
     ProfileEvent::start();
-    // as_task_.start();
+    as_task_.start();
   }
   /*!
    * \brief Stop the profiling scope
    */
   void stop() override {
-    // as_task_.stop();
+    as_task_.stop();
     ProfileEvent::stop();
   }
 
