@@ -64,10 +64,9 @@ struct MultiProposalParam : public dmlc::Parameter<MultiProposalParam> {
   DMLC_DECLARE_PARAMETER(MultiProposalParam) {
     float tmp[] = {0, 0, 0, 0};
     DMLC_DECLARE_FIELD(rpn_pre_nms_top_n).set_default(6000)
-    .describe("Number of top scoring boxes to keep after applying NMS to RPN proposals");
+    .describe("Number of top scoring boxes to keep before applying NMS to RPN proposals");
     DMLC_DECLARE_FIELD(rpn_post_nms_top_n).set_default(300)
-    .describe("Overlap threshold used for non-maximum"
-              "suppresion(suppress boxes with IoU >= this threshold");
+    .describe("Number of top scoring boxes to keep after applying NMS to RPN proposals");
     DMLC_DECLARE_FIELD(threshold).set_default(0.7)
     .describe("NMS value, below which to suppress.");
     DMLC_DECLARE_FIELD(rpn_min_size).set_default(16)

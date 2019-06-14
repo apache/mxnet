@@ -92,10 +92,9 @@ train_data = SyntheticDataLoader(data_shape, batch_size)
 def get_network():
     # SSD with RN50 backbone
     net_name = 'ssd_512_resnet50_v1_coco'
-    net = get_model(net_name, pretrained_base=True, norm_layer=gluon.nn.BatchNorm)
-    async_net = net
     with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
+        warnings.simplefilter("ignore")
+        net = get_model(net_name, pretrained_base=True, norm_layer=gluon.nn.BatchNorm)
         net.initialize()
         net.collect_params().reset_ctx(ctx)
 
@@ -112,9 +111,6 @@ net = get_network()
 net.hybridize(static_alloc=True, static_shape=True)
 ```
 
-    /mxnet/code/python/mxnet/gluon/block.py:1138: UserWarning: Cannot decide type for the following arguments. Consider providing them as input:
-    	data: None
-      input_sym_arg_type = in_param.infer_type()[0]
 
 
 Next, we need to create a Gluon Trainer.
@@ -191,11 +187,6 @@ After that, we can create the network exactly the same way we did in FP32 traini
 net = get_network()
 net.hybridize(static_alloc=True, static_shape=True)
 ```
-
-    /mxnet/code/python/mxnet/gluon/block.py:1138: UserWarning: Cannot decide type for the following arguments. Consider providing them as input:
-    	data: None
-      input_sym_arg_type = in_param.infer_type()[0]
-
 
 For some models that may be enough to start training in mixed precision, but the full FP16 recipe recommends using dynamic loss scaling to guard against over- and underflows of FP16 values. Therefore, as a next step, we create a trainer and initialize it with support for AMP's dynamic loss scaling. Currently, support for dynamic loss scaling is limited to trainers created with `update_on_kvstore=False` option, and so we add it to our trainer initialization.
 

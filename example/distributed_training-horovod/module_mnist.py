@@ -42,7 +42,7 @@ args = parser.parse_args()
 
 if not args.no_cuda:
     # Disable CUDA if there are no GPUs.
-    if not mx.test_utils.list_gpus():
+    if mx.context.num_gpus() == 0:
         args.no_cuda = True
 
 logging.basicConfig(level=logging.INFO)

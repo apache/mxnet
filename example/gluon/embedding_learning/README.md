@@ -22,6 +22,10 @@ This example implements embedding learning based on a Margin-based Loss with dis
 
 ## Usage
 Download the data
+
+Note: the dataset is from [Caltech-UCSD Birds 200](http://www.vision.caltech.edu/visipedia/CUB-200.html).
+These datasets are copyright Caltech Computational Vision Group and licensed CC BY 4.0 Attribution.
+See [original dataset source](http://www.vision.caltech.edu/archive.html) for details
 ```bash
 ./get_cub200_data.sh
 ```
