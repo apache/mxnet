@@ -22,7 +22,7 @@
  * \file np_multinomial_op.cu
  * \brief Operator for numpy sampling from multinomial distributions
  */
-#include "./sample_multinomial_op.h"
+ #include "./np_multinomial_op.h"
 
 namespace mxnet {
 namespace op {
