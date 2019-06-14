@@ -609,13 +609,9 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
 
-    def repeat(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`repeat`.
-
-        The arguments are the same as for :py:func:`repeat`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
+        """Repeat elements of an array."""
+        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
