@@ -37,10 +37,15 @@ using TaskPtr = std::unique_ptr<ProfileTask>;
    */
 class CustomOpProfiler {
  public:
-
   static CustomOpProfiler* Get() {
-    static CustomOpProfiler inst;
-    return &inst;
+    static std::mutex mtx;
+    static std::unique_ptr<CustomOpProfiler> prof = nullptr;
+    if (!prof) {
+      std::unique_lock<std::mutex> lk(mtx);
+      if (!prof)
+        prof = std::make_unique<CustomOpProfiler>();
+    }
+    return prof.get();
   }
   /*!
    * \brief Called before the callback of custom operators to start a profile task for python 
@@ -92,7 +97,7 @@ class CustomOpProfiler {
   }
 
  protected:
-  CustomOpProfiler(){};
+  // CustomOpProfiler(){}
 
  private:
   /*! \brief class mutex*/
