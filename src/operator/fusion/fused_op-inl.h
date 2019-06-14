@@ -31,26 +31,21 @@ namespace mxnet {
 namespace detail {
 
 const char fp16_support_string[] = R"code(
-#define __HALF_TO_US(var) *(reinterpret_cast<unsigned short *>(&(var)))
-#define __HALF_TO_CUS(var) *(reinterpret_cast<const unsigned short *>(&(var)))
 struct __align__(2) __half {
   __host__ __device__ __half() { }
-protected:
   unsigned short __x;
 };
 /* Definitions of intrinsics */
 __device__ inline __half __float2half(const float f) {
   __half val;
-  asm("{  cvt.rn.f16.f32 %0, %1;}\n" : "=h"(__HALF_TO_US(val)) : "f"(f));
+  asm("{  cvt.rn.f16.f32 %0, %1;}\n" : "=h"(val.__x) : "f"(f));
   return val;
 }
 __device__ inline float __half2float(const __half h) {
   float val;
-  asm("{  cvt.f32.f16 %0, %1;}\n" : "=f"(val) : "h"(__HALF_TO_CUS(h)));
+  asm("{  cvt.f32.f16 %0, %1;}\n" : "=f"(val) : "h"(h.__x));
   return val;
 }
-#undef __HALF_TO_US
-#undef __HALF_TO_CUS
 typedef __half half;
 )code";
 
