@@ -96,9 +96,6 @@ class CustomOpProfiler {
     return display_names_.find(name)->c_str();
   }
 
- protected:
-  // CustomOpProfiler(){}
-
  private:
   /*! \brief class mutex*/
   std::mutex mutex_;
