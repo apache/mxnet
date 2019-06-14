@@ -118,7 +118,7 @@ def check_second_order_unary(x, op, grad_grad_op):
     # Perform compute.
     with autograd.record():
         y = op(x)
-        x_grad = autograd.grad(y, x, head_grads=y_grad,
+        x_grad = autograd.grad(heads=y, variables=x, head_grads=y_grad,
                                create_graph=True, retain_graph=True)[0]
     x_grad.backward(head_grad_grads)
 
