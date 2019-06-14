@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+from __future__ import absolute_import
+
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
 
@@ -39,6 +41,7 @@ import numpy as np
 
 from .. import ndarray
 from ..util import is_np_shape, is_np_array, wraps_safely
+from .. import numpy as _mx_np
 
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
@@ -112,15 +115,14 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     list of NDArray
         Each corresponds to a context in `ctx_list`.
     """
-    # TODO(junwu): temp solution for supporting np.ndarray
-    # rewrite this using np ops
+    array_fn = _mx_np.array if is_np_array() else ndarray.array
     if not isinstance(data, ndarray.NDArray):
-        data = ndarray.array(data, ctx=ctx_list[0])
+        data = array_fn(data, ctx=ctx_list[0])
     if len(ctx_list) == 1:
-        if is_np_array():
-            data = data.as_np_ndarray()
         return [data.as_in_context(ctx_list[0])]
 
+    # TODO(junwu): temp solution for supporting np.ndarray
+    # rewrite this using np ops
     slices = split_data(data, len(ctx_list), batch_axis, even_split)
     if is_np_array():
         slices = [i.as_np_ndarray() for i in slices]

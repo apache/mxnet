@@ -340,6 +340,8 @@ class ndarray(NDArray):
         else:
             raise ValueError("The truth value of an ndarray with multiple elements is ambiguous.")
 
+    __nonzero__ = __bool__
+
     def __float__(self):
         num_elements = self.size
         if num_elements != 1:

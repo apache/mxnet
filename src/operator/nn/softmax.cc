@@ -182,6 +182,7 @@ NNVM_REGISTER_OP(_backward_softmin)
                                                         mxnet_op::softmax_bwd, true>);
 
 NNVM_REGISTER_OP(log_softmax)
+.add_alias("_npx_log_softmax")
 .describe(R"code(Computes the log softmax of the input.
 This is equivalent to computing softmax followed by log.
 
