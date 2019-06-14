@@ -384,6 +384,7 @@ class _Symbol(Symbol):
 
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
+        TODO
         """
         if kind != 'quicksort':
             raise AttributeError('mxnet.numpy.argsort does not support other sorting methods')
