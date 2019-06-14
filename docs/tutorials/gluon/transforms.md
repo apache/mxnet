@@ -168,6 +168,6 @@ We've now seen how to use Gluon transforms to adjust samples returned by a [`Dat
 
 ### Additional Reading
 
-Check out the introduction to data tutorial for an overview of how `transforms` fit into the complete data pipeline. More information on data augmentation can be found here. And the [GluonNLP](https://gluon-nlp.mxnet.io/api/modules/data.html) and [GluonCV](https://gluon-cv.mxnet.io/api/data.transforms.html) toolkits provide a variety of domain specific transforms that you might find useful. 
+Check out the introduction to data tutorial for an overview of how `transforms` fit into the complete data pipeline. More information on data augmentation can be found here. And the [GluonNLP](https://gluon-nlp.mxnet.io/api/modules/data.html) and [GluonCV](https://gluon-cv.mxnet.io/api/data.transforms.html) toolkits provide a variety of domain specific transforms that you might find useful.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
