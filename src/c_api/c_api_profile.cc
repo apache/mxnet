@@ -328,7 +328,7 @@ int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format, 
       else if (static_cast<PrintFormat>(format) == PrintFormat::json)
         stats->DumpJson(os, sort_by, ascending);
       else
-        LOG(FATAL) << "Invliad value for parameter format";
+        LOG(FATAL) << "Invalid value for parameter format";
     }
     if (reset != 0)
       stats->clear();

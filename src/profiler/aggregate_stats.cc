@@ -73,7 +73,7 @@ inline std::priority_queue<pi>
         value = data.total_count_;
         break;
       default:
-        LOG(FATAL) << "Invliad value for parameter sort_by";
+        LOG(FATAL) << "Invalid value for parameter sort_by";
         break;
     }
     if (ascending != 0)
