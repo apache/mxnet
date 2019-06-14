@@ -25,17 +25,63 @@ from __future__ import absolute_import
 
 import os
 import sys
+from array import array
 import ctypes
 import logging
 import numpy as np
+
+# pylint: disable= no-member
+_DTYPE_NP_TO_MX = {
+    None: -1,
+    np.float32: 0,
+    np.float64: 1,
+    np.float16: 2,
+    np.uint8: 3,
+    np.int32: 4,
+    np.int8: 5,
+    np.int64: 6,
+}
 
 __all__ = ["Predictor", "load_ndarray_file"]
 
 if sys.version_info[0] == 3:
     py_str = lambda x: x.decode('utf-8')
+
+    def c_str_array(strings):
+        """Create ctypes const char ** from a list of Python strings.
+
+        Parameters
+        ----------
+        strings : list of strings
+            Python strings.
+
+        Returns
+        -------
+        (ctypes.c_char_p * len(strings))
+            A const char ** pointer that can be passed to C API.
+        """
+        arr = (ctypes.c_char_p * len(strings))()
+        arr[:] = strings
+        return arr
 else:
     py_str = lambda x: x
 
+    def c_str_array(strings):
+        """Create ctypes const char ** from a list of Python strings.
+
+        Parameters
+        ----------
+        strings : list of string
+            Python strings.
+
+        Returns
+        -------
+        (ctypes.c_char_p * len(strings))
+            A const char ** pointer that can be passed to C API.
+        """
+        arr = (ctypes.c_char_p * len(strings))()
+        arr[:] = [s.encode('utf-8') for s in strings]
+        return arr
 
 def c_str(string):
     """"Convert a python string to C string."""
@@ -47,6 +93,11 @@ def c_str(string):
 def c_array(ctype, values):
     """Create ctypes array from a python array."""
     return (ctype * len(values))(*values)
+
+def c_array_buf(ctype, buf):
+    """Create ctypes array from a Python buffer."""
+    return (ctype * len(buf)).from_buffer(buf)
+
 
 
 def _find_lib_path():
@@ -76,6 +127,7 @@ def _find_lib_path():
 def _load_lib():
     """Load libary by searching possible path."""
     lib_path = _find_lib_path()
+    print(lib_path)
     lib = ctypes.cdll.LoadLibrary(lib_path[0])
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
@@ -90,6 +142,7 @@ def _check_call(ret):
 _LIB = _load_lib()
 # type definitions
 mx_uint = ctypes.c_uint
+mx_int = ctypes.c_int
 mx_float = ctypes.c_float
 mx_float_p = ctypes.POINTER(mx_float)
 PredictorHandle = ctypes.c_void_p
@@ -116,10 +169,13 @@ class Predictor(object):
 
     dev_id : int, optional
         The device id of the predictor.
+
+    type_dict : Dict of str->numpy.dtype
+        Input type dictionary, name->dtype
     """
     def __init__(self, symbol_file,
                  param_raw_bytes, input_shapes,
-                 dev_type="cpu", dev_id=0):
+                 dev_type="cpu", dev_id=0, type_dict=None):
         dev_type = devstr2type[dev_type]
         indptr = [0]
         sdata = []
@@ -133,7 +189,26 @@ class Predictor(object):
         handle = PredictorHandle()
         param_raw_bytes = bytearray(param_raw_bytes)
         ptr = (ctypes.c_char * len(param_raw_bytes)).from_buffer(param_raw_bytes)
-        _check_call(_LIB.MXPredCreate(
+
+        # data types
+        num_provided_arg_types = 0
+        # provided type argument names
+        provided_arg_type_names = ctypes.POINTER(ctypes.c_char_p)()
+        # provided types
+        provided_arg_type_data = ctypes.POINTER(mx_uint)()
+        if type_dict is not None:
+            provided_arg_type_names = []
+            provided_arg_type_data = []
+            for k, v in type_dict.items():
+                v = np.dtype(v).type
+                if v in _DTYPE_NP_TO_MX:
+                    provided_arg_type_names.append(k)
+                    provided_arg_type_data.append(_DTYPE_NP_TO_MX[v])
+            num_provided_arg_types = mx_uint(len(provided_arg_type_names))
+            provided_arg_type_names = c_str_array(provided_arg_type_names)
+            provided_arg_type_data = c_array_buf(ctypes.c_int, array('i', provided_arg_type_data))
+
+        _check_call(_LIB.MXPredCreateEx(
             c_str(symbol_file),
             ptr, len(param_raw_bytes),
             ctypes.c_int(dev_type), ctypes.c_int(dev_id),
@@ -141,6 +216,9 @@ class Predictor(object):
             c_array(ctypes.c_char_p, keys),
             c_array(mx_uint, indptr),
             c_array(mx_uint, sdata),
+            num_provided_arg_types,
+            provided_arg_type_names,
+            provided_arg_type_data,
             ctypes.byref(handle)))
         self.handle = handle
 
@@ -218,12 +296,16 @@ class Predictor(object):
         """
         pdata = ctypes.POINTER(mx_uint)()
         ndim = mx_uint()
+        out_type = mx_int()
         _check_call(_LIB.MXPredGetOutputShape(
             self.handle, index,
             ctypes.byref(pdata),
             ctypes.byref(ndim)))
+        _check_call(_LIB.MXPredGetOutputType(
+            self.handle, index,
+            ctypes.byref(out_type)))
         shape = tuple(pdata[:ndim.value])
-        data = np.empty(shape, dtype=np.float32)
+        data = np.empty(shape, dtype=out_type.value)
         _check_call(_LIB.MXPredGetOutput(
             self.handle, mx_uint(index),
             data.ctypes.data_as(mx_float_p),
