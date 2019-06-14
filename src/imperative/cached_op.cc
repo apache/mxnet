@@ -146,18 +146,10 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
 #if MXNET_USE_CUDA
   if (dmlc::GetEnv("MXNET_USE_FUSION", true) && context.dev_mask() == kGPU &&
       !inlining) {
-    if (dmlc::GetEnv("MXNET_DEBUG_PRINT_GRAPH", 0)) {
-      std::cout << "Before the fusion" << std::endl;
-      exec::PrintFullGraph(*full_graph);
-    }
     full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
     *full_graph = exec::FusePointwiseForward(std::move(*full_graph));
     full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
     *full_graph = exec::FusePointwiseBackward(std::move(*full_graph));
-    if (dmlc::GetEnv("MXNET_DEBUG_PRINT_GRAPH", 0)) {
-      std::cout << "After the fusion" << std::endl;
-      exec::PrintFullGraph(*full_graph);
-    }
   }
 #endif  // MXNET_USE_CUDA
 
