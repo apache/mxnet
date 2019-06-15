@@ -162,7 +162,7 @@ for epoch in range(num_epochs):
 
         # Update the parameters by stepping the trainer; the batch size
         # is required to normalize the gradients by `1 / batch_size`.
-        trainer.step(batch_size=actual_batch_size)
+        trainer.step(batch_size=actual_batch_size, ignore_stale_grad=True)
 
     # Print the evaluation metric and reset it for the next epoch
     name, acc = metric.get()
