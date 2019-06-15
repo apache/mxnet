@@ -20,6 +20,8 @@
 # build and install are separated so changes to build don't invalidate
 # the whole docker cache for the image
 
+set -ex
+
 wget https://mirror.clarkson.edu/gnu/binutils/binutils-2.27.tar.gz
 
 export DEBIAN_FRONTEND=noninteractive
