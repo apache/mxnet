@@ -320,14 +320,29 @@ MXNET_DLL int MXDumpProcessProfile(int finished, int profile_process, KVStoreHan
  */
 MXNET_DLL int MXDumpProfile(int finished);
 
+
 /*!
- * \brief Print aggregate stats to the a string
+ * \brief Deprecated, use MXAggregateProfileStatsPrintEx instead.
  * \param out_str Will receive a pointer to the output string
  * \param reset Clear the aggregate stats after printing
  * \return 0 when success, -1 when failure happens.
  * \note
  */
 MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
+
+/*!
+ * \brief Print sorted aggregate stats to the a string
+ *        How aggregate stats are stored will not change
+ * \param out_str will receive a pointer to the output string
+ * \param reset clear the aggregate stats after printing
+ * \param format whether to return in tabular or json format
+ * \param sort_by sort by avg, min, max, or count
+ * \param ascending whether to sort ascendingly
+ * \return 0 when success, -1 when failure happens.
+ * \note
+ */
+MXNET_DLL int MXAggregateProfileStatsPrintEx(const char **out_str, int reset, int format,
+                                            int sort_by, int ascending);
 
 /*!
  * \brief Pause profiler tuning collection
