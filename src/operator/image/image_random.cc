@@ -41,7 +41,7 @@ DMLC_REGISTER_PARAMETER(RandomColorJitterParam);
 NNVM_REGISTER_OP(_image_to_tensor)
 .describe(R"code(Converts an image NDArray of shape (H x W x C) or (N x H x W x C) 
 with values in the range [0, 255] to a tensor NDArray of shape (C x H x W) or (N x C x H x W)
-with values in the range [0, 1)
+with values in the range [0, 1]
 
 Example:
     .. code-block:: python

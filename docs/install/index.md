@@ -28,9 +28,7 @@
    download.md
    java_setup.md
    osx_setup.md
-   raspbian_setup.md
    scala_setup.md
-   tx2_setup.md
    ubuntu_setup.md
    validate_mxnet.md
    windows_setup.md
@@ -767,7 +765,10 @@ To ensure MXNet R package runs with the version of OpenBLAS installed, create a 
 ln -sf /usr/local/opt/openblas/lib/libopenblas.dylib /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
 ```
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
+Note: packages for 3.6.x are not yet available.
+
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/macosx/). The latest is [v3.5.3](https://cran.r-project.org/bin/macosx/R-3.5.3.pkg).
+
 You can [build MXNet-R from source](osx_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -1127,7 +1128,9 @@ To build from source, refer to the <a href="windows_setup.html">MXNet Windows in
 <div class="cpu">
 </br>
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/windows/).
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
+
 You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -1478,7 +1481,8 @@ Install these dependencies using the following commands in any directory:
     sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip
     sudo pip install pip --upgrade
     sudo pip install setuptools numpy --upgrade
-    sudo pip install graphviz jupyter
+    sudo pip install graphviz==0.8.4 \
+                     jupyter
 ```
 
 Clone the MXNet source code repository using the following `git` command in your home directory:

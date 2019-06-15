@@ -16,6 +16,7 @@
 # under the License.
 
 import mxnet as mx
+import warnings
 import collections
 import ctypes
 import mxnet.contrib.amp as amp
@@ -59,25 +60,26 @@ def test_amp_coverage():
 
     ret1 = set(op_names) - set(t)
 
-    assert ret1 == set(), ("Operators " + str(ret1) + " do not exist in AMP lists (in "
-                           "python/mxnet/contrib/amp/lists/symbol.py) - please add them. "
-                           """Please follow these guidelines for choosing a proper list:
-                           - if your operator is not to be used in a computational graph
-                             (e.g. image manipulation operators, optimizers) or does not have
-                             inputs, put it in FP16_FP32_FUNCS list,
-                           - if your operator requires FP32 inputs or is not safe to use with lower
-                             precision, put it in FP32_FUNCS list,
-                           - if your operator supports both FP32 and lower precision, has
-                             multiple inputs and expects all inputs to be of the same
-                             type, put it in WIDEST_TYPE_CASTS list,
-                           - if your operator supports both FP32 and lower precision and has
-                             either a single input or supports inputs of different type,
-                             put it in FP16_FP32_FUNCS list,
-                           - if your operator is both safe to use in lower precision and
-                             it is highly beneficial to use it in lower precision, then
-                             put it in FP16_FUNCS (this is unlikely for new operators)
-                           - If you are not sure which list to choose, FP32_FUNCS is the
-                             safest option""")
+    if ret1 != set():
+        warnings.warn("Operators " + str(ret1) + " do not exist in AMP lists (in "
+                       "python/mxnet/contrib/amp/lists/symbol.py) - please add them. "
+                       """Please follow these guidelines for choosing a proper list:
+                       - if your operator is not to be used in a computational graph
+                         (e.g. image manipulation operators, optimizers) or does not have
+                         inputs, put it in FP16_FP32_FUNCS list,
+                       - if your operator requires FP32 inputs or is not safe to use with lower
+                         precision, put it in FP32_FUNCS list,
+                       - if your operator supports both FP32 and lower precision, has
+                         multiple inputs and expects all inputs to be of the same
+                         type, put it in WIDEST_TYPE_CASTS list,
+                       - if your operator supports both FP32 and lower precision and has
+                         either a single input or supports inputs of different type,
+                         put it in FP16_FP32_FUNCS list,
+                       - if your operator is both safe to use in lower precision and
+                         it is highly beneficial to use it in lower precision, then
+                         put it in FP16_FUNCS (this is unlikely for new operators)
+                       - If you are not sure which list to choose, FP32_FUNCS is the
+                         safest option""")
 
 if __name__ == '__main__':
     test_amp_coverage()

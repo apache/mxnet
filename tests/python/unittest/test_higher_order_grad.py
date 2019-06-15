@@ -15,86 +15,106 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import math
 
+import math
 from mxnet import nd, autograd
-from mxnet.test_utils import assert_almost_equal, random_arrays
+from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd
 from common import with_seed
 
 
-# @with_seed()
-# def test_log():
-#     def log(x):
-#         return nd.log(x)
+@with_seed()
+def test_sin():
+    def sin(x):
+        return nd.sin(x)
 
-#     def grad_grad_op(x):
-#         return -1/(x**2)
+    def grad_grad_op(x):
+        return -nd.sin(x)
 
-#     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
-
-#     for array in arrays:
-#         check_second_order_unary(array, log, grad_grad_op)
-
-
-# @with_seed()
-# def test_log2():
-#     def log2(x):
-#         return nd.log2(x)
-
-#     def grad_grad_op(x):
-#         return -1/((x**2) * math.log(2))
-
-#     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
-
-#     for array in arrays:
-#         check_second_order_unary(array, log2, grad_grad_op)
-
-
-# @with_seed()
-# def test_log10():
-#     def log10(x):
-#         return nd.log10(x)
-
-#     def grad_grad_op(x):
-#         return -1/((x**2) * math.log(10))
-
-#     arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
-
-#     for array in arrays:
-#         check_second_order_unary(array, log10, grad_grad_op)
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, sin, grad_grad_op)
 
 
 @with_seed()
-def test_sigmoid():
-    sigmoid = lambda x: nd.sigmoid(x)
-
-    def grad_op(x):
-        return sigmoid(x) * (1 - sigmoid(x))
+def test_cos():
+    def cos(x):
+        return nd.cos(x)
 
     def grad_grad_op(x):
-        # return grad_op(x) - 2 * grad_op(x) * sigmoid(x)
-        return sigmoid(x) * grad_op(x)
+        return -nd.cos(x)
 
-    arrays = random_arrays((2, 2), (2, 3), (4, 5, 2), (3, 1, 4, 5))
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, cos, grad_grad_op)
 
-    for array in arrays[:1]:
-        check_second_order_unary(array, sigmoid, grad_grad_op)
+
+@with_seed()
+def test_relu():
+    def relu(x):
+        return nd.relu(x)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, relu, grad_grad_op)
+
+
+@with_seed()
+def test_log():
+    def log(x):
+        return nd.log(x)
+
+    def grad_grad_op(x):
+        return -1/(x**2)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, log, grad_grad_op)
+
+
+@with_seed()
+def test_log2():
+    def log2(x):
+        return nd.log2(x)
+
+    def grad_grad_op(x):
+        return -1/((x**2) * math.log(2))
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, log2, grad_grad_op)
+
+
+@with_seed()
+def test_log10():
+    def log10(x):
+        return nd.log10(x)
+
+    def grad_grad_op(x):
+        return -1/((x**2) * math.log(10))
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, log10, grad_grad_op)
 
 
 def check_second_order_unary(x, op, grad_grad_op):
     x = nd.array(x)
-    grad_grad_x = grad_grad_op(x)
+    expect_grad_grad = grad_grad_op(x)
     x.attach_grad()
     with autograd.record():
         y = op(x)
-        # head_grads = nd.random.normal(shape=y.shape)
-        head_grads = nd.ones_like(y)#  * 0.5
-        y_grad = autograd.grad(y, x, head_grads=head_grads,create_graph=True, retain_graph=True)[0]
-    head_grad_grads =  nd.ones_like(y_grad)
-    # head_grad_grads = nd.random.normal(shape=y_grad.shape)
-    y_grad.backward(head_grad_grads)
-    expected_grad_grad = grad_grad_x.asnumpy()  * head_grad_grads.asnumpy() * head_grads.asnumpy() 
-    assert_almost_equal(expected_grad_grad, x.grad.asnumpy())
+        y_grad = autograd.grad(y, x, create_graph=True, retain_graph=True)[0]
+    y_grad.backward()
+    assert_almost_equal(expect_grad_grad.asnumpy(), x.grad.asnumpy())
 
 
 if __name__ == '__main__':

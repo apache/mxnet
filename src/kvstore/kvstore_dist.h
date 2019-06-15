@@ -141,9 +141,7 @@ class KVStoreDist : public KVStoreLocal {
     }
     if (server_) server_->Run();
     ps::Finalize(0, true);
-    if (server_) {
-      delete server_;
-    }
+    delete server_;
     server_ = nullptr;
   }
 
