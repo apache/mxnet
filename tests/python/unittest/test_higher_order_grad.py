@@ -106,6 +106,22 @@ def test_log10():
         check_second_order_unary(array, log10, grad_grad_op)
 
 
+@with_seed()
+def test_sigmoid():
+    def sigmoid(x):
+        return nd.sigmoid(x)
+
+    def grad_grad_op(x):
+        # Actual: f(x) * f'(x)
+        # Expected: f(x)
+        return sigmoid(x) * (1 - sigmoid(x)) * sigmoid(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_sigmoid(array, sigmoid, grad_grad_op)
+
+
 def check_second_order_unary(x, op, grad_grad_op):
     x = nd.array(x)
     expect_grad_grad = grad_grad_op(x)
@@ -115,6 +131,24 @@ def check_second_order_unary(x, op, grad_grad_op):
         y_grad = autograd.grad(y, x, create_graph=True, retain_graph=True)[0]
     y_grad.backward()
     assert_almost_equal(expect_grad_grad.asnumpy(), x.grad.asnumpy())
+
+
+def check_sigmoid(x, op, grad_grad_op):
+    x = nd.array(x)
+    grad_grad_x = grad_grad_op(x)
+    x.attach_grad()
+
+    y_grad = nd.ones_like(x) *  nd.random.normal(shape=x.shape) 
+    head_grad_grad = nd.ones_like(x) * nd.random.normal(shape=x.shape) 
+
+    with autograd.record():
+        y = op(x)
+        x_grad = autograd.grad(y, x, y_grad,create_graph=True, retain_graph=True)[0]
+        # x_grad.backward(head_grad_grad)
+        x_grad_grad = autograd.grad(x_grad, [x], head_grad_grad,create_graph=False, retain_graph=True)[0]
+    expected_grad_grad = grad_grad_x * head_grad_grad # * y_grad
+    assert_almost_equal(expected_grad_grad.asnumpy(), x_grad_grad.asnumpy())
+    # assert_almost_equal(expected_grad_grad.asnumpy(), x.grad.asnumpy())
 
 
 if __name__ == '__main__':

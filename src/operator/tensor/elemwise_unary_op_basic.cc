@@ -118,66 +118,23 @@ The storage type of ``sigmoid`` output is always dense
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::sigmoid>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto fx = nnvm::NodeEntry{n};
-    std::vector<nnvm::NodeEntry> ret;
-
-    ret.emplace_back(MakeNode("_backward_sigmoid", n->attrs.name + "_backward_sigmoid",
-                     {ograds[0], fx}, nullptr, &n));
-
-    return ret;
-  });
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
                                                unary_bwd<mshadow_op::sigmoid_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto fx = nnvm::NodeEntry{n->inputs[1]};
-    auto gx_out = nnvm::NodeEntry{n};
-
-    auto gxfx_out = MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_mid",
-                                        {gx_out, fx}, nullptr, &n);
-    auto gxfx_out_node = nnvm::NodeEntry{gxfx_out};
-    auto gxfx_out_times_2 = MakeNode("elemwise_add", n->attrs.name + "_backward_grad_grad_mid_2",
-                                        {gxfx_out_node, gxfx_out_node}, nullptr, &n);
-    auto ggx = MakeNode("elemwise_sub", n->attrs.name + "_backward_grad_grad_",
-                                        {gx_out, nnvm::NodeEntry{gxfx_out_times_2}}, nullptr, &n);
+    auto gx_ograd = nnvm::NodeEntry{n};
 
     std::vector<nnvm::NodeEntry> ret;
        
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], gx_out}, nullptr, &n));
+                             {ograds[0], gx_ograd}, nullptr, &n));
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], nnvm::NodeEntry{fx}}, nullptr, &n));
+                             {ograds[0], fx}, nullptr, &n));
     return ret;
   });
-
-// .set_attr<nnvm::FGradient>("FGradient",
-//   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-//     auto gx_out = nnvm::NodeEntry{n->inputs[0]}; // gx * ograds # Checked
-//     auto gxfx = nnvm::NodeEntry{n->inputs[1]}; // gxfx # Checked
-//     auto gxgx_out = nnvm::NodeEntry{n}; // gx**2 * ograds # Checked
-//     auto gxgx = MakeNode("elemwise_div", n->attrs.name + "_backward_grad_grad_kid",
-//                                         {gxgx_out, gx_out}, nullptr, &n); // gx*gx # Checked How.
-//     auto out = MakeNode("elemwise_div", n->attrs.name + "_backward_grad_grad_sid",
-//                                         {gx_out, nnvm::NodeEntry{gxgx}}, nullptr, &n); // ograds # Checked
-                              
-//     auto gxfx_times_2 = MakeNode("elemwise_add", n->attrs.name + "_backward_grad_grad_mid",
-//                                         {gxfx, gxfx}, nullptr, &n);  // #checked
-//     auto gxfx_times_2_ograd = MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_xid",
-//                                         {nnvm::NodeEntry{gxfx_times_2}, nnvm::NodeEntry{out}}, nullptr, &n);                
-//     auto ggx = MakeNode("elemwise_sub", n->attrs.name + "_backward_grad_grad_fid",
-//                                         {nnvm::NodeEntry{gx_out}, nnvm::NodeEntry{gxfx_times_2_ograd}}, nullptr, &n);
-
-//     std::vector<nnvm::NodeEntry> ret;
-       
-//     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-//                              {ograds[0], gx_out}, nullptr, &n));
-//     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-//                              {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
-//     return ret;
-//   });
 
 DMLC_REGISTER_PARAMETER(HardSigmoidParam);
 MXNET_OPERATOR_REGISTER_UNARY(hard_sigmoid)
@@ -1149,7 +1106,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
     // For f(x) -> f = log
     // f''(x) = -1 * (f'(x) * f'(x))
     auto gx = nnvm::NodeEntry{n};
-    auto fx = nnvm::NodeEntry{n->inputs[1]};
     auto ggx_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_mid_grad_grad",
                             {gx, gx}, nullptr, &n);
     auto ggx = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
@@ -1160,7 +1116,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
                              {ograds[0], gx}, nullptr, &n));
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{fx}}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
     return ret;
   });
 

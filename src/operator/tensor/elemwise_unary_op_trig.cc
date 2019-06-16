@@ -139,22 +139,7 @@ The storage type of ``tan`` output depends upon the input storage type:
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tan" });
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshadow_op::tan_grad>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto gx = nnvm::NodeEntry{n->inputs[0]};
-    auto gxfx = nnvm::NodeEntry{n->inputs[1]};
-    auto ggx = MakeNode("elemwise_add", n->attrs.name + "_backward_grad_grad",
-                                        {gxfx, gxfx}, nullptr, &n);
-
-    std::vector<nnvm::NodeEntry> ret;
-       
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], gx}, nullptr, &n));
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
-    return ret;
-  });
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshadow_op::tan_grad>);
 
 // arcsin
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arcsin, cpu, mshadow_op::arcsin)
@@ -305,24 +290,7 @@ The storage type of ``tanh`` output depends upon the input storage type:
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tanh" });
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<mshadow_op::tanh_grad>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto gx = nnvm::NodeEntry{n->inputs[0]};
-    auto gxfx = nnvm::NodeEntry{n->inputs[1]};
-
-    std::unordered_map<std::string, std::string> attr = {{"scalar", std::to_string(-2.)}};
-    auto ggx = MakeNode("_mul_scalar", n->attrs.name + "_backward_grad_grad",
-                                        {gxfx}, &attr, &n);
-
-    std::vector<nnvm::NodeEntry> ret;
-       
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], gx}, nullptr, &n));
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
-    return ret;
-  });
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<mshadow_op::tanh_grad>);
 
 // arcsinh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arcsinh, cpu, mshadow_op::arcsinh)
