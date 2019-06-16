@@ -23,7 +23,6 @@ from ...context import current_context
 from ..ndarray import NDArray
 from . import _internal as _npi
 
-
 __all__ = ['uniform', 'normal', 'multinomial']
 
 

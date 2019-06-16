@@ -99,6 +99,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     """
     return _mx_nd_np.random.normal(loc, scale, size, **kwargs)
 
+
 def multinomial(n, pvals, size=None, **kwargs):
     """Draw samples from a multinomial distribution.
 
