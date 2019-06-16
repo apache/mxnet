@@ -1345,7 +1345,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     step : float, optional
         Only returned if retstep is True
         Size of spacing between samples.
-    
+
     Notes
     -----
     This function currently does not support ``start`` and ``stop`` as ndarrays and
