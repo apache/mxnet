@@ -360,8 +360,9 @@ class BatchNorm(HybridBlock):
             dtype = 'float32'
         super(BatchNorm, self).cast(dtype)
 
-    @_adapt_np_array
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
+        if is_np_array():
+            F = F.npx
         return F.BatchNorm(x, gamma, beta, running_mean, running_var,
                            name='fwd', **self._kwargs)
 
@@ -612,10 +613,10 @@ class LayerNorm(HybridBlock):
                                     shape=(in_channels,), init=beta_initializer,
                                     allow_deferred_init=True)
 
-    @_adapt_np_array
     def hybrid_forward(self, F, data, gamma, beta):
-        norm_data = F.LayerNorm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
-        return norm_data
+        if is_np_array():
+            F = F.npx
+        return F.LayerNorm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
 
     def __repr__(self):
         s = '{name}({content}'

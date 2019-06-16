@@ -472,6 +472,7 @@ def _check_all_np_ndarrays(out):
     from ..symbol import Symbol as nd_symbol
     from ..ndarray import NDArray as nd_ndarray
 
+    # pylint: disable=no-else-raise
     if isinstance(out, (nd_ndarray, nd_symbol)) and not isinstance(out, (np_ndarray, np_symbol)):
         raise TypeError("Block's output ndarrays/symbols must be of type `mxnet.numpy.ndarray`"
                         " or `mxnet.symbol.numpy._Symbol`, while got output type {}"
@@ -479,6 +480,7 @@ def _check_all_np_ndarrays(out):
     elif isinstance(out, (list, tuple)):
         for i in out:
             _check_all_np_ndarrays(i)
+    # pylint: enable=no-else-raise
 
 
 def _to_classic_arrays(*args, **kwargs):
