@@ -1444,9 +1444,6 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     return _mx_nd_np.arange(start, stop, step, dtype, ctx)
 
 
-
-
-
 @set_module('mxnet.numpy')
 def argmax(a, axis=None, out=None):
     """Returns the indices of the maximum values along an axis.
