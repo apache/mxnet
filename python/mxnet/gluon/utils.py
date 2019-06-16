@@ -447,7 +447,7 @@ def _check_same_symbol_type(symbols):
     Raise type error if the types are different. Return the class of
     the symbols."""
     from ..symbol.numpy import _Symbol as np_symbol
-    from ..symbol import Symbol as classic_symbol
+    from ..symbol import Symbol as nd_symbol
     is_np_sym = bool(isinstance(symbols[0], np_symbol))
     for s in symbols[1:]:
         if is_np_sym != isinstance(s, np_symbol):
@@ -462,18 +462,23 @@ def _check_same_symbol_type(symbols):
                             'on each of them; if you want classic ndarray output(s) from the '
                             'computation graph, please convert all the numpy symbols in the list '
                             'to classic symbols by calling `as_nd_ndarray()` on each of them.')
-    return np_symbol if is_np_sym else classic_symbol
+    return np_symbol if is_np_sym else nd_symbol
 
 
 def _check_all_np_ndarrays(out):
-    """Check if ndarrays in out are all np.ndarray"""
+    """Check if ndarrays/symbols in out are all np.ndarray/np._Symbol."""
     from ..numpy import ndarray as np_ndarray
     from ..symbol.numpy import _Symbol as np_symbol
-    assert isinstance(out, (list, tuple))
-    for array in out:
-        if not isinstance(array, (np_ndarray, np_symbol)):
-            raise TypeError('Expected np.ndarray or np._Symbol type in output, while received type '
-                            '{}'.format(str(type(array))))
+    from ..symbol import Symbol as nd_symbol
+    from ..ndarray import NDArray as nd_ndarray
+
+    if isinstance(out, (nd_ndarray, nd_symbol)) and not isinstance(out, (np_ndarray, np_symbol)):
+        raise TypeError("Block's output ndarrays/symbols must be of type `mxnet.numpy.ndarray`"
+                        " or `mxnet.symbol.numpy._Symbol`, while got output type {}"
+                        .format(str(type(out))))
+    elif isinstance(out, (list, tuple)):
+        for i in out:
+            _check_all_np_ndarrays(i)
 
 
 def _to_classic_arrays(*args, **kwargs):
