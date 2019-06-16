@@ -103,6 +103,9 @@ def test_gluon_autograd():
 def test_gluon_gluon():
     assert _test_tutorial_nb('gluon/gluon')
 
+def test_gluon_multi_gpu():
+    assert _test_tutorial_nb('gluon/multi_gpu')
+
 def test_gluon_save_load_params():
     assert _test_tutorial_nb('gluon/save_load_params')
 
