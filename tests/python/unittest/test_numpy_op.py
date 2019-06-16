@@ -817,6 +817,47 @@ def test_np_split():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@npx.use_np_shape
+def test_np_tile():
+    config = [
+        ((), ()),
+        ((), 0),
+        ((), (2, 0)),
+        ((), (2, 3)),
+        ((4, 2), (2,)),
+        ((4, 2), (2, 3)),
+        ((4, 2), (2, 1, 4)),
+        ((4, 2), (2, 3, 4)),
+        ((4, 2), (2, 0)),
+        ((4, 2), (2, 0, 3)),
+        ((4, 2), (2, 0, 3)),
+        ((4, 0), (2, 0, 3)),
+    ]
+
+    class TestTile(HybridBlock):
+        def __init__(self, reps):
+            super(TestTile, self).__init__()
+            self._reps = reps
+
+        def hybrid_forward(self, F, x):
+            return F.np.tile(x, reps=self._reps)
+
+    for shape, reps in config:
+        data_np = _np.random.uniform(size=shape)
+        data_mx = np.array(data_np, dtype=data_np.dtype)
+        ret_np = _np.tile(data_np, reps=reps)
+        ret_mx = np.tile(data_mx, reps=reps)
+        assert same(ret_mx.asnumpy(), ret_np)
+
+        net = TestTile(reps)
+        for hybrid in [False, True]:
+            if hybrid:
+                net.hybridize()
+            ret_mx = net(data_mx)
+            assert same(ret_mx.asnumpy(), ret_np)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

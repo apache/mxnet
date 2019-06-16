@@ -826,6 +826,7 @@ NNVM_REGISTER_OP(_backward_repeat)
 });
 
 NNVM_REGISTER_OP(tile)
+.add_alias("_npi_tile")
 .describe(R"code(Repeats the whole array multiple times.
 
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
