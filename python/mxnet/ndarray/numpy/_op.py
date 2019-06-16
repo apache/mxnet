@@ -23,6 +23,7 @@ from ...base import numeric_types
 from ...util import _sanity_check_params, set_module
 from ...context import current_context
 from . import _internal as _npi
+from ..ndarray import NDArray
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
@@ -675,7 +676,13 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     This function currently does not support ``start`` and ``stop`` as ndarrays and
     axis could only be 0 now.
     """
-    if isinstance(start, (list, _np.ndarray, mx.nd.NDArray)) or \
-        isinstance(stop, (list, _np.ndarray, mx.nd.NDArray)):
+    if isinstance(start, (list, _np.ndarray, NDArray)) or \
+        isinstance(stop, (list, _np.ndarray, NDArray)):
         raise NotImplementedError('start and stop only support int')
-    return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, dtype=dtype)
+    if axis != 0:
+        raise NotImplementedError("the function only support axis 0")
+    if retstep:
+        step = (stop - start) / (num - 1)
+        return (_npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, dtype=dtype), step)
+    else:
+        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, dtype=dtype)
