@@ -272,6 +272,11 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
                                        bool erase_result) {
   using namespace nnvm;
   using namespace imperative;
+  if (config_.dynamic_shape_checked) {
+    return config_.is_dynamic;
+  } else {
+    config_.dynamic_shape_checked = true;
+  }
   CHECK_EQ(inputs.size(), num_inputs());
 
   auto state_ptr = GetCachedOpState(default_ctx);

@@ -36,6 +36,7 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   bool static_alloc;
   bool static_shape;
   bool is_dynamic;
+  bool dynamic_shape_checked;
   mxnet::Tuple<uint32_t> data_indices;
   mxnet::Tuple<uint32_t> param_indices;
   std::string subgraph;
@@ -70,6 +71,9 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     DMLC_DECLARE_FIELD(is_dynamic)
     .set_default(false)
     .describe("Whether the graph contains dynamic shape operators.");
+    DMLC_DECLARE_FIELD(dynamic_shape_checked)
+    .set_default(false)
+    .describe("Whether dynamic shape is checked.");
   }
 };
 
