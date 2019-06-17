@@ -553,7 +553,7 @@ class Block(object):
         for hook in self._forward_hooks.values():
             hook(self, args, out)
         if _mx_npx.is_np_array():
-            _check_all_np_ndarrays(_flatten(out, "output")[0])
+            _check_all_np_ndarrays(out)
         return out
 
     def forward(self, *args):

@@ -773,6 +773,7 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr<FCompute>("FCompute<cpu>", ClipGrad_<cpu>);
 
 NNVM_REGISTER_OP(repeat)
+.add_alias("_np_repeat")
 .describe(R"code(Repeats elements of an array.
 
 By default, ``repeat`` flattens the input array into 1-D and then repeats the
@@ -823,6 +824,7 @@ NNVM_REGISTER_OP(_backward_repeat)
 });
 
 NNVM_REGISTER_OP(tile)
+.add_alias("_npi_tile")
 .describe(R"code(Repeats the whole array multiple times.
 
 If ``reps`` has length *d*, and input array has dimension of *n*. There are
