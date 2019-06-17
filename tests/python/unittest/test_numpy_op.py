@@ -20,10 +20,11 @@ from __future__ import absolute_import
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx
+from mxnet.base import MXNetError
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient
-from common import with_seed
+from common import assertRaises, with_seed
 import random
 
 
@@ -560,7 +561,12 @@ def test_np_linspace():
     configs = [
         (0.0, 1.0, 10),
         (-2, 4, 45),
-        (5.234324, 8.98324, 324)
+        (5.234324, 8.98324, 324),
+        (2, 10, 100)
+    ]
+    exception_configs = [
+        (0, 10, -1),
+        (0, 1, 2.5)
     ]
     dtypes = ['int32', 'float16', 'float32', 'float64', None]
     for config in configs:
@@ -578,7 +584,12 @@ def test_np_linspace():
                         same(mx_ret[1], np_ret[1])
                     else:
                         assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
-
+    # check for exception input
+    for config in exception_configs:
+        assertRaises(MXNetError, np.linspace, *config)
+    # check linspace equivalent to arange
+    for test_index in range(1000):
+        assert_almost_equal(mx.np.linspace(0, test_index, test_index + 1).asnumpy(), mx.np.arange(test_index + 1).asnumpy())
     @npx.use_np
     class TestLinspace(HybridBlock):
         def __init__(self, start, stop, num=50, endpoint=None, retstep=False, dtype=None, axis=0):
