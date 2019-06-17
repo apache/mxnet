@@ -415,7 +415,8 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
         ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
         reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
         params.info->contexts[kCustomOpBackward]));
-    }, ctx, false, ctx.is_train, cpys, tags, output_tags, outputs, "_backward_" + std::string(params.op_type));
+    }, ctx, false, ctx.is_train, cpys, tags, output_tags, outputs,
+       "_backward_" + std::string(params.op_type));
 }
 
 // infer storage backward function for custom op which assigns kDefaultStorage for

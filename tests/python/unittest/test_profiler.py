@@ -339,7 +339,6 @@ def test_custom_operator_profiling():
     profiler.dump()
     debug_str = profiler.dumps(format = 'json')
     target_dict = json.loads(debug_str)
-    print(target_dict)
     assert "Time" in target_dict and "Custom Operator" in target_dict["Time"] \
         and "MySigmoid::pure_python" in target_dict["Time"]["Custom Operator"] \
         and "_backward_MySigmoid::pure_python" in target_dict["Time"]["Custom Operator"] \
