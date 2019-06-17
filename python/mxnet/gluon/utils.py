@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+from __future__ import absolute_import
+
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
 
@@ -39,6 +41,7 @@ import numpy as np
 
 from .. import ndarray
 from ..util import is_np_shape, is_np_array, wraps_safely
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
@@ -112,15 +115,14 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     list of NDArray
         Each corresponds to a context in `ctx_list`.
     """
-    # TODO(junwu): temp solution for supporting np.ndarray
-    # rewrite this using np ops
+    array_fn = _mx_np.array if is_np_array() else ndarray.array
     if not isinstance(data, ndarray.NDArray):
-        data = ndarray.array(data, ctx=ctx_list[0])
+        data = array_fn(data, ctx=ctx_list[0])
     if len(ctx_list) == 1:
-        if is_np_array():
-            data = data.as_np_ndarray()
         return [data.as_in_context(ctx_list[0])]
 
+    # TODO(junwu): temp solution for supporting np.ndarray
+    # rewrite this using np ops
     slices = split_data(data, len(ctx_list), batch_axis, even_split)
     if is_np_array():
         slices = [i.as_np_ndarray() for i in slices]
@@ -445,7 +447,7 @@ def _check_same_symbol_type(symbols):
     Raise type error if the types are different. Return the class of
     the symbols."""
     from ..symbol.numpy import _Symbol as np_symbol
-    from ..symbol import Symbol as classic_symbol
+    from ..symbol import Symbol as nd_symbol
     is_np_sym = bool(isinstance(symbols[0], np_symbol))
     for s in symbols[1:]:
         if is_np_sym != isinstance(s, np_symbol):
@@ -460,18 +462,25 @@ def _check_same_symbol_type(symbols):
                             'on each of them; if you want classic ndarray output(s) from the '
                             'computation graph, please convert all the numpy symbols in the list '
                             'to classic symbols by calling `as_nd_ndarray()` on each of them.')
-    return np_symbol if is_np_sym else classic_symbol
+    return np_symbol if is_np_sym else nd_symbol
 
 
 def _check_all_np_ndarrays(out):
-    """Check if ndarrays in out are all np.ndarray"""
+    """Check if ndarrays/symbols in out are all np.ndarray/np._Symbol."""
     from ..numpy import ndarray as np_ndarray
     from ..symbol.numpy import _Symbol as np_symbol
-    assert isinstance(out, (list, tuple))
-    for array in out:
-        if not isinstance(array, (np_ndarray, np_symbol)):
-            raise TypeError('Expected np.ndarray or np._Symbol type in output, while received type '
-                            '{}'.format(str(type(array))))
+    from ..symbol import Symbol as nd_symbol
+    from ..ndarray import NDArray as nd_ndarray
+
+    # pylint: disable=no-else-raise
+    if isinstance(out, (nd_ndarray, nd_symbol)) and not isinstance(out, (np_ndarray, np_symbol)):
+        raise TypeError("Block's output ndarrays/symbols must be of type `mxnet.numpy.ndarray`"
+                        " or `mxnet.symbol.numpy._Symbol`, while got output type {}"
+                        .format(str(type(out))))
+    elif isinstance(out, (list, tuple)):
+        for i in out:
+            _check_all_np_ndarrays(i)
+    # pylint: enable=no-else-raise
 
 
 def _to_classic_arrays(*args, **kwargs):
