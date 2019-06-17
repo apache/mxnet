@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <sys/stat.h>
 #include <nvrtc.h>
 #include <cuda.h>
 #include <nnvm/pass_functions.h>
@@ -28,7 +29,6 @@
 #include "../elemwise_op_common.h"
 #include "../../executor/exec_pass.h"
 #include "../../common/cuda_utils.h"
-#include <sys/stat.h>
 
 namespace mxnet {
 
@@ -151,7 +151,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
               const auto& var_name = source->attrs.name;
               code += "const auto vec_" + var_name + " = load_index(" + var_name + ", offset);\n";
               variables[{i, 0}] = var_name;
-            } 
+            }
             CHECK_EQ(outputs[i], 1);
         } else {
             std::string op_name = source->op()->name;
@@ -162,7 +162,9 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
                 std::string begin = source->attrs.dict.at("begin");
                 std::string axis = source->attrs.dict.at("axis");
                 const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-                code += "const auto " + vec_name + " = load_slice<DType0, ndim, nvec>(" + var_name + ", " + var_name + "_strides," + axis + "," + begin + ", &ref_index[0]);\n";
+                code += "const auto " + vec_name + " = load_slice<DType0, ndim, nvec>(" + \
+                        var_name + ", " + var_name + "_strides," + axis + "," + begin + \
+                        ", &ref_index[0]);\n";
                 CHECK_EQ(outputs[i], 1);
                 variables[{i, 0}] = vec_name;
                 continue;
@@ -326,7 +328,6 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
 
   counter = 0;
 
-  
   for (const auto& entry : g.outputs()) {
     const std::string& var = variables[{entry.node_id, entry.index}];
     if (req[counter] == kWriteTo || req[counter] == kWriteInplace) {
@@ -335,7 +336,6 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
     } else if (req[counter] == kAddTo) {
       const auto var_name = "output" + std::to_string(counter);
       code += "store_add_index(vec_" + var_name + ", i, " + var_name + ");\n";
-      //code += "store_add_index(" + var + ", i, output" + std::to_string(counter) + ");\n";
     } else if (req[counter] == kNullOp) {
       // NULL req, do not do anything
     } else {
@@ -436,7 +436,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
             code_ + "\n" +
             detail::fused_op_kernel_end;
     // Guard NVRTC calls
-    LOG(INFO) << code_;
+    // LOG(INFO) << code_;
     std::lock_guard<std::mutex> lock_nvrtc(mutex_);
     nvrtcProgram program;
     NVRTC_CALL(

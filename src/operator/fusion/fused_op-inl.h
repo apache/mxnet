@@ -52,7 +52,6 @@ const char fp16_support_string[] = R"code(
 // }
 // typedef __half half;
 // )code";
- 
 
 const char type_support_string[] = R"code(
 using float32 = float;
