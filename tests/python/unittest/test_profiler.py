@@ -269,7 +269,6 @@ def test_aggregate_stats_sorting():
             check_sorting(debug_str, sb, asc)
     profiler.set_state('stop')
 
-<<<<<<< HEAD
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
     enable_profiler(profile_filename = file_name, run=True, continuous_dump=True, \
@@ -292,7 +291,6 @@ def test_aggregate_duplication():
     assert target_dict['Time']['operator']['_plus_scalar']['Count'] == 2
     profiler.set_state('stop')
     
-=======
 def test_custom_operator_profiling():
     class Sigmoid(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
@@ -328,7 +326,7 @@ def test_custom_operator_profiling():
         def create_operator(self, ctx, in_shapes, in_dtypes):
             return Sigmoid()
 
-    file_name = 'test_custom_operator_domain.json'
+    file_name = 'test_custom_operator_profiling.json'
     enable_profiler(file_name, True, True, True)
     x = mx.nd.array([0, 1, 2, 3])
     x.attach_grad()
@@ -345,7 +343,75 @@ def test_custom_operator_profiling():
         and "MySigmoid::_zeros" in target_dict["Time"]["Custom Operator"]
     profiler.set_state('stop')
 
->>>>>>> tests added
+def test_custom_operator_profiling_multiple_custom_ops():
+    class MyAdd(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):        
+            self.assign(out_data[0], req[0], in_data[0] + 1)
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], out_grad[0])
+
+    @mx.operator.register("MyAdd1")
+    class MyAdd1Prop(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(MyAdd1Prop, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['in']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            # inputs, outputs, aux
+            return [in_shape[0]], [in_shape[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return MyAdd()
+
+    @mx.operator.register("MyAdd2")
+    class MyAdd2Prop(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(MyAdd2Prop, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['in']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            # inputs, outputs, aux
+            return [in_shape[0]], [in_shape[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return MyAdd()
+
+    file_name = 'test_custom_operator_profiling_multiple_custom_ops.json'
+    enable_profiler(file_name, True, True, True)
+    inp = mx.nd.zeros(shape=(100, 100))
+    x = inp + 1
+    y = mx.nd.Custom(inp, op_type="MyAdd1")
+    z = mx.nd.Custom(inp, op_type="MyAdd2")
+    mx.nd.waitall()
+    profiler.dump()
+    debug_str = profiler.dumps(format = 'json')
+    target_dict = json.loads(debug_str)
+    '''
+    We are calling _plus_scalar within MyAdd1 and MyAdd2 and outside both the custom 
+    operators, so in aggregate stats we should have three different kinds of 
+    _plus_scalar under domains "Custom Operator" and "operator"
+    '''
+    assert "Time" in target_dict and "Custom Operator" in target_dict["Time"] \
+        and "MyAdd1::pure_python" in target_dict["Time"]["Custom Operator"] \
+        and "MyAdd2::pure_python" in target_dict["Time"]["Custom Operator"] \
+        and "MyAdd1::_plus_scalar" in target_dict["Time"]["Custom Operator"] \
+        and "MyAdd2::_plus_scalar" in target_dict["Time"]["Custom Operator"] \
+        and "_plus_scalar" not in target_dict["Time"]["Custom Operator"] \
+        and "operator" in target_dict["Time"] \
+        and "_plus_scalar" in target_dict["Time"]["operator"]
+    profiler.set_state('stop')
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
