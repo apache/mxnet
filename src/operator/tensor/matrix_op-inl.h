@@ -2637,10 +2637,14 @@ inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < num_outputs; ++i) {
     int start = indices[i];
     int end = (i < num_outputs - 1) ? indices[i + 1] : ishape[real_axis];
-    CHECK(start < end)
-      << "start " << start << " is not less than end " << end << "for subarray " << i;
-    CHECK(end <= ishape[real_axis])
-      << "end " << end << " is no less than the size of the axis " << ishape[real_axis];
+    if (ishape[real_axis] == 0U) {
+      end = start;
+    } else {
+      CHECK(start < end)
+        << "start " << start << " is not less than end " << end << "for subarray " << i;
+      CHECK(end <= ishape[real_axis])
+        << "end " << end << " is no less than the size of the axis " << ishape[real_axis];
+    }
     dshape[real_axis] = (end - start);
     if (param.squeeze_axis) {
       CHECK_EQ(end - start, 1U) << "expected axis size of 1 but got " << end - start;
