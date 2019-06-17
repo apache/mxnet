@@ -1787,9 +1787,6 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);
     return true;
   }
-  for (int i = 0; i < reps.ndim(); ++i) {
-    CHECK_GT(reps[i], 0) << "invalid reps=" << i << ", dim size must be greater than zero";
-  }
   mxnet::TShape oshape(std::max(ishape.ndim(), reps.ndim()), -1);
   int i1 = ishape.ndim() - 1;
   int i2 = reps.ndim() - 1;
@@ -1801,6 +1798,11 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
     } else if (i2 >= 0) {
       oshape[i] = reps[i2--];
     }
+  }
+  // If reps contains 0s, oshape is a zero-size shape.
+  // Need to distinguish between np_shape mode and legacy mode.
+  if (!Imperative::Get()->is_np_shape()) {
+    common::ConvertToNumpyShape(&oshape);
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return shape_is_known(oshape);
@@ -1820,7 +1822,7 @@ inline bool TileOpType(const nnvm::NodeAttrs& attrs,
 
 /*!
  * \brief Reshape the input and output tensors for
- * using broadcast_to to achieve the funcitonality
+ * using broadcast_to to achieve the functionality
  * of operator tile.
  * \return a pair of mxnet::TShape's, first is the reshaped
  * input shape, second is the reshaped output shape.
@@ -1828,7 +1830,7 @@ inline bool TileOpType(const nnvm::NodeAttrs& attrs,
 inline std::pair<mxnet::TShape, mxnet::TShape> ReshapeInputOutputForTileOp(
   const mxnet::TShape& ishape,
   const mxnet::Tuple<int>& reps) {
-  if (ishape.ndim() == 0 || reps.ndim() == 0) {
+  if (reps.ndim() == 0) {
     return std::make_pair(ishape, ishape);
   }
 
