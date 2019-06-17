@@ -54,7 +54,7 @@ class CustomOpProfiler {
    */
   void OnCustomBegin(const std::string& op_type) {
     const Tid tid = std::this_thread::get_id();
-    const std::string task_name = op_type + "::pure_python" ;
+    const std::string task_name = op_type + "::pure_python";
     std::lock_guard<std::mutex> lock(mutex_);
     tid_to_op_type_[tid] = op_type;
     tasks_[tid] = std::make_unique<ProfileTask>(task_name.c_str(), &custom_op_domain);
@@ -85,7 +85,7 @@ class CustomOpProfiler {
     if (!op_type_ptr) {
       return NULL;
     }
-    Tid tid = std::this_thread::get_id(); 
+    Tid tid = std::this_thread::get_id();
     std::lock_guard<std::mutex> lock(mutex_);
     if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
       return NULL;
@@ -107,8 +107,8 @@ class CustomOpProfiler {
    *         that is runnin on that thread
    */
   std::unordered_map<Tid, std::string> tid_to_op_type_;
-};	
+};
 }  // namespace profiler
 }  // namespace mxnet
 
-#endif  // MXNET_CUSTOM_OP_PROFILER_H_ 
+#endif  // MXNET_PROFILER_CUSTOM_OP_PROFILER_H_
