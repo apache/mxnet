@@ -558,7 +558,9 @@ def test_np_arange():
 @npx.use_np_shape
 def test_np_linspace():
     configs = [
-        (0.0, 1.0, 10)
+        (0.0, 1.0, 10),
+        (-2, 4, 45),
+        (5.234324, 8.98324, 324)
     ]
     dtypes = ['int32', 'float16', 'float32', 'float64', None]
     for config in configs:
