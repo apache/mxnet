@@ -52,49 +52,45 @@ logging.basicConfig(level=logging.INFO)
 
 #[bs, sequence length, embedding size, hidden size]
 input_shape_list = [[64,15,500,500],
-   [64,20,500,500],
-   [64,25,500,500],
-   [64,30,500,500],
-   [64,35,500,500],
-   [64,40,500,500],
-   [64,45,500,500],
-   [64,50,500,500],
-   [16,25,512,512],
-   [32,25,512,512],
-   [64,25,512,512],
-   [128,25,512,512],
-   [16,25,1024,1024],
-   [32,25,1024,1024],
-   [64,25,1024,1024],
-   [128,25,1024,1024],
-   [16,25,2048,2048],
-   [32,25,2048,2048],
-   [64,25,2048,2048],
-   [128,25,2048,2048],
-   [16,25,4096,4096],
-   [32,25,4096,4096],
-   [64,25,4096,4096],
-   [128,25,4096,4096]]
+    [64,20,500,500],
+    [64,25,500,500],
+    [64,30,500,500],
+    [64,35,500,500],
+    [64,40,500,500],
+    [64,45,500,500],
+    [64,50,500,500],
+    [16,25,512,512],
+    [32,25,512,512],
+    [64,25,512,512],
+    [128,25,512,512],
+    [16,25,1024,1024],
+    [32,25,1024,1024],
+    [64,25,1024,1024],
+    [128,25,1024,1024],
+    [16,25,2048,2048],
+    [32,25,2048,2048],
+    [64,25,2048,2048],
+    [128,25,2048,2048],
+    [16,25,4096,4096],
+    [32,25,4096,4096],
+    [64,25,4096,4096],
+    [128,25,4096,4096]
+ ]
 
 rnncell_type = ['lstm', 'gru', 'all']
 input_layout = ['TNC', 'NTC']
 
-if not opt.gpu:
-    ctx = mx.cpu()
-else:
-    ctx = mx.gpu(0)
+ctx = mx.gpu(0) if opt.gpu else mx.cpu()
 
 dropout = opt.dropout
 bidirection = opt.bidirection
 unfuse = opt.unfuse
 celltype = opt.cell_type
 
-dry_run = 20
-num_iter = 100
 
-def get_rnn_layer(input_shape, num_layer, cell_type, dropout=0, bidirection=False):
-    hidden_size = input_shape[3]
-    embedding_size = input_shape[2]
+def get_rnn_model(input_shape, num_layer, cell_type, ctx, dropout, bidirection=False, layout='TNC', unfuse=False, hybridize=True, is_train=False):
+
+    bs, seq_len, embedding_size, hidden_size = input_shape
     if cell_type == 'lstm':
         rnn_layer = rnn.LSTM(hidden_size, num_layer, dropout=dropout,
                              bidirectional=bidirection, input_size=embedding_size,
@@ -103,15 +99,7 @@ def get_rnn_layer(input_shape, num_layer, cell_type, dropout=0, bidirection=Fals
         rnn_layer = rnn.GRU(hidden_size, num_layer, dropout=dropout,
                             bidirectional=bidirection, input_size=embedding_size,
                             prefix='_gru_layer')
-    return rnn_layer
 
-
-def rnn_cell_score(input_shape, cell_type, ctx, num_layer, dropout=0, bidirection=False, layout='TNC', unfuse=False, hybridize=True, is_train=False):
-    bs = input_shape[0]
-    seq_len = input_shape[1]
-    embedding_size = input_shape[2]
-    hidden_size = input_shape[3]
-    rnn_layer = get_rnn_layer(input_shape, num_layer, cell_type, dropout, bidirection)
     input_data = mx.sym.Variable('data')
 
     if unfuse:
@@ -124,8 +112,10 @@ def rnn_cell_score(input_shape, cell_type, ctx, num_layer, dropout=0, bidirectio
             rnn_layer.hybridize()
         out = rnn_layer(input_data)
 
-    if is_train: 
-        #out = mx.sym.slice(out, begin=(0, None), end=(bs, None))
+        dshape = (bs, seq_len, embedding_size) if layout == 'NTC' else (seq_len, bs, embedding_size)
+
+    if is_train:
+        # add training layers
         hidden = mx.sym.Reshape(data = out, shape=(-1, hidden_size))
         pred = mx.sym.FullyConnected(data=hidden, num_hidden=embedding_size, name='pred')
         if layout == 'TNC':
@@ -134,31 +124,24 @@ def rnn_cell_score(input_shape, cell_type, ctx, num_layer, dropout=0, bidirectio
             pred = mx.sym.Reshape(data=pred, shape=(-1, seq_len, embedding_size))
         softmax_output = mx.sym.SoftmaxOutput(data=pred, name='softmax')
 
-    if layout == 'NTC':
-        dshape = (bs, seq_len, embedding_size)
-    elif layout == 'TNC':
-        dshape = (seq_len, bs, embedding_size)
-    
-    if is_train:
         mod = mx.mod.Module(softmax_output, label_names=('softmax_label',), context=ctx)
+        mod.bind(for_training = True, data_shapes=[('data', dshape)],
+                label_shapes=[('softmax_label', dshape)])
+
     else:
         mod = mx.mod.Module(out, label_names=None, context=ctx)
-    
-    if is_train:
-        if layout == 'TNC':
-            mod.bind(for_training = True, data_shapes=[('data', dshape)],
-                label_shapes=[('softmax_label', (seq_len, bs, embedding_size))])
-        elif layout == 'NTC':
-            mod.bind(for_training = True, data_shapes=[('data', dshape)],
-                label_shapes=[('softmax_label', (bs, seq_len, embedding_size))])
-        
-    else:
         mod.bind(data_shapes=[('data', dshape)], label_shapes=None)
 
     batch = mx.io.DataBatch(data=[mx.random.uniform(shape=dshape)], label=[])
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
+    mod.init_optimizer(optimizer='sgd')
+
+    return mod, batch
+
+
+def rnn_bench_score(mod, batch, is_train, unfuse):
+    
     if is_train:
-        mod.init_optimizer(optimizer='sgd')
         mod.forward(batch, is_train=True)
         if unfuse:
             for o in mod.get_outputs():
@@ -177,47 +160,43 @@ def rnn_cell_score(input_shape, cell_type, ctx, num_layer, dropout=0, bidirectio
             o = mod.get_outputs()[0]
             o.wait_to_read()
 
+
 if __name__ == '__main__':
 
     num_layer = opt.num_layer
     layout = opt.layout
     latency = opt.latency
     hybridize = not(opt.no_hybridize)
-    
-    if layout not in input_layout:
-        logging.warning('Only TNC or NTC are supported!')
-        sys.exit(0)
 
-    if celltype not in rnncell_type:
-        logging.warning('Only LSTM and GRU cell are supported!')
-        sys.exit(0)
-    
-    if celltype == 'all':
-        cell_lst = ['lstm', 'gru']
-    else:
-        cell_lst = [celltype]
+    assert layout in input_layout, "Only TNC or NTC are supported!"
+    assert celltype in rnncell_type, "Only LSTM and GRU cell are supported!"
 
-    if opt.specify_shape != None:
+    dry_run = 20
+    num_iter = 100
+            
+    cell_lst = ['lstm', 'gru'] if celltype == 'all' else [celltype]
+
+    if opt.specify_shape:
         input_shape_list = [[int(x) for x in opt.specify_shape.split(',')]]
 
     for cell in cell_lst:
-        if opt.train:
-            logging.info('%s training benchmark.', cell)
-        else:
-            logging.info('%s inference benchmark.', cell)
+        logging_type = 'training' if opt.train else 'inference'
+        logging.info('%s %s benchmark.', cell, logging_type)
+        
         for input_shape in input_shape_list:
-            #batch will set to 1 for latency test
+            mod, batch = get_rnn_model(input_shape, num_layer, cell, ctx, dropout=dropout, bidirection=bidirection,
+                    layout=opt.layout, unfuse=unfuse, hybridize=hybridize, is_train=opt.train)
+            # batch will set to 1 for latency test
             if latency:
                 input_shape[0] = 1
-            for i in range(dry_run+num_iter):
+            for i in range(dry_run + num_iter):
                 if i == dry_run:
                     tic = time.time()
-                rnn_cell_score(input_shape, cell, ctx, num_layer, dropout=dropout, bidirection=bidirection,
-                    layout=opt.layout, unfuse=unfuse, hybridize=hybridize, is_train=opt.train)
+                rnn_bench_score(mod, batch, is_train=opt.train, unfuse=unfuse)
             toc = time.time() - tic
-            bs = input_shape[0]
-            seq_len = input_shape[1]
-            sps = (bs*num_iter)/toc
+            
+            bs, seq_len, _, _ = input_shape
+            sps = (bs * num_iter) / toc
             if latency:
                 logging.info('For BS = %d, Layers = %d, Shape=%s, latency=%0.6f ms'%(bs, num_layer, input_shape, (1/sps)))
             else:
