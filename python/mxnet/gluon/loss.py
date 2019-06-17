@@ -357,17 +357,28 @@ class SoftmaxCrossEntropyLoss(Loss):
         self._sparse_label = sparse_label
         self._from_logits = from_logits
 
-    @_adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None):
+        if is_np_array():
+            log_softmax = F.npx.log_softmax
+            pick = F.npx.pick
+        else:
+            log_softmax = F.log_softmax
+            pick = F.pick
         if not self._from_logits:
-            pred = F.log_softmax(pred, self._axis)
+            pred = log_softmax(pred, self._axis)
         if self._sparse_label:
-            loss = -F.pick(pred, label, axis=self._axis, keepdims=True)
+            loss = -pick(pred, label, axis=self._axis, keepdims=True)
         else:
             label = _reshape_like(F, label, pred)
-            loss = -F.sum(pred * label, axis=self._axis, keepdims=True)
+            loss = -(pred * label).sum(axis=self._axis, keepdims=True)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        if is_np_array():
+            if F is ndarray:
+                return loss.mean(axis=tuple(range(1, loss.ndim)))
+            else:
+                return F.npx.batch_flatten(loss).mean(axis=1)
+        else:
+            return loss.mean(axis=self._batch_axis, exclude=True)
 
 
 SoftmaxCELoss = SoftmaxCrossEntropyLoss

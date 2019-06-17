@@ -26,7 +26,7 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims']
+           'clip', 'split', 'swapaxes', 'expand_dims', 'tile']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -593,3 +593,39 @@ def split(ary, indices_or_sections, axis=0):
     if not isinstance(ret, list):
         raise NotImplementedError('single output from split is not supported yet...')
     return ret
+
+
+@set_module('mxnet.ndarray.numpy')
+def tile(A, reps):
+    """
+    Construct an array by repeating A the number of times given by reps.
+
+    If `reps` has length ``d``, the result will have dimension of
+    ``max(d, A.ndim)``.
+
+    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
+    axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
+    or shape (1, 1, 3) for 3-D replication. If this is not the desired
+    behavior, promote `A` to d-dimensions manually before calling this
+    function.
+
+    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
+    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
+    (1, 1, 2, 2).
+
+    Note : Although tile may be used for broadcasting, it is strongly
+    recommended to use numpy's broadcasting operations and functions.
+
+    Parameters
+    ----------
+    A : ndarray
+        The input array.
+    reps : tuple of integers
+        The number of repetitions of `A` along each axis.
+
+    Returns
+    -------
+    c : ndarray
+        The tiled output array.
+    """
+    return _npi.tile(A, reps)
