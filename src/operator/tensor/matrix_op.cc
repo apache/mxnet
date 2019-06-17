@@ -1124,6 +1124,7 @@ Example::
 .add_arguments(DepthToSpaceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_split_v2)
+.add_alias("_npi_split")
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 
 Example::
