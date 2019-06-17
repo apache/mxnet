@@ -269,6 +269,7 @@ def test_aggregate_stats_sorting():
             check_sorting(debug_str, sb, asc)
     profiler.set_state('stop')
 
+<<<<<<< HEAD
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
     enable_profiler(profile_filename = file_name, run=True, continuous_dump=True, \
@@ -291,6 +292,61 @@ def test_aggregate_duplication():
     assert target_dict['Time']['operator']['_plus_scalar']['Count'] == 2
     profiler.set_state('stop')
     
+=======
+def test_custom_operator_profiling():
+    class Sigmoid(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):
+            x = in_data[0].asnumpy()
+            import numpy as np
+            y = 1.0 / (1.0 + np.exp(-x))
+            self.assign(out_data[0], req[0], mx.nd.array(y))
+            # Create a dummy matrix using nd.zeros. Test if 'MySigmoid::_zeros' is in dump file
+            dummy = mx.nd.zeros(shape=(100, 100))
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            y = out_data[0].asnumpy()
+            dy = out_grad[0].asnumpy()
+            dx = dy*(1.0 - y)*y
+            self.assign(in_grad[0], req[0], mx.nd.array(dx))
+
+    @mx.operator.register("MySigmoid")
+    class SigmoidProp(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(SigmoidProp, self).__init__(True)
+
+        def list_arguments(self):
+            return ['data']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shapes):
+            data_shape = in_shapes[0]
+            output_shape = data_shape
+            return (data_shape,), (output_shape,), ()
+
+        def create_operator(self, ctx, in_shapes, in_dtypes):
+            return Sigmoid()
+
+    file_name = 'test_custom_operator_domain.json'
+    enable_profiler(file_name, True, True, True)
+    x = mx.nd.array([0, 1, 2, 3])
+    x.attach_grad()
+    with mx.autograd.record():
+        y = mx.nd.Custom(x, op_type='MySigmoid')
+    y.backward()
+    mx.nd.waitall()
+    profiler.dump()
+    debug_str = profiler.dumps(format = 'json')
+    target_dict = json.loads(debug_str)
+    print(target_dict)
+    assert "Time" in target_dict and "Custom Operator" in target_dict["Time"] \
+        and "MySigmoid::pure_python" in target_dict["Time"]["Custom Operator"] \
+        and "_backward_MySigmoid::pure_python" in target_dict["Time"]["Custom Operator"] \
+        and "MySigmoid::_zeros" in target_dict["Time"]["Custom Operator"]
+    profiler.set_state('stop')
+
+>>>>>>> tests added
 if __name__ == '__main__':
     import nose
     nose.runmodule()
