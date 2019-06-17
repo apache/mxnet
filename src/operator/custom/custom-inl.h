@@ -80,7 +80,9 @@ class CustomOperator {
             const std::vector<NDArray>& outputs,
             const std::string op_type = "") {
     if (naive_engine_) {
+      profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
       func();
+      profiler::CustomOpProfiler::Get()->OnCustomEnd();
       for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
         if (arrs[i].storage_type() == kDefaultStorage ||
             arrs[i].storage_type() == kUndefinedStorage)

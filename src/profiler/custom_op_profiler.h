@@ -16,8 +16,8 @@
 * specific language governing permissions and limitations
 * under the License.
 */
-#ifndef MXNET_CUSTOM_OP_PROFILER_H_
-#define MXNET_CUSTOM_OP_PROFILER_H_
+#ifndef MXNET_PROFILER_CUSTOM_OP_PROFILER_H_
+#define MXNET_PROFILER_CUSTOM_OP_PROFILER_H_
 
 #include <string>
 #include <unordered_set>

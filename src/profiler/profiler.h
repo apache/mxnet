@@ -1237,8 +1237,7 @@ struct ProfileOperator : public ProfileEvent {
       }
       if (std::string(name).find("::") != std::string::npos) {
         categories_.set(custom_op_domain.name());
-      }
-      else {
+      } else {
         categories_.set("operator");
       }
       items_[kStart].timestamp_ = start_time;
