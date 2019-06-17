@@ -45,7 +45,7 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims']
+           'clip', 'split', 'swapaxes', 'expand_dims', 'tile']
 
 
 # This function is copied from ndarray.py since pylint
@@ -340,6 +340,8 @@ class ndarray(NDArray):
         else:
             raise ValueError("The truth value of an ndarray with multiple elements is ambiguous.")
 
+    __nonzero__ = __bool__
+
     def __float__(self):
         num_elements = self.size
         if num_elements != 1:
@@ -607,13 +609,9 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
 
-    def repeat(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`repeat`.
-
-        The arguments are the same as for :py:func:`repeat`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
+        """Repeat elements of an array."""
+        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -1757,3 +1755,39 @@ def split(ary, indices_or_sections, axis=0):
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division."""
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
+
+
+@set_module('mxnet.numpy')
+def tile(A, reps):
+    """
+    Construct an array by repeating A the number of times given by reps.
+
+    If `reps` has length ``d``, the result will have dimension of
+    ``max(d, A.ndim)``.
+
+    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
+    axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
+    or shape (1, 1, 3) for 3-D replication. If this is not the desired
+    behavior, promote `A` to d-dimensions manually before calling this
+    function.
+
+    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
+    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
+    (1, 1, 2, 2).
+
+    Note : Although tile may be used for broadcasting, it is strongly
+    recommended to use numpy's broadcasting operations and functions.
+
+    Parameters
+    ----------
+    A : ndarray
+        The input array.
+    reps : tuple of integers
+        The number of repetitions of `A` along each axis.
+
+    Returns
+    -------
+    c : ndarray
+        The tiled output array.
+    """
+    return _npi.tile(A, reps)
