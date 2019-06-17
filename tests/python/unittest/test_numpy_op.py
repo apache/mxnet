@@ -613,6 +613,7 @@ def test_np_linspace():
                     mx_out = net(x)
                     assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
 
+
 @with_seed()
 @npx.use_np_shape
 def test_np_argmax():
