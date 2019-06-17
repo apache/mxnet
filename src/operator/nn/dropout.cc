@@ -65,6 +65,7 @@ struct DropoutGrad {
 DMLC_REGISTER_PARAMETER(DropoutParam);
 
 NNVM_REGISTER_OP(Dropout)
+.add_alias("_npx_Dropout")
 .describe(R"(Applies dropout operation to input array.
 
 - During training, each element of the input is set to zero with probability p.
