@@ -336,7 +336,7 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
   const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
   // Try to get a new name. Only not null for sub-operators of a custom operator
   const char* d_name = profiling && opr_name ?
-                       profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) : NULL;
+                       profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) : nullptr;
   const char* display_name = (d_name ? d_name : opr_name);
   ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars,
                                  prop, display_name, wait);
