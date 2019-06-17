@@ -24,7 +24,7 @@ import collections
 import ctypes
 import mxnet.contrib.amp as amp
 from nose.tools import assert_raises
-from mxnet.test_utils import set_default_context, download_model, compare_symbol_structure
+from mxnet.test_utils import set_default_context, download_model, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock
 from mxnet.contrib.amp import amp
@@ -111,7 +111,7 @@ def test_amp_conversion():
         z = mx.sym.FullyConnected(x_fp16, y_fp16, num_hidden=10, no_bias=True)
         outs = mx.sym.amp_multicast(z, amp_casted_siny, num_outputs=2)
         res_expected = outs[0] + outs[1]
-        assert compare_symbol_structure(res_converted, res_expected), \
+        assert same_symbol_structure(res_converted, res_expected), \
             "convert_symbol generating wrong computation graph"
 
         # convert_symbol called with incorrect inputs
@@ -140,7 +140,7 @@ def test_amp_conversion():
                                            conditional_fp32_ops=[("FullyConnected", "no_bias", ["False"])])
 
         res_expected = mx.sym.FullyConnected(x, y, num_hidden=10, no_bias=True)
-        assert compare_symbol_structure(res_converted, res_expected), \
+        assert same_symbol_structure(res_converted, res_expected), \
             "convert_symbol generating wrong computation graph when conditional ops is used"
 
         # Test for op in conditional ops with condition satisfied
@@ -150,7 +150,7 @@ def test_amp_conversion():
         x_fp32 = mx.sym.amp_cast(x, dtype="float32")
         y_fp32 = mx.sym.amp_cast(y, dtype="float32")
         res_expected = mx.sym.FullyConnected(x_fp32, y_fp32, num_hidden=10, no_bias=True)
-        assert compare_symbol_structure(res_converted, res_expected), \
+        assert same_symbol_structure(res_converted, res_expected), \
             "convert_symbol generating wrong computation graph when conditional ops used with satisfying condition"
 
         # Test with a real world model, default inputs for convert_symbol
@@ -204,6 +204,13 @@ def test_amp_conversion():
         mod.get_outputs()[0].asnumpy()
 
     def check_amp_convert_hybrid_block():
+        # Test conversion for hybrid block on CPU
+        model_cpu = get_model("resnet50_v1")
+        model_cpu.collect_params().initialize(ctx=mx.cpu())
+        model_cpu.hybridize()
+        model_cpu(mx.nd.random.uniform(0, 1, shape=(1, 3, 224, 224), ctx=mx.cpu()))
+        converted_model_cpu = amp.convert_hybrid_block(model_cpu)
+
         # Test with real world model, default inputs for convert_hybrid_block
         model = get_model("resnet50_v1")
         model.collect_params().initialize(ctx=mx.gpu())
@@ -248,6 +255,50 @@ def test_amp_conversion():
         check_amp_convert_symbol()
         check_amp_convert_model()
         check_amp_convert_hybrid_block()
+
+
+@with_seed()
+def test_module_backward_compatibility():
+    channel_num = 10
+    conv_layer_filter_dims = [2, 3]
+    conv_layer_strides = [1, 1]
+    dimension = 5
+
+    data_len = 10
+
+    data = mx.sym.var("data")
+    conv = mx.sym.Convolution(data,
+                              num_filter=channel_num,
+                              kernel=tuple(conv_layer_filter_dims),
+                              stride=tuple(conv_layer_strides))
+
+    bn = mx.sym.BatchNorm(conv,
+                          eps=0.001,
+                          momentum=0.9,
+                          fix_gamma=False,
+                          use_global_stats=False,
+                          output_mean_var=False,
+                          name="conv0_batchnorm")
+    fc = mx.sym.FullyConnected(bn, num_hidden=10, name="fullyconnected")
+    mod = mx.mod.Module(fc, data_names=["data"], context=mx.gpu(0))
+    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]])
+    mod.init_params()
+
+    arg_params, aux_params = mod.get_params()
+    for param_key, param_val in arg_params.items():
+        assert param_val.dtype == np.float32, "Incorrect inference type for arg_params," \
+                                               "please check simple_bind for module executor"
+    for param_key, param_val in aux_params.items():
+        assert param_val.dtype == np.float32, "Incorrect inference type for aux_params," \
+                                               "please check simple_bind for module executor"
+
+
+    sym, arg_params, aux_params = amp.convert_model(mod._symbol, mod._arg_params, mod._aux_params, target_dtype_ops=["Convolution"])
+    mod = mx.mod.Module(sym, data_names=["data"], context=mx.gpu(0))
+    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]])
+    mod.set_params(arg_params, aux_params)
+    assert arg_params["fullyconnected_weight"].dtype == np.float16, \
+        "Module API is overwriting the inferred dtype for a mixed precision model"
 
 
 if __name__ == '__main__':

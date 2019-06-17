@@ -63,19 +63,19 @@ NodePtr InsertNode(std::string op_name, std::string node_name, NodePtr current,
 }
 
 // get suffix for a node entry so that it can be used for amp_cast/amp_multicast node name
-std::string GetSuffix(const nnvm::NodeEntry &e,
+std::string GetSuffix(const nnvm::NodeEntry &node_entry,
                       const std::unordered_map<Node*, NodePtr> &mirror_map) {
   static const auto &flist_outputs =
       nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   std::string suffix = "";
-  NodePtr mirror_node = mirror_map.at(e.node.get());
+  NodePtr mirror_node = mirror_map.at(node_entry.node.get());
   if (mirror_node->op() != nullptr) {
-      auto list_output_names_func = flist_outputs.get(e.node->op(), nullptr);
+      auto list_output_names_func = flist_outputs.get(node_entry.node->op(), nullptr);
       if (list_output_names_func != nullptr) {
-          std::vector<std::string> names = list_output_names_func(e.node->attrs);
-          suffix = "_" + names[e.index];
+          std::vector<std::string> names = list_output_names_func(node_entry.node->attrs);
+          suffix = "_" + names[node_entry.index];
       } else {
-          suffix = "_" + std::to_string(e.index);
+          suffix = "_" + std::to_string(node_entry.index);
       }
   }
   return suffix;
@@ -91,7 +91,7 @@ void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
                  curr_node, input);
   cast_node->attrs.dict["dtype"] = dtype;
   cast_node->op()->attr_parser(&(cast_node->attrs));
-  (*mirror_entry_map)[e] = NodeEntry{cast_node, 0, e.version};
+  (*mirror_entry_map)[e] = NodeEntry{std::move(cast_node), 0, e.version};
   return;
 }
 
@@ -100,22 +100,23 @@ void AddMultiCastNode(const std::vector<NodeEntry> &inputs,
                       const std::string &node_name,
                       const std::unordered_map<Node *, NodePtr> &mirror_map,
                       NodePtr curr_node) {
-    NodePtr node = CreateNode("amp_multicast",
-                              inputs[0].node->attrs.name + node_name + "_amp_multicast");
-    for (size_t i = 0; i < inputs.size(); ++i) {
+  NodePtr node =
+      CreateNode("amp_multicast",
+                 inputs[0].node->attrs.name + node_name + "_amp_multicast");
+  for (size_t i = 0; i < inputs.size(); ++i) {
     const auto &e = inputs[i];
     NodePtr mirror_node = mirror_map.at(e.node.get());
-    NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
+    NodeEntry mirror_entry = NodeEntry{std::move(mirror_node), e.index, e.version};
     node->inputs.emplace_back(mirror_entry);
-    }
-    node->attrs.dict["num_outputs"] = std::to_string(inputs.size());
-    node->op()->attr_parser(&(node->attrs));
-    for (uint32_t i = 0; i < inputs.size(); ++i) {
+  }
+  node->attrs.dict["num_outputs"] = std::to_string(inputs.size());
+  node->op()->attr_parser(&(node->attrs));
+  for (uint32_t i = 0; i < inputs.size(); ++i) {
     const auto &e = inputs[i];
     curr_node->inputs.emplace_back(
         NodeEntry{node, static_cast<uint32_t>(i), e.version});
-    }
-    return;
+  }
+  return;
 }
 
 bool CheckConditionalFP32(
@@ -220,29 +221,27 @@ Graph ReducePrecision(Graph &&src) {
                excluded_syms.count(node->attrs.name) == 0) {
       CHECK(node->inputs.size() > 0)
           << "Please check the symbol. node name: " << node->attrs.name
-          << "op name " << node->op()->name << " has no inputs";
+          << "op name " << node->op()->name << " has no inputs."
+          << "It is likely that something went wrong during symbolic construction.";
       const auto &e = node->inputs[0];
       std::string suffix = GetSuffix(e, mirror_map);
       AddMultiCastNode(node->inputs, suffix, mirror_map, new_node);
     } else if (CheckConditionalFP32(conditional_fp32_ops, excluded_syms, node)) {
-      for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto &e = node->inputs[i];
-        if (mirror_fp32_map.count(e)) {
-          new_node->inputs.emplace_back(mirror_fp32_map[e]);
+      for (const auto& node_entry : node->inputs) {
+        if (mirror_fp32_map.count(node_entry)) {
+          new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
         } else {
-          NodePtr mirror_node = mirror_map.at(e.node.get());
-          NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
-          std::string suffix = GetSuffix(e, mirror_map);
-          AddCastNode(e, suffix, mirror_entry, "float32", &mirror_fp32_map,
+          NodePtr mirror_node = mirror_map.at(node_entry.node.get());
+          NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
+          std::string suffix = GetSuffix(node_entry, mirror_map);
+          AddCastNode(node_entry, suffix, mirror_entry, "float32", &mirror_fp32_map,
                       new_node);
         }
       }
     } else {
-      for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto &e = node->inputs[i];
-        NodePtr mirror_node = mirror_map.at(e.node.get());
-        NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
-        new_node->inputs.emplace_back(mirror_entry);
+      for (const auto& node_entry : node->inputs) {
+        NodePtr mirror_node = mirror_map.at(node_entry.node.get());
+        new_node->inputs.emplace_back(mirror_node, node_entry.index, node_entry.version);
       }
     }
     mirror_map[node.get()] = std::move(new_node);
@@ -250,7 +249,7 @@ Graph ReducePrecision(Graph &&src) {
 
   std::vector<NodeEntry> outputs;
   for (const auto& e : src.outputs) {
-      outputs.emplace_back(NodeEntry{mirror_map.at(e.node.get()), e.index, e.version});
+      outputs.emplace_back(mirror_map.at(e.node.get()), e.index, e.version);
   }
 
   Graph ret;

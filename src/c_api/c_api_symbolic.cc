@@ -810,6 +810,89 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
+// helper function to add mapping of node_name -> dtype map
+// for the given indexed graph and inferred_dtypes
+inline void _SetInputDTypes(
+    const nnvm::IndexedGraph& idx,
+    const nnvm::DTypeVector& inferred_dtypes,
+    std::unordered_map<std::string, int>* node_name_dtype_map,
+    std::unordered_map<std::string, int>* node_without_dtype_map) {
+  const std::string dtype_keyword = "__dtype__";
+  for (uint32_t nid : idx.input_nodes()) {
+    const auto& node = idx[nid].source;
+    const auto& node_with_dtype = node->attrs.dict.find(dtype_keyword);
+    // input nodes classified into nodes_with_dtype, nodes_without_dtype
+    // This classification required because if param_names not provided
+    // we want to update dtypes of only those nodes which have dtypes set
+    // inferred_dtypes are obtained for the nodes, if unknown
+    // dtype is set to fp32
+    if (node_with_dtype != node->attrs.dict.end()) {
+      if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
+        (*node_name_dtype_map)[node->attrs.name] = 0;
+      } else {
+        (*node_name_dtype_map)[node->attrs.name] =
+            inferred_dtypes[idx.entry_id(nid, 0)];
+      }
+    } else {
+      if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
+        (*node_without_dtype_map)[node->attrs.name] = 0;
+      } else {
+        (*node_without_dtype_map)[node->attrs.name] =
+            inferred_dtypes[idx.entry_id(nid, 0)];
+      }
+    }
+  }
+}
+
+// helper function update the node dtype attrs for a vector of nodeptrs
+// given the node name to dtype information and the names of model_params
+// if model_params is provided the function will dtype of only model params.
+// if model_params is empty, the function will dtype of all nodes which had
+// a prior dtype set.
+inline void _UpdateSymDTypeAttrs(
+    const std::unordered_map<std::string, int>& node_name_dtype_map,
+    const std::unordered_map<std::string, int>& node_without_dtype_map,
+    const std::unordered_set<std::string>& model_params,
+    const std::vector<nnvm::NodePtr>& args) {
+  const std::string dtype_keyword = "__dtype__";
+
+  // Update args to have the right dtype attrs
+  if (model_params.size() > 0) {
+    // if model params provided, set dtype only for model params
+    for (size_t i = 0; i < args.size(); ++i) {
+      const std::string& node_name = args[i]->attrs.name;
+      auto it_model_params = model_params.find(node_name);
+      auto it_with_dtype = node_name_dtype_map.find(node_name);
+      auto it_without_dtype = node_without_dtype_map.find(node_name);
+      if (it_model_params != model_params.end()) {
+        // need to update __dtype__ attribute if already set, else set it
+        if (it_with_dtype != node_name_dtype_map.end()) {
+          args[i]->attrs.dict[dtype_keyword] =
+              std::to_string(it_with_dtype->second);
+        } else {
+          CHECK(it_without_dtype != node_without_dtype_map.end())
+              << "make sure all nodes without dtype have properly been added "
+                 "in node_without_dtype_map";
+          args[i]->attrs.dict[dtype_keyword] =
+              std::to_string(it_without_dtype->second);
+        }
+      }
+    }
+  } else {
+    // if model params not provided, update __dtype__ for all inputs,
+    // which already had it set, don't touch the rest
+    for (size_t i = 0; i < args.size(); ++i) {
+      auto it = node_name_dtype_map.find(args[i]->attrs.name);
+      if (it != node_name_dtype_map.end()) {
+        if (args[i]->attrs.dict.find(dtype_keyword) !=
+            args[i]->attrs.dict.end()) {
+          args[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
+        }
+      }
+    }
+  }
+}
+
 int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             SymbolHandle *ret_sym_handle,
                             mx_uint num_args,
@@ -832,7 +915,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             const char **param_vals,
                             const char **model_param_names,
                             const char **arg_names) {
-  nnvm::Symbol *s = new nnvm::Symbol();
+  nnvm::Symbol *result_sym = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   nnvm::Graph g = Symbol2Graph(*sym);
@@ -896,68 +979,20 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   const nnvm::DTypeVector &inferred_dtypes =
       g.GetAttr<nnvm::DTypeVector>("dtype");
   const nnvm::IndexedGraph &idx = g.indexed_graph();
-  const std::string dtype_keyword = "__dtype__";
 
-  for (uint32_t nid : idx.input_nodes()) {
-    auto node = idx[nid].source;
-    auto node_with_dtype = node->attrs.dict.find(dtype_keyword);
-    // input nodes classified into nodes_with_dtype, nodes_without_dtype
-    // This classification required because if param_names not provided
-    // we want to update dtypes of only those nodes which have dtypes set
-    // inferred_dtypes are obtained for the nodes, if unknown
-    // dtype is set to fp32
-    if (node_with_dtype != node->attrs.dict.end()) {
-      if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
-        node_name_dtype_map[node->attrs.name] = 0;
-      } else {
-        node_name_dtype_map[node->attrs.name] =
-            inferred_dtypes[idx.entry_id(nid, 0)];
-      }
-    } else {
-      if (inferred_dtypes[idx.entry_id(nid, 0)] == -1) {
-        node_without_dtype_map[node->attrs.name] = 0;
-      } else {
-        node_without_dtype_map[node->attrs.name] =
-            inferred_dtypes[idx.entry_id(nid, 0)];
-      }
-    }
-  }
+  // set node name -> input dtype mapping using infer dtype
+  _SetInputDTypes(idx, inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
 
-  s->outputs = g.outputs;
-  *ret_sym_handle = s;
+  result_sym->outputs = g.outputs;
+  *ret_sym_handle = result_sym;
   nnvm::Symbol *ret_sym = static_cast<nnvm::Symbol *>(*ret_sym_handle);
-  auto args = ret_sym->ListInputs(nnvm::Symbol::kAll);
-  // Update args to have the right dtype attrs
-  if (num_model_params > 0) {
-    // if model params provided, set dtype only for model params
-    for (size_t i = 0; i < args.size(); ++i) {
-      auto it = model_params.find(args[i]->attrs.name);
-      auto it2 = node_name_dtype_map.find(args[i]->attrs.name);
-      if (it != model_params.end()) {
-        // need to update __dtype__ attribute if already set, else set it
-        if (it2 != node_name_dtype_map.end()) {
-          args[i]->attrs.dict[dtype_keyword] = std::to_string(it2->second);
-        } else {
-          args[i]->attrs.dict[dtype_keyword] =
-              std::to_string(node_without_dtype_map[args[i]->attrs.name]);
-        }
-      }
-    }
-  } else {
-    // if model params not provided, update __dtype__ for all inputs,
-    // which already had it set, don't touch the rest
-    for (size_t i = 0; i < args.size(); ++i) {
-      auto it = node_name_dtype_map.find(args[i]->attrs.name);
-      if (it != node_name_dtype_map.end()) {
-        if (args[i]->attrs.dict.find(dtype_keyword) !=
-            args[i]->attrs.dict.end()) {
-          args[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
-        }
-      }
-    }
-  }
+  const std::vector<nnvm::NodePtr>& args = ret_sym->ListInputs(nnvm::Symbol::kAll);
 
-  API_END_HANDLE_ERROR(delete s);
+  // update symbol dtype attrs using the node name -> dtype mapping, if dtype is already set
+  // in the symbol, else set dtype for the model_params
+  _UpdateSymDTypeAttrs(node_name_dtype_map, node_without_dtype_map, model_params, args);
+
+  API_END_HANDLE_ERROR(delete result_sym);
 }
 
 int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,

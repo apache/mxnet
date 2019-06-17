@@ -382,6 +382,8 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     data_names : list of strs, optional
         A list of strings that represent input data tensor names to the model
     """
+    assert isinstance(sym, Symbol), "First argument to convert_symbol should be Symbol"
+
     if target_dtype != "float16":
         raise ValueError("Only target_dtype float16 is supported currently")
 
@@ -541,6 +543,11 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
 
     if target_dtype != "float16":
         raise ValueError("Only target_dtype float16 is supported currently")
+
+    assert isinstance(sym, Symbol), "First argument to convert_model should be Symbol"
+    assert isinstance(arg_params, dict), "Second argument to convert_model should be a dict of name to ndarray"
+    assert isinstance(aux_params, dict), "Third argument to convert_model should be a dict of name to ndarray"
+
     param_names = list(arg_params.keys()) + list(aux_params.keys())
 
     # Only pass non params as data_names, param types can be inferred

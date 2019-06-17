@@ -2141,7 +2141,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
 
 
-def compare_symbol_structure(sym1, sym2):
+def same_symbol_structure(sym1, sym2):
     """Compare two symbols to check if they have the same computation graph structure.
     Returns true if operator corresponding to a particular node id is same in both
     symbols for all nodes

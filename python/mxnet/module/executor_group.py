@@ -654,17 +654,10 @@ class DataParallelExecutorGroup(object):
         input_types = {x.name: x.dtype for x in data_shapes}
         attr_dict = self.symbol.attr_dict()
 
-        for sym_name in self.symbol.list_arguments():
-            if sym_name not in input_types:
-                if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
-                    if attr_dict[sym_name]["__dtype__"] != "-1":
-                        input_types[sym_name] = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
-
-        for sym_name in self.symbol.list_auxiliary_states():
-            if sym_name not in input_types:
-                if sym_name in attr_dict and "__dtype__" in attr_dict[sym_name]:
-                    if attr_dict[sym_name]["__dtype__"] != "-1":
-                        input_types[sym_name] = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
+        for sym_name in self.symbol.list_inputs():
+            if sym_name in input_types and sym_name in attr_dict \
+            and "__dtype__" in attr_dict[sym_name] and attr_dict[sym_name]["__dtype__"] != "-1":
+                input_types[sym_name] = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
 
         if label_shapes is not None:
             input_types.update({x.name: x.dtype for x in label_shapes})
