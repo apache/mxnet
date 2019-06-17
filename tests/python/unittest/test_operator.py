@@ -4629,7 +4629,6 @@ def test_tile():
     def test_invalid_reps():
         data = mx.nd.arange(16).reshape((4, 4))
         assert_exception(mx.nd.tile, MXNetError, data, (1, 2, -3))
-        assert_exception(mx.nd.tile, MXNetError, data, (1, 0, 3))
 
     test_normal_case()
     with mx.np_shape():
