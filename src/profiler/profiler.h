@@ -128,7 +128,7 @@ struct ProfileStat {
   /*! \brief operation categories (comma-delimited) */
   profile_stat_string categories_;
 
-  /*! \breif whether to add this stat to AggregateStats */
+  /*! \brief whether to add this stat to AggregateStats */
   bool enable_aggregate_ = true;
 
   /* !\brief Process id */
@@ -854,7 +854,7 @@ struct ProfileTask : public ProfileDuration {
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneTask> vtune_task_);
   /*! \brief NVTX duration object */
   NVTX_ONLY_CODE(std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_);
-  /*! \breif not to add this stat to AggregateStats */
+  /*! \brief not to add this stat to AggregateStats */
   bool enable_aggregate_ = true;
 
  protected:
