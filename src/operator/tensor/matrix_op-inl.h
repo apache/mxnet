@@ -1799,6 +1799,11 @@ inline bool TileOpShape(const nnvm::NodeAttrs& attrs,
       oshape[i] = reps[i2--];
     }
   }
+  // If reps contains 0s, oshape is a zero-size shape.
+  // Need to distinguish between np_shape mode and legacy mode.
+  if (!Imperative::Get()->is_np_shape()) {
+    common::ConvertToNumpyShape(&oshape);
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return shape_is_known(oshape);
 }
