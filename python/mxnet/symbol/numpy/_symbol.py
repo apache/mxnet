@@ -1307,7 +1307,7 @@ def tile(A, reps):
     return _npi.tile(A, reps)
 
 
-def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None): # pylint: disable=too-many-lines
     """Return evenly spaced numbers over a specified interval.
 
     Returns num evenly spaced samples, calculated over the interval [start, stop].
