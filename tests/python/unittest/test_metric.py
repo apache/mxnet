@@ -34,7 +34,7 @@ def test_metrics():
     check_metric('mcc')
     check_metric('perplexity', -1)
     check_metric('pearsonr')
-    check_metric('mmcc')
+    check_metric('pcc')
     check_metric('nll_loss')
     check_metric('loss')
     composite = mx.metric.create(['acc', 'f1'])
@@ -90,7 +90,7 @@ def test_global_metric():
     _check_global_metric('mcc', shape=(10,2), average='micro')
     _check_global_metric('perplexity', -1)
     _check_global_metric('pearsonr', use_same_shape=True)
-    _check_global_metric('mmcc', shape=(10,2))
+    _check_global_metric('pcc', shape=(10,2))
     _check_global_metric('nll_loss')
     _check_global_metric('loss')
     _check_global_metric('ce')
@@ -267,26 +267,26 @@ def cm_batch(cm):
             preds += [ ident[j] ] * cm[i][j]
     return ([ mx.nd.array(labels, dtype='int32') ], [ mx.nd.array(preds) ])
 
-def test_mmcc():
+def test_pcc():
     labels, preds = cm_batch([
         [ 7, 3 ],
         [ 2, 5 ],
     ])
-    met_mmcc = mx.metric.create('mmcc')
-    met_mmcc.update(labels, preds)
-    _, mmcc = met_mmcc.get()
+    met_pcc = mx.metric.create('pcc')
+    met_pcc.update(labels, preds)
+    _, pcc = met_pcc.get()
 
-    # mmcc should agree with mcc for binary classification
+    # pcc should agree with mcc for binary classification
     met_mcc = mx.metric.create('mcc')
     met_mcc.update(labels, preds)
     _, mcc = met_mcc.get()
-    np.testing.assert_almost_equal(mmcc, mcc)
+    np.testing.assert_almost_equal(pcc, mcc)
 
-    # mmcc should agree with Pearson for binary classification
+    # pcc should agree with Pearson for binary classification
     met_pear = mx.metric.create('pearsonr')
     met_pear.update(labels, [p.argmax(axis=1) for p in preds])
     _, pear = met_pear.get()
-    np.testing.assert_almost_equal(mmcc, pear)
+    np.testing.assert_almost_equal(pcc, pear)
 
     # check multiclass case against reference implementation
     CM = [
@@ -316,10 +316,10 @@ def test_mmcc():
         for k in range(K)
     )) ** 0.5
     labels, preds = cm_batch(CM)
-    met_mmcc.reset()
-    met_mmcc.update(labels, preds)
-    _, mmcc = met_mmcc.get()
-    np.testing.assert_almost_equal(mmcc, ref)
+    met_pcc.reset()
+    met_pcc.update(labels, preds)
+    _, pcc = met_pcc.get()
+    np.testing.assert_almost_equal(pcc, ref)
 
     # things that should not change metric score:
     # * order
@@ -330,10 +330,10 @@ def test_mmcc():
     preds = [ [ i.reshape((1, -1)) ] for i in preds[0] ]
     preds.reverse()
 
-    met_mmcc.reset()
+    met_pcc.reset()
     for l, p in zip(labels, preds):
-        met_mmcc.update(l, p)
-    assert mmcc == met_mmcc.get()[1]
+        met_pcc.update(l, p)
+    assert pcc == met_pcc.get()[1]
 
 def test_single_array_input():
     pred = mx.nd.array([[1,2,3,4]])

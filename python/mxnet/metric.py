@@ -860,7 +860,7 @@ class MCC(EvalMetric):
 
     .. note::
 
-        This version of MCC only supports binary classification.  See MMCC.
+        This version of MCC only supports binary classification.  See PCC.
 
     Parameters
     ----------
@@ -1477,18 +1477,18 @@ class PearsonCorrelation(EvalMetric):
 
 
 @register
-class MMCC(EvalMetric):
-    """MMCC is a multiclass equivalent for the Matthews correlation coefficient derived
+class PCC(EvalMetric):
+    """PCC is a multiclass equivalent for the Matthews correlation coefficient derived
     from a discrete solution to the Pearson correlation coefficient.
 
     .. math::
-        \\text{MMCC} = \\frac {\\sum _{k}\\sum _{l}\\sum _{m}C_{kk}C_{lm}-C_{kl}C_{mk}}
+        \\text{PCC} = \\frac {\\sum _{k}\\sum _{l}\\sum _{m}C_{kk}C_{lm}-C_{kl}C_{mk}}
         {{\\sqrt {\\sum _{k}(\\sum _{l}C_{kl})(\\sum _{k'|k'\\neq k}\\sum _{l'}C_{k'l'})}}
          {\\sqrt {\\sum _{k}(\\sum _{l}C_{lk})(\\sum _{k'|k'\\neq k}\\sum _{l'}C_{l'k'})}}}
 
     defined in terms of a K x K confusion matrix C.
 
-    When there are more than two labels the MMCC will no longer range between -1 and +1.
+    When there are more than two labels the PCC will no longer range between -1 and +1.
     Instead the minimum value will be between -1 and 0 depending on the true distribution.
     The maximum value is always +1.
 
@@ -1522,18 +1522,18 @@ class MMCC(EvalMetric):
     )]
     >>> f1 = mx.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
-    >>> mmcc = mx.metric.MMCC()
-    >>> mmcc.update(preds = predicts, labels = labels)
+    >>> pcc = mx.metric.PCC()
+    >>> pcc.update(preds = predicts, labels = labels)
     >>> print f1.get()
     ('f1', 0.95233560306652054)
-    >>> print mmcc.get()
-    ('mmcc', 0.01917751877733392)
+    >>> print pcc.get()
+    ('pcc', 0.01917751877733392)
     """
-    def __init__(self, name='mmcc',
+    def __init__(self, name='pcc',
                  output_names=None, label_names=None,
                  has_global_stats=True):
         self.k = 2
-        super(MMCC, self).__init__(
+        super(PCC, self).__init__(
             name=name, output_names=output_names, label_names=label_names,
             has_global_stats=has_global_stats)
 
