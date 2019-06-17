@@ -28,10 +28,39 @@
 #include "../elemwise_op_common.h"
 #include "../../executor/exec_pass.h"
 #include "../../common/cuda_utils.h"
+#include <sys/stat.h>
 
 namespace mxnet {
 
 namespace detail {
+
+std::string FindCUDAIncludePath() {
+#if defined(_WIN32)
+  const std::string delimiter = "\\";
+#else
+  const std::string delimiter = "/";
+#endif
+  std::string cuda_include_path;
+  const char* cuda_path_env = std::getenv("CUDA_PATH");
+  if (cuda_path_env != nullptr) {
+    cuda_include_path += cuda_path_env;
+    cuda_include_path += delimiter + "include";
+    return cuda_include_path;
+  }
+
+#if defined(__linux__)
+  struct stat st;
+  cuda_include_path = "/usr/local/cuda/include";
+  if (stat(cuda_include_path.c_str(), &st) == 0) {
+    return cuda_include_path;
+  }
+#endif
+  LOG(FATAL) << "Cannot find cuda include path."
+             << "CUDA_PATH is not set or CUDA is not installed in the default installation path."
+             << "In other than linux, it is necessary to set CUDA_PATH.";
+  return cuda_include_path;
+}
+
 
 inline std::string mshadowTypeToString(int type) {
   switch (type) {
@@ -55,6 +84,29 @@ inline std::string mshadowTypeToString(int type) {
   return "";
 }
 
+inline int mshadowTypeToVectorLength(int type) {
+  switch (type) {
+    case mshadow::kFloat32:
+      return 1;
+    case mshadow::kFloat64:
+      return 1;
+    case mshadow::kFloat16:
+      return 2;
+    case mshadow::kUint8:
+      return 1;
+    case mshadow::kInt8:
+      return 1;
+    case mshadow::kInt32:
+      return 1;
+    case mshadow::kInt64:
+      return 1;
+    default:
+      LOG(FATAL) << "Unknown type enum " << type;
+  }
+  return 0;
+}
+
+
 }  // namespace detail
 
 void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
@@ -63,6 +115,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
   int temp_name_counter = 0;
   using NodeEntry = nnvm::IndexedGraph::NodeEntry;
   std::map<std::pair<int, int>, std::string> variables;
+  std::map<int, int> load_index;
 
   std::vector<uint32_t> outputs(g.num_nodes());
 
@@ -79,11 +132,66 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
     const auto& node = g[i];
     const auto* source = node.source;
     if (source != nullptr) {
+        if (source->is_variable()) {
+            load_index[i] = 1;
+        } else {
+            std::string op_name = source->op()->name;
+            if (detail::fused_op_slice_ops.find(op_name) != detail::fused_op_slice_ops.end()) {
+                load_index[node.inputs[0].node_id] = 0;
+            }
+        }
+    }
+  }
+  for (size_t i = 0; i < g.num_nodes(); ++i) {
+    const auto& node = g[i];
+    const auto* source = node.source;
+    if (source != nullptr) {
+        if (source->is_variable()) {
+            if (load_index[i]) {
+              const auto& var_name = source->attrs.name;
+              code += "const auto vec_" + var_name + " = load_index(" + var_name + ", offset);\n";
+              variables[{i, 0}] = var_name;
+            } 
+            CHECK_EQ(outputs[i], 1);
+        } else {
+            std::string op_name = source->op()->name;
+            if (detail::fused_op_slice_ops.find(op_name) != detail::fused_op_slice_ops.end()) {
+                int arg_id = node.inputs[0].node_id;
+                const auto& var_name = g[arg_id].source->attrs.name;
+                load_index[arg_id] = 0;
+                std::string begin = source->attrs.dict.at("begin");
+                std::string axis = source->attrs.dict.at("axis");
+                const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
+                code += "const auto " + vec_name + " = load_slice<DType0, ndim, nvec>(" + var_name + ", " + var_name + "_strides," + axis + "," + begin + ", &ref_index[0]);\n";
+                CHECK_EQ(outputs[i], 1);
+                variables[{i, 0}] = vec_name;
+                continue;
+            }
+        }
+    }
+  }
+
+  int counter = 0;
+  for (const auto& entry : g.outputs()) {
+    const auto var_name = "output" + std::to_string(counter);
+    code += "VectorType<DType0> vec_output" + std::to_string(counter) + ";\n";
+    ++counter;
+  }
+
+  code += "for (int j = 0; j < nvec; j++ ) {\n";
+
+
+  for (size_t i = 0; i < g.num_nodes(); ++i) {
+    const auto& node = g[i];
+    const auto* source = node.source;
+    if (source != nullptr) {
       std::string var_name = "temp" + std::to_string(temp_name_counter++);
       if (source->is_variable()) {
-        code += "const auto " + var_name + " = load(" + source->attrs.name + ", i);\n";
-        CHECK_EQ(outputs[i], 1);
-        variables[{i, 0}] = var_name;
+        if (load_index[i]) {
+            code += "const auto " + var_name + " = load(vec_" + variables[{i, 0}] + ".x[j]);\n";
+            CHECK_EQ(outputs[i], 1);
+            variables[{i, 0}] = var_name;
+        }
       } else {
         std::string op_name = source->op()->name;
         if (detail::fused_op_binary_ops.find(op_name) != detail::fused_op_binary_ops.end()) {
@@ -159,6 +267,13 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
           continue;
         }
 
+        if (detail::fused_op_slice_ops.find(op_name) != detail::fused_op_slice_ops.end()) {
+          code += "const auto " + var_name + " = load(" + variables[{i, 0}] + ".x[j]);\n";
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
+
         // Special cases with variable number
         // of inputs/outputs, listed in
         // detail::fused_op_variable_io_ops
@@ -199,13 +314,28 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
     }
   }
 
-  int counter = 0;
+  counter = 0;
+  for (const auto& entry : g.outputs()) {
+    const std::string& var = variables[{entry.node_id, entry.index}];
+    const auto var_name = "output" + std::to_string(counter);
+    code += "vec_" + var_name + ".x[j] = store<DType0>("+ var +");\n";
+    ++counter;
+  }
+
+  code += "}\n";
+
+  counter = 0;
+
+  
   for (const auto& entry : g.outputs()) {
     const std::string& var = variables[{entry.node_id, entry.index}];
     if (req[counter] == kWriteTo || req[counter] == kWriteInplace) {
-      code += "store(" + var + ", i, output" + std::to_string(counter) + ");\n";
+      const auto var_name = "output" + std::to_string(counter);
+      code += "store_index(vec_" + var_name + ", i, " + var_name + ");\n";
     } else if (req[counter] == kAddTo) {
-      code += "storeadd(" + var + ", i, output" + std::to_string(counter) + ");\n";
+      const auto var_name = "output" + std::to_string(counter);
+      code += "store_add_index(vec_" + var_name + ", i, " + var_name + ");\n";
+      //code += "store_add_index(" + var + ", i, output" + std::to_string(counter) + ");\n";
     } else if (req[counter] == kNullOp) {
       // NULL req, do not do anything
     } else {
@@ -229,6 +359,8 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
 
   std::vector<int> in_dtypes;
   std::vector<int> out_dtypes;
+  int ndim = outputs[0].ndim();
+  size_t nvec = detail::mshadowTypeToVectorLength(outputs[0].type_flag_);
 
   size_t counter = 0;
   for (const auto& blob : inputs) {
@@ -261,33 +393,39 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
 
   if (!initialized_) {
     this->GenerateCode(req);
-    LOG(INFO) << code_;
     std::string aux_code = "";
     std::string kernel_params = "";
+    std::string tensor_params = "";
     nnvm::Symbol sym;
     sym.outputs = this->symbol_.outputs;
     const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
     size_t num_params = in_dtypes.size() + out_dtypes.size();
     size_t i = 0;
+    aux_code += "static const int ndim = " + std::to_string(ndim) + ";\n";
+    aux_code += "static const int nvec = " + std::to_string(nvec) + ";\n";
+    kernel_params += "const Strides<ndim> ref_strides,";
     for (const auto &type : in_dtypes) {
       std::string type_name = detail::mshadowTypeToString(type);
       aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      kernel_params += "DType" + std::to_string(i) + "* " +input_names[i];
+      tensor_params += " DType" + std::to_string(i) + "* " +input_names[i];
+      kernel_params += " const Strides<ndim> " + input_names[i]+"_strides";
       ++i;
       if (i < num_params) {
+        tensor_params += ", ";
         kernel_params += ", ";
       }
     }
     for (const auto &type : out_dtypes) {
       std::string type_name = detail::mshadowTypeToString(type);
       aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      kernel_params += "DType" + std::to_string(i) + "* output" +
+      tensor_params += "DType" + std::to_string(i) + "* output" +
                        std::to_string(i - in_dtypes.size());
       ++i;
       if (i < num_params) {
-        kernel_params += ", ";
+        tensor_params += ", ";
       }
     }
+    kernel_params += tensor_params;
     code_ = std::string(detail::fp16_support_string) + "\n" +
             detail::type_support_string + "\n" +
             detail::fused_op_function_definitions + "\n" +
@@ -298,6 +436,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
             code_ + "\n" +
             detail::fused_op_kernel_end;
     // Guard NVRTC calls
+    LOG(INFO) << code_;
     std::lock_guard<std::mutex> lock_nvrtc(mutex_);
     nvrtcProgram program;
     NVRTC_CALL(
@@ -310,15 +449,17 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     std::string gpu_arch = "--gpu-architecture=compute_" +
                            std::to_string(this->cc_major_) +
                            std::to_string(this->cc_minor_);
+    std::string cuda_include_path = "-I" + detail::FindCUDAIncludePath();
 
     const char *opts[] = {gpu_arch.c_str(),
                           "--std=c++11",
-                          "-default-device"};
+                          "-default-device",
+                          cuda_include_path.c_str()};
     const std::string kernel_name_demangled = "FusedKernel_" + attrs.name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
     nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                    3,        // numOptions
+                                                    4,        // numOptions
                                                     opts);    // options
     // Obtain compilation log from the program.
     size_t logSize;
@@ -342,7 +483,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     CUdevice cuDevice;
     CUcontext context;
     CUmodule module;
-    CUDA_CALL(cudaGetDevice(&device))
+    CUDA_CALL(cudaGetDevice(&device));
     CUDA_DRIVER_CALL(cuDeviceGet(&cuDevice, device));
     CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cuDevice));
     CUDA_DRIVER_CALL(cuModuleLoadData(&module, &ptx_[0]));
@@ -354,14 +495,28 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   Stream<gpu>* s = ctx.get_stream<gpu>();
   auto stream = Stream<gpu>::GetStream(s);
   std::vector<void*> args;
-  size_t N = outputs[0].shape_.Size();
+  size_t N = (outputs[0].shape_.Size() + nvec - 1)/nvec;
   args.push_back(&N);
+  std::vector<int> ref_strides(ndim);
+  ref_strides[ndim-1] = 1;
+  for (int i = ndim-2; i >= 0; i--) {
+    ref_strides[i] = ref_strides[i+1] * outputs[0].shape_[i+1];
+  }
+  args.push_back(ref_strides.data());
+
   unsigned int num_blocks = (N + FusedOp::NTHREADS - 1) / FusedOp::NTHREADS;
   std::vector<void*> ptrs;
+  std::vector<std::vector<int>> strides;
   for (const auto &data : inputs) {
     MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
       Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
       ptrs.push_back(tensor.dptr_);
+      strides.push_back(std::vector<int>(ndim));
+      std::vector<int>& tensor_strides = strides.back();
+      tensor_strides[ndim-1] = 1;
+      for (int i = ndim-2; i >= 0; i--) {
+        tensor_strides[i] = tensor_strides[i+1] * data.shape_[i+1];
+      }
     });
   }
   for (const auto &data : outputs) {
@@ -369,6 +524,9 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
       Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
       ptrs.push_back(tensor.dptr_);
     });
+  }
+  for (auto &tensor_strides : strides) {
+    args.push_back(tensor_strides.data());
   }
   for (auto &ptr : ptrs) {
     args.push_back(reinterpret_cast<void *>(&ptr));

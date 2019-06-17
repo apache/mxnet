@@ -31,23 +31,28 @@ namespace mxnet {
 namespace detail {
 
 const char fp16_support_string[] = R"code(
-struct __align__(2) __half {
-  __host__ __device__ __half() { }
-  unsigned short __x;
-};
-/* Definitions of intrinsics */
-__device__ inline __half __float2half(const float f) {
-  __half val;
-  asm("{  cvt.rn.f16.f32 %0, %1;}\n" : "=h"(val.__x) : "f"(f));
-  return val;
-}
-__device__ inline float __half2float(const __half h) {
-  float val;
-  asm("{  cvt.f32.f16 %0, %1;}\n" : "=f"(val) : "h"(h.__x));
-  return val;
-}
-typedef __half half;
+#include <cuda_fp16.h>
 )code";
+
+// const char fp16_support_string[] = R"code(
+// struct __align__(2) __half {
+//   __host__ __device__ __half() { }
+//   unsigned short __x;
+// };
+// /* Definitions of intrinsics */
+// __device__ inline __half __float2half(const float f) {
+//   __half val;
+//  asm("{  cvt.rn.f16.f32 %0, %1;}\n" : "=h"(val.__x) : "f"(f));
+//   return val;
+// }
+// __device__ inline float __half2float(const __half h) {
+//   float val;
+//  asm("{  cvt.f32.f16 %0, %1;}\n" : "=f"(val) : "h"(h.__x));
+//   return val;
+// }
+// typedef __half half;
+// )code";
+ 
 
 const char type_support_string[] = R"code(
 using float32 = float;
@@ -218,6 +223,10 @@ const std::map<std::string, std::vector<std::vector<std::string>>> fused_op_mimo
                        {"(% * % / hypot(%, %))", "_0", "_2", "_1", "_2"}}}
 };
 
+const std::map<std::string, std::string> fused_op_slice_ops = {
+  {"slice_axis"   , ""},
+};
+
 const std::vector<std::string> fused_op_variable_io_ops = {
   "add_n",
   "_backward_Activation"
@@ -235,34 +244,118 @@ struct LoadType<half> {
 };
 
 template <typename DType>
-inline typename LoadType<DType>::Type load(const DType * input, int i) {
-  return input[i];
+inline typename LoadType<DType>::Type load(const DType input) {
+  return input;
 }
 
 template <>
-inline float load(const half * input, int i) {
-  return __half2float(input[i]);
+inline float load(const half input) {
+  return __half2float(input);
+}
+
+template <typename DType1, typename DType2>
+inline DType1 store(const DType2 input) {
+  return input;
+}
+
+template<>
+inline half store(const float input) {
+  return __float2half(input);
+}
+
+
+
+template <typename DType>
+struct VectorConfig {
+    static const int N = 1;
+    using IndexType = DType;
+};
+
+struct VectorConfig<half> {
+    static const int N = 2;
+    using IndexType = __half2;
+};
+
+
+template <typename DType>
+union VectorType {
+    typename VectorConfig<DType>::IndexType y;
+    DType x[VectorConfig<DType>::N];
+    VectorType () {};
+    VectorType (const VectorType<DType>& y2) {
+        y = y2.y;
+    }
+    VectorType (const typename VectorConfig<DType>::IndexType &y2) {
+        y = y2;
+    }
+}; 
+
+
+template <int ndim>
+struct Strides {
+   int x[ndim];
+};
+
+template <int ndim>
+inline Strides<ndim> get_index(const Strides<ndim> strides, int i) {
+  int idx = i;
+  Strides<ndim> ref_index;
+  #pragma unroll
+  for (int dim = 0; dim < ndim; dim++) {
+     int stride = strides.x[dim];
+     ref_index.x[dim] = idx / stride;
+     idx = idx % stride;
+  }
+  return ref_index;
+}
+
+
+template <typename DType>
+inline VectorType<DType> load_index(const DType * input, int i) {
+  const auto* vector_input = reinterpret_cast<const typename VectorConfig<DType>::IndexType *>(input + i);
+  VectorType<DType> ret = {*vector_input};
+  return ret;
+}
+
+template <typename DType, int ndim, int nvec>
+inline VectorType<DType> load_slice(const DType * input, const Strides<ndim> strides, int axis, int begin, Strides<ndim>* ref_index) {
+  int idx[nvec];
+  bool consecutive = true;
+  #pragma unroll
+  for (int j = 0; j < nvec; j++) {
+    idx[j] = 0;
+    #pragma unroll
+    for (int dim = 0; dim < ndim; dim++) {
+       idx[j] += ref_index[j].x[dim] * strides.x[dim];
+    }
+    idx[j] += begin * strides.x[axis];
+    if (j > 0 && (idx[j] != idx[j-1])) {
+        consecutive = false;
+    }
+  }
+  if (!consecutive) {
+    VectorType<DType> ret;
+    #pragma unroll
+    for (int j = 0; j < nvec; j++) {
+        ret.x[j] = *(input + idx[j]);
+    }
+    return ret;
+  } 
+  return load_index(input, idx[0]);
+}
+
+
+
+template <typename DType>
+inline void store_index(const VectorType<DType> value, int i, DType * output) {
+  auto vector_output = reinterpret_cast<typename VectorConfig<DType>::IndexType *>(output);
+  vector_output[i] = value.y;
 }
 
 template <typename DType>
-inline void store(const typename LoadType<DType>::Type value, int i, DType * output) {
-  output[i] = value;
-}
-
-template <>
-inline void store(const float value, int i, half * output) {
-  output[i] = __float2half(value);
-}
-
-template <typename DType>
-inline void storeadd(const typename LoadType<DType>::Type value, int i, DType * output) {
-  output[i] += value;
-}
-
-template <>
-inline void storeadd(const float value, int i, half * output) {
-  const auto previous = load(output, i);
-  output[i] = __float2half(value + previous);
+inline void store_add_index(const VectorType<DType> value, int i, DType * output) {
+  auto vector_output = reinterpret_cast<typename VectorConfig<DType>::IndexType *>(output);
+  vector_output[i] += value.y;
 }
 
 template <typename DType>
@@ -725,6 +818,13 @@ inline DType backward_erfinv(const DType val, const DType grad) {
 const char fused_op_kernel_begin[] = R"code(
 const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 for (int i = tid; i < N; i+= gridDim.x * blockDim.x) {
+    Strides<ndim> ref_index[nvec];
+    int offset = i*nvec;
+    #pragma unroll 
+    for (int j = 0; j < nvec; j++) {
+      ref_index[j] = get_index(ref_strides, offset + j);
+    }
+
 )code";
 
 const char fused_op_kernel_end[] = R"code(

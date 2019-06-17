@@ -53,6 +53,8 @@ namespace {
       return true;
     if (fused_op_mimo_ops.count(op_name))
       return true;
+    if (fused_op_slice_ops.count(op_name))
+      return true;
     if (std::find(fused_op_variable_io_ops.begin(),
                   fused_op_variable_io_ops.end(),
                   op_name) !=
