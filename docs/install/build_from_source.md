@@ -230,7 +230,7 @@ For example, you can specify using all cores on Linux as follows:
 
 ```bash
 mkdir build && cd build
-cmake -GNinja .
+cmake -GNinja ..
 ninja -v
 ```
 
@@ -240,7 +240,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja .
+cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -249,7 +249,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja .
+cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -258,7 +258,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja .
+cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -267,7 +267,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DBLAS=open -GNinja .
+cmake -DUSE_CUDA=0 -DBLAS=open -GNinja ..
 ninja -v
 ```
 
@@ -277,7 +277,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_OPENCV=0 -GNinja .
+cmake -DUSE_OPENCV=0 -GNinja ..
 ninja -v
 ```
 
@@ -285,7 +285,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja .
+cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja ..
 ninja -v
 ```
 
@@ -294,7 +294,7 @@ ninja -v
 ```bash
 brew install llvm
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja .
+cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja ..
 ninja -v
 ```
 
@@ -306,13 +306,13 @@ After building MXNet's shared library, you can install other language bindings.
 **NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++](#build-mxnet-with-c++).
 
 The following table provides links to each language binding by operating system:
-| | [Ubuntu](ubuntu_setup.md) | [macOS](osx_setup.md) | [Windows](windows_setup.md) |
+| | [Ubuntu](ubuntu_setup.html) | [macOS](osx_setup.html) | [Windows](windows_setup.html) |
 | --- | ----  | --- | ------- |
-| Python | [Ubuntu guide](ubuntu_setup.md#install-mxnet-for-python) | [OSX guide](osx_setup.md) | [Windows guide](windows_setup.md#install-mxnet-for-python) |
-| C++ | [C++ guide](c_plus_plus.md) | [C++ guide](c_plus_plus.md) | [C++ guide](c_plus_plus.md) |
+| Python | [Ubuntu guide](ubuntu_setup.html#install-mxnet-for-python) | [OSX guide](osx_setup.html) | [Windows guide](windows_setup.html#install-mxnet-for-python) |
+| C++ | [C++ guide](c_plus_plus.html) | [C++ guide](c_plus_plus.html) | [C++ guide](c_plus_plus.html) |
 | Clojure | [Clojure guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) | [Clojure guide](https://github.com/apache/incubator-mxnet/tree/master/contrib/clojure-package) | n/a |
-| Julia | [Ubuntu guide](ubuntu_setup.md#install-the-mxnet-package-for-julia) | [OSX guide](osx_setup.md#install-the-mxnet-package-for-julia) | [Windows guide](windows_setup.md#install-the-mxnet-package-for-julia) |
-| Perl | [Ubuntu guide](ubuntu_setup.md#install-the-mxnet-package-for-perl) | [OSX guide](osx_setup.md#install-the-mxnet-package-for-perl) | n/a |
-| R | [Ubuntu guide](ubuntu_setup.md#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.md#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.md#install-the-mxnet-package-for-r) |
-| Scala | [Scala guide](scala_setup.md) | [Scala guide](scala_setup.md) | n/a |
-| Java | [Java guide](java_setup.md) | [Java Guide](java_setup.md) | n/a |
+| Julia | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-julia) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-julia) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-julia) |
+| Perl | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-perl) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-perl) | n/a |
+| R | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-r) |
+| Scala | [Scala guide](scala_setup.html) | [Scala guide](scala_setup.html) | n/a |
+| Java | [Java guide](java_setup.html) | [Java Guide](java_setup.html) | n/a |

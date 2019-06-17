@@ -115,28 +115,26 @@ the float32 data into int8.
 .add_argument("max_data", "NDArray-or-Symbol", "Maximum value of data.")
 .add_arguments(ActivationParam::__FIELDS__());
 
-// TODO(zhiyuan): need extra condition check if there's benefited if it's switched on
-// Since it's not compute-intensive.
-#if 0
+
 NNVM_REGISTER_OP(Activation)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-  ActivationParam param;
-  param.Init(attrs.dict);
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   nnvm::NodePtr node = nnvm::Node::Create();
   if (param.act_type == activation::kReLU) {
     node->attrs.op = Op::Get("_contrib_quantized_act");
     node->attrs.name = "quantized_" + attrs.name;
   } else {
+    LOG(INFO) << "Currently, quantized activation only supports relu, exclude "
+              << attrs.name << " which act_type is " << param.act_type;
     node->attrs.op = nullptr;
     node->attrs.name = attrs.name;
   }
   node->attrs.dict = attrs.dict;
-  if (node->op()->attr_parser != nullptr) {
+  if (node->op() != nullptr && node->op()->attr_parser != nullptr) {
     node->op()->attr_parser(&(node->attrs));
   }
   return node;
 });
-#endif
 
 }  // namespace op
 }  // namespace mxnet
