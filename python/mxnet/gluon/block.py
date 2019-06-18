@@ -37,6 +37,7 @@ from .utils import _indent, _brief_print_list, HookHandle
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
 from .. import numpy_extension as _mx_npx
 from .. import numpy as _mx_np
+from .. util import is_np_array
 
 
 class _BlockScope(object):
@@ -335,7 +336,10 @@ class Block(object):
         """
         params = self._collect_params_with_prefix()
         arg_dict = {key : val._reduce() for key, val in params.items()}
-        ndarray.save(filename, arg_dict)
+        if is_np_array():
+            _mx_np.save(filename, arg_dict)
+        else:
+            ndarray.save(filename, arg_dict)
 
     def save_params(self, filename):
         """[Deprecated] Please use save_parameters. Note that if you want load
@@ -384,7 +388,10 @@ class Block(object):
         `Saving and Loading Gluon Models \
         <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
-        loaded = ndarray.load(filename)
+        if is_np_array():
+            loaded = _mx_np.load(filename)
+        else:
+            loaded = ndarray.load(filename)
         params = self._collect_params_with_prefix()
         if not loaded and not params:
             return
