@@ -120,5 +120,3 @@ def load(file):
         return dict(
             (py_str(names[i]), ndarray(NDArrayHandle(handles[i])))
             for i in range(out_size.value))
-
-

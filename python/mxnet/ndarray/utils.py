@@ -267,7 +267,7 @@ def save(fname, data):
         if any(not isinstance(v, NDArray) for v in data):
             raise TypeError('save only accept dict str->NDArray or list of NDArray')
         if any(isinstance(v, np_ndarray) for v in data):
-            raise TypeError('cannot save mxnet.numpy.ndarray using mxnet.ndarray.save'
+            raise TypeError('cannot save mxnet.numpy.ndarray using mxnet.ndarray.save;'
                             ' use mxnet.numpy.save instead.')
         keys = None
         handles = c_handle_array(data)
