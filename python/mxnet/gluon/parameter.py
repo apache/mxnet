@@ -246,12 +246,14 @@ class Parameter(object):
     def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
         if self.shape:
+            unknown_dim_size = -1 if is_np_shape() else 0
             for self_dim, data_dim in zip(self.shape, data.shape):
-                assert self_dim in (0, data_dim), \
+                assert self_dim in (unknown_dim_size, data_dim), \
                     "Failed loading Parameter '%s' from saved params: " \
                     "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
-            self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
+            self.shape = tuple(i if i != unknown_dim_size else j
+                               for i, j in zip(self.shape, data.shape))
         if self.dtype:
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter '%s' from saved params: " \
