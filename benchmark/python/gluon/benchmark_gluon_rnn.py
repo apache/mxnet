@@ -198,7 +198,7 @@ if __name__ == '__main__':
             bs, seq_len, _, _ = input_shape
             sps = (bs * num_iter) / toc
             if latency:
-                logging.info('For BS = %d, Layers = %d, Shape=%s, latency=%0.6f ms'%(bs, num_layer, input_shape, (1/sps)))
+                logging.info('For BS = %d, Layers = %d, Shape=%s, latency=%0.6f s'%(bs, num_layer, input_shape, (1/sps)))
             else:
                 logging.info('For BS = %d, Layers = %d, Shape=%s, SPS=%0.3f sps'%(bs, num_layer, input_shape, sps))
 
