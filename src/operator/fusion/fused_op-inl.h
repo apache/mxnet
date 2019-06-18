@@ -318,7 +318,7 @@ inline VectorType<DType, nvec> load_index(const DType * input, int i) {
 template <int nvec, int axis, typename DType, int ndim>
 inline VectorType<DType, nvec> load_slice(const DType * input, const Strides<ndim> strides, int begin, int end, int offset) {
   int idx[nvec];
-  bool consecutive = true;
+  bool mem_aligned = true;
 
   Strides<ndim> ref_strides;
   if (axis > 0) {
@@ -345,10 +345,11 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Strides<ndi
     }
     idx[j] += begin * strides.x[axis];
     if (j > 0 && (idx[j] != (idx[j-1] + 1))) {
-        consecutive = false;
+        mem_aligned = false;
     }
   }
-  if (!consecutive) {
+  mem_aligned = mem_aligned && ((idx[0] % nvec) == 0);
+  if (!mem_aligned) {
     VectorType<DType, nvec> ret;
     #pragma unroll
     for (int j = 0; j < nvec; j++) {
