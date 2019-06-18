@@ -325,6 +325,41 @@ def check_second_order_unary(x, op, grad_grad_op, rtol=None, atol=None):
     assert_almost_equal(expected_grad_grad,
                         x.grad.asnumpy(), rtol=rtol, atol=atol)
 
+class RandomShapes:
+    def __init__(dim):
+        self.dim = dim
+        self.curdim = 1
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.curdim > self.dim:
+            raise StopIteration
+        shape = rand_shape_nd(self.curdim)
+        x = random_arrays(shape)
+        return x
+        self.curdim += 1
+
+
+@with_seed()
+def test_dense_backward():
+    import mxnet.autograd as ag
+    import mxnet.ndarray as nd
+    array = random_arrays(shape)
+    net = gluon.nn.Sequential()
+    with net.name_scope():
+        net.add(gluon.nn.Dense(1, in_units=x.shape[1]))
+    net.initialize(mx.initializer.Constant(.5))
+    params = [p.data() for p in net.collect_params().values()]
+    for x in RandomShapes(5):
+        x.attach_grad()
+        with ag.record():
+            y = net.forward(x)
+            x_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
+        x_grad.backward()
+        same(x.grad, nd.zeros(4))
+
 
 if __name__ == '__main__':
     import nose
