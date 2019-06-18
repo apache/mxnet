@@ -1285,7 +1285,6 @@ def array(object, dtype=None, ctx=None):
             try:
                 object = _np.array(object, dtype=dtype)
             except Exception as e:
-                print(e)
                 raise TypeError('source array must be an array like object')
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:

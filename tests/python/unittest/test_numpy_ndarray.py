@@ -18,12 +18,13 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from __future__ import division
+import os
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, assert_exception
-from common import with_seed
+from common import with_seed, TemporaryDirectory
 
 
 @with_seed()
@@ -623,6 +624,49 @@ def test_np_ndarray_indexing():
             # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
             # which should have no problem to do autograd
             test_setitem_autograd(np_array, index)
+
+
+@with_seed()
+@npx.use_np
+def test_np_save_load_ndarrays():
+    shapes = [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0), (4, 5, 6), (0, 0, 0)]
+    array_list = [_np.random.randint(0, 10, size=shape) for shape in shapes]
+    array_list = [np.array(arr, dtype=arr.dtype) for arr in array_list]
+    # test save/load single ndarray
+    for i, arr in enumerate(array_list):
+        with TemporaryDirectory() as work_dir:
+            fname = os.path.join(work_dir, 'dataset.npy')
+            np.save(fname, arr)
+            arr_loaded = np.load(fname)
+            assert isinstance(arr_loaded, list)
+            assert len(arr_loaded) == 1
+            assert _np.array_equal(arr_loaded[0].asnumpy(), array_list[i].asnumpy())
+
+    # test save/load a list of ndarrays
+    with TemporaryDirectory() as work_dir:
+        fname = os.path.join(work_dir, 'dataset.npy')
+        np.save(fname, array_list)
+        array_list_loaded = mx.nd.load(fname)
+        assert isinstance(arr_loaded, list)
+        assert len(array_list) == len(array_list_loaded)
+        assert all(isinstance(arr, np.ndarray) for arr in arr_loaded)
+        for a1, a2 in zip(array_list, array_list_loaded):
+            assert _np.array_equal(a1.asnumpy(), a2.asnumpy())
+
+    # test save/load a dict of str->ndarray
+    arr_dict = {}
+    keys = [str(i) for i in range(len(array_list))]
+    for k, v in zip(keys, array_list):
+        arr_dict[k] = v
+    with TemporaryDirectory() as work_dir:
+        fname = os.path.join(work_dir, 'dataset.npy')
+        np.save(fname, arr_dict)
+        arr_dict_loaded = np.load(fname)
+        assert isinstance(arr_dict_loaded, dict)
+        assert len(arr_dict_loaded) == len(arr_dict)
+        for k, v in arr_dict_loaded.items():
+            assert k in arr_dict
+            assert _np.array_equal(v.asnumpy(), arr_dict[k].asnumpy())
 
 
 if __name__ == '__main__':
