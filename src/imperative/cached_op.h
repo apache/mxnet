@@ -36,7 +36,6 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   bool static_alloc;
   bool static_shape;
   bool is_dynamic;
-  bool dynamic_shape_checked;
   mxnet::Tuple<uint32_t> data_indices;
   mxnet::Tuple<uint32_t> param_indices;
   std::string subgraph;
@@ -71,9 +70,6 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     DMLC_DECLARE_FIELD(is_dynamic)
     .set_default(false)
     .describe("Whether the graph contains dynamic shape operators.");
-    DMLC_DECLARE_FIELD(dynamic_shape_checked)
-    .set_default(false)
-    .describe("Whether dynamic shape is checked.");
   }
 };
 
@@ -200,6 +196,7 @@ class CachedOp {
   nnvm::Graph grad_graph_;
   nnvm::Graph full_graph_;
   bool inlining_;
+  bool dynamic_shape_checked_;
   std::vector<nnvm::NodeEntry> ograd_entries_;
   std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
   std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output_;
