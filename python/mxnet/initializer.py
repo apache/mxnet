@@ -467,7 +467,7 @@ class Constant(Initializer):
     def dumps(self):
         val = self._kwargs['value']
         if not np.isscalar(val):
-            self._kwargs['value'] = val.tolist() if type(val).__module__ == 'numpy' else val.asnumpy().tolist()
+            self._kwargs['value'] = val.tolist() if isinstance(val, np.ndarray) else val.asnumpy().tolist()
         return json.dumps([self.__class__.__name__.lower(), self._kwargs])
 
 @register
