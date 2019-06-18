@@ -45,7 +45,7 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile']
+           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'eye']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1791,3 +1791,34 @@ def tile(A, reps):
         The tiled output array.
     """
     return _npi.tile(A, reps)
+
+
+@set_module('mxnet.numpy')
+def eye(N, M=None, k=0, dtype=_np.float32, order='C')):
+    """
+    Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
+    Parameters
+    ----------
+    N : int
+        Number of rows in the output.
+    M : int, optional
+        Number of columns in the output. If None, defaults to N.
+    k : int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    dtype : data-type, optional
+        Data-type of the returned array.
+    order : {‘C’, ‘F’}, optional
+        Whether the output should be stored in row-major (C-style)
+        or column-major (Fortran-style) order in memory.
+
+    Returns
+    -------
+    I : ndarray of shape (N,M)
+        An array where all elements are equal to zero,
+        except for the k-th diagonal, whose values are equal to one.
+    """
+    return _mx_nd_np.eye(N, M, k, dtype, order)
+
