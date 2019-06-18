@@ -335,7 +335,7 @@ def test_custom_operator_profiling():
         y = mx.nd.Custom(x, op_type='MySigmoid')
     y.backward()
     mx.nd.waitall()
-    profiler.dump()
+    profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
     target_dict = json.loads(debug_str)
     assert "Time" in target_dict and "Custom Operator" in target_dict["Time"] \
@@ -396,7 +396,7 @@ def test_custom_operator_profiling_multiple_custom_ops():
     y = mx.nd.Custom(inp, op_type="MyAdd1")
     z = mx.nd.Custom(inp, op_type="MyAdd2")
     mx.nd.waitall()
-    profiler.dump()
+    profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
     target_dict = json.loads(debug_str)
     '''
