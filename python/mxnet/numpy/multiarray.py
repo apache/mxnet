@@ -1676,10 +1676,17 @@ def argmax(a, axis=None, out=None):
     return _mx_nd_np.argmax(a, axis, out)
 
 @set_module('mxnet.numpy')
+<<<<<<< 9b403f818cb72c018386935e8b3922b0e58e2654
 def argsort(a, axis=-1, kind='quicksort', order=None):
     """
     Returns the indices that would sort an input array along the given axis.
     This function performs sorting along the given axis and returns an array
+=======
+def argsort(a, axis=-1, kind='quicksort',order=None):
+    """
+    Returns the indices that would sort an input array along the given axis.
+    This function performs sorting along the given axis and returns an array 
+>>>>>>> Add numpy compatible argsort to the mxnet.numpy
     of indices having same shape as an input array that index data in sorted order.
 
     Parameters
@@ -1699,7 +1706,11 @@ def argsort(a, axis=-1, kind='quicksort', order=None):
         raise AttributeError('mxnet.numpy.argsort does not support other sorting methods')
     if order is not None:
         raise AttributeError('mxnet.numpy.argsort does not support sorting with fields ordering')
+<<<<<<< 9b403f818cb72c018386935e8b3922b0e58e2654
     return _npi.argsort(a, axis)
+=======
+    return _npi.argsort(a,axis)
+>>>>>>> Add numpy compatible argsort to the mxnet.numpy
 
 @set_module('mxnet.numpy')
 def concatenate(seq, axis=0, out=None):
