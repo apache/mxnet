@@ -124,10 +124,11 @@ struct SampleMultinomialKernel {
   MSHADOW_XINLINE static void Map(int i, index_t K, index_t M,
                                   DType* dist, float* uniform, float* cum_table,
                                   IType* out, DType* prob) {
-    cum_table[i*K] = 0.0;
+    float acc = 0.0;
     // CDF table
-    for (index_t c = 1; c < K + 1; ++c) {
-      cum_table[i*K + c] = cum_table[i*K + c - 1] + dist[i*K + c - 1];
+    for (index_t c = 0; c < K; ++c) {
+      acc += dist[i*K + c];
+      cum_table[i*K + c] = acc;
     }
     for (index_t j = 0; j < M; ++j) {
       index_t left = 0, right = K;
@@ -142,8 +143,8 @@ struct SampleMultinomialKernel {
           right = middle;
         }
       }
-      out[i*M + j] = static_cast<IType>(middle);
-      if (prob != nullptr) prob[i*M + j] = logf(dist[i*K + middle - 1]);
+      out[i*M + j] = static_cast<IType>(left);
+      if (prob != nullptr) prob[i*M + j] = logf(dist[i*K + left]);
     }
   }
 };
@@ -167,7 +168,7 @@ void SampleMultinomialForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
     Tensor<xpu, 1, float> workspace =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(N*M + N*(K + 1)), s);
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(N*M + N*K), s);
     Tensor<xpu, 1, float> uniform(workspace.dptr_, Shape1(N*M));
     prnd->SampleUniform(&uniform, 0, 1);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
