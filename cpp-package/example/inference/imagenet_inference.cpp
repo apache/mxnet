@@ -226,7 +226,7 @@ bool Predictor::CreateImageRecordIter() {
   }
 
   std::vector<index_t> shape_vec;
-  for(index_t i = 1; i < input_shape_.ndim(); i++)
+  for (index_t i = 1; i < input_shape_.ndim(); i++)
     shape_vec.push_back(input_shape_[i]);
   mxnet::TShape data_shape(shape_vec.begin(), shape_vec.end());
 
@@ -320,7 +320,7 @@ void Predictor::InitParameters() {
   Xavier xavier(Xavier::uniform, Xavier::avg, 2.0f);
 
   auto arg_name_list = net_.ListArguments();
-  for(index_t i = 0; i < in_shapes.size(); i++) {
+  for (index_t i = 0; i < in_shapes.size(); i++) {
     const auto &shape = in_shapes[i];
     const auto &arg_name = arg_name_list[i];
     int paramType = kFloat32;
@@ -334,7 +334,7 @@ void Predictor::InitParameters() {
   }
 
   auto aux_name_list = net_.ListAuxiliaryStates();
-  for(index_t i = 0; i < aux_shapes.size(); i++) {
+  for (index_t i = 0; i < aux_shapes.size(); i++) {
     const auto &shape = aux_shapes[i];
     const auto &aux_name = aux_name_list[i];
     NDArray tmp_arr(shape, global_ctx_, false);
@@ -449,7 +449,7 @@ void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
   LG << "INFO:" << "Batch size = " << input_shape_[0] << " for inference";
   LG << "INFO:" << "Accuracy: " << val_acc.Get();
   LG << "INFO:" << "Throughput: " << (nBatch * input_shape_[0] / sec)
-     << " images per second";       
+     << " images per second";
 }
 
 Predictor::~Predictor() {
