@@ -17,6 +17,7 @@
 
 import os
 import json
+from operator import itemgetter
 
 from collections import ChainMap
 
@@ -62,7 +63,7 @@ def save_to_file(inp_dict, out_filepath, out_format='json'):
     if out_format == 'json':
         # Save as JSON
         with open(out_filepath, "w") as result_file:
-            json.dump(inp_dict, result_file, indent=4)
+            json.dump(inp_dict, result_file, indent=4, sort_keys=True)
     elif out_format == 'md':
         # Save as md
         with open(out_filepath, "w") as result_file:
@@ -112,7 +113,7 @@ def _prepare_markdown(results):
         " | Inputs |",
         "| :---: | :---: | :---: | :---:| :--- |"]
 
-    for op, op_bench_results in results.items():
+    for op, op_bench_results in sorted(results.items(), key=itemgetter(0)):
         for op_bench_result in op_bench_results:
             results_markdown.append(_prepare_op_benchmark_result(op, op_bench_result))
 

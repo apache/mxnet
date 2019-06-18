@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,9 +16,15 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# -*- coding: utf-8 -*-
+
+"""Commandline utility to run operator benchmarks"""
 
 import argparse
 import logging
+import os
+import sys
 
 import mxnet as mx
 
@@ -94,10 +102,7 @@ def _parse_mxnet_context(ctx):
         device_id = int(ctx[4:-1])
         return mx.gpu(device_id)
 
-
-if __name__ == '__main__':
-    # CLI Parser
-
+def main():
     # 1. GET USER INPUTS
     parser = argparse.ArgumentParser(
         description='Run all the MXNet operators (NDArray) benchmarks')
@@ -108,26 +113,33 @@ if __name__ == '__main__':
                              'Valid Inputs - cpu, gpu, gpu(0), gpu(1)...')
     parser.add_argument('--dtype', type=str, default='float32', help='DType (Precision) to run benchmarks. By default, '
                                                                      'float32. Valid Inputs - float32, float64.')
-    parser.add_argument('--output-format', type=str, default='json',
+    parser.add_argument('-f', '--output-format', type=str, default='json',
+                        choices=['json', 'md'],
                         help='Benchmark result output format. By default, json. '
                              'Valid Inputs - json, md')
 
-    parser.add_argument('--output-file', type=str, default='./mxnet_operator_benchmarks.json',
+    parser.add_argument('-o', '--output-file', type=str, default='./mxnet_operator_benchmarks.json',
                         help='Name and path for the '
                              'output file.')
 
-    user_options = parser.parse_args()
-    logging.info(f"Running MXNet operator benchmarks with the following options: {user_options}")
+    args = parser.parse_args()
+    logging.info(f"Running MXNet operator benchmarks with the following options: {args}")
+    assert not os.path.isfile(args.output_file), f"Output file {args.output_file} already exists."
 
     # 2. RUN BENCHMARKS
-    ctx = _parse_mxnet_context(user_options.ctx)
-    dtype = user_options.dtype
-    final_benchmark_results = run_all_mxnet_operator_benchmarks(ctx=ctx, dtype=user_options.dtype)
+    ctx = _parse_mxnet_context(args.ctx)
+    dtype = args.dtype
+    final_benchmark_results = run_all_mxnet_operator_benchmarks(ctx=ctx, dtype=args.dtype)
 
     # 3. PREPARE OUTPUTS
-    save_to_file(final_benchmark_results, user_options.output_file, user_options.output_format)
+    save_to_file(final_benchmark_results, args.output_file, args.output_format)
 
     # 4. Generate list of MXNet operators not covered in benchmarks
     ops_not_covered = get_operators_with_no_benchmark(final_benchmark_results.keys())
     for idx, op in enumerate(ops_not_covered):
         print(f"{idx}. {op}")
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
+

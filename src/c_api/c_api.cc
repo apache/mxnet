@@ -1534,6 +1534,46 @@ int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
   API_END();
 }
 
+int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
+                      EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                      NDArrayHandle const_nds_handle, int num_const_nds,
+                      NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                      EngineFnPropertyHandle prop_handle, int priority,
+                      const char* opr_name, bool wait) {
+  API_BEGIN();
+  NDArray* const_nds = static_cast<NDArray*>(const_nds_handle);
+  NDArray* mutable_nds = static_cast<NDArray*>(mutable_nds_handle);
+  std::vector<VarHandle> const_var_vec(num_const_nds);
+  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
+  std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
+  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
+  return MXEnginePushAsync(async_func, func_param, deleter, ctx_handle,
+                           const_var_vec.data(), num_const_nds,
+                           mutable_var_vec.data(), num_mutable_nds,
+                           prop_handle, priority, opr_name, wait);
+  API_END();
+}
+
+int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
+                     EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                     NDArrayHandle const_nds_handle, int num_const_nds,
+                     NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                     EngineFnPropertyHandle prop_handle, int priority,
+                     const char* opr_name) {
+  API_BEGIN();
+  NDArray* const_nds = static_cast<NDArray*>(const_nds_handle);
+  NDArray* mutable_nds = static_cast<NDArray*>(mutable_nds_handle);
+  std::vector<VarHandle> const_var_vec(num_const_nds);
+  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
+  std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
+  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
+  return MXEnginePushSync(sync_func, func_param, deleter, ctx_handle,
+                          const_var_vec.data(), num_const_nds,
+                          mutable_var_vec.data(), num_mutable_nds,
+                          prop_handle, priority, opr_name);
+  API_END();
+}
+
 int MXStorageEmptyCache(int dev_type, int dev_id) {
   API_BEGIN();
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
