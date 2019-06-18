@@ -100,10 +100,10 @@ The pattern to calculate higher order gradients is the following:
 ```python
 from mxnet import ndarray as nd
 from mxnet import autograd as ag
-x=nd.array([1,2,3])
+x = nd.array([1,2,3])
 x.attach_grad()
 def f(x):
-    # A function which supports higher oder gradients
+    # Any function which supports higher oder gradient
     return nd.log(x)
 ```
 
@@ -117,10 +117,10 @@ Using mxnet.autograd.grad multiple times:
 ```python
 with ag.record():
     y = f(x)
-    x_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
-    x_grad_grad = ag.grad(x_grad, x, create_graph=False, retain_graph=True)[0]
-print(f"dy/dx: {x_grad}")
-print(f"d2y/dx2: {x_grad_grad}")
+    x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
+    x_grad_grad = ag.grad(heads=x_grad, variables=x, create_graph=False, retain_graph=False)[0]
+print(f"dL/dx: {x_grad}")
+print(f"d2L/dx2: {x_grad_grad}")
 ```
 
 Running backward on the backward graph:
@@ -128,17 +128,17 @@ Running backward on the backward graph:
 ```python
 with ag.record():
     y = f(x)
-    x_grad = ag.grad(y, x, create_graph=True, retain_graph=True)[0]
+    x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
 x_grad.backward()
 x_grad_grad = x.grad
-print(f"dy/dx: {x_grad}")
-print(f"d2y/dx2: {x_grad_grad}")
+print(f"dL/dx: {x_grad}")
+print(f"d2L/dx2: {x_grad_grad}")
 
 ```
 
 Both methods are equivalent, except that in the second case, retain_graph on running backward is set
 to False by default. But both calls are running a backward pass as on the graph as usual to get the
-gradient of the first gradient `y_grad` with respect to `x` evaluated at the value of `x`.
+gradient of the first gradient `x_grad` with respect to `x` evaluated at the value of `x`.
 
 
 
