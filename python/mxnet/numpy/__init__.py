@@ -24,5 +24,6 @@ from .multiarray import *  # pylint: disable=wildcard-import
 from . import _op
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
+from .utils import *  # pylint: disable=wildcard-import
 
 __all__ = []
