@@ -232,6 +232,16 @@ const std::vector<std::string> fused_op_variable_io_ops = {
 };
 
 const char fused_op_function_definitions[] = R"code(
+
+template <class T>
+struct remove_pointer;
+
+template <class U>
+struct remove_pointer<U*>
+{
+  typedef U type;
+};
+
 template <typename DType>
 struct LoadType {
   using Type = DType;
@@ -253,42 +263,45 @@ inline float load(const half input) {
 }
 
 template <typename DType1, typename DType2>
-inline DType1 store(const DType2 input) {
+inline DType1 store(const DType2 input, DType1* ref) {
   return input;
 }
 
 template<>
-inline half store(const float input) {
+inline half store(const float input, half* ref) {
   return __float2half(input);
 }
 
 
 
-template <typename DType>
+template <int size>
 struct VectorConfig {
-    static const int N = 1;
-    using IndexType = DType;
+    static_assert(size >= 4, "Error");
+    using IndexType = float;
 };
 
-struct VectorConfig<half> {
-    static const int N = 2;
-    using IndexType = __half2;
+template <>
+struct VectorConfig<8> {
+    using IndexType = double;
 };
 
+template <>
+struct VectorConfig<16> {
+    using IndexType = double2;
+};
 
-template <typename DType>
+template <typename DType, int nvec>
 union VectorType {
-    typename VectorConfig<DType>::IndexType y;
-    DType x[VectorConfig<DType>::N];
+    typename VectorConfig<sizeof(DType)*nvec>::IndexType y;
+    DType x[nvec];
     VectorType () {};
-    VectorType (const VectorType<DType>& y2) {
+    VectorType (const VectorType<DType, nvec>& y2) {
         y = y2.y;
     }
-    VectorType (const typename VectorConfig<DType>::IndexType &y2) {
+    VectorType (const decltype(y) &y2) {
         y = y2;
     }
 }; 
-
 
 template <int ndim>
 struct Strides {
@@ -309,15 +322,15 @@ inline Strides<ndim> get_index(const Strides<ndim> strides, int i) {
 }
 
 
-template <typename DType>
-inline VectorType<DType> load_index(const DType * input, int i) {
-  const auto* vector_input = reinterpret_cast<const typename VectorConfig<DType>::IndexType *>(input + i);
-  VectorType<DType> ret = {*vector_input};
+template <int nvec, typename DType>
+inline VectorType<DType, nvec> load_index(const DType * input, int i) {
+  const auto* vector_input = reinterpret_cast<const typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(input + i);
+  VectorType<DType, nvec> ret = {*vector_input};
   return ret;
 }
 
-template <typename DType, int ndim, int nvec>
-inline VectorType<DType> load_slice(const DType * input, const Strides<ndim> strides, int axis, int begin, Strides<ndim>* ref_index) {
+template <int nvec, typename DType, int ndim>
+inline VectorType<DType, nvec> load_slice(const DType * input, const Strides<ndim> strides, int axis, int begin, Strides<ndim>* ref_index) {
   int idx[nvec];
   bool consecutive = true;
   #pragma unroll
@@ -333,27 +346,27 @@ inline VectorType<DType> load_slice(const DType * input, const Strides<ndim> str
     }
   }
   if (!consecutive) {
-    VectorType<DType> ret;
+    VectorType<DType, nvec> ret;
     #pragma unroll
     for (int j = 0; j < nvec; j++) {
         ret.x[j] = *(input + idx[j]);
     }
     return ret;
-  } 
-  return load_index(input, idx[0]);
+  }
+  return load_index<nvec>(input, idx[0]);
 }
 
 
 
-template <typename DType>
-inline void store_index(const VectorType<DType> value, int i, DType * output) {
-  auto vector_output = reinterpret_cast<typename VectorConfig<DType>::IndexType *>(output);
+template <int nvec, typename DType>
+inline void store_index(const VectorType<DType, nvec> value, int i, DType * output) {
+  auto vector_output = reinterpret_cast<typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
   vector_output[i] = value.y;
 }
 
-template <typename DType>
-inline void store_add_index(const VectorType<DType> value, int i, DType * output) {
-  auto vector_output = reinterpret_cast<typename VectorConfig<DType>::IndexType *>(output);
+template <int nvec, typename DType>
+inline void store_add_index(const VectorType<DType, nvec> value, int i, DType * output) {
+  auto vector_output = reinterpret_cast<typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
   vector_output[i] += value.y;
 }
 

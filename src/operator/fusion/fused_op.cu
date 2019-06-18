@@ -93,9 +93,9 @@ inline int mshadowTypeToVectorLength(int type) {
     case mshadow::kFloat16:
       return 2;
     case mshadow::kUint8:
-      return 1;
+      return 4;
     case mshadow::kInt8:
-      return 1;
+      return 4;
     case mshadow::kInt32:
       return 1;
     case mshadow::kInt64:
@@ -149,7 +149,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
         if (source->is_variable()) {
             if (load_index[i]) {
               const auto& var_name = source->attrs.name;
-              code += "const auto vec_" + var_name + " = load_index(" + var_name + ", offset);\n";
+              code += "const auto vec_" + var_name + " = load_index<nvec>(" + var_name + ", offset);\n";
               variables[{i, 0}] = var_name;
             }
             CHECK_EQ(outputs[i], 1);
@@ -162,7 +162,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
                 std::string begin = source->attrs.dict.at("begin");
                 std::string axis = source->attrs.dict.at("axis");
                 const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-                code += "const auto " + vec_name + " = load_slice<DType0, ndim, nvec>(" + \
+                code += "const auto " + vec_name + " = load_slice<nvec>(" + \
                         var_name + ", " + var_name + "_strides," + axis + "," + begin + \
                         ", &ref_index[0]);\n";
                 CHECK_EQ(outputs[i], 1);
@@ -176,7 +176,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
   int counter = 0;
   for (const auto& entry : g.outputs()) {
     const auto var_name = "output" + std::to_string(counter);
-    code += "VectorType<DType0> vec_output" + std::to_string(counter) + ";\n";
+    code += "VectorType<remove_pointer<decltype(" + var_name + ")>::type, nvec> vec_output" + std::to_string(counter) + ";\n";
     ++counter;
   }
 
@@ -320,7 +320,8 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
   for (const auto& entry : g.outputs()) {
     const std::string& var = variables[{entry.node_id, entry.index}];
     const auto var_name = "output" + std::to_string(counter);
-    code += "vec_" + var_name + ".x[j] = store<DType0>("+ var +");\n";
+    //code += "vec_" + var_name + ".x[j] = store<std::remove_pointer<decltype(" + var_name + ")>::type>("+ var +");\n";
+    code += "vec_" + var_name + ".x[j] = store("+ var +", " + var_name + ");\n";
     ++counter;
   }
 
@@ -360,13 +361,14 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<int> in_dtypes;
   std::vector<int> out_dtypes;
   int ndim = outputs[0].ndim();
-  size_t nvec = detail::mshadowTypeToVectorLength(outputs[0].type_flag_);
+  int nvec = 1;
 
   size_t counter = 0;
   for (const auto& blob : inputs) {
     in_dtypes.push_back(blob.type_flag_);
     initialized_ = initialized_ && (blob.type_flag_ == inputs_[counter].dtype);
     inputs_[counter].dtype = blob.type_flag_;
+    nvec = max(nvec, detail::mshadowTypeToVectorLength(blob.type_flag_));
     ++counter;
   }
 
@@ -436,7 +438,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
             code_ + "\n" +
             detail::fused_op_kernel_end;
     // Guard NVRTC calls
-    // LOG(INFO) << code_;
+    LOG(INFO) << code_;
     std::lock_guard<std::mutex> lock_nvrtc(mutex_);
     nvrtcProgram program;
     NVRTC_CALL(
