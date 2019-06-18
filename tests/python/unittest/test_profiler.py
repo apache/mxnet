@@ -307,7 +307,7 @@ def test_custom_operator_profiling():
             dx = dy*(1.0 - y)*y
             self.assign(in_grad[0], req[0], mx.nd.array(dx))
 
-    @mx.operator.register("MySigmoid")
+    @mx.operator.register('MySigmoid')
     class SigmoidProp(mx.operator.CustomOpProp):
         def __init__(self):
             super(SigmoidProp, self).__init__(True)
@@ -338,10 +338,10 @@ def test_custom_operator_profiling():
     profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
     target_dict = json.loads(debug_str)
-    assert "Time" in target_dict and "Custom Operator" in target_dict["Time"] \
-        and "MySigmoid::pure_python" in target_dict["Time"]["Custom Operator"] \
-        and "_backward_MySigmoid::pure_python" in target_dict["Time"]["Custom Operator"] \
-        and "MySigmoid::_zeros" in target_dict["Time"]["Custom Operator"]
+    assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
+        and 'MySigmoid::pure_python' in target_dict['Time']['Custom Operator'] \
+        and '_backward_MySigmoid::pure_python' in target_dict['Time']['Custom Operator'] \
+        and 'MySigmoid::_zeros' in target_dict['Time']['Custom Operator']
     profiler.set_state('stop')
 
 def test_custom_operator_profiling_multiple_custom_ops():
@@ -352,7 +352,7 @@ def test_custom_operator_profiling_multiple_custom_ops():
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
             self.assign(in_grad[0], req[0], out_grad[0])
 
-    @mx.operator.register("MyAdd1")
+    @mx.operator.register('MyAdd1')
     class MyAdd1Prop(mx.operator.CustomOpProp):
         def __init__(self):
             super(MyAdd1Prop, self).__init__(need_top_grad=True)
@@ -370,7 +370,7 @@ def test_custom_operator_profiling_multiple_custom_ops():
         def create_operator(self, ctx, shapes, dtypes):
             return MyAdd()
 
-    @mx.operator.register("MyAdd2")
+    @mx.operator.register('MyAdd2')
     class MyAdd2Prop(mx.operator.CustomOpProp):
         def __init__(self):
             super(MyAdd2Prop, self).__init__(need_top_grad=True)
@@ -393,8 +393,8 @@ def test_custom_operator_profiling_multiple_custom_ops():
                     aggregate_stats=True)
     inp = mx.nd.zeros(shape=(100, 100))
     x = inp + 1
-    y = mx.nd.Custom(inp, op_type="MyAdd1")
-    z = mx.nd.Custom(inp, op_type="MyAdd2")
+    y = mx.nd.Custom(inp, op_type='MyAdd1')
+    z = mx.nd.Custom(inp, op_type='MyAdd2')
     mx.nd.waitall()
     profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
@@ -404,14 +404,14 @@ def test_custom_operator_profiling_multiple_custom_ops():
     operators, so in aggregate stats we should have three different kinds of 
     _plus_scalar under domains "Custom Operator" and "operator"
     '''
-    assert "Time" in target_dict and "Custom Operator" in target_dict["Time"] \
-        and "MyAdd1::pure_python" in target_dict["Time"]["Custom Operator"] \
-        and "MyAdd2::pure_python" in target_dict["Time"]["Custom Operator"] \
-        and "MyAdd1::_plus_scalar" in target_dict["Time"]["Custom Operator"] \
-        and "MyAdd2::_plus_scalar" in target_dict["Time"]["Custom Operator"] \
-        and "_plus_scalar" not in target_dict["Time"]["Custom Operator"] \
-        and "operator" in target_dict["Time"] \
-        and "_plus_scalar" in target_dict["Time"]["operator"]
+    assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
+        and 'MyAdd1::pure_python' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd2::pure_python' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd1::_plus_scalar' in target_dict['Time']['Custom Operator'] \
+        and 'MyAdd2::_plus_scalar' in target_dict['Time']['Custom Operator'] \
+        and '_plus_scalar' not in target_dict['Time']['Custom Operator'] \
+        and 'operator' in target_dict['Time'] \
+        and '_plus_scalar' in target_dict['Time']['operator']
     profiler.set_state('stop')
 
 if __name__ == '__main__':
