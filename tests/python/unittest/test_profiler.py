@@ -278,7 +278,7 @@ def test_aggregate_duplication():
     inp = inp + 1
     inp = inp + 1
     mx.nd.waitall()
-    profiler.dump()
+    profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
     target_dict = json.loads(debug_str)
     assert 'Time' in target_dict and 'operator' in target_dict['Time'] \
