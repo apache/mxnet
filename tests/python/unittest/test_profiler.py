@@ -327,7 +327,8 @@ def test_custom_operator_profiling():
             return Sigmoid()
 
     file_name = 'test_custom_operator_profiling.json'
-    enable_profiler(file_name, True, True, True)
+    enable_profiler(profile_filename = file_name, run=True, continuous_dump=True,\
+                    aggregate_stats=True)
     x = mx.nd.array([0, 1, 2, 3])
     x.attach_grad()
     with mx.autograd.record():
@@ -388,7 +389,8 @@ def test_custom_operator_profiling_multiple_custom_ops():
             return MyAdd()
 
     file_name = 'test_custom_operator_profiling_multiple_custom_ops.json'
-    enable_profiler(file_name, True, True, True)
+    enable_profiler(profile_filename = file_name, run=True, continuous_dump=True,\
+                    aggregate_stats=True)
     inp = mx.nd.zeros(shape=(100, 100))
     x = inp + 1
     y = mx.nd.Custom(inp, op_type="MyAdd1")
