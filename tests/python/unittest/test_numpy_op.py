@@ -22,6 +22,7 @@ import mxnet as mx
 from mxnet import np, npx
 from mxnet.base import MXNetError
 from mxnet.gluon import HybridBlock
+from mxnet.base import MXNetError
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient
 from common import assertRaises, with_seed
@@ -714,6 +715,74 @@ def test_np_linspace():
                         net.hybridize()
                     mx_out = net(x)
                     assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
+
+
+@with_seed()
+@npx.use_np_shape
+def test_np_eye():
+    configs = [
+        4,
+        1000,
+        (4, 3),
+        (5, None),
+        (4, None, 1),
+        (2, 2, 1),
+        (4, 6, 1),
+        (7, 3, -3),
+        (3, 2, -2),
+        (4, 0),
+        (0, 0),
+        (0, 3),
+        (0, 0, -2)
+    ]
+    exception_configs = [
+        -1,
+        -1000,
+        (-2, None),
+        (1, -1)
+    ]
+    dtypes = ['int32', 'float16', 'float32', 'float64', None]
+    for config in configs:
+        for dtype in dtypes:
+            if isinstance(config, tuple):
+                mx_ret = np.eye(*config, dtype=dtype)
+                np_ret = _np.eye(*config, dtype=dtype)
+            else:
+                mx_ret = np.eye(config, dtype=dtype)
+                np_ret = _np.eye(config, dtype=dtype)
+            assert same(mx_ret.asnumpy(), np_ret)
+    # check for exception input
+    for config in exception_configs:
+        if isinstance(config, tuple):
+            assertRaises(MXNetError, np.eye, *config)
+        else:
+            assertRaises(MXNetError, np.eye, config)
+    @npx.use_np
+    class TestEye(HybridBlock):
+        def __init__(self, N, M=None, k=0, dtype=None):
+            super(TestEye, self).__init__()
+            self._N = N
+            self._M = M
+            self._k = k
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.eye(self._N, self._M, self._k, dtype=self._dtype)
+
+    for dtype in dtypes:
+        x = np.zeros(shape=(), dtype=dtype)
+        for config in configs:
+            for hybridize in [False, True]:
+                if isinstance(config, tuple):
+                    net = TestEye(*config, dtype=dtype)
+                    np_out = _np.eye(*config, dtype=dtype)
+                else:
+                    net = TestEye(config, dtype=dtype)
+                    np_out = _np.eye(config, dtype=dtype)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(x)
+                assert same(mx_out.asnumpy(), np_out)
 
 
 @with_seed()
