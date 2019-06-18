@@ -1358,12 +1358,7 @@ def array(object, dtype=None, ctx=None):
             try:
                 object = _np.array(object, dtype=dtype)
             except Exception as e:
-<<<<<<< a95c4bc5f389af8e4fd3a7b4120f5040bd8cc89d
                 raise TypeError('{}'.format(str(e)))
-=======
-                print(e)
-                raise TypeError('source array must be an array like object')
->>>>>>> [numpy] Fix d2l chapter8 (#15237)
     ret = empty(object.shape, dtype=dtype, ctx=ctx)
     if len(object.shape) == 0:
         ret[()] = object
@@ -1682,20 +1677,30 @@ def argmax(a, axis=None, out=None):
     return _mx_nd_np.argmax(a, axis, out)
 
 @set_module('mxnet.numpy')
-def argsort(self, axis=-1, kind='quicksort',order=None):
+def argsort(a, axis=-1, kind='quicksort',order=None):
     """
     Returns the indices that would sort an input array along the given axis.
+    This function performs sorting along the given axis and returns an array 
+    of indices having same shape as an input array that index data in sorted order.
 
-    This function performs sorting along the given axis and returns an array of indices having same shape as an input array that index data in sorted order.
+    Parameters
+    ----------
+    a : ndarray
+        Input array
+    axis : int, optional
+        The axis along which to sort teh input tensor.
+        If not given, the last, dimension -1 will be used by default.
 
+    Returns
+    -------
+    output : ndarray of indicies that sort input array along the specified axis
     Examples:
-    TODO
     """
     if kind != 'quicksort':
         raise AttributeError('mxnet.numpy.argsort does not support other sorting methods')
     if order != None:
         raise AttributeError('mxnet.numpy.argsort does not support sorting with fields ordering')
-    return _npi.argsort(self,axis)
+    return _npi.argsort(a,axis)
 
 @set_module('mxnet.numpy')
 def concatenate(seq, axis=0, out=None):
