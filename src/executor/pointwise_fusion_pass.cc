@@ -54,11 +54,21 @@ namespace {
     if (fused_op_mimo_ops.count(op_name))
       return true;
     if (fused_op_slice_ops.count(op_name))
-      return true;
+      return false;
     if (std::find(fused_op_variable_io_ops.begin(),
                   fused_op_variable_io_ops.end(),
                   op_name) !=
         fused_op_variable_io_ops.end())
+      return true;
+    return false;
+  }
+
+  bool IsInputsOnlyCompatible(nnvm::Node* n) {
+    using namespace mxnet::detail;
+    if (n->op() == nullptr)
+      return false;
+    std::string op_name = n->op()->name;
+    if (fused_op_slice_ops.count(op_name))
       return true;
     return false;
   }
@@ -194,6 +204,36 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
   return new_graph;
 }
 
+template <typename IsCompatible>
+void AddInputsOnlyCompatible(const Graph &g,
+                             std::vector<std::unordered_set<nnvm::Node*> >& subsets,
+                             IsCompatible is_compatible) {
+  std::unordered_map<nnvm::Node*, uint32_t> node2setidx;
+  size_t subgraphs_fullsize = 0;
+  for (auto& s : subsets) {
+    subgraphs_fullsize += s.size();
+  }
+  node2setidx.reserve(subgraphs_fullsize);
+  for (size_t i = 0; i < subsets.size(); ++i) {
+    for (auto& n : subsets[i]) {
+      node2setidx.insert({n, i});
+    }
+  }
+  std::vector<std::vector<nnvm::Node*> > to_add(subsets.size());
+  DFSVisit(g.outputs, [&is_compatible, &node2setidx, &subsets, &to_add](const nnvm::NodePtr& n) {
+    const auto& it = node2setidx.find(n.get());
+    if (it != node2setidx.end()) {
+      for (auto& e : n->inputs) {
+        if (is_compatible(e.node.get()))
+          to_add[it->second].push_back(e.node.get());
+      }
+    }
+  });
+  for (size_t i = 0; i < subsets.size(); ++i) {
+    subsets[i].insert(to_add[i].begin(), to_add[i].end());
+  }
+}
+
 Graph FusePointwiseForward(Graph &&g) {
   Graph ret;
   g.indexed_graph();
@@ -202,6 +242,7 @@ Graph FusePointwiseForward(Graph &&g) {
   fg.outputs.insert(fg.outputs.begin(), g.outputs.begin(),
                     g.outputs.begin() + num_forward_outputs);
   auto subsets = GetCompatibleSubsets(fg, IsFusionCompatible);
+  AddInputsOnlyCompatible(fg, subsets, IsInputsOnlyCompatible);
   g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode);
   ret.outputs = g.outputs;
   return ret;
