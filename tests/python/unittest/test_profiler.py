@@ -280,15 +280,14 @@ def test_aggregate_duplication():
     profiler.dump()
     debug_str = profiler.dumps(format = 'json')
     target_dict = json.loads(debug_str)
-    print(target_dict)
-    assert "Time" in target_dict and "operator" in target_dict["Time"] \
-        and "sqrt" in target_dict["Time"]["operator"] \
-        and "Count" in target_dict["Time"]["operator"]["sqrt"] \
-        and "_plus_scalar" in target_dict["Time"]["operator"] \
-        and "Count" in target_dict["Time"]["operator"]["_plus_scalar"]
+    assert 'Time' in target_dict and 'operator' in target_dict['Time'] \
+        and 'sqrt' in target_dict['Time']['operator'] \
+        and 'Count' in target_dict['Time']['operator']['sqrt'] \
+        and '_plus_scalar' in target_dict['Time']['operator'] \
+        and 'Count' in target_dict['Time']['operator']['_plus_scalar']
     # thet are called once and twice respectively
-    assert target_dict["Time"]["operator"]["sqrt"]["Count"] == 1
-    assert target_dict["Time"]["operator"]["_plus_scalar"]["Count"] == 2
+    assert target_dict['Time']['operator']['sqrt']['Count'] == 1
+    assert target_dict['Time']['operator']['_plus_scalar']['Count'] == 2
     profiler.set_state('stop')
     
 if __name__ == '__main__':
