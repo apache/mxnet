@@ -124,11 +124,11 @@ struct SampleMultinomialKernel {
   MSHADOW_XINLINE static void Map(int i, index_t K, index_t M,
                                   DType* dist, float* uniform, float* cum_table,
                                   IType* out, DType* prob) {
-    float acc = 0.0;
+    double acc = 0.0;
     // CDF table
     for (index_t c = 0; c < K; ++c) {
       acc += dist[i*K + c];
-      cum_table[i*K + c] = acc;
+      cum_table[i*K + c] = static_cast<float>(acc);
     }
     for (index_t j = 0; j < M; ++j) {
       index_t left = 0, right = K;
