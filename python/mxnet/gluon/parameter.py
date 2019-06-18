@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=unnecessary-pass, too-many-lines
 """Neural network parameter."""
+from __future__ import absolute_import
+
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
 
@@ -32,6 +34,7 @@ from ..context import Context, cpu
 from .. import autograd
 from .utils import _indent, _brief_print_list, shape_is_known
 from ..util import is_np_shape, is_np_array
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -190,9 +193,9 @@ class Parameter(object):
             return
 
         assert len(self._shape) == len(new_shape) and \
-            all(j in (0, i) for i, j in zip(new_shape, self._shape)), \
+            all(j in (-1, 0, i) for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
-                str(new_shape), str(self._shape))
+                str(new_shape), str(self._shape))  # -1 means unknown dim size in np_shape mode
 
         self._shape = new_shape
 
@@ -271,12 +274,14 @@ class Parameter(object):
         if cast_dtype:
             assert dtype_source in ['current', 'saved']
         if self.shape:
+            unknown_dim_size = -1 if is_np_shape() else 0
             for self_dim, data_dim in zip(self.shape, data.shape):
-                assert self_dim in (0, data_dim), \
+                assert self_dim in (unknown_dim_size, data_dim), \
                     "Failed loading Parameter '%s' from saved params: " \
                     "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
-            self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
+            self.shape = tuple(i if i != unknown_dim_size else j
+                               for i, j in zip(self.shape, data.shape))
         if self.dtype:
             if cast_dtype and np.dtype(self.dtype).type != data.dtype:
                 if dtype_source == 'current':
@@ -326,13 +331,18 @@ class Parameter(object):
 
         with autograd.pause():
             if data is None:
-                data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
-                                     ctx=context.cpu(), stype=self._stype)
+                kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': context.cpu()}
+                if is_np_array():
+                    if self._stype != 'default':
+                        raise ValueError("mxnet.numpy.zeros does not support stype = {}"
+                                         .format(self._stype))
+                    zeros_fn = _mx_np.zeros
+                else:
+                    kwargs['stype'] = self._stype
+                    zeros_fn = ndarray.zeros
+                data = zeros_fn(**kwargs)
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
-                # TODO(junwu): use np random operators when available
-                if is_np_array():
-                    data = data.as_np_ndarray()  # convert to np.ndarray
 
             self._init_impl(data, ctx)
 
@@ -355,11 +365,15 @@ class Parameter(object):
             self._grad = None
             return
 
-        self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
-                                    stype=self._grad_stype) for i in self._data]
-        # TODO(junwu): use np.zeros
         if is_np_array():
-            self._grad = [arr.as_np_ndarray() for arr in self._grad]
+            if self._grad_stype != 'default':
+                raise ValueError("mxnet.numpy.zeros does not support stype = {}"
+                                 .format(self._grad_stype))
+            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context)
+                          for i in self._data]
+        else:
+            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
+                                        stype=self._grad_stype) for i in self._data]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
                                 self._grad, self.grad_req)
@@ -773,12 +787,12 @@ class ParameterDict(object):
                         inferred_shape = []
                         matched = True
                         for dim1, dim2 in zip(v, existing):
-                            if dim1 != dim2 and dim1 * dim2 != 0:
+                            if dim1 != dim2 and dim1 > 0 and dim2 > 0:
                                 matched = False
                                 break
                             elif dim1 == dim2:
                                 inferred_shape.append(dim1)
-                            elif dim1 == 0:
+                            elif dim1 in (0, -1):  # -1 means unknown dim size in np_shape mode
                                 inferred_shape.append(dim2)
                             else:
                                 inferred_shape.append(dim1)
