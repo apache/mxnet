@@ -271,7 +271,8 @@ def test_aggregate_stats_sorting():
 
 def test_aggregate_duplication():
     file_name = 'test_aggregate_duplication.json'
-    enable_profiler(file_name, True, True, True)
+    enable_profiler(profile_filename = file_name, run=True, continuous_dump=True, \
+                    aggregate_stats=True)
     inp = mx.nd.zeros(shape=(100, 100))
     y = mx.nd.sqrt(inp)
     inp = inp + 1
