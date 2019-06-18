@@ -172,7 +172,7 @@ void SampleMultinomialForward(const nnvm::NodeAttrs& attrs,
     prnd->SampleUniform(&uniform, 0, 1);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
       Kernel<SampleMultinomialKernel, xpu>::Launch(
-        s, N, K, M, inputs[0].dptr<DType>(), workspace.dptr_, workspace.dptr_ + N*M,
+        s, N, K, M, inputs[0].dptr<DType>(), uniform.dptr_, workspace.dptr_ + N*M,
         outputs[0].dptr<IType>(),
         param.get_prob ? outputs[1].dptr<DType>() : nullptr);
     });
