@@ -290,7 +290,7 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   CheckAndInferShape(&g, std::move(shape_inputs), true,
                      {0, 0}, {0, 0},
                      &contain_dynamic_shape);
-  if (contain_dynamic_shape && erase_result) {
+  if (!config_.static_shape && erase_result) {
     g.attrs.erase("shape");
     g.attrs.erase("shape_inputs");
   }
