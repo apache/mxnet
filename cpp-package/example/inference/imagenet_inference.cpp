@@ -26,12 +26,11 @@
  * 4. Run the forward pass and obtain throughput & accuracy.
  */
 
-#include <sys/stat.h>
-#include <sys/time.h>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <chrono>
 #include <string>
 #include <vector>
 #include <random>
@@ -43,12 +42,6 @@
 #include "mxnet-cpp/initializer.h"
 
 using namespace mxnet::cpp;
-
-double get_msec() {
-    struct timeval time;
-    gettimeofday(&time, NULL);
-    return 1e+3 * time.tv_sec + 1e-3 * time.tv_usec;
-}
 
 // define the data type for NDArray, aliged with the definition in mshadow/base.h
 enum TypeFlag {
@@ -92,21 +85,20 @@ class Predictor {
     void LoadParameters(const std::string& model_parameters_file);
     void InitParameters();
 
-    inline bool FileExists(const std::string& name) {
-      struct stat buffer;
-      return (stat(name.c_str(), &buffer) == 0);
+    inline bool FileExists(const std::string &name) {
+      std::ifstream fhandle(name.c_str());
+      return fhandle.good();
     }
     int GetDataLayerType();
 
-    NDArray mean_img;
-    std::map<std::string, NDArray> args_map;
-    std::map<std::string, NDArray> aux_map;
-    Symbol net;
-    Executor *executor;
-    Shape input_shape;
-    Context global_ctx = Context::cpu();
+    std::map<std::string, NDArray> args_map_;
+    std::map<std::string, NDArray> aux_map_;
+    Symbol net_;
+    Executor *executor_;
+    Shape input_shape_;
+    Context global_ctx_ = Context::cpu();
 
-    MXDataIter *val_iter;
+    MXDataIter *val_iter_;
     bool use_gpu_;
     std::string dataset_;
     int data_nthreads_;
@@ -152,7 +144,7 @@ Predictor::Predictor(const std::string& model_json_file,
                      const std::vector<float>& rgb_std,
                      int shuffle_chunk_seed,
                      int seed, bool benchmark)
-    : input_shape(input_shape),
+    : input_shape_(input_shape),
       use_gpu_(use_gpu),
       dataset_(dataset),
       data_nthreads_(data_nthreads),
@@ -163,7 +155,7 @@ Predictor::Predictor(const std::string& model_json_file,
       seed_(seed),
       benchmark_(benchmark) {
   if (use_gpu) {
-    global_ctx = Context::gpu();
+    global_ctx_ = Context::gpu();
   }
 
   // initilize data iterator
@@ -187,22 +179,22 @@ Predictor::Predictor(const std::string& model_json_file,
   if (dtype == -1) {
     throw std::runtime_error("Unsupported data layer type...");
   }
-  args_map["data"] = NDArray(input_shape, global_ctx, false, dtype);
-  Shape label_shape(input_shape[0]);
-  args_map["softmax_label"] = NDArray(label_shape, global_ctx, false);
+  args_map_["data"] = NDArray(input_shape_, global_ctx_, false, dtype);
+  Shape label_shape(input_shape_[0]);
+  args_map_["softmax_label"] = NDArray(label_shape, global_ctx_, false);
   std::vector<NDArray> arg_arrays;
   std::vector<NDArray> grad_arrays;
   std::vector<OpReqType> grad_reqs;
   std::vector<NDArray> aux_arrays;
 
   // infer and create ndarrays according to the given input ndarrays.
-  net.InferExecutorArrays(global_ctx, &arg_arrays, &grad_arrays, &grad_reqs, &aux_arrays, args_map,
-                      std::map<std::string, NDArray>(), std::map<std::string, OpReqType>(),
-                      aux_map);
+  net_.InferExecutorArrays(global_ctx_, &arg_arrays, &grad_arrays, &grad_reqs,
+                           &aux_arrays, args_map_, std::map<std::string, NDArray>(),
+                           std::map<std::string, OpReqType>(), aux_map_);
   for (auto& i : grad_reqs) i = OpReqType::kNullOp;
 
   // Create an executor after binding the model to input parameters.
-  executor = new Executor(net, global_ctx, arg_arrays, grad_arrays, grad_reqs, aux_arrays);
+  executor_ = new Executor(net_, global_ctx_, arg_arrays, grad_arrays, grad_reqs, aux_arrays);
 }
 
 /*
@@ -227,46 +219,48 @@ int Predictor::GetDataLayerType() {
  * create a new ImageRecordIter according to the given parameters
  */
 bool Predictor::CreateImageRecordIter() {
-  val_iter = new MXDataIter("ImageRecordIter");
+  val_iter_ = new MXDataIter("ImageRecordIter");
   if (!FileExists(dataset_)) {
     LG << "Error: " << dataset_ << " must be provided";
     return false;
   }
 
-  std::vector<index_t> shape_vec {input_shape[1], input_shape[2], input_shape[3]};
+  std::vector<index_t> shape_vec;
+  for(index_t i = 1; i < input_shape_.ndim(); i++)
+    shape_vec.push_back(input_shape_[i]);
   mxnet::TShape data_shape(shape_vec.begin(), shape_vec.end());
 
   // set image record parser parameters
-  val_iter->SetParam("path_imgrec", dataset_);
-  val_iter->SetParam("label_width", 1);
-  val_iter->SetParam("data_shape", data_shape);
-  val_iter->SetParam("preprocess_threads", data_nthreads_);
-  val_iter->SetParam("shuffle_chunk_seed", shuffle_chunk_seed_);
+  val_iter_->SetParam("path_imgrec", dataset_);
+  val_iter_->SetParam("label_width", 1);
+  val_iter_->SetParam("data_shape", data_shape);
+  val_iter_->SetParam("preprocess_threads", data_nthreads_);
+  val_iter_->SetParam("shuffle_chunk_seed", shuffle_chunk_seed_);
 
   // set Batch parameters
-  val_iter->SetParam("batch_size", input_shape[0]);
+  val_iter_->SetParam("batch_size", input_shape_[0]);
 
   // image record parameters
-  val_iter->SetParam("shuffle", true);
-  val_iter->SetParam("seed", seed_);
+  val_iter_->SetParam("shuffle", true);
+  val_iter_->SetParam("seed", seed_);
 
   // set normalize parameters
-  val_iter->SetParam("mean_r", rgb_mean_[0]);
-  val_iter->SetParam("mean_g", rgb_mean_[1]);
-  val_iter->SetParam("mean_b", rgb_mean_[2]);
-  val_iter->SetParam("std_r", rgb_std_[0]);
-  val_iter->SetParam("std_g", rgb_std_[1]);
-  val_iter->SetParam("std_b", rgb_std_[2]);
+  val_iter_->SetParam("mean_r", rgb_mean_[0]);
+  val_iter_->SetParam("mean_g", rgb_mean_[1]);
+  val_iter_->SetParam("mean_b", rgb_mean_[2]);
+  val_iter_->SetParam("std_r", rgb_std_[0]);
+  val_iter_->SetParam("std_g", rgb_std_[1]);
+  val_iter_->SetParam("std_b", rgb_std_[2]);
 
   // set prefetcher parameters
   if (use_gpu_) {
-    val_iter->SetParam("ctx", "gpu");
+    val_iter_->SetParam("ctx", "gpu");
   } else {
-    val_iter->SetParam("ctx", "cpu");
+    val_iter_->SetParam("ctx", "cpu");
   }
-  val_iter->SetParam("dtype", data_layer_type_);
+  val_iter_->SetParam("dtype", data_layer_type_);
 
-  val_iter->CreateDataIter();
+  val_iter_->CreateDataIter();
   return true;
 }
 
@@ -279,7 +273,7 @@ void Predictor::LoadModel(const std::string& model_json_file) {
     throw std::runtime_error("Model file does not exist");
   }
   LG << "Loading the model from " << model_json_file << std::endl;
-  net = Symbol::Load(model_json_file);
+  net_ = Symbol::Load(model_json_file);
 }
 
 
@@ -297,11 +291,11 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
   for (const auto &k : parameters) {
     if (k.first.substr(0, 4) == "aux:") {
       auto name = k.first.substr(4, k.first.size() - 4);
-      aux_map[name] = k.second.Copy(global_ctx);
+      aux_map_[name] = k.second.Copy(global_ctx_);
     }
     if (k.first.substr(0, 4) == "arg:") {
       auto name = k.first.substr(4, k.first.size() - 4);
-      args_map[name] = k.second.Copy(global_ctx);
+      args_map_[name] = k.second.Copy(global_ctx_);
     }
   }
   /*WaitAll is need when we copy data between GPU and the main memory*/
@@ -313,34 +307,39 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
  */
 void Predictor::InitParameters() {
   std::vector<mx_uint> data_shape;
-  for (index_t i=0; i < input_shape.ndim(); i++) {
-    data_shape.push_back(input_shape[i]);
+  for (index_t i = 0; i < input_shape_.ndim(); i++) {
+    data_shape.push_back(input_shape_[i]);
   }
 
   std::map<std::string, std::vector<mx_uint> > arg_shapes;
   std::vector<std::vector<mx_uint> > aux_shapes, in_shapes, out_shapes;
   arg_shapes["data"] = data_shape;
-  net.InferShape(arg_shapes, &in_shapes, &aux_shapes, &out_shapes);
+  net_.InferShape(arg_shapes, &in_shapes, &aux_shapes, &out_shapes);
 
   // initializer to call
   Xavier xavier(Xavier::uniform, Xavier::avg, 2.0f);
-  index_t i = 0;
-  for (auto& name : net.ListArguments()) {
+
+  auto arg_name_list = net_.ListArguments();
+  for(index_t i = 0; i < in_shapes.size(); i++) {
+    const auto &shape = in_shapes[i];
+    const auto &arg_name = arg_name_list[i];
     int paramType = kFloat32;
-    if (Initializer::StringEndWith(name, "weight_quantize") ||
-        Initializer::StringEndWith(name, "bias_quantize")) {
+    if (Initializer::StringEndWith(arg_name, "weight_quantize") ||
+        Initializer::StringEndWith(arg_name, "bias_quantize")) {
       paramType = kInt8;
     }
-    NDArray tmp_arr(in_shapes[i++], global_ctx, false, paramType);
-    xavier(name, &tmp_arr);
-    args_map[name] = tmp_arr.Copy(global_ctx);
+    NDArray tmp_arr(shape, global_ctx_, false, paramType);
+    xavier(arg_name, &tmp_arr);
+    args_map_[arg_name] = tmp_arr.Copy(global_ctx_);
   }
 
-  i = 0;
-  for (auto& name : net.ListAuxiliaryStates()) {
-    NDArray tmp_arr(aux_shapes[i++], global_ctx, false);
-    xavier(name, &tmp_arr);
-    aux_map[name] = tmp_arr.Copy(global_ctx);
+  auto aux_name_list = net_.ListAuxiliaryStates();
+  for(index_t i = 0; i < aux_shapes.size(); i++) {
+    const auto &shape = aux_shapes[i];
+    const auto &aux_name = aux_name_list[i];
+    NDArray tmp_arr(shape, global_ctx_, false);
+    xavier(aux_name, &tmp_arr);
+    aux_map_[aux_name] = tmp_arr.Copy(global_ctx_);
   }
   /*WaitAll is need when we copy data between GPU and the main memory*/
   NDArray::WaitAll();
@@ -352,36 +351,38 @@ void Predictor::InitParameters() {
  */
 void Predictor::BenchmarkScore(int num_inference_batches) {
   // Create dummy data
-  std::vector<float> dummy_data(input_shape.Size());
+  std::vector<float> dummy_data(input_shape_.Size());
   std::default_random_engine generator;
   std::uniform_real_distribution<float> val(0.0f, 1.0f);
-  for (int i = 0; i < static_cast<int>(input_shape.Size()); ++i) {
+  for (size_t i = 0; i < static_cast<size_t>(input_shape_.Size()); ++i) {
     dummy_data[i] = static_cast<float>(val(generator));
   }
-    executor->arg_dict()["data"].SyncCopyFromCPU(
+  executor_->arg_dict()["data"].SyncCopyFromCPU(
         dummy_data.data(),
-        input_shape.Size());
+        input_shape_.Size());
   NDArray::WaitAll();
 
   LG << "Running the forward pass on model to evaluate the performance..";
 
   // warm up.
   for (int i = 0; i < 5; i++) {
-    executor->Forward(false);
+    executor_->Forward(false);
     NDArray::WaitAll();
   }
 
   // Run the forward pass.
-  double ms = get_msec();
+  // double ms = get_msec();
+  auto tic = std::chrono::system_clock::now();
   for (int i = 0; i < num_inference_batches; i++) {
-    executor->Forward(false);
+    executor_->Forward(false);
     NDArray::WaitAll();
   }
-  ms = get_msec() - ms;
-  LG << "benchmark completed!";
-  LG << "batch size: " << input_shape[0] << " num batch: " << num_inference_batches
-     << " throughput: " << 1000 * input_shape[0] * num_inference_batches / ms
-     << " imgs/s latency:" << ms / input_shape[0] / num_inference_batches << " ms";
+  double sec = std::chrono::duration_cast<std::chrono::milliseconds>
+               (std::chrono::system_clock::now() - tic).count() / 1000.0;
+  LG << " benchmark completed!";
+  LG << " batch size: " << input_shape_[0] << " num batch: " << num_inference_batches
+     << " throughput: " << input_shape_[0] * num_inference_batches / sec
+     << " imgs/s latency:" << sec / input_shape_[0] / num_inference_batches * 1000.0 << " ms";
 }
 
 /*
@@ -392,7 +393,7 @@ bool Predictor::AdvanceDataIter(int skipped_batches) {
   assert(skipped_batches >= 0);
   if (skipped_batches == 0) return true;
   int skipped_count = 0;
-  while (val_iter->Next()) {
+  while (val_iter_->Next()) {
     if (++skipped_count >= skipped_batches) break;
   }
   if (skipped_count != skipped_batches) return false;
@@ -407,7 +408,7 @@ void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
   // Create metrics
   Accuracy val_acc;
 
-  val_iter->Reset();
+  val_iter_->Reset();
   val_acc.Reset();
   int nBatch = 0;
 
@@ -415,48 +416,48 @@ void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
     LG << "skipped batches should less than total batches!";
     return;
   }
-  double ms = get_msec();
-  while (val_iter->Next()) {
-    auto data_batch = val_iter->GetDataBatch();
-    data_batch.data.CopyTo(&args_map["data"]);
-    data_batch.label.CopyTo(&args_map["softmax_label"]);
+
+  auto tic = std::chrono::system_clock::now();
+  while (val_iter_->Next()) {
+    auto data_batch = val_iter_->GetDataBatch();
+    data_batch.data.CopyTo(&args_map_["data"]);
+    data_batch.label.CopyTo(&args_map_["softmax_label"]);
     NDArray::WaitAll();
 
     // running on forward pass
-    executor->Forward(false);
+    executor_->Forward(false);
     NDArray::WaitAll();
-    val_acc.Update(data_batch.label, executor->outputs[0]);
+    val_acc.Update(data_batch.label, executor_->outputs[0]);
 
     if (++nBatch >= num_inference_batches) {
       break;
     }
   }
-  ms = get_msec() - ms;
-  num_inference_batches = (nBatch == num_inference_batches) ? num_inference_batches : nBatch;
-
-  auto args_name = net.ListArguments();
-  std::cout << "INFO:" << "Dataset for inference: " << dataset_ << std::endl
-            << "INFO:" << "label_name = " << args_name[args_name.size()-1] << std::endl
-            << "INFO:" << "rgb_mean: " << "(" << rgb_mean_[0] << ", " << rgb_mean_[1]
-            << ", " << rgb_mean_[2] << ")" << std::endl
-            << "INFO:" << "rgb_std: " << "(" << rgb_std_[0] << ", " << rgb_std_[1]
-            << ", " << rgb_std_[2] << ")" << std::endl
-            << "INFO:" << "Image shape: " << "(" << input_shape[1] << ", "
-            << input_shape[2] << ", " << input_shape[3] << ")" << std::endl
-            << "INFO:" << "Finished inference with: " << num_inference_batches * input_shape[0]
-            << " images " << std::endl
-            << "INFO:" << "Batch size = " << input_shape[0] << " for inference" << std::endl
-            << "INFO:" << "Accuracy: " << val_acc.Get() << std::endl
-            << "INFO:" << "Throughput: " << (1000 * num_inference_batches * input_shape[0] / ms)
-            << " images per second" << std::endl;
+  double sec = std::chrono::duration_cast<std::chrono::milliseconds>
+               (std::chrono::system_clock::now() - tic).count() / 1000.0;
+  auto args_name = net_.ListArguments();
+  LG << "INFO:" << "Dataset for inference: " << dataset_;
+  LG << "INFO:" << "label_name = " << args_name[args_name.size()-1];
+  LG << "INFO:" << "rgb_mean: " << "(" << rgb_mean_[0] << ", " << rgb_mean_[1]
+     << ", " << rgb_mean_[2] << ")";
+  LG << "INFO:" << "rgb_std: " << "(" << rgb_std_[0] << ", " << rgb_std_[1]
+     << ", " << rgb_std_[2] << ")";
+  LG << "INFO:" << "Image shape: " << "(" << input_shape_[1] << ", "
+     << input_shape_[2] << ", " << input_shape_[3] << ")";
+  LG << "INFO:" << "Finished inference with: " << nBatch * input_shape_[0]
+     << " images ";
+  LG << "INFO:" << "Batch size = " << input_shape_[0] << " for inference";
+  LG << "INFO:" << "Accuracy: " << val_acc.Get();
+  LG << "INFO:" << "Throughput: " << (nBatch * input_shape_[0] / sec)
+     << " images per second";       
 }
 
 Predictor::~Predictor() {
-  if (executor) {
-    delete executor;
+  if (executor_) {
+    delete executor_;
   }
-  if (!benchmark_) {
-    delete val_iter;
+  if (!benchmark_ && val_iter_) {
+    delete val_iter_;
   }
   MXNotifyShutdown();
 }
@@ -466,26 +467,26 @@ Predictor::~Predictor() {
  */
 template<typename T>
 std::vector<T> createVectorFromString(const std::string& input_string) {
-    std::vector<T> dst_vec;
-    char *p_next;
-    T elem;
-    bool bFloat = std::is_same<T, float>::value;
-    if (!bFloat) {
-      elem = strtol(input_string.c_str(), &p_next, 10);
-    } else {
-      elem = strtof(input_string.c_str(), &p_next);
-    }
+  std::vector<T> dst_vec;
+  char *p_next;
+  T elem;
+  bool bFloat = std::is_same<T, float>::value;
+  if (!bFloat) {
+    elem = strtol(input_string.c_str(), &p_next, 10);
+  } else {
+    elem = strtof(input_string.c_str(), &p_next);
+  }
 
-    dst_vec.push_back(elem);
-    while (*p_next) {
-        if (!bFloat) {
-          elem = strtol(p_next, &p_next, 10);
-        } else {
-          elem = strtof(p_next, &p_next);
-        }
-        dst_vec.push_back(elem);
+  dst_vec.push_back(elem);
+  while (*p_next) {
+    if (!bFloat) {
+      elem = strtol(p_next, &p_next, 10);
+    } else {
+      elem = strtof(p_next, &p_next);
     }
-    return dst_vec;
+    dst_vec.push_back(elem);
+  }
+  return dst_vec;
 }
 
 void printUsage() {
@@ -528,47 +529,47 @@ int main(int argc, char** argv) {
   int index = 1;
   while (index < argc) {
     if (strcmp("--symbol_file", argv[index]) == 0) {
-            index++;
-            model_file_json = (index < argc ? argv[index]:"");
-        } else if (strcmp("--params_file", argv[index]) == 0) {
-            index++;
-            model_file_params = (index < argc ? argv[index]:"");
-        } else if (strcmp("--dataset", argv[index]) == 0) {
-            index++;
-            dataset = (index < argc ? argv[index]:dataset);
-        } else if (strcmp("--data_nthreads", argv[index]) == 0) {
-            index++;
-            data_nthreads = strtol(argv[index], nullptr, 10);
-        } else if (strcmp("--input_shape", argv[index]) == 0) {
-            index++;
-            input_shape = (index < argc ? argv[index]:input_shape);
-        } else if (strcmp("--rgb_mean", argv[index]) == 0) {
-            index++;
-            input_rgb_mean = (index < argc ? argv[index]:input_rgb_mean);
-        } else if (strcmp("--rgb_std", argv[index]) == 0) {
-            index++;
-            input_rgb_std = (index < argc ? argv[index]:input_rgb_std);
-        } else if (strcmp("--batch_size", argv[index]) == 0) {
-            index++;
-            batch_size = strtol(argv[index], nullptr, 10);
-        }  else if (strcmp("--num_skipped_batches", argv[index]) == 0) {
-            index++;
-            num_skipped_batches = strtol(argv[index], nullptr, 10);
-        }  else if (strcmp("--num_inference_batches", argv[index]) == 0) {
-            index++;
-            num_inference_batches = strtol(argv[index], nullptr, 10);
-        } else if (strcmp("--data_layer_type", argv[index]) == 0) {
-            index++;
-            data_layer_type = (index < argc ? argv[index]:data_layer_type);
-        } else if (strcmp("--gpu", argv[index]) == 0) {
-            use_gpu = true;
-        } else if (strcmp("--benchmark", argv[index]) == 0) {
-            benchmark = true;
-        } else if (strcmp("--help", argv[index]) == 0) {
-            printUsage();
-            return 0;
-        }
-        index++;
+      index++;
+      model_file_json = (index < argc ? argv[index]:"");
+    } else if (strcmp("--params_file", argv[index]) == 0) {
+      index++;
+      model_file_params = (index < argc ? argv[index]:"");
+    } else if (strcmp("--dataset", argv[index]) == 0) {
+      index++;
+      dataset = (index < argc ? argv[index]:dataset);
+    } else if (strcmp("--data_nthreads", argv[index]) == 0) {
+      index++;
+      data_nthreads = strtol(argv[index], nullptr, 10);
+    } else if (strcmp("--input_shape", argv[index]) == 0) {
+      index++;
+      input_shape = (index < argc ? argv[index]:input_shape);
+    } else if (strcmp("--rgb_mean", argv[index]) == 0) {
+      index++;
+      input_rgb_mean = (index < argc ? argv[index]:input_rgb_mean);
+    } else if (strcmp("--rgb_std", argv[index]) == 0) {
+      index++;
+      input_rgb_std = (index < argc ? argv[index]:input_rgb_std);
+    } else if (strcmp("--batch_size", argv[index]) == 0) {
+      index++;
+      batch_size = strtol(argv[index], nullptr, 10);
+    }  else if (strcmp("--num_skipped_batches", argv[index]) == 0) {
+      index++;
+      num_skipped_batches = strtol(argv[index], nullptr, 10);
+    }  else if (strcmp("--num_inference_batches", argv[index]) == 0) {
+      index++;
+      num_inference_batches = strtol(argv[index], nullptr, 10);
+    } else if (strcmp("--data_layer_type", argv[index]) == 0) {
+      index++;
+      data_layer_type = (index < argc ? argv[index]:data_layer_type);
+    } else if (strcmp("--gpu", argv[index]) == 0) {
+      use_gpu = true;
+    } else if (strcmp("--benchmark", argv[index]) == 0) {
+      benchmark = true;
+    } else if (strcmp("--help", argv[index]) == 0) {
+      printUsage();
+      return 0;
+    }
+    index++;
   }
 
   if (model_file_json.empty() || (!benchmark && model_file_params.empty())) {

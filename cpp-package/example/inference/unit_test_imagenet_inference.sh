@@ -17,13 +17,27 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Downloading the data and model
-mkdir -p model
-wget -nc http://data.mxnet.io/models/imagenet/inception-bn.tar.gz
-tar -xvzf inception-bn.tar.gz -C model
-wget -nc https://raw.githubusercontent.com/dmlc/gluon-cv/master/gluoncv/model_zoo/quantized/resnet50_v1_int8-symbol.json -O ./model/resnet50_v1_int8-symbol.json
-mkdir -p data
-wget -nc http://data.mxnet.io/data/val_256_q90.rec -O ./data/val_256_q90.rec
+set -ex
+# create ./model directory if not existed
+if [ ! -d model ]; then
+    mkdir -p model
+fi
+# create ./data directory if not existed
+if [ ! -d data ]; then
+    mkdir -p data
+fi
+# Downloading the data and model if not existed
+model_file=./model/Inception-BN-symbol.json
+params_file=./model/Inception-BN-0126.params
+if [ ! -f ${model_file} ] || [ ! -f ${params_file} ]; then
+    wget -nc http://data.mxnet.io/models/imagenet/inception-bn.tar.gz
+    tar -xvzf inception-bn.tar.gz -C model
+fi
+cd model
+wget -nc https://raw.githubusercontent.com/dmlc/gluon-cv/master/gluoncv/model_zoo/quantized/resnet50_v1_int8-symbol.json
+cd ../data
+wget -nc http://data.mxnet.io/data/val_256_q90.rec
+cd ..
 
 # Running inference on imagenet.
 if [ "$(uname)" == "Darwin" ]; then

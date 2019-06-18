@@ -106,7 +106,7 @@ export MXNET_SUBGRAPH_BACKEND=MKLDNN
 ./imagenet_inference --symbol_file "./model/resnet50_v1-quantized-5batches-naive-symbol.json" --batch_size 64 --num_inference_batches 500 --benchmark
 
 ```
-For a quickly inference test, users can directly run [unit_test_imagenet_inference.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_imagenet_inference.sh>) by using the below command. This script will automatically download the pre-trained **Inception-Bn** and **resnet50_v1_int8** model and **validation dataset** which are required for inference.
+For a quick inference test, users can directly run [unit_test_imagenet_inference.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_imagenet_inference.sh>) by using the below command. This script will automatically download the pre-trained **Inception-Bn** and **resnet50_v1_int8** model and **validation dataset** which are required for inference.
 
 ```
 ./unit_test_imagenet_inference.sh
@@ -114,27 +114,29 @@ For a quickly inference test, users can directly run [unit_test_imagenet_inferen
 And you may get the similiar outputs like below:
 ```
 >>> INFO: FP32 real data
-imagenet_inference.cpp:253: Loading the model from ./model/Inception-BN-symbol.json
-imagenet_inference.cpp:266: Loading the model parameters from ./model/Inception-BN-0126.params
-INFO:Dataset for inference: ./data/val_256_q90.rec
-INFO:label_name = softmax_label
-INFO:rgb_mean: (123.68, 116.779, 103.939)
-INFO:rgb_std: (1, 1, 1)
-INFO:Image shape: (3, 224, 224)
-INFO:Finished inference with: 500 images
-INFO:Batch size = 1 for inference
-INFO:Accuracy: 0.744
-INFO:Throughput: xxxx images per second
+imagenet_inference.cpp:282: Loading the model from ./model/Inception-BN-symbol.json
+imagenet_inference.cpp:295: Loading the model parameters from ./model/Inception-BN-0126.params
+imagenet_inference.cpp:443: INFO:Dataset for inference: ./data/val_256_q90.rec
+imagenet_inference.cpp:444: INFO:label_name = softmax_label
+imagenet_inference.cpp:445: INFO:rgb_mean: (123.68, 116.779, 103.939)
+imagenet_inference.cpp:447: INFO:rgb_std: (1, 1, 1)
+imagenet_inference.cpp:449: INFO:Image shape: (3, 224, 224)
+imagenet_inference.cpp:451: INFO:Finished inference with: 500 images
+imagenet_inference.cpp:453: INFO:Batch size = 1 for inference
+imagenet_inference.cpp:454: INFO:Accuracy: 0.744
+imagenet_inference.cpp:455: INFO:Throughput: xxxx images per second
 
 >>> INFO: FP32 dummy data
-imagenet_inference.cpp:253: Loading the model from ./model/Inception-BN-symbol.json
-imagenet_inference.cpp:354: benchmark completed!
-imagenet_inference.cpp:355: batch size: 1 num batch: 500 throughput: xxxx imgs/s latency: xxxx ms
+imagenet_inference.cpp:282: Loading the model from ./model/Inception-BN-symbol.json
+imagenet_inference.cpp:372: Running the forward pass on model to evaluate the performance..
+imagenet_inference.cpp:387: benchmark completed!
+imagenet_inference.cpp:388: batch size: 1 num batch: 500 throughput: xxxx imgs/s latency:xxxx ms
 
 >>> INFO: INT8 dummy data
-imagenet_inference.cpp:253: Loading the model from ./model/resnet50_v1_int8-symbol.json
-imagenet_inference.cpp:354: benchmark completed!
-imagenet_inference.cpp:355: batch size: 1 num batch: 500 throughput: xxxx imgs/s latency: xxxx ms
+imagenet_inference.cpp:282: Loading the model from ./model/resnet50_v1_int8-symbol.json
+imagenet_inference.cpp:372: Running the forward pass on model to evaluate the performance..
+imagenet_inference.cpp:387: benchmark completed!
+imagenet_inference.cpp:388: batch size: 1 num batch: 500 throughput: xxxx imgs/s latency:xxxx ms
 ```
 
 ## [sentiment_analysis_rnn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/sentiment_analysis_rnn.cpp>)

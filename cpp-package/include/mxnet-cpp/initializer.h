@@ -103,10 +103,10 @@ class Initializer {
   virtual void InitQuantizedWeight(NDArray* arr) {
     std::default_random_engine generator;
     std::uniform_int_distribution<int32_t> _val(-127, 127);
-    (*arr) = static_cast<int8_t>(_val(generator));
+    (*arr) = _val(generator);
   }
   virtual void InitQuantizedBias(NDArray* arr) {
-    (*arr) = (int8_t)0;
+    (*arr) = 0;
   }
   virtual void InitDefault(NDArray* arr) {}
 };
