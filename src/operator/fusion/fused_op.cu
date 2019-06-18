@@ -160,11 +160,12 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
                 const auto& var_name = g[arg_id].source->attrs.name;
                 load_index[arg_id] = 0;
                 std::string begin = source->attrs.dict.at("begin");
+                std::string end = source->attrs.dict.at("end");
                 std::string axis = source->attrs.dict.at("axis");
                 const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-                code += "const auto " + vec_name + " = load_slice<nvec>(" + \
-                        var_name + ", " + var_name + "_strides," + axis + "," + begin + \
-                        ", &ref_index[0]);\n";
+                code += "const auto " + vec_name + " = load_slice<nvec, "+ axis + ">(" + \
+                        var_name + ", " + var_name + "_strides," + begin + \
+                        "," + end + ", offset);\n";
                 CHECK_EQ(outputs[i], 1);
                 variables[{i, 0}] = vec_name;
                 continue;
@@ -359,6 +360,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_GE(outputs.size(), 1) << "There needs to be at least 1 output.";
 
   std::vector<int> in_dtypes;
+  std::vector<int> in_ndims;
   std::vector<int> out_dtypes;
   int ndim = outputs[0].ndim();
   int nvec = 1;
@@ -366,6 +368,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   size_t counter = 0;
   for (const auto& blob : inputs) {
     in_dtypes.push_back(blob.type_flag_);
+    in_ndims.push_back(blob.ndim());
     initialized_ = initialized_ && (blob.type_flag_ == inputs_[counter].dtype);
     inputs_[counter].dtype = blob.type_flag_;
     nvec = max(nvec, detail::mshadowTypeToVectorLength(blob.type_flag_));
@@ -403,14 +406,13 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
     size_t num_params = in_dtypes.size() + out_dtypes.size();
     size_t i = 0;
-    aux_code += "static const int ndim = " + std::to_string(ndim) + ";\n";
     aux_code += "static const int nvec = " + std::to_string(nvec) + ";\n";
-    kernel_params += "const Strides<ndim> ref_strides,";
     for (const auto &type : in_dtypes) {
       std::string type_name = detail::mshadowTypeToString(type);
       aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
+      aux_code = "static const int ndim" + std::to_string(i) + " = " + std::to_string(in_ndims[i]) + ";\n" + aux_code;
       tensor_params += " DType" + std::to_string(i) + "* " +input_names[i];
-      kernel_params += " const Strides<ndim> " + input_names[i]+"_strides";
+      kernel_params += " const Strides<ndim0> " + input_names[i]+"_strides";
       ++i;
       if (i < num_params) {
         tensor_params += ", ";
@@ -438,7 +440,6 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
             code_ + "\n" +
             detail::fused_op_kernel_end;
     // Guard NVRTC calls
-    LOG(INFO) << code_;
     std::lock_guard<std::mutex> lock_nvrtc(mutex_);
     nvrtcProgram program;
     NVRTC_CALL(
@@ -499,18 +500,13 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<void*> args;
   size_t N = (outputs[0].shape_.Size() + nvec - 1)/nvec;
   args.push_back(&N);
-  std::vector<int> ref_strides(ndim);
-  ref_strides[ndim-1] = 1;
-  for (int i = ndim-2; i >= 0; i--) {
-    ref_strides[i] = ref_strides[i+1] * outputs[0].shape_[i+1];
-  }
-  args.push_back(ref_strides.data());
 
   unsigned int num_blocks = (N + FusedOp::NTHREADS - 1) / FusedOp::NTHREADS;
   std::vector<void*> ptrs;
   std::vector<std::vector<int>> strides;
   for (const auto &data : inputs) {
     MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+      int ndim = data.ndim();
       Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
       ptrs.push_back(tensor.dptr_);
       strides.push_back(std::vector<int>(ndim));

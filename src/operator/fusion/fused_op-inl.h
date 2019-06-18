@@ -308,20 +308,6 @@ struct Strides {
    int x[ndim];
 };
 
-template <int ndim>
-inline Strides<ndim> get_index(const Strides<ndim> strides, int i) {
-  int idx = i;
-  Strides<ndim> ref_index;
-  #pragma unroll
-  for (int dim = 0; dim < ndim; dim++) {
-     int stride = strides.x[dim];
-     ref_index.x[dim] = idx / stride;
-     idx = idx % stride;
-  }
-  return ref_index;
-}
-
-
 template <int nvec, typename DType>
 inline VectorType<DType, nvec> load_index(const DType * input, int i) {
   const auto* vector_input = reinterpret_cast<const typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(input + i);
@@ -329,19 +315,36 @@ inline VectorType<DType, nvec> load_index(const DType * input, int i) {
   return ret;
 }
 
-template <int nvec, typename DType, int ndim>
-inline VectorType<DType, nvec> load_slice(const DType * input, const Strides<ndim> strides, int axis, int begin, Strides<ndim>* ref_index) {
+template <int nvec, int axis, typename DType, int ndim>
+inline VectorType<DType, nvec> load_slice(const DType * input, const Strides<ndim> strides, int begin, int end, int offset) {
   int idx[nvec];
   bool consecutive = true;
+
+  Strides<ndim> ref_strides;
+  if (axis > 0) {
+      int shape = strides.x[axis-1]/strides.x[axis];
+      #pragma unroll
+      for (int dim = 0; dim < axis; dim++) {
+          ref_strides.x[dim] = (strides.x[dim] / shape) * (end-begin);
+      }
+  }
+  #pragma unroll
+  for (int dim = axis; dim < ndim; dim++) {
+      ref_strides.x[dim] = strides.x[dim];
+  }
+
   #pragma unroll
   for (int j = 0; j < nvec; j++) {
     idx[j] = 0;
+    int ref_idx = offset + j;
     #pragma unroll
     for (int dim = 0; dim < ndim; dim++) {
-       idx[j] += ref_index[j].x[dim] * strides.x[dim];
+       int stride = ref_strides.x[dim];
+       idx[j] += (ref_idx / stride) * strides.x[dim];
+       ref_idx = ref_idx % stride;
     }
     idx[j] += begin * strides.x[axis];
-    if (j > 0 && (idx[j] != idx[j-1])) {
+    if (j > 0 && (idx[j] != (idx[j-1] + 1))) {
         consecutive = false;
     }
   }
@@ -830,12 +833,7 @@ inline DType backward_erfinv(const DType val, const DType grad) {
 const char fused_op_kernel_begin[] = R"code(
 const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 for (int i = tid; i < N; i+= gridDim.x * blockDim.x) {
-    Strides<ndim> ref_index[nvec];
     int offset = i*nvec;
-    #pragma unroll 
-    for (int j = 0; j < nvec; j++) {
-      ref_index[j] = get_index(ref_strides, offset + j);
-    }
 
 )code";
 
