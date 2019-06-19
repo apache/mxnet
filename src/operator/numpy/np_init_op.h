@@ -25,6 +25,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_INIT_OP_H_
 #define MXNET_OPERATOR_NUMPY_NP_INIT_OP_H_
 
+#include <vector>
 #include "../tensor/init_op.h"
 #include "../tensor/elemwise_unary_op.h"
 
@@ -98,28 +99,13 @@ void NumpyEyeFill(const nnvm::NodeAttrs& attrs,
              const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 0U);
   CHECK_EQ(outputs.size(), 1U);
-  if (outputs[0].shape_.Size() == 0) return; // zero-size tensor
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (outputs[0].shape_.Size() == 0) return;  // zero-size tensor
   const NumpyEyeParam& param = nnvm::get<NumpyEyeParam>(attrs.parsed);
-  const TBlob& out_data = outputs[0];
   const nnvm::dim_t num_cols = param.M.has_value() ? param.M.value() : param.N;
-  const nnvm::dim_t cnnz = std::max(num_cols - std::abs(param.k), (nnvm::dim_t)0);
-  const nnvm::dim_t rnnz = std::max(param.N - std::abs(param.k), (nnvm::dim_t)0);
-  const nnvm::dim_t nnz = param.k > 0 ? std::min(cnnz, param.N) :
-                                        std::min(rnnz, num_cols);
-  using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Fill(s, out_data, req[0], static_cast<DType>(0));
-      if (nnz > 0) {
-        Kernel<eye_dns_fill<req_type>, xpu>::Launch(s, nnz, out_data.dptr<DType>(),
-          std::max(static_cast<nnvm::dim_t>(0), param.k), param.k, num_cols);
-      }
-    });
-  });
+  EyeFillImpl<xpu>(outputs[0], ctx, req, num_cols, param.N, param.k);
 }
 
 }  // namespace op
 }  // namespace mxnet
 
-#endif // MXNET_OPERATOR_NUMPY_NP_INIT_OP_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_INIT_OP_H_

@@ -30,7 +30,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
 
 
 @set_module('mxnet.ndarray.numpy')
-def zeros(shape, dtype=None, **kwargs):
+def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -660,4 +660,3 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     if ctx is None:
         ctx = current_context()
     return _npi.eye(N, M, k, dtype)
-
