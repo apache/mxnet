@@ -3,6 +3,7 @@ import tvm
 import os
 import argparse
 import pkgutil
+from itertools import product
 
 def get_target(device):
     if device == "cpu":
@@ -33,7 +34,17 @@ def get_operator_def(path):
     return operators
 
 
+def func_arg_values_prod(func):
+    args = [k for k in func.__annotations__ if k != "return"]
+    values = [func.__annotations__[k].values for k in args]
+    cart_product = product(*values)
+    for comb_values in cart_product:
+        yield {k: v for k, v in zip(args, comb_values)}
+
+
 if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.dirname(sys.path[0]))
     parser = argparse.ArgumentParser(description="Generate tvm operators")
     parser.add_argument("-i", action="store", required=True, dest="input_path",
                         help="Input path where operators are defined")
@@ -46,19 +57,22 @@ if __name__ == "__main__":
     func_list_llvm = []
     func_list_cuda = []
     for operator, func in operators.items():
-        func_list = func_list_cuda if operator.startswith("cuda_") else func_list_llvm
-        sch, args = func()
+        # for dtype in ["float32", "int32"]:
+        for func_args in func_arg_values_prod(func):
+            func_list = func_list_cuda if operator.startswith("cuda_") else func_list_llvm
+            sch, args = func(**func_args)
 
-        binds = {}
-        new_args = []
-        for arg in args:
-            if isinstance(arg, tuple):
-                arg, buf = arg
-                binds[arg] = buf
-            new_args.append(arg)
-
-        func_lower = tvm.lower(sch, new_args, name=operator, binds=binds)
-        func_list.append(func_lower)
+            binds = {}
+            new_args = []
+            for arg in args:
+                if isinstance(arg, tuple):
+                    arg, buf = arg
+                    binds[arg] = buf
+                new_args.append(arg)
+            op_name = operator + ''.join([arg.dtype for arg in new_args])
+            print(op_name)
+            func_lower = tvm.lower(sch, new_args, name=op_name, binds=binds)
+            func_list.append(func_lower)
 
     lowered_funcs = {get_target("cpu") : func_list_llvm}
     if len(func_list_cuda) > 0:

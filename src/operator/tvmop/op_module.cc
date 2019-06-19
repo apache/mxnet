@@ -16,6 +16,41 @@ void TVMOpModule::Load(const std::string &filepath) {
   *module_ptr_ = module;
 }
 
+inline PackedFunc GetFunction(const std::shared_ptr<Module> &module,
+                              const std::string &op_name,
+                              const std::vector<mxnet::TBlob> &args) {
+  std::ostringstream func_name;
+  func_name << op_name;
+  for (const auto &arg : args) {
+    switch (arg.type_flag_) {
+      case mshadow::kFloat32:
+        func_name << "float32";
+        break;
+      case mshadow::kFloat64:
+        func_name << "float64";
+        break;
+      case mshadow::kFloat16:
+        func_name << "float16";
+        break;
+      case mshadow::kUint8:
+        func_name << "uint8";
+        break;
+      case mshadow::kInt32:
+        func_name << "int32";
+        break;
+      case mshadow::kInt8:
+        func_name << "int8";
+        break;
+      case mshadow::kInt64:
+        func_name << "int64";
+        break;
+      default:
+        LOG(FATAL) << "Unknown dtype " << arg.type_flag_;
+    }
+  }
+  return module->GetFunction(func_name.str(), false);
+}
+
 void TVMOpModule::Call(const std::string &func_name,
                        const mxnet::OpContext& ctx,
                        const std::vector<mxnet::TBlob> &args) {
@@ -32,18 +67,15 @@ void TVMOpModule::Call(const std::string &func_name,
   TVMArgs tvm_args(&values[0], &type_codes[0], args.size());
   TVMRetValue rv;
 
-  // TODO: cache
-  PackedFunc func = module_ptr_->GetFunction(func_name, false);
-
+#if MXNET_USE_CUDA
   int dev_type = (ctx.run_ctx.ctx.dev_type == mxnet::Context::DeviceType::kGPU) ? kDLGPU : kDLCPU;
   int dev_id = ctx.run_ctx.ctx.dev_id;
-#if MXNET_USE_CUDA
   if (dev_type == kDLGPU) {
     void *stream = static_cast<void *>(ctx.run_ctx.get_stream<mxnet::gpu>()->stream_);
     TVMSetStream(dev_type, dev_id, stream);
   }
 #endif
-  func.CallPacked(tvm_args, &rv);
+  GetFunction(module_ptr_, func_name, args).CallPacked(tvm_args, &rv);
 #if MXNET_USE_CUDA
   if (dev_type == kDLGPU) {
     TVMSetStream(dev_type, dev_id, nullptr);

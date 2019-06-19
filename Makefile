@@ -595,8 +595,9 @@ lib/libtvm_runtime.so:
 
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
-	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$PYTHONPATH LD_LIBRARY_PATH=$(TVM_PATH)/build \
-	    python3 $(ROOTDIR)/contrib/tvmop/compile_op.py -i $(TVM_OP_PATH) -o $(ROOTDIR)/lib/libtvmop.so
+	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib:$PYTHONPATH \
+		LD_LIBRARY_PATH=$(TVM_PATH)/build \
+	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -i $(TVM_OP_PATH) -o $(ROOTDIR)/lib/libtvmop.so
 
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
