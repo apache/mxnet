@@ -265,15 +265,29 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     # TODO: figure out why int32 doesn't work here
     sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("float")
 
-    net_output = net(data, sequence_length=sequence_length).asnumpy()
-    ref_net_output = ref_net(data, sequence_length).asnumpy()
+    with autograd.record():
+        net_output = net(data.copy(), sequence_length=sequence_length.copy())
+        ref_net_output = ref_net(data.copy(), sequence_length.copy())
+
+    net_output_np = net_output.asnumpy()
+    ref_net_output_np = ref_net_output.asnumpy()
     sequence_length_np = sequence_length.asnumpy().astype("int32")
 
     # TODO: test state return value as well output
     # Only compare the valid sections for each batch entry
     for b in range(batch_size):
-        assert_allclose(net_output[:sequence_length_np[b], b], ref_net_output[:sequence_length_np[b], b])
+        assert_allclose(net_output_np[:sequence_length_np[b], b], ref_net_output_np[:sequence_length_np[b], b])
 
+    # Now test backward
+    net_output.backward()
+    ref_net_output.backward()
+
+    for k in weights:
+        net_grad = net_params[k].grad()
+        ref_net_grad = ref_net_params[k.replace('l0', 'l0l0').replace('r0', 'r0l0')].grad()
+        sys.stderr.write("checking gradient for {}\n".format(k))
+        assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
+                            rtol=1e-2, atol=1e-2)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
