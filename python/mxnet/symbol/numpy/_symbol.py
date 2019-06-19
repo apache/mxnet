@@ -531,13 +531,9 @@ class _Symbol(Symbol):
         """
         return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
-    def max(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`max`.
-
-        The arguments are the same as for :py:func:`max`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the maximum along a given axis."""
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=None)
 
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.

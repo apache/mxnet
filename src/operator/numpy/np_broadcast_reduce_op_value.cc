@@ -140,7 +140,7 @@ inline bool NumpyMaxType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_np_max)
-.describe(R"code()code" ADD_FILELINE)
+.add_alias("_np_amax")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyMaxParam>)
@@ -151,7 +151,6 @@ NNVM_REGISTER_OP(_np_max)
     return std::vector<std::string>{"a"};
   })
 .add_argument("a", "NDArray-or-Symbol", "The input")
-<<<<<<< HEAD
 .add_arguments(NumpyMaxParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyMaxCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_max"});

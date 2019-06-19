@@ -864,7 +864,7 @@ class ndarray(NDArray):
 
     def prod(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the product of the array elements over the given axis."""
-        return _mx_nd_np.prod(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+        return _mx_np_op.prod(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.
@@ -880,15 +880,11 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`mean`, with
         this array as data.
         """
-        return _mx_nd_np.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+        return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
-    def max(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`max`.
-
-        The arguments are the same as for :py:func:`max`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the maximum along a given axis."""
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=None)
 
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
