@@ -38,9 +38,9 @@
 
 using namespace mxnet::cpp;
 
-static mx_float DEFAULT_MEAN_R = 123.675;
-static mx_float DEFAULT_MEAN_G = 116.28;
-static mx_float DEFAULT_MEAN_B = 103.53;
+static mx_float DEFAULT_MEAN_R = 0.485;
+static mx_float DEFAULT_MEAN_G = 0.456;
+static mx_float DEFAULT_MEAN_B = 0.406;
 
 static mx_float DEFAULT_STD_R = 0.229;
 static mx_float DEFAULT_STD_G = 0.224;
