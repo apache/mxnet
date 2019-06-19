@@ -38,8 +38,8 @@ To complete this tutorial, you will need:
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon.model_zoo import vision
-from mxnet.gluon.contrib.estimator import estimator, event_handler
-from mxnet.gluon.contrib.estimator.event_handler import EventHandler
+from mxnet.gluon.contrib.estimator import estimator
+from mxnet.gluon.contrib.estimator.event_handler import TrainBegin, TrainEnd, EpochEnd, CheckpointHandler
 
 gpu_count = mx.context.num_gpus()
 ctx = [mx.gpu(i) for i in range(gpu_count)] if gpu_count > 0 else mx.cpu()
@@ -155,33 +155,47 @@ est.fit(train_data=train_data_loader,
 
 Fit API is also customizable with several `Event Handlers` which give a fine grained control over the steps in training and exposes callback methods that provide control over the stages involved in training. Available callback methods are: `train_begin`, `train_end`, `batch_begin`, `batch_end`, `epoch_begin` and `epoch_end`.
 
-One can use built-in event handlers such as `LoggingHandler`, `CheckpointHandler` or `EarlyStoppingHandler` to log and save the model at certain timesteps during training and stopping the training when the model's performance plateaus. One can also create a custom handler by inheriting [`EventHandler`](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/estimator/event_handler.py#L31).
+One can use built-in event handlers such as `LoggingHandler`, `CheckpointHandler` or `EarlyStoppingHandler` to log and save the model at certain timesteps during training and stopping the training when the model's performance plateaus. 
+There are also some default utility handlers that will be added to your estimator by default. For example, `StoppingHandler` is used to control when the training ends based on number of epochs or number of batches trained. 
+`MetricHandler` is used to calculate training metrics at end of each batch and epoch. 
+`ValidationHandler` is used to validate your model on test data at epoch end and  calculate validation metrics.
+One can create these utility handlers with different configurations and pass to estimator, it will override the default handler configuration.
+One can also create a custom handler by inheriting one or multiple of 
+[base event handlers](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/estimator/event_handler.py#L32)
+ including: `TrainBegin`, `TrainEnd`, `EpochBegin`, `EpochEnd`, `BatchBegin`, `BatchEnd`.
+
 
 ### Custom Event Handler
 
-Here we will showcase an example to create a custom event handler by inheriting from `EventHandler` class. Our custom event handler is a simple one, that just records the loss values at the end of every epoch in our training phase.
+Here we will showcase an example to create a custom event handler by inheriting from a few base handler class. 
+Our custom event handler is a simple one, that just record the loss values at the end of every epoch in our training phase.
 
-Note : The `EventHandler` holds a reference to the `Estimator` object. The Estimator object reference is updated when the Fit API is called.
-
+Note : For each of the method, the Estimator object is passed along so you can access train metrics.
 
 ```python
-class LossRecordHandler(EventHandler):
+class LossRecordHandler(TrainBegin, TrainEnd, EpochEnd):
     def __init__(self):
         super(LossRecordHandler, self).__init__()
-        self.losses = []
-    
-    def train_begin(self):
-        print ("Training begin")
+        self.loss_history = {}
 
-    def train_end(self):
+    def train_begin(self, estimator, *args, **kwargs):
+        print("Training begin")
+
+    def train_end(self, estimator, *args, **kwargs):
         # Print all the losses at the end of training
-        for i, loss in enumerate(self.losses):
-            print ("Epoch {}, loss {}".format(i, loss)) 
+        print("Training ended")
+        for loss_name in self.loss_history:
+            for i, loss_val in enumerate(self.loss_history[loss_name]):
+                print("Epoch: {}, Loss name: {}, Loss value: {}".format(i, loss_name, loss_val))
 
-    def epoch_end(self):
-        loss_name = self.estimator.loss[0].name # Access the loss from estimator
-        loss_val = self.estimator.train_stats['train_'+ loss_name] # Get the loss value at current epoch
-        self.losses.append(loss_val) # Append it to losses
+    def epoch_end(self, estimator, *args, **kwargs):
+        for metric in estimator.train_metrics:
+            # look for train Loss in training metrics
+            # we wrapped loss value as a metric to record it
+            if isinstance(metric, mx.metric.Loss):
+                loss_name, loss_val = metric.get()
+                # append loss value for this epoch
+                self.loss_history.setdefault(loss_name, []).append(loss_val)
 ```
 
 
@@ -204,10 +218,10 @@ est = estimator.Estimator(net=resnet_18_v1,
                           context=ctx)
 
 # Define the handlers, let's say in built Checkpointhandler
-checkpoint_handler = event_handler.CheckpointHandler(filepath='./my_best_model.params',
-                                                     monitor='val_accuracy', # Monitors a metric
-                                                     save_best_only=True) # Save the best model in terms of 
-                                                                         # training accuracy
+checkpoint_handler = CheckpointHandler(model_dir='./',
+                                       model_prefix='my_model',
+                                       monitor=train_acc,  # Monitors a metric
+                                       save_best=True)  # Save the best model in terms of
 # Let's instantiate another handler which we defined above 
 loss_record_handler = LossRecordHandler()
 # Magic line
@@ -234,8 +248,8 @@ You can load the saved model, by using ```load_parameters``` API in Gluon. For m
 
 
 ```python
-resnet_18_v1 = vision.resnet18_v1(pretrained=False, classes = 10)
-resnet_18_v1.load_parameters('./my_best_model.params', ctx=ctx)
+resnet_18_v1 = vision.resnet18_v1(pretrained=False, classes=10)
+resnet_18_v1.load_parameters('./my_model-best.params', ctx=ctx)
 ```
 
 ## Summary
