@@ -21,9 +21,10 @@ import numpy as _np
 import mxnet as mx
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
+from mxnet.base import MXNetError
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient
-from common import with_seed
+from common import assertRaises, with_seed
 import random
 
 
@@ -572,6 +573,12 @@ def test_np_eye():
         (0, 3),
         (0, 0, -2)
     ]
+    exception_configs = [
+        -1,
+        -1000,
+        (-2, None),
+        (1, -1)
+    ]
     dtypes = ['int32', 'float16', 'float32', 'float64', None]
     for config in configs:
         for dtype in dtypes:
@@ -582,7 +589,12 @@ def test_np_eye():
                 mx_ret = np.eye(config, dtype=dtype)
                 np_ret = _np.eye(config, dtype=dtype)
             assert same(mx_ret.asnumpy(), np_ret)
-
+    # check for exception input
+    for config in exception_configs:
+        if isinstance(config, tuple):
+            assertRaises(MXNetError, np.eye, *config)
+        else:
+            assertRaises(MXNetError, np.eye, config)
     @npx.use_np
     class TestEye(HybridBlock):
         def __init__(self, N, M=None, k=0, dtype=None):

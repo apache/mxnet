@@ -87,8 +87,11 @@ inline bool NumpyEyeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   nnvm::dim_t M = param.M.has_value() ? param.M.value() : param.N;
+  CHECK(param.N >= 0) << "negative dimensions are not allowed. N is " << param.N;
+  CHECK(M >= 0) << "negative dimensions are not allowed. M is " << M;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape2(param.N, M));
-  return true;
+
+  return out_attrs->at(0).ndim() != 0U;
 }
 
 template<typename xpu>
