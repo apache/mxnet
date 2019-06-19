@@ -216,11 +216,11 @@ class _Symbol(Symbol):
     def dot(self, b, out=None):
         return _mx_np_op.dot(self, b, out=out)
 
-    def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
+    def reshape(self, *args, order='C'):  # pylint: disable=arguments-differ
         if order != 'C':
             raise NotImplementedError('only supports order=\'C\', while received {}'
                                       .format(str(order)))
-        return _mx_np_op.reshape(self, newshape=shape, order=order)
+        return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
         return _mx_np_op.argmax(self, axis, out)
@@ -497,13 +497,9 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute nansum')
 
-    def prod(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`prod`.
-
-        The arguments are the same as for :py:func:`prod`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def prod(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the product of the array elements over the given axis."""
+        return _mx_np_op.prod(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.

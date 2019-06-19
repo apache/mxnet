@@ -570,12 +570,12 @@ class ndarray(NDArray):
     def dot(self, b, out=None):
         return _mx_np_op.dot(self, b, out=out)
 
-    def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
+    def reshape(self, *args, order='C'):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape."""
         if order != 'C':
             raise NotImplementedError('reshape only supports C-order,'
                                       ' while received {}'.format(order))
-        return _mx_np_op.reshape(self, newshape=shape, order=order)
+        return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -849,13 +849,9 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute nansum')
 
-    def prod(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`prod`.
-
-        The arguments are the same as for :py:func:`prod`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def prod(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the product of the array elements over the given axis."""
+        return _mx_nd_np.prod(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.

@@ -289,10 +289,10 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu, typename OP>
 void NumpyMaxBackward(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<TBlob>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<TBlob>& outputs) {
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
@@ -303,6 +303,24 @@ void NumpyMaxBackward(const nnvm::NodeAttrs& attrs,
     small = NumpyReduceAxesShapeImpl(outputs[0].shape_, param.axis, true);
   }
   ReduceAxesBackwardUseInOutImpl<xpu, OP, false>(ctx, small, inputs, req, outputs);
+}
+
+template<typename xpu, typename OP, bool normalize = false>
+inline void NumpyReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
+                                            const OpContext& ctx,
+                                            const std::vector<TBlob>& inputs,
+                                            const std::vector<OpReqType>& req,
+                                            const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(outputs[0].shape_, param.axis, true);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
 }
 
 }  // namespace op

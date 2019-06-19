@@ -103,7 +103,6 @@ inline bool NumpyMeanType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_np_mean)
-.describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)
@@ -152,12 +151,9 @@ NNVM_REGISTER_OP(_np_max)
     return std::vector<std::string>{"a"};
   })
 .add_argument("a", "NDArray-or-Symbol", "The input")
+<<<<<<< HEAD
 .add_arguments(NumpyMaxParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyMaxCompute<cpu, mshadow::red::maximum>)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_max"});
 
 NNVM_REGISTER_OP(_backward_np_max)
@@ -166,6 +162,27 @@ NNVM_REGISTER_OP(_backward_np_max)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_num_inputs(3)
 .set_attr<FCompute>("FCompute<cpu>", NumpyMaxBackward<cpu, mshadow_op::eq>);
+
+NNVM_REGISTER_OP(_np_prod)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyReduceAxesParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpySumType)
+.add_arguments(NumpyReduceAxesParam::__FIELDS__())
+.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::product, true>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_prod"});
+
+NNVM_REGISTER_OP(_backward_np_prod)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyReduceAxesParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBackwardUseInOut<cpu, mshadow_op::rdiv>);
 
 }  // namespace op
 }  // namespace mxnet

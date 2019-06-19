@@ -1060,6 +1060,58 @@ def test_np_tile():
             assert same(ret_mx.asnumpy(), ret_np)
 
 
+@with_seed()
+@npx.use_np_shape
+def test_np_prod():
+    class TestProd(HybridBlock):
+        def __init__(self, axis=None, dtype=None, keepdims=False):
+            super(TestProd, self).__init__()
+            self._axis = axis
+            self._dtype = dtype
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.prod(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+
+    in_data_dim = random.choice([3, 4])
+    shape = rand_shape_nd(in_data_dim, dim=3)
+    for hybridize in [False, True]:
+        for keepdims in [True, False]:
+            for axis in ([i for i in range(in_data_dim)] + [(), None]):
+                for itype in ['float32', 'float64']:
+                    for dtype in ['float32', 'float64']:
+                        # test gluon
+                        test_prod = TestProd(axis=axis, dtype=dtype, keepdims=keepdims)
+                        if hybridize:
+                            test_prod.hybridize()
+                        x = np.random.uniform(-2.0, 2.0, size=shape, dtype=itype)
+                        x.attach_grad()
+                        print(x.grad.dtype)
+                        expected_ret = _np.prod(x.asnumpy(), axis=axis, keepdims=keepdims)
+                        expected_ret = expected_ret.astype(dtype)
+                        with mx.autograd.record():
+                            y = test_prod(x)
+                        assert y.shape == expected_ret.shape
+                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
+                        y.backward()
+                        # use keepdims=True so that broadcast divide can be used to calculate
+                        # grad of input
+                        expected_ret = _np.prod(x.asnumpy(), axis=axis, keepdims=True)
+                        assert_almost_equal(x.grad.asnumpy(), expected_ret / x.asnumpy(), rtol=1e-3, atol=1e-3)
+
+                        # test numeric
+                        if itype == 'float32' and dtype == 'float32':
+                            x_sym = mx.sym.Variable("x").as_np_ndarray()
+                            mx_sym = mx.sym.np.prod(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
+                                                   numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
+
+                        # test imperative
+                        mx_out = np.prod(x, axis=axis, dtype=dtype, keepdims=keepdims)
+                        np_out = _np.prod(x.asnumpy(), axis=axis, keepdims=keepdims).astype(dtype)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
