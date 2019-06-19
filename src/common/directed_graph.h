@@ -68,8 +68,15 @@ class DirectedGraph {
     nodes.reserve(num_nodes);
   }
 
-  void addNode(const Node& node_attrs) {
+  NodeKey_t addNode(const Node& node_attrs) {
     nodes.emplace_back(node_attrs);
+    return nodes.size() - 1;
+  }
+
+  template <typename... Args>
+  NodeKey_t addNode(Args&&... args) {
+    nodes.emplace_back(std::forward<Args>(args)...);
+    return nodes.size() - 1;
   }
 
   Node& node(NodeKey_t node_key) {

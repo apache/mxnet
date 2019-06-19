@@ -25,14 +25,25 @@
  */
 
 #include "./graph_dump.h"
+#include "common/directed_graph.h"
 #include <vector>
 #include <string>
 
 using std::vector;
 using std::string;
 using namespace std;
+using common::graph::DirectedGraph;
+
+using namespace nnvm;
+
+namespace {
+  struct Node {
+    NodePtr node_ptr_;
+  };
+}  // end anon ns
 
 namespace nnvm {
+
 
 std::string GraphDump(const Graph& graph) {
     vector<NodePtr> topo_order;
@@ -40,7 +51,10 @@ std::string GraphDump(const Graph& graph) {
         //cout << "Node: " << nodePtr.get() << " " << nodePtr->attrs.name << endl;
         topo_order.push_back(nodePtr);
     });
-
+    DirectedGraph<NodePtr> directed_graph;
+    for (const auto node_ptr : topo_order) {
+      directed_graph.addNode(node_ptr);
+    }
     return "";
 }
 
