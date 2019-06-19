@@ -571,11 +571,24 @@ class ndarray(NDArray):
         return _mx_np_op.dot(self, b, out=out)
 
     def reshape(self, *args, order='C'):  # pylint: disable=arguments-differ
-        """Returns an array containing the same data with a new shape."""
+        """Returns an array containing the same data with a new shape.
+
+        Notes
+        -----
+        Unlike the free function `numpy.reshape`, this method on `ndarray` allows
+        the elements of the shape parameter to be passed in as separate arguments.
+        For example, ``a.reshape(10, 11)`` is equivalent to
+        ``a.reshape((10, 11))``.
+        """
         if order != 'C':
             raise NotImplementedError('reshape only supports C-order,'
                                       ' while received {}'.format(order))
-        return _mx_np_op.reshape(self, newshape=args, order=order)
+        if len(args) == 0:
+            raise TypeError('reshape() takes exactly 1 argument (0 given)')
+        if len(args) == 1 and isinstance(args[0], tuple):
+            return _mx_np_op.reshape(self, newshape=args[0], order=order)
+        else:
+            return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.

@@ -356,7 +356,7 @@ def test_npx_sigmoid():
 def test_np_reshape():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
-    ret = data.reshape(shape=())
+    ret = data.reshape(())
     assert type(ret) == mx.sym.np._Symbol
 
     data = np.ones((1, 1, 1))
@@ -365,6 +365,8 @@ def test_np_reshape():
     ret = np.reshape(ret, (1, 1, 1, 1))
     assert ret.shape == (1, 1, 1, 1)
     assert type(ret) == np.ndarray
+    ret2 = ret.reshape(1, 1, -1)
+    assert ret2.shape == (1, 1, 1)
 
 
 @with_seed()
