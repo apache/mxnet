@@ -41,6 +41,11 @@ using namespace mxnet::cpp;
 static mx_float DEFAULT_MEAN_R = 123.675;
 static mx_float DEFAULT_MEAN_G = 116.28;
 static mx_float DEFAULT_MEAN_B = 103.53;
+
+static mx_float DEFAULT_STD_R = 0.229;
+static mx_float DEFAULT_STD_G = 0.224;
+static mx_float DEFAULT_STD_B = 0.225;
+
 /*
  * class Predictor
  *
@@ -193,9 +198,8 @@ void Predictor::LoadSynset(const std::string& synset_file) {
     std::cerr << "Error opening synset file " << synset_file << std::endl;
     throw std::runtime_error("Error in opening the synset file.");
   }
-  std::string synset, lemma;
-  while (fi >> synset) {
-    getline(fi, lemma);
+  std::string lemma;
+  while (getline(fi, lemma)) {
     output_labels.push_back(lemma);
   }
   fi.close();
@@ -225,24 +229,34 @@ void Predictor::LoadMeanImageData() {
  */
 void Predictor::LoadDefaultMeanImageData() {
   LG << "Loading the default mean image data";
-  std::vector<float> array;
+  std::vector<float> array_means;
+  std::vector<float> array_stds;
   /*resize pictures to (224, 224) according to the pretrained model*/
   int height = input_shape[2];
   int width = input_shape[3];
   int channels = input_shape[1];
+  /* default for mean*/
   std::vector<mx_float> default_means;
   default_means.push_back(DEFAULT_MEAN_R);
   default_means.push_back(DEFAULT_MEAN_G);
   default_means.push_back(DEFAULT_MEAN_B);
+  /* default for std*/
+  std::vector<mx_float> default_stds;
+  default_stds.push_back(DEFAULT_STD_R);
+  default_stds.push_back(DEFAULT_STD_G);
+  default_stds.push_back(DEFAULT_STD_B); 
   for (int c = 0; c < channels; ++c) {
     for (int i = 0; i < height; ++i) {
       for (int j = 0; j < width; ++j) {
-        array.push_back(default_means[c]);
+        array_means.push_back(default_means[c]);
+        array_stds.push_back(default_stds[c]);
       }
     }
   }
   mean_image_data = NDArray(input_shape, global_ctx, false);
-  mean_image_data.SyncCopyFromCPU(array.data(), input_shape.Size());
+  mean_image_data.SyncCopyFromCPU(array_means.data(), input_shape.Size());
+  std_dev_image_data = NDArray(input_shape, global_ctx, false);
+  std_dev_image_data.SyncCopyFromCPU(array_stds.data(), input_shape.Size());
 }
 
 
@@ -285,7 +299,9 @@ void Predictor::PredictImage(const std::string& image_file) {
   NDArray image_data = LoadInputImage(image_file);
 
   // Normalize the image
-  image_data.Slice(0, 1) -= mean_image_data;
+  image_data.Slice(0, 1) /= 255.0;
+  image_data -= mean_image_data;
+  image_data /= std_dev_image_data;
 
   LG << "Running the forward pass on model to predict the image";
   /*

@@ -226,7 +226,7 @@ void Predictor::PredictImage(const std::string& image_file) {
   auto predicted = array.ArgmaxChannel();
   NDArray::WaitAll();
 
-  int best_idx = predicted.At(0, 0);
+  int best_idx = predicted.At(0);
   float best_accuracy = array.At(0, best_idx);
 
   if (output_labels.empty()) {
