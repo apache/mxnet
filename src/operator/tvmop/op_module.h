@@ -1,5 +1,5 @@
-#ifndef MXNET_TVM_OP_MODULE_H
-#define MXNET_TVM_OP_MODULE_H
+#ifndef MXNET_OP_MODULE_H
+#define MXNET_OP_MODULE_H
 
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
@@ -30,4 +30,4 @@ class TVMOpModule {
 }  // namespace op
 }  // namespace mxnet
 
-#endif // MXNET_TVM_OP_MODULE_H
+#endif //MXNET_OP_MODULE_H

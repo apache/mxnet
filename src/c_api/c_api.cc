@@ -48,7 +48,7 @@
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
-#include "../operator/tvmop/tvm_op_module.h"
+#include "../operator/tvmop/op_module.h"
 #include "../common/utils.h"
 
 using namespace mxnet;

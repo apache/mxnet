@@ -1,7 +1,7 @@
 #include <tvm/runtime/packed_func.h>
 #include <tvm/runtime/registry.h>
 #include <tvm/runtime/c_runtime_api.h>
-#include "tvm_op_module.h"
+#include "op_module.h"
 
 using namespace tvm::runtime;
 
@@ -37,14 +37,18 @@ void TVMOpModule::Call(const std::string &func_name,
 
   int dev_type = (ctx.run_ctx.ctx.dev_type == mxnet::Context::DeviceType::kGPU) ? kDLGPU : kDLCPU;
   int dev_id = ctx.run_ctx.ctx.dev_id;
+#if MXNET_USE_CUDA
   if (dev_type == kDLGPU) {
     void *stream = static_cast<void *>(ctx.run_ctx.get_stream<mxnet::gpu>()->stream_);
     TVMSetStream(dev_type, dev_id, stream);
   }
+#endif
   func.CallPacked(tvm_args, &rv);
+#if MXNET_USE_CUDA
   if (dev_type == kDLGPU) {
     TVMSetStream(dev_type, dev_id, nullptr);
   }
+#endif
 }
 
 }

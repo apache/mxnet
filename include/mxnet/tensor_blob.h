@@ -406,7 +406,6 @@ class TBlob {
       std::vector<dim_t> strides(shape_.ndim(), 1);
       for (int i = shape_.ndim() - 2; i >= 0; --i) {
         strides[i] = strides[i + 1] * shape_[i + 1];
-        LOG(INFO) << strides[i];
       }
       strides_ = strides;
     }

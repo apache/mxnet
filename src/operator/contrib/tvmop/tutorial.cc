@@ -2,8 +2,8 @@
 #include <tvm/runtime/registry.h>
 #include <tvm/runtime/c_runtime_api.h>
 #include <mxnet/base.h>
-#include "../tvmop/tvm_op_module.h"
-#include "../tensor/elemwise_binary_op.h"
+#include "../../tvmop/op_module.h"
+#include "../../tensor/elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
