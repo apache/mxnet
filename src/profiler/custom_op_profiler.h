@@ -68,6 +68,7 @@ class CustomOpProfiler {
   void OnCustomEnd() {
     const Tid tid = std::this_thread::get_id();
     std::lock_guard<std::mutex> lock(mutex_);
+    // Theoretically this check will never fail if we use onBegin and onEnd in pairs
     CHECK(tasks_.find(tid) != tasks_.end());
     tasks_[tid]->stop();
     tasks_.erase(tid);
@@ -91,10 +92,8 @@ class CustomOpProfiler {
     if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
       return op_type_ptr;
     }
-    std::string op_type = std::string(op_type_ptr);
-    std::string name = tid_to_op_type_[tid] + "::" + op_type;
-    display_names_.insert(name);
-    return display_names_.find(name)->c_str();
+    std::string name = tid_to_op_type_[tid] + "::" + std::string(op_type_ptr);
+    return display_names_.insert(name).first->c_str();
   }
 
  private:

@@ -1178,9 +1178,9 @@ struct ProfileOperator : public ProfileEvent {
     SetCategories(domain_.name());
 =======
       , attributes_(attributes)
-      , profiling_operator_(strcmp(name, "Dummy_Wait"))
+      , profiling_operator_(strcmp(name, "Dummy_Wait") && strcmp(name, "Custom"))
       , profiling_task_(strcmp(name, "Dummy_Wait") && strcmp(name, "Custom")) {
-    if (std::string(name).find("::") != std::string::npos) {
+    if (strstr(name, "::")) {
       as_task_.setDomain(&custom_op_domain);
       SetCategories(custom_op_domain.name());
     } else {

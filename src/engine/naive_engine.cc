@@ -164,8 +164,8 @@ class NaiveEngine final : public Engine {
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
     // GenerateDisplayName() will return a pointer to the correct name of the operator
     const char* display_name = profiling ?
-                              profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name)
-                              : opr_name;
+                               profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) :
+                               opr_name;
     if (profiling) {
       opr = NewOperator(exec_fun, const_vars, mutable_vars,
                         prop, display_name)->Cast<NaiveOpr>();
