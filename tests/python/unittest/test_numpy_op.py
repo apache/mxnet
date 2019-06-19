@@ -489,6 +489,60 @@ def test_np_unary_funcs():
 
 @with_seed()
 @npx.use_np_shape
+def test_np_bitwise_or():
+    @npx.use_np_shape
+    class TestBitwiseOr(HybridBlock):
+        def __init__(self):
+            super(TestBitwiseOr, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.bitwise_or(a, b)
+
+    a, b = mx.sym.Variable("a"), mx.sym.Variable("b")
+    ret = mx.sym.np.bitwise_or([a.as_np_ndarray(), b.as_np_ndarray()])
+    assert type(ret) == mx.sym.np._Symbol
+
+    for shape_a, shape_b in [[(1,), (1,)],  # single elements
+                             [(4, 5), (4, 5)],  # normal case
+                             [(3, 2), (3, 2)],  # tall matrices
+                             ((), ()),  # scalar only
+                             [(3, 0, 2), (3, 0, 2)],  # zero-dim
+                             ((3, 4, 5), (4, 5)),  # broadcasting
+                             ((3, 4, 5), ()),  # scalar broadcasting
+                             [(4, 3), (4, 1)],  # single broadcasting
+                             ((3, 4, 5), (3, 1, 5))  # single broadcasting in the middle
+                             ]:
+        for hybridize in [True, False]:
+            test_bitwise_or = TestBitwiseOr()
+            if hybridize:
+                test_bitwise_or.hybridize()
+            np_a = _np.random.uniform(-1.0, 1.0, shape_a).astype(_np.int32)  # todo: change range
+            np_b = _np.random.uniform(-1.0, 1.0, shape_b).astype(_np.int32)  # todo: change range
+
+            # test forward
+            mx_a = np.array(np_a)
+            mx_a.attach_grad()
+            mx_b = np.array(np_b)
+            mx_b.attach_grad()
+            expected_ret = _np.bitwise_or(np_a, np_b)
+            with mx.autograd.record():
+                y = test_bitwise_or(mx_a, mx_b)
+            assert y.shape == expected_ret.shape  # test shape inference
+            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
+
+            # test grads
+            y.backward()
+            assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape_a), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(mx_b.grad.asnumpy(), _np.zeros(shape_b), rtol=1e-3, atol=1e-5)
+
+            # test imperative
+            np_out = _np.bitwise_or(np_a, np_b)
+            mx_out = np.bitwise_or(mx_a, mx_b)
+            assert same(mx_out.asnumpy(), np_out)
+
+
+@with_seed()
+@npx.use_np_shape
 def test_np_stack():
     @npx.use_np_shape
     class TestStack(HybridBlock):
