@@ -1080,6 +1080,53 @@ def test_np_stack():
                 assert same(mx_out.asnumpy(), np_out)
 
 
+@with_seed()
+@use_np
+def test_np_bitwise_and():
+    class TestBitwiseAnd(HybridBlock):
+        def __init__(self):
+            super(TestBitwiseAnd, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.bitwise_and(x1, x2)
+
+    shapes = [
+        ((3, 1), (3, 1)),
+        ((3, 1, 2), (3, 1, 2)),
+        ((1, ),(1, )),
+        ((3, 0), (3, 0)),  # zero-size shape
+        ((0, 1), (0, 1)),  # zero-size shape
+        ((2, 0, 2), (2, 0, 2)),  # zero-size shape
+        ((1, ), (3, )),  # broadcast
+        ((2, 3), (2, 1)),  # broadcast
+        ((1, 3), (2, 3)),  # broadcast
+        ((1, 3), (2, 0, 3)),  # broadcast to zero-size shape
+        ((1, 0, 1), (3, 0, 1)), # broadcast of zero-size shape
+        ((), ()),  # zero-dim shape
+    ]
+
+    for hybridize in [True, False]:
+        for shape in shapes:
+            x1_shape, x2_shape = shape
+
+            test_bitwise_and = TestBitwiseAnd()
+            if hybridize:
+                test_bitwise_and.hybridize()
+
+            x1 = rand_ndarray(x1_shape, dtype=_np.dtype(int)).as_np_ndarray()
+            x2 = rand_ndarray(x2_shape, dtype=_np.dtype(int)).as_np_ndarray()
+
+            np_out = _np.bitwise_and(x1.asnumpy(), x2.asnumpy())
+            with mx.autograd.record():
+                mx_out = test_bitwise_and(x1, x2)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            mx_out = np.bitwise_and(x1, x2)
+            np_out = _np.bitwise_and(x1.asnumpy(), x2.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
