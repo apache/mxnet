@@ -580,20 +580,21 @@ void ArgSort(const nnvm::NodeAttrs& attrs,
              const std::vector<OpReqType>& req,
              const std::vector<TBlob>& outputs) {
   const ArgSortParam& param = nnvm::get<ArgSortParam>(attrs.parsed);
-  if (inputs[0].shape_.ndim() == 0){
+  if (inputs[0].shape_.ndim() == 0) {
 // Scalar tensor only accept axis of value 0, -1 or None
-    CHECK(!static_cast<bool>(param.axis) || param.axis.value() == -1 || param.axis.value() == 0) << "Axis can only be -1 or 0 for scalor tensor";
+    CHECK(!static_cast<bool>(param.axis) || param.axis.value() == -1 || param.axis.value() == 0)
+    << "Axis can only be -1 or 0 for scalor tensor";
     MSHADOW_TYPE_SWITCH(param.dtype, DType, {
       Tensor<xpu, 1, DType> outdata = outputs[0].get_with_shape<xpu, 1, DType>(Shape1(1));
-      ASSIGN_DISPATCH(outdata, OpReqType::kWriteTo,0);
+      ASSIGN_DISPATCH(outdata, OpReqType::kWriteTo, 0);
     });
   } else if (inputs[0].shape_.Size() == 0) {
-    if(static_cast<bool>(param.axis)){
+    if (static_cast<bool>(param.axis)) {
       int axis = param.axis.value();
-      if(axis < 0) axis += inputs[0].shape_.ndim();
-      CHECK(axis >=0 && axis < inputs[0].shape_.ndim()) << "Axis must be within the range of input tensor's dimension";  
+      if (axis < 0) axis += inputs[0].shape_.ndim();
+      CHECK(axis >=0 && axis < inputs[0].shape_.ndim())
+      << "Axis must be within the range of input tensor's dimension";
     }
-    
   } else {
     TopKParam topk_param;
     topk_param.axis = param.axis;
@@ -846,10 +847,10 @@ inline bool ArgSortShape(const nnvm::NodeAttrs& attrs,
   if (in_shape.ndim() == 0) {
     mxnet::TShape target_shape({1});
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
-  }else if(!static_cast<bool>(param.axis)) {
-    mxnet::TShape target_shape(Shape1(in_shape.Size())); 
+  } else if (!static_cast<bool>(param.axis)) {
+    mxnet::TShape target_shape(Shape1(in_shape.Size()));
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
-  }else{
+  } else {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_shape);
   }
   return true;
