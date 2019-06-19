@@ -149,7 +149,8 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
         if (source->is_variable()) {
             if (load_index[i]) {
               const auto& var_name = source->attrs.name;
-              code += "const auto vec_" + var_name + " = load_index<nvec>(" + var_name + ", offset);\n";
+              code += "const auto vec_" + var_name + " = load_index<nvec>(" + \
+                       var_name + ", offset);\n";
               variables[{i, 0}] = var_name;
             }
             CHECK_EQ(outputs[i], 1);
@@ -180,7 +181,8 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
   int counter = 0;
   for (const auto& entry : g.outputs()) {
     const auto var_name = "output" + std::to_string(counter);
-    code += "VectorType<remove_pointer<decltype(" + var_name + ")>::type, nvec> vec_output" + std::to_string(counter) + ";\n";
+    code += "VectorType<remove_pointer<decltype(" + var_name + \
+            ")>::type, nvec> vec_output" + std::to_string(counter) + ";\n";
     ++counter;
   }
 
@@ -324,7 +326,6 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
   for (const auto& entry : g.outputs()) {
     const std::string& var = variables[{entry.node_id, entry.index}];
     const auto var_name = "output" + std::to_string(counter);
-    //code += "vec_" + var_name + ".x[j] = store<std::remove_pointer<decltype(" + var_name + ")>::type>("+ var +");\n";
     code += "vec_" + var_name + ".x[j] = store("+ var +", " + var_name + ");\n";
     ++counter;
   }
@@ -417,7 +418,8 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
       std::string dtype_var = "DType" + std::to_string(i);
       std::string dim_var = "ndim" + std::to_string(i);
       aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
-      aux_code = "static const int " + dim_var + " = " + std::to_string(in_ndims[i]) + ";\n" + aux_code;
+      aux_code = "static const int " + dim_var + " = " + \
+                  std::to_string(in_ndims[i]) + ";\n" + aux_code;
       tensor_params += dtype_var + "* " +input_names[i];
       kernel_params += " const Strides<" + dim_var + "> " + input_names[i]+"_strides";
       ++i;
