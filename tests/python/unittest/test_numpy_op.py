@@ -1061,6 +1061,50 @@ def test_np_tile():
             ret_mx = net(data_mx)
             assert same(ret_mx.asnumpy(), ret_np)
 
+@with_seed()
+def test_np_bitwise_and():
+    @npx.use_np_shape
+    class TestBitwiseAnd(HybridBlock):
+        def __init__(self):
+            super(TestBitwiseAnd, self).__init__()
+
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.bitwise_and(x1, x2)
+
+    # test_shapes, remember to include zero-dim shape and zero-size shapes
+    shapes = [((3, 1), (3, 1)),
+              ((3, 0), (3, 0)),
+              ((1, ), (1, )),
+             ]  # argument??
+
+    for hybridize in [True, False]:
+        for shape in shapes:
+            x1, x2 = shape
+            # More for-loops for iterating through all other arguments
+            # 1 extra for-loop for iterating through data types
+            test_bitwise_and = TestBitwiseAnd()
+            if hybridize:
+                test_bitwise_and.hybridize()
+            x = rand_ndarray(shape)
+            x.attach_grad()
+            np_out = _np.bitwise_and(x1, x2)
+            with mx.autograd.record():
+                mx_out = test_bitwise_and(x) # symbolic
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            # mx_out.backward()
+            # # Code to get reference backward value
+            # # np_backward = ...
+            # assert_almost_equal(x.grad.asnumpy(), np_backward, atol=1e-3, rtol=1e-5)
+
+            # Test imperative once again
+            mx_out = np.bitwise_and(x1, x2) # imperative
+            np_out = _np.bitwise_and(x1, x2)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
 
 @with_seed()
 @npx.use_np_shape
