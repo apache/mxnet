@@ -23,6 +23,7 @@
  * \brief CPU Implementation of elementwise bitwise add.
  */
 
+#include <mxnet/base.h>
 #include "./np_bitwise_and_op-inl.h"
 
 namespace mxnet {
