@@ -581,7 +581,7 @@ class ndarray(NDArray):
         ``a.reshape((10, 11))``.
         """
         if order != 'C':
-            raise NotImplementedError('reshape only supports C-order,'
+            raise NotImplementedError('only supports C-order,'
                                       ' while received {}'.format(order))
         if len(args) == 0:
             raise TypeError('reshape() takes exactly 1 argument (0 given)')
@@ -766,13 +766,9 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute abs')
 
-    def flatten(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`flatten`.
-
-        The arguments are the same as for :py:func:`flatten`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def flatten(self, order='C'):  # pylint: disable=arguments-differ
+        """Return a copy of the array collapsed into one dimension."""
+        return self.reshape(-1, order=order)
 
     def shape_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`shape_array`.

@@ -1114,6 +1114,19 @@ def test_np_prod():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@npx.use_np
+def test_np_flatten():
+    # TODO(junwu): Add more test cases
+    shapes = [(), (2, 0, 1), (3, 4, 5), 6]
+    for shape in shapes:
+        a = _np.random.uniform(size=shape).astype('float32')
+        a_mx = np.array(a, dtype=a.dtype)
+        expected_ret = a.flatten()
+        ret_mx = a_mx.flatten()
+        assert same(expected_ret, ret_mx.asnumpy())
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

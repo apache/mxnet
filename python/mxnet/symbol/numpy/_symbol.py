@@ -415,13 +415,9 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute abs')
 
-    def flatten(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`flatten`.
-
-        The arguments are the same as for :py:func:`flatten`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def flatten(self, order='C'):  # pylint: disable=arguments-differ
+        """Return a copy of the array collapsed into one dimension."""
+        return self.reshape(-1, order=order)
 
     def shape_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`shape_array`.
