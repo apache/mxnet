@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_np_bitwise_and)
-.set_attr<FCompute>("FCompute<gpu>", BitwiseAndOpForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<cpu, bitwise_and_forward>);
 
 }  // namespace op
 }  // namespace mxnet

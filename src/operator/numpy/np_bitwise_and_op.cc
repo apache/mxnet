@@ -31,22 +31,20 @@ namespace op {
 NNVM_REGISTER_OP(_np_bitwise_and)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-[](const NodeAttrs& attrs) {
-return std::vector<std::string>{"x1", "x2"};
-})
-.set_attr<nnvm::FInferShape>("FInferShape", BitwiseAndOpShape)
-.set_attr<nnvm::FInferType>("FInferType", BitwiseAndOpType)
-.set_attr<FCompute>("FCompute", BitwiseAndOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.add_argument("x1", "NDArray-or-Symbol", "Input ndarray") // ???
-.add_argument("x2", "NDArray-or-Symbol", "Input ndarray"); // ???
-// .add_arguments(ReduceAxisParam::__FIELDS__()); // adds user input parameters
-
+    return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
+})
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"x1", "x2"};
+})
+.set_attr<FCompute>("FCompute", ElemwiseBinaryOp::Compute<cpu, bitwise_and_forward>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("x1", "NDArray-or-Symbol", "Input ndarray")
+.add_argument("x2", "NDArray-or-Symbol", "Input ndarray");
 
 } // namespace op
 } // namespace mxnet
