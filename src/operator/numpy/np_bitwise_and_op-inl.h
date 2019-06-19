@@ -26,6 +26,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_BITWISE_AND_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_BITWISE_AND_OP_INL_H_
 
+#include <mxnet/operator_util.h>
 #include <vector>
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
