@@ -102,7 +102,14 @@ class FusedOp {
   }
 
  private:
-  void GenerateCode(const std::vector<OpReqType> &req);
+  void GenerateCode(const std::vector<OpReqType> &req,
+                    const std::vector<int> &in_dtypes,
+                    const std::vector<int> &out_dtypes,
+                    const std::vector<int> &in_ndims,
+                    const int nvec,
+                    const std::string& kernel_name);
+  void CompileCode(const std::string &kernel_name);
+  bool CheckComputeCapability(const OpContext &ctx);
 
   std::vector<FusedOpEntry> inputs_;
   std::vector<FusedOpEntry> outputs_;

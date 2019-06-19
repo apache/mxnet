@@ -102,7 +102,12 @@ std::string ParseOpDescription(const std::vector<std::string>& op_desc,
   return fmt;
 }
 
-void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
+void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
+                           const std::vector<int> &in_dtypes,
+                           const std::vector<int> &out_dtypes,
+                           const std::vector<int> &in_ndims,
+                           const int nvec,
+                           const std::string &kernel_name) {
   const auto& g = this->symbol_.indexed_graph();
   std::string code = "";
   int temp_name_counter = 0;
@@ -171,7 +176,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
     }
   }
 
-  int counter = 0;
+  size_t counter = 0;
   for (const auto& entry : g.outputs()) {
     const auto var_name = "output" + std::to_string(counter);
     code += "VectorType<remove_pointer<decltype(" + var_name + \
@@ -286,6 +291,119 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
   }
 
   this->code_ = code;
+
+  // Add boilerplate and type information
+  LOG(INFO) << code_;
+  std::string kernel_params = "";
+  std::string tensor_params = "";
+  nnvm::Symbol sym;
+  sym.outputs = this->symbol_.outputs;
+  const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
+  size_t num_params = in_dtypes.size() + out_dtypes.size();
+  size_t i = 0;
+  std::string aux_code = "static const int nvec = " + std::to_string(nvec) + ";\n";
+  for (const auto &type : in_dtypes) {
+    std::string type_name = detail::mshadowTypeToString(type);
+    std::string dtype_var = "DType" + std::to_string(i);
+    std::string dim_var = "ndim" + std::to_string(i);
+    aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
+    aux_code = "static const int " + dim_var + " = " + \
+                std::to_string(in_ndims[i]) + ";\n" + aux_code;
+    tensor_params += dtype_var + "* " +input_names[i];
+    kernel_params += " const Strides<" + dim_var + "> " + input_names[i]+"_strides";
+    ++i;
+    if (i < num_params) {
+      tensor_params += ", ";
+      kernel_params += ", ";
+    }
+  }
+  for (const auto &type : out_dtypes) {
+    std::string type_name = detail::mshadowTypeToString(type);
+    std::string dtype_var = "DType" + std::to_string(i);
+    aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
+    tensor_params += dtype_var + "* output" +
+                     std::to_string(i - in_dtypes.size());
+    ++i;
+    if (i < num_params) {
+      tensor_params += ", ";
+    }
+  }
+  kernel_params += tensor_params;
+  code_ = std::string(detail::fp16_support_string) + "\n" +
+          detail::type_support_string + "\n" +
+          detail::fused_op_function_definitions + "\n" +
+          aux_code + "\n" +
+          "__global__ void FusedKernel_" + kernel_name +
+          "(size_t N, " + kernel_params + ") {\n" +
+          detail::fused_op_kernel_begin + "\n" +
+          code_ + "\n" +
+          detail::fused_op_kernel_end;
+}
+
+void FusedOp::CompileCode(const std::string &kernel_name) {
+  // Guard NVRTC calls
+  std::lock_guard<std::mutex> lock_nvrtc(mutex_);
+  nvrtcProgram program;
+  NVRTC_CALL(
+      nvrtcCreateProgram(&program,                                  // prog
+                         &code_[0],                                 // buffer
+                         (kernel_name + "_kernel.cu").c_str(),      // name
+                         0,                                         // numHeaders
+                         NULL,                                      // headers
+                         NULL));                                    // includeNames
+  std::string gpu_arch = "--gpu-architecture=compute_" +
+                         std::to_string(this->cc_major_) +
+                         std::to_string(this->cc_minor_);
+
+  const char *opts[] = {gpu_arch.c_str(),
+                        "--std=c++11",
+                        "-default-device"};
+  const std::string kernel_name_demangled = "FusedKernel_" + kernel_name;
+  NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
+
+  nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
+                                                  3,        // numOptions
+                                                  opts);    // options
+  // Obtain compilation log from the program.
+  size_t logSize;
+  NVRTC_CALL(nvrtcGetProgramLogSize(program, &logSize));
+  std::string log(logSize, '\0');
+  NVRTC_CALL(nvrtcGetProgramLog(program, &log[0]));
+  CHECK_EQ(compileResult, NVRTC_SUCCESS) << "NVRTC Compilation failed.\n" << log;
+  // Obtain PTX from the program.
+  size_t ptxSize;
+  NVRTC_CALL(nvrtcGetPTXSize(program, &ptxSize));
+  ptx_.reserve(ptxSize);
+  NVRTC_CALL(nvrtcGetPTX(program, &ptx_[0]));
+  const char *name;
+  NVRTC_CALL(nvrtcGetLoweredName(program,
+                                 kernel_name_demangled.c_str(),
+                                 &name));
+  kernel_name_ = name;
+  // Destroy the program.
+  NVRTC_CALL(nvrtcDestroyProgram(&program));
+  int device;
+  CUdevice cuDevice;
+  CUcontext context;
+  CUmodule module;
+  CUDA_CALL(cudaGetDevice(&device));
+  CUDA_DRIVER_CALL(cuDeviceGet(&cuDevice, device));
+  CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cuDevice));
+  CUDA_DRIVER_CALL(cuModuleLoadData(&module, &ptx_[0]));
+  CUDA_DRIVER_CALL(cuModuleGetFunction(&kernel_,
+                                       module,
+                                       kernel_name_.c_str()));
+}
+
+bool FusedOp::CheckComputeCapability(const OpContext &ctx) {
+  const int dev_id = ctx.run_ctx.ctx.dev_id;
+  const int cc_major = ComputeCapabilityMajor(dev_id);
+  const int cc_minor = ComputeCapabilityMinor(dev_id);
+
+  const bool ret = cc_major == this->cc_major_ && cc_minor == this->cc_minor_;
+  this->cc_major_ = cc_major;
+  this->cc_minor_ = cc_minor;
+  return ret;
 }
 
 template <>
@@ -323,119 +441,15 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     ++counter;
   }
 
-  // Get compute capability of the current GPU
-  int dev_id = ctx.run_ctx.ctx.dev_id;
-  int cc_major = ComputeCapabilityMajor(dev_id);
-  int cc_minor = ComputeCapabilityMinor(dev_id);
-
-  initialized_ = initialized_ && cc_major == this->cc_major_;
-  initialized_ = initialized_ && cc_minor == this->cc_minor_;
-  this->cc_major_ = cc_major;
-  this->cc_minor_ = cc_minor;
+  // Check and save compute capability of the current GPU
+  if (!CheckComputeCapability(ctx)) initialized_ = false;
 
   initialized_ = initialized_ && (req == saved_reqs_);
   saved_reqs_ = req;
 
   if (!initialized_) {
-    this->GenerateCode(req);
-    LOG(INFO) << code_;
-    std::string aux_code = "";
-    std::string kernel_params = "";
-    std::string tensor_params = "";
-    nnvm::Symbol sym;
-    sym.outputs = this->symbol_.outputs;
-    const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
-    size_t num_params = in_dtypes.size() + out_dtypes.size();
-    size_t i = 0;
-    aux_code += "static const int nvec = " + std::to_string(nvec) + ";\n";
-    for (const auto &type : in_dtypes) {
-      std::string type_name = detail::mshadowTypeToString(type);
-      std::string dtype_var = "DType" + std::to_string(i);
-      std::string dim_var = "ndim" + std::to_string(i);
-      aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
-      aux_code = "static const int " + dim_var + " = " + \
-                  std::to_string(in_ndims[i]) + ";\n" + aux_code;
-      tensor_params += dtype_var + "* " +input_names[i];
-      kernel_params += " const Strides<" + dim_var + "> " + input_names[i]+"_strides";
-      ++i;
-      if (i < num_params) {
-        tensor_params += ", ";
-        kernel_params += ", ";
-      }
-    }
-    for (const auto &type : out_dtypes) {
-      std::string type_name = detail::mshadowTypeToString(type);
-      std::string dtype_var = "DType" + std::to_string(i);
-      aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
-      tensor_params += dtype_var + "* output" +
-                       std::to_string(i - in_dtypes.size());
-      ++i;
-      if (i < num_params) {
-        tensor_params += ", ";
-      }
-    }
-    kernel_params += tensor_params;
-    code_ = std::string(detail::fp16_support_string) + "\n" +
-            detail::type_support_string + "\n" +
-            detail::fused_op_function_definitions + "\n" +
-            aux_code + "\n" +
-            "__global__ void FusedKernel_" + attrs.name +
-            "(size_t N, " + kernel_params + ") {\n" +
-            detail::fused_op_kernel_begin + "\n" +
-            code_ + "\n" +
-            detail::fused_op_kernel_end;
-    // Guard NVRTC calls
-    std::lock_guard<std::mutex> lock_nvrtc(mutex_);
-    nvrtcProgram program;
-    NVRTC_CALL(
-        nvrtcCreateProgram(&program,                                 // prog
-                           &code_[0],                                // buffer
-                           (attrs.name + "_kernel.cu").c_str(),      // name
-                           0,                                        // numHeaders
-                           NULL,                                     // headers
-                           NULL));                                   // includeNames
-    std::string gpu_arch = "--gpu-architecture=compute_" +
-                           std::to_string(this->cc_major_) +
-                           std::to_string(this->cc_minor_);
-
-    const char *opts[] = {gpu_arch.c_str(),
-                          "--std=c++11",
-                          "-default-device"};
-    const std::string kernel_name_demangled = "FusedKernel_" + attrs.name;
-    NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
-
-    nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                    3,        // numOptions
-                                                    opts);    // options
-    // Obtain compilation log from the program.
-    size_t logSize;
-    NVRTC_CALL(nvrtcGetProgramLogSize(program, &logSize));
-    std::string log(logSize, '\0');
-    NVRTC_CALL(nvrtcGetProgramLog(program, &log[0]));
-    CHECK_EQ(compileResult, NVRTC_SUCCESS) << "NVRTC Compilation failed.\n" << log;
-    // Obtain PTX from the program.
-    size_t ptxSize;
-    NVRTC_CALL(nvrtcGetPTXSize(program, &ptxSize));
-    ptx_.reserve(ptxSize);
-    NVRTC_CALL(nvrtcGetPTX(program, &ptx_[0]));
-    const char *name;
-    NVRTC_CALL(nvrtcGetLoweredName(program,
-                                   kernel_name_demangled.c_str(),
-                                   &name));
-    kernel_name_ = name;
-    // Destroy the program.
-    NVRTC_CALL(nvrtcDestroyProgram(&program));
-    int device;
-    CUdevice cuDevice;
-    CUcontext context;
-    CUmodule module;
-    CUDA_CALL(cudaGetDevice(&device));
-    CUDA_DRIVER_CALL(cuDeviceGet(&cuDevice, device));
-    CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cuDevice));
-    CUDA_DRIVER_CALL(cuModuleLoadData(&module, &ptx_[0]));
-    CUDA_DRIVER_CALL(cuModuleGetFunction(&kernel_,
-                                         module,
-                                         kernel_name_.c_str()));
+    this->GenerateCode(req, in_dtypes, out_dtypes, in_ndims, nvec, attrs.name);
+    this->CompileCode(attrs.name);
     initialized_ = true;
   }
   Stream<gpu>* s = ctx.get_stream<gpu>();
