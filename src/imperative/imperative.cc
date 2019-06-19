@@ -317,6 +317,7 @@ std::vector<NDArray*> Imperative::Backward(
     }
   }
 
+
   // Get gradient graph
   Symbol sym;
   sym.outputs = graph.outputs;
@@ -368,6 +369,8 @@ std::vector<NDArray*> Imperative::Backward(
       graph.outputs.push_back(e);
     }
   }
+
+
   const auto& idx = graph.indexed_graph();
   // get number of nodes used in forward pass
   size_t num_forward_nodes = 0;
@@ -500,6 +503,10 @@ std::vector<NDArray*> Imperative::Backward(
       }
     }
   }
+
+
+  std::cout<<"Complete graph: " << std::endl;
+  common::LogMemoryPlan(graph);
 
   // Execution
 
