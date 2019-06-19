@@ -64,6 +64,24 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
   }
 };
 
+struct NumpyMaxParam : public dmlc::Parameter<NumpyMaxParam> {
+  dmlc::optional<mxnet::Tuple<int>> axis;
+  bool keepdims;
+  dmlc::optional<double> initial;
+  DMLC_DECLARE_PARAMETER(NumpyMaxParam) {
+    DMLC_DECLARE_FIELD(axis)
+      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .describe("Axis or axes along which a sum is performed. The default, axis=None, will sum "
+                "all of the elements of the input array. If axis is negative it counts from the "
+                "last to the first axis.");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false)
+      .describe("If this is set to `True`, the reduced axes are left "
+                "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
+      .describe("Starting value for the sum.");
+  }
+};
+
 inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
                                        const dmlc::optional<mxnet::Tuple<int>>& axis,
                                        bool keepdims) {
@@ -152,6 +170,39 @@ inline bool NumpyReduceAxesShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
+inline bool NumpyMaxShape(const nnvm::NodeAttrs& attrs,
+                                 std::vector<TShape> *in_attrs,
+                                 std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if (!shape_is_known(in_attrs->at(0))) {
+    return false;
+  }
+  const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
+  // check the case where the reduction axis should not be zero
+  bool is_all_reducded_axes_not_zero = true;
+  const TShape& ishape = (*in_attrs)[0];
+  if (param.axis.has_value()) {
+    const mxnet::Tuple<int>& axes = param.axis.value();
+    for (int i = 0; i < axes.ndim(); ++i) {
+      if (ishape[axes[i]] == 0) {
+        is_all_reducded_axes_not_zero = false;
+        break;
+      }
+    }
+  } else {
+    if (ishape.Size() == 0) {
+      // global reduction should excuted only when input have size more than 0
+      is_all_reducded_axes_not_zero = false;
+    }
+  }
+  CHECK(is_all_reducded_axes_not_zero)
+    << "zero-size array to reduction operation maximum which has no identity";
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     NumpyReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims));
+  return shape_is_known(out_attrs->at(0));
+}
+
 template<bool safe_acc_hint = false>
 inline bool NeedSafeAcc(int itype, int otype) {
   bool rule = (itype != otype) || (itype != mshadow::kFloat32 && itype != mshadow::kFloat64);
@@ -187,6 +238,29 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
+template<typename xpu, typename reducer, typename OP = op::mshadow_op::identity>
+void NumpyMaxCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
+  if (param.initial.has_value()) {
+    LOG(FATAL) << "initial is not supported yet";
+  }
+  if (inputs[0].shape_.Size() == 0U || outputs[0].shape_.Size() == 0U) return;  // zero-size tensor
+  if (param.axis.has_value() && param.axis.value().ndim() == 0) {
+    UnaryOp::IdentityCompute<xpu>(attrs, ctx, inputs, req, outputs);
+  }
+  TShape small;
+  if (param.keepdims) {
+    small = outputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(inputs[0].shape_, param.axis, true);
+  }
+  ReduceAxesComputeImpl<xpu, reducer, false, false, OP>(ctx, inputs, req, outputs, small);
+}
+
 template<typename xpu, bool normalize = false>
 inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                            const OpContext& ctx,
@@ -211,6 +285,24 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
       igrad /= scalar<IType>(outputs[0].Size()/inputs[0].Size());
     });
   }
+}
+
+template<typename xpu, typename OP>
+void NumpyMaxBackward(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(outputs[0].shape_, param.axis, true);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, OP, false>(ctx, small, inputs, req, outputs);
 }
 
 }  // namespace op
