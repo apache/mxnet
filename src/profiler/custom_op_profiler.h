@@ -77,18 +77,19 @@ class CustomOpProfiler {
   /*!
    * \brief Generate a display name for sub-operators, which is the name used for OprBlock
    *        and later by profiler, and store it in a unordered_set so that it can be referenced 
-   *        in the future
+   *        in the future.
+   *        Notice if the operator is not a sub-operator, just return the char pointer back.
    * \param op_type_ptr The registed name of the operator
    * \return Returns a pointer to the display name generated
    */
   const char* GenerateDisplayName(const char* op_type_ptr) {
     if (!op_type_ptr) {
-      return NULL;
+      return nullptr;
     }
     Tid tid = std::this_thread::get_id();
     std::lock_guard<std::mutex> lock(mutex_);
     if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
-      return NULL;
+      return op_type_ptr;
     }
     std::string op_type = std::string(op_type_ptr);
     std::string name = tid_to_op_type_[tid] + "::" + op_type;
