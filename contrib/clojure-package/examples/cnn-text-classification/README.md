@@ -49,6 +49,19 @@ and then run
 - `lein uberjar`
 - `java -Xms1024m -Xmx2048m -jar target/cnn-text-classification-0.1.0-SNAPSHOT-standalone.jar`
 
+## Usage with fastText
+
+Using fastText instead of glove is fairly straightforward, as the pretrained embedding format is very similar.
+
+Download the wiki news 300d 1M pre-trained word vectors from the fastText [site](https://fasttext.cc/docs/en/english-vectors.html).
+
+Unzip the word vectors and place them in the `data/fastText` directory.
+
+Then you can run training on a subset of examples through the repl using:
+```
+(train-convnet {:embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :fastText})
+```
+
 ## Usage with word2vec
 
 You can also use word2vec embeddings in order to train the text classification model.

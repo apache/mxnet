@@ -33,6 +33,8 @@
   [embedding-size]
   (format "data/glove/glove.6B.%dd.txt" embedding-size))
 
+(def fasttext-file-path "data/fastText/wiki-news-300d-1M.vec")
+
 (defn r-string
   "Reads a string from the given DataInputStream `dis` until a space or newline is reached."
   [dis]
@@ -99,6 +101,10 @@
 (defn load-glove [glove-file-path]
   (println "Loading the glove pre-trained word embeddings from " glove-file-path)
   (into {} (read-text-embedding-pairs (io/reader glove-file-path))))
+
+(defn load-fasttext [fasttext-file-path]
+  (println "Loading the fastText pre-trained word embeddings from " fasttext-file-path)
+  (into {} (read-text-embedding-pairs (io/reader fasttext-file-path))))
 
 (defn clean-str [s]
   (-> s
@@ -190,6 +196,8 @@
         vocab-embeddings (case pretrained-embedding
                            :glove (->> (load-glove (glove-file-path embedding-size))
                                        (build-vocab-embeddings vocab embedding-size))
+                           :fastText (->> (load-fasttext fasttext-file-path)
+                                          (build-vocab-embeddings vocab embedding-size))
                            :word2vec (->> (load-word2vec-model w2v-file-path embedding-size {:vocab vocab})
                                           (:word2vec)
                                           (build-vocab-embeddings vocab embedding-size))
