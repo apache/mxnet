@@ -153,6 +153,10 @@ NNVM_REGISTER_OP(_np_max)
 .add_argument("a", "NDArray-or-Symbol", "The input")
 .add_arguments(NumpyMaxParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyMaxCompute<cpu, mshadow::red::maximum>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_max"});
 
 NNVM_REGISTER_OP(_backward_np_max)
@@ -169,6 +173,11 @@ NNVM_REGISTER_OP(_np_prod)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpySumType)
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a"};
+  })
+.add_argument("a", "NDArray-or-Symbol", "The input")
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::product, true>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
