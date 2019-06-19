@@ -327,13 +327,16 @@ def check_second_order_unary(x, op, grad_grad_op, rtol=None, atol=None):
     assert_almost_equal(expected_grad_grad,
                         x.grad.asnumpy(), rtol=rtol, atol=atol)
 
-class RandomShapes:
+class RandomShapes(object):
     def __init__(self, dim):
         self.dim = dim
         self.curdim = 1
 
     def __iter__(self):
         return self
+
+    def next(self):
+        return self.__next__()
 
     def __next__(self):
         if self.curdim > self.dim:
