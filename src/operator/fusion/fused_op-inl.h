@@ -221,6 +221,7 @@ const std::map<std::string, std::vector<std::vector<std::string>>> fused_op_ops_
 
 const std::map<std::string, std::string> fused_op_slice_ops = {
   {"slice_axis"   , ""},
+  {"slice"   , ""},
 };
 
 const std::vector<std::string> fused_op_variable_io_ops = {
@@ -230,14 +231,7 @@ const std::vector<std::string> fused_op_variable_io_ops = {
 
 const char fused_op_function_definitions[] = R"code(
 
-template <class T>
-struct remove_pointer;
-
-template <class U>
-struct remove_pointer<U*>
-{
-  typedef U type;
-};
+#define INT_MAX (2147483647)
 
 template <typename DType>
 struct LoadType {
@@ -301,9 +295,21 @@ union VectorType {
 };
 
 template <int ndim>
-struct Strides {
+struct Shape {
    int x[ndim];
-};
+   inline const int& operator [](const int i) const {
+       return x[i];
+   }
+   inline int& operator [](const int i) {
+       return x[i];
+   }
+   inline void set(const int def) {
+       #pragma unroll
+       for (int i = 0; i < ndim; i++) {
+           x[i] = def;
+       }
+   }
+ };
 
 template <int nvec, typename DType>
 inline VectorType<DType, nvec> load_index(const DType * input, int i) {
@@ -312,25 +318,24 @@ inline VectorType<DType, nvec> load_index(const DType * input, int i) {
   return ret;
 }
 
-template <int nvec, int axis, typename DType, int ndim>
-inline VectorType<DType, nvec> load_slice(const DType * input, const Strides<ndim> strides, int begin, int end, int offset) {
+template <int nvec, typename DType, int ndim>
+inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim> shape, Shape<ndim> begin, Shape<ndim> end, int offset) {
   int idx[nvec];
   bool mem_aligned = true;
 
-  Strides<ndim> ref_strides;
-  if (axis > 0) {
-      int shape = strides.x[axis-1]/strides.x[axis];
-      if (begin < 0) begin = shape - begin;
-      if (end < 0) begin = shape - begin;
-      if (end > shape) end = shape;
-      #pragma unroll
-      for (int dim = 0; dim < axis; dim++) {
-          ref_strides.x[dim] = (strides.x[dim] / shape) * (end-begin);
-      }
-  }
+  Shape<ndim> ref_strides;
+  Shape<ndim> strides;
+  ref_strides[ndim-1] = 1;
+  strides[ndim-1] = 1;
   #pragma unroll
-  for (int dim = axis; dim < ndim; dim++) {
-      ref_strides.x[dim] = strides.x[dim];
+  for (int dim = ndim-1; dim >=0; dim--) {
+    if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
+    if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
+    if (end[dim] > shape[dim]) end[dim] = shape[dim];
+    if (dim > 0) {
+      ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
+      strides[dim-1] = strides[dim] * shape[dim];
+    }
   }
 
   #pragma unroll
@@ -339,11 +344,10 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Strides<ndi
     int ref_idx = offset + j;
     #pragma unroll
     for (int dim = 0; dim < ndim; dim++) {
-       int stride = ref_strides.x[dim];
-       idx[j] += (ref_idx / stride) * strides.x[dim];
+       int stride = ref_strides[dim];
+       idx[j] += (ref_idx / stride + begin[dim]) * strides[dim];
        ref_idx = ref_idx % stride;
     }
-    idx[j] += begin * strides.x[axis];
     if (j > 0 && (idx[j] != (idx[j-1] + 1))) {
         mem_aligned = false;
     }

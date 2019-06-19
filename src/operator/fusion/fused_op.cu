@@ -78,6 +78,14 @@ inline int mshadowTypeToVectorLength(int type) {
   return 0;
 }
 
+inline void replaceString(std::string *input, const std::string old, const std::string repl) {
+    int pos = 0;
+    while ((pos = input->find(old, pos)) != std::string::npos) {
+        input->replace(pos, old.size(), repl);
+        pos += repl.size();
+    }
+}
+
 }  // namespace detail
 
 std::string ParseOpDescription(const std::vector<std::string>& op_desc,
@@ -157,17 +165,35 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             if (detail::fused_op_slice_ops.find(op_name) != detail::fused_op_slice_ops.end()) {
                 int arg_id = node.inputs[0].node_id;
                 const auto& var_name = g[arg_id].source->attrs.name;
-                load_index[arg_id] = 0;
-                std::string begin = source->attrs.dict.at("begin");
-                std::string end = source->attrs.dict.at("end");
-                if (end == "None") {
-                    end = "((1<<31)-1)";
-                }
-                std::string axis = source->attrs.dict.at("axis");
                 const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-                code += "const auto " + vec_name + " = load_slice<nvec, "+ axis + ">(" + \
-                        var_name + ", " + var_name + "_strides," + begin + \
-                        "," + end + ", offset);\n";
+                load_index[arg_id] = 0;
+                auto parse_tuple = [](const std::string& input, const std::string def) {
+                    std::string out = input;
+                    detail::replaceString(&out, "(", "{");
+                    detail::replaceString(&out, ")", "}");
+                    detail::replaceString(&out, "None", def);
+                    return out;
+                };
+                std::string begin = parse_tuple(source->attrs.dict.at("begin"), "0");
+                std::string end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
+                if (op_name == "slice") {
+                    // step = parse_tuple(source->attrs.dict.at("step"), "1");
+                } else if (op_name == "slice_axis") {
+                    std::string axis = source->attrs.dict.at("axis");
+                    std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
+                    std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
+                    code += "Shape<ndim_" + var_name + "> "+ begin_var_name + ";\n";
+                    code += "Shape<ndim_" + var_name + "> "+ end_var_name + ";\n";
+                    code += begin_var_name + ".set(0);\n";
+                    code += end_var_name + ".set(INT_MAX);\n";
+                    code += begin_var_name + "["+axis+"] = " + begin + ";\n";
+                    code += end_var_name + "["+axis+"] = " + end + ";\n";
+                    begin = begin_var_name;
+                    end = end_var_name;
+                }
+                code += "const auto " + vec_name + " = load_slice<nvec>(" + \
+                        var_name + ", " + var_name + "_shape," + begin + \
+                         "," + end + ", offset);\n";
                 CHECK_EQ(outputs[i], 1);
                 variables[{i, 0}] = vec_name;
                 continue;
@@ -178,9 +204,9 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 
   size_t counter = 0;
   for (const auto& entry : g.outputs()) {
-    const auto var_name = "output" + std::to_string(counter);
-    code += "VectorType<remove_pointer<decltype(" + var_name + \
-            ")>::type, nvec> vec_output" + std::to_string(counter) + ";\n";
+    std::string var_name = "output" + std::to_string(counter);
+    code += "VectorType<DType_" + var_name + \
+            ", nvec> vec_" + var_name + ";\n";
     ++counter;
   }
 
@@ -304,13 +330,13 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   std::string aux_code = "static const int nvec = " + std::to_string(nvec) + ";\n";
   for (const auto &type : in_dtypes) {
     std::string type_name = detail::mshadowTypeToString(type);
-    std::string dtype_var = "DType" + std::to_string(i);
-    std::string dim_var = "ndim" + std::to_string(i);
+    std::string dtype_var = "DType_" + input_names[i];
+    std::string dim_var = "ndim_" + input_names[i];
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
     aux_code = "static const int " + dim_var + " = " + \
                 std::to_string(in_ndims[i]) + ";\n" + aux_code;
     tensor_params += dtype_var + "* " +input_names[i];
-    kernel_params += " const Strides<" + dim_var + "> " + input_names[i]+"_strides";
+    kernel_params += " const Shape<" + dim_var + "> " + input_names[i]+"_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
@@ -319,10 +345,10 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   }
   for (const auto &type : out_dtypes) {
     std::string type_name = detail::mshadowTypeToString(type);
-    std::string dtype_var = "DType" + std::to_string(i);
+    std::string out_name = "output" + std::to_string(i - in_dtypes.size());
+    std::string dtype_var = "DType_" + out_name;
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
-    tensor_params += dtype_var + "* output" +
-                     std::to_string(i - in_dtypes.size());
+    tensor_params += dtype_var + "* " + out_name;
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
@@ -460,17 +486,16 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
 
   unsigned int num_blocks = (N + FusedOp::NTHREADS - 1) / FusedOp::NTHREADS;
   std::vector<void*> ptrs;
-  std::vector<std::vector<int>> strides;
+  std::vector<std::vector<int>> shapes;
   for (const auto &data : inputs) {
     MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
       int ndim = data.ndim();
       Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
       ptrs.push_back(tensor.dptr_);
-      strides.push_back(std::vector<int>(ndim));
-      std::vector<int>& tensor_strides = strides.back();
-      tensor_strides[ndim-1] = 1;
-      for (int i = ndim-2; i >= 0; i--) {
-        tensor_strides[i] = tensor_strides[i+1] * data.shape_[i+1];
+      shapes.push_back(std::vector<int>(ndim));
+      std::vector<int>& tensor_shapes = shapes.back();
+      for (int i = ndim-1; i >= 0; i--) {
+        tensor_shapes[i] = data.shape_[i];
       }
     });
   }
@@ -480,8 +505,8 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
       ptrs.push_back(tensor.dptr_);
     });
   }
-  for (auto &tensor_strides : strides) {
-    args.push_back(tensor_strides.data());
+  for (auto &tensor_shapes : shapes) {
+    args.push_back(tensor_shapes.data());
   }
   for (auto &ptr : ptrs) {
     args.push_back(reinterpret_cast<void *>(&ptr));
