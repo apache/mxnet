@@ -20,10 +20,11 @@ from __future__ import absolute_import
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx
+from mxnet.base import MXNetError
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient
-from common import with_seed
+from common import assertRaises, with_seed
 import random
 
 
@@ -197,6 +198,95 @@ def test_np_mean():
                         mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
                         np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@npx.use_np_shape
+def test_np_max():
+    @npx.use_np_shape
+    class TestMax(HybridBlock):
+        def __init__(self, axis=None, keepdims=False):
+            super(TestMax, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.max(a, axis=self._axis, keepdims=self._keepdims)
+
+    def is_int(dtype):
+        return 'int' == dtype
+
+    def get_grad(axis):
+        if axis == ():
+            return _np.ones((2,3,4,5))
+        else:
+            temp = _np.zeros((2,3,4,5))
+            if axis == 0:
+                temp[-1,:,:,:] = 1
+                return temp
+            elif axis == 1:
+                temp[:,-1,:,:] = 1
+                return temp
+            elif axis == 2:
+                temp[:,:,-1,:] = 1
+                return temp
+            elif axis == 3:
+                temp[:,:,:,-1] = 1
+                return temp
+            elif not axis:
+                temp[-1,-1,-1,-1] = 1
+                return temp
+            raise ValueError('axis should be int or None or ()')
+
+    def _test_np_max_exception(shape, dim):
+        x = _np.random.uniform(-1.0, 1.0, shape)
+        x = mx.nd.array(x).as_np_ndarray()
+        out = mx.np.max(x)
+        assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
+
+    in_data_dim = random.choice([2, 3, 4])
+    shape = rand_shape_nd(in_data_dim, dim=3)
+    for hybridize in [False, True]:
+        for keepdims in [True, False]:
+            for axis in ([i for i in range(in_data_dim)] + [(), None]):
+                for itype in ['float16', 'float32', 'float64', 'int']:
+                    # test gluon
+                    test_max = TestMax(axis=axis, keepdims=keepdims)
+                    if hybridize:
+                        test_max.hybridize()
+                    if is_int(itype):
+                        x = mx.nd.arange(120).reshape((2, 3, 4, 5))
+                        x = mx.nd.array(x)
+                    else:
+                        x = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype=itype)
+                    x = x.as_np_ndarray()
+                    x.attach_grad()
+                    expected_ret = _np.amax(x.asnumpy(), axis=axis, keepdims=keepdims)
+                    with mx.autograd.record():
+                        y = test_max(x)
+                    assert y.shape == expected_ret.shape
+                    assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if itype == 'float16' else 1e-3,
+                                        atol=1e-5 if itype == 'float16' else 1e-5)
+                    y.backward()
+                    # only check the gradient with hardcoded input
+                    if is_int(itype):
+                        assert same(x.grad.asnumpy(), get_grad(axis)), \
+                            'x={}\ny={}\nx.grad={}\nnumpy={}'.format(x.asnumpy(), y.asnumpy(), x.grad.asnumpy(), get_grad(axis))
+
+                    # test imperative
+                    mx_out = np.max(x, axis=axis, keepdims=keepdims)
+                    np_out = _np.amax(x.asnumpy(), axis=axis, keepdims=keepdims)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+    # test zero and zero dim
+    shapes = [(), (0), (2, 0), (0, 2, 1)]
+    exceptions = [False, True, True, True]
+    dims = [0] * len(shapes)
+    for shape, exception, dim in zip(shapes, exceptions, dims):
+        if exception:
+            assertRaises(MXNetError, _test_np_max_exception, shape, dim)
+        else:
+            _test_np_max_exception(shape, dim)
 
 
 @with_seed()
