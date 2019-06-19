@@ -323,6 +323,9 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Strides<ndi
   Strides<ndim> ref_strides;
   if (axis > 0) {
       int shape = strides.x[axis-1]/strides.x[axis];
+      if (begin < 0) begin = shape - begin;
+      if (end < 0) begin = shape - begin;
+      if (end > shape) end = shape;
       #pragma unroll
       for (int dim = 0; dim < axis; dim++) {
           ref_strides.x[dim] = (strides.x[dim] / shape) * (end-begin);

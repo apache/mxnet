@@ -161,6 +161,9 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
                 load_index[arg_id] = 0;
                 std::string begin = source->attrs.dict.at("begin");
                 std::string end = source->attrs.dict.at("end");
+                if (end == "None") {
+                    end = "((1<<31)-1)";
+                }
                 std::string axis = source->attrs.dict.at("axis");
                 const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
                 code += "const auto " + vec_name + " = load_slice<nvec, "+ axis + ">(" + \
@@ -380,6 +383,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     out_dtypes.push_back(blob.type_flag_);
     initialized_ = initialized_ && (blob.type_flag_ == outputs_[counter].dtype);
     outputs_[counter].dtype = blob.type_flag_;
+    nvec = max(nvec, detail::mshadowTypeToVectorLength(blob.type_flag_));
     ++counter;
   }
 
@@ -398,6 +402,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
 
   if (!initialized_) {
     this->GenerateCode(req);
+    LOG(INFO) << code_;
     std::string aux_code = "";
     std::string kernel_params = "";
     std::string tensor_params = "";
@@ -409,10 +414,12 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     aux_code += "static const int nvec = " + std::to_string(nvec) + ";\n";
     for (const auto &type : in_dtypes) {
       std::string type_name = detail::mshadowTypeToString(type);
-      aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      aux_code = "static const int ndim" + std::to_string(i) + " = " + std::to_string(in_ndims[i]) + ";\n" + aux_code;
-      tensor_params += " DType" + std::to_string(i) + "* " +input_names[i];
-      kernel_params += " const Strides<ndim0> " + input_names[i]+"_strides";
+      std::string dtype_var = "DType" + std::to_string(i);
+      std::string dim_var = "ndim" + std::to_string(i);
+      aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
+      aux_code = "static const int " + dim_var + " = " + std::to_string(in_ndims[i]) + ";\n" + aux_code;
+      tensor_params += dtype_var + "* " +input_names[i];
+      kernel_params += " const Strides<" + dim_var + "> " + input_names[i]+"_strides";
       ++i;
       if (i < num_params) {
         tensor_params += ", ";
@@ -421,8 +428,9 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     }
     for (const auto &type : out_dtypes) {
       std::string type_name = detail::mshadowTypeToString(type);
-      aux_code = "using DType" + std::to_string(i) + " = " + type_name + ";\n" + aux_code;
-      tensor_params += "DType" + std::to_string(i) + "* output" +
+      std::string dtype_var = "DType" + std::to_string(i);
+      aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
+      tensor_params += dtype_var + "* output" +
                        std::to_string(i - in_dtypes.size());
       ++i;
       if (i < num_params) {
