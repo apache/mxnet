@@ -45,13 +45,7 @@ namespace {
     if (n->op() == nullptr)
       return false;
     std::string op_name = n->op()->name;
-    if (fused_op_binary_ops.count(op_name))
-      return true;
-    if (fused_op_unary_ops.count(op_name))
-      return true;
-    if (fused_op_special_ops.count(op_name))
-      return true;
-    if (fused_op_mimo_ops.count(op_name))
+    if (fused_op_ops_desc.count(op_name))
       return true;
     if (fused_op_slice_ops.count(op_name))
       return false;

@@ -78,8 +78,29 @@ inline int mshadowTypeToVectorLength(int type) {
   return 0;
 }
 
-
 }  // namespace detail
+
+std::string ParseOpDescription(const std::vector<std::string>& op_desc,
+                               const std::map<std::pair<int, int>, std::string>& variables,
+                               const nnvm::IndexedGraph::Node& node) {
+  const auto* source = node.source;
+  std::string fmt = op_desc[0];
+  for (size_t j = 1; j < op_desc.size(); ++j) {
+    const std::string& desc = op_desc[j];
+    std::string sub;
+    if (desc[0] == '_') {
+      // Argument
+      const int arg_id = std::stoi(desc.substr(1));
+      sub = variables.at({node.inputs[arg_id].node_id, node.inputs[arg_id].index});
+    } else {
+      sub = source->attrs.dict.at(desc);
+    }
+    size_t pos = fmt.find("%");
+    CHECK_NE(pos, std::string::npos);
+    fmt.replace(pos, 1, sub);
+  }
+  return fmt;
+}
 
 void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
   const auto& g = this->symbol_.indexed_graph();
@@ -174,72 +195,14 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req) {
         }
       } else {
         std::string op_name = source->op()->name;
-        if (detail::fused_op_binary_ops.find(op_name) != detail::fused_op_binary_ops.end()) {
-          std::string op = detail::fused_op_binary_ops.at(op_name);
-          const auto& arg1 = variables[{node.inputs[0].node_id, node.inputs[0].index}];
-          const auto& arg2 = variables[{node.inputs[1].node_id, node.inputs[1].index}];
-          code += "const auto " + var_name + " = " + op +
-                  "(" + arg1 + ", " + arg2 + ");\n";
-          CHECK_EQ(outputs[i], 1);
-          variables[{i, 0}] = var_name;
-          continue;
-        }
-
-        if (detail::fused_op_unary_ops.find(op_name) != detail::fused_op_unary_ops.end()) {
-          std::string op = detail::fused_op_unary_ops.at(op_name);
-          const auto& arg1 = variables[{node.inputs[0].node_id, node.inputs[0].index}];
-          code += "const auto " + var_name + " = " + op +
-                  "(" + arg1 + ");\n";
-          CHECK_EQ(outputs[i], 1);
-          variables[{i, 0}] = var_name;
-          continue;
-        }
-
-        if (detail::fused_op_special_ops.find(op_name) != detail::fused_op_special_ops.end()) {
-          const std::vector<std::string>& op_desc = detail::fused_op_special_ops.at(op_name);
-          std::string fmt = op_desc[0];
-          for (size_t j = 1; j < op_desc.size(); ++j) {
-            const std::string& desc = op_desc[j];
-            std::string sub;
-            if (desc[0] == '_') {
-              // Argument
-              int arg_id = std::stoi(desc.substr(1));
-              sub = variables[{node.inputs[arg_id].node_id, node.inputs[arg_id].index}];
-            } else {
-              sub = source->attrs.dict.at(desc);
-            }
-            size_t pos = fmt.find("%");
-            CHECK_NE(pos, std::string::npos);
-            fmt.replace(pos, 1, sub);
-          }
-          code += "const auto " + var_name + " = " + fmt + ";\n";
-          CHECK_EQ(outputs[i], 1);
-          variables[{i, 0}] = var_name;
-          continue;
-        }
-
-        if (detail::fused_op_mimo_ops.find(op_name) != detail::fused_op_mimo_ops.end()) {
+        if (detail::fused_op_ops_desc.find(op_name) != detail::fused_op_ops_desc.end()) {
           const std::vector<std::vector<std::string>>& op_descs =
-            detail::fused_op_mimo_ops.at(op_name);
+            detail::fused_op_ops_desc.at(op_name);
           CHECK_EQ(outputs[i], op_descs.size());
           size_t count = 0;
           for (const auto& op_desc : op_descs) {
             var_name = "temp" + std::to_string(temp_name_counter++);
-            std::string fmt = op_desc[0];
-            for (size_t j = 1; j < op_desc.size(); ++j) {
-              const std::string& desc = op_desc[j];
-              std::string sub;
-              if (desc[0] == '_') {
-                // Argument
-                int arg_id = std::stoi(desc.substr(1));
-                sub = variables[{node.inputs[arg_id].node_id, node.inputs[arg_id].index}];
-              } else {
-                sub = source->attrs.dict.at(desc);
-              }
-              size_t pos = fmt.find("%");
-              CHECK_NE(pos, std::string::npos);
-              fmt.replace(pos, 1, sub);
-            }
+            const std::string& fmt = ParseOpDescription(op_desc, variables, node);
             code += "const auto " + var_name + " = " + fmt + ";\n";
             variables[{i, count}] = var_name;
             ++count;
