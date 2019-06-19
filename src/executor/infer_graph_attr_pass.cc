@@ -66,8 +66,9 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
 template<typename AttrType, typename IsNone>
 inline void GetAttrFromForwardNode(const uint32_t nid,
                                    const nnvm::IndexedGraph &idx,
-                                   std::vector<AttrType>& rshape,
+                                   std::vector<AttrType>* rshape_ptr,
                                    IsNone fis_none) {
+  std::vector<AttrType>& rshape = *rshape_ptr;
   const auto& inode = idx[nid];
   // gradient function, used to get node correspondence.
   static auto& fgrad =
@@ -119,9 +120,10 @@ inline void GetAttrFromForwardNode(const uint32_t nid,
 template<typename FAccessSubgraphType, typename AttrType, typename IsNone>
 void GetAttrFromFusedNode(uint32_t nid,
                           const nnvm::IndexedGraph& idx,
-                          std::vector<AttrType>& rshape,
+                          std::vector<AttrType>* rshape_ptr,
                           IsNone fis_none,
                           const std::string& infer_fusion_name) {
+  std::vector<AttrType>& rshape = *rshape_ptr;
   const auto& inode = idx[nid];
   nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
   static auto& finfer_fused_shape =
@@ -164,7 +166,7 @@ void GetAttrFromFusedNode(uint32_t nid,
 template <typename FProvideSubgraphType, typename AttrType>
 void ProvideAttrToFusion(const uint32_t nid,
                          const nnvm::IndexedGraph& idx,
-                         std::vector<AttrType>& rshape,
+                         const std::vector<AttrType>& rshape,
                          const std::string& provide_fusion_name) {
   const auto& inode = idx[nid];
   std::vector<std::vector<AttrType>> in_attrs;
@@ -347,9 +349,9 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
 
       static auto& is_fusion_helper = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
       if (!is_fusion_helper.get(fwd_ptr->op(), false)) {
-        GetAttrFromForwardNode(nid, idx, rshape, fis_none);
+        GetAttrFromForwardNode(nid, idx, &rshape, fis_none);
       } else {
-        GetAttrFromFusedNode<FAccessSubgraphType>(nid, idx, rshape, fis_none, infer_fusion_name);
+        GetAttrFromFusedNode<FAccessSubgraphType>(nid, idx, &rshape, fis_none, infer_fusion_name);
       }
     } else {
       DispatchMode* dispatch_mode = nullptr;
@@ -605,9 +607,9 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
 
       static auto& is_fusion_helper = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
       if (!is_fusion_helper.get(fwd_ptr->op(), false)) {
-        GetAttrFromForwardNode(nid, idx, rshape, fis_none);
+        GetAttrFromForwardNode(nid, idx, &rshape, fis_none);
       } else {
-        GetAttrFromFusedNode<exec::FAccessSubgraphShape>(nid, idx, rshape, fis_none,
+        GetAttrFromFusedNode<exec::FAccessSubgraphShape>(nid, idx, &rshape, fis_none,
                                                          "FAccessSubgraphShape");
       }
     } else {
