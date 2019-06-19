@@ -63,6 +63,133 @@ bool ApplyOpInferAttr<int, FInferStorageType>(const nnvm::Graph& g,
   return true;
 }
 
+template<typename AttrType, typename IsNone>
+inline void GetAttrFromForwardNode(const uint32_t nid,
+                                   const nnvm::IndexedGraph &idx,
+                                   std::vector<AttrType>& rshape,
+                                   IsNone fis_none) {
+  const auto& inode = idx[nid];
+  // gradient function, used to get node correspondence.
+  static auto& fgrad =
+      Op::GetAttr<nnvm::FGradient>("FGradient");
+  nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
+  const nnvm::IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
+  // use gradient function to find out the correspondence.
+  std::vector<nnvm::NodeEntry> ograd(fwd_ptr->num_outputs());
+  for (size_t i = 0; i < ograd.size(); ++i) {
+    ograd[i].index = static_cast<uint32_t>(i);
+  }
+  // input gradient list
+  const std::vector<nnvm::NodeEntry>& igrad = fgrad[fwd_ptr->op()](fwd_ptr, ograd);
+  const nnvm::Node* igrad_node = nullptr;
+  // Input gradient assignement
+  for (size_t i = 0; i < igrad.size(); ++i) {
+    if (igrad[i].node->op() == inode.source->op()) {
+      uint32_t eid = idx.entry_id(nid, igrad[i].index);
+      if (fis_none(rshape[eid])) {
+        rshape[eid] = rshape[idx.entry_id(fnode.inputs[i])];
+      } else if (!fis_none(rshape[idx.entry_id(fnode.inputs[i])])) {
+        // Need to skip empty forward shape, because it may not be
+        // available now and it is possible to infer the forward
+        // shape in one of the next a few passes
+        CHECK_EQ(rshape[eid], rshape[idx.entry_id(fnode.inputs[i])])
+            << "Backward shape inconsistent with the forward shape";
+      }
+      if (igrad_node == nullptr) {
+        igrad_node = igrad[i].node.get();
+      } else {
+        CHECK(igrad_node == igrad[i].node.get());
+      }
+    }
+  }
+  // out grad entries
+  CHECK(igrad_node != nullptr)
+    << "Cannot find matching backward op for " << inode.source->attrs.name;
+  for (size_t i = 0; i < igrad_node->inputs.size(); ++i) {
+    const nnvm::NodeEntry& e = igrad_node->inputs[i];
+    if (e.node == nullptr) {
+      uint32_t eid = idx.entry_id(inode.inputs[i]);
+      if (fis_none(rshape[eid])) {
+        rshape[eid] = rshape[idx.entry_id(inode.control_deps[0], e.index)];
+      }
+    }
+  }
+}
+
+template<typename FAccessSubgraphType, typename AttrType, typename IsNone>
+void GetAttrFromFusedNode(uint32_t nid,
+                          const nnvm::IndexedGraph& idx,
+                          std::vector<AttrType>& rshape,
+                          IsNone fis_none,
+                          const std::string& infer_fusion_name) {
+  const auto& inode = idx[nid];
+  nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
+  static auto& finfer_fused_shape =
+    Op::GetAttr<FAccessSubgraphType>(infer_fusion_name);
+  auto finfer = finfer_fused_shape.get(fwd_ptr->op(), nullptr);
+  CHECK(finfer != nullptr) << "Operator " << fwd_ptr->attrs.name <<
+    " is marked as Fusion but does not allow accessing attributes";
+  const auto& inferred_attrs = finfer(fwd_ptr->attrs);
+  const auto& input_attrs = inferred_attrs.first;
+  const auto& output_attrs = inferred_attrs.second;
+  CHECK(input_attrs.size() == inode.source->op()->num_outputs) <<
+    "Number of outputs of the gradient node " << inode.source->attrs.name <<
+    " does not match the number of inputs of the corresponding forward node";
+  // Set the attributes of output gradients
+  // using attributes of forward node inputs
+  for (size_t i = 0; i < input_attrs.size(); ++i) {
+    uint32_t eid = idx.entry_id(nid, i);
+    if (fis_none(rshape[eid])) {
+      rshape[eid] = input_attrs[i];
+    } else if (!fis_none(input_attrs[i])) {
+      CHECK_EQ(rshape[eid], input_attrs[i])
+          << "Backward shape inconsistent with the forward shape";
+    }
+  }
+  // Set the attributes of input gradients
+  // using attributes of forward node outputs
+  for (size_t i = 0; i < output_attrs.size(); ++i) {
+    // We assume that the first inputs to the
+    // backward op are the output gradients
+    const auto& e = inode.source->inputs[i];
+    if (e.node == nullptr) {
+      uint32_t eid = idx.entry_id(inode.inputs[i]);
+      if (fis_none(rshape[eid])) {
+        rshape[eid] = output_attrs[i];
+      }
+    }
+  }
+}
+
+template <typename FProvideSubgraphType, typename AttrType>
+void ProvideAttrToFusion(const uint32_t nid,
+                         const nnvm::IndexedGraph& idx,
+                         std::vector<AttrType>& rshape,
+                         const std::string& provide_fusion_name) {
+  const auto& inode = idx[nid];
+  std::vector<std::vector<AttrType>> in_attrs;
+  std::vector<std::vector<AttrType>> out_attrs;
+  for (const auto& dep_node : inode.source->control_deps) {
+    in_attrs.push_back({});
+    out_attrs.push_back({});
+    auto &current_in_attrs = in_attrs.back();
+    auto &current_out_attrs = out_attrs.back();
+    uint32_t dep_node_id = idx.node_id(dep_node.get());
+    for (const auto& e : idx[dep_node_id].inputs) {
+      current_in_attrs.push_back(rshape[idx.entry_id(e)]);
+    }
+    for (size_t i = 0; i < dep_node->num_outputs(); ++i) {
+      current_out_attrs.push_back(rshape[idx.entry_id(dep_node_id, i)]);
+    }
+  }
+  auto provide =
+    Op::GetAttr<FProvideSubgraphType>(provide_fusion_name).get(inode.source->op(), nullptr);
+  CHECK(provide != nullptr) <<
+    "Encountered Fusion operator that does not implement providing subgraph attr " <<
+    provide_fusion_name << ".";
+  provide(inode.source->attrs, in_attrs, out_attrs);
+}
+
 /*!\brief
  * This is a duplicate of the InferAttr function in nnvm with minor modification
  * to support inferring storage type whose function signature is different from
@@ -118,9 +245,6 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
       Op::GetAttr<FInferType>(infer_name);
   static auto& is_backward =
       Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
-  // gradient function, used to get node correspondence.
-  static auto& fgrad =
-      Op::GetAttr<nnvm::FGradient>("FGradient");
   // reshape shape vector
   AttrVector rshape;
   // dispatch mode vector
@@ -221,80 +345,11 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
       nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
       CHECK(fwd_ptr->op() != nullptr) << "Forward op cannot be a variable";
 
-      static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
-      if (!is_fusion.get(fwd_ptr->op(), false)) {
-        const IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
-        // use gradient function to find out the correspondence.
-        std::vector<nnvm::NodeEntry> ograd(fwd_ptr->num_outputs());
-        for (size_t i = 0; i < ograd.size(); ++i) {
-          ograd[i].index = static_cast<uint32_t>(i);
-        }
-        // input gradient list
-        auto igrad = fgrad[fwd_ptr->op()](fwd_ptr, ograd);
-        const nnvm::Node* igrad_node = nullptr;
-        // Input gradient assignement
-        for (size_t i = 0; i < igrad.size(); ++i) {
-          if (igrad[i].node->op() == inode.source->op()) {
-            uint32_t eid = idx.entry_id(nid, igrad[i].index);
-            if (fis_none(rshape[eid])) {
-              rshape[eid] = rshape[idx.entry_id(fnode.inputs[i])];
-            } else if (!fis_none(rshape[idx.entry_id(fnode.inputs[i])])) {
-              // Need to skip empty forward shape, because it may not be
-              // available now and it is possible to infer the forward
-              // shape in one of the next a few passes
-              CHECK_EQ(rshape[eid], rshape[idx.entry_id(fnode.inputs[i])])
-                  << "Backward shape inconsistent with the forward shape";
-            }
-            if (igrad_node == nullptr) {
-              igrad_node = igrad[i].node.get();
-            } else {
-              CHECK(igrad_node == igrad[i].node.get());
-            }
-          }
-        }
-        // out grad entries
-        CHECK(igrad_node != nullptr)
-          << "Cannot find matching backward op for " << inode.source->attrs.name;
-        for (size_t i = 0; i < igrad_node->inputs.size(); ++i) {
-          const nnvm::NodeEntry& e = igrad_node->inputs[i];
-          if (e.node == nullptr) {
-            uint32_t eid = idx.entry_id(inode.inputs[i]);
-            if (fis_none(rshape[eid])) {
-              rshape[eid] = rshape[idx.entry_id(inode.control_deps[0], e.index)];
-            }
-          }
-        }
+      static auto& is_fusion_helper = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
+      if (!is_fusion_helper.get(fwd_ptr->op(), false)) {
+        GetAttrFromForwardNode(nid, idx, rshape, fis_none);
       } else {
-        static auto& finfer_fused_shape = Op::GetAttr<FAccessSubgraphType>(infer_fusion_name);
-        auto finfer = finfer_fused_shape.get(fwd_ptr->op(), nullptr);
-        CHECK(finfer != nullptr) << "Operator " << fwd_ptr->attrs.name <<
-          " is marked as Fusion but does not allow accessing attributes";
-        const auto& inferred_attrs = finfer(fwd_ptr->attrs);
-        const auto& input_attrs = inferred_attrs.first;
-        const auto& output_attrs = inferred_attrs.second;
-        CHECK(input_attrs.size() == inode.source->op()->num_outputs) <<
-          "Number of outputs of the gradient node " << inode.source->attrs.name <<
-          " does not match the number of inputs of the corresponding forward node";
-        for (size_t i = 0; i < input_attrs.size(); ++i) {
-          uint32_t eid = idx.entry_id(nid, i);
-          if (fis_none(rshape[eid])) {
-            rshape[eid] = input_attrs[i];
-          } else if (!fis_none(input_attrs[i])) {
-            CHECK_EQ(rshape[eid], input_attrs[i])
-                << "Backward shape inconsistent with the forward shape";
-          }
-        }
-        for (size_t i = 0; i < output_attrs.size(); ++i) {
-          // We assume that the first inputs to the
-          // backward op are the output gradients
-          const auto& e = inode.source->inputs[i];
-          if (e.node == nullptr) {
-            uint32_t eid = idx.entry_id(inode.inputs[i]);
-            if (fis_none(rshape[eid])) {
-              rshape[eid] = output_attrs[i];
-            }
-          }
-        }
+        GetAttrFromFusedNode<FAccessSubgraphType>(nid, idx, rshape, fis_none, infer_fusion_name);
       }
     } else {
       DispatchMode* dispatch_mode = nullptr;
@@ -321,28 +376,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
           try {
             static auto& is_fusion = Op::GetAttr<exec::TIsFusion>("TIsFusion");
             if (is_fusion.get(inode.source->op(), false)) {
-              std::vector<std::vector<AttrType>> in_attrs;
-              std::vector<std::vector<AttrType>> out_attrs;
-              for (const auto& dep_node : inode.source->control_deps) {
-                in_attrs.push_back({});
-                out_attrs.push_back({});
-                auto &current_in_attrs = in_attrs.back();
-                auto &current_out_attrs = out_attrs.back();
-                uint32_t dep_node_id = idx.node_id(dep_node.get());
-                for (const auto& e : idx[dep_node_id].inputs) {
-                  current_in_attrs.push_back(rshape[idx.entry_id(e)]);
-                }
-                for (size_t i = 0; i < dep_node->num_outputs(); ++i) {
-                  current_out_attrs.push_back(rshape[idx.entry_id(dep_node_id, i)]);
-                }
-              }
-              auto provide =
-                Op::GetAttr<FProvideSubgraphType>(provide_fusion_name).get(inode.source->op(),
-                                                                           nullptr);
-              CHECK(provide != nullptr) <<
-                "Encountered Fusion operator that does not implement providing subgraph attr " <<
-                provide_fusion_name << ".";
-              provide(inode.source->attrs, in_attrs, out_attrs);
+              ProvideAttrToFusion<FProvideSubgraphType>(nid, idx, rshape, provide_fusion_name);
             }
             forward_known = ApplyOpInferAttr(ret, finfer, inode.source->attrs,
                                              nid, &ishape, &oshape, dispatch_mode);
@@ -458,9 +492,6 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       Op::GetAttr<FInferType>(infer_name);
   static auto& is_backward =
       Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
-  // gradient function, used to get node correspondence.
-  static auto& fgrad =
-      Op::GetAttr<nnvm::FGradient>("FGradient");
   // reshape shape vector
   AttrVector rshape;
   // dispatch mode vector
@@ -572,81 +603,12 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
       nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
       CHECK(fwd_ptr->op() != nullptr) << "Forward op cannot be a variable";
 
-      static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
-      if (!is_fusion.get(fwd_ptr->op(), false)) {
-        const IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
-        // use gradient function to find out the correspondence.
-        std::vector<nnvm::NodeEntry> ograd(fwd_ptr->num_outputs());
-        for (size_t i = 0; i < ograd.size(); ++i) {
-          ograd[i].index = static_cast<uint32_t>(i);
-        }
-        // input gradient list
-        auto igrad = fgrad[fwd_ptr->op()](fwd_ptr, ograd);
-        const nnvm::Node* igrad_node = nullptr;
-        // Input gradient assignement
-        for (size_t i = 0; i < igrad.size(); ++i) {
-          if (igrad[i].node->op() == inode.source->op()) {
-            uint32_t eid = idx.entry_id(nid, igrad[i].index);
-            if (fis_none(rshape[eid])) {
-              rshape[eid] = rshape[idx.entry_id(fnode.inputs[i])];
-            } else if (!fis_none(rshape[idx.entry_id(fnode.inputs[i])])) {
-              // Need to skip empty forward shape, because it may not be
-              // available now and it is possible to infer the forward
-              // shape in one of the next a few passes
-              CHECK_EQ(rshape[eid], rshape[idx.entry_id(fnode.inputs[i])])
-                  << "Backward shape inconsistent with the forward shape";
-            }
-            if (igrad_node == nullptr) {
-              igrad_node = igrad[i].node.get();
-            } else {
-              CHECK(igrad_node == igrad[i].node.get());
-            }
-          }
-        }
-        // out grad entries
-        CHECK(igrad_node != nullptr)
-          << "Cannot find matching backward op for " << inode.source->attrs.name;
-        for (size_t i = 0; i < igrad_node->inputs.size(); ++i) {
-          const nnvm::NodeEntry& e = igrad_node->inputs[i];
-          if (e.node == nullptr) {
-            uint32_t eid = idx.entry_id(inode.inputs[i]);
-            if (fis_none(rshape[eid])) {
-              rshape[eid] = rshape[idx.entry_id(inode.control_deps[0], e.index)];
-            }
-          }
-        }
+      static auto& is_fusion_helper = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
+      if (!is_fusion_helper.get(fwd_ptr->op(), false)) {
+        GetAttrFromForwardNode(nid, idx, rshape, fis_none);
       } else {
-        static auto& finfer_fused_shape =
-          Op::GetAttr<exec::FAccessSubgraphShape>("FAccessSubgraphShape");
-        auto finfer = finfer_fused_shape.get(fwd_ptr->op(), nullptr);
-        CHECK(finfer != nullptr) << "Operator " << fwd_ptr->attrs.name <<
-          " is marked as Fusion but does not allow accessing attributes";
-        const auto& inferred_attrs = finfer(fwd_ptr->attrs);
-        const auto& input_attrs = inferred_attrs.first;
-        const auto& output_attrs = inferred_attrs.second;
-        CHECK(input_attrs.size() == inode.source->op()->num_outputs) <<
-          "Number of outputs of the gradient node " << inode.source->attrs.name <<
-          " does not match the number of inputs of the corresponding forward node";
-        for (size_t i = 0; i < input_attrs.size(); ++i) {
-          uint32_t eid = idx.entry_id(nid, i);
-          if (fis_none(rshape[eid])) {
-            rshape[eid] = input_attrs[i];
-          } else if (!fis_none(input_attrs[i])) {
-            CHECK_EQ(rshape[eid], input_attrs[i])
-                << "Backward shape inconsistent with the forward shape";
-          }
-        }
-        for (size_t i = 0; i < output_attrs.size(); ++i) {
-          // We assume that the first inputs to the
-          // backward op are the output gradients
-          const auto& e = inode.source->inputs[i];
-          if (e.node == nullptr) {
-            uint32_t eid = idx.entry_id(inode.inputs[i]);
-            if (fis_none(rshape[eid])) {
-              rshape[eid] = output_attrs[i];
-            }
-          }
-        }
+        GetAttrFromFusedNode<exec::FAccessSubgraphShape>(nid, idx, rshape, fis_none,
+                                                         "FAccessSubgraphShape");
       }
     } else {
       DispatchMode* dispatch_mode = nullptr;
@@ -683,28 +645,8 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
           try {
             static auto& is_fusion = Op::GetAttr<exec::TIsFusion>("TIsFusion");
             if (is_fusion.get(inode.source->op(), false)) {
-              std::vector<std::vector<AttrType>> in_attrs;
-              std::vector<std::vector<AttrType>> out_attrs;
-              for (const auto& dep_node : inode.source->control_deps) {
-                in_attrs.emplace_back();
-                out_attrs.emplace_back();
-                auto &current_in_attrs = in_attrs.back();
-                auto &current_out_attrs = out_attrs.back();
-                uint32_t dep_node_id = idx.node_id(dep_node.get());
-                for (const auto& e : idx[dep_node_id].inputs) {
-                  current_in_attrs.push_back(rshape[idx.entry_id(e)]);
-                }
-                for (size_t i = 0; i < dep_node->num_outputs(); ++i) {
-                  current_out_attrs.push_back(rshape[idx.entry_id(dep_node_id, i)]);
-                }
-              }
-              auto provide =
-                Op::GetAttr<exec::FProvideSubgraphShape>("FProvideSubgraphShape").get(
-                    inode.source->op(),
-                    nullptr);
-              CHECK(provide != nullptr) <<
-                "Encountered Fusion operator that does not implement providing subgraph shape.";
-              provide(inode.source->attrs, in_attrs, out_attrs);
+              ProvideAttrToFusion<exec::FProvideSubgraphShape>(nid, idx, rshape,
+                                                               "FProvideSubgraphShape");
             }
             forward_known = ApplyOpInferAttr(ret, finfer, inode.source->attrs,
                                              nid, &ishape, &oshape, dispatch_mode);
