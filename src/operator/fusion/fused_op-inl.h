@@ -31,27 +31,23 @@ namespace mxnet {
 namespace detail {
 
 const char fp16_support_string[] = R"code(
-#include <cuda_fp16.h>
+struct __align__(2) __half {
+  __host__ __device__ __half() { }
+  unsigned short __x;
+};
+/* Definitions of intrinsics */
+__device__ inline __half __float2half(const float f) {
+  __half val;
+ asm("{  cvt.rn.f16.f32 %0, %1;}\n" : "=h"(val.__x) : "f"(f));
+  return val;
+}
+__device__ inline float __half2float(const __half h) {
+  float val;
+ asm("{  cvt.f32.f16 %0, %1;}\n" : "=f"(val) : "h"(h.__x));
+  return val;
+}
+typedef __half half;
 )code";
-
-// const char fp16_support_string[] = R"code(
-// struct __align__(2) __half {
-//   __host__ __device__ __half() { }
-//   unsigned short __x;
-// };
-// /* Definitions of intrinsics */
-// __device__ inline __half __float2half(const float f) {
-//   __half val;
-//  asm("{  cvt.rn.f16.f32 %0, %1;}\n" : "=h"(val.__x) : "f"(f));
-//   return val;
-// }
-// __device__ inline float __half2float(const __half h) {
-//   float val;
-//  asm("{  cvt.f32.f16 %0, %1;}\n" : "=f"(val) : "h"(h.__x));
-//   return val;
-// }
-// typedef __half half;
-// )code";
 
 const char type_support_string[] = R"code(
 using float32 = float;

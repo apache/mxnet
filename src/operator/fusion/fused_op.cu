@@ -34,34 +34,6 @@ namespace mxnet {
 
 namespace detail {
 
-std::string FindCUDAIncludePath() {
-#if defined(_WIN32)
-  const std::string delimiter = "\\";
-#else
-  const std::string delimiter = "/";
-#endif
-  std::string cuda_include_path;
-  const char* cuda_path_env = std::getenv("CUDA_PATH");
-  if (cuda_path_env != nullptr) {
-    cuda_include_path += cuda_path_env;
-    cuda_include_path += delimiter + "include";
-    return cuda_include_path;
-  }
-
-#if defined(__linux__)
-  struct stat st;
-  cuda_include_path = "/usr/local/cuda/include";
-  if (stat(cuda_include_path.c_str(), &st) == 0) {
-    return cuda_include_path;
-  }
-#endif
-  LOG(FATAL) << "Cannot find cuda include path."
-             << "CUDA_PATH is not set or CUDA is not installed in the default installation path."
-             << "In other than linux, it is necessary to set CUDA_PATH.";
-  return cuda_include_path;
-}
-
-
 inline std::string mshadowTypeToString(int type) {
   switch (type) {
     case mshadow::kFloat32:
@@ -462,17 +434,15 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     std::string gpu_arch = "--gpu-architecture=compute_" +
                            std::to_string(this->cc_major_) +
                            std::to_string(this->cc_minor_);
-    std::string cuda_include_path = "-I" + detail::FindCUDAIncludePath();
 
     const char *opts[] = {gpu_arch.c_str(),
                           "--std=c++11",
-                          "-default-device",
-                          cuda_include_path.c_str()};
+                          "-default-device"};
     const std::string kernel_name_demangled = "FusedKernel_" + attrs.name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
     nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                    4,        // numOptions
+                                                    3,        // numOptions
                                                     opts);    // options
     // Obtain compilation log from the program.
     size_t logSize;
