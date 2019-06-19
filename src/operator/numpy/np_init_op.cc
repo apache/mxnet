@@ -27,6 +27,8 @@
 namespace mxnet {
 namespace op {
 
+DMLC_REGISTER_PARAMETER(NumpyEyeParam);
+
 NNVM_REGISTER_OP(_npi_zeros)
 .describe("Return a new array of given shape, type, and context, filled with zeros.")
 .set_num_inputs(0)

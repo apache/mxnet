@@ -1794,7 +1794,7 @@ def tile(A, reps):
 
 
 @set_module('mxnet.numpy')
-def eye(N, M=None, k=0, dtype=_np.float32, order='C')):
+def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     """
     Return a 2-D array with ones on the diagonal and zeros elsewhere.
 
@@ -1810,9 +1810,6 @@ def eye(N, M=None, k=0, dtype=_np.float32, order='C')):
         and a negative value to a lower diagonal.
     dtype : data-type, optional
         Data-type of the returned array.
-    order : {‘C’, ‘F’}, optional
-        Whether the output should be stored in row-major (C-style)
-        or column-major (Fortran-style) order in memory.
 
     Returns
     -------
@@ -1820,5 +1817,8 @@ def eye(N, M=None, k=0, dtype=_np.float32, order='C')):
         An array where all elements are equal to zero,
         except for the k-th diagonal, whose values are equal to one.
     """
-    return _mx_nd_np.eye(N, M, k, dtype, order)
-
+    _sanity_check_params('eye', ['order'], kwargs)
+    ctx = kwargs.pop('ctx', current_context())
+    if ctx is None:
+        ctx = current_context()
+    return _npi.eye(N, M, k, dtype)
