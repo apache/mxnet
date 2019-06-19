@@ -167,7 +167,7 @@ class NaiveEngine final : public Engine {
     const char* display_name = (d_name ? d_name : opr_name);
     if (profiling) {
       opr = NewOperator(exec_fun, const_vars, mutable_vars,
-                        prop, opr_name)->Cast<NaiveOpr>();
+                        prop, display_name)->Cast<NaiveOpr>();
       opr->profiling = profiling;
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
       if (profiler->AggregateEnabled()) {
