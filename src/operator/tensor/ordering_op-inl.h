@@ -585,7 +585,8 @@ void ArgSort(const nnvm::NodeAttrs& attrs,
     CHECK(!static_cast<bool>(param.axis) || param.axis.value() == -1 || param.axis.value() == 0)
     << "Axis can only be -1 or 0 for scalor tensor";
     MSHADOW_TYPE_SWITCH(param.dtype, DType, {
-      Tensor<xpu, 1, DType> outdata = outputs[0].get_with_shape<xpu, 1, DType>(Shape1(1));
+      Stream<xpu> *s = ctx.get_stream<xpu>();
+      Tensor<xpu, 1, DType> outdata = outputs[0].get_with_shape<xpu, 1, DType>(Shape1(1), s);
       ASSIGN_DISPATCH(outdata, OpReqType::kWriteTo, 0);
     });
   } else if (inputs[0].shape_.Size() == 0) {
