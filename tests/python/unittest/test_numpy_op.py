@@ -507,7 +507,7 @@ def test_np_bitwise_or():
                              [(3, 2), (3, 2)],  # tall matrices
                              ((), ()),  # scalar only
                              [(3, 0, 2), (3, 0, 2)],  # zero-dim
-                             ((3, 4, 5), (4, 5)),  # broadcasting
+                             ((3, 4, 5), (4, 5)),  # trailing dim broadcasting
                              ((3, 4, 5), ()),  # scalar broadcasting
                              [(4, 3), (4, 1)],  # single broadcasting
                              ((3, 4, 5), (3, 1, 5))  # single broadcasting in the middle
