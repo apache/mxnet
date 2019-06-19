@@ -128,6 +128,14 @@ class DirectedGraph {
     return nodes.end();
   }
 
+  NodeIterator begin() const {
+    return nodesBegin();
+  }
+
+  NodeIterator end() const {
+    return nodesEnd();
+  }
+
  protected:
   std::vector<Node> nodes;
   std::multimap<NodeKey_t, Edge> edges;

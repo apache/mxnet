@@ -32,4 +32,6 @@ TEST(Graph_dump, basic) {
   auto w = NodeEntry(Node::Create(nullptr, "w"));
   auto x_mul_w = MakeNode("dot", "x_mul_w", {x,w});
   g.outputs.emplace_back(std::move(x_mul_w));
+  string graph_dump = GraphDump(g);
+  cout << graph_dump << endl;
 }
