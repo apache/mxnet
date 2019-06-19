@@ -1335,7 +1335,7 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()
-    return _npi.eye(N, M, k, dtype)
+    return _npi.eye(N, M, k, ctx, dtype)
 
 
 _set_np_symbol_class(_Symbol)

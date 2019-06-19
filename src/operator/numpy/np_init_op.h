@@ -38,7 +38,7 @@ struct NumpyEyeParam : public dmlc::Parameter<NumpyEyeParam> {
   dmlc::optional<nnvm::dim_t> M;
   nnvm::dim_t k;
   int dtype;
-
+  std::string ctx;
   DMLC_DECLARE_PARAMETER(NumpyEyeParam) {
     DMLC_DECLARE_FIELD(N)
     .describe("Number of rows in the output.");
@@ -60,6 +60,10 @@ struct NumpyEyeParam : public dmlc::Parameter<NumpyEyeParam> {
     .add_enum("int32", mshadow::kInt32)
     .add_enum("int64", mshadow::kInt64)
     .describe("Data-type of the returned array.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
   }
 };
 
