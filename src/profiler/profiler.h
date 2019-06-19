@@ -790,7 +790,10 @@ struct ProfileTask : public ProfileDuration {
     NVTX_ONLY_CODE(nvtx_duration_.reset(new nvtx::NVTXDuration(name)));
   }
 
-  void setDomain(ProfileDomain *domain) {
+  /*!
+   * \brief Set the domain
+   */
+  void setDomain(ProfileDomain* domain) {
     domain_ = domain;
   }
 
@@ -1175,14 +1178,9 @@ struct ProfileOperator : public ProfileEvent {
     SetCategories(domain_.name());
 =======
       , attributes_(attributes)
-      , profiling_operator_(true)
-      , profiling_task_(true) {
-    if (strcmp(name, "Dummy_Wait") == 0) {
-      profiling_operator_ = false;
-      profiling_task_ = false;
-    } else if (strcmp(name, "Custom") == 0) {
-      profiling_task_ = false;
-    } else if (std::string(name).find("::") != std::string::npos) {
+      , profiling_operator_(strcmp(name, "Dummy_Wait"))
+      , profiling_task_(strcmp(name, "Dummy_Wait") && strcmp(name, "Custom")) {
+    if (std::string(name).find("::") != std::string::npos) {
       as_task_.setDomain(&custom_op_domain);
       SetCategories(custom_op_domain.name());
     } else {
@@ -1272,9 +1270,9 @@ struct ProfileOperator : public ProfileEvent {
   /*! \brief Optional operator attributes */
   std::unique_ptr<Attributes> attributes_;
   /*! \brief Whether to profile as operator */
-  bool profiling_operator_;
+  const bool profiling_operator_;
   /*! \brief Whether to profile as task */
-  bool profiling_task_;
+  const bool profiling_task_;
 };
 
 /*
