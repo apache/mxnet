@@ -30,6 +30,7 @@
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"  //ElemenwiseShape, ElemenwiseType
+#include "../operator_common.h"
 
 namespace mxnet{
 namespace op {
