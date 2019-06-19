@@ -195,6 +195,7 @@ class CachedOp {
   nnvm::Graph fwd_graph_;
   nnvm::Graph full_graph_;
   bool inlining_;
+  bool dynamic_shape_checked_;
   std::vector<nnvm::NodeEntry> ograd_entries_;
   std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
   std::vector<bool> save_inputs_, save_outputs_;

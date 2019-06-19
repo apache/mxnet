@@ -697,6 +697,27 @@ def test_symbol_pow():
 
 
 @with_seed()
+def test_fully_connected():
+    data = mx.sym.var("data")
+    fc_weight = mx.sym.var("weight")
+    fc_bias = mx.sym.var("bias")
+    fc = mx.sym.FullyConnected(data=data, weight=fc_weight, bias=fc_bias, num_hidden=10, no_bias=False, name='fc')
+    data = mx.nd.random.uniform(shape=(5, 5, 5, 13), dtype=np.float32)
+    fc_weight = mx.nd.random.uniform(shape=(10, 325), dtype=np.float32)
+    fc_bias = mx.nd.random.uniform(shape=(10), dtype=np.float32)
+    fc_bias2 = mx.nd.random.uniform(shape=(10, 1), dtype=np.float32)
+    data_np = data.asnumpy().reshape(5, 325)
+    fc_weight_np = np.transpose(fc_weight.asnumpy())
+    fc_bias_np = fc_bias.asnumpy()
+    res = np.dot(data_np, fc_weight_np) + fc_bias.asnumpy()
+    check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np}, {'fc_output': res})
+    check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np},
+                           numeric_eps=1e-2, rtol=1e-4, atol=1e-2)
+    # TODO: Fix Bug #15032 when bias has ndim > 1
+    #check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias2.asnumpy()}, {'fc_output': res})
+
+
+@with_seed()
 def test_pow_fn():
     shape = (3, 4)
     exp = mx.symbol.Variable("exp")
@@ -3384,7 +3405,6 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
 
 
 @with_seed()
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/15004")
 def test_l2_normalization():
     for dtype in ['float16', 'float32', 'float64']:
         for mode in ['channel', 'spatial', 'instance']:
@@ -4859,7 +4879,6 @@ def test_where():
     test_1d_cond()
 
 
-@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13600")
 @with_seed()
 def test_softmin():
     for ndim in range(1, 5):
@@ -5338,6 +5357,30 @@ def test_boolean_mask():
     expected_grad = np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]])
     assert same(out.asnumpy(), expected)
     assert same(data.grad.asnumpy(), expected_grad)
+
+    # test gradient
+    shape = (100, 30)
+    a = mx.nd.random.randint(0, 100, shape=shape)
+    a.attach_grad()
+    bi = mx.nd.random.randint(0, 100, shape=shape[0:1]) > 50
+    ci = mx.nd.random.randint(0, 100, shape=shape[0:1]) < 50
+    mx_grad = mx.nd.zeros_like(a)
+    mx.autograd.mark_variables([a], [mx_grad], grad_reqs='add')
+    T = 3
+    for _ in range(T):
+        with mx.autograd.record():
+            b = mx.nd.contrib.boolean_mask(a, bi)
+            c = mx.nd.contrib.boolean_mask(a, ci)
+            su = b.sum() + c.sum()
+            su.backward()
+    grad = (bi + ci).asnumpy().reshape((-1,) + (1,) * (len(shape)-1))
+    grad = np.tile(grad, (1,) + shape[1:])
+    # T times
+    grad *= T
+    assert_allclose(a.grad.asnumpy(), grad)
+    a_np = a.asnumpy()
+    assert same(b.asnumpy(), a_np[bi.asnumpy().astype('bool')])
+    assert same(c.asnumpy(), a_np[ci.asnumpy().astype('bool')])
 
 
 @with_seed()

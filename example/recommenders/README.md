@@ -43,3 +43,6 @@ Thanks to [xlvector](https://github.com/xlvector/) for the first Matrix Factoriz
 that provided the basis for these examples.
 
 [MovieLens](http://grouplens.org/datasets/movielens/) data from [GroupLens](http://grouplens.org/).
+Note: MovieLens 100K and 10M dataset are copy right to GroupLens Research Group at the University of Minnesota,
+and licensed under their usage license. For full text of the usage license, see [ml-100k license](http://files.grouplens.org/datasets/movielens/ml-100k-README.txt)
+ and [ml-10m license](http://files.grouplens.org/datasets/movielens/ml-10m-README.html). 

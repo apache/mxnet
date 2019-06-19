@@ -222,6 +222,7 @@ CachedOp::CachedOp(
     const nnvm::Symbol& sym,
     const std::vector<std::pair<std::string, std::string> >& flags) {
   config_.Init(flags);
+  this->dynamic_shape_checked_ = false;
 
   if (config_.static_shape) {
     CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
@@ -328,6 +329,11 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
                                        bool erase_result) {
   using namespace nnvm;
   using namespace imperative;
+  if (this->dynamic_shape_checked_) {
+    return config_.is_dynamic;
+  } else {
+    this->dynamic_shape_checked_ = true;
+  }
   CHECK_EQ(inputs.size(), num_inputs());
 
   auto state_ptr = GetCachedOpState(default_ctx);
@@ -346,7 +352,7 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   CheckAndInferShape(&g, std::move(shape_inputs), true,
                      {0, 0}, {0, 0},
                      &contain_dynamic_shape);
-  if (contain_dynamic_shape && erase_result) {
+  if (!config_.static_shape && erase_result) {
     g.attrs.erase("shape");
     g.attrs.erase("shape_inputs");
   }
