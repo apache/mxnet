@@ -179,6 +179,8 @@ More information on turning these features on or off are found in the following 
 There is a configuration file for make,
 [`make/config.mk`](https://github.com/apache/incubator-mxnet/blob/master/make/config.mk), that contains all the compilation options. You can edit it and then run `make` or `cmake`. `cmake` is recommended for building MXNet (and is required to build with MKLDNN), however you may use `make` instead. For building with Java/Scala/Clojure, only `make` is supported.
 
+**NOTE:** When certain set of build flags are set, MXNet archive increases to more than 4 GB. Since MXNet uses archive internally archive runs into a bug ("File Truncated": [bugreport](https://sourceware.org/bugzilla/show_bug.cgi?id=14625)) for archives greater than 4 GB. Please use ar version 2.27 or greater to overcome this bug. Please see https://github.com/apache/incubator-mxnet/issues/15084 for more details.
+
 <hr>
 
 ## Build MXNet
