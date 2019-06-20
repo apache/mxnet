@@ -1232,7 +1232,7 @@ struct ProfileOperator : public ProfileEvent {
       if (attributes) {
         name_.append(attributes->to_string().c_str());
       }
-      if (std::string(name).find("::") != std::string::npos) {
+      if (IsSubOperatorOfCustom(const char* name)) {
         categories_.set(custom_op_domain.name());
       } else {
         categories_.set("operator");
