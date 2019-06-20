@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=unnecessary-pass
+# pylint: disable=unnecessary-pass, too-many-lines
 """Neural network parameter."""
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
@@ -957,10 +957,11 @@ class ParameterDict(object):
                     "with '%s'"%(restore_prefix, name, restore_prefix)
         ndarray_load = ndarray.load(filename)
         self.load_dict(ndarray_load, ctx, allow_missing,
-                       ignore_extra, restore_prefix, filename, cast_dtype)
+                       ignore_extra, restore_prefix, filename, cast_dtype, dtype_source)
 
     def load_dict(self, param_dict, ctx=None, allow_missing=False,
-                  ignore_extra=False, restore_prefix='', filename=None, cast_dtype=False):
+                  ignore_extra=False, restore_prefix='', filename=None, cast_dtype=False,
+                  dtype_source="current"):
         """Load parameters from dict
 
         Parameters
@@ -1000,4 +1001,5 @@ class ParameterDict(object):
                     "Please make sure source and target networks have the same prefix."%(
                         name[lprefix:], error_str, _brief_print_list(self._params.keys()))
                 continue
-            self[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
+            self[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype,
+                                  dtype_source=dtype_source)
