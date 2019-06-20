@@ -108,6 +108,8 @@ def test_predictor_fp16():
                           type_dict={"data": input1.dtype})
     predictor.forward(data=input1)
     predictor_out1 = predictor.get_output(0)
+    assert out1.asnumpy().dtype == predictor_out1.dtype, \
+        "Dtypes of output from C predict API doesnt match with gluon"
 
     assert_almost_equal(out1.asnumpy(), predictor_out1, rtol=1e-5, atol=1e-6)
 
