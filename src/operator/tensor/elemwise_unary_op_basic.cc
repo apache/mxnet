@@ -138,7 +138,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
       // when building gradient graph, the backward node of n->inputs[1] will be
       // added to the graph again, therefore f`(x) will be multiplied
       std::vector<nnvm::NodeEntry> ret;
-      ret.emplace_back(ograds[0]); // this output is not passed out if gradient w.r.t x only
+      ret.emplace_back(ograds[0]);  // this output is not passed out if gradient w.r.t x only
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_in",
                                 {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
       return ret;
