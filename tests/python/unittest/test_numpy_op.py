@@ -857,6 +857,54 @@ def test_np_tile():
             ret_mx = net(data_mx)
             assert same(ret_mx.asnumpy(), ret_np)
 
+@with_seed()
+@npx.use_np_shape
+def test_np_gcd():
+    @npx.use_np_shape 
+    class TestGcd(HybridBlock):
+        def __init__(self):
+            super(TestGcd, self).__init__()
+            # necessary initializations
+            
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.gcd(x1, x2)
+    
+    shapes = [  
+               (),
+               (2, 1),
+               (1, 2),
+               (2, 2),
+               (3, 11),
+               (11, 3),
+               (0, 11, 15),
+               (2, 0, 15),
+               (1, 0, 15),
+               (1, 0, 15, 16)
+             ]
+
+    for hybridize in [True, False]:
+        for shape in shapes:
+            # More for-loops for iterating through all other arguments
+            # 1 extra for-loop for iterating through data types
+            test_gcd = TestGcd()
+            if hybridize:
+                test_gcd.hybridize()
+
+            x1 = rand_ndarray(shape).astype(_np.int32).as_np_ndarray()
+            x2 = rand_ndarray(shape).astype(_np.int32).as_np_ndarray()
+
+            np_out = _np.gcd(x1.asnumpy(), x2.asnumpy())
+
+            with mx.autograd.record():
+                mx_out = test_gcd(x1, x2)
+
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            # Test imperative once again
+            mx_out = np.gcd(x1, x2)
+            np_out = _np.gcd(x1.asnumpy(), x2.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 if __name__ == '__main__':
     import nose
