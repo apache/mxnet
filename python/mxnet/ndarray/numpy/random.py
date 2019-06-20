@@ -17,11 +17,13 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 from __future__ import absolute_import
+import numpy as np
 from ...base import numeric_types
 from ...context import current_context
+from ..ndarray import NDArray
 from . import _internal as _npi
 
-__all__ = ['uniform', 'normal']
+__all__ = ['uniform', 'normal', 'multinomial']
 
 
 def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):
@@ -135,3 +137,40 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     out = kwargs.pop('out', None)
     return _random_helper(_npi.random_normal, None,
                           [loc, scale], size, dtype, ctx, out, kwargs)
+
+
+def multinomial(n, pvals, size=None):
+    """Draw samples from a multinomial distribution.
+
+    The multinomial distribution is a multivariate generalisation of the binomial distribution.
+    Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
+    where the outcome can be 1 through 6. Each sample drawn from the distribution represents n such experiments.
+    Its values, ``X_i = [X_0, X_1, ..., X_p]``, represent the number of times the outcome was ``i``.
+
+
+    Parameters
+    ----------
+    n : int
+        Number of experiments.
+    pvals : sequence of floats, length p
+        Probabilities of each of the p different outcomes. These should sum to 1
+        (however, the last element is always assumed to account for the remaining
+        probability, as long as ``sum(pvals[:-1]) <= 1)``.
+    size : int or tuple of ints, optional
+        Output shape. If the given shape is, e.g., ``(m, n, k)``, then ``m * n * k`` sam-
+        ples are drawn. Default is None, in which case a single value is returned.
+
+    Returns
+    -------
+    out : ndarray
+        The drawn samples, of shape size, if that was provided. If not, the shape is ``(N,)``.
+        In other words, each entry ``out[i,j,...,:]`` is an N-dimensional value drawn from the distribution.
+    """
+    if isinstance(pvals, NDArray):
+        return _npi.multinomial(pvals, pvals=None, n=n, size=size)
+    else:
+        if isinstance(pvals, np.ndarray):
+            pvals = pvals.tolist()
+        if any(isinstance(i, list) for i in pvals):
+            raise ValueError('object too deep for desired array')
+        return _npi.multinomial(n=n, pvals=pvals, size=size)
