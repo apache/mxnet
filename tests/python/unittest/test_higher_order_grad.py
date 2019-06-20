@@ -105,6 +105,7 @@ def test_log10():
         array = random_arrays(shape)
         check_second_order_unary(array, log10, grad_grad_op)
 
+
 @with_seed()
 def test_sigmoid():
     def sigmoid(x):
