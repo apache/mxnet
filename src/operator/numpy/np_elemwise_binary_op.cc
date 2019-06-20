@@ -33,7 +33,7 @@ namespace mxnet {
         NNVM_REGISTER_OP(_np_bitwise_or)
                 .set_num_inputs(2)
                 .set_num_outputs(1)
-                .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+                .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
                 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
                 .set_attr<nnvm::FListInputNames>("FListInputNames",
                                                  [](const NodeAttrs &attrs) {
