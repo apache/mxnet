@@ -646,6 +646,76 @@ def test_np_arange():
 
 @with_seed()
 @npx.use_np_shape
+def test_np_linspace():
+    configs = [
+        (0.0, 1.0, 10),
+        (-2, 4, 30),
+        (5.234324, 8.98324, 324),
+        (2, 10, 100)
+    ]
+    exception_configs = [
+        (0, 10, -1),
+        (0, 1, 2.5)
+    ]
+    dtypes = ['int32', 'float16', 'float32', 'float64', None]
+    for config in configs:
+        for dtype in dtypes:
+            for endpoint in [False, True]:
+                for retstep in [False, True]:
+                    if isinstance(config, tuple):
+                        mx_ret = np.linspace(*config, endpoint=endpoint, retstep=retstep, dtype=dtype)
+                        np_ret = _np.linspace(*config, endpoint=endpoint, retstep=retstep, dtype=dtype)
+                    else:
+                        mx_ret = np.linspace(config, endpoint=endpoint, retstep=retstep, dtype=dtype)
+                        np_ret = _np.linspace(config, endpoint=endpoint, retstep=retstep, dtype=dtype)
+                    if retstep:
+                        assert_almost_equal(mx_ret[0].asnumpy(), np_ret[0], atol=1e-3, rtol=1e-5)
+                        same(mx_ret[1], np_ret[1])
+                    else:
+                        assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
+    # check for exception input
+    for config in exception_configs:
+        assertRaises(MXNetError, np.linspace, *config)
+    # check linspace equivalent to arange
+    for test_index in range(1000):
+        assert_almost_equal(mx.np.linspace(0, test_index, test_index + 1).asnumpy(), mx.np.arange(test_index + 1).asnumpy())
+    @npx.use_np
+    class TestLinspace(HybridBlock):
+        def __init__(self, start, stop, num=50, endpoint=None, retstep=False, dtype=None, axis=0):
+            super(TestLinspace, self).__init__()
+            self._start = start
+            self._stop = stop
+            self._num = num
+            self._endpoint = endpoint
+            self._retstep = retstep
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            if self._retstep:
+                raise ValueError("linspace didn't support retstep = True inside HybridBlock")
+            else:
+                return x + F.np.linspace(self._start, self._stop, self._num, \
+                self._endpoint, self._retstep, self._dtype)
+
+    for dtype in dtypes:
+        x = np.zeros(shape=(), dtype=dtype)
+        for config in configs:
+            for hybridize in [False, True]:
+                for endpoint in [False, True]:
+                    if isinstance(config, tuple):
+                        net = TestLinspace(*config, endpoint=endpoint, dtype=dtype)
+                        np_out = _np.linspace(*config, endpoint=endpoint, dtype=dtype)
+                    else:
+                        net = TestLinspace(config, endpoint=endpoint, dtype=dtype)
+                        np_out = _np.linspace(config, endpoint=endpoint, dtype=dtype)
+                    if hybridize:
+                        net.hybridize()
+                    mx_out = net(x)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
+
+
+@with_seed()
+@npx.use_np_shape
 def test_np_argmax():
     workloads = [
         ((), 0, False),
