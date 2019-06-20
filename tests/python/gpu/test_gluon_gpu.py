@@ -271,7 +271,8 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     # TODO: test state return value as well output
     # Only compare the valid sections for each batch entry
     for b in range(batch_size):
-        assert_allclose(net_output_np[:sequence_length_np[b], b], ref_net_output[b].asnumpy().squeeze(1))
+        assert_allclose(net_output_np[:sequence_length_np[b], b], ref_net_output[b].asnumpy().squeeze(1),
+                        rtol=1e-2, atol=1e-6)
 
     # Now test backward
     net_output.backward()
@@ -285,7 +286,7 @@ def check_layer_bidirectional_varseqlen(size, in_size):
         net_grad = net_params[k].grad()
         ref_net_grad = ref_net_params[k.replace('lstm_', 'lstm_ref_')].grad()
         assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
-                            rtol=1e-2, atol=1e-2)
+                            rtol=1e-2, atol=1e-6)
 
 
 @with_seed()
