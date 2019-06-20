@@ -86,42 +86,40 @@ def test_np_tensordot():
         
         return [grad_a, grad_b]
 
-    axes = [1, 1, 0, 1, [[1], [0]], 3, [[2, 3, 4], [2, 1, 0]], 2]
-    shapes = [
-        ((3, 0), (0, 4)),
-        ((3,), (3,)),        # Case 1
-        ((3,), (3,)),
-        ((3, 4), (4, 5)),    # Case 2
-        ((3, 5, 4), (5, )),  # Case 3
-        ((3, 4, 5, 6, 7), (5, 6, 7, 1, 2)),
-        ((3, 4, 5, 6, 7), (7, 6, 5, 1, 2)),
-        ((2, 2), (2, 2))
+    tensor_shapes = [
+        ((3, 0), (0, 4), 1),
+        ((3,), (3,), 1),        # Case 1
+        ((3,), (3,), 0),
+        ((3, 4), (4, 5), 1),    # Case 2
+        ((3, 5, 4), (5, ), [[1], [0]]),  # Case 3
+        ((3, 4, 5, 6, 7), (5, 6, 7, 1, 2), 3),
+        ((3, 4, 5, 6, 7), (7, 6, 5, 1, 2), [[2, 3, 4], [2, 1, 0]]),
+        ((2, 2), (2, 2), 2)
     ]
 
     for hybridize in [True, False]:
-        for shape, axis in shapes, axes:
-            for dtype in [np.float16, np.float32, np.float64]:
-                test_tensordot = TestTensordot(axis)
+        for a_shape, b_shape, axes in tensor_shapes:
+            for dtype in [_np.float16, _np.float32, _np.float64]:
+                test_tensordot = TestTensordot(axes)
                 if hybridize:
                     test_tensordot.hybridize()
-                a = rand_ndarray(shape[0])
-                b = rand_ndarray(shape[1])
+                a = rand_ndarray(a_shape)
+                b = rand_ndarray(b_shape)
                 a.attach_grad()
                 b.attach_grad()
-                np_out = _np.tensordot(a, b, axis)
+                np_out = _np.tensordot(a, b, axes)
                 with mx.autograd.record():
                     mx_out = test_tensordot(a, b)
                 assert mx_out.shape == np_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
                 mx_out.backward()
-                # Code to get reference backward value
-                # np_backward = ...
+                np_backward = tensordot_backward(a, b, axes)
                 assert_almost_equal(a.grad.asnumpy(), np_backward[0], atol=1e-3, rtol=1e-5)
                 assert_almost_equal(b.grad.asnumpy(), np_backward[1], atol=1e-3, rtol=1e-5)
                 
                 # Test imperative once again
-                mx_out = np.tensordot(a, b, axis)
-                np_out = _np.tensordot(a, b, axis)
+                mx_out = np.tensordot(a, b, axes)
+                np_out = _np.tensordot(a, b, axes)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
