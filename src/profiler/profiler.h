@@ -1260,13 +1260,13 @@ struct ProfileOperator : public ProfileEvent {
    * \brief Check if this operator is no longer profiled
    * Notice that this operator may still be used for e.g synchronization
    */
-  inline bool IsDeprecatedOperator(const char* name) {
+  inline static bool IsDeprecatedOperator(const char* name) {
     return strcmp(name, "Dummy_Wait") && strcmp(name, "Custom");
   }
   /*!
    * \brief Check if this operator a sub-operator of a custom operator
    */
-  inline bool IsSubOperatorOfCustom(const char* name) {
+  inline static bool IsSubOperatorOfCustom(const char* name) {
     return strstr(name, "::");
   }
   /*! \brief Also log the operator as a task in the operator domain */
