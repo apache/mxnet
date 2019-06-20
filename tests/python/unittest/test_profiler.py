@@ -286,7 +286,7 @@ def test_aggregate_duplication():
         and 'Count' in target_dict['Time']['operator']['sqrt'] \
         and '_plus_scalar' in target_dict['Time']['operator'] \
         and 'Count' in target_dict['Time']['operator']['_plus_scalar']
-    # thet are called once and twice respectively
+    # they are called once and twice respectively
     assert target_dict['Time']['operator']['sqrt']['Count'] == 1
     assert target_dict['Time']['operator']['_plus_scalar']['Count'] == 2
     profiler.set_state('stop')
