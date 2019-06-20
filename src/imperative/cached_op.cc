@@ -100,6 +100,7 @@ CachedOp::CachedOp(
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const auto _copy_op = Op::Get("_copy");
   config_.Init(flags);
+  this->dynamic_shape_checked_ = false;
 
   if (config_.static_shape) {
     CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
@@ -272,6 +273,11 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
                                        bool erase_result) {
   using namespace nnvm;
   using namespace imperative;
+  if (this->dynamic_shape_checked_) {
+    return config_.is_dynamic;
+  } else {
+    this->dynamic_shape_checked_ = true;
+  }
   CHECK_EQ(inputs.size(), num_inputs());
 
   auto state_ptr = GetCachedOpState(default_ctx);
