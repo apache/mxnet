@@ -99,7 +99,7 @@ TEST(DirectedGraphTest, iterators) {
   size_t edge_cnt = 0;
   vector<size_t> costs;
   for (auto ei = g.edgesBegin(); ei != g.edgesEnd(); ++ei) {
-    costs.push_back(ei->second.cost);
+    costs.push_back(ei->cost);
     ++edge_cnt;
   }
   EXPECT_EQ(edge_cnt, g.numEdges());
@@ -125,7 +125,7 @@ TEST(DirectedGraphTest, iterators2) {
   typedef DirectedGraph<>::NodeKey_t node_t;
   vector<pair<node_t, node_t>> edges;
   for (auto ei = g.outEdgesBegin(0); ei != g.outEdgesEnd(0); ++ei)
-    edges.emplace_back(ei->second.src, ei->second.dst);
+    edges.emplace_back(ei->src, ei->dst);
   EXPECT_EQ(edges.size(), 3);
   EXPECT_EQ(edges.at(0), make_pair(node_t(0), node_t(1)));
   EXPECT_EQ(edges.at(1), make_pair(node_t(0), node_t(1)));
@@ -133,23 +133,37 @@ TEST(DirectedGraphTest, iterators2) {
 
   edges.clear();
   for (auto ei = g.outEdgesBegin(1); ei != g.outEdgesEnd(1); ++ei)
-    edges.emplace_back(ei->second.src, ei->second.dst);
+    edges.emplace_back(ei->src, ei->dst);
   EXPECT_EQ(edges.size(), 0);
 
   edges.clear();
   for (auto ei = g.outEdgesBegin(2); ei != g.outEdgesEnd(2); ++ei)
-    edges.emplace_back(ei->second.src, ei->second.dst);
+    edges.emplace_back(ei->src, ei->dst);
   EXPECT_EQ(edges.size(), 2);
   EXPECT_EQ(edges.at(0), make_pair(node_t(2), node_t(4)));
   EXPECT_EQ(edges.at(1), make_pair(node_t(2), node_t(5)));
 
   edges.clear();
   for (auto ei = g.outEdgesBegin(3); ei != g.outEdgesEnd(3); ++ei)
-    edges.emplace_back(ei->second.src, ei->second.dst);
+    edges.emplace_back(ei->src, ei->dst);
   EXPECT_EQ(edges.size(), 1);
 
   edges.clear();
   for (auto ei = g.outEdgesBegin(8); ei != g.outEdgesEnd(8); ++ei)
-    edges.emplace_back(ei->second.src, ei->second.dst);
+    edges.emplace_back(ei->src, ei->dst);
   EXPECT_EQ(edges.size(), 0);
+
+  edges.clear();
+  for (auto ei : g.edges()) {
+    edges.emplace_back(ei->src, ei->dst);
+  }
+  EXPECT_EQ(edges.size(), 6);
+  typedef pair<size_t, size_t> p_t;
+  EXPECT_TRUE(edges[0] == p_t(0,1));
+  EXPECT_TRUE(edges[1] == p_t(0,1));
+  EXPECT_TRUE(edges[2] == p_t(0,1));
+  EXPECT_TRUE(edges[3] == p_t(2,4));
+  EXPECT_TRUE(edges[4] == p_t(2,5));
+  EXPECT_TRUE(edges[5] == p_t(3,5));
 }
+

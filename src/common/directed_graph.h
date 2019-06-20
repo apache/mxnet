@@ -27,6 +27,12 @@
 #include <map>
 #include <algorithm>
 #include <functional>
+#include <iterator>
+
+#define SELF_t \
+    static auto helper() -> typename std::remove_reference<decltype(*this)>::type; \
+    typedef decltype(helper())
+
 namespace common {
 namespace graph {
 
@@ -37,6 +43,7 @@ class DirectedGraph {
  protected:
   const EdgeAttrs_ default_edge = EdgeAttrs_();
  public:
+  SELF_t DirectedGraph_t;
   typedef Node_ Node;
   typedef NodeKey_t_ NodeKey_t;
   typedef EdgeKey_t_ EdgeKey_t;
@@ -63,69 +70,118 @@ class DirectedGraph {
     }
   };
 
+  typedef typename std::vector<Node>::const_iterator NodeIterator;
+  typedef typename std::multimap<NodeKey_t, Edge>::const_iterator InternalEdgeIterator;
+
+
+  struct EdgeIterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = Edge;
+    using reference_type = Edge&;
+    using const_pointer_type = const Edge*;
+    InternalEdgeIterator internal_edge_iterator_;
+    EdgeIterator(const InternalEdgeIterator& ei) :
+      internal_edge_iterator_(ei) {
+    }
+    EdgeIterator& operator++() {
+      ++internal_edge_iterator_;
+      return *this;
+    }
+    const_pointer_type operator*() const {
+      return static_cast<const Edge*>(&(internal_edge_iterator_->second));
+    }
+    const_pointer_type operator->() const {
+      return &(internal_edge_iterator_->second);
+    }
+    bool operator==(const EdgeIterator& other) const {
+      if (internal_edge_iterator_ != other.internal_edge_iterator_)
+        return false;
+      return true;
+    }
+    bool operator!=(const EdgeIterator& other) const {
+      return ! ((*this) == other);
+    }
+  };
+
+  struct EdgeRange {
+    const DirectedGraph_t& graph_;
+    EdgeRange(const DirectedGraph_t& g) :
+      graph_(g) {
+    }
+    EdgeIterator begin() {
+      return EdgeIterator(std::begin(graph_.edges_));
+    }
+    EdgeIterator end() {
+      return EdgeIterator(std::end(graph_.edges_));
+    }
+  };
+
   DirectedGraph(NodeKey_t num_nodes = 0) :
-      edges() {
-    nodes.reserve(num_nodes);
+      edges_() {
+    nodes_.reserve(num_nodes);
   }
 
   NodeKey_t addNode(const Node& node_attrs) {
-    nodes.emplace_back(node_attrs);
-    return nodes.size() - 1;
+    nodes_.emplace_back(node_attrs);
+    return nodes_.size() - 1;
   }
 
   template <typename... Args>
   NodeKey_t addNode(Args&&... args) {
-    nodes.emplace_back(std::forward<Args>(args)...);
-    return nodes.size() - 1;
+    nodes_.emplace_back(std::forward<Args>(args)...);
+    return nodes_.size() - 1;
   }
 
   Node& node(NodeKey_t node_key) {
-    return nodes.at(node_key);
+    return nodes_.at(node_key);
+  }
+
+  EdgeRange edges() const {
+    return EdgeRange(*this);
   }
 
   EdgeKey_t numEdges() const {
-    return static_cast<EdgeKey_t>(edges.size());
+    return static_cast<EdgeKey_t>(edges_.size());
   }
 
   NodeKey_t numNodes() const {
-    return static_cast<NodeKey_t>(nodes.size());
+    return static_cast<NodeKey_t>(nodes_.size());
   }
 
   void addEdge(NodeKey_t src, NodeKey_t dst, const EdgeAttrs& edge_attrs) {
     const auto reqsz = static_cast<size_t>(std::max(src, dst)) + 1;
-    if (reqsz > nodes.size())
-      nodes.resize(reqsz);
-    edges.emplace(src, Edge{src, dst, edge_attrs});
+    if (reqsz > nodes_.size())
+      nodes_.resize(reqsz);
+    edges_.emplace(src, Edge{src, dst, edge_attrs});
   }
+
   void addEdge(NodeKey_t src, NodeKey_t dst) {
     addEdge(src, dst, default_edge);
   }
 
-  typedef typename std::vector<Node>::const_iterator NodeIterator;
-  typedef typename std::multimap<NodeKey_t, Edge>::const_iterator EdgeIterator;
 
   EdgeIterator edgesBegin() const {
-    return edges.begin();
+    return EdgeIterator(std::begin(edges_));
   }
 
   EdgeIterator edgesEnd() const {
-    return edges.end();
+    return EdgeIterator(std::end(edges_));
   }
 
   EdgeIterator outEdgesBegin(NodeKey_t node) const {
-    return edges.lower_bound(node);
+    return edges_.lower_bound(node);
   }
 
   EdgeIterator outEdgesEnd(NodeKey_t node) const {
-    return edges.upper_bound(node);
+    return edges_.upper_bound(node);
   }
 
   NodeIterator nodesBegin() const {
-    return nodes.begin();
+    return nodes_.begin();
   }
 
   NodeIterator nodesEnd() const {
-    return nodes.end();
+    return nodes_.end();
   }
 
   NodeIterator begin() const {
@@ -137,8 +193,8 @@ class DirectedGraph {
   }
 
  protected:
-  std::vector<Node> nodes;
-  std::multimap<NodeKey_t, Edge> edges;
+  std::vector<Node> nodes_;
+  std::multimap<NodeKey_t, Edge> edges_;
 };
 
 };  // end namespace common

@@ -45,6 +45,12 @@ namespace {
     bool is_output;
   };
   typedef DirectedGraph<DumpNode> DumpGraph_t;
+
+  /**
+   * Serialize a graph to Json
+   * @param g
+   * @return json content
+   */
   std::string SerializeJson(DumpGraph_t& g) {
     ostringstream os;
     dmlc::JSONWriter json_writer(&os);
@@ -62,10 +68,25 @@ namespace {
     json_writer.EndObject();
     return os.str();
   }
+
+  /**
+   * Serialize a graph to dot format
+   * @param g a graph to serialize to dot format
+   * @return a string with a dot file content
+   * example result:
+   * digraph G {
+   *      x -> x_mul_w
+   *      w -> x_mul_w
+   * }
+   */
   std::string SerializeDot(DumpGraph_t& g) {
     ostringstream os;
-    os << "digraph G {";
-    for (const auto& edge_it = g.edgesBegin())
+    os << "digraph G {" << endl;
+    for (auto edge_it : g.edges()) {
+      string src_name = g.node(edge_it->src).node_ptr_->attrs.name;
+      string dst_name = g.node(edge_it->dst).node_ptr_->attrs.name;
+      os << "  " << src_name << " -> " << dst_name << endl;
+    }
     os << "}";
     return os.str();
   }
@@ -83,18 +104,29 @@ std::string GraphDump(const Graph& graph) {
     set<NodePtr> outputs;
     transform(begin(graph.outputs), end(graph.outputs), inserter(outputs, end(outputs)),
         [](const NodeEntry& ne) { return ne.node; });
+
+    // Build directed graph;
     DumpGraph_t g;
-    for (const auto node_ptr : topo_order) {
+    typedef DumpGraph_t::NodeKey_t node_key_t;
+    unordered_map<NodePtr, node_key_t > node_ptr_to_node_key;
+    for (const NodePtr& node_ptr : topo_order) {
       DumpNode node{node_ptr,
                 node_ptr->is_variable(),
                 node_ptr->op() != nullptr,
                 outputs.count(node_ptr) != 0};
-      g.addNode(move(node));
+      DumpGraph_t::NodeKey_t node_key = g.addNode(move(node));
+      node_ptr_to_node_key.emplace(node_ptr, node_key);
     }
-    return SerializeJson(g);
 
+    for (const DumpNode& node : g) {
+      node_key_t dst_key = node_ptr_to_node_key.at(node.node_ptr_);
+      for (const NodeEntry& node_entry: node.node_ptr_->inputs) {
+        node_key_t src_key = node_ptr_to_node_key.at(node_entry.node);
+        g.addEdge(src_key, dst_key);
+      }
+    }
+    return SerializeDot(g);
 }
-
 
 
 }  // end namespace nnvm

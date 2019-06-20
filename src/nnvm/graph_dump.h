@@ -33,7 +33,7 @@
 namespace nnvm {
 
 /*!
- * Returns a dot graph
+ * Returns a human readable graph
  */
 std::string GraphDump(const Graph& graph);
 
