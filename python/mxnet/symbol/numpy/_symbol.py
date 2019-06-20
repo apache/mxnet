@@ -1307,7 +1307,8 @@ def tile(A, reps):
     return _npi.tile(A, reps)
 
 
-def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None): # pylint: disable=too-many-arguments
+@set_module('mxnet.symbol.numpy')
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, **kwargs): # pylint: disable=too-many-arguments
     """Return evenly spaced numbers over a specified interval.
 
     Returns num evenly spaced samples, calculated over the interval [start, stop].
@@ -1356,13 +1357,14 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         raise NotImplementedError('start and stop only support int')
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
-    if not ctx:
+    ctx = kwargs.pop('ctx', current_context())
+    if ctx is None:
         ctx = current_context()
     if retstep:
         step = (stop - start) / (num - 1)
-        return (_npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, dtype=dtype), step)
+        return (_npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step)
     else:
-        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, dtype=dtype)
+        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
 
 
 _set_np_symbol_class(_Symbol)

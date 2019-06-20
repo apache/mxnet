@@ -1793,7 +1793,8 @@ def tile(A, reps):
     return _npi.tile(A, reps)
 
 
-def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):
+@set_module('mxnet.numpy')
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, **kwargs):
     """Return evenly spaced numbers over a specified interval.
 
     Returns num evenly spaced samples, calculated over the interval [start, stop].
@@ -1832,4 +1833,4 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         Only returned if retstep is True
         Size of spacing between samples.
     """
-    return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, ctx)
+    return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, **kwargs)
