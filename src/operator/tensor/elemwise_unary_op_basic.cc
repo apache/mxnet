@@ -1149,7 +1149,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
     // ograds[0]: dL/dxgrad
     // inputs[0]: dL/dy
     // inputs[1]: x
-    // f(x) = y = log10(x)
+    // f(x) = y = log2(x)
     // f'(x) = 1 / (log(2) * x)
     // f''(x) = -1 * (f'(x) * 1/x)
     auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
