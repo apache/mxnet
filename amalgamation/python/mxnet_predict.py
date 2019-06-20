@@ -42,6 +42,17 @@ _DTYPE_NP_TO_MX = {
     np.int64: 6,
 }
 
+_DTYPE_MX_TO_NP = {
+    -1: None,
+    0: np.float32,
+    1: np.float64,
+    2: np.float16,
+    3: np.uint8,
+    4: np.int32,
+    5: np.int8,
+    6: np.int64,
+}
+
 __all__ = ["Predictor", "load_ndarray_file"]
 
 if sys.version_info[0] == 3:
@@ -220,6 +231,7 @@ class Predictor(object):
             provided_arg_type_names,
             provided_arg_type_data,
             ctypes.byref(handle)))
+        self.type_dict = type_dict
         self.handle = handle
 
     def __del__(self):
@@ -238,13 +250,21 @@ class Predictor(object):
         >>> predictor.forward(data=mydata)
         >>> out = predictor.get_output(0)
         """
+        if self.type_dict and len(self.type_dict) != len(kwargs.items()):
+            raise ValueError("number of kwargs should be same as len of type_dict" \
+                             "Please check your forward pass inputs" \
+                             "or type_dict passed to Predictor instantiation")
+
         for k, v in kwargs.items():
             if not isinstance(v, np.ndarray):
                 raise ValueError("Expect numpy ndarray as input")
-            v = np.asarray(v, dtype=np.float32, order='C')
+            if k in self.type_dict:
+                v = np.asarray(v, dtype=self.type_dict[k], order='C')
+            else:
+                v = np.asarray(v, dtype=np.float32, order='C')
             _check_call(_LIB.MXPredSetInput(
                 self.handle, c_str(k),
-                v.ctypes.data_as(mx_float_p),
+                v.ctypes.data_as(ctypes.c_void_p),
                 mx_uint(v.size)))
         _check_call(_LIB.MXPredForward(self.handle))
 
@@ -305,10 +325,10 @@ class Predictor(object):
             self.handle, index,
             ctypes.byref(out_type)))
         shape = tuple(pdata[:ndim.value])
-        data = np.empty(shape, dtype=out_type.value)
+        data = np.empty(shape, dtype=_DTYPE_MX_TO_NP[out_type.value])
         _check_call(_LIB.MXPredGetOutput(
             self.handle, mx_uint(index),
-            data.ctypes.data_as(mx_float_p),
+            data.ctypes.data_as(ctypes.c_void_p),
             mx_uint(data.size)))
         return data
 
@@ -355,4 +375,5 @@ def load_ndarray_file(nd_bytes):
     if len(keys) == 0 or len(keys[0]) == 0:
         return arrs
     else:
-        return {keys[i] : arrs[i] for i in range(len(keys))}
+        return {keys[i] : arrs[i] for i in range(len(keys))
+  }

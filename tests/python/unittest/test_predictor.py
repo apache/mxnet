@@ -82,7 +82,7 @@ def test_load_ndarray():
         assert_almost_equal(nd_data[k].asnumpy(), nd_load[k], rtol=1e-5, atol=1e-6)
 
 @with_seed()
-def test_predictor():
+def test_predictor_fp16():
     prefix = 'test_predictor_simple_dense'
     symbol_file = "%s-symbol.json" % prefix
     param_file = "%s-0000.params" % prefix

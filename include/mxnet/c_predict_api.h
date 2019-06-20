@@ -234,7 +234,7 @@ MXNET_DLL int MXPredGetOutputShape(PredictorHandle handle,
  */
 MXNET_DLL int MXPredGetOutputType(PredictorHandle handle,
                                   mx_uint out_index,
-                                  const int* out_dtype);
+                                  int* out_dtype);
 
 /*!
  * \brief Set the input data of predictor.
