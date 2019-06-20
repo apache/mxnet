@@ -1023,8 +1023,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
       auto eid = idx.entry_id(nid, i);
       data_context[eid] = vctx[nid];
-      CHECK_NE(vstorage_type[nid], kUndefinedStorage);
-      data_storage_type[eid] = (NDArrayStorageType) vstorage_type[nid];
+      CHECK_NE(vstorage_type[eid], kUndefinedStorage);
+      data_storage_type[eid] = (NDArrayStorageType) vstorage_type[eid];
     }
   }
 

@@ -146,7 +146,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: 0(false) or 1(true) ```(default=0)```
   - If true, MXNet tries to use tree reduction for Push and Pull communication.
   - Otherwise, MXNet uses the default Push and Pull implementation.
-  - [Tree reduction technology](http://www.sysml.cc/doc/178.pdf) has been shown to be faster than the standard ```--kv-store device``` Push/Pull and ```--kv-store nccl``` Push/Pull for small batch sizes.
+  - Tree reduction technology has been shown to be faster than the standard ```--kv-store device``` Push/Pull and ```--kv-store nccl``` Push/Pull for small batch sizes.
 
 * MXNET_KVSTORE_LOGTREE
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -331,5 +331,5 @@ Settings for controlling OMP tuning
 
 - Set ```MXNET_USE_NUM_CORES_OPERATOR_TUNING``` to define num_cores to be used by operator tuning code.
   - This reduces operator tuning overhead when there are multiple instances of mxnet running in the system and we know that
-    each mxnet will take only partial num_cores available with system. 
+    each mxnet will take only partial num_cores available with system.
   - refer: https://github.com/apache/incubator-mxnet/pull/13602
