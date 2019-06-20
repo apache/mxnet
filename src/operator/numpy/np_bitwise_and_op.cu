@@ -23,13 +23,16 @@
  * \brief GPU Implementation of numpy bitwise and.
  */
 
+
+#include <mxnet/base.h>
 #include "./np_bitwise_and_op-inl.h"
+#include "../elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_np_bitwise_and)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<cpu, bitwise_and_forward>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<cpu, mshadow_op::bitwise_and>);
 
 }  // namespace op
 }  // namespace mxnet
