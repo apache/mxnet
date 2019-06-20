@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Module for numpy ops used in imperative programming."""
+from __future__ import division, absolute_import, print_function
 
 from __future__ import absolute_import
 from . import random
@@ -25,5 +25,7 @@ from . import _op
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 from .utils import *  # pylint: disable=wildcard-import
+from .function_base import *  # pylint: disable=wildcard-import
+from .stride_tricks import *  # pylint: disable=wildcard-import
 
 __all__ = []
