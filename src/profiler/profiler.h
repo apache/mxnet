@@ -1258,7 +1258,7 @@ struct ProfileOperator : public ProfileEvent {
   }
   /*!
    * \brief Check if this operator is no longer profiled
-   * Notice that this operator may still be used for i.e. synchronization
+   * Notice that this operator may still be used for e.g synchronization
    */
   inline bool IsDeprecatedOperator(const char* name) {
     return strcmp(name, "Dummy_Wait") && strcmp(name, "Custom");
