@@ -1178,9 +1178,8 @@ struct ProfileOperator : public ProfileEvent {
     SetCategories(domain_.name());
 =======
       , attributes_(attributes)
-      , profiling_operator_(strcmp(name, "Dummy_Wait") && strcmp(name, "Custom"))
-      , profiling_task_(strcmp(name, "Dummy_Wait") && strcmp(name, "Custom")) {
-    if (strstr(name, "::")) {
+      , profiling(IsDeprecatedOperator(name)) {
+    if (IsSubOperatorOfCustom(name)) {
       as_task_.setDomain(&custom_op_domain);
       SetCategories(custom_op_domain.name());
     } else {
@@ -1196,19 +1195,19 @@ struct ProfileOperator : public ProfileEvent {
   void start(mxnet::Context::DeviceType dev_type, uint32_t dev_id) {
     dev_type_ = dev_type;
     dev_id_ = dev_id;
-    if (profiling_operator_)
+    if (profiling) {
       ProfileEvent::start();
-    if (profiling_task_)
       as_task_.start();
+    }
   }
   /*!
    * \brief Stop the profiling scope
    */
   void stop() override {
-    if (profiling_task_)
+    if (profiling) {
       as_task_.stop();
-    if (profiling_operator_)
       ProfileEvent::stop();
+    }
   }
 
   /*!
@@ -1257,6 +1256,19 @@ struct ProfileOperator : public ProfileEvent {
       start_time_, ProfileStat::NowInMicrosec(),
       attributes_.get());
   }
+  /*!
+   * \brief Check if this operator is no longer profiled
+   * Notice that this operator may still be used for i.e. synchronization
+   */
+  inline bool IsDeprecatedOperator(const char* name) {
+    return strcmp(name, "Dummy_Wait") && strcmp(name, "Custom");
+  }
+  /*!
+   * \brief Check if this operator a sub-operator of a custom operator
+   */
+  inline bool IsSubOperatorOfCustom(const char* name) {
+    return strstr(name, "::");
+  }
   /*! \brief Also log the operator as a task in the operator domain */
   ProfileTask as_task_;
   /* !\brief Operator name */
@@ -1269,10 +1281,8 @@ struct ProfileOperator : public ProfileEvent {
   static ProfileDomain domain_;
   /*! \brief Optional operator attributes */
   std::unique_ptr<Attributes> attributes_;
-  /*! \brief Whether to profile as operator */
-  const bool profiling_operator_;
-  /*! \brief Whether to profile as task */
-  const bool profiling_task_;
+  /*! \brief Whether to profile or not */
+  const bool profiling;
 };
 
 /*

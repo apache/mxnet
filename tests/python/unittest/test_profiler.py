@@ -23,6 +23,7 @@ import time
 import os
 import json
 from collections import OrderedDict
+from common import run_in_spawned_process
 
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
     profiler.set_config(profile_symbolic=True,
@@ -291,7 +292,7 @@ def test_aggregate_duplication():
     assert target_dict['Time']['operator']['_plus_scalar']['Count'] == 2
     profiler.set_state('stop')
     
-def test_custom_operator_profiling():
+def test_custom_operator_profiling(seed = None):
     class Sigmoid(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
             x = in_data[0].asnumpy()
@@ -344,7 +345,7 @@ def test_custom_operator_profiling():
         and 'MySigmoid::_zeros' in target_dict['Time']['Custom Operator']
     profiler.set_state('stop')
 
-def test_custom_operator_profiling_multiple_custom_ops():
+def test_custom_operator_profiling_multiple_custom_ops(seed = None):
     class MyAdd(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):        
             self.assign(out_data[0], req[0], in_data[0] + 1)
@@ -413,6 +414,11 @@ def test_custom_operator_profiling_multiple_custom_ops():
         and 'operator' in target_dict['Time'] \
         and '_plus_scalar' in target_dict['Time']['operator']
     profiler.set_state('stop')
+
+def test_custom_operator_profiling_naive():
+    # run the two tests above using Naive Engine
+    run_in_spawned_process(func = test_custom_operator_profiling, env = {'MXNET_ENGINE_TYPE' : "NaiveEngine"})
+    run_in_spawned_process(func = test_custom_operator_profiling_multiple_custom_ops, env = {'MXNET_ENGINE_TYPE' : "NaiveEngine"})
 
 if __name__ == '__main__':
     import nose

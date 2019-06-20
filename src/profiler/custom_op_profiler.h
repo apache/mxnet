@@ -33,7 +33,7 @@ using TaskPtr = std::unique_ptr<ProfileTask>;
 
   /*!
    * \brief Singleton class to assist profiling python callback of custom operators
-   *        and to assist linking sub-operators to custom operators
+   * and to assist linking sub-operators to custom operators
    */
 class CustomOpProfiler {
  public:
@@ -49,12 +49,12 @@ class CustomOpProfiler {
   }
   /*!
    * \brief Called before the callback of custom operators to start a profile task for python 
-   *        code execution time
+   * code execution time
    * \param op_type The registed name of the custom operator
    */
   void OnCustomBegin(const std::string& op_type) {
     const Tid tid = std::this_thread::get_id();
-    const std::string task_name = op_type + "::pure_python";
+    const std::string task_name = MakePythonCodeName(op_type);
     std::lock_guard<std::mutex> lock(mutex_);
     tid_to_op_type_[tid] = op_type;
     tasks_[tid] = std::make_unique<ProfileTask>(task_name.c_str(), &custom_op_domain);
@@ -63,13 +63,14 @@ class CustomOpProfiler {
 
   /*!
    * \brief Called after the callback of custom operators to stop the profile task for python 
-   *        code execution time
+   * code execution time
    */
   void OnCustomEnd() {
     const Tid tid = std::this_thread::get_id();
     std::lock_guard<std::mutex> lock(mutex_);
     // Theoretically this check will never fail if we use onBegin and onEnd in pairs
-    CHECK(tasks_.find(tid) != tasks_.end());
+    CHECK(tasks_.find(tid) != tasks_.end()) << "thread_id not found. " <<
+        "Please use OnCustomBegin() and OnCustomEnd() in pairs on the same thread.";
     tasks_[tid]->stop();
     tasks_.erase(tid);
     tid_to_op_type_.erase(tid);
@@ -77,34 +78,45 @@ class CustomOpProfiler {
 
   /*!
    * \brief Generate a display name for sub-operators, which is the name used for OprBlock
-   *        and later by profiler, and store it in a unordered_set so that it can be referenced 
-   *        in the future.
-   *        Notice if the operator is not a sub-operator, just return the char pointer back.
-   * \param op_type_ptr The registed name of the operator
+   * and later by profiler, and store it in a unordered_set so that it can be referenced 
+   * in the future.
+   * Notice if the operator is not a sub-operator, just return the char pointer back.
+   * \param op_type The registed name of the operator
    * \return Returns a pointer to the display name generated
    */
-  const char* GenerateDisplayName(const char* op_type_ptr) {
-    if (!op_type_ptr) {
+  const char* GenerateDisplayName(const char* op_type) {
+    if (!op_type) {
       return nullptr;
     }
     Tid tid = std::this_thread::get_id();
     std::lock_guard<std::mutex> lock(mutex_);
     if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
-      return op_type_ptr;
+      return op_type;
     }
-    std::string name = tid_to_op_type_[tid] + "::" + std::string(op_type_ptr);
+    //
+    std::string name = MakeSubOperatorName(tid, op_type);
     return display_names_.insert(name).first->c_str();
   }
 
  private:
-  /*! \brief class mutex*/
+  /* !\brief make the display name for sub-operators */
+  inline std::string MakeSubOperatorName(const Tid& tid, const char* op_type) {
+    return tid_to_op_type_[tid] + "::" + std::string(op_type);
+  }
+  /* !\brief make the display name for the pure python call back function i.e.
+   * forward() or backward() in the custom operator definition
+   */
+  inline std::string MakePythonCodeName(const std::string& op_type) {
+    return op_type + "::pure_python";
+  }
+  /*! \brief class mutex */
   std::mutex mutex_;
   /* !\brief display names for sub-operators in custom ops */
   std::unordered_set<std::string> display_names_;
-  /* !\brief profiling tasks for pure python code in custom operators*/
+  /* !\brief profiling tasks for pure python code in custom operators */
   std::unordered_map<Tid, TaskPtr> tasks_;
   /* !\brief the maping from thread id to the registered name op the custom operator
-   *         that is runnin on that thread
+   * that is runnin on that thread
    */
   std::unordered_map<Tid, std::string> tid_to_op_type_;
 };
