@@ -249,8 +249,7 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     data = mx.random.uniform(shape=(num_timesteps, batch_size, in_size))
     data_np = data.asnumpy()
 
-    # TODO: figure out why int32 doesn't work here
-    sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("float")
+    sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("int32")
     sequence_length_np = sequence_length.asnumpy().astype("int32")
 
     # Reference net is processing batch elements one at a time, so that it is "perfectly sized"
