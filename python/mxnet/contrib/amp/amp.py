@@ -532,7 +532,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
         fp32)
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
-        from being quantized.
+        from being executed in lower precision.
     """
     if excluded_sym_names is None:
         excluded_sym_names = []
