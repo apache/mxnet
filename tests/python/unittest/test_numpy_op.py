@@ -96,12 +96,12 @@ def test_np_sum():
 def test_np_dot():
     shapes = [
         ((3, 0), (0, 4)),
-        ((3,), (3,)),        # Case 1
-        ((3, 4), (4, 5)),    # Case 2
-        ((), ()),            # Case 3
-        ((3, 4, 5), ()),     # Case 3.5.1
-        ((), (3, 4, 5)),     # Case 3.5.2
-        ((3, 4, 5), (5, )),  # Case 4
+        ((3,), (3,)),  # Case 1
+        ((3, 4), (4, 5)),  # Case 2
+        ((), ()),  # Case 3
+        ((3, 4, 5), ()),  # Case 3.5.1
+        ((), (3, 4, 5)),  # Case 3.5.2
+        ((3, 4, 5), (5,)),  # Case 4
         ((3, 4, 5), (5, 2)),
         ((5,), (5, 2))
     ]
@@ -124,7 +124,7 @@ def test_np_dot():
         mx_sym = mx.sym.np.dot(mx_a.as_np_ndarray(), mx_b.as_np_ndarray()).as_nd_ndarray()
         check_numeric_gradient(mx_sym, {"a": a, "b": b}, numeric_eps=eps, rtol=1e-2, atol=1e-3)
 
-    bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6, ))]
+    bad_shapes = [((4, 5), (2, 3)), ((3, 4, 5), (6,))]
 
     for shape_a, shape_b in bad_shapes:
         a = mx.nd.array(random.random()) if len(shape_a) == 0 else rand_ndarray(shape_a)
@@ -197,7 +197,8 @@ def test_np_mean():
 
                         # test imperative
                         mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
-                        np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
+                        np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(
+                            dtype)
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
@@ -442,42 +443,43 @@ def test_np_unary_funcs():
 
             if ref_grad:
                 y.backward()
-                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-5, atol=1e-6, equal_nan=True)
+                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-5, atol=1e-6,
+                                    equal_nan=True)
 
     funcs = {
-        'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
-        'cbrt' : (lambda x: 1. / (3. * _np.cbrt(x) ** 2), -1.0, 1.0),
-        'ceil' : (None, -10.0, 10.0),
-        'exp' : (lambda x: _np.exp(x), -1.0, 1.0),
-        'expm1' : (lambda x: _np.exp(x), -1.0, 1.0),
-        'fix' : (None, -10.0, 10.0),
-        'floor' : (None, -10.0, 10.0),
-        'log' : (lambda x: 1.0 / x, 0.1, 5.0),
-        'log10' : (lambda x: 1.0 / (x * _np.log(10)), 0.1, 10.0),
-        'log1p' : (lambda x: 1.0 / (1.0 + x), -0.9, 5.0),
-        'log2' : (lambda x: 1.0 / (x * _np.log(2)), 0.1, 2.0),
-        'logical_not' : (None, -1.0, 1.0),
-        'negative' : (lambda x: -1. * _np.ones(x.shape), -1.0, 1.0),
-        'reciprocal' : (lambda x: -1. / (x ** 2), 0.01, 1.0),
-        'rint' : (None, -5.0, 5.0),
-        'sign' : (None, -1.0, 1.0),
-        'sqrt' : (lambda x: 0.5 / _np.sqrt(x), 0.001, 10.0),
-        'square' : (lambda x: 2.0 * x, -1.0, 1.0),
-        'trunc' : (None, -5.0, 5.0),
-        'sin' : (lambda x: _np.cos(x), -1.0, 1.0),
-        'cos' : (lambda x: -_np.sin(x), -1.0, 1.0),
-        'tan' : (lambda x: _np.tan(x) ** 2 + 1.0, -1.0, 1.0),
-        'arcsin' : (lambda x: 1. / (1. - x ** 2) ** (1. / 2.), -1.0, 1.0),
-        'arccos' : (lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), -1.0, 1.0),
-        'arctan' : (lambda x: 1. / (x ** 2. + 1.), -1.0, 1.0),
-        'degrees' : (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0),
-        'radians' : (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0),
-        'sinh' : (lambda x: _np.cosh(x), -1.0, 1.0),
-        'cosh' : (lambda x: _np.sinh(x), -1.0, 1.0),
-        'tanh' : (lambda x: 1. - _np.tanh(x) ** 2, -1.0, 1.0),
-        'arcsinh' : (lambda x: 1./(x**2 + 1.)**(1./2.), -1.0, 1.0),
-        'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
-        'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
+        'absolute': (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
+        'cbrt': (lambda x: 1. / (3. * _np.cbrt(x) ** 2), -1.0, 1.0),
+        'ceil': (None, -10.0, 10.0),
+        'exp': (lambda x: _np.exp(x), -1.0, 1.0),
+        'expm1': (lambda x: _np.exp(x), -1.0, 1.0),
+        'fix': (None, -10.0, 10.0),
+        'floor': (None, -10.0, 10.0),
+        'log': (lambda x: 1.0 / x, 0.1, 5.0),
+        'log10': (lambda x: 1.0 / (x * _np.log(10)), 0.1, 10.0),
+        'log1p': (lambda x: 1.0 / (1.0 + x), -0.9, 5.0),
+        'log2': (lambda x: 1.0 / (x * _np.log(2)), 0.1, 2.0),
+        'logical_not': (None, -1.0, 1.0),
+        'negative': (lambda x: -1. * _np.ones(x.shape), -1.0, 1.0),
+        'reciprocal': (lambda x: -1. / (x ** 2), 0.01, 1.0),
+        'rint': (None, -5.0, 5.0),
+        'sign': (None, -1.0, 1.0),
+        'sqrt': (lambda x: 0.5 / _np.sqrt(x), 0.001, 10.0),
+        'square': (lambda x: 2.0 * x, -1.0, 1.0),
+        'trunc': (None, -5.0, 5.0),
+        'sin': (lambda x: _np.cos(x), -1.0, 1.0),
+        'cos': (lambda x: -_np.sin(x), -1.0, 1.0),
+        'tan': (lambda x: _np.tan(x) ** 2 + 1.0, -1.0, 1.0),
+        'arcsin': (lambda x: 1. / (1. - x ** 2) ** (1. / 2.), -1.0, 1.0),
+        'arccos': (lambda x: -1. / (1. - x ** 2.) ** (1. / 2.), -1.0, 1.0),
+        'arctan': (lambda x: 1. / (x ** 2. + 1.), -1.0, 1.0),
+        'degrees': (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0),
+        'radians': (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0),
+        'sinh': (lambda x: _np.cosh(x), -1.0, 1.0),
+        'cosh': (lambda x: _np.sinh(x), -1.0, 1.0),
+        'tanh': (lambda x: 1. - _np.tanh(x) ** 2, -1.0, 1.0),
+        'arcsinh': (lambda x: 1. / (x ** 2 + 1.) ** (1. / 2.), -1.0, 1.0),
+        'arccosh': (lambda x: 1. / (x ** 2 - 1.) ** (1. / 2.), 2.0, 5.0),
+        'arctanh': (lambda x: -1. / (x ** 2 - 1.), -0.99, 0.99)
     }
     ndim = random.choice([2, 3, 4])
     shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
@@ -498,47 +500,44 @@ def test_np_bitwise_or():
         def hybrid_forward(self, F, a, b):
             return F.np.bitwise_or(a, b)
 
-    a, b = mx.sym.Variable("a"), mx.sym.Variable("b")
-    ret = mx.sym.np.bitwise_or([a.as_np_ndarray(), b.as_np_ndarray()])
-    assert type(ret) == mx.sym.np._Symbol
-
-    for shape_a, shape_b in [[(1,), (1,)],  # single elements
-                             [(4, 5), (4, 5)],  # normal case
-                             [(3, 2), (3, 2)],  # tall matrices
-                             ((), ()),  # scalar only
-                             [(3, 0, 2), (3, 0, 2)],  # zero-dim
-                             ((3, 4, 5), (4, 5)),  # trailing dim broadcasting
-                             ((3, 4, 5), ()),  # scalar broadcasting
-                             [(4, 3), (4, 1)],  # single broadcasting
-                             ((3, 4, 5), (3, 1, 5))  # single broadcasting in the middle
-                             ]:
-        for hybridize in [True, False]:
+    for hybridize in [True, False]:
+        for shape_x, shape_y in [[(1,), (1,)],  # single elements
+                                 [(4, 5), (4, 5)],  # normal case
+                                 [(3, 2), (3, 2)],  # tall matrices
+                                 ((), ()),  # scalar only
+                                 [(3, 0, 2), (3, 0, 2)],  # zero-dim
+                                 ((3, 4, 5), (4, 5)),  # trailing dim broadcasting
+                                 ((3, 4, 5), ()),  # scalar broadcasting
+                                 [(4, 3), (4, 1)],  # single broadcasting
+                                 ((3, 4, 5), (3, 1, 5))  # single broadcasting in the middle
+                                 ]:
+            # More for-loops for iterating through all other arguments
+            # 1 extra for-loop for iterating through data types
             test_bitwise_or = TestBitwiseOr()
             if hybridize:
                 test_bitwise_or.hybridize()
-            np_a = _np.random.uniform(-1.0, 1.0, shape_a).astype(_np.int32)  # todo: change range
-            np_b = _np.random.uniform(-1.0, 1.0, shape_b).astype(_np.int32)  # todo: change range
 
-            # test forward
-            mx_a = np.array(np_a)
-            mx_a.attach_grad()
-            mx_b = np.array(np_b)
-            mx_b.attach_grad()
-            expected_ret = _np.bitwise_or(np_a, np_b)
+            x = rand_ndarray(shape_x, dtype=_np.int32).as_np_ndarray()
+            x.attach_grad()
+            y = rand_ndarray(shape_y, dtype=_np.int32).as_np_ndarray()
+            y.attach_grad()
+
+            np_out = _np.bitwise_or(x.asnumpy(), y.asnumpy())
             with mx.autograd.record():
-                y = test_bitwise_or(mx_a, mx_b)
-            assert y.shape == expected_ret.shape  # test shape inference
-            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
+                mx_out = test_bitwise_or(x, y)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            # Code to get reference backward value
+            np_backward = _np.zeros(shape_x)
+            assert_almost_equal(x.grad.asnumpy(), np_backward, atol=1e-3, rtol=1e-5)
+            np_backward = _np.zeros(shape_y)
+            assert_almost_equal(y.grad.asnumpy(), np_backward, atol=1e-3, rtol=1e-5)
 
-            # test grads
-            y.backward()
-            assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape_a), rtol=1e-3, atol=1e-5)
-            assert_almost_equal(mx_b.grad.asnumpy(), _np.zeros(shape_b), rtol=1e-3, atol=1e-5)
-
-            # test imperative
-            np_out = _np.bitwise_or(np_a, np_b)
-            mx_out = np.bitwise_or(mx_a, mx_b)
-            assert same(mx_out.asnumpy(), np_out)
+            # Test imperative once again
+            mx_out = np.bitwise_or(x, y)
+            np_out = _np.bitwise_or(x.asnumpy(), y.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
@@ -1475,4 +1474,5 @@ def test_np_trace():
 
 if __name__ == '__main__':
     import nose
+
     nose.runmodule()
