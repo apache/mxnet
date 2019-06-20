@@ -173,8 +173,7 @@ Graph ReducePrecision(Graph &&src) {
 
   // Visit nodes in a topologically sorted order
   DFSVisit(src.outputs, [&](const NodePtr &node) {
-    NodePtr new_node = Node::Create();
-    *new_node = *node;
+    NodePtr new_node = Node::Create(*node);
     new_node->inputs.clear();
 
     /* 1. for node which needs to run in FP32 mode, add amp_cast operators
