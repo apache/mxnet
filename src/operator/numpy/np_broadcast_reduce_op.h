@@ -171,8 +171,8 @@ inline bool NumpyReduceAxesShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NumpyReduceAxesNoDTypeShape(const nnvm::NodeAttrs& attrs,
-                                 std::vector<TShape> *in_attrs,
-                                 std::vector<TShape> *out_attrs) {
+                                        std::vector<TShape> *in_attrs,
+                                        std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   if (!shape_is_known(in_attrs->at(0))) {
@@ -240,10 +240,10 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu, typename reducer, typename OP = op::mshadow_op::identity>
 void NumpyReduceAxesNoDTypeCompute(const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<TBlob>& inputs,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<TBlob>& outputs) {
+                                   const OpContext& ctx,
+                                   const std::vector<TBlob>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<TBlob>& outputs) {
   const NumpyReduceAxesNoDTypeParam& param = nnvm::get<NumpyReduceAxesNoDTypeParam>(attrs.parsed);
   if (param.initial.has_value()) {
     LOG(FATAL) << "initial is not supported yet";
@@ -289,10 +289,10 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu, typename OP>
 void NumpyReduceAxesNoDTypeBackward(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<TBlob>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<TBlob>& outputs) {
+                                    const OpContext& ctx,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   const NumpyReduceAxesNoDTypeParam& param = nnvm::get<NumpyReduceAxesNoDTypeParam>(attrs.parsed);

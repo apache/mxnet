@@ -129,8 +129,8 @@ NNVM_REGISTER_OP(_backward_np_mean)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBackwardUseNone<cpu, true>);
 
 inline bool NumpyReduceAxesNoDTypeType(const nnvm::NodeAttrs& attrs,
-                         std::vector<int> *in_attrs,
-                         std::vector<int> *out_attrs) {
+                                       std::vector<int> *in_attrs,
+                                       std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
