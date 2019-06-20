@@ -813,7 +813,7 @@ struct ProfileTask : public ProfileDuration {
   /*!
    * \brief Whether to add stat to AggregateStats
    */
-  void enableAggregateStats(bool enabled) {
+  void enableAggregateStats(const bool enabled = true) {
     enable_aggregate_ = enabled;
   }
 
@@ -854,7 +854,7 @@ struct ProfileTask : public ProfileDuration {
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneTask> vtune_task_);
   /*! \brief NVTX duration object */
   NVTX_ONLY_CODE(std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_);
-  /*! \brief not to add this stat to AggregateStats */
+  /*! \brief whether to add this stat to AggregateStats */
   bool enable_aggregate_ = true;
 
  protected:
