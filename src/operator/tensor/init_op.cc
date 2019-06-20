@@ -101,6 +101,7 @@ NNVM_REGISTER_OP(_arange)
 .add_arguments(RangeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_linspace)
+.add_alias("_npi_linspace")
 .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
 .set_num_inputs(0)
 .set_num_outputs(1)
