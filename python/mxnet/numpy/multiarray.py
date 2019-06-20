@@ -77,9 +77,9 @@ def tensordot(a, b, axes = 2):
         if len(axes) != 2:
             raise ValueError('Axes must consist of two arrays.')
         a_axes_summed, b_axes_summed = axes
-        if numpy.isscalar(a_axes_summed):
+        if _np.isscalar(a_axes_summed):
             a_axes_summed = a_axes_summed,
-        if numpy.isscalar(b_axes_summed):
+        if _np.isscalar(b_axes_summed):
             b_axes_summed = b_axes_summed,
     else:
         a_axes_summed = [i + a.ndim - axes for i in range(axes)]
@@ -101,7 +101,7 @@ def tensordot(a, b, axes = 2):
     b_axes = b_axes_summed[:] + b_axes_remained[:]
 
     return _npi.tensordot(a, b, a_axes, a_axes_remained, a_axes_summed, b_axes, 
-    b_axes_remained, b_axes_summed)
+      b_axes_remained, b_axes_summed)
 
 
 # This function is copied from ndarray.py since pylint

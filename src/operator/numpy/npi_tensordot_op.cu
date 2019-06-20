@@ -23,6 +23,8 @@
  */
 
 #include "npi_tensordot_op-inl.h"
+namespace mxnet {
+namespace op {
 
 using namespace mxnet;
 using namespace op;
@@ -32,3 +34,6 @@ NNVM_REGISTER_OP(tensordot)
 
 NNVM_REGISTER_OP(_backward_tensordot)
 .set_attr<FCompute>("FCompute<gpu>", TensordotOpBackward<gpu>);
+
+}  // namespace op
+}  // namespace mxnetø

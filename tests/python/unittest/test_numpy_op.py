@@ -38,7 +38,55 @@ def test_np_tensordot():
             
         def hybrid_forward(self, F, a, b):
             return F.np.tensordot(a, b, self._axes)
-    
+
+    def tensordot_backward(a, b, axes = 2):
+        if (a.ndim < 1) or (b.ndim < 1):
+            raise ValueError('An input is zero-dim')
+
+        if isinstance(axes, collections.abc.Sequence):
+            if len(axes) != 2:
+                raise ValueError('Axes must consist of two arrays.')
+            a_axes_summed, b_axes_summed = axes
+            if _np.isscalar(a_axes_summed):
+                a_axes_summed = a_axes_summed,
+            if _np.isscalar(b_axes_summed):
+                b_axes_summed = b_axes_summed,
+        else:
+            a_axes_summed = [i + a.ndim - axes for i in range(axes)]
+            b_axes_summed = [i for i in range(axes)]
+
+        if len(a_axes_summed) != len(b_axes_summed):
+            raise ValueError('Axes length mismatch') 
+
+        a_axes_remained = []
+        for i in range(a.ndim):
+            if not (i in a_axes_summed):
+                a_axes_remained.append(i)
+        a_axes = a_axes_remained[:] + a_axes_summed[:]
+        
+        b_axes_remained = []
+        for i in range(b.ndim):
+            if not (i in b_axes_summed):
+                b_axes_remained.append(i)
+        b_axes = b_axes_summed[:] + b_axes_remained[:]
+        
+        ad1 = np.prod([a.shape[i] for i in a_axes_remained]) if len(a_axes_remained) > 0 else 1
+        ad2 = np.prod([a.shape[i] for i in a_axes_summed]) if len(a_axes_summed) > 0 else 1
+        bd1 = np.prod([b.shape[i] for i in b_axes_summed]) if len(b_axes_summed) > 0 else 1
+        bd2 = np.prod([b.shape[i] for i in b_axes_remained]) if len(b_axes_remained) > 0 else 1
+        
+        out_dim = tuple([a.shape[i] for i in a_axes_remained] + [b.shape[i] for i in b_axes_remained])
+        out_grad = _np.ones(out_dim)
+
+        new_a = _np.transpose(a, a_axes).reshape((ad1, ad2)) 
+        new_b = _np.transpose(b, b_axes).reshape((bd1, bd2)) 
+
+        grad_b = _np.dot(new_a.T, out_grad).reshape(b.shape)
+        grad_a = _np.dot(out_grad, new_b.T).reshape(a.shape)
+        
+        return [grad_a, grad_b]
+
+    axes = [1, 1, 0, 1, [[1], [0]], 3, [[2, 3, 4], [2, 1, 0]], 2]
     shapes = [
         ((3, 0), (0, 4)),
         ((3,), (3,)),        # Case 1
@@ -46,10 +94,9 @@ def test_np_tensordot():
         ((3, 4), (4, 5)),    # Case 2
         ((3, 5, 4), (5, )),  # Case 3
         ((3, 4, 5, 6, 7), (5, 6, 7, 1, 2)),
-        ((3, 4, 5, 6, 7), (7, 6, 5, 1, 2))
+        ((3, 4, 5, 6, 7), (7, 6, 5, 1, 2)),
+        ((2, 2), (2, 2))
     ]
-
-    axes = [1, 1, 0, 1, [[1], [0]], 3, [[2, 3, 4], [2, 1, 0]]]
 
     for hybridize in [True, False]:
         for shape, axis in shapes, axes:
