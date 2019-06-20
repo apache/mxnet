@@ -25,6 +25,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
 
+#include <vector>
 #include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
@@ -33,54 +34,48 @@ namespace op {
 template<int req>
 struct gcd_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data_1, const DType* in_data_2) {
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* out_data,
+                                  const DType* in_data_1,
+                                  const DType* in_data_2) {
     int a = in_data_1[i];
     int b = in_data_2[i];
 
-    //minus cases.
-    if(a < 0)
+    // minus cases.
+    if (a < 0) {
        a = -a;
+    }
 
-    //minus cases.
-    if(b < 0)
+    // minus cases.
+    if (b < 0) {
        b = -b;
+    }
 
-    //handle zero-valued cases.
+    // handle zero-valued cases.
     int c;
-    if(a == 0 && b != 0)
-    {
+    if (a == 0 && b != 0) {
         c = b;
-    }
-    else if(b == 0 && a != 0)
-    {
+    } else if (b == 0 && a != 0) {
         c = a;
-    }
-    else if(a == 0 && b == 0)
-    {
+    } else if (a == 0 && b == 0) {
         c = 0;
-    }
-    else
-    {
-       if(a<b)
-       {
+    } else {
+       if (a < b) {
           a^=b;
           b^=a;
           a^=b;
-       }   
-
-       while(a % b != 0)
-       {
-          a = a % b; 
-          if(a<b){
+       }
+       while (a % b != 0) {
+          a = a % b;
+          if (a < b) {
              a^=b;
              b^=a;
              a^=b;
-          } 
+          }
        }
        c = b;
     }
     KERNEL_ASSIGN(out_data[i], req, c);
-
   }
 };
 
@@ -94,24 +89,26 @@ void GcdOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
 
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                           
-  const TBlob& in_data_1 = inputs[0];                                          
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data_1 = inputs[0];
   const TBlob& in_data_2 = inputs[1];
-  const TBlob& out_data = outputs[0];                                        
+  const TBlob& out_data = outputs[0];
 
-  //if zero buffered, then just return, scalar cases are handled similarly with tensors.
-  if(in_data_1.shape_.ndim() == -1 || in_data_2.shape_.ndim() == -1)
-	return;
+  // if zero buffered, then just return, scalar cases are handled similarly with tensors.
+  if (in_data_1.shape_.ndim() == -1 || in_data_2.shape_.ndim() == -1) {
+       return;
+  }
 
-  using namespace mxnet_op;                                                  
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {                          
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {                              
-      Kernel<gcd_forward<req_type>, xpu>::Launch(                      
-          s, out_data.Size(), out_data.dptr<DType>(), in_data_1.dptr<DType>(), in_data_2.dptr<DType>());                                        
-    });                                                                      
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<gcd_forward<req_type>, xpu>::Launch(
+          s, out_data.Size(),
+          out_data.dptr<DType>(),
+          in_data_1.dptr<DType>(), in_data_2.dptr<DType>());
+    });
   });
 }
-
 }  // namespace op
 }  // namespace mxnet
 

@@ -24,6 +24,8 @@
  */
 
 #include "np_gcd_op-inl.h"
+#include <string>
+#include <utility>
 
 namespace mxnet {
 namespace op {
