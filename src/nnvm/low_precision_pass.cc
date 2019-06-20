@@ -105,7 +105,8 @@ void AddMultiCastNode(const std::vector<NodeEntry> &inputs,
                  inputs[0].node->attrs.name + node_name + "_amp_multicast");
   for (const auto &node_entry : inputs) {
     NodePtr mirror_node = mirror_map.at(node_entry.node.get());
-    NodeEntry mirror_entry = NodeEntry{std::move(mirror_node), node_entry.index, node_entry.version};
+    NodeEntry mirror_entry = NodeEntry{std::move(mirror_node), node_entry.index,
+                                       node_entry.version};
     node->inputs.emplace_back(mirror_entry);
   }
   node->attrs.dict["num_outputs"] = std::to_string(inputs.size());
