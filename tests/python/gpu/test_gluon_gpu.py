@@ -285,7 +285,6 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     for k in weights:
         net_grad = net_params[k].grad()
         ref_net_grad = ref_net_params[k.replace('lstm_', 'lstm_ref_')].grad()
-        sys.stderr.write("checking gradient for {}\n".format(k))
         assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
                             rtol=1e-2, atol=1e-2)
 
