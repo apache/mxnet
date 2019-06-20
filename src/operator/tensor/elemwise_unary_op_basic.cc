@@ -124,15 +124,23 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
                                                unary_bwd<mshadow_op::sigmoid_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-      auto fx = nnvm::NodeEntry{n->inputs[1]};
-      auto gx_ograd = nnvm::NodeEntry{n};
-
+      // n->inputs[0] : y_grad
+      // n->inputs[1] : f(x) = sigmoid(x)
+      // ograds[0] : head_grads
+      // f''(x) = f'(x) * (1 - 2*f(x))
+      auto ones = MakeNode("ones_like", n->attrs.name + "_grad_ones", {n->inputs[1]}, nullptr, &n);
+      const std::unordered_map<std::string, std::string> args = {{"scalar", "2.0"}};
+      auto two_y = MakeNode("_mul_scalar", n->attrs.name + "_mul_two", {n->inputs[1]}, &args, &n);
+      auto one_minus_two_y = MakeNode("elemwise_sub", n->attrs.name + "_grad_sub",
+                                    {nnvm::NodeEntry{ones}, nnvm::NodeEntry{two_y}}, nullptr, &n);
+      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "_grad_mul",
+                                    {n->inputs[0], nnvm::NodeEntry{one_minus_two_y}}, nullptr, &n);
+      // when building gradient graph, the backward node of n->inputs[1] will be
+      // added to the graph again, therefore f`(x) will be multiplied
       std::vector<nnvm::NodeEntry> ret;
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-          {ograds[0], fx}, nullptr, &n));
-
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-          {ograds[0], fx}, nullptr, &n));
+      ret.emplace_back(ograds[0]); // this output is not passed out if gradient w.r.t x only
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
       return ret;
     });
 

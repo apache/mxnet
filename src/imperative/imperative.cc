@@ -504,9 +504,9 @@ std::vector<NDArray*> Imperative::Backward(
     }
   }
 
-
-  std::cout<<"Complete graph: " << std::endl;
-  common::LogMemoryPlan(graph);
+  if (dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false)) {
+    common::LogMemoryPlan(graph);
+  }
 
   // Execution
 
