@@ -1700,7 +1700,7 @@ def swapaxes(a, axis1, axis2):
 def expand_dims(a, axis):
     """Expand the shape of an array.
 
-    Insert a new axis that will appear at the `axis` position in the expanded
+    Insert a new axis that will appear at the `axis` position in the expanded array shape.
 
     Parameters
     ----------

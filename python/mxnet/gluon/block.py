@@ -911,7 +911,8 @@ class HybridBlock(Block):
             else:
                 assert name in aux_names
                 arg_dict['aux:%s'%name] = param._reduce()
-        ndarray.save('%s-%04d.params'%(path, epoch), arg_dict)
+        save_fn = _mx_np.save if is_np_array() else ndarray.save
+        save_fn('%s-%04d.params'%(path, epoch), arg_dict)
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either

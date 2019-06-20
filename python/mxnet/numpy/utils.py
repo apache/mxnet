@@ -21,12 +21,23 @@
 from __future__ import absolute_import
 
 import ctypes
+import numpy as onp
 from .. util import is_np_array, is_np_shape
 from .. base import _LIB, check_call, string_types, c_str_array
 from .. base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
 from . import ndarray
 
-__all__ = ['save', 'load']
+__all__ = ['save', 'load', 'float16', 'float32', 'float64', 'uint8', 'int32', 'int8', 'int64', 'pi']
+
+float16 = onp.float16
+float32 = onp.float32
+float64 = onp.float64
+uint8 = onp.uint8
+int32 = onp.int32
+int8 = onp.int8
+int64 = onp.int64
+
+pi = onp.pi
 
 
 def save(file, arr):
