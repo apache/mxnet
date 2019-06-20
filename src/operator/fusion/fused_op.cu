@@ -79,7 +79,7 @@ inline int mshadowTypeToVectorLength(int type) {
 }
 
 inline void replaceString(std::string *input, const std::string old, const std::string repl) {
-    int pos = 0;
+    size_t pos = 0;
     while ((pos = input->find(old, pos)) != std::string::npos) {
         input->replace(pos, old.size(), repl);
         pos += repl.size();
