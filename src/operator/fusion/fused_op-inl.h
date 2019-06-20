@@ -152,8 +152,8 @@ const std::map<std::string, std::vector<std::vector<std::string>>> fused_op_ops_
   {"cast"                              , {{"cast<%>(%)", "dtype", "_0"}}},
   {"Activation"                        , {{"%(%)", "act_type", "_0"}}},
   {"clip"                              , {{"clip(%, %, %)", "_0", "a_min", "a_max"}}},
-  {"_zeros"                            , {{"zero<%>(0)", "dtype"}}},
-  {"_ones"                             , {{"one<%>(0)", "dtype"}}},
+  {"_zeros"                            , {{"zero<%>()", "dtype"}}},
+  {"_ones"                             , {{"one<%>()", "dtype"}}},
   {"negative"                          , {{"(-%)", "_0"}}},
   {"_hypot"                            , {{"hypot(%, %)", "_0", "_1"}}},
   {"_hypot_scalar"                     , {{"hypot(%, %)", "_0", "scalar"}}},
@@ -746,7 +746,17 @@ inline typename LoadType<DType>::Type zero(const DType val) {
 }
 
 template <typename DType>
+inline typename LoadType<DType>::Type zero() {
+  return 0;
+}
+
+template <typename DType>
 inline typename LoadType<DType>::Type one(const DType val) {
+  return 1;
+}
+
+template <typename DType>
+inline typename LoadType<DType>::Type one() {
   return 1;
 }
 
