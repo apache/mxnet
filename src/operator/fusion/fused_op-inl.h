@@ -784,6 +784,15 @@ inline DType clip(const DType val, const float a_min, const float a_max) {
 }
 
 template <typename DType>
+inline DType backward_clip(const DType val, const DType grad, const float a_min, const float a_max) {
+  if (val > a_max || val < a_min) {
+    return 0;
+  } else {
+    return grad;
+  }
+}
+
+template <typename DType>
 inline DType sign(const DType val) {
   if (val < 0) return -1;
   return val > 0 ? 1 : 0;
@@ -792,6 +801,11 @@ inline DType sign(const DType val) {
 template <typename DType>
 inline DType reciprocal(const DType val) {
   return 1.0f / val;
+}
+
+template <typename DType>
+inline DType backward_reciprocal(const DType val, const DType grad) {
+  return -grad / (val * val);
 }
 
 template <typename DType>
@@ -827,6 +841,32 @@ inline DType erfinv(const DType val) {
 template <typename DType>
 inline DType backward_erfinv(const DType val, const DType grad) {
   return 0.5f * sqrt(pi) * exp(val * val) * grad;
+}
+
+template <typename DType>
+inline DType smooth_l1(const DType val, const DType scalar) {
+  const auto bsq = scalar * scalar;
+  const auto ibsq = 1.0f / bsq;
+  if (val > ibsq) {
+    return val - 0.5f * ibsq;
+  } else if (val < -ibsq) {
+    return -val - 0.5f * ibsq;
+  } else {
+    return 0.5f * val * val * bsq;
+  }
+}
+
+template <typename DType>
+inline DType backward_smooth_l1(const DType val, const DType scalar, const DType grad) {
+  auto bsq = scalar * scalar;
+  auto ibsq = 1.0f / bsq;
+  if (val > ibsq) {
+    return grad;
+  } else if (val < -ibsq) {
+    return -grad;
+  } else {
+    return bsq * val * grad;
+  }
 }
 
 )code";
