@@ -356,6 +356,9 @@ class ndarray(NDArray):
 
     def __len__(self):
         """Number of elements along the first axis."""
+        shape = self.shape
+        if len(shape) == 0:
+            raise TypeError('len() of unsized object')
         return self.shape[0]
 
     def __reduce__(self):
@@ -426,14 +429,12 @@ class ndarray(NDArray):
         3. Else (the `ndarray` is allocated on gpu), the string of its numpy form, class name,
         shape, and context is returned."""
         array_str = str(self.asnumpy())
-        if self.ndim == 0:  # scalar tensor
-            return array_str
         context = self.context
-        if context.device_type == 'gpu':
-            return '%s\n<%s shape=%s ctx=%s>' % (array_str, self.__class__.__name__, self.shape,
-                                                 context)
-        else:
-            return '%s\n<%s shape=%s>' % (array_str, self.__class__.__name__, self.shape)
+        # for scalar tensors and tensors allocated on CPUs,
+        # keep the output str same as numpy
+        if self.ndim == 0 or context.device_type == 'cpu':
+            return array_str
+        return '{array}@{ctx}'.format(array=array_str, ctx=context)
 
     def attach_grad(self, grad_req='write'):  # pylint: disable=arguments-differ
         """Attach a gradient buffer to this ndarray, so that `backward`

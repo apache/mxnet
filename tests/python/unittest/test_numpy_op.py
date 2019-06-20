@@ -1127,6 +1127,19 @@ def test_np_flatten():
         assert same(expected_ret, ret_mx.asnumpy())
 
 
+@with_seed()
+@npx.use_np
+def test_np_broadcast_to():
+    # TODO(junwu): Add more test cases
+    shapes = [(1, 2, 3, 4, 5), (1, 0, 3, 4, 5)]
+    for shape in shapes:
+        a = _np.random.uniform(size=(4, 1)).astype('float32')
+        a_mx = np.array(a, dtype=a.dtype)
+        expected_ret = _np.broadcast_to(a, shape)
+        ret_mx = np.broadcast_to(a_mx, shape)
+        assert same(expected_ret, ret_mx.asnumpy())
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
