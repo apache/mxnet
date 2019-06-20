@@ -138,7 +138,6 @@ def _find_lib_path():
 def _load_lib():
     """Load libary by searching possible path."""
     lib_path = _find_lib_path()
-    print(lib_path)
     lib = ctypes.cdll.LoadLibrary(lib_path[0])
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
@@ -264,7 +263,7 @@ class Predictor(object):
                 v = np.asarray(v, dtype=np.float32, order='C')
             _check_call(_LIB.MXPredSetInput(
                 self.handle, c_str(k),
-                v.ctypes.data_as(ctypes.c_void_p),
+                v.ctypes.data_as(mx_float_p),
                 mx_uint(v.size)))
         _check_call(_LIB.MXPredForward(self.handle))
 
@@ -328,7 +327,7 @@ class Predictor(object):
         data = np.empty(shape, dtype=_DTYPE_MX_TO_NP[out_type.value])
         _check_call(_LIB.MXPredGetOutput(
             self.handle, mx_uint(index),
-            data.ctypes.data_as(ctypes.c_void_p),
+            data.ctypes.data_as(mx_float_p),
             mx_uint(data.size)))
         return data
 
