@@ -813,7 +813,7 @@ struct ProfileTask : public ProfileDuration {
   /*!
    * \brief Whether to add stat to AggregateStats
    */
-  void enableAggregateStats(const bool enabled = true) {
+  void enableAggregateStats(bool enabled = true) {
     enable_aggregate_ = enabled;
   }
 
