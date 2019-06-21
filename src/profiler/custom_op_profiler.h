@@ -98,7 +98,6 @@ class CustomOpProfiler {
     if (tid_to_op_type_.find(tid) == tid_to_op_type_.end()) {
       return op_type;
     }
-    //
     std::string name = MakeSubOperatorName(tid, op_type);
     return display_names_.insert(name).first->c_str();
   }
