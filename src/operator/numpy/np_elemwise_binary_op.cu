@@ -19,14 +19,14 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_broadcast_reduce_op_index.cu
- * \brief GPU Implementation of numpy bitwise and.
+ * \file np_elemwise_binary_op.cu
+ * \brief CPU Implementation for element-wise bitwise add.
  */
 
 
 #include <mxnet/base.h>
-#include "../mshadow_op.h"  // mshadow operations
-#include "../tensor/elemwise_binary_broadcast_op.h"  // BinaryBroadcastCompute
+#include "../mshadow_op.h"
+#include "../tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
 namespace op {

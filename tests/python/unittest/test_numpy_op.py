@@ -1069,30 +1069,29 @@ def test_np_bitwise_and():
         def __init__(self):
             super(TestBitwiseAnd, self).__init__()
 
-
         def hybrid_forward(self, F, x1, x2):
             return F.np.bitwise_and(x1, x2)
 
     # test_shapes, remember to include zero-dim shape and zero-size shapes
-    shapes = [((3, 1), (3, 1)),
-              ((3, 1, 2), (3, 1, 2)),
-              ((1, ),(1, )),
-              ((3, 0), (3, 0)),  # zero-dim shape
-              ((0, 1), (0, 1)),  # zero-dim shape
-              ((2, 0, 2), (2, 0, 2)),  # zero-dim shape
-              ((1, ), (3, )),  # broadcast
-              ((2, 3), (2, 1)),  # broadcast
-              ((1, 3), (2, 3)),  # broadcast
-              ((1, 3), (2, 0, 3)),  # broadcast to zero-dim shape
-              ((1, 0, 1), (3, 0, 1)), # broadcast of zero-dim shape
-              ((), ()),  # zero-size shape
-             ]
+    shapes = [
+        ((3, 1), (3, 1)),
+        ((3, 1, 2), (3, 1, 2)),
+        ((1, ),(1, )),
+        ((3, 0), (3, 0)),  # zero-dim shape
+        ((0, 1), (0, 1)),  # zero-dim shape
+        ((2, 0, 2), (2, 0, 2)),  # zero-dim shape
+        ((1, ), (3, )),  # broadcast
+        ((2, 3), (2, 1)),  # broadcast
+        ((1, 3), (2, 3)),  # broadcast
+        ((1, 3), (2, 0, 3)),  # broadcast to zero-dim shape
+        ((1, 0, 1), (3, 0, 1)), # broadcast of zero-dim shape
+        ((), ()),  # zero-size shape
+    ]
 
     for hybridize in [True, False]:
         for shape in shapes:
             x1_shape, x2_shape = shape
-            # More for-loops for iterating through all other arguments
-            # 1 extra for-loop for iterating through data types
+
             test_bitwise_and = TestBitwiseAnd()
             if hybridize:
                 test_bitwise_and.hybridize()
@@ -1104,24 +1103,13 @@ def test_np_bitwise_and():
 
             np_out = _np.bitwise_and(x1.asnumpy(), x2.asnumpy())
             with mx.autograd.record():
-                mx_out = test_bitwise_and(x1, x2) # symbolic
+                mx_out = test_bitwise_and(x1, x2)
             assert mx_out.shape == np_out.shape
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
-            # Test imperative once again
-            mx_out = np.bitwise_and(x1, x2) # imperative
+            mx_out = np.bitwise_and(x1, x2)
             np_out = _np.bitwise_and(x1.asnumpy(), x2.asnumpy())
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
 
 
 @with_seed()
