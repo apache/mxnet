@@ -1061,6 +1061,7 @@ def test_np_tile():
             ret_mx = net(data_mx)
             assert same(ret_mx.asnumpy(), ret_np)
 
+
 @with_seed()
 @npx.use_np_shape
 def test_np_bitwise_and():
@@ -1076,15 +1077,15 @@ def test_np_bitwise_and():
         ((3, 1), (3, 1)),
         ((3, 1, 2), (3, 1, 2)),
         ((1, ),(1, )),
-        ((3, 0), (3, 0)),  # zero-dim shape
-        ((0, 1), (0, 1)),  # zero-dim shape
-        ((2, 0, 2), (2, 0, 2)),  # zero-dim shape
+        ((3, 0), (3, 0)),  # zero-size shape
+        ((0, 1), (0, 1)),  # zero-size shape
+        ((2, 0, 2), (2, 0, 2)),  # zero-size shape
         ((1, ), (3, )),  # broadcast
         ((2, 3), (2, 1)),  # broadcast
         ((1, 3), (2, 3)),  # broadcast
         ((1, 3), (2, 0, 3)),  # broadcast to zero-dim shape
         ((1, 0, 1), (3, 0, 1)), # broadcast of zero-dim shape
-        ((), ()),  # zero-size shape
+        ((), ()),  # zero-dim shape
     ]
 
     for hybridize in [True, False]:

@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_binary_op.cu
- * \brief CPU Implementation for element-wise bitwise add.
+ * \brief CPU Implementation for element-wise binary operators.
  */
 
 
@@ -33,7 +33,6 @@ namespace op {
 
 NNVM_REGISTER_OP(_np_bitwise_and)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::bitwise_and>);
-
 
 }  // namespace op
 }  // namespace mxnet

@@ -20,10 +20,10 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_elemwise_binary_op.cc
- * \brief CPU Implementation for element-wise bitwise add.
+ * \brief CPU Implementation for element-wise binary operators.
  */
 
-#include "./np_bitwise_and_op-inl.h"
+
 #include <mxnet/base.h>
 #include "../mshadow_op.h"
 #include "../operator_common.h"
