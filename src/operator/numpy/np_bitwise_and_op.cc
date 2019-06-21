@@ -25,15 +25,11 @@
 
 #include "./np_bitwise_and_op-inl.h"
 #include <mxnet/base.h>
-#include "../mshadow_op.h" // mshadow operations
-#include "../operator_common.h" // MakeZeroGradNodes
-#include "../tensor/elemwise_binary_op.h" // ElemwiseShape, ElemwiseType
-#include "../tensor/elemwise_binary_broadcast_op.h" // BinaryBroadcastCompute
+#include "../mshadow_op.h"  // mshadow operations
+#include "../operator_common.h"  // MakeZeroGradNodes
+#include "../tensor/elemwise_binary_op.h"  // ElemwiseShape, ElemwiseType
+#include "../tensor/elemwise_binary_broadcast_op.h"  // BinaryBroadcastCompute
 
-//#include <mxnet/base.h>
-//#include <mxnet/operator_util.h>
-//#include <vector>
-//#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -41,7 +37,7 @@ namespace op {
 NNVM_REGISTER_OP(_np_bitwise_and)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
@@ -52,5 +48,5 @@ NNVM_REGISTER_OP(_np_bitwise_and)
 .add_argument("x1", "NDArray-or-Symbol", "Input ndarray")
 .add_argument("x2", "NDArray-or-Symbol", "Input ndarray");
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
