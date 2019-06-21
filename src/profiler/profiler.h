@@ -1178,7 +1178,7 @@ struct ProfileOperator : public ProfileEvent {
     SetCategories(domain_.name());
 =======
       , attributes_(attributes)
-      , profiling(IsDeprecatedOperator(name)) {
+      , profiling(!IsDeprecatedOperator(name)) {
     if (IsSubOperatorOfCustom(name)) {
       as_task_.setDomain(&custom_op_domain);
       SetCategories(custom_op_domain.name());
@@ -1261,7 +1261,8 @@ struct ProfileOperator : public ProfileEvent {
    * Notice that this operator may still be used for e.g synchronization
    */
   inline static bool IsDeprecatedOperator(const char* name) {
-    return strcmp(name, "Dummy_Wait") && strcmp(name, "Custom");
+    return strcmp(name, "Dummy_Wait") == 0 ||
+           strcmp(name, "Custom") == 0 || strcmp(name, "_backward_Custom") == 0;
   }
   /*!
    * \brief Check if this operator a sub-operator of a custom operator

@@ -160,7 +160,6 @@ class NaiveEngine final : public Engine {
     this->req_completed_ = false;
     profiler::Profiler *profiler = profiler::Profiler::Get();
     NaiveOpr *opr = nullptr;
-    // Try to get a new name. Only not null for sub-operators of a custom operator
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
     // GenerateDisplayName() will return a pointer to the correct name of the operator
     const char* display_name = profiling ?
