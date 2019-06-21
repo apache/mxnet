@@ -22,7 +22,6 @@
  * \file np_gcd_op-inl.h
  * \brief Function definition of greatest common divisor 
  */
-
 #ifndef MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
 
@@ -94,14 +93,14 @@ void GcdOpForward(const nnvm::NodeAttrs& attrs,
 
   // if zero buffered, then just return, scalar cases are handled similarly with tensors.
   if (in_data_1.shape_.ndim() == -1 || in_data_2.shape_.ndim() == -1) {
-       return;
+    return;
   }
 
   using namespace mxnet_op;
   MXNET_INT_TYPE_SWITCH(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       Kernel<gcd_forward<req_type>, xpu>::Launch( s, out_data.Size(), out_data.dptr<DType>(),
-          in_data_1.dptr<DType>(), in_data_2.dptr<DType>());
+            in_data_1.dptr<DType>(), in_data_2.dptr<DType>());
     });
   });
 }

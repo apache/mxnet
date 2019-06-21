@@ -186,7 +186,7 @@ inline int get_num_threads<cpu>(const int N) {
     }                                                      \
     break;                                                 \
   default:                                                 \
-    LOG(FATAL) << "Unknown type enum " << type;            \
+    LOG(FATAL) << "This type is not vailate";              \
   }
 
 
