@@ -1076,9 +1076,11 @@ def test_np_bitwise_and():
     # test_shapes, remember to include zero-dim shape and zero-size shapes
     shapes = [((3, 1), (3, 1)),
               ((3, 1, 2), (3, 1, 2)),
+              ((1, ),(1, )),
               ((3, 0), (3, 0)),  # zero-dim shape
               ((0, 1), (0, 1)),  # zero-dim shape
               ((2, 0, 2), (2, 0, 2)),  # zero-dim shape
+              ((1, ), (3, )),  # broadcast
               ((2, 3), (2, 1)),  # broadcast
               ((1, 3), (2, 3)),  # broadcast
               ((1, 3), (2, 0, 3)),  # broadcast to zero-dim shape
