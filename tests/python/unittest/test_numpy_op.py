@@ -919,8 +919,6 @@ def test_np_dstack():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-
-
 @with_seed()
 @npx.use_np_shape
 def test_np_swapaxes():

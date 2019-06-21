@@ -107,7 +107,6 @@ bool DStackShape(const nnvm::NodeAttrs& attrs,
         << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
   }
 
-
   if (!has_unknown_dim_size) {
     dshape[axis] = size;
   }
