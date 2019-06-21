@@ -1068,12 +1068,12 @@ def test_np_gcd():
     class TestGcd(HybridBlock):
         def __init__(self):
             super(TestGcd, self).__init__()
-            # necessary initializations
             
         def hybrid_forward(self, F, x1, x2):
             return F.np.gcd(x1, x2)
     
     shapes = [  
+               #shapes here
                (),
                (2, 1),
                (1, 2),
@@ -1088,8 +1088,6 @@ def test_np_gcd():
 
     for hybridize in [True, False]:
         for shape in shapes:
-            # More for-loops for iterating through all other arguments
-            # 1 extra for-loop for iterating through data types
             test_gcd = TestGcd()
             if hybridize:
                 test_gcd.hybridize()
@@ -1208,7 +1206,6 @@ def test_np_meshgrid():
 def test_np_broadcast_arrays():
     # TODO(junwu): Add test
     pass
-
 
 if __name__ == '__main__':
     import nose
