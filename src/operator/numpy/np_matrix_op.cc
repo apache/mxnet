@@ -67,7 +67,6 @@ bool DStackShape(const nnvm::NodeAttrs& attrs,
   int axis = 2;
   param_.dim = axis;
   for (int i = 0; i < param_.num_args; ++i) {
-    // scalor tensor is treated as one dimensional vector
     if ((*in_shape)[i].ndim() == 0) {
       (*in_shape)[i] = mxnet::TShape(3, 1);
     } else if ((*in_shape)[i].ndim() == 1) {
