@@ -1060,6 +1060,8 @@ def test_np_tile():
                 net.hybridize()
             ret_mx = net(data_mx)
             assert same(ret_mx.asnumpy(), ret_np)
+
+
 @with_seed()
 @npx.use_np_shape
 def test_np_gcd():
@@ -1095,7 +1097,6 @@ def test_np_gcd():
             x2 = rand_ndarray(shape).astype(_np.int32).as_np_ndarray()
 
             np_out = _np.gcd(x1.asnumpy(), x2.asnumpy())
-
             with mx.autograd.record():
                 mx_out = test_gcd(x1, x2)
 
