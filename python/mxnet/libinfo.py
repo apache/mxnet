@@ -74,7 +74,6 @@ def find_lib_path(prefix='libmxnet'):
                            'List of candidates:\n' + str('\n'.join(dll_path)))
     if os.name == 'nt':
         os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(lib_path[0])
-    print("lib_path = ", lib_path)
     return lib_path
 
 def find_include_path():

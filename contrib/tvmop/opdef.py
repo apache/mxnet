@@ -1,0 +1,52 @@
+import tvm
+from itertools import product
+
+__OP_DEF__ = []
+
+class OpDef:
+    def __init__(self, func, name, target, auto_broadcast, **kwargs):
+        # construct the value combination of the arguments
+        # e.g., ldtype=["float32", "int32"], rdtype=["float16", "int16"]
+        # arg_combination = [
+        #   {"ldtype": "float32", "rdtype": "float16"},
+        #   {"ldtype": "float32", "rdtype": "int16"},
+        #   {"ldtype": "int32", "rdtype": "float16"},
+        #   {"ldtype": "int32", "rdtype": "int16"},
+        # ]
+        args = [k for k in kwargs]
+        values = [kwargs[k] if isinstance(kwargs[k], (list, tuple)) else [kwargs[k]]
+                  for k in args]
+        cart_product = product(*values)
+        self.arg_combination = [{k: v for k, v in zip(args, comb_values)}
+                                for comb_values in cart_product]
+        self.func = func
+        self.name = name
+        self.target = target
+        self.auto_broadcast = auto_broadcast
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
+
+    def invoke_all(self):
+        for each_kwargs in self.arg_combination:
+            yield self.func(**each_kwargs)
+
+    def get_op_name(self, args):
+        return self.name + ''.join([arg.dtype for arg in args])
+
+    def get_binds(self, args):
+        if self.auto_broadcast:
+            return {arg: tvm.decl_buffer(arg.shape, arg.dtype, buffer_type="broadcast")
+                    for arg in args}
+        return None
+
+
+def defop(name, target=None, auto_broadcast=False, **kwargs):
+    assert name is not None and len(name) > 0
+    target = "cpu" if target is None else target
+    def _defop(func):
+        opdef = OpDef(func, name, target, auto_broadcast, **kwargs)
+        __OP_DEF__.append(opdef)
+        return opdef
+    return _defop
+
