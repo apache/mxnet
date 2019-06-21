@@ -812,7 +812,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
 
 // helper function to add mapping of node_name -> dtype map
 // for the given indexed graph and inferred_dtypes
-inline void _SetInputDTypes(
+static void _SetInputDTypes(
     const nnvm::IndexedGraph& idx,
     const nnvm::DTypeVector& inferred_dtypes,
     std::unordered_map<std::string, int>* node_name_dtype_map,
@@ -849,7 +849,9 @@ inline void _SetInputDTypes(
 // if model_params is provided the function will dtype of only model params.
 // if model_params is empty, the function will dtype of all nodes which had
 // a prior dtype set.
-inline void _UpdateSymDTypeAttrs(
+// args is a const_reference vector of NodePtrs. NodePtrs are immutable but
+// the Nodes they are pointing will be mutated in this function
+static void _UpdateSymDTypeAttrs(
     const std::unordered_map<std::string, int>& node_name_dtype_map,
     const std::unordered_map<std::string, int>& node_without_dtype_map,
     const std::unordered_set<std::string>& model_params,
@@ -924,6 +926,9 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   std::unordered_set<std::string> widest_dtype_ops;
   std::unordered_set<std::string> excluded_syms;
   std::unordered_set<std::string> model_params;
+
+  // conditional_fp32_ops contains the mapping of op_name -> (map of param_name -> param_values)
+  // which need to be conditionally selected to be casted to FP32
   std::unordered_map<std::string,
                      std::unordered_map<std::string,
                                         std::vector<std::string>>> conditional_fp32_ops;

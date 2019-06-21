@@ -39,7 +39,7 @@ using nnvm::NodeEntry;
 using nnvm::Graph;
 
 // create a node for operator : op_name with name : node_name
-NodePtr CreateNode(std::string op_name, std::string node_name) {
+static NodePtr CreateNode(std::string op_name, std::string node_name) {
   NodePtr node = Node::Create();
   node->attrs.name = node_name;
   if (op_name == "nullptr") {
@@ -54,8 +54,8 @@ NodePtr CreateNode(std::string op_name, std::string node_name) {
   return node;
 }
 
-NodePtr InsertNode(std::string op_name, std::string node_name, NodePtr current,
-                   NodeEntry previous) {
+static NodePtr InsertNode(std::string op_name, std::string node_name, NodePtr current,
+                          NodeEntry previous) {
     NodePtr node = CreateNode(op_name, node_name);
     node->inputs.emplace_back(previous);
     current->inputs.emplace_back(NodeEntry{node, 0, 0});
@@ -63,8 +63,8 @@ NodePtr InsertNode(std::string op_name, std::string node_name, NodePtr current,
 }
 
 // get suffix for a node entry so that it can be used for amp_cast/amp_multicast node name
-std::string GetSuffix(const nnvm::NodeEntry &node_entry,
-                      const std::unordered_map<Node*, NodePtr> &mirror_map) {
+static std::string GetSuffix(const nnvm::NodeEntry &node_entry,
+                             const std::unordered_map<Node*, NodePtr> &mirror_map) {
   static const auto &flist_outputs =
       nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   std::string suffix = "";
@@ -82,10 +82,10 @@ std::string GetSuffix(const nnvm::NodeEntry &node_entry,
 }
 
 // add amp_cast node between curr_node and input
-void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
-                 const nnvm::NodeEntry &input, const std::string dtype,
-                 nnvm::NodeEntryMap<NodeEntry> *mirror_entry_map,
-                 NodePtr curr_node) {
+static void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
+                        const nnvm::NodeEntry &input, const std::string dtype,
+                        nnvm::NodeEntryMap<NodeEntry> *mirror_entry_map,
+                        NodePtr curr_node) {
   NodePtr cast_node =
       InsertNode("amp_cast", e.node->attrs.name + suffix + "_amp_cast_" + dtype,
                  curr_node, input);
@@ -96,10 +96,10 @@ void AddCastNode(const nnvm::NodeEntry &e, const std::string &suffix,
 }
 
 // add amp_multicast node between curr_node and inputs
-void AddMultiCastNode(const std::vector<NodeEntry> &inputs,
-                      const std::string &node_name,
-                      const std::unordered_map<Node *, NodePtr> &mirror_map,
-                      NodePtr curr_node) {
+static void AddMultiCastNode(const std::vector<NodeEntry> &inputs,
+                             const std::string &node_name,
+                             const std::unordered_map<Node *, NodePtr> &mirror_map,
+                             NodePtr curr_node) {
   NodePtr node =
       CreateNode("amp_multicast",
                  inputs[0].node->attrs.name + node_name + "_amp_multicast");
@@ -119,7 +119,7 @@ void AddMultiCastNode(const std::vector<NodeEntry> &inputs,
   return;
 }
 
-bool CheckConditionalFP32(
+static bool CheckConditionalFP32(
     const std::unordered_map<
         std::string, std::unordered_map<std::string, std::vector<std::string>>>
         &conditional_fp32_ops,
