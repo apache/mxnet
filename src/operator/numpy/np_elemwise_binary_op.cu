@@ -35,7 +35,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_np_bitwise_xor)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::bitwise_xor>)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::bitwise_xor>);
 
 }  // namespace op
 }  // namespace mxnet
