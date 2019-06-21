@@ -41,28 +41,28 @@ namespace mxnet {
 namespace exec {
 namespace {
   bool IsFusionCompatible(nnvm::Node* n) {
-    using namespace mxnet::detail;
+    using namespace mxnet::fusion;
     if (n->op() == nullptr)
       return false;
     std::string op_name = n->op()->name;
-    if (fused_op_ops_desc.count(op_name))
+    if (ops_desc.count(op_name))
       return true;
-    if (fused_op_slice_ops.count(op_name))
+    if (slice_ops.count(op_name))
       return false;
-    if (std::find(fused_op_variable_io_ops.begin(),
-                  fused_op_variable_io_ops.end(),
+    if (std::find(variable_io_ops.begin(),
+                  variable_io_ops.end(),
                   op_name) !=
-        fused_op_variable_io_ops.end())
+        variable_io_ops.end())
       return true;
     return false;
   }
 
   bool IsInputsOnlyCompatible(nnvm::Node* n) {
-    using namespace mxnet::detail;
+    using namespace mxnet::fusion;
     if (n->op() == nullptr)
       return false;
     std::string op_name = n->op()->name;
-    if (fused_op_slice_ops.count(op_name))
+    if (slice_ops.count(op_name))
       return true;
     return false;
   }

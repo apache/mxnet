@@ -28,7 +28,7 @@
 
 namespace mxnet {
 
-namespace detail {
+namespace fusion {
 
 const char fp16_support_string[] = R"code(
 struct __align__(2) __half {
@@ -59,7 +59,7 @@ using int32 = int;
 using int64 = long long;
 )code";
 
-const std::map<std::string, std::vector<std::vector<std::string>>> fused_op_ops_desc = {
+const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
   {"elemwise_add"                      , {{"add(%, %)", "_0", "_1"}}},
   {"_plus"                             , {{"add(%, %)", "_0", "_1"}}},
   {"_Plus"                             , {{"add(%, %)", "_0", "_1"}}},
@@ -219,17 +219,17 @@ const std::map<std::string, std::vector<std::vector<std::string>>> fused_op_ops_
                                           {"(% * % / hypot(%, %))", "_0", "_2", "_1", "_2"}}}
 };
 
-const std::map<std::string, std::string> fused_op_slice_ops = {
+const std::map<std::string, std::string> slice_ops = {
   {"slice_axis"   , ""},
   {"slice"   , ""},
 };
 
-const std::vector<std::string> fused_op_variable_io_ops = {
+const std::vector<std::string> variable_io_ops = {
   "add_n",
   "_backward_Activation"
 };
 
-const char fused_op_function_definitions[] = R"code(
+const char function_definitions[] = R"code(
 
 #define INT_MAX (2147483647)
 
@@ -885,19 +885,19 @@ inline DType backward_smooth_l1(const DType val, const DType scalar, const DType
 
 )code";
 
-const char fused_op_kernel_begin[] = R"code(
+const char kernel_begin[] = R"code(
 const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 for (int i = tid; i < N; i+= gridDim.x * blockDim.x) {
     int offset = i*nvec;
 
 )code";
 
-const char fused_op_kernel_end[] = R"code(
+const char kernel_end[] = R"code(
 }
 }
 )code";
 
-}  // namespace detail
+}  // namespace fusion
 
 }  // namespace mxnet
 

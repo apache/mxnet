@@ -32,7 +32,7 @@
 
 namespace mxnet {
 
-namespace detail {
+namespace {
 
 inline std::string mshadowTypeToString(int type) {
   switch (type) {
@@ -86,8 +86,6 @@ inline void replaceString(std::string *input, const std::string old, const std::
     }
 }
 
-}  // namespace detail
-
 std::string ParseOpDescription(const std::vector<std::string>& op_desc,
                                const std::map<std::pair<int, int>, std::string>& variables,
                                const nnvm::IndexedGraph::Node& node) {
@@ -109,6 +107,8 @@ std::string ParseOpDescription(const std::vector<std::string>& op_desc,
   }
   return fmt;
 }
+
+}  // namespace
 
 void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
                            const std::vector<int> &in_dtypes,
@@ -142,7 +142,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             load_index[i] = 1;
         } else {
             std::string op_name = source->op()->name;
-            if (detail::fused_op_slice_ops.find(op_name) != detail::fused_op_slice_ops.end()) {
+            if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
                 load_index[node.inputs[0].node_id] = 0;
             }
         }
@@ -162,16 +162,16 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             CHECK_EQ(outputs[i], 1);
         } else {
             std::string op_name = source->op()->name;
-            if (detail::fused_op_slice_ops.find(op_name) != detail::fused_op_slice_ops.end()) {
+            if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
                 int arg_id = node.inputs[0].node_id;
                 const auto& var_name = g[arg_id].source->attrs.name;
                 const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
                 load_index[arg_id] = 0;
                 auto parse_tuple = [](const std::string& input, const std::string def) {
                     std::string out = input;
-                    detail::replaceString(&out, "(", "{");
-                    detail::replaceString(&out, ")", "}");
-                    detail::replaceString(&out, "None", def);
+                    replaceString(&out, "(", "{");
+                    replaceString(&out, ")", "}");
+                    replaceString(&out, "None", def);
                     return out;
                 };
                 std::string begin = parse_tuple(source->attrs.dict.at("begin"), "0");
@@ -226,9 +226,9 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         }
       } else {
         std::string op_name = source->op()->name;
-        if (detail::fused_op_ops_desc.find(op_name) != detail::fused_op_ops_desc.end()) {
+        if (fusion::ops_desc.find(op_name) != fusion::ops_desc.end()) {
           const std::vector<std::vector<std::string>>& op_descs =
-            detail::fused_op_ops_desc.at(op_name);
+            fusion::ops_desc.at(op_name);
           CHECK_EQ(outputs[i], op_descs.size());
           size_t count = 0;
           for (const auto& op_desc : op_descs) {
@@ -241,7 +241,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           continue;
         }
 
-        if (detail::fused_op_slice_ops.find(op_name) != detail::fused_op_slice_ops.end()) {
+        if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
           code += "const auto " + var_name + " = load(" + variables[{i, 0}] + ".x[j]);\n";
           variables[{i, 0}] = var_name;
           continue;
@@ -250,7 +250,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 
         // Special cases with variable number
         // of inputs/outputs, listed in
-        // detail::fused_op_variable_io_ops
+        // fusion::variable_io_ops
         if (op_name == "add_n") {
           CHECK_EQ(outputs[i], 1);
           const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
@@ -329,7 +329,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   size_t i = 0;
   std::string aux_code = "static const int nvec = " + std::to_string(nvec) + ";\n";
   for (const auto &type : in_dtypes) {
-    std::string type_name = detail::mshadowTypeToString(type);
+    std::string type_name = mshadowTypeToString(type);
     std::string dtype_var = "DType_" + input_names[i];
     std::string dim_var = "ndim_" + input_names[i];
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
@@ -344,7 +344,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     }
   }
   for (const auto &type : out_dtypes) {
-    std::string type_name = detail::mshadowTypeToString(type);
+    std::string type_name = mshadowTypeToString(type);
     std::string out_name = "output" + std::to_string(i - in_dtypes.size());
     std::string dtype_var = "DType_" + out_name;
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
@@ -355,15 +355,15 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     }
   }
   kernel_params += tensor_params;
-  code_ = std::string(detail::fp16_support_string) + "\n" +
-          detail::type_support_string + "\n" +
-          detail::fused_op_function_definitions + "\n" +
+  code_ = std::string(fusion::fp16_support_string) + "\n" +
+          fusion::type_support_string + "\n" +
+          fusion::function_definitions + "\n" +
           aux_code + "\n" +
           "__global__ void FusedKernel_" + kernel_name +
           "(size_t N, " + kernel_params + ") {\n" +
-          detail::fused_op_kernel_begin + "\n" +
+          fusion::kernel_begin + "\n" +
           code_ + "\n" +
-          detail::fused_op_kernel_end;
+          fusion::kernel_end;
 }
 
 void FusedOp::CompileCode(const std::string &kernel_name) {
@@ -454,7 +454,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     in_ndims.push_back(blob.ndim());
     initialized_ = initialized_ && (blob.type_flag_ == inputs_[counter].dtype);
     inputs_[counter].dtype = blob.type_flag_;
-    nvec = max(nvec, detail::mshadowTypeToVectorLength(blob.type_flag_));
+    nvec = max(nvec, mshadowTypeToVectorLength(blob.type_flag_));
     ++counter;
   }
 
@@ -463,7 +463,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     out_dtypes.push_back(blob.type_flag_);
     initialized_ = initialized_ && (blob.type_flag_ == outputs_[counter].dtype);
     outputs_[counter].dtype = blob.type_flag_;
-    nvec = max(nvec, detail::mshadowTypeToVectorLength(blob.type_flag_));
+    nvec = max(nvec, mshadowTypeToVectorLength(blob.type_flag_));
     ++counter;
   }
 
