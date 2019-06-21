@@ -1097,9 +1097,7 @@ def test_np_bitwise_and():
                 test_bitwise_and.hybridize()
 
             x1 = rand_ndarray(x1_shape, dtype=_np.dtype(int)).as_np_ndarray()
-            x1.attach_grad()
             x2 = rand_ndarray(x2_shape, dtype=_np.dtype(int)).as_np_ndarray()
-            x2.attach_grad()
 
             np_out = _np.bitwise_and(x1.asnumpy(), x2.asnumpy())
             with mx.autograd.record():
