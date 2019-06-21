@@ -37,9 +37,11 @@ NNVM_REGISTER_OP(_np_bitwise_or)
     .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
     .set_attr<nnvm::FListInputNames>("FListInputNames",
                                      [](const NodeAttrs &attrs) {
-                                       return std::vector<std::string>{"x1", "x2"};
+                                       return std::vector<std::string>{"x1",
+                                                                       "x2"};
                                      })
-    .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::bitwise_or>)
+    .set_attr<FCompute>("FCompute<cpu>",
+                        BinaryBroadcastCompute<cpu, mshadow_op::bitwise_or>)
     .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
     .add_argument("x1", "NDArray-or-Symbol", "The input array.")
     .add_argument("x2", "NDArray-or-Symbol", "The input array.");

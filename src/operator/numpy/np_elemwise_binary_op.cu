@@ -28,10 +28,10 @@
 #include "../tensor/elemwise_binary_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 
-
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(_np_bitwise_or)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::bitwise_or>);
+.set_attr<FCompute>("FCompute<gpu>",
+                    BinaryBroadcastCompute<gpu, mshadow_op::bitwise_or>);
 }  // namespace op
 }  // namespace mxnet
