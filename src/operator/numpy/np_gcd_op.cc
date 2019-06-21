@@ -50,5 +50,3 @@ NNVM_REGISTER_OP(_np_gcd)
 
 }  // namespace op
 }  // namespace mxnet
-
-

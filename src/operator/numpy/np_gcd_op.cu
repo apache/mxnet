@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_gcd_op_index.cu
- * \brief GPU Implementation of reduce functions.
+ * \brief GPU Implementation of greatest common divisor.
  */
 #include "np_gcd_op-inl.h"
 

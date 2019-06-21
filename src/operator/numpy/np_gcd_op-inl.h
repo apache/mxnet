@@ -20,13 +20,15 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_gcd_op-inl.h
- * \brief Function definition of matrix related operators
+ * \brief Function definition of greatest common divisor 
  */
+
 #ifndef MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
 
 #include <vector>
 #include "../tensor/broadcast_reduce_op.h"
+#include "../src/operator/mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -61,16 +63,12 @@ struct gcd_forward {
         c = 0;
     } else {
        if (a < b) {
-          a^=b;
-          b^=a;
-          a^=b;
+          std::swap<int>(a, b);
        }
        while (a % b != 0) {
           a = a % b;
           if (a < b) {
-             a^=b;
-             b^=a;
-             a^=b;
+             std::swap<int>(a, b);
           }
        }
        c = b;
@@ -81,10 +79,10 @@ struct gcd_forward {
 
 template<typename xpu>
 void GcdOpForward(const nnvm::NodeAttrs& attrs,
-               const OpContext& ctx,
-               const std::vector<TBlob>& inputs,
-               const std::vector<OpReqType>& req,
-               const std::vector<TBlob>& outputs) {
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -100,11 +98,9 @@ void GcdOpForward(const nnvm::NodeAttrs& attrs,
   }
 
   using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+  MXNET_INT_TYPE_SWITCH(out_data.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<gcd_forward<req_type>, xpu>::Launch(
-          s, out_data.Size(),
-          out_data.dptr<DType>(),
+      Kernel<gcd_forward<req_type>, xpu>::Launch( s, out_data.Size(), out_data.dptr<DType>(),
           in_data_1.dptr<DType>(), in_data_2.dptr<DType>());
     });
   });
