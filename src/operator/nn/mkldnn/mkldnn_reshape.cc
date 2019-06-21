@@ -27,37 +27,14 @@
 
 #include <mkldnn.hpp>
 #include "../../tensor/matrix_op-inl.h"
+#include "mkldnn_reshape-inl.h"
 
 namespace mxnet {
 namespace op {
 
-bool SupportMKLDNNReshape(const ReshapeParam &param,
-                          const NDArray &data) {
-  auto data_ndim = data.shape().ndim();
-
-  if (data_ndim > 4 ||
-      data.dtype() != mshadow::kFloat32 ||
-      param.shape.ndim() > 4)
-    return false;
-
-  return true;
-}
-
-typedef ParamOpSign<ReshapeParam> MKLDNNReshapeSignature;
-
-class MKLDNNReshapeForward {
-  std::shared_ptr<mkldnn::memory> data_;
-  std::shared_ptr<mkldnn::memory> out_;
-  std::shared_ptr<mkldnn::memory> temp_;
-  std::vector<mkldnn::primitive> prims_;
-
-  bool needInvalidateInput = false;
-
- public:
-  MKLDNNReshapeForward(const ReshapeParam &param,
-                       const OpReqType &req,
-                       const NDArray &input,
-                       const NDArray &output) {
+MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType &req,
+                                   const NDArray &input,
+                                   const NDArray &output) {
     auto engine = CpuEngine::Get()->get_engine();
 
     // data_
@@ -98,62 +75,63 @@ class MKLDNNReshapeForward {
     } else {
       LOG(FATAL) << "not supported req type: " << req;
     }
+}
+
+int MKLDNNReshapeFwd::GetWorkspaceSize() {
+  return temp_ ? temp_->get_primitive_desc().get_size() : 0;
+}
+
+void MKLDNNReshapeFwd::SetNewMem(const NDArray &input,
+                                 const NDArray &output,
+                                 void* workspace) {
+  if (input.IsMKLDNNData()) {
+    this->data_->set_data_handle(input.GetMKLDNNData()->get_data_handle());
+  } else {
+    MSHADOW_TYPE_SWITCH(input.dtype(), DTYPE, {
+      this->data_->set_data_handle(input.data().dptr<DTYPE>());
+    })
   }
 
-  int GetWorkspaceSize() {
-    return temp_ ? temp_->get_primitive_desc().get_size() : 0;
+  if (output.IsMKLDNNData()) {
+    this->out_->set_data_handle(output.GetMKLDNNData()->get_data_handle());
+  } else {
+    MSHADOW_TYPE_SWITCH(output.dtype(), DTYPE, {
+      this->out_->set_data_handle(output.data().dptr<DTYPE>());
+    })
   }
 
-  void SetNewMem(const NDArray &input, const NDArray &output, void* workspace = nullptr) {
-    if (input.IsMKLDNNData()) {
-      this->data_->set_data_handle(input.GetMKLDNNData()->get_data_handle());
-    } else {
-      MSHADOW_TYPE_SWITCH(input.dtype(), DTYPE, {
-        this->data_->set_data_handle(input.data().dptr<DTYPE>());
-      })
-    }
-
-    if (output.IsMKLDNNData()) {
-      this->out_->set_data_handle(output.GetMKLDNNData()->get_data_handle());
-    } else {
-      MSHADOW_TYPE_SWITCH(output.dtype(), DTYPE, {
-        this->out_->set_data_handle(output.data().dptr<DTYPE>());
-      })
-    }
-
-    if (workspace) {
-      this->temp_->set_data_handle(workspace);
-    }
+  if (workspace) {
+    this->temp_->set_data_handle(workspace);
   }
+}
 
-  void Execute(const NDArray &input,
-               const NDArray &output,
-               void* workspace = nullptr) {
-    // set memory handles
-    SetNewMem(input, output, workspace);
-    // register primitives
-    auto stream = MKLDNNStream::Get();
-    for (auto &v : this->prims_) {
-      stream->RegisterPrim(v);
-    }
-    stream->Submit();
-    // invalidate mkldnn memory in input
-    if (needInvalidateInput) {
-      const_cast<NDArray &>(input).InvalidateMKLDNNData();
-    }
+void MKLDNNReshapeFwd::Execute(const NDArray &input,
+                               const NDArray &output,
+                               void* workspace) {
+  // set memory handles
+  SetNewMem(input, output, workspace);
+  // register primitives
+  auto stream = MKLDNNStream::Get();
+  for (auto &v : this->prims_) {
+    stream->RegisterPrim(v);
   }
-};
+  stream->Submit();
+  // invalidate mkldnn memory in input
+  if (needInvalidateInput) {
+    const_cast<NDArray &>(input).InvalidateMKLDNNData();
+  }
+}
 
-static MKLDNNReshapeForward &GetReshapeForward(const ReshapeParam& param,
-                                               const OpReqType &req,
-                                               const NDArray &input,
-                                               const NDArray &output) {
+MKLDNNReshapeFwd &GetReshapeForward(const ReshapeParam& param,
+                                    const OpReqType &req,
+                                    const NDArray &input,
+                                    const NDArray &output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNReshapeSignature,
-                                         MKLDNNReshapeForward, OpHash> fwds;
+                                         MKLDNNReshapeFwd, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNReshapeSignature,
-                                            MKLDNNReshapeForward, OpHash> fwds;
+                                            MKLDNNReshapeFwd, OpHash> fwds;
 #endif
   MKLDNNReshapeSignature key(param);
   key.AddSign(req);
@@ -162,7 +140,7 @@ static MKLDNNReshapeForward &GetReshapeForward(const ReshapeParam& param,
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    MKLDNNReshapeForward fwd(param, req, input, output);
+    MKLDNNReshapeFwd fwd(req, input, output);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
