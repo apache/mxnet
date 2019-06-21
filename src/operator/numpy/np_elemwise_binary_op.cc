@@ -19,7 +19,7 @@
 
 /*!
  * \file np_elemwise_binary_op.cc
- * \brief CPU Implementation of numpy-compatible bitwise OR
+ * \brief CPU Implementation of numpy-compatible element-wise binary operations
  */
 
 #include <mxnet/base.h>
@@ -30,20 +30,22 @@
 
 namespace mxnet {
 namespace op {
+
 NNVM_REGISTER_OP(_np_bitwise_or)
-    .set_num_inputs(2)
-    .set_num_outputs(1)
-    .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
-    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-    .set_attr<nnvm::FListInputNames>("FListInputNames",
-                                     [](const NodeAttrs &attrs) {
-                                       return std::vector<std::string>{"x1",
-                                                                       "x2"};
-                                     })
-    .set_attr<FCompute>("FCompute<cpu>",
-                        BinaryBroadcastCompute<cpu, mshadow_op::bitwise_or>)
-    .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-    .add_argument("x1", "NDArray-or-Symbol", "The input array.")
-    .add_argument("x2", "NDArray-or-Symbol", "The input array.");
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+                                 [](const NodeAttrs &attrs) {
+                                   return std::vector<std::string>{"x1",
+                                                                   "x2"};
+                                 })
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryBroadcastCompute<cpu, mshadow_op::bitwise_or>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("x1", "NDArray-or-Symbol", "The input array.")
+.add_argument("x2", "NDArray-or-Symbol", "The input array.");
+
 }  // namespace op
 }  // namespace mxnet

@@ -509,8 +509,6 @@ def test_np_bitwise_or():
                                  [(4, 3), (4, 1)],  # single broadcasting
                                  ((3, 4, 5), (3, 1, 5))  # single broadcasting in the middle
                                  ]:
-            # More for-loops for iterating through all other arguments
-            # 1 extra for-loop for iterating through data types
             test_bitwise_or = TestBitwiseOr()
             if hybridize:
                 test_bitwise_or.hybridize()
@@ -526,11 +524,6 @@ def test_np_bitwise_or():
             assert mx_out.shape == np_out.shape
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
             mx_out.backward()
-            # Code to get reference backward value
-            np_backward = _np.zeros(shape_x)
-            assert_almost_equal(x.grad.asnumpy(), np_backward, atol=1e-3, rtol=1e-5)
-            np_backward = _np.zeros(shape_y)
-            assert_almost_equal(y.grad.asnumpy(), np_backward, atol=1e-3, rtol=1e-5)
 
             # Test imperative once again
             mx_out = np.bitwise_or(x, y)

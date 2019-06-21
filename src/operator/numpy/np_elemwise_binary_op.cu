@@ -19,7 +19,7 @@
 
 /*!
  * \file np_elemwise_binary_op.cu
- * \brief GPU Implementation of numpy-compatible bitwise OR
+ * \brief GPU Implementation of numpy-compatible element-wise binary operations
  */
 
 #include <mxnet/base.h>
@@ -30,8 +30,10 @@
 
 namespace mxnet {
 namespace op {
+
 NNVM_REGISTER_OP(_np_bitwise_or)
 .set_attr<FCompute>("FCompute<gpu>",
                     BinaryBroadcastCompute<gpu, mshadow_op::bitwise_or>);
+
 }  // namespace op
 }  // namespace mxnet
