@@ -46,10 +46,10 @@ NNVM_REGISTER_OP(_backward_np_concat)
 NNVM_REGISTER_OP(_np_squeeze)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_npi_hstack)
+NNVM_REGISTER_OP(_npi_dstack)
 .set_attr<FCompute>("FCompute<gpu>", DStackCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_hstack)
+NNVM_REGISTER_OP(_backward_np_dstack)
 .set_attr<FCompute>("FCompute<gpu>", DStackGradCompute<gpu>);
 
 }  // namespace op
