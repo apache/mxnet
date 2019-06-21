@@ -122,7 +122,7 @@ inline void SetShapeType(const Context& ctx,
   if (!infershape.count(attrs.op)) {
     is_dynamic_shape_existing = true;
   } else {
-    if (!Imperative::Get()->is_np_comp()) {
+    if (!Imperative::Get()->is_np_shape()) {
       common::ConvertToNumpyShape(&in_shapes);
       common::ConvertToNumpyShape(&out_shapes);
     }
@@ -464,7 +464,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
       InvalidateOutputs(outputs, req);
 #endif
       fn(attrs, opctx, inputs, req, outputs);
-      if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync) {
+      if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
       }
     };
@@ -512,7 +512,7 @@ inline void PushOperator(const OpStatePtr& state,
 #endif
       fcompute_ex(state, opctx, inputs, req, outputs);
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync
-          && rctx.get_stream<gpu>()) {
+          && rctx.get_stream<gpu>() && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
       }
     };
@@ -562,7 +562,7 @@ inline void PushOperator(const OpStatePtr& state,
         // post-fcompute fallback, cast to original storage type, if necessary
         CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
         if (is_gpu && exec_type == ExecType::kSync
-            && rctx.get_stream<gpu>()) {
+            && rctx.get_stream<gpu>() && !rctx.is_bulk) {
           rctx.get_stream<gpu>()->Wait();
         }
       };
@@ -596,22 +596,23 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, mxnet::ShapeVector&& shapes,
   }
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
-    if (g.attrs.count("shape_inputs") &&
-        g.GetAttr<mxnet::ShapeVector>("shape_inputs") == shapes) return true;
+    if (g.attrs.count("shape_inputs") && g.GetAttr<mxnet::ShapeVector>("shape_inputs") == shapes)
+      return true;
   } else if (g.attrs.count("shape")) {
     const auto& prev_shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    CHECK_EQ(prev_shapes.size(), shapes.size());
-    bool match = true;
-    for (size_t i = 0; i < shapes.size(); ++i) {
-      if (i == entry_range.first) {
-        i = entry_range.second;
-        if (i >= shapes.size()) break;
+    if (prev_shapes.size() == shapes.size()) {
+      bool match = true;
+      for (size_t i = 0; i < shapes.size(); ++i) {
+        if (i == entry_range.first) {
+          i = entry_range.second;
+          if (i >= shapes.size()) break;
+        }
+        if (shapes[i] == prev_shapes[i]) continue;
+        match = false;
+        break;
       }
-      if (shapes[i] == prev_shapes[i]) continue;
-      match = false;
-      break;
+      if (match) return true;
     }
-    if (match) return true;
   }
   g.attrs.erase("shape");
   g.attrs.erase("shape_inputs");

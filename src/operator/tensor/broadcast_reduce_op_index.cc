@@ -167,9 +167,8 @@ Examples::
     if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
     auto ret = MakeGradNode("_backward_pick", n, {ograds[0], n->inputs[1]},
                             n->attrs.dict);
-    auto p = MakeNode("zeros_like", n->attrs.name + "_index_backward",
-                      {n->inputs[1]}, nullptr, &n);
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_index_backward",
+                     {n->inputs[1]}, nullptr, &n));
     return ret;
   })
 .add_argument("data", "NDArray-or-Symbol", "The input array")

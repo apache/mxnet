@@ -268,7 +268,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
         new_height = param_.resize;
         new_width = param_.resize*src.cols/src.rows;
       }
-      CHECK((param_.inter_method >= 1 && param_.inter_method <= 4) ||
+      CHECK((param_.inter_method >= 0 && param_.inter_method <= 4) ||
        (param_.inter_method >= 9 && param_.inter_method <= 10))
         << "invalid inter_method: valid value 0,1,2,3,9,10";
       int interpolation_method = GetInterMethod(param_.inter_method,

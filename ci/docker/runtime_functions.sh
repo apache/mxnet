@@ -41,6 +41,26 @@ scala_prepare() {
     export MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn"
 }
 
+check_cython() {
+    set -ex
+    local python_ver=$1
+    local is_cython_used=$(python${python_ver} <<EOF
+import sys
+import mxnet as mx
+cython_ndarraybase = 'mxnet._cy' + str(sys.version_info.major) + '.ndarray'
+print(mx.nd._internal.NDArrayBase.__module__ == cython_ndarraybase)
+EOF
+)
+
+    if [ "${is_cython_used}" != "True" ]; then
+        echo "ERROR: cython is not used."
+        return 1
+    else
+        echo "NOTE: cython is used."
+        return 0
+    fi 
+}
+
 build_ccache_wrappers() {
     set -ex
 
@@ -370,6 +390,8 @@ build_ubuntu_cpu_openblas() {
         USE_LIBJPEG_TURBO=1           \
         USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_cpu_mkl() {
@@ -565,7 +587,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda91_cudnn7
+    build_ubuntu_gpu_cuda100_cudnn7
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -665,7 +687,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda91_cudnn7() {
+build_ubuntu_gpu_cuda100_cudnn7() {
     set -ex
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
@@ -682,6 +704,9 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
+
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_amalgamation() {
@@ -749,6 +774,7 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DBUILD_CYTHON_MODULES=1                \
         -G Ninja                                \
         /work/mxnet
 
@@ -816,12 +842,25 @@ sanity_check() {
     nosetests-3.4 tests/tutorials/test_sanity_tutorials.py
 }
 
-
-unittest_ubuntu_python2_cpu() {
+unittest_ubuntu_python2_cpu_cython() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=1
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 2
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
+}
+
+unittest_ubuntu_python2_cpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
@@ -830,8 +869,9 @@ unittest_ubuntu_python2_cpu() {
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
@@ -839,8 +879,9 @@ unittest_ubuntu_python3_cpu() {
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
 }
@@ -848,7 +889,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
 unittest_ubuntu_python2_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
@@ -857,9 +898,22 @@ unittest_ubuntu_python2_gpu() {
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+}
+
+unittest_ubuntu_python3_gpu_cython() {
+    set -ex
+    export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=1
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 3
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -868,6 +922,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export CUDNN_OFF_TEST_ONLY=true
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -877,6 +932,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
 }
@@ -886,9 +942,10 @@ unittest_ubuntu_tensorrt_gpu() {
 unittest_ubuntu_python2_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -897,9 +954,10 @@ unittest_ubuntu_python2_quantization_gpu() {
 unittest_ubuntu_python3_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -1348,6 +1406,16 @@ nightly_scala_demo_test_cpu() {
     mvn -B -Pci-nightly install
     bash bin/demo.sh
     bash bin/run_im.sh
+}
+
+nightly_estimator() {
+    set -ex
+    cd /work/mxnet/tests/nightly/estimator
+    export PYTHONPATH=/work/mxnet/python/
+    python test_estimator_cnn.py --type gpu
+    python test_sentiment_rnn.py --type gpu
+    python test_estimator_cnn.py --type cpu
+    python test_sentiment_rnn.py --type cpu
 }
 
 # Deploy

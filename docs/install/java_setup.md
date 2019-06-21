@@ -19,7 +19,7 @@
 
 The following instructions are provided for macOS and Ubuntu. Windows is not yet available.
 
-**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](../tutorials/java/mxnet_java_on_intellij.html) instead of these instructions.
+**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](../tutorials/java/mxnet_java_on_intellij.md) instead of these instructions.
 
 <hr>
 
@@ -43,7 +43,7 @@ brew install maven
 Please run the following lines:
 
 ```bash
-sudo apt-get install openjdk-8-java maven
+sudo apt-get install openjdk-8-jdk maven
 ```
 
 **Step 2.** Run the demo MXNet-Java project.
@@ -99,8 +99,8 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 
 | OS | Step 1 | Step 2 |
 |---|---|---|
-|macOS | [Shared Library for macOS](../install/osx_setup.html#build-the-shared-library) | [Scala Package for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#install-the-mxnet-package-for-scala) |
-| Ubuntu | [Shared Library for Ubuntu](../install/ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-scala) |
+|macOS | [Shared Library for macOS](osx_setup.html#build-the-shared-library) | [Scala Package for macOS](osx_setup.html#install-the-mxnet-package-for-scala) |
+| Ubuntu | [Shared Library for Ubuntu](ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](ubuntu_setup.html#install-the-mxnet-package-for-scala) |
 | Windows | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub"> | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Call for Contribution</a> |
 
 
@@ -110,12 +110,12 @@ If you have already built MXNet **from source** and are looking to setup Java fr
 ```
 mvn install
 ```
-This will install both the Java Inference API and the required MXNet-Scala package. 
+This will install both the Java Inference API and the required MXNet-Scala package.
 <hr>
 
 ## Documentation
 
-Javadocs are generated as part of the docs build pipeline. You can find them published in the [Java API](../api/java/index.html) section of the website or by going to the [scaladocs output](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package) directly.
+Javadocs are generated as part of the docs build pipeline. You can find them published in the [Java API](../api/java/index.md) section of the website or by going to the [scaladocs output](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package) directly.
 
 To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions).
 
@@ -123,6 +123,6 @@ To build the docs yourself, follow the [developer build docs instructions](https
 
 ## Resources
 
-* [Java API](../api/java/index.html)
-* [javadocs](../api/java/docs/index.html#org.apache.mxnet.package)
-* [MXNet-Java Tutorials](../../tutorials/index.html#java-tutorials)
+* [Java API](../api/java/)
+* [javadocs](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package)
+* [MXNet-Java Tutorials](../tutorials/java/)

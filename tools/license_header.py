@@ -68,6 +68,9 @@ _WHITE_LIST = [
                # Git submodules under different licenses
                '3rdparty',
 
+               # 3rdparty headerfiles under different licenses
+               'include/mkldnn',
+
                # Code shared with project by author - see file for details
                'src/operator/special_functions-inl.h',
 

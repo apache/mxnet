@@ -33,6 +33,7 @@
 #include <vector>
 #include <cstring>
 #ifdef USE_GNU_PARALLEL_SHUFFLE
+  #include <unistd.h>
   #include <parallel/algorithm>
 #endif
 #include "../elemwise_op_common.h"
@@ -45,8 +46,13 @@ namespace {
 template<typename DType, typename Rand>
 void Shuffle1D(DType* const out, const index_t size, Rand* const prnd) {
   #ifdef USE_GNU_PARALLEL_SHUFFLE
-    auto rand_n = [prnd](index_t n) {
-      std::uniform_int_distribution<index_t> dist(0, n - 1);
+     /*
+      * See issue #15029: the data type of n needs to be compatible with
+      * the gcc library: https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B\
+      * -v3/include/parallel/random_shuffle.h#L384
+      */
+    auto rand_n = [prnd](uint32_t n) {
+      std::uniform_int_distribution<uint32_t> dist(0, n - 1);
       return dist(*prnd);
     };
     __gnu_parallel::random_shuffle(out, out + size, rand_n);

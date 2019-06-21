@@ -92,6 +92,18 @@ def test_Cifar10Rec():
     for i in range(10):
         assert(labelcount[i] == 5000)
 
+def test_inter_methods_in_augmenter():
+    def test_Cifar10Rec():
+        get_cifar10()
+        for inter_method in [0,1,2,3,4,9,10]:
+            dataiter = mx.io.ImageRecordIter(
+                path_imgrec="data/cifar/train.rec",
+                mean_img="data/cifar/cifar10_mean.bin",
+                max_rotate_angle=45,
+                inter_method=inter_method)
+            for batch in dataiter:
+                pass
+
 def test_image_iter_exception():
     def check_cifar10_exception():
         get_cifar10()

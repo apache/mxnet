@@ -59,7 +59,9 @@ upscale_factor = opt.upscale_factor
 batch_size, test_batch_size = opt.batch_size, opt.test_batch_size
 color_flag = 0
 
-# Get data
+# Get data from https://github.com/BIDS/BSDS500/
+# The BSDS500 Dataset is copyright Berkeley Computer Vision Group
+# For more details, see https://www2.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/resources.html#bsds500
 datasets_dir = path.expanduser(path.join("~", ".mxnet", "datasets"))
 datasets_tmpdir = path.join(datasets_dir, "tmp")
 dataset_url = "https://github.com/BIDS/BSDS500/archive/master.zip"
