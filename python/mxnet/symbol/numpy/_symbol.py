@@ -31,7 +31,7 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace']
+           'expand_dims', 'tile', 'linspace', 'dstack']
 
 
 def _num_outputs(sym):
@@ -1060,6 +1060,22 @@ def concatenate(seq, axis=0, out=None):
         The concatenated array.
     """
     return _npi.concatenate(*seq, dim=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def dstack(arrays):
+    """Stack tensors in sequence depth wise.
+        This is equivalent to concatenation along the third axis, except for zero
+        dimensional, 1-D or 2D tensors, in which case the first dimension is used.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    Returns
+    -------
+    depth-wisely concatenated ndarray
+    """
+    return _npi.dstack(*arrays)
 
 
 @set_module('mxnet.symbol.numpy')
