@@ -1072,7 +1072,6 @@ def test_np_bitwise_and():
         def hybrid_forward(self, F, x1, x2):
             return F.np.bitwise_and(x1, x2)
 
-    # test_shapes, remember to include zero-dim shape and zero-size shapes
     shapes = [
         ((3, 1), (3, 1)),
         ((3, 1, 2), (3, 1, 2)),
