@@ -30,7 +30,7 @@ from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'dstack']
 
 
 def _num_outputs(sym):
@@ -1135,6 +1135,20 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     else:
         return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
 
+@set_module('mxnet.symbol.numpy')
+def dstack(arrays):
+    """Stack tensors in sequence depth wise.
+        This is equivalent to concatenation along the third axis, except for zero
+        dimensional, 1-D or 2D tensors, in which case the first dimension is used.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    Returns
+    -------
+    depth-wisely concatenated ndarray
+    """
+    return _npi.dstack(*arrays)
 
 @set_module('mxnet.symbol.numpy')
 def expand_dims(a, axis):

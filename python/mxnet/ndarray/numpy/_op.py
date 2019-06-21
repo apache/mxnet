@@ -27,7 +27,7 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'dstack']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -198,6 +198,22 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
     else:
         raise TypeError('type {} not supported'.format(str(type(rhs))))
 #pylint: enable= too-many-arguments, no-member, protected-access
+
+
+@set_module('mxnet.ndarray.numpy')
+def dstack(arrays):
+    """Stack tensors in sequence depth wise.
+        This is equivalent to concatenation along the third axis, except for zero
+        dimensional, 1-D or 2D tensors, in which case the first dimension is used.
+    Parameters
+    ----------
+    arrays : sequence of array_like
+        Each array must have the same shape.
+    Returns
+    -------
+    depth-wisely concatenated ndarray
+    """
+    return _npi.dstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
