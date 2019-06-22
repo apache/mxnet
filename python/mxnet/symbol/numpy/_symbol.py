@@ -31,7 +31,7 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace']
+           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh']
 
 
 def _num_outputs(sym):
@@ -1367,6 +1367,127 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         return (_npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step)
     else:
         return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
+
+
+def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
+    """Helper function for unary operators.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input of the unary operator.
+    fn_array : function
+        Function to be called if x is of ``_Symbol`` type.
+    fn_scalar : function
+        Function to be called if x is a Python scalar.
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Result _Symbol or scalar.
+    """
+    if isinstance(x, numeric_types):
+        return fn_scalar(x, **kwargs)
+    elif isinstance(x, _Symbol):
+        return fn_array(x, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+def sin(x, out=None, **kwargs):
+    """Trigonometric sine, element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The sine of each element of x.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sin, _np.sin, out=out, **kwargs)
+
+
+def cos(x, out=None, **kwargs):
+    """Cosine, element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The corresponding cosine values. This is a scalar if x is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.cos, _np.cos, out=out, **kwargs)
+
+
+def sinh(x, out=None, **kwargs):
+    """Hyperbolic sine, element-wise.
+
+    Equivalent to ``1/2 * (np.exp(x) - np.exp(-x))`` or ``-1j * np.sin(1j*x)``.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array or scalar.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding hyperbolic sine values. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sinh, _np.sinh, out=out, **kwargs)
+
+
+def cosh(x, out=None, **kwargs):
+    """Hyperbolic cosine, element-wise.
+
+    Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
+
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array or scalar.
+    out : ndarray or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.cosh, _np.cosh, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)

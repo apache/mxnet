@@ -51,5 +51,11 @@ NNVM_REGISTER_OP(_np_prod)
 NNVM_REGISTER_OP(_backward_np_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
 
+NNVM_REGISTER_OP(_np_broadcast_to)
+.set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_broadcast_to)
+.set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

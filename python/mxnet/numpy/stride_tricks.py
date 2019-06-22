@@ -43,7 +43,7 @@ def broadcast_arrays(*args):
     Returns
     -------
     broadcasted : list of arrays
-        These arrays are copies of the original arrays. If all the input
+        These arrays are copies of the original arrays unless that all the input
         arrays have the same shape, the input list of arrays are returned
         instead of a list of copies.
     """

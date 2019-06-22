@@ -1130,7 +1130,7 @@ def test_np_flatten():
 @with_seed()
 @npx.use_np
 def test_np_broadcast_to():
-    # TODO(junwu): Add more test cases
+    # TODO(junwu): Add more test cases and backward test
     shapes = [(1, 2, 3, 4, 5), (1, 0, 3, 4, 5)]
     for shape in shapes:
         a = _np.random.uniform(size=(4, 1)).astype('float32')
@@ -1138,6 +1138,28 @@ def test_np_broadcast_to():
         expected_ret = _np.broadcast_to(a, shape)
         ret_mx = np.broadcast_to(a_mx, shape)
         assert same(expected_ret, ret_mx.asnumpy())
+
+
+@with_seed()
+@npx.use_np
+def test_np_meshgrid():
+    nx, ny = (4, 5)
+    x = np.linspace(0, 1, nx)
+    y = np.linspace(0, 1, ny)
+    z = np.ones(())
+    xv, yv, zv = np.meshgrid(x, y, z)
+    xv_expected, yv_expected, zv_expected = _np.meshgrid(x.asnumpy(), y.asnumpy(), z.asnumpy())
+    assert same(xv.asnumpy(), xv_expected)
+    assert same(yv.asnumpy(), yv_expected)
+    assert same(zv.asnumpy(), zv_expected)
+    # TODO(junwu): Add more test
+
+
+@with_seed()
+@npx.use_np
+def test_np_broadcast_arrays():
+    # TODO(junwu): Add test
+    pass
 
 
 if __name__ == '__main__':

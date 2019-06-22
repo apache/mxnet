@@ -45,7 +45,8 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace']
+           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
+           'sinh', 'cosh']
 
 
 # This function is copied from ndarray.py since pylint
@@ -422,19 +423,20 @@ class ndarray(NDArray):
         return self
 
     def __repr__(self):
-        """Returns a string representation of the array using the following rules:
-        1. If the `ndarray` is a scalar tensor, only the string of the scalar is returned.
-        2. Else if the `ndarray` is allocated on cpu, the string of its numpy form, class name,
-        and shape is returned.
-        3. Else (the `ndarray` is allocated on gpu), the string of its numpy form, class name,
-        shape, and context is returned."""
-        array_str = str(self.asnumpy())
+        """Returns a string representation of the array."""
+        array_str = self.asnumpy().__repr__()
         context = self.context
-        # for scalar tensors and tensors allocated on CPUs,
-        # keep the output str same as numpy
-        if self.ndim == 0 or context.device_type == 'cpu':
+        if context.device_type == 'cpu':
             return array_str
-        return '{array}@{ctx}'.format(array=array_str, ctx=context)
+        return array_str[:-1] + ', ctx={})'.format(str(context))
+
+    def __str__(self):
+        """Returns a string representation of the array."""
+        array_str = self.asnumpy().__str__()
+        context = self.context
+        if context.device_type == 'cpu' or self.ndim == 0:
+            return array_str
+        return '{array} @{ctx}'.format(array=array_str, ctx=context)
 
     def attach_grad(self, grad_req='write'):  # pylint: disable=arguments-differ
         """Attach a gradient buffer to this ndarray, so that `backward`
@@ -1835,3 +1837,108 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         Size of spacing between samples.
     """
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, **kwargs)
+
+
+def sin(x, out=None, **kwargs):
+    """Trigonometric sine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The sine of each element of x. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sin(x, out=out, **kwargs)
+
+
+def cos(x, out=None, **kwargs):
+    """Cosine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding cosine values. This is a scalar if x is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.cos(x, out=out, **kwargs)
+
+
+def sinh(x, out=None, **kwargs):
+    """Hyperbolic sine, element-wise.
+
+    Equivalent to ``1/2 * (np.exp(x) - np.exp(-x))`` or ``-1j * np.sin(1j*x)``.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding hyperbolic sine values. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sinh(x, out=out, **kwargs)
+
+
+def cosh(x, out=None, **kwargs):
+    """Hyperbolic cosine, element-wise.
+
+    Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
+
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.cosh(x, out=out, **kwargs)
