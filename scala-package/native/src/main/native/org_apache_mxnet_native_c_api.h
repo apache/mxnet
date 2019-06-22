@@ -66,10 +66,18 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateNone
 /*
  * Class:     org_apache_mxnet_LibInfo
  * Method:    mxNDArrayCreateEx
- * Signature: ([IIIIIILorg/apache/mxnet/Base/RefLong;)I
+ * Signature: ([Lorg/apache/mxnet/Base/RefLong;)I
  */
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateEx
   (JNIEnv *, jobject, jintArray, jint, jint, jint, jint, jint, jobject);
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxNDArrayCreateSparseEx
+ * Signature: ([Lorg/apache/mxnet/Base/RefLong;)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateSparseEx
+  (JNIEnv *, jobject, jint, jintArray, jint, jint, jint, jint, jint, jint, jintArray, jintArray, jintArray, jobject);
 
 /*
  * Class:     org_apache_mxnet_LibInfo
@@ -134,6 +142,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxFuncInvokeEx
  */
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   (JNIEnv *, jobject, jlong, jobject, jobject);
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxNDArraySyncCopyFromNDArray
+ * Signature: (J[BI)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromNDArray
+  (JNIEnv *, jobject, jlong, jlong, jint);
 
 /*
  * Class:     org_apache_mxnet_LibInfo
@@ -229,6 +245,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayLoadFromRawBytes
  * Signature: (JLorg/apache/mxnet/Base/RefInt;)I
  */
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetDType
+  (JNIEnv *, jobject, jlong, jobject);
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxNDArrayGetStorageType
+ * Signature: (JLorg/apache/mxnet/Base/RefInt;)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetStorageType
   (JNIEnv *, jobject, jlong, jobject);
 
 /*

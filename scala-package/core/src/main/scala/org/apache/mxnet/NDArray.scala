@@ -21,7 +21,8 @@ import java.nio.{ByteBuffer, ByteOrder}
 
 import org.apache.mxnet.Base._
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.MX_PRIMITIVES.{MX_PRIMITIVE_TYPE}
+import org.apache.mxnet.MX_PRIMITIVES.MX_PRIMITIVE_TYPE
+import org.apache.mxnet.SparseFormat.SparseFormat
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -943,6 +944,12 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     DType(mxDtype.value)
   }
 
+  val sparseFormat: SparseFormat = {
+    val mxSF = new RefInt
+    checkCall(_LIB.mxNDArrayGetStorageType(handle, mxSF))
+    SparseFormat(mxSF.value)
+  }
+
   /**
    * Return a copied numpy array of current array with specified type.
    * @param dtype Desired type of result array.
@@ -1307,6 +1314,16 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    */
   def asInContext(context: Context): NDArray = {
     if (this.context == context) this else this.copyTo(context)
+  }
+
+  def toSparse(sfOption : Option[SparseFormat] = None): SparseNDArray = {
+    val sf = sfOption.getOrElse(SparseFormat.ROW_SPARSE)
+    if (sf.id == 0) throw new IllegalArgumentException("Require Sparse")
+    if (this.sparseFormat.id != 0 && sfOption.isEmpty) {
+        this.asInstanceOf[SparseNDArray]
+    } else {
+      NDArray.api.cast_storage(this, sf.toString).head.asInstanceOf[SparseNDArray]
+    }
   }
 
   override def equals(o: Any): Boolean = o match {

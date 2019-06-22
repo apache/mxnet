@@ -47,6 +47,18 @@ private[mxnet] class LibInfo {
                                 delayAlloc: Int,
                                 dtype: Int,
                                 out: NDArrayHandleRef): Int
+  @native def mxNDArrayCreateSparseEx(storageType: Int,
+                                      shape: Array[Int],
+                                      ndim: Int,
+                                      devType: Int,
+                                      devId: Int,
+                                      delayAlloc: Int,
+                                      dtype: Int,
+                                      numAux: Int,
+                                      auxTypes: Array[Int],
+                                      auxNdims: Array[Int],
+                                      auxShapes: Array[Int],
+                                      out: NDArrayHandleRef): Int
   @native def mxNDArrayWaitAll(): Int
   @native def mxNDArrayWaitToRead(handle: NDArrayHandle): Int
   @native def mxListFunctions(functions: ListBuffer[FunctionHandle]): Int
@@ -76,6 +88,9 @@ private[mxnet] class LibInfo {
   @native def mxNDArrayGetShape(handle: NDArrayHandle,
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
+  @native def mxNDArraySyncCopyFromNDArray(handleDst: NDArrayHandle,
+                                           handleSrc: NDArrayHandle,
+                                           locator: Int): Int
   @native def mxNDArraySyncCopyToCPU(handle: NDArrayHandle,
                                      data: Array[Byte],
                                      size: Int): Int
@@ -109,6 +124,7 @@ private[mxnet] class LibInfo {
   @native def mxNDArraySaveRawBytes(handle: NDArrayHandle, buf: ArrayBuffer[Byte]): Int
   @native def mxNDArrayLoadFromRawBytes(bytes: Array[Byte], handle: NDArrayHandleRef): Int
   @native def mxNDArrayGetDType(handle: NDArrayHandle, dtype: RefInt): Int
+  @native def mxNDArrayGetStorageType(handle: NDArrayHandle, stype: RefInt): Int
 
   // KVStore Server
   @native def mxInitPSEnv(keys: Array[String], values: Array[String]): Int

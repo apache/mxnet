@@ -93,6 +93,31 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateEx
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateSparseEx
+  (JNIEnv *env, jobject obj, jint storageType, jintArray shape, jint ndim, jint devType,
+    jint devId, jint delayAlloc, jint dtype, jint numAux, jintArray auxTypes,
+    jintArray auxNdims, jintArray auxShapes, jobject ndArrayHandle) {
+    jint *shapeArr = env->GetIntArrayElements(shape, NULL);
+    jint *auxTypesArr = env->GetIntArrayElements(auxTypes, NULL);
+    jint *auxNdimsArr = env->GetIntArrayElements(auxNdims, NULL);
+    jint *auxShapesArr = env->GetIntArrayElements(auxShapes, NULL);
+    NDArrayHandle out;
+    int ret = MXNDArrayCreateSparseEx(storageType,
+     reinterpret_cast<const mx_uint *>(shapeArr),
+     static_cast<mx_uint>(ndim),
+     devType, devId, delayAlloc, dtype,
+     static_cast<mx_uint>(numAux),
+     reinterpret_cast<int *>(auxTypesArr),
+     reinterpret_cast<mx_uint *>(auxNdimsArr),
+     reinterpret_cast<const mx_uint *>(auxShapesArr),  &out);
+    env->ReleaseIntArrayElements(shape, shapeArr, 0);
+    env->ReleaseIntArrayElements(auxTypes, auxTypesArr, 0);
+    env->ReleaseIntArrayElements(auxNdims, auxNdimsArr, 0);
+    env->ReleaseIntArrayElements(auxShapes, auxShapesArr, 0);
+    SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
+    return ret;
+}
+
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayWaitAll(JNIEnv *env, jobject obj) {
   return MXNDArrayWaitAll();
 }
@@ -379,6 +404,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromNDArray
+  (JNIEnv *env, jobject obj, jlong dstPtr, jlong srcPtr, jint locator) {
+  int ret = MXNDArraySyncCopyFromNDArray(reinterpret_cast<NDArrayHandle>(dstPtr),
+                                   reinterpret_cast<NDArrayHandle>(srcPtr),
+                                   locator);
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyToCPU
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jbyteArray data, jint size) {
   jbyte *pdata = env->GetByteArrayElements(data, NULL);
@@ -537,6 +570,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetDType
   int dtype;
   int ret = MXNDArrayGetDType(reinterpret_cast<NDArrayHandle>(jhandle), &dtype);
   SetIntField(env, jdtype, dtype);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetStorageType
+  (JNIEnv * env, jobject obj, jlong jhandle, jobject jstype) {
+  int stype;
+  int ret = MXNDArrayGetStorageType(reinterpret_cast<NDArrayHandle>(jhandle), &stype);
+  SetIntField(env, jstype, stype);
   return ret;
 }
 
