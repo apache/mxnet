@@ -48,7 +48,7 @@ The following models have been tested on Linux systems. And 50000 images are use
 |[ResNet152-V2](#8)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.65%|76.36%|
 |[Inception-BN](#9)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.28%|72.20%|
 
-The following performance numbers are collected by using C5.18xlarge.
+The following performance numbers are collected by using AWS EC2 C5.18xlarge.
 
 | Model | Dataset |C++ latency (imgs/sec) |Python latency (imgs/sec) |
 |:---|:---|:---:|:---:|
