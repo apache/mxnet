@@ -24,6 +24,7 @@
  */
 
 #include "./np_matrix_op-inl.h"
+#include "../nn/concat-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -45,6 +46,12 @@ NNVM_REGISTER_OP(_backward_np_concat)
 
 NNVM_REGISTER_OP(_npi_stack)
 .set_attr<FCompute>("FCompute<gpu>", StackOpForward<gpu>);
+
+NNVM_REGISTER_OP(_npi_vstack)
+.set_attr<FCompute>("FCompute<gpu>", NumpyVstackForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_vstack)
+.set_attr<FCompute>("FCompute<gpu>", NumpyVstackBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
