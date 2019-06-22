@@ -28,7 +28,7 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power']
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'vstack']
 
 
 def _num_outputs(sym):
@@ -1008,6 +1008,41 @@ def mod(x1, x2, out=None):
 @set_module('mxnet.symbol.numpy')
 def power(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def vstack(arrays):
+    r"""vstack(tup)
+
+    Stack arrays in sequence vertically (row wise).
+
+    This is equivalent to concatenation along the first axis after 1-D arrays
+    of shape `(N,)` have been reshaped to `(1,N)`. Rebuilds arrays divided by
+    `vsplit`.
+
+    This function makes most sense for arrays with up to 3 dimensions. For
+    instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions `concatenate` and `stack`
+    provide more general stacking and concatenation operations.
+
+    Parameters
+    ----------
+    tup : sequence of _Symbol
+        The arrays must have the same shape along all but the first axis.
+        1-D arrays must have the same length.
+
+    Returns
+    -------
+    stacked : _Symbol
+        The array formed by stacking the given arrays, will be at least 2-D.
+    """
+    def get_list(arrays):
+        if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
+            raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
+        return [arr for arr in arrays]
+
+    arrays = get_list(arrays)
+    return _npi.vstack(*arrays)
 
 
 _set_np_symbol_class(_Symbol)
