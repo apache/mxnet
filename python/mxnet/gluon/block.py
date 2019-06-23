@@ -36,7 +36,7 @@ from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
 from .. import numpy_extension as _mx_npx
-from .. import numpy as _mx_np
+from .. import numpy as _mx_np, numpy_extension as _mx_npx
 from .. util import is_np_array
 
 
@@ -336,10 +336,8 @@ class Block(object):
         """
         params = self._collect_params_with_prefix()
         arg_dict = {key : val._reduce() for key, val in params.items()}
-        if is_np_array():
-            _mx_np.save(filename, arg_dict)
-        else:
-            ndarray.save(filename, arg_dict)
+        save_fn = _mx_npx.save if is_np_array() else ndarray.save
+        save_fn(filename, arg_dict)
 
     def save_params(self, filename):
         """[Deprecated] Please use save_parameters. Note that if you want load
@@ -389,7 +387,7 @@ class Block(object):
         <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         if is_np_array():
-            loaded = _mx_np.load(filename)
+            loaded = _mx_npx.load(filename)
         else:
             loaded = ndarray.load(filename)
         params = self._collect_params_with_prefix()
@@ -920,7 +918,8 @@ class HybridBlock(Block):
             else:
                 assert name in aux_names
                 arg_dict['aux:%s'%name] = param._reduce()
-        ndarray.save('%s-%04d.params'%(path, epoch), arg_dict)
+        save_fn = _mx_npx.save if is_np_array() else ndarray.save
+        save_fn('%s-%04d.params'%(path, epoch), arg_dict)
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
