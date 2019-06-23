@@ -2408,7 +2408,7 @@ def _get_broadcast_shape(shape1, shape2):
     for a, b in zip(shape1[::-1], shape2[::-1]):
         if a != 1 and b != 1 and a != b:
             raise ValueError('shape1=%s is not broadcastable to shape2=%s' % (shape1, shape2))
-        shape[i] = max(a, b)
+        shape[i] = b if a == 1 else a
         i -= 1
     return tuple(shape)
 

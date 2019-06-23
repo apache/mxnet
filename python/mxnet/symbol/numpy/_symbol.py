@@ -31,7 +31,7 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace']
+           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
 
 
 def _num_outputs(sym):
@@ -216,11 +216,33 @@ class _Symbol(Symbol):
     def dot(self, b, out=None):
         return _mx_np_op.dot(self, b, out=out)
 
-    def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
-        if order != 'C':
-            raise NotImplementedError('only supports order=\'C\', while received {}'
-                                      .format(str(order)))
-        return _mx_np_op.reshape(self, newshape=shape, order=order)
+    def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
+        """Returns an array containing the same data with a new shape.
+
+        Notes
+        -----
+        Unlike the free function `numpy.reshape`, this method on `ndarray` allows
+        the elements of the shape parameter to be passed in as separate arguments.
+        For example, ``a.reshape(10, 11)`` is equivalent to
+        ``a.reshape((10, 11))``.
+        """
+        order = 'C'
+        if len(kwargs) > 1:
+            raise TypeError('function takes at most 1 keyword argument')
+        if len(kwargs) == 1:
+            if 'order' not in kwargs:
+                raise TypeError('{} is an invalid keyword argument for this function'
+                                .format(kwargs.keys()[0]))
+            order = kwargs.pop('order', 'C')
+            if order != 'C':
+                raise NotImplementedError('only supports C-order,'
+                                          ' while received {}'.format(order))
+        if len(args) == 0:
+            raise TypeError('reshape() takes exactly 1 argument (0 given)')
+        if len(args) == 1 and isinstance(args[0], tuple):
+            return _mx_np_op.reshape(self, newshape=args[0], order=order)
+        else:
+            return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
         return _mx_np_op.argmax(self, axis, out)
@@ -401,13 +423,9 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute abs')
 
-    def flatten(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`flatten`.
-
-        The arguments are the same as for :py:func:`flatten`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def flatten(self, order='C'):  # pylint: disable=arguments-differ
+        """Return a copy of the array collapsed into one dimension."""
+        return self.reshape(-1, order=order)
 
     def shape_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`shape_array`.
@@ -497,13 +515,9 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute nansum')
 
-    def prod(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`prod`.
-
-        The arguments are the same as for :py:func:`prod`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def prod(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the product of the array elements over the given axis."""
+        return _mx_np_op.prod(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.
@@ -521,13 +535,13 @@ class _Symbol(Symbol):
         """
         return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
-    def max(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`max`.
+    def cumsum(self, axis=None, dtype=None, out=None):
+        """Return the cumulative sum of the elements along the given axis."""
+        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
 
-        The arguments are the same as for :py:func:`max`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the maximum along a given axis."""
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
@@ -1365,6 +1379,180 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         return (_npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step)
     else:
         return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
+
+
+def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
+    """Helper function for unary operators.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input of the unary operator.
+    fn_array : function
+        Function to be called if x is of ``_Symbol`` type.
+    fn_scalar : function
+        Function to be called if x is a Python scalar.
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Result _Symbol or scalar.
+    """
+    if isinstance(x, numeric_types):
+        return fn_scalar(x, **kwargs)
+    elif isinstance(x, _Symbol):
+        return fn_array(x, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def sin(x, out=None, **kwargs):
+    r"""Trigonometric sine, element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The sine of each element of x.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sin, _np.sin, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def cos(x, out=None, **kwargs):
+    r"""Cosine, element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The corresponding cosine values. This is a scalar if x is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.cos, _np.cos, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def sinh(x, out=None, **kwargs):
+    """Hyperbolic sine, element-wise.
+
+    Equivalent to ``1/2 * (np.exp(x) - np.exp(-x))`` or ``-1j * np.sin(1j*x)``.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array or scalar.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding hyperbolic sine values. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sinh, _np.sinh, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def cosh(x, out=None, **kwargs):
+    """Hyperbolic cosine, element-wise.
+
+    Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
+
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array or scalar.
+    out : ndarray or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.cosh, _np.cosh, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log10(x, out=None, **kwargs):
+    """Return the base 10 logarithm of the input array, element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array or scalar.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The logarithm to the base 10 of `x`, element-wise. NaNs are
+        returned where x is negative. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.log10, _np.log10, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def sqrt(x, out=None, **kwargs):
+    """
+    Return the non-negative square-root of an array, element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        The values whose square-roots are required.
+    out : _Symbol, or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        An array of the same shape as `x`, containing the positive
+        square-root of each element in `x`. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)

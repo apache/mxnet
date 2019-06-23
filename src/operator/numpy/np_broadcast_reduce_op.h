@@ -289,10 +289,10 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu, typename OP>
 void NumpyMaxBackward(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<TBlob>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<TBlob>& outputs) {
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
@@ -303,6 +303,65 @@ void NumpyMaxBackward(const nnvm::NodeAttrs& attrs,
     small = NumpyReduceAxesShapeImpl(outputs[0].shape_, param.axis, true);
   }
   ReduceAxesBackwardUseInOutImpl<xpu, OP, false>(ctx, small, inputs, req, outputs);
+}
+
+template<typename xpu, typename OP, bool normalize = false>
+void NumpyReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
+                                     const OpContext& ctx,
+                                     const std::vector<TBlob>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(outputs[0].shape_, param.axis, true);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
+}
+
+template<typename xpu>
+void NumpyBroadcastToForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
+  if (outputs[0].shape_.Size() == 0U) return;  // zero-size tensor
+  TShape expanded_ishape(outputs[0].shape_.ndim(), 1);
+  const TShape& ishape = inputs[0].shape_;
+  CHECK_LE(ishape.ndim(), expanded_ishape.ndim()) << "output ndim cannot be less than input ndim";
+  const int ndim_delta = expanded_ishape.ndim() - ishape.ndim();
+  for (int i = 0; i < ishape.ndim(); ++i) {
+    expanded_ishape[i + ndim_delta] = ishape[i];
+  }
+  BroadcastComputeImpl<xpu>(attrs, ctx, {inputs[0].reshape(expanded_ishape)},
+                            req, outputs, expanded_ishape);
+}
+
+template<typename xpu>
+void NumpyBroadcastToBackward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
+  TShape expanded_igrad_shape(inputs[0].shape_.ndim(), 1);
+  const TShape& igrad_shape = outputs[0].shape_;
+  CHECK_LE(igrad_shape.ndim(), expanded_igrad_shape.ndim())
+      << "output ndim cannot be less than input ndim";
+  const int ndim_delta = expanded_igrad_shape.ndim() - igrad_shape.ndim();
+  for (int i = 0; i < igrad_shape.ndim(); ++i) {
+    expanded_igrad_shape[i + ndim_delta] = igrad_shape[i];
+  }
+  if (NeedSafeAcc<true>(inputs[0].type_flag_, outputs[0].type_flag_)) {
+    ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
+        ctx, inputs, req, {outputs[0].reshape(expanded_igrad_shape)}, expanded_igrad_shape);
+  } else {
+    ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(
+        ctx, inputs, req, {outputs[0].reshape(expanded_igrad_shape)}, expanded_igrad_shape);
+  }
 }
 
 }  // namespace op
