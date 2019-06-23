@@ -15,19 +15,29 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""MXNet NumPy module."""
 
-from __future__ import division, absolute_import, print_function
+"""I/O functions for ndarrays."""
+from __future__ import absolute_import
+import numpy as onp
+from ..context import current_context
+from .multiarray import array
 
-from . import random
-from . import linalg
-from .multiarray import *  # pylint: disable=wildcard-import
-from . import _op
-from . import _register
-from ._op import *  # pylint: disable=wildcard-import
-from .utils import *  # pylint: disable=wildcard-import
-from .function_base import *  # pylint: disable=wildcard-import
-from .stride_tricks import *  # pylint: disable=wildcard-import
-from .io import *  # pylint: disable=wildcard-import
+__all__ = ['genfromtxt']
 
-__all__ = []
+
+# TODO(junwu): Add doc
+def genfromtxt(*args, **kwargs):
+    """This is a wrapper of the official NumPy's `genfromtxt` function.
+    Please refer to the documentation here
+    https://docs.scipy.org/doc/numpy/reference/generated/numpy.genfromtxt.html.
+
+    Notes
+    -----
+    This function has added an additional parameter `ctx` which allows to create
+    ndarrays on the user-specified device.
+    """
+    ctx = kwargs.pop('ctx', current_context())
+    if ctx is None:
+        ctx = current_context()
+    ret = onp.genfromtxt(*args, **kwargs)
+    return array(ret, dtype=ret.dtype, ctx=ctx)

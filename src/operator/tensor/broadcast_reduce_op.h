@@ -946,36 +946,36 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
         }
       }
       if (dst_shape.ndim() == 2) {
-        Tensor<xpu, 2, DType> igrad =
-          outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-        Tensor<xpu, 2, OType> ograd =
-          inputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
-        Tensor<xpu, 2, DType> data =
-          inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-        Tensor<xpu, 2, OType> out =
-          inputs[2].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
+        Tensor<xpu, 2, OType> igrad =
+          outputs[0].get_with_shape<xpu, 2, OType>(src_shape.get<2>(), s);
+        Tensor<xpu, 2, DType> ograd =
+          inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+        Tensor<xpu, 2, OType> data =
+          inputs[1].get_with_shape<xpu, 2, OType>(src_shape.get<2>(), s);
+        Tensor<xpu, 2, DType> out =
+          inputs[2].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
         MXNET_REQ_TYPE_SWITCH(req[0], Req, {
           Kernel<reduce_axes_backward_broadcast<Req, OP>, xpu>::Launch(
             s, outputs[0].shape_.Size(), data.dptr_, out.dptr_, igrad.dptr_, ograd.dptr_,
             in_shape, out_shape, src_shape.ndim());
         });
-        if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
+        if (normalize) igrad /= scalar<OType>(src_shape.Size()/dst_shape.Size());
       } else {
         const int ndim = MXNET_SPECIAL_MAX_NDIM;
-        Tensor<xpu, ndim, DType> igrad =
-          outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-        Tensor<xpu, ndim, OType> ograd =
-          inputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
-        Tensor<xpu, ndim, DType> data =
-          inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-        Tensor<xpu, ndim, OType> out =
-          inputs[2].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, OType> igrad =
+          outputs[0].get_with_shape<xpu, ndim, OType>(src_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, DType> ograd =
+          inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, OType> data =
+          inputs[1].get_with_shape<xpu, ndim, OType>(src_shape.get<ndim>(), s);
+        Tensor<xpu, ndim, DType> out =
+          inputs[2].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
         MXNET_REQ_TYPE_SWITCH(req[0], Req, {
           Kernel<reduce_axes_backward_broadcast<Req, OP>, xpu>::Launch(
             s, outputs[0].shape_.Size(), data.dptr_, out.dptr_, igrad.dptr_, ograd.dptr_,
             in_shape, out_shape, src_shape.ndim());
         });
-        if (normalize) igrad /= scalar<DType>(src_shape.Size()/dst_shape.Size());
+        if (normalize) igrad /= scalar<OType>(src_shape.Size()/dst_shape.Size());
       }
     });
   });
