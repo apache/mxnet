@@ -57,10 +57,8 @@ def tensordot(a, b, axes = 2):
         numpy.array: The tensor dot product of ``a`` and ``b`` along the
         axes specified by ``axes``.
     """
+    
     import collections
-
-    if (a.ndim < 1) or (b.ndim < 1):
-        raise ValueError('An input is zero-dim')
 
     if isinstance(axes, collections.abc.Sequence):
         if len(axes) != 2:
@@ -89,8 +87,8 @@ def tensordot(a, b, axes = 2):
             b_axes_remained.append(i)
     b_axes = b_axes_summed[:] + b_axes_remained[:]
 
-    return _npi.tensordot(a, b, a_axes, a_axes_remained, a_axes_summed, b_axes, 
-      b_axes_remained, b_axes_summed)
+    return _npi.tensordot(a.as_np_ndarray(), b.as_np_ndarray(), a_axes, a_axes_remained, 
+      a_axes_summed, b_axes, b_axes_remained, b_axes_summed)
 
 
 @set_module('mxnet.symbol.numpy')

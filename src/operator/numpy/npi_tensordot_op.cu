@@ -14,7 +14,7 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
- * under the License.
+ * under the License.ø
  */
 
 /*!
@@ -36,4 +36,4 @@ NNVM_REGISTER_OP(_backward_tensordot)
 .set_attr<FCompute>("FCompute<gpu>", TensordotOpBackward<gpu>);
 
 }  // namespace op
-}  // namespace mxnetø
+}  // namespace mxnet

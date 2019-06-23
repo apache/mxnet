@@ -29,6 +29,30 @@ namespace op {
 
 using namespace mxnet;
 
+void printTuple(const Tuple<int>& axes, std::string s) { //TODO
+  std::cout << s << "tuple:\n";
+  for (int i = 0; i < axes.ndim(); i++) {
+    std::cout << std::endl << axes[i] << std::endl << "9999999999999999999999999\n" << std::endl;
+  }
+  std::cout << "tuple ends\n";
+}
+
+void printTShape(const TShape& axes, std::string s) { //TODO
+  std::cout << s << "shape:\n";
+  for (int i = 0; i < axes.Size(); i++) {
+    std::cout << std::endl << axes[i] << std::endl << "333333333333333\n" << std::endl;
+  }
+  std::cout << "shape ends\n";
+}
+
+void printShapeVector(const ShapeVector& in_attrs, std::string s) { //TODO
+  std::cout << s << "vector:\n";
+  for (auto i : in_attrs) {
+    printTShape(i, "");
+  }
+  std::cout << "vector ends\n";
+}
+
 inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector *in_attrs,
                           mxnet::ShapeVector *out_attrs) {
@@ -49,17 +73,27 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   const Tuple<int>& b_axes_remained = param.b_axes_remained;
   const Tuple<int>& a_axes = param.a_axes;
   const Tuple<int>& b_axes = param.b_axes;
+  
+  printTuple(a_axes_summed, "a_axes_summed");//TODO
+  printTuple(a_axes_remained, "a_axes_remained");
+  printTuple(b_axes_summed, "b_axes_summed");
+  printTuple(b_axes_remained, "b_axes_remained");
+  printTuple(a_axes, "a_axes");
+  printTuple(b_axes, "b_axes");
+  CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
 
   mxnet::TShape out_shape(a_axes_remained.ndim() + b_axes_remained.ndim(), -1);
   for (int i = 0; i < a_axes_remained.ndim(); i++) {
     out_shape[i] = a_shape[a_axes_remained[i]];
   }
-  for (int i = a_axes_remained.ndim(); i < a_axes_remained.ndim() + b_axes_remained.ndim(); i++) {
-    out_shape[i] = b_shape[b_axes_remained[i]];
+  for (int i = 0; i < b_axes_remained.ndim(); i++) {
+    out_shape[a_axes_remained.ndim() + i] = b_shape[b_axes_remained[i]];
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
-
+  printTShape(out_shape, "out_shape"); //todo
+  std::cout << std::endl << "\n666666666666666666666666\n" << std::endl;//todo
+  printShapeVector(*out_attrs, "out_attrs"); //todo
   mxnet::TShape tem_shape1(a_axes.ndim(), -1);
   for (int i = 0; i < a_axes_remained.ndim(); i++) {
     tem_shape1[a_axes_remained[i]] = out_shape[i];
@@ -69,7 +103,9 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   }
 
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, tem_shape1);
-
+  printTShape(tem_shape1, "tem_shape1"); //todo
+std::cout << std::endl << "5555555555555555555\n" << std::endl;//todo
+printShapeVector(*in_attrs, "in_attrs1"); //todo
   mxnet::TShape tem_shape2(b_axes.ndim(), -1);
   for (int i = 0; i < b_axes_remained.ndim(); i++) {
     tem_shape2[b_axes_remained[i]] = out_shape[a_axes_remained.ndim() + i];
@@ -79,13 +115,16 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   }
 
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, tem_shape2);
-
+  printTShape(tem_shape2, "tem_shape2"); //todo 
+std::cout << std::endl << "444444444444444444\n" << std::endl;// todo
+printShapeVector(*in_attrs, "in_attrs"); //todo
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs); 
 }
 
 DMLC_REGISTER_PARAMETER(TensordotParam);                                           
 
-NNVM_REGISTER_OP(tensordot)                                                        
+NNVM_REGISTER_OP(tensordot)
+.add_alias("_npi_tensordot")                                                        
 .describe(R"code(This operators implements the numpy-compatible tensordot function                 
 )code" ADD_FILELINE) // description. 
 .set_attr_parser(mxnet::op::ParamParser<TensordotParam>)  
