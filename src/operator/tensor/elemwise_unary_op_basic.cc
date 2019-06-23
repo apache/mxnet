@@ -1125,7 +1125,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
     // f''(x) = -1 * (f'(x) * 1/x)
     auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
     auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
-                            {n->inputs[0]}, nullptr, &n);
+                            {dydx_mul_dldy, n->inputs[0]}, nullptr, &n);
     auto dlogx = MakeNode("reciprocal", n->attrs.name + "_dlogx",
                             {n->inputs[1]}, nullptr, &n);
     auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
@@ -1154,7 +1154,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
     // f''(x) = -1 * (f'(x) * 1/x)
     auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
     auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
-                            {n->inputs[0]}, nullptr, &n);
+                            {dydx_mul_dldy, n->inputs[0]}, nullptr, &n);
     auto dlogx = MakeNode("reciprocal", n->attrs.name + "_dlogx",
                             {n->inputs[1]}, nullptr, &n);
     auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
