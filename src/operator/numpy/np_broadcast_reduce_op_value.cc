@@ -103,7 +103,6 @@ inline bool NumpyMeanType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_np_mean)
-.describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)
@@ -141,7 +140,7 @@ inline bool NumpyMaxType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_np_max)
-.describe(R"code()code" ADD_FILELINE)
+.add_alias("_np_amax")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyMaxParam>)
@@ -166,6 +165,78 @@ NNVM_REGISTER_OP(_backward_np_max)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_num_inputs(3)
 .set_attr<FCompute>("FCompute<cpu>", NumpyMaxBackward<cpu, mshadow_op::eq>);
+
+NNVM_REGISTER_OP(_np_prod)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyReduceAxesParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpySumType)
+.add_arguments(NumpyReduceAxesParam::__FIELDS__())
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"a"};
+  })
+.add_argument("a", "NDArray-or-Symbol", "The input")
+.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::product, true>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_prod"});
+
+NNVM_REGISTER_OP(_backward_np_prod)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyReduceAxesParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBackwardUseInOut<cpu, mshadow_op::rdiv>);
+
+bool NumpyBroadcastToShape(const nnvm::NodeAttrs& attrs,
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!mxnet::shape_is_known(ishape)) return false;
+  const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
+  CHECK(mxnet::shape_is_known(param.shape))
+      << "the objective shape for broadcasting array must be known";
+  CHECK_LE(ishape.ndim(), param.shape.ndim())
+      << "shape " << ishape << " is not broadcastable to " << param.shape;
+  for (int i = param.shape.ndim() - 1; i >= 0; --i) {
+    int j = i - param.shape.ndim() + ishape.ndim();
+    if (j < 0) break;
+    CHECK(ishape[j] == param.shape[i] || ishape[j] == 1)
+        << "shape " << ishape << " is not broadcastable to " << param.shape;
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
+  return true;
+}
+
+NNVM_REGISTER_OP(_np_broadcast_to)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n,
+     const std::vector<nnvm::NodeEntry>& ograds) {
+    return MakeNonlossGradNode("_backward_np_broadcast_to", n, ograds, {}, n->attrs.dict);
+  })
+.add_argument("array", "NDArray-or-Symbol", "The input")
+.set_attr_parser(ParamParser<BroadcastToParam>)
+.add_arguments(BroadcastToParam::__FIELDS__())
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyBroadcastToShape)
+.set_attr<FCompute>("FCompute<cpu>", NumpyBroadcastToForward<cpu>);
+
+NNVM_REGISTER_OP(_backward_np_broadcast_to)
+.set_attr_parser(ParamParser<BroadcastToParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyBroadcastToBackward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  });
 
 }  // namespace op
 }  // namespace mxnet

@@ -45,7 +45,8 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace']
+           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
+           'sinh', 'cosh', 'log10', 'sqrt']
 
 
 # This function is copied from ndarray.py since pylint
@@ -356,6 +357,9 @@ class ndarray(NDArray):
 
     def __len__(self):
         """Number of elements along the first axis."""
+        shape = self.shape
+        if len(shape) == 0:
+            raise TypeError('len() of unsized object')
         return self.shape[0]
 
     def __reduce__(self):
@@ -419,21 +423,20 @@ class ndarray(NDArray):
         return self
 
     def __repr__(self):
-        """Returns a string representation of the array using the following rules:
-        1. If the `ndarray` is a scalar tensor, only the string of the scalar is returned.
-        2. Else if the `ndarray` is allocated on cpu, the string of its numpy form, class name,
-        and shape is returned.
-        3. Else (the `ndarray` is allocated on gpu), the string of its numpy form, class name,
-        shape, and context is returned."""
-        array_str = str(self.asnumpy())
-        if self.ndim == 0:  # scalar tensor
-            return array_str
+        """Returns a string representation of the array."""
+        array_str = self.asnumpy().__repr__()
         context = self.context
-        if context.device_type == 'gpu':
-            return '%s\n<%s shape=%s ctx=%s>' % (array_str, self.__class__.__name__, self.shape,
-                                                 context)
-        else:
-            return '%s\n<%s shape=%s>' % (array_str, self.__class__.__name__, self.shape)
+        if context.device_type == 'cpu':
+            return array_str
+        return array_str[:-1] + ', ctx={})'.format(str(context))
+
+    def __str__(self):
+        """Returns a string representation of the array."""
+        array_str = self.asnumpy().__str__()
+        context = self.context
+        if context.device_type == 'cpu' or self.ndim == 0:
+            return array_str
+        return '{array} @{ctx}'.format(array=array_str, ctx=context)
 
     def attach_grad(self, grad_req='write'):  # pylint: disable=arguments-differ
         """Attach a gradient buffer to this ndarray, so that `backward`
@@ -570,12 +573,33 @@ class ndarray(NDArray):
     def dot(self, b, out=None):
         return _mx_np_op.dot(self, b, out=out)
 
-    def reshape(self, shape, order='C'):  # pylint: disable=arguments-differ
-        """Returns an array containing the same data with a new shape."""
-        if order != 'C':
-            raise NotImplementedError('reshape only supports C-order,'
-                                      ' while received {}'.format(order))
-        return _mx_np_op.reshape(self, newshape=shape, order=order)
+    def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
+        """Returns an array containing the same data with a new shape.
+
+        Notes
+        -----
+        Unlike the free function `numpy.reshape`, this method on `ndarray` allows
+        the elements of the shape parameter to be passed in as separate arguments.
+        For example, ``a.reshape(10, 11)`` is equivalent to
+        ``a.reshape((10, 11))``.
+        """
+        order = 'C'
+        if len(kwargs) > 1:
+            raise TypeError('function takes at most 1 keyword argument')
+        if len(kwargs) == 1:
+            if 'order' not in kwargs:
+                raise TypeError('{} is an invalid keyword argument for this function'
+                                .format(kwargs.keys()[0]))
+            order = kwargs.pop('order', 'C')
+            if order != 'C':
+                raise NotImplementedError('only supports C-order,'
+                                          ' while received {}'.format(order))
+        if len(args) == 0:
+            raise TypeError('reshape() takes exactly 1 argument (0 given)')
+        if len(args) == 1 and isinstance(args[0], tuple):
+            return _mx_np_op.reshape(self, newshape=args[0], order=order)
+        else:
+            return _mx_np_op.reshape(self, newshape=args, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -753,13 +777,9 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute abs')
 
-    def flatten(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`flatten`.
-
-        The arguments are the same as for :py:func:`flatten`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def flatten(self, order='C'):  # pylint: disable=arguments-differ
+        """Return a copy of the array collapsed into one dimension."""
+        return self.reshape(-1, order=order)
 
     def shape_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`shape_array`.
@@ -849,13 +869,9 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute nansum')
 
-    def prod(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`prod`.
-
-        The arguments are the same as for :py:func:`prod`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def prod(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the product of the array elements over the given axis."""
+        return _mx_np_op.prod(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def nanprod(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nanprod`.
@@ -866,20 +882,25 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute nanprod')
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
-        """Convenience fluent method for :py:func:`mean`.
+        """Returns the average of the array elements along given axis."""
+        return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
-        The arguments are the same as for :py:func:`mean`, with
-        this array as data.
-        """
-        return _mx_nd_np.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+    # TODO(junwu): Use mxnet std op instead of onp.std
+    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
+        """Returns the standard deviation of the array elements along given axis."""
+        ret_np = self.asnumpy().std(axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
+        return array(ret_np, dtype=ret_np.dtype, ctx=self.context)
 
-    def max(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`max`.
+    def cumsum(self, axis=None, dtype=None, out=None):
+        """Return the cumulative sum of the elements along the given axis."""
+        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
 
-        The arguments are the same as for :py:func:`max`, with
-        this array as data.
-        """
-        raise NotImplementedError
+    def tolist(self):
+        return self.asnumpy().tolist()
+
+    def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+        """Return the maximum along a given axis."""
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
@@ -1699,7 +1720,7 @@ def swapaxes(a, axis1, axis2):
 def expand_dims(a, axis):
     """Expand the shape of an array.
 
-    Insert a new axis that will appear at the `axis` position in the expanded
+    Insert a new axis that will appear at the `axis` position in the expanded array shape.
 
     Parameters
     ----------
@@ -1833,3 +1854,165 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         Size of spacing between samples.
     """
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def sin(x, out=None, **kwargs):
+    r"""Trigonometric sine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The sine of each element of x. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sin(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def cos(x, out=None, **kwargs):
+    r"""Cosine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Angle, in radians (:math:`2 \pi` rad equals 360 degrees).
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding cosine values. This is a scalar if x is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.cos(x, out=out, **kwargs)
+
+
+def sinh(x, out=None, **kwargs):
+    """Hyperbolic sine, element-wise.
+
+    Equivalent to ``1/2 * (np.exp(x) - np.exp(-x))`` or ``-1j * np.sin(1j*x)``.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding hyperbolic sine values. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sinh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def cosh(x, out=None, **kwargs):
+    """Hyperbolic cosine, element-wise.
+
+    Equivalent to ``1/2 * (np.exp(x) + np.exp(-x))`` and ``np.cos(1j*x)``.
+
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.cosh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def log10(x, out=None, **kwargs):
+    """Return the base 10 logarithm of the input array, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The logarithm to the base 10 of `x`, element-wise. NaNs are
+        returned where x is negative. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.log10(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def sqrt(x, out=None, **kwargs):
+    """
+    Return the non-negative square-root of an array, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        The values whose square-roots are required.
+    out : ndarray, or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        An array of the same shape as `x`, containing the positive
+        square-root of each element in `x`. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sqrt(x, out=out, **kwargs)
