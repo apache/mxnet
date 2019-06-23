@@ -33,7 +33,7 @@
   [embedding-size]
   (format "data/glove/glove.6B.%dd.txt" embedding-size))
 
-(def fasttext-file-path "data/fastText/wiki-news-300d-1M.vec")
+(def fasttext-file-path "data/fastText/wiki-news-300d-100K.vec")
 
 (defn r-string
   "Reads a string from the given DataInputStream `dis` until a space or newline is reached."
@@ -77,8 +77,8 @@
            _  (println "Processing with " {:dim dim :word-size word-size} " loading max vectors " max-vectors)
            _ (if (not= embedding-size dim)
                (throw (ex-info "Mismatch in embedding size"
-                      {:input-embedding-size embedding-size
-                       :word2vec-embedding-size dim})))
+                       {:input-embedding-size embedding-size
+                        :word2vec-embedding-size dim})))
            vectors (load-w2v-vectors dis dim max-vectors)
            word2vec (if vocab
                       (->> vectors
@@ -92,19 +92,21 @@
   ([path embedding-size]
    (load-word2vec-model path embedding-size {:max-vectors 100})))
 
-(defn read-text-embedding-pairs [rdr]
-  (for [^String line (line-seq rdr)
+(defn read-text-embedding-pairs [pairs]
+  (for [^String line pairs
         :let [fields (.split line " ")]]
     [(aget fields 0)
      (mapv #(Float/parseFloat ^String %) (rest fields))]))
 
 (defn load-glove [glove-file-path]
   (println "Loading the glove pre-trained word embeddings from " glove-file-path)
-  (into {} (read-text-embedding-pairs (io/reader glove-file-path))))
+  (into {} (read-text-embedding-pairs (line-seq (io/reader glove-file-path)))))
+
+(def remove-fasttext-metadata rest)
 
 (defn load-fasttext [fasttext-file-path]
   (println "Loading the fastText pre-trained word embeddings from " fasttext-file-path)
-  (into {} (read-text-embedding-pairs (io/reader fasttext-file-path))))
+  (into {} (read-text-embedding-pairs (remove-fasttext-metadata (line-seq (io/reader fasttext-file-path))))))
 
 (defn clean-str [s]
   (-> s

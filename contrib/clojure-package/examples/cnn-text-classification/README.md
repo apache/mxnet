@@ -56,6 +56,9 @@ Download the wiki news 300d 1M pre-trained word vectors from the fastText [site]
 
 Unzip the word vectors and place them in the `data/fastText` directory.
 
+To prevent OOM errors, we will not use all the trained embeddings; instead we'll take
+the first 10%: `head -n 100000 wiki-news-300d-1M.vec > wiki-news-300d-100K.vec`.
+
 Then you can run training on a subset of examples through the repl using:
 ```
 (train-convnet {:devs [(context/cpu 0)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :fastText})
