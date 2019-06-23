@@ -75,6 +75,7 @@ imagenet_inference  --symbol_file <model symbol file in json format>
 		    --num_inference_batches <number of batches used for inference>
 		    --data_layer_type <default: "float32", choices: ["float32", "int8", "uint8"]>
 		    --gpu <whether to run inference on GPU, default: false>
+		    --enableTRT  <whether to run inference with TensorRT, default: false>"
 		    --benchmark <whether to use dummy data to run inference, default: false>
 ```
 
@@ -133,6 +134,19 @@ imagenet_inference.cpp:282: Loading the model from ./model/resnet50_v1_int8-symb
 imagenet_inference.cpp:372: Running the forward pass on model to evaluate the performance..
 imagenet_inference.cpp:387: benchmark completed!
 imagenet_inference.cpp:388: batch size: 1 num batch: 500 throughput: xxxx imgs/s latency:xxxx ms
+```
+For running this example with TensorRT, you can quickly try the following example to run a benchmark test for testing Inception BN:
+```
+./imagenet_inference --symbol_file "./model/Inception-BN-symbol.json" --params_file "./model/Inception-BN-0126.params" --batch_size 16 --num_inference_batches 500 --benchmark --enableTRT
+```
+Sample output will looks like this (the example is running on a AWS P3.2xl machine):
+```
+imagenet_inference.cpp:302: Loading the model from ./model/Inception-BN-symbol.json
+build_subgraph.cc:686: start to execute partition graph.
+imagenet_inference.cpp:317: Loading the model parameters from ./model/Inception-BN-0126.params
+imagenet_inference.cpp:424: Running the forward pass on model to evaluate the performance..
+imagenet_inference.cpp:439:  benchmark completed!
+imagenet_inference.cpp:440:  batch size: 16 num batch: 500 throughput: 6284.78 imgs/s latency:0.159115 ms
 ```
 
 ## [sentiment_analysis_rnn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/sentiment_analysis_rnn.cpp>)
