@@ -723,7 +723,7 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def sin(x, out=None, **kwargs):
-    """Trigonometric sine, element-wise.
+    r"""Trigonometric sine, element-wise.
 
     Parameters
     ----------
@@ -749,7 +749,7 @@ def sin(x, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def cos(x, out=None, **kwargs):
-    """Cosine, element-wise.
+    r"""Cosine, element-wise.
 
     Parameters
     ----------

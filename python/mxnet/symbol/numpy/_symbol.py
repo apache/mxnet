@@ -527,9 +527,13 @@ class _Symbol(Symbol):
         """
         return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
+    def cumsum(self, axis=None, dtype=None, out=None):
+        """Return the cumulative sum of the elements along the given axis."""
+        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
+
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=None)
+        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
 
     def min(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`min`.
@@ -1398,7 +1402,7 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def sin(x, out=None, **kwargs):
-    """Trigonometric sine, element-wise.
+    r"""Trigonometric sine, element-wise.
 
     Parameters
     ----------
@@ -1422,7 +1426,7 @@ def sin(x, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def cos(x, out=None, **kwargs):
-    """Cosine, element-wise.
+    r"""Cosine, element-wise.
 
     Parameters
     ----------
