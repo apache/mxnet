@@ -356,7 +356,7 @@ def test_npx_sigmoid():
 def test_np_reshape():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
-    ret = data.reshape(shape=())
+    ret = data.reshape(())
     assert type(ret) == mx.sym.np._Symbol
 
     data = np.ones((1, 1, 1))
@@ -365,6 +365,8 @@ def test_np_reshape():
     ret = np.reshape(ret, (1, 1, 1, 1))
     assert ret.shape == (1, 1, 1, 1)
     assert type(ret) == np.ndarray
+    ret2 = ret.reshape(1, 1, -1)
+    assert ret2.shape == (1, 1, 1)
 
 
 @with_seed()
@@ -1058,6 +1060,106 @@ def test_np_tile():
                 net.hybridize()
             ret_mx = net(data_mx)
             assert same(ret_mx.asnumpy(), ret_np)
+
+
+@with_seed()
+@npx.use_np_shape
+def test_np_prod():
+    class TestProd(HybridBlock):
+        def __init__(self, axis=None, dtype=None, keepdims=False):
+            super(TestProd, self).__init__()
+            self._axis = axis
+            self._dtype = dtype
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.prod(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+
+    in_data_dim = random.choice([3, 4])
+    shape = rand_shape_nd(in_data_dim, dim=3)
+    for hybridize in [False, True]:
+        for keepdims in [True, False]:
+            for axis in ([i for i in range(in_data_dim)] + [(), None]):
+                for itype in ['float32', 'float64']:
+                    for dtype in ['float32', 'float64']:
+                        # test gluon
+                        test_prod = TestProd(axis=axis, dtype=dtype, keepdims=keepdims)
+                        if hybridize:
+                            test_prod.hybridize()
+                        x = np.random.uniform(-2.0, 2.0, size=shape, dtype=itype)
+                        x.attach_grad()
+                        print(x.grad.dtype)
+                        expected_ret = _np.prod(x.asnumpy(), axis=axis, keepdims=keepdims)
+                        expected_ret = expected_ret.astype(dtype)
+                        with mx.autograd.record():
+                            y = test_prod(x)
+                        assert y.shape == expected_ret.shape
+                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
+                        y.backward()
+                        # use keepdims=True so that broadcast divide can be used to calculate
+                        # grad of input
+                        expected_ret = _np.prod(x.asnumpy(), axis=axis, keepdims=True)
+                        assert_almost_equal(x.grad.asnumpy(), expected_ret / x.asnumpy(), rtol=1e-3, atol=1e-3)
+
+                        # test numeric
+                        if itype == 'float32' and dtype == 'float32':
+                            x_sym = mx.sym.Variable("x").as_np_ndarray()
+                            mx_sym = mx.sym.np.prod(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
+                                                   numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
+
+                        # test imperative
+                        mx_out = np.prod(x, axis=axis, dtype=dtype, keepdims=keepdims)
+                        np_out = _np.prod(x.asnumpy(), axis=axis, keepdims=keepdims).astype(dtype)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@npx.use_np
+def test_np_flatten():
+    # TODO(junwu): Add more test cases
+    shapes = [(), (2, 0, 1), (3, 4, 5), 6]
+    for shape in shapes:
+        a = _np.random.uniform(size=shape).astype('float32')
+        a_mx = np.array(a, dtype=a.dtype)
+        expected_ret = a.flatten()
+        ret_mx = a_mx.flatten()
+        assert same(expected_ret, ret_mx.asnumpy())
+
+
+@with_seed()
+@npx.use_np
+def test_np_broadcast_to():
+    # TODO(junwu): Add more test cases and backward test
+    shapes = [(1, 2, 3, 4, 5), (1, 0, 3, 4, 5)]
+    for shape in shapes:
+        a = _np.random.uniform(size=(4, 1)).astype('float32')
+        a_mx = np.array(a, dtype=a.dtype)
+        expected_ret = _np.broadcast_to(a, shape)
+        ret_mx = np.broadcast_to(a_mx, shape)
+        assert same(expected_ret, ret_mx.asnumpy())
+
+
+@with_seed()
+@npx.use_np
+def test_np_meshgrid():
+    nx, ny = (4, 5)
+    x = np.linspace(0, 1, nx)
+    y = np.linspace(0, 1, ny)
+    z = np.ones(())
+    xv, yv, zv = np.meshgrid(x, y, z)
+    xv_expected, yv_expected, zv_expected = _np.meshgrid(x.asnumpy(), y.asnumpy(), z.asnumpy())
+    assert same(xv.asnumpy(), xv_expected)
+    assert same(yv.asnumpy(), yv_expected)
+    assert same(zv.asnumpy(), zv_expected)
+    # TODO(junwu): Add more test
+
+
+@with_seed()
+@npx.use_np
+def test_np_broadcast_arrays():
+    # TODO(junwu): Add test
+    pass
 
 
 if __name__ == '__main__':
