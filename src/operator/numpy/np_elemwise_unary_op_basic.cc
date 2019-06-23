@@ -175,7 +175,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
 
 // sqrt
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sqrt, "x", mshadow_op::square_root)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sqrt, "x", mshadow_op::square_root)
 .describe(R"code(Return the non-negative square-root of an array, element-wise.
 Example::
    sqrt([4, 9, 16]) = [2, 3, 4]
@@ -220,7 +220,7 @@ The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
 // log10
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_log10, "x", mshadow_op::log10)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_log10, "x", mshadow_op::log10)
 .describe(R"code(Returns element-wise Base-10 logarithmic value of the input.
 ``10**log10(x) = x``
 )code" ADD_FILELINE)
@@ -255,7 +255,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // sin
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sin, "x", mshadow_op::sin)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sin, "x", mshadow_op::sin)
 .describe(R"code(Trigonometric sine, element-wise.
 .. math::
    sin([0, \pi/4, \pi/2]) = [0, 0.707, 1]
@@ -263,7 +263,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sin, "x", mshadow_op::sin)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sin" });
 
 // cos
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_cos, "x", mshadow_op::cos)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_cos, "x", mshadow_op::cos)
 .describe(R"code(Computes the element-wise cosine of the input array.
 .. math::
    cos([0, \pi/4, \pi/2]) = [1, 0.707, 0]
@@ -322,7 +322,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_radians, "x", mshadow_op::radians)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_radians" });
 
 // sinh
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sinh, "x", mshadow_op::sinh)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sinh, "x", mshadow_op::sinh)
 .describe(R"code(Returns the hyperbolic sine of the input array, computed element-wise.
 .. math::
    sinh(x) = 0.5\times(exp(x) - exp(-x))
@@ -330,7 +330,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sinh, "x", mshadow_op::sinh)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_sinh" });
 
 // cosh
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_cosh, "x", mshadow_op::cosh)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_cosh, "x", mshadow_op::cosh)
 .describe(R"code(Returns the hyperbolic cosine  of the input array, computed element-wise.
 .. math::
    cosh(x) = 0.5\times(exp(x) + exp(-x))

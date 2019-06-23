@@ -18,7 +18,8 @@
 """Namespace for operators used in Gluon dispatched by F=symbol."""
 
 from __future__ import absolute_import
-from . import _op as _mx_nd_np
+from . import _symbol
+from . import _op as _mx_sym_np
 
 __all__ = ['norm']
 
@@ -64,4 +65,4 @@ def norm(x, ord=None, axis=None, keepdims=False):
     if isinstance(axis, tuple) and len(axis) > 2:
         raise ValueError('Improper number of dimensions to norm')
     # TODO(junwu): When ord = 'fro', axis = None, and x.ndim > 2, raise exception
-    return _mx_nd_np.sqrt(_mx_nd_np.sum(x * x, axis=axis, keepdims=keepdims))
+    return _symbol.sqrt(_mx_sym_np.sum(x * x, axis=axis, keepdims=keepdims))
