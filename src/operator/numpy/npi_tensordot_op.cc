@@ -38,9 +38,9 @@ void printTuple(const Tuple<int>& axes, std::string s) { //TODO
 }
 
 void printTShape(const TShape& axes, std::string s) { //TODO
-  std::cout << s << "shape:\n";
-  for (int i = 0; i < axes.Size(); i++) {
-    std::cout << std::endl << axes[i] << std::endl << "333333333333333\n" << std::endl;
+  std::cout << s << "shape: " << "\n";
+  for (auto i : axes) {
+    std::cout << std::endl << i << std::endl << "333333333333333\n" << std::endl;
   }
   std::cout << "shape ends\n";
 }
