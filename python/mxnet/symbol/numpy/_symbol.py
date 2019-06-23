@@ -229,7 +229,7 @@ class _Symbol(Symbol):
         order = 'C'
         if len(kwargs) > 1:
             raise TypeError('function takes at most 1 keyword argument')
-        elif len(kwargs) == 1:
+        if len(kwargs) == 1:
             if 'order' not in kwargs:
                 raise TypeError('{} is an invalid keyword argument for this function'
                                 .format(kwargs.keys()[0]))
