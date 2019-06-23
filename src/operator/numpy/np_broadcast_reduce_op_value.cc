@@ -221,7 +221,7 @@ NNVM_REGISTER_OP(_np_broadcast_to)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n,
      const std::vector<nnvm::NodeEntry>& ograds) {
-    return MakeNonlossGradNode("_backward_np_broadcast_to", n, ograds, {}, {});
+    return MakeNonlossGradNode("_backward_np_broadcast_to", n, ograds, {}, n->attrs.dict);
   })
 .add_argument("array", "NDArray-or-Symbol", "The input")
 .set_attr_parser(ParamParser<BroadcastToParam>)

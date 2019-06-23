@@ -216,7 +216,7 @@ class _Symbol(Symbol):
     def dot(self, b, out=None):
         return _mx_np_op.dot(self, b, out=out)
 
-    def reshape(self, *args, order='C'):  # pylint: disable=arguments-differ
+    def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns an array containing the same data with a new shape.
 
         Notes
@@ -226,9 +226,17 @@ class _Symbol(Symbol):
         For example, ``a.reshape(10, 11)`` is equivalent to
         ``a.reshape((10, 11))``.
         """
-        if order != 'C':
-            raise NotImplementedError('only supports order=\'C\', while received {}'
-                                      .format(str(order)))
+        order = 'C'
+        if len(kwargs) > 1:
+            raise TypeError('function takes at most 1 keyword argument')
+        elif len(kwargs) == 1:
+            if 'order' not in kwargs:
+                raise TypeError('{} is an invalid keyword argument for this function'
+                                .format(kwargs.keys()[0]))
+            order = kwargs.pop('order', 'C')
+            if order != 'C':
+                raise NotImplementedError('only supports C-order,'
+                                          ' while received {}'.format(order))
         if len(args) == 0:
             raise TypeError('reshape() takes exactly 1 argument (0 given)')
         if len(args) == 1 and isinstance(args[0], tuple):
