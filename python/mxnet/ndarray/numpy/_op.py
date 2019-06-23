@@ -28,7 +28,7 @@ from ..ndarray import NDArray
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
-           'sin', 'cos', 'sinh', 'cosh']
+           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -721,6 +721,7 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
         raise TypeError('type {} not supported'.format(str(type(x))))
 
 
+@set_module('mxnet.ndarray.numpy')
 def sin(x, out=None, **kwargs):
     """Trigonometric sine, element-wise.
 
@@ -746,6 +747,7 @@ def sin(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.sin, _np.sin, out=out, **kwargs)
 
 
+@set_module('mxnet.ndarray.numpy')
 def cos(x, out=None, **kwargs):
     """Cosine, element-wise.
 
@@ -771,6 +773,7 @@ def cos(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.cos, _np.cos, out=out, **kwargs)
 
 
+@set_module('mxnet.ndarray.numpy')
 def sinh(x, out=None, **kwargs):
     """Hyperbolic sine, element-wise.
 
@@ -798,6 +801,7 @@ def sinh(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.sinh, _np.sinh, out=out, **kwargs)
 
 
+@set_module('mxnet.ndarray.numpy')
 def cosh(x, out=None, **kwargs):
     """Hyperbolic cosine, element-wise.
 
@@ -824,3 +828,57 @@ def cosh(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _unary_func_helper(x, _npi.cosh, _np.cosh, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def log10(x, out=None, **kwargs):
+    """Return the base 10 logarithm of the input array, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The logarithm to the base 10 of `x`, element-wise. NaNs are
+        returned where x is negative. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.log10, _np.log10, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def sqrt(x, out=None, **kwargs):
+    """
+    Return the non-negative square-root of an array, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        The values whose square-roots are required.
+    out : ndarray, or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        An array of the same shape as `x`, containing the positive
+        square-root of each element in `x`. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)

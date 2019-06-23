@@ -175,7 +175,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
 
 // sqrt
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sqrt, "x", mshadow_op::square_root)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sqrt, "x", mshadow_op::square_root)
 .describe(R"code(Return the non-negative square-root of an array, element-wise.
 Example::
    sqrt([4, 9, 16]) = [2, 3, 4]
@@ -220,7 +220,7 @@ The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
 // log10
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_log10, "x", mshadow_op::log10)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_log10, "x", mshadow_op::log10)
 .describe(R"code(Returns element-wise Base-10 logarithmic value of the input.
 ``10**log10(x) = x``
 )code" ADD_FILELINE)

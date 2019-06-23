@@ -46,7 +46,7 @@ from ..ndarray.numpy import _internal as _npi
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
-           'sinh', 'cosh']
+           'sinh', 'cosh', 'log10', 'cumsum', 'sqrt']
 
 
 # This function is copied from ndarray.py since pylint
@@ -880,6 +880,21 @@ class ndarray(NDArray):
         this array as data.
         """
         return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+    # TODO(junwu): Use std op implemented in MXNet
+    def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):
+        """Returns the standard deviation of the array elements along given axis."""
+        ret_np = self.asnumpy().std(axis=axis, dtype=dtype, out=out, ddof=ddof, keepdims=keepdims)
+        return array(ret_np, dtype=ret_np.dtype, ctx=self.context)
+
+    # TODO(junwu): Use cumsum op implemented in MXNet
+    def cumsum(self, axis=None, dtype=None, out=None):
+        """Return the cumulative sum of the elements along the given axis."""
+        ret_np = self.asnumpy().cumsum(axis=axis, dtype=dtype, out=out)
+        return array(ret_np, dtype=ret_np.dtype, ctx=self.context)
+
+    def tolist(self):
+        return self.asnumpy().tolist()
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
@@ -1839,6 +1854,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, **kwargs)
 
 
+@set_module('mxnet.numpy')
 def sin(x, out=None, **kwargs):
     """Trigonometric sine, element-wise.
 
@@ -1864,6 +1880,7 @@ def sin(x, out=None, **kwargs):
     return _mx_nd_np.sin(x, out=out, **kwargs)
 
 
+@set_module('mxnet.numpy')
 def cos(x, out=None, **kwargs):
     """Cosine, element-wise.
 
@@ -1916,6 +1933,7 @@ def sinh(x, out=None, **kwargs):
     return _mx_nd_np.sinh(x, out=out, **kwargs)
 
 
+@set_module('mxnet.numpy')
 def cosh(x, out=None, **kwargs):
     """Hyperbolic cosine, element-wise.
 
@@ -1942,3 +1960,93 @@ def cosh(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _mx_nd_np.cosh(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def log10(x, out=None, **kwargs):
+    """Return the base 10 logarithm of the input array, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array or scalar.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The logarithm to the base 10 of `x`, element-wise. NaNs are
+        returned where x is negative. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.log10(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def cumsum(a, axis=None, dtype=None, out=None):
+    # TODO(junwu): This is a temp solution. Call mxnet cumsum in the future.
+    """
+    Return the cumulative sum of the elements along a given axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    axis : int, optional
+        Axis along which the cumulative sum is computed. The default
+        (None) is to compute the cumsum over the flattened array.
+    dtype : dtype, optional
+        Type of the returned array and of the accumulator in which the
+        elements are summed.  If `dtype` is not specified, it defaults
+        to the dtype of `a`, unless `a` has an integer dtype with a
+        precision less than that of the default platform integer.  In
+        that case, the default platform integer is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output
+        but the type will be cast if necessary. See `doc.ufuncs`
+        (Section "Output arguments") for more details.
+
+    Returns
+    -------
+    cumsum_along_axis : ndarray.
+        A new array holding the result is returned unless `out` is
+        specified, in which case a reference to `out` is returned. The
+        result has the same size as `a`, and the same shape as `a` if
+        `axis` is not None or `a` is a 1-d array.
+    """
+    return a.cumsum(axis=axis, dtype=dtype, out=out)
+
+
+@set_module('mxnet.numpy')
+def sqrt(x, out=None, **kwargs):
+    """
+    Return the non-negative square-root of an array, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        The values whose square-roots are required.
+    out : ndarray, or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        An array of the same shape as `x`, containing the positive
+        square-root of each element in `x`. This is a scalar if `x` is a scalar.
+
+    Notes
+    ----
+    This function only supports input type of float.
+    """
+    return _mx_nd_np.sqrt(x, out=out, **kwargs)
