@@ -32,7 +32,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'pow
            'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'stack']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -429,7 +429,6 @@ def tensordot(a, b, axes=2):
 def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
     r"""
     Return evenly spaced numbers over a specified interval.
-
     Returns num evenly spaced samples, calculated over the interval [start, stop].
     The endpoint of the interval can optionally be excluded.
 
@@ -1815,7 +1814,7 @@ def split(ary, indices_or_sections, axis=0):
     ----------
     ary : ndarray
         Array to be divided into sub-arrays.
-    indices_or_sections : int or 1-D array
+    indices_or_sections : int or 1-D python tuple, list or set.
         If `indices_or_sections` is an integer, N, the array will be divided
         into N equal arrays along `axis`.  If such a split is not possible,
         an error is raised.
@@ -1847,14 +1846,91 @@ def split(ary, indices_or_sections, axis=0):
             raise ValueError('array split does not result in an equal division')
         section_size = int(axis_size / sections)
         indices = [i * section_size for i in range(sections)]
-    elif isinstance(indices_or_sections, tuple):
+    elif isinstance(indices_or_sections, (list, set, tuple)):
         indices = [0] + list(indices_or_sections)
     else:
-        raise ValueError('indices_or_sections must either int or tuple of ints')
+        raise ValueError('indices_or_sections must either int, or tuple / list / set of ints')
     ret = _npi.split(ary, indices, axis, False)
     if not isinstance(ret, list):
         return [ret]
     return ret
+
+
+@set_module('mxnet.ndarray.numpy')
+def vsplit(ary, indices_or_sections):
+    r"""
+    vsplit(ary, indices_or_sections)
+
+    Split an array into multiple sub-arrays vertically (row-wise).
+
+    ``vsplit`` is equivalent to ``split`` with `axis=0` (default): the array is always split
+    along the first axis regardless of the array dimension.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1 - D Python tuple, list or set.
+        If `indices_or_sections` is an integer, N, the array will be divided into N equal arrays
+        along axis 0.  If such a split is not possible, an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries indicate where
+        along axis 0 the array is split.  For example, ``[2, 3]`` would result in
+
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+
+        If an index exceeds the dimension of the array along axis 0, an error will be thrown.
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+
+    See Also
+    --------
+    split : Split an array into multiple sub-arrays of equal size.
+
+    Notes
+    -------
+    This function differs from the original `numpy.degrees
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
+    the following aspects:
+
+    - Currently parameter ``indices_or_sections`` does not support ndarray, but supports scalar,
+    tuple and list.
+    - In ``indices_or_sections``, if an index exceeds the dimension of the array along axis 0,
+    an error will be thrown.
+
+    Examples
+    --------
+    >>> x = np.arange(16.0).reshape(4, 4)
+    >>> x
+    array([[  0.,   1.,   2.,   3.],
+           [  4.,   5.,   6.,   7.],
+           [  8.,   9.,  10.,  11.],
+           [ 12.,  13.,  14.,  15.]])
+    >>> np.vsplit(x, 2)
+    [array([[0., 1., 2., 3.],
+            [4., 5., 6., 7.]]), array([[ 8.,  9., 10., 11.],
+            [12., 13., 14., 15.]])]
+
+    With a higher dimensional array the split is still along the first axis.
+
+    >>> x = np.arange(8.0).reshape(2, 2, 2)
+    >>> x
+    array([[[ 0.,  1.],
+            [ 2.,  3.]],
+           [[ 4.,  5.],
+            [ 6.,  7.]]])
+    >>> np.vsplit(x, 2)
+    [array([[[0., 1.],
+            [2., 3.]]]), array([[[4., 5.],
+            [6., 7.]]])]
+
+    """
+    return split(ary, indices_or_sections, 0)
 
 
 @set_module('mxnet.ndarray.numpy')
