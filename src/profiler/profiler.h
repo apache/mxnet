@@ -1261,7 +1261,7 @@ struct ProfileOperator : public ProfileEvent {
    * Notice that this operator may still be used for e.g synchronization
    */
   inline static bool IsDeprecatedOperator(const char* name) {
-    return strcmp(name, "Dummy_Wait") == 0 ||
+    return strcmp(name, "CustomOperatorWait") == 0 ||
            strcmp(name, "Custom") == 0 || strcmp(name, "_backward_Custom") == 0;
   }
   /*!
