@@ -23,6 +23,7 @@ from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import image
 from ....base import numeric_types
+from ...utils import _adapt_np_array
 
 
 class Compose(Sequential):
@@ -133,6 +134,7 @@ class ToTensor(HybridBlock):
     def __init__(self):
         super(ToTensor, self).__init__()
 
+    @_adapt_np_array
     def hybrid_forward(self, F, x):
         return F.image.to_tensor(x)
 
@@ -368,6 +370,7 @@ class Resize(HybridBlock):
         self._size = size
         self._interpolation = interpolation
 
+    @_adapt_np_array
     def hybrid_forward(self, F, x):
         return F.image.resize(x, self._size, self._keep, self._interpolation)
 

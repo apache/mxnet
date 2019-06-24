@@ -2726,6 +2726,22 @@ def test_slice_activation_reshape_activation():
             net = Net(act0, act1, shape, slice)
             check_layer_forward_withinput(net, x)
 
+@with_seed()
+def test_np_shape_parameters():
+    class Foo(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Foo, self).__init__(**kwargs)
+            self.dense = gluon.nn.Dense(16)
+        def forward(self, x):
+            return self.dense(x)
+
+    with mx.np_shape(True):
+        z = mx.nd.zeros((2,2016))
+        print(z.shape)
+        foo = Foo()
+        foo.initialize()
+        print(foo(z).shape)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

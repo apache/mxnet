@@ -18,6 +18,7 @@
 
 # pylint: disable=too-many-lines
 """Weight updating functions."""
+from __future__ import absolute_import
 import logging
 import math
 import pickle
@@ -28,11 +29,12 @@ from ..base import py_str
 from ..ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs, array, multiply)
 from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                        mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
-                       signsgd_update, signum_update,
+                       signsgd_update, signum_update, nag_mom_update, mp_nag_mom_update,
                        multi_sgd_update, multi_sgd_mom_update, multi_mp_sgd_update,
                        multi_mp_sgd_mom_update)
 from ..ndarray import sparse
 from ..random import normal
+from ..util import is_np_array
 
 __all__ = [
     'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LBSGD',
@@ -119,6 +121,7 @@ class Optimizer(object):
         self.idx2name = param_idx2name.copy()
         self.sym_info = (sym.attr_dict(), sym.list_arguments()) if sym is not None else ()
         self.param_dict = param_dict if param_dict else {}
+        self.allow_np_array = is_np_array()
 
         self.set_lr_mult({})
         self.set_wd_mult({})
@@ -1029,7 +1032,7 @@ class DCASGD(Optimizer):
 
 @register
 class NAG(Optimizer):
-    """Nesterov accelerated SGD.
+    """Nesterov accelerated gradient.
 
     This optimizer updates each weight by::
 
@@ -1051,33 +1054,59 @@ class NAG(Optimizer):
         super(NAG, self).__init__(**kwargs)
         self.momentum = momentum
 
+    def create_state_multi_precision(self, index, weight):
+        weight_master_copy = None
+        if self.multi_precision and weight.dtype == numpy.float16:
+            weight_master_copy = weight.astype(numpy.float32)
+            return (self.create_state(index, weight_master_copy), weight_master_copy)
+        if weight.dtype == numpy.float16 and not self.multi_precision:
+            warnings.warn("Accumulating with float16 in optimizer can lead to "
+                          "poor accuracy or slow convergence. "
+                          "Consider using multi_precision=True option of the "
+                          "NAG optimizer")
+        return self.create_state(index, weight)
+
     def create_state(self, index, weight):
         momentum = None
         if self.momentum != 0.0:
             momentum = zeros(weight.shape, weight.context, dtype=weight.dtype)
         return momentum
 
-    def update(self, index, weight, grad, state):
+    def _update_impl(self, index, weight, grad, state, multi_precision=False):
         assert(isinstance(weight, NDArray))
         assert(isinstance(grad, NDArray))
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
 
-        grad = grad * self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+        kwargs = {'rescale_grad': self.rescale_grad}
+        if self.momentum > 0:
+            kwargs['momentum'] = self.momentum
+        if self.clip_gradient:
+            kwargs['clip_gradient'] = self.clip_gradient
 
-        if state is not None:
-            mom = state
-            mom[:] *= self.momentum
-            mom[:] += grad
-            mom[:] += wd * weight
-            grad[:] += self.momentum * mom
-            weight[:] -= lr * grad
+        if not multi_precision:
+            if state is not None:
+                nag_mom_update(weight, grad, state, out=weight, lr=lr, wd=wd, **kwargs)
+            else:
+                sgd_update(weight, grad, out=weight, lr=lr, wd=wd, **kwargs)
         else:
-            assert self.momentum == 0.0
-            weight[:] += -lr * (grad + wd * weight)
+            if state[0] is not None:
+                mp_nag_mom_update(weight, grad, state[0], state[1], out=weight,
+                                  lr=lr, wd=wd, **kwargs)
+            else:
+                mp_sgd_update(weight, grad, state[1], out=weight,
+                              lr=lr, wd=wd, **kwargs)
+
+    def update(self, index, weight, grad, state):
+        self._update_impl(index, weight, grad, state, multi_precision=False)
+
+    def update_multi_precision(self, index, weight, grad, state):
+        use_multi_precision = self.multi_precision and weight.dtype == numpy.float16 \
+                                and isinstance(state, (tuple, list))
+        self._update_impl(index, weight, grad, state,
+                          multi_precision=use_multi_precision)
+
 
 @register
 class SGLD(Optimizer):
@@ -1380,7 +1409,7 @@ class AdaDelta(Optimizer):
         # preprocess grad
         grad *= self.rescale_grad
         if self.clip_gradient is not None:
-            grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+            grad = clip(grad, - self.clip_gradient, self.clip_gradient)
 
         # accumulated g and delta initlization
         acc_g, acc_delta = state
@@ -1618,6 +1647,28 @@ class Test(Optimizer):
 # backward compatibility wrapper for Optimizer.CreateOptimizer
 create = Optimizer.create_optimizer  # pylint: disable=invalid-name
 
+
+def _as_classic(a, allow_np):
+    # TODO(junwu): This is a temp solution for allowing converting
+    # np.ndarray to mx.nd.NDArray to be fed into the optimizer since
+    # users may have custom optimizers implemented using mx.nd.NDArray ops.
+    from ..numpy import ndarray as np_ndarray
+    if isinstance(a, (tuple, list)):
+        if any(isinstance(x, np_ndarray) for x in a):
+            if allow_np:
+                return [x.as_nd_ndarray() for x in a]
+            else:
+                raise ValueError('Converting np.ndarray to mx.nd.NDArray is not allowed')
+    else:
+        if isinstance(a, np_ndarray):
+            if allow_np:
+                return a.as_nd_ndarray()
+            else:
+                raise ValueError('Converting np.ndarray to mx.nd.NDArray is not allowed')
+    return a
+
+
+
 class Updater(object):
     """Updater for kvstore."""
     def __init__(self, optimizer):
@@ -1628,14 +1679,15 @@ class Updater(object):
 
     def __call__(self, index, grad, weight):
         """Updates weight given gradient and index."""
+        allow_np = self.optimizer.allow_np_array
         if not isinstance(index, (list, tuple)):
             indices = [index]
-            grads = [grad]
-            weights = [weight]
+            grads = [_as_classic(grad, allow_np)]
+            weights = [_as_classic(weight, allow_np)]
         else:
             indices = index
-            grads = grad
-            weights = weight
+            grads = _as_classic(grad, allow_np)
+            weights = _as_classic(weight, allow_np)
         if weights:
             self.optimizer._set_current_context(weights[0].context.device_id)
         for i, idx in enumerate(indices):

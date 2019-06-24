@@ -20,6 +20,9 @@ import ctypes
 import os
 import sys
 import functools
+import itertools
+import inspect
+import threading
 
 from .base import _LIB, check_call
 
@@ -76,18 +79,32 @@ def set_np_shape(active):
     >>> print(mx.is_np_shape())
     True
     """
+    if active:
+        import logging
+        logging.info('NumPy-shape semantics has been activated in your code. '
+                     'This is required for creating and manipulating scalar and zero-size '
+                     'tensors, which were not supported in MXNet before, as in the official '
+                     'NumPy library. Please DO NOT manually deactivate this semantics while '
+                     'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+    elif is_np_array():
+        raise ValueError('Deactivating NumPy shape semantics while NumPy array semantics is still'
+                         ' active is not allowed. Please consider calling `npx.reset_np()` to'
+                         ' deactivate both of them.')
     prev = ctypes.c_int()
     check_call(_LIB.MXSetIsNumpyShape(ctypes.c_int(active), ctypes.byref(prev)))
     return bool(prev.value)
 
 
 def is_np_shape():
-    """
-    Checks whether the NumPy shape semantics is currently turned on.
+    """Checks whether the NumPy shape semantics is currently turned on.
     In NumPy shape semantics, `()` represents the shape of scalar tensors,
     and tuples with `0` elements, for example, `(0,)`, `(1, 0, 2)`, represent
     the shapes of zero-size tensors. This is turned off by default for keeping
     backward compatibility.
+
+    In the NumPy shape semantics, `-1` indicates an unknown size. For example,
+    `(-1, 2, 2)` means that the size of the first dimension is unknown. Its size
+    may be inferred during shape inference.
 
     Please note that this is designed as an infrastructure for the incoming
     MXNet-NumPy operators. Legacy operators registered in the modules
@@ -209,39 +226,379 @@ def np_shape(active=True):
     return _NumpyShapeScope(active)
 
 
+def wraps_safely(wrapped, assigned=functools.WRAPPER_ASSIGNMENTS):
+    """This function is safe version of `functools.wraps` in Python2 which skips wrapping functions
+    for the attributes that do not exist."""
+    if sys.version_info[0] > 2:
+        return functools.wraps(wrapped)
+    else:
+        return functools.wraps(wrapped,
+                               assigned=itertools.ifilter(
+                                   functools.partial(hasattr, wrapped), assigned))
+
+
 def use_np_shape(func):
-    """Wraps a function with an activated NumPy-shape scope. This ensures
-    that the execution of the function is guaranteed with the support of
-    scalar and zero-size tensors as in NumPy.
+    """A decorator wrapping a function or class with activated NumPy-shape semantics.
+    When `func` is a function, this ensures that the execution of the function is scoped with NumPy
+    shape semantics, such as the support for zero-dim and zero size tensors. When
+    `func` is a class, it ensures that all the methods, static functions, and properties
+    of the class are executed with the NumPy shape semantics.
+
+    Example::
+        import mxnet as mx
+        @mx.use_np_shape
+        def scalar_one():
+            return mx.nd.ones(())
+        print(scalar_one())
+
+        @np.use_np_shape
+        class ScalarTensor(object):
+            def __init__(self, val=None):
+                if val is None:
+                    val = ScalarTensor.random().value
+                self._scalar = mx.nd.ones(()) * val
+
+            def __repr__(self):
+                print("Is __repr__ in np_shape semantics? {}!".format(str(np.is_np_shape())))
+                return str(self._scalar.asnumpy())
+
+            @staticmethod
+            def random():
+                val = mx.nd.random.uniform().asnumpy().item()
+                return ScalarTensor(val)
+
+            @property
+            def value(self):
+                print("Is value property in np_shape semantics? {}!".format(str(np.is_np_shape())))
+                return self._scalar.asnumpy().item()
+
+
+        print("Is global scope of np_shape activated? {}!".format(str(np.is_np_shape())))
+        scalar_tensor = ScalarTensor()
+        print(scalar_tensor)
+
+    Parameters
+    ----------
+    func : a user-provided callable function or class to be scoped by the NumPy-shape semantics.
+
+    Returns
+    -------
+    Function or class
+        A function or class wrapped in the NumPy-shape scope.
+    """
+
+    if inspect.isclass(func):
+        for name, method in inspect.getmembers(
+                func,
+                predicate=
+                lambda f: inspect.isfunction(f) or inspect.ismethod(f) or isinstance(f, property)):
+            if isinstance(method, property):
+                setattr(func, name, property(use_np_shape(method.__get__),
+                                             method.__set__,
+                                             method.__delattr__,
+                                             method.__doc__))
+            else:
+                setattr(func, name, use_np_shape(method))
+        return func
+    elif callable(func):
+        @wraps_safely(func)
+        def _with_np_shape(*args, **kwargs):
+            with np_shape(active=True):
+                return func(*args, **kwargs)
+        return _with_np_shape
+    else:
+        raise TypeError('use_np_shape can only decorate classes and callable objects, '
+                        'while received a {}'.format(str(type(func))))
+
+
+def _sanity_check_params(func_name, unsupported_params, param_dict):
+    for param_name in unsupported_params:
+        if param_name in param_dict:
+            raise NotImplementedError("function {} does not support parameter {}"
+                                      .format(func_name, param_name))
+
+
+def set_module(module):
+    """Decorator for overriding __module__ on a function or class.
+
+    Example usage::
+
+        @set_module('mxnet.numpy')
+        def example():
+            pass
+
+        assert example.__module__ == 'numpy'
+    """
+    def decorator(func):
+        if module is not None:
+            func.__module__ = module
+        return func
+    return decorator
+
+
+class _NumpyArrayScope(object):
+    """Scope for managing NumPy array creation. This is often used
+    with `is_np_array=True` in initializer to enforce array creation
+    as type `mxnet.numpy.ndarray`, instead of `mx.nd.NDArray` in Gluon.
+
+    Do not use this class directly. Use `np_array(active)` instead.
+    """
+    _current = threading.local()
+
+    def __init__(self, is_np_array):  # pylint: disable=redefined-outer-name
+        self._old_scope = None
+        self._is_np_array = is_np_array
+
+    def __enter__(self):
+        if not hasattr(_NumpyArrayScope._current, "value"):
+            _NumpyArrayScope._current.value = _NumpyArrayScope(False)
+        self._old_scope = _NumpyArrayScope._current.value
+        _NumpyArrayScope._current.value = self
+        return self
+
+    def __exit__(self, ptype, value, trace):
+        assert self._old_scope
+        _NumpyArrayScope._current.value = self._old_scope
+
+
+def np_array(active=True):
+    """Returns an activated/deactivated NumPy-array scope to be used in 'with' statement
+    and captures code that needs the NumPy-array semantics.
+
+    Currently, this is used in Gluon to enforce array creation in `Block`s as type
+    `mxnet.numpy.ndarray`, instead of `mx.nd.NDArray`.
+
+    It is recommended to use the decorator `use_np_array` to decorate the classes
+    that need this semantics, instead of using this function in a `with` statement
+    unless you know exactly what has been scoped by this semantics.
 
     Please note that this is designed as an infrastructure for the incoming
     MXNet-NumPy operators. Legacy operators registered in the modules
     `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
     in NumPy even within this scope.
 
-
     Parameters
     ----------
-    func : a user-provided callable function to be scoped by the NumPy-shape semantics.
+    active : bool
+        Indicates whether to activate NumPy-array semantics.
 
     Returns
     -------
-    Function
-        A function for wrapping the user functions in the NumPy-shape semantics.
-
-
-    Examples
-    --------
-    >>> import mxnet as mx
-    >>> @mx.use_np_shape
-    ... def scalar_one():
-    ...     return mx.nd.ones(())
-    ...
-    >>> print(scalar_one())
+    _NumpyShapeScope
+        A scope object for wrapping the code w/ or w/o NumPy-shape semantics.
     """
-    @functools.wraps(func)
-    def _with_np_shape(*args, **kwargs):
-        with np_shape(active=True):
-            return func(*args, **kwargs)
+    return _NumpyArrayScope(active)
 
-    return _with_np_shape
+
+def is_np_array():
+    """Checks whether the NumPy-array semantics is currently turned on.
+    This is currently used in Gluon for checking whether an array of type `mxnet.numpy.ndarray`
+    or `mx.nd.NDArray` should be created. For example, at the time when a parameter
+    is created in a `Block`, an `mxnet.numpy.ndarray` is created if this returns true; else
+    an `mx.nd.NDArray` is created.
+
+    Normally, users are not recommended to use this API directly unless you known exactly
+    what is going on under the hood.
+
+    Please note that this is designed as an infrastructure for the incoming
+    MXNet-NumPy operators. Legacy operators registered in the modules
+    `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
+    in NumPy within this semantics.
+
+    Returns
+    -------
+        A bool value indicating whether the NumPy-array semantics is currently on.
+    """
+    return _NumpyArrayScope._current.value._is_np_array if hasattr(
+        _NumpyArrayScope._current, "value") else False
+
+
+def use_np_array(func):
+    """A decorator wrapping Gluon `Block`s and all its methods, properties, and static functions
+    with the semantics of NumPy-array, which means that where ndarrays are created,
+    `mxnet.numpy.ndarray`s should be created, instead of legacy ndarrays of type `mx.nd.NDArray`.
+    For example, at the time when a parameter is created in a `Block`, an `mxnet.numpy.ndarray`
+    is created if it's decorated with this decorator.
+
+    Example::
+        import mxnet as mx
+        from mxnet import gluon, np
+
+
+        class TestHybridBlock1(gluon.HybridBlock):
+            def __init__(self):
+                super(TestHybridBlock1, self).__init__()
+                self.w = self.params.get('w', shape=(2, 2))
+
+            def hybrid_forward(self, F, x, w):
+                return F.dot(x, w)
+
+
+        x = mx.nd.ones((2, 2))
+        net1 = TestHybridBlock1()
+        net1.initialize()
+        out = net1.forward(x)
+        for _, v in net1.collect_params().items():
+            assert type(v.data()) is mx.nd.NDArray
+        assert type(out) is mx.nd.NDArray
+
+
+        @np.use_np_array
+        class TestHybridBlock2(gluon.HybridBlock):
+            def __init__(self):
+                super(TestHybridBlock2, self).__init__()
+                self.w = self.params.get('w', shape=(2, 2))
+
+            def hybrid_forward(self, F, x, w):
+                return F.np.dot(x, w)
+
+
+        x = np.ones((2, 2))
+        net2 = TestHybridBlock2()
+        net2.initialize()
+        out = net2.forward(x)
+        for _, v in net2.collect_params().items():
+            print(type(v.data()))
+            assert type(v.data()) is np.ndarray
+        assert type(out) is np.ndarray
+
+    Parameters
+    ----------
+    func : a user-provided callable function or class to be scoped by the NumPy-array semantics.
+
+    Returns
+    -------
+    Function or class
+        A function or class wrapped in the NumPy-array scope.
+    """
+    if inspect.isclass(func):
+        for name, method in inspect.getmembers(
+                func,
+                predicate=
+                lambda f: inspect.isfunction(f) or inspect.ismethod(f) or isinstance(f, property)):
+            if isinstance(method, property):
+                setattr(func, name, property(use_np_array(method.__get__),
+                                             method.__set__,
+                                             method.__delattr__,
+                                             method.__doc__))
+            else:
+                setattr(func, name, use_np_array(method))
+        return func
+    elif callable(func):
+        @wraps_safely(func)
+        def _with_np_array(*args, **kwargs):
+            with np_array(active=True):
+                return func(*args, **kwargs)
+        return _with_np_array
+    else:
+        raise TypeError('use_np_array can only decorate classes and callable objects, '
+                        'while received a {}'.format(str(type(func))))
+
+
+def use_np(func):
+    """A convenience decorator for wrapping user provided functions and classes in the scope of
+    both NumPy-shape and NumPy-array semantics, which means that (1) empty tuples `()` and tuples
+    with zeros, such as `(0, 1)`, `(1, 0, 2)`, will be treated as scalar tensors' shapes and
+    zero-size tensors' shapes in shape inference functions of operators, instead of as unknown
+    in legacy mode; (2) ndarrays of type `mxnet.numpy.ndarray` should be created instead of
+    `mx.nd.NDArray`.
+
+    Example::
+        import mxnet as mx
+        from mxnet import gluon, np
+
+
+        class TestHybridBlock1(gluon.HybridBlock):
+            def __init__(self):
+                super(TestHybridBlock1, self).__init__()
+                self.w = self.params.get('w', shape=(2, 2))
+
+            def hybrid_forward(self, F, x, w):
+                return F.dot(x, w) + F.ones((1,))
+
+
+        x = mx.nd.ones((2, 2))
+        net1 = TestHybridBlock1()
+        net1.initialize()
+        out = net1.forward(x)
+        for _, v in net1.collect_params().items():
+            assert type(v.data()) is mx.nd.NDArray
+        assert type(out) is mx.nd.NDArray
+
+
+        @np.use_np
+        class TestHybridBlock2(gluon.HybridBlock):
+            def __init__(self):
+                super(TestHybridBlock2, self).__init__()
+                self.w = self.params.get('w', shape=(2, 2))
+
+            def hybrid_forward(self, F, x, w):
+                return F.np.dot(x, w) + F.np.ones(())
+
+
+        x = np.ones((2, 2))
+        net2 = TestHybridBlock2()
+        net2.initialize()
+        out = net2.forward(x)
+        for _, v in net2.collect_params().items():
+            print(type(v.data()))
+            assert type(v.data()) is np.ndarray
+        assert type(out) is np.ndarray
+
+    Parameters
+    ----------
+    func : a user-provided callable function or class to be scoped by the
+    NumPy-shape and NumPy-array semantics.
+
+    Returns
+    -------
+    Function or class
+        A function or class wrapped in the Numpy-shape and NumPy-array scope.
+    """
+    return use_np_shape(use_np_array(func))
+
+
+def _set_np_array(active):
+    """Turns on/off NumPy array semantics for the current thread in which `mxnet.numpy.ndarray`
+    is expected to be created, instead of the legacy `mx.nd.NDArray`.
+
+    Parameters
+    ---------
+    active : bool
+        A boolean value indicating whether the NumPy-array semantics should be turned on or off.
+
+    Returns
+    -------
+        A bool value indicating the previous state of NumPy array semantics.
+    """
+    if active:
+        import logging
+        logging.info('NumPy array semantics has been activated in your code. This allows you'
+                     ' to use operators from MXNet NumPy and NumPy Extension modules as well'
+                     ' as MXNet NumPy `ndarray`s.')
+    cur_state = is_np_array()
+    _NumpyArrayScope._current.value = _NumpyArrayScope(active)
+    return cur_state
+
+
+def set_np(shape=True, array=True):
+    """Setting NumPy shape and array semantics at the same time.
+    It is required to keep NumPy shape semantics active when activating NumPy array semantics.
+    Deactivating NumPy shape semantics while NumPy array semantics is still active is not allowed.
+
+    Parameters
+    ----------
+    shape : bool
+        A boolean value indicating whether the NumPy-shape semantics should be turned on or off.
+    array : bool
+        A boolean value indicating whether the NumPy-array semantics should be turned on or off.
+    """
+    if not shape and array:
+        raise ValueError('NumPy Shape semantics is required in using NumPy array semantics.')
+    _set_np_array(array)
+    set_np_shape(shape)
+
+
+def reset_np():
+    """Deactivate NumPy shape and array semantics at the same time."""
+    set_np(shape=False, array=False)

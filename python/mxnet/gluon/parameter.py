@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=unnecessary-pass
 """Neural network parameter."""
+from __future__ import absolute_import
+
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
 
@@ -30,7 +32,9 @@ from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent, _brief_print_list
+from .utils import _indent, _brief_print_list, shape_is_known
+from ..util import is_np_shape, is_np_array
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 # pylint: disable= invalid-name
 tensor_types = (symbol.Symbol, ndarray.NDArray)
@@ -130,7 +134,6 @@ class Parameter(object):
         self._grad_stype = grad_stype
         self._stype = stype
 
-
     def __repr__(self):
         s = 'Parameter {name} (shape={shape}, dtype={dtype})'
         return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
@@ -156,7 +159,20 @@ class Parameter(object):
 
     @property
     def shape(self):
-        return self._shape
+        """The shape of the parameter.
+
+        By default, an unknown dimension size is 0. However, when the NumPy semantic
+        is turned on, unknown dimension size is -1.
+        """
+        if self._shape is None:
+            return None
+        elif is_np_shape():
+            # Parameters shouldn't be zero-size. If one of its dimension is 0,
+            # it means the parameter isn't initialized. In the NumPy semantics,
+            # the unknown dimension should be marked with -1.
+            return tuple(i if i != 0 else -1 for i in self._shape)
+        else:
+            return self._shape
 
     @shape.setter
     def shape(self, new_shape):
@@ -165,9 +181,9 @@ class Parameter(object):
             return
 
         assert len(self._shape) == len(new_shape) and \
-            all(j in (0, i) for i, j in zip(new_shape, self._shape)), \
+            all(j in (-1, 0, i) for i, j in zip(new_shape, self._shape)), \
             "Expected shape %s is incompatible with given shape %s."%(
-                str(new_shape), str(self._shape))
+                str(new_shape), str(self._shape))  # -1 means unknown dim size in np_shape mode
 
         self._shape = new_shape
 
@@ -230,12 +246,14 @@ class Parameter(object):
     def _load_init(self, data, ctx):
         """(Re)initializes by loading from data."""
         if self.shape:
+            unknown_dim_size = -1 if is_np_shape() else 0
             for self_dim, data_dim in zip(self.shape, data.shape):
-                assert self_dim in (0, data_dim), \
+                assert self_dim in (unknown_dim_size, data_dim), \
                     "Failed loading Parameter '%s' from saved params: " \
                     "shape incompatible expected %s vs saved %s"%(
                         self.name, str(self.shape), str(data.shape))
-            self.shape = tuple(i if i != 0 else j for i, j in zip(self.shape, data.shape))
+            self.shape = tuple(i if i != unknown_dim_size else j
+                               for i, j in zip(self.shape, data.shape))
         if self.dtype:
             assert np.dtype(self.dtype).type == data.dtype, \
                 "Failed loading Parameter '%s' from saved params: " \
@@ -269,7 +287,8 @@ class Parameter(object):
             return
         init, ctx, default_init, data = self._deferred_init
         self._deferred_init = ()
-        assert self.shape is not None and np.prod(self.shape) > 0, \
+
+        assert shape_is_known(self.shape), \
             "Cannot initialize Parameter '%s' because it has " \
             "invalid shape: %s. Please specify in_units, " \
             "in_channels, etc for `Block`s."%(
@@ -277,8 +296,16 @@ class Parameter(object):
 
         with autograd.pause():
             if data is None:
-                data = ndarray.zeros(shape=self.shape, dtype=self.dtype,
-                                     ctx=context.cpu(), stype=self._stype)
+                kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': context.cpu()}
+                if is_np_array():
+                    if self._stype != 'default':
+                        raise ValueError("mxnet.numpy.zeros does not support stype = {}"
+                                         .format(self._stype))
+                    zeros_fn = _mx_np.zeros
+                else:
+                    kwargs['stype'] = self._stype
+                    zeros_fn = ndarray.zeros
+                data = zeros_fn(**kwargs)
                 initializer.create(default_init)(
                     initializer.InitDesc(self.name, {'__init__': init}), data)
 
@@ -303,8 +330,15 @@ class Parameter(object):
             self._grad = None
             return
 
-        self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
-                                    stype=self._grad_stype) for i in self._data]
+        if is_np_array():
+            if self._grad_stype != 'default':
+                raise ValueError("mxnet.numpy.zeros does not support stype = {}"
+                                 .format(self._grad_stype))
+            self._grad = [_mx_np.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context)
+                          for i in self._data]
+        else:
+            self._grad = [ndarray.zeros(shape=i.shape, dtype=i.dtype, ctx=i.context,
+                                        stype=self._grad_stype) for i in self._data]
 
         autograd.mark_variables(self._check_and_get(self._data, list),
                                 self._grad, self.grad_req)
@@ -314,7 +348,10 @@ class Parameter(object):
         ctx = context.cpu()
         if self._stype == 'default':
             block = self.list_data()
-            data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
+            if is_np_array():
+                data = sum([w.copyto(ctx) for w in block]) / len(block)
+            else:
+                data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
         else:
             # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
@@ -380,7 +417,7 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
-        if not self.shape or np.prod(self.shape) <= 0:
+        if not shape_is_known(self.shape):
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init, None)
                 return
@@ -413,7 +450,6 @@ class Parameter(object):
         else:
             raise ValueError("Cannot reset context for Parameter '%s' because it "
                              "has not been initialized."%self.name)
-
 
     def set_data(self, data):
         """Sets this parameter's value on all contexts."""
@@ -553,6 +589,8 @@ class Parameter(object):
             self._var = symbol.var(self.name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init, stype=self._stype)
+            if is_np_array():
+                self._var = self._var.as_np_ndarray()
         return self._var
 
     def cast(self, dtype):
@@ -714,12 +752,12 @@ class ParameterDict(object):
                         inferred_shape = []
                         matched = True
                         for dim1, dim2 in zip(v, existing):
-                            if dim1 != dim2 and dim1 * dim2 != 0:
+                            if dim1 != dim2 and dim1 > 0 and dim2 > 0:
                                 matched = False
                                 break
                             elif dim1 == dim2:
                                 inferred_shape.append(dim1)
-                            elif dim1 == 0:
+                            elif dim1 in (0, -1):  # -1 means unknown dim size in np_shape mode
                                 inferred_shape.append(dim2)
                             else:
                                 inferred_shape.append(dim1)

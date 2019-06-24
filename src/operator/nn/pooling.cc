@@ -364,7 +364,8 @@ inline static bool BackwardPoolingStorageType(const nnvm::NodeAttrs &attrs,
 DMLC_REGISTER_PARAMETER(PoolingParam);
 
 NNVM_REGISTER_OP(Pooling)
-    .describe(R"code(Performs pooling on the input.
+.add_alias("_npx_Pooling")
+.describe(R"code(Performs pooling on the input.
 
 The shapes for 1-D pooling are
 

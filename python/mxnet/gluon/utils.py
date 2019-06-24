@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+from __future__ import absolute_import
+
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
 
@@ -38,6 +40,9 @@ except ImportError:
 import numpy as np
 
 from .. import ndarray
+from ..util import is_np_shape, is_np_array, wraps_safely
+from .. import numpy as _mx_np  # pylint: disable=reimported
+
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
     """Splits an NDArray into `num_slice` slices along `batch_axis`.
@@ -110,12 +115,17 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     list of NDArray
         Each corresponds to a context in `ctx_list`.
     """
+    array_fn = _mx_np.array if is_np_array() else ndarray.array
     if not isinstance(data, ndarray.NDArray):
-        data = ndarray.array(data, ctx=ctx_list[0])
+        data = array_fn(data, ctx=ctx_list[0])
     if len(ctx_list) == 1:
         return [data.as_in_context(ctx_list[0])]
 
+    # TODO(junwu): temp solution for supporting np.ndarray
+    # rewrite this using np ops
     slices = split_data(data, len(ctx_list), batch_axis, even_split)
+    if is_np_array():
+        slices = [i.as_np_ndarray() for i in slices]
     return [i.as_in_context(ctx) for i, ctx in zip(slices, ctx_list)]
 
 
@@ -412,3 +422,112 @@ class HookHandle(object):
 
     def __exit__(self, ptype, value, trace):
         self.detach()
+
+
+def shape_is_known(shape):
+    """Check whether a shape is completely known with or without np semantics.
+
+    Please see the doc of is_np_shape for more details.
+    """
+    if shape is None:
+        return False
+    unknown_dim_size = -1 if is_np_shape() else 0
+    if len(shape) == 0:
+        return unknown_dim_size == -1
+    for dim_size in shape:
+        if dim_size == unknown_dim_size:
+            return False
+        assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
+                                            "received {}".format(unknown_dim_size, dim_size)
+    return True
+
+
+def _check_same_symbol_type(symbols):
+    """Check whether all the symbols in the list are of the same type.
+    Raise type error if the types are different. Return the class of
+    the symbols."""
+    from ..symbol.numpy import _Symbol as np_symbol
+    from ..symbol import Symbol as nd_symbol
+    is_np_sym = bool(isinstance(symbols[0], np_symbol))
+    for s in symbols[1:]:
+        if is_np_sym != isinstance(s, np_symbol):
+            raise TypeError('Found both classic symbol (mx.sym.Symbol) and numpy symbol '
+                            '(mx.sym.np._Symbol) in outputs. This will prevent you from building '
+                            'a computation graph by grouping them since different types of symbols '
+                            'are not allowed to be grouped in Gluon to form a computation graph. '
+                            'You will need to convert them to the same type of symbols, either '
+                            'classic or numpy following this rule: if you want numpy ndarray '
+                            'output(s) from the computation graph, please convert all the classic '
+                            'symbols in the list to numpy symbols by calling `as_np_ndarray()` '
+                            'on each of them; if you want classic ndarray output(s) from the '
+                            'computation graph, please convert all the numpy symbols in the list '
+                            'to classic symbols by calling `as_nd_ndarray()` on each of them.')
+    return np_symbol if is_np_sym else nd_symbol
+
+
+def _check_all_np_ndarrays(out):
+    """Check if ndarrays/symbols in out are all np.ndarray/np._Symbol."""
+    from ..numpy import ndarray as np_ndarray
+    from ..symbol.numpy import _Symbol as np_symbol
+    from ..symbol import Symbol as nd_symbol
+    from ..ndarray import NDArray as nd_ndarray
+
+    # pylint: disable=no-else-raise
+    if isinstance(out, (nd_ndarray, nd_symbol)) and not isinstance(out, (np_ndarray, np_symbol)):
+        raise TypeError("Block's output ndarrays/symbols must be of type `mxnet.numpy.ndarray`"
+                        " or `mxnet.symbol.numpy._Symbol`, while got output type {}"
+                        .format(str(type(out))))
+    elif isinstance(out, (list, tuple)):
+        for i in out:
+            _check_all_np_ndarrays(i)
+    # pylint: enable=no-else-raise
+
+
+def _to_classic_arrays(*args, **kwargs):
+    """Convert arrays to classic arrays. This is used in a Gluon layer for converting
+    inputs of np arrays to classic arrays so that the layer built with legacy ops can still
+    be used in np_array semantics."""
+    from ..numpy import ndarray as np_ndarray
+    from ..symbol.numpy import _Symbol as np_symbol
+    num_inputs = len(args)
+    assert num_inputs != 0
+    if not is_np_array():
+        return args, kwargs
+    in_arrs = [arr if arr is None else arr.as_nd_ndarray() for arr in args]
+    new_kwargs = {}
+    for k, v in kwargs.items():
+        if isinstance(v, (np_ndarray, np_symbol)):
+            new_kwargs[k] = v.as_nd_ndarray()
+        else:
+            new_kwargs[k] = v
+    return in_arrs, new_kwargs
+
+
+def _to_np_arrays(*args):
+    """Convert arrays to np arrays. This is used in a Gluon layer for converting
+    outputs of classic arrays to np arrays so that the layer built with legacy ops can still
+    be used in np_array semantics."""
+    num_outputs = len(args)
+    assert num_outputs != 0
+    if not is_np_array():
+        return args[0] if num_outputs == 1 else args
+    out = [arr.as_np_ndarray() for arr in args]
+    return out[0] if num_outputs == 1 else out
+
+
+# TODO(junwu): This is a temp solution for allowing basic layers
+# implemented using legacy ops to accept np.ndarrays as inputs and return
+# np.ndarrays as outputs. We should remove it after changing all the layers
+# to use np ops in np_array semantics in the future.
+def _adapt_np_array(func):
+    @wraps_safely(func)
+    def _with_np_array(*args, **kwargs):
+        assert len(args) > 2, "expect at least three arguments in args"
+        if is_np_array():
+            input_args, kwargs = _to_classic_arrays(*args[2:], **kwargs)
+            input_args = list(args[0:2]) + list(input_args)
+            out = func(*input_args, **kwargs)
+            return _to_np_arrays(out)
+        else:
+            return func(*args, **kwargs)
+    return _with_np_array
