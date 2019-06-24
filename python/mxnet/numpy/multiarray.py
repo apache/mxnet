@@ -45,7 +45,7 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
+           'clip', 'split',  'vsplit', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
            'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan']
 
 
@@ -1833,6 +1833,24 @@ def split(ary, indices_or_sections, axis=0):
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division."""
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
+
+
+@set_module('mxnet.numpy')
+def vsplit(ary, indices_or_sections):
+    """
+    Split an array into multiple sub-arrays vertically (row-wise).
+    This is equivalent to split with axis=0 (default), the array is always split along the first axis regardless
+    of the array dimension.
+
+    Parameters
+    ----------
+    array : an input ndarray
+
+    Returns
+    -------
+    A list of multiple ndarrays.
+    """
+    return split(ary, indices_or_sections, 0)
 
 
 @set_module('mxnet.numpy')

@@ -29,7 +29,7 @@ from ..ndarray import NDArray
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
-           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan']
+           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'vsplit']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -611,6 +611,25 @@ def split(ary, indices_or_sections, axis=0):
     if not isinstance(ret, list):
         raise NotImplementedError('single output from split is not supported yet...')
     return ret
+
+
+@set_module('mxnet.ndarray.numpy')
+def vsplit(ary, indices_or_sections):
+    """
+    Split an array into multiple sub-arrays vertically (row-wise).
+    This is equivalent to split with axis=0 (default), the array is always split along the first axis regardless
+    of the array dimension.
+
+    Parameters
+    ----------
+    array : an input ndarray
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+    """
+    return split(ary, indices_or_sections, 0)
 
 
 @set_module('mxnet.ndarray.numpy')

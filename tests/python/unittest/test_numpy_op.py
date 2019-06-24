@@ -981,6 +981,56 @@ def test_np_split():
 
 @with_seed()
 @npx.use_np_shape
+def test_np_vsplit():
+    class TestVsplit(HybridBlock):
+        def __init__(self, indices_or_sections):
+            super(TestSplit, self).__init__()
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.vsplit(a, indices_or_sections=self._indices_or_sections)
+
+    def get_indices(axis_size):
+        if axis_size is 0:
+            axis_size = random.randint(3, 6)
+        samples = random.randint(1, axis_size - 1)
+        indices = sorted(random.sample([i for i in range(1, axis_size)], samples))
+        indices = tuple(indices)
+        return indices
+
+    dim = random.randint(0, 3)
+    shape = [0] + [random.randint(2, 4) for i in range(dim)]
+    for hybridize in [True, False]:
+        indices = get_indices(shape[0])
+        sections = 7 if shape[0] is 0 else shape[0]
+        for indices_or_sections in [indices, sections]:
+            # test gluon
+            test_split = TestSplit(indices_or_sections=indices_or_sections)
+            if hybridize:
+                test_split.hybridize()
+
+            a = mx.nd.random.uniform(-1.0, 1.0, shape=shape).as_np_ndarray()
+            a.attach_grad()
+            expected_ret = _np.vsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+            with mx.autograd.record():
+                y = test_split(a)
+            assert len(y) == len(expected_ret)
+            for mx_out, np_out in zip(y, expected_ret):
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            mx.autograd.backward(y)
+
+            assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+
+            # test imperative
+            mx_outs = np.vsplit(a, indices_or_sections=indices_or_sections)
+            np_outs = _np.vsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
+            for mx_out, np_out in zip(mx_outs, np_outs):
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@npx.use_np_shape
 def test_np_cumsum():
     def np_cumsum_backward(ograd, axis=None, dtype=None):
         return _np.flip(_np.cumsum(_np.flip(ograd, axis=axis), axis=axis, dtype=dtype), axis=axis)

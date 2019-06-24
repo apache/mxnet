@@ -30,9 +30,9 @@ from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
-           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
-           'abs', 'exp', 'arctan']
+           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'vsplit',
+           'swapaxes','expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10',
+           'sqrt','abs', 'exp', 'arctan']
 
 
 def _num_outputs(sym):
@@ -1289,6 +1289,24 @@ def split(ary, indices_or_sections, axis=0):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.split(ary, indices, axis, False, sections)
     return ret
+
+
+@set_module('mxnet.symbol.numpy')
+def vsplit(ary, indices_or_sections):
+    """
+    Split an array into multiple sub-arrays vertically (row-wise).
+    This is equivalent to split with axis=0 (default), the array is always split along the first axis regardless
+    of the array dimension.
+
+    Parameters
+    ----------
+    array : an input ndarray
+
+    Returns
+    -------
+    A list of multiple ndarrays.
+    """
+    return split(ary, indices_or_sections, 0)
 
 
 @set_module('mxnet.symbol.numpy')
