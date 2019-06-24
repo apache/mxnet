@@ -1,5 +1,29 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+/*!
+ * \file npi_tensordot.cc
+ * \brief CPU Implementation of numpy-compatible tensordot
+ */
+
+
 #include "np_matrix_op-inl.h"
-#include "np_dot-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -11,14 +35,21 @@ struct TensordotParam : public dmlc::Parameter<TensordotParam> {
   mxnet::Tuple<int> a_axes, a_axes_remained, a_axes_summed, 
     b_axes, b_axes_remained, b_axes_summed; 
   DMLC_DECLARE_PARAMETER(TensordotParam) {
-    DMLC_DECLARE_FIELD(a_axes);
-    DMLC_DECLARE_FIELD(a_axes_remained);
     DMLC_DECLARE_FIELD(a_axes_summed);
-    DMLC_DECLARE_FIELD(b_axes);
-    DMLC_DECLARE_FIELD(b_axes_remained);
     DMLC_DECLARE_FIELD(b_axes_summed);
   }
 };
+
+/** 
+ * recovers 0 size shapes.
+*/
+inline void recover0Size(TShape* shape) {
+  for (auto& i: *shape) {
+    if (i == -1) {
+      i = 0;
+    }
+  }
+}
 
 inline void getMatrixDimensions(int& ad1, int& ad2, int& bd1, int& bd2, const mxnet::Tuple<int>& a_axes_remained, 
   const mxnet::Tuple<int>& a_axes_summed, const mxnet::Tuple<int>& b_axes_remained, 
@@ -41,6 +72,72 @@ inline void getMatrixDimensions(int& ad1, int& ad2, int& bd1, int& bd2, const mx
     bd2 *= b_shape[b_axes_remained[i]];
   } 
 }
+
+// inline void leftPadding1(mxnet::TShape& shape, Tuple<int>& axes) {
+//   std::vector<int> newShape;
+//   newShape.push_back(1);
+//   for (auto& i : shape) {
+//     newShape.push_back(i);
+//   }
+//   shape = mxnet::TShape(newShape.begin(), newShape.end());
+
+//   for (auto& i : axes) {
+//     i++;
+//   }
+// }
+
+// inline void rightPadding1(mxnet::TShape& shape) {
+//   std::vector<int> newShape;
+//   for (auto& i : shape) {
+//     newShape.push_back(i);
+//   }
+//   newShape.push_back(1);
+//   shape = mxnet::TShape(newShape.begin(), newShape.end());
+// }
+
+inline void getReorderedAxes(const mxnet::Tuple<int>& a_axes_summed, 
+  mxnet::Tuple<int>& a_axes_remained, 
+  mxnet::Tuple<int>& a_axes, 
+  const mxnet::Tuple<int>& b_axes_summed,
+  mxnet::Tuple<int>& b_axes_remained, 
+  mxnet::Tuple<int>& b_axes, 
+  const mxnet::TShape& a_shape, 
+  const mxnet::TShape& b_shape) {
+    std::vector<int> a_axes_remained_vector;
+    for (int i = 0; i < a_shape.ndim(); i++) {
+      a_axes_remained_vector.push_back(i);
+    }
+    for(auto& i: a_axes_summed) {
+      a_axes_remained_vector.erase(std::find(a_axes_remained_vector.begin(), 
+        a_axes_remained_vector.end(), i));
+    }
+    a_axes_remained = mxnet::Tuple<int>(a_axes_remained_vector);
+
+    std::vector<int> a_axes_vector(a_axes_remained_vector);
+    for(auto& i: a_axes_summed) {
+      a_axes_vector.push_back(i);
+    }
+    a_axes = mxnet::Tuple<int>(a_axes_vector);
+
+    std::vector<int> b_axes_remained_vector;
+    for (int i = 0; i < b_shape.ndim(); i++) {
+      b_axes_remained_vector.push_back(i);
+    }
+    for(auto& i: b_axes_summed) {
+      b_axes_remained_vector.erase(std::find(b_axes_remained_vector.begin(), 
+        b_axes_remained_vector.end(), i));
+    }
+    b_axes_remained = mxnet::Tuple<int>(b_axes_remained_vector);
+
+    std::vector<int> b_axes_vector;
+    for(auto& i: b_axes_summed) {
+      b_axes_vector.push_back(i);
+    }
+    for(auto& i: b_axes_remained_vector) {
+      b_axes_vector.push_back(i);
+    }
+    b_axes = mxnet::Tuple<int>(b_axes_vector);
+  }
 
 inline mxnet::TShape getReorderedShape(const mxnet::TShape& shape, const mxnet::Tuple<int>& axes) {
   mxnet::TShape newShape(shape);
@@ -99,8 +196,8 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs, // a,b,c
     return;
   }
 
-  const mxnet::TShape& a_shape = a.shape_;
-  const mxnet::TShape& b_shape = b.shape_;
+  mxnet::TShape a_shape = a.shape_;
+  mxnet::TShape b_shape = b.shape_;
 
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();  
   CHECK_EQ(out.type_flag_, a.type_flag_)
@@ -113,12 +210,17 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs, // a,b,c
     
                                                               
   const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
-  const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& a_axes_remained = param.a_axes_remained;
-  const Tuple<int>& b_axes_summed = param.b_axes_summed;
-  const Tuple<int>& b_axes_remained = param.b_axes_remained;
-  const Tuple<int>& a_axes = param.a_axes;
-  const Tuple<int>& b_axes = param.b_axes;
+  Tuple<int> a_axes_summed = param.a_axes_summed;
+  Tuple<int> b_axes_summed = param.b_axes_summed;  
+ // leftPadding1(a_shape, a_axes_summed);
+ // rightPadding1(b_shape);
+
+  Tuple<int> a_axes_remained;
+  Tuple<int> b_axes_remained;
+  Tuple<int> a_axes;
+  Tuple<int> b_axes;
+  getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
+    b_axes, a_shape, b_shape);
 
   if (a_axes_summed.ndim() != b_axes_summed.ndim()) {
     return;
@@ -152,7 +254,7 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs, // a,b,c
     Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
       (Shape1(a.Size() + b.Size()), s); // TODO
     DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
-    DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size() * sizeof(DType));
+    DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
     TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask); 
     TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask); 
   
@@ -197,17 +299,21 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
   const TBlob& grad_a = outputs[0];
   const TBlob& grad_b = outputs[1];    
   
-  const mxnet::TShape a_shape = a.shape_.ndim() > 1 ? a.shape_: mxnet::TShape({1, a.shape_[0]});
-  const mxnet::TShape b_shape = b.shape_.ndim() > 1 ? b.shape_: mxnet::TShape({b.shape_[0], 1});
-  const mxnet::TShape out_grad_shape = out_grad.shape_;
+  mxnet::TShape a_shape = a.shape_;
+  mxnet::TShape b_shape = b.shape_;
 
-  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);  
-  const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& a_axes_remained = param.a_axes_remained;
-  const Tuple<int>& b_axes_summed = param.b_axes_summed;
-  const Tuple<int>& b_axes_remained = param.b_axes_remained;
-  const Tuple<int>& a_axes = param.a_axes;
-  const Tuple<int>& b_axes = param.b_axes;
+  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
+  Tuple<int> a_axes_summed = param.a_axes_summed;
+  Tuple<int> b_axes_summed = param.b_axes_summed;  
+  //leftPadding1(a_shape, a_axes_summed);
+  //rightPadding1(b_shape);
+
+  Tuple<int> a_axes_remained;
+  Tuple<int> b_axes_remained;
+  Tuple<int> a_axes;
+  Tuple<int> b_axes;
+  getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
+    b_axes, a_shape, b_shape);
 
   int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
   getMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
@@ -235,7 +341,7 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
       (Shape1(a.Size() + b.Size()), s);
     DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
-    DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size() * sizeof(DType));
+    DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
     TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask);
     TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask);
 

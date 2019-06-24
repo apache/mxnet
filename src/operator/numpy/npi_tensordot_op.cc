@@ -59,21 +59,29 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
+  recover0Size(&in_attrs->at(0));
+  recover0Size(&in_attrs->at(1));
   const mxnet::TShape& a_shape = in_attrs->at(0);
   const mxnet::TShape& b_shape = in_attrs->at(1);
 
+printTShape(a_shape, "ashape:"); //todo
+printTShape(b_shape, "bshape:"); //todo
   if (!ndim_is_known(a_shape) || !ndim_is_known(b_shape)) {
     return false;
   }
 
   const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
   const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& a_axes_remained = param.a_axes_remained;
   const Tuple<int>& b_axes_summed = param.b_axes_summed;
-  const Tuple<int>& b_axes_remained = param.b_axes_remained;
-  const Tuple<int>& a_axes = param.a_axes;
-  const Tuple<int>& b_axes = param.b_axes;
-  
+
+  Tuple<int> a_axes_remained;
+  Tuple<int> b_axes_remained;
+  Tuple<int> a_axes;
+  Tuple<int> b_axes;
+  std::cout << "ddddddddddddddddddddddddd" << std::endl; // TODO
+  getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
+    b_axes, a_shape, b_shape);
+
   printTuple(a_axes_summed, "a_axes_summed");//TODO
   printTuple(a_axes_remained, "a_axes_remained");
   printTuple(b_axes_summed, "b_axes_summed");
@@ -101,11 +109,11 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < a_axes_summed.ndim(); i++) {
     tem_shape1[a_axes_summed[i]] = b_shape[b_axes_summed[i]];
   }
-
-  SHAPE_ASSIGN_CHECK(*in_attrs, 0, tem_shape1);
   printTShape(tem_shape1, "tem_shape1"); //todo
 std::cout << std::endl << "5555555555555555555\n" << std::endl;//todo
 printShapeVector(*in_attrs, "in_attrs1"); //todo
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, tem_shape1);
+
   mxnet::TShape tem_shape2(b_axes.ndim(), -1);
   for (int i = 0; i < b_axes_remained.ndim(); i++) {
     tem_shape2[b_axes_remained[i]] = out_shape[a_axes_remained.ndim() + i];
