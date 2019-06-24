@@ -20,13 +20,15 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  *
- * \file np_gcd_op-inl.h
+ * \file 
  * \brief Function definition of greatest common divisor 
  */
+
 #ifndef MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
 
 #include <vector>
+#include <utility>
 #include "../tensor/broadcast_reduce_op.h"
 #include "../src/operator/mxnet_op.h"
 
@@ -45,33 +47,33 @@ struct gcd_forward {
 
     // minus cases.
     if (a < 0) {
-       a = -a;
+      a = -a;
     }
 
     // minus cases.
     if (b < 0) {
-       b = -b;
+      b = -b;
     }
 
     // handle zero-valued cases.
     int c;
     if (a == 0 && b != 0) {
-        c = b;
+      c = b;
     } else if (b == 0 && a != 0) {
-        c = a;
+      c = a;
     } else if (a == 0 && b == 0) {
-        c = 0;
+      c = 0;
     } else {
-       if (a < b) {
+      if (a < b) {
+        std::swap<int>(a, b);
+      }
+      while (a % b != 0) {
+        a = a % b;
+        if (a < b) {
           std::swap<int>(a, b);
-       }
-       while (a % b != 0) {
-          a = a % b;
-          if (a < b) {
-             std::swap<int>(a, b);
-          }
-       }
-       c = b;
+        }
+      }
+      c = b;
     }
     KERNEL_ASSIGN(out_data[i], req, c);
   }

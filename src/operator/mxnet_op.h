@@ -185,8 +185,29 @@ inline int get_num_threads<cpu>(const int N) {
       {__VA_ARGS__}                                        \
     }                                                      \
     break;                                                 \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      LOG(FATAL) << "This operation does not "             \
+                  "support float";                         \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      LOG(FATAL) << "This operation does not "             \
+                  "support float";                         \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      LOG(FATAL) << "This operation does not "             \
+                  "support float";                         \
+    }                                                      \
+    break;                                                 \
   default:                                                 \
-    LOG(FATAL) << "This type is not vailate";              \
+    LOG(FATAL) << "Unknown type enum " << type;            \
   }
 
 
