@@ -881,5 +881,5 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
         save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
                         for k, v in aux_params.items()})
         nd_save(param_name, save_dict)
-        net.collect_params().load(param_name)
+        net.collect_params().load(param_name, cast_dtype=True, dtype_source='saved')
     return net
