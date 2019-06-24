@@ -49,9 +49,8 @@ class Activation(HybridBlock):
         return self._act_type
 
     def hybrid_forward(self, F, x):
-        if is_np_array():
-            F = F.npx
-        return F.Activation(x, act_type=self._act_type, name='fwd')
+        act = F.npx.activation if is_np_array() else F.Activation
+        return act(x, act_type=self._act_type, name='fwd')
 
     def __repr__(self):
         s = '{name}({_act_type})'
