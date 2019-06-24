@@ -292,7 +292,7 @@ def test_aggregate_duplication():
     assert target_dict['Time']['operator']['_plus_scalar']['Count'] == 2
     profiler.set_state('stop')
     
-def test_custom_operator_profiling(seed = None):
+def test_custom_operator_profiling(seed = None, file_name = None):
     class Sigmoid(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
             x = in_data[0].asnumpy()
@@ -327,7 +327,8 @@ def test_custom_operator_profiling(seed = None):
         def create_operator(self, ctx, in_shapes, in_dtypes):
             return Sigmoid()
 
-    file_name = 'test_custom_operator_profiling.json'
+    if file_name is None:
+        file_name = 'test_custom_operator_profiling.json'
     enable_profiler(profile_filename = file_name, run=True, continuous_dump=True,\
                     aggregate_stats=True)
     x = mx.nd.array([0, 1, 2, 3])
@@ -345,7 +346,8 @@ def test_custom_operator_profiling(seed = None):
         and 'MySigmoid::_zeros' in target_dict['Time']['Custom Operator']
     profiler.set_state('stop')
 
-def test_custom_operator_profiling_multiple_custom_ops(seed = None):
+def test_custom_operator_profiling_multiple_custom_ops_imperative(seed = None, \
+        mode = 'imperative', file_name = None):
     class MyAdd(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):        
             self.assign(out_data[0], req[0], in_data[0] + 1)
@@ -359,7 +361,7 @@ def test_custom_operator_profiling_multiple_custom_ops(seed = None):
             super(MyAdd1Prop, self).__init__(need_top_grad=True)
 
         def list_arguments(self):
-            return ['in']
+            return ['data']
 
         def list_outputs(self):
             return ['output']
@@ -377,7 +379,7 @@ def test_custom_operator_profiling_multiple_custom_ops(seed = None):
             super(MyAdd2Prop, self).__init__(need_top_grad=True)
 
         def list_arguments(self):
-            return ['in']
+            return ['data']
 
         def list_outputs(self):
             return ['output']
@@ -389,13 +391,23 @@ def test_custom_operator_profiling_multiple_custom_ops(seed = None):
         def create_operator(self, ctx, shapes, dtypes):
             return MyAdd()
 
-    file_name = 'test_custom_operator_profiling_multiple_custom_ops.json'
+    if file_name is None:
+        file_name = 'test_custom_operator_profiling_multiple_custom_ops_imperative.json'
     enable_profiler(profile_filename = file_name, run=True, continuous_dump=True,\
                     aggregate_stats=True)
     inp = mx.nd.zeros(shape=(100, 100))
-    x = inp + 1
-    y = mx.nd.Custom(inp, op_type='MyAdd1')
-    z = mx.nd.Custom(inp, op_type='MyAdd2')
+    if mode == 'imperative':
+        x = inp + 1
+        y = mx.nd.Custom(inp, op_type='MyAdd1')
+        z = mx.nd.Custom(inp, op_type='MyAdd2')
+    elif mode == 'symbolic':
+        a = mx.symbol.Variable('a')
+        b = a + 1
+        c = mx.symbol.Custom(data=a, op_type='MyAdd1')
+        d = mx.symbol.Custom(data=a, op_type='MyAdd2')
+        b.bind(mx.cpu(), {'a': inp}).forward()
+        c.bind(mx.cpu(), {'a': inp}).forward()
+        d.bind(mx.cpu(), {'a': inp}).forward()
     mx.nd.waitall()
     profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
@@ -415,10 +427,24 @@ def test_custom_operator_profiling_multiple_custom_ops(seed = None):
         and '_plus_scalar' in target_dict['Time']['operator']
     profiler.set_state('stop')
 
-def test_custom_operator_profiling_naive():
-    # run the two tests above using Naive Engine
-    run_in_spawned_process(func = test_custom_operator_profiling, env = {'MXNET_ENGINE_TYPE' : "NaiveEngine"})
-    run_in_spawned_process(func = test_custom_operator_profiling_multiple_custom_ops, env = {'MXNET_ENGINE_TYPE' : "NaiveEngine"})
+def test_custom_operator_profiling_multiple_custom_ops_symbolic(seed = None, file_name = None):
+    if file_name is None:
+        'test_custom_operator_profiling_multiple_custom_ops_symbolic.json'
+    test_custom_operator_profiling_multiple_custom_ops_imperative(mode = 'symbolic', \
+            file_name = file_name)
+
+def test_custom_operator_profiling_naive_engine():
+    # run the three tests above using Naive Engine
+    run_in_spawned_process(test_custom_operator_profiling, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
+            'test_custom_operator_profiling_naive.json')
+    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
+            'imperative', \
+            'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
+    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_symbolic, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
+            'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 if __name__ == '__main__':
     import nose
