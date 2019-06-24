@@ -28,6 +28,7 @@ import logging
 import json
 import warnings
 import numpy as np
+from .. import numpy as _mx_np
 
 
 try:
@@ -40,6 +41,8 @@ from .. import ndarray as nd
 from ..ndarray import _internal
 from .. import io
 from .. import recordio
+from .. util import is_np_array
+from ..ndarray.numpy import _internal as _npi
 
 
 def imread(filename, *args, **kwargs):
@@ -80,7 +83,11 @@ def imread(filename, *args, **kwargs):
     >>> mx.img.imread("flower.jpg", to_rgb=0)
     <NDArray 224x224x3 @cpu(0)>
     """
-    return _internal._cvimread(filename, *args, **kwargs)
+    if is_np_array():
+        read_fn = _npi.cvimread
+    else:
+        read_fn = _internal._cvimread
+    return read_fn(filename, *args, **kwargs)
 
 
 def imresize(src, w, h, *args, **kwargs):
@@ -137,7 +144,8 @@ def imresize(src, w, h, *args, **kwargs):
     >>> new_image
     <NDArray 240x360x3 @cpu(0)>
     """
-    return _internal._cvimresize(src, w, h, *args, **kwargs)
+    resize_fn = _npi.cvimresize if is_np_array() else _internal._cvimresize
+    return resize_fn(src, w, h, *args, **kwargs)
 
 
 def imdecode(buf, *args, **kwargs):
@@ -193,8 +201,10 @@ def imdecode(buf, *args, **kwargs):
         if sys.version_info[0] == 3 and not isinstance(buf, (bytes, bytearray, np.ndarray)):
             raise ValueError('buf must be of type bytes, bytearray or numpy.ndarray,'
                              'if you would like to input type str, please convert to bytes')
-        buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        buf = array_fn(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
 
+    imdecode = _npi.cvimdecode
     return _internal._cvimdecode(buf, *args, **kwargs)
 
 
@@ -428,7 +438,7 @@ def fixed_crop(src, x0, y0, w, h, size=None, interp=2):
     NDArray
         An `NDArray` containing the cropped image.
     """
-    out = nd.slice(src, begin=(y0, x0, 0), end=(y0 + h, x0 + w, int(src.shape[2])))
+    out = src[y0:y0+h, x0:x0+w]
     if size is not None and (w, h) != size:
         sizes = (h, w, size[1], size[0])
         out = imresize(out, *size, interp=_get_interp_method(interp, sizes))

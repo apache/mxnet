@@ -21,6 +21,7 @@
 
 from __future__ import absolute_import
 from . import _op
+from . import image
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 from ..context import *  # pylint: disable=wildcard-import
