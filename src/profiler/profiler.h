@@ -1171,12 +1171,6 @@ struct ProfileOperator : public ProfileEvent {
     : ProfileEvent(name)
       , as_task_(name, &domain_)
       , name_(name)
-<<<<<<< HEAD
-      , attributes_(attributes) {
-    // make as_task_ not to add stat to AggregateStats; otherwise we will add twice
-    as_task_.enableAggregateStats(false);
-    SetCategories(domain_.name());
-=======
       , attributes_(attributes)
       , profiling(!IsDeprecatedOperator(name)) {
     if (IsSubOperatorOfCustom(name)) {
@@ -1185,7 +1179,8 @@ struct ProfileOperator : public ProfileEvent {
     } else {
       SetCategories(domain_.name());
     }
->>>>>>> working version
+    // make as_task_ not to add stat to AggregateStats; otherwise we will add twice
+    as_task_.enableAggregateStats(false);
   }
   /*!
    * \brief Start the profiling scope
