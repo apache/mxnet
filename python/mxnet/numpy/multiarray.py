@@ -78,14 +78,13 @@ def tensordot(a, b, axes = 2):
             a_axes_summed = a_axes_summed,
         if _np.isscalar(b_axes_summed):
             b_axes_summed = b_axes_summed,
+        
+        if len(a_axes_summed) != len(b_axes_summed):
+            raise ValueError('Axes length mismatch') 
+
+        return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
     else:
-        a_axes_summed = [i + a.ndim - axes for i in range(axes)]
-        b_axes_summed = [i for i in range(axes)]
-
-    if len(a_axes_summed) != len(b_axes_summed):
-        raise ValueError('Axes length mismatch') 
-
-    return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
+        return _npi.tensordot_inplace(a, b, axes)
 
 
 # This function is copied from ndarray.py since pylint

@@ -18,11 +18,11 @@
  */
 
 /*!
- * \file npi_tensordot_inplace.cu
+ * \file npi_tensordot_inplace_op.cu
  * \brief GPU Implementation of numpy-compatible tensordot
  */
 
-#include "npi_tensordot_op-inl.h"
+#include "npi_tensordot_inplace_op-inl.h"
 namespace mxnet {
 namespace op {
 
@@ -30,10 +30,10 @@ using namespace mxnet;
 using namespace op;
 
 NNVM_REGISTER_OP(tensordot)
-.set_attr<FCompute>("FCompute<gpu>", TensordotOpForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", TensordotInplaceOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_tensordot)
-.set_attr<FCompute>("FCompute<gpu>", TensordotOpBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", TensordotInplaceOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

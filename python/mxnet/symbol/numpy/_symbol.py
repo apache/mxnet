@@ -57,7 +57,6 @@ def tensordot(a, b, axes = 2):
         numpy.array: The tensor dot product of ``a`` and ``b`` along the
         axes specified by ``axes``.
     """
-    
     import collections
 
     if isinstance(axes, collections.abc.Sequence):
@@ -68,27 +67,13 @@ def tensordot(a, b, axes = 2):
             a_axes_summed = a_axes_summed,
         if _np.isscalar(b_axes_summed):
             b_axes_summed = b_axes_summed,
+        
+        if len(a_axes_summed) != len(b_axes_summed):
+            raise ValueError('Axes length mismatch') 
+
+        return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
     else:
-        a_axes_summed = [i + a.ndim - axes for i in range(axes)]
-        b_axes_summed = [i for i in range(axes)]
-
-    if len(a_axes_summed) != len(b_axes_summed):
-        raise ValueError('Axes length mismatch') 
-
-    a_axes_remained = []
-    for i in range(a.ndim):
-        if not (i in a_axes_summed):
-            a_axes_remained.append(i)
-    a_axes = a_axes_remained[:] + a_axes_summed[:]
-    
-    b_axes_remained = []
-    for i in range(b.ndim):
-        if not (i in b_axes_summed):
-            b_axes_remained.append(i)
-    b_axes = b_axes_summed[:] + b_axes_remained[:]
-
-    return _npi.tensordot(a.as_np_ndarray(), b.as_np_ndarray(), a_axes, a_axes_remained, 
-      a_axes_summed, b_axes, b_axes_remained, b_axes_summed)
+        return _npi.tensordot_inplace(a, b, axes)
 
 
 @set_module('mxnet.symbol.numpy')

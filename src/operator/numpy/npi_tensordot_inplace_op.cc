@@ -18,18 +18,18 @@
  */
 
 /*!
- * \file npi_tensordot_op.cc
+ * \file npi_tensordot_inplace_op.cc
  * \brief CPU Implementation of numpy-compatible tensordot
  */
 
-#include "npi_tensordot_op-inl.h"
+#include "npi_tensordot_inplace_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector *in_attrs,
-                             mxnet::ShapeVector *out_attrs) {
+inline bool TensordotInplaceOpShape(const nnvm::NodeAttrs& attrs,
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -42,9 +42,12 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
-  const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& b_axes_summed = param.b_axes_summed;
+  const TensordotInplaceParam& param = nnvm::get<TensordotInplaceParam>(attrs.parsed);  
+  const int& axes = param.axes;    
+
+  Tuple<int> a_axes_summed;
+  Tuple<int> b_axes_summed;  
+  getSummedAxes(a_axes_summed, b_axes_summed, axes, a_shape);
 
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
@@ -85,33 +88,33 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs); 
 }
 
-DMLC_REGISTER_PARAMETER(TensordotParam);                                           
+DMLC_REGISTER_PARAMETER(TensordotInplaceParam);                                           
 
-NNVM_REGISTER_OP(tensordot)
-.add_alias("_npi_tensordot")                                                        
-.describe(R"code(This operators implements the numpy-compatible tensordot function                 
+NNVM_REGISTER_OP(tensordot_inplace)
+.add_alias("_npi_tensordot_inplace")                                                        
+.describe(R"code(This operators implements the numpy-compatible inplace tensordot function                 
 )code" ADD_FILELINE) // description. 
-.set_attr_parser(mxnet::op::ParamParser<TensordotParam>)  
+.set_attr_parser(mxnet::op::ParamParser<TensordotInplaceParam>)  
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "b"};
   })
-.set_attr<mxnet::FInferShape>("FInferShape", TensordotOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TensordotInplaceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", TensordotOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseIn{"_backward_tensordot"})
+.set_attr<FCompute>("FCompute<cpu>", TensordotInplaceOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseIn{"_backward_tensordot_inplace"})
 .add_argument("a", "NDArray-or-Symbol", "First input")
 .add_argument("b", "NDArray-or-Symbol", "Second input")
-.add_arguments(TensordotParam::__FIELDS__()); // abc  
+.add_arguments(TensordotInplaceParam::__FIELDS__()); // abc  
 
-NNVM_REGISTER_OP(_backward_tensordot)
-.set_attr_parser(mxnet::op::ParamParser<TensordotParam>) 
+NNVM_REGISTER_OP(_backward_tensordot_inplace)
+.set_attr_parser(mxnet::op::ParamParser<TensordotInplaceParam>) 
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -119,7 +122,7 @@ NNVM_REGISTER_OP(_backward_tensordot)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", TensordotOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", TensordotInplaceOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

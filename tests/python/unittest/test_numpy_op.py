@@ -27,6 +27,7 @@ from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndar
 from mxnet.test_utils import check_numeric_gradient
 from common import assertRaises, with_seed
 import random
+import collections
 
 @with_seed()
 def test_np_tensordot():
@@ -63,27 +64,42 @@ def test_np_tensordot():
             if not (i in a_axes_summed):
                 a_axes_remained.append(i)
         a_axes = a_axes_remained[:] + a_axes_summed[:]
-        
+        print(a_axes) #TODO
         b_axes_remained = []
         for i in range(b.ndim):
             if not (i in b_axes_summed):
                 b_axes_remained.append(i)
         b_axes = b_axes_summed[:] + b_axes_remained[:]
         
-        ad1 = np.prod([a.shape[i] for i in a_axes_remained]) if len(a_axes_remained) > 0 else 1
-        ad2 = np.prod([a.shape[i] for i in a_axes_summed]) if len(a_axes_summed) > 0 else 1
-        bd1 = np.prod([b.shape[i] for i in b_axes_summed]) if len(b_axes_summed) > 0 else 1
-        bd2 = np.prod([b.shape[i] for i in b_axes_remained]) if len(b_axes_remained) > 0 else 1
+        ad1 = _np.prod([a.shape[i] for i in a_axes_remained]) if len(a_axes_remained) > 0 else 1
+        ad2 = _np.prod([a.shape[i] for i in a_axes_summed]) if len(a_axes_summed) > 0 else 1
+        bd1 = _np.prod([b.shape[i] for i in b_axes_summed]) if len(b_axes_summed) > 0 else 1
+        bd2 = _np.prod([b.shape[i] for i in b_axes_remained]) if len(b_axes_remained) > 0 else 1
         
-        out_dim = tuple([a.shape[i] for i in a_axes_remained] + [b.shape[i] for i in b_axes_remained])
-        out_grad = _np.ones(out_dim)
+        out_grad = _np.ones((ad1, bd2))
 
-        new_a = _np.transpose(a, a_axes).reshape((ad1, ad2)) 
-        new_b = _np.transpose(b, b_axes).reshape((bd1, bd2)) 
-
-        grad_b = _np.dot(new_a.T, out_grad).reshape(b.shape)
-        grad_a = _np.dot(out_grad, new_b.T).reshape(a.shape)
+        new_a = _np.transpose(a, a_axes)
+        new_a_shape = new_a.shape[:]
+        new_a = new_a.reshape((ad1, ad2)) 
+        new_b = _np.transpose(b, b_axes) 
+        new_b_shape = new_b.shape[:]
+        new_b = new_b.reshape((bd1, bd2))
         
+        reverse_a_axes = [0 for i in a_axes]
+        for i in range(len(a_axes)):
+            reverse_a_axes[a_axes[i]] = i
+            
+        reverse_b_axes = [0 for i in b_axes]
+        for i in range(len(b_axes)):
+            reverse_b_axes[b_axes[i]] = i
+
+        grad_b = _np.dot(new_a.T, out_grad).reshape(new_b_shape)
+        grad_b = _np.transpose(grad_b, reverse_b_axes)
+        grad_a = _np.dot(out_grad, new_b.T).reshape(new_a_shape)
+        grad_a = _np.transpose(grad_a, reverse_a_axes)
+        
+        print(grad_a.shape) #todo
+        print(grad_b.shape) #todo
         return [grad_a, grad_b]
 
     tensor_shapes = [
@@ -109,23 +125,31 @@ def test_np_tensordot():
                     test_tensordot.hybridize()
                 a = np.array(_np.random.uniform(-1.0, 1.0, (a_shape)).astype(dtype))
                 b = np.array(_np.random.uniform(-1.0, 1.0, (b_shape)).astype(dtype))
-                # a.attach_grad()
-                # b.attach_grad()
-                # np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
-                # with mx.autograd.record():
-                #     mx_out = test_tensordot(a, b)
-                # assert mx_out.shape == np_out.shape
-                # assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
-                # mx_out.backward()
-                # np_backward = tensordot_backward(a, b, axes)
-                # assert_almost_equal(a.grad.asnumpy(), np_backward[0], atol=1e-3, rtol=1e-5)
-                # assert_almost_equal(b.grad.asnumpy(), np_backward[1], atol=1e-3, rtol=1e-5)
+                a.attach_grad()
+                b.attach_grad()
+                np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
+                print(hybridize) #TODO
+                print(a_shape)#TODO
+                print(dtype)#TODO
+                print(6666666666666666666)#TODO
+                with mx.autograd.record():
+                    mx_out = test_tensordot(a, b)
+                
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
+                print(77777777777777777)#TODO
+                mx_out.backward()
+                print(88888888888888888888)#TODO
+                np_backward = tensordot_backward(a.asnumpy(), b.asnumpy(), axes)
+                print(9999999999999999999)#TODO
+                assert_almost_equal(a.grad.asnumpy(), np_backward[0], atol=1e-3, rtol=1e-5)
+                assert_almost_equal(b.grad.asnumpy(), np_backward[1], atol=1e-3, rtol=1e-5)
                 
                 # Test imperative once again
                 mx_out = np.tensordot(a, b, axes)
                 np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-
+                print(5555555555555555555555)#TODO
 
 @with_seed()
 @npx.use_np_shape
