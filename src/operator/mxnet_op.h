@@ -189,21 +189,21 @@ inline int get_num_threads<cpu>(const int N) {
     {                                                      \
       typedef float DType;                                 \
       LOG(FATAL) << "This operation does not "             \
-                  "support float";                         \
+                    "support float32";                     \
     }                                                      \
     break;                                                 \
   case mshadow::kFloat64:                                  \
     {                                                      \
       typedef double DType;                                \
       LOG(FATAL) << "This operation does not "             \
-                  "support float";                         \
+                    "support float64";                     \
     }                                                      \
     break;                                                 \
   case mshadow::kFloat16:                                  \
     {                                                      \
       typedef mshadow::half::half_t DType;                 \
       LOG(FATAL) << "This operation does not "             \
-                  "support float";                         \
+                    "support float16";                     \
     }                                                      \
     break;                                                 \
   default:                                                 \
