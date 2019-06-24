@@ -411,6 +411,7 @@ def test_custom_operator_profiling_multiple_custom_ops_imperative(seed = None, \
     mx.nd.waitall()
     profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
+    print(debug_str)
     target_dict = json.loads(debug_str)
     '''
     We are calling _plus_scalar within MyAdd1 and MyAdd2 and outside both the custom 
@@ -427,11 +428,12 @@ def test_custom_operator_profiling_multiple_custom_ops_imperative(seed = None, \
         and '_plus_scalar' in target_dict['Time']['operator']
     profiler.set_state('stop')
 
-def test_custom_operator_profiling_multiple_custom_ops_symbolic(seed = None, file_name = None):
-    if file_name is None:
-        'test_custom_operator_profiling_multiple_custom_ops_symbolic.json'
-    test_custom_operator_profiling_multiple_custom_ops_imperative(mode = 'symbolic', \
-            file_name = file_name)
+def test_custom_operator_profiling_multiple_custom_ops_symbolic():
+    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
+            {'MXNET_EXEC_BULK_EXEC_INFERENCE' : 0, \
+            'MXNET_EXEC_BULK_EXEC_TRAIN' : 0}, \
+            'symbolic', \
+            'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
 def test_custom_operator_profiling_naive_engine():
     # run the three tests above using Naive Engine
@@ -442,10 +444,11 @@ def test_custom_operator_profiling_naive_engine():
             {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
             'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
-    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_symbolic, \
+    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
             {'MXNET_ENGINE_TYPE' : "NaiveEngine", \
             'MXNET_EXEC_BULK_EXEC_INFERENCE' : 0, \
             'MXNET_EXEC_BULK_EXEC_TRAIN' : 0}, \
+            'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 if __name__ == '__main__':
