@@ -411,6 +411,8 @@ def test_custom_operator_profiling_multiple_custom_ops_imperative(seed = None, \
     mx.nd.waitall()
     profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
+    print(file_name)
+    print(debug_str)
     target_dict = json.loads(debug_str)
     '''
     We are calling _plus_scalar within MyAdd1 and MyAdd2 and outside both the custom 
