@@ -55,15 +55,6 @@ def tensordot(a, b, axes = 2):
     """
     import collections
 
-    if (a.ndim < 1) or (b.ndim < 1):
-        raise ValueError('An input is zero-dim')
-
-    if a.ndim == 1:
-        a = a.reshape((1, a.shape[0]))
-
-    if b.ndim == 1:
-        b = b.reshape((b.shape[0], 1))
-
     if isinstance(axes, collections.abc.Sequence):
         if len(axes) != 2:
             raise ValueError('Axes must consist of two arrays.')
@@ -79,20 +70,7 @@ def tensordot(a, b, axes = 2):
     if len(a_axes_summed) != len(b_axes_summed):
         raise ValueError('Axes length mismatch') 
 
-    a_axes_remained = []
-    for i in range(a.ndim):
-        if not (i in a_axes_summed):
-            a_axes_remained.append(i)
-    a_axes = a_axes_remained[:] + a_axes_summed[:]
-    
-    b_axes_remained = []
-    for i in range(b.ndim):
-        if not (i in b_axes_summed):
-            b_axes_remained.append(i)
-    b_axes = b_axes_summed[:] + b_axes_remained[:]
-
-    return _npi.tensordot(a.as_np_ndarray(), b.as_np_ndarray(), a_axes, a_axes_remained, 
-      a_axes_summed, b_axes, b_axes_remained, b_axes_summed)
+    return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
 
 @set_module('mxnet.ndarray.numpy')
 def zeros(shape, dtype=_np.float32, **kwargs):

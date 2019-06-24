@@ -69,11 +69,6 @@ def tensordot(a, b, axes = 2):
         axes specified by ``axes``.
     """
     import collections
-    # if (a.ndim < 1) or (b.ndim < 1):
-    #     raise ValueError('An input is zero-dim')
-    
-    # a = a.reshape((1,) + a.shape)
-    # b = b.reshape(b.shape + (1,))
 
     if isinstance(axes, collections.abc.Sequence):
         if len(axes) != 2:
@@ -83,7 +78,6 @@ def tensordot(a, b, axes = 2):
             a_axes_summed = a_axes_summed,
         if _np.isscalar(b_axes_summed):
             b_axes_summed = b_axes_summed,
-        #a_axes_summed = [i + 1 for i in a_axes_summed]
     else:
         a_axes_summed = [i + a.ndim - axes for i in range(axes)]
         b_axes_summed = [i for i in range(axes)]
@@ -91,23 +85,6 @@ def tensordot(a, b, axes = 2):
     if len(a_axes_summed) != len(b_axes_summed):
         raise ValueError('Axes length mismatch') 
 
-    # a_axes_remained = []
-    # for i in range(a.ndim):
-    #     if not (i in a_axes_summed):
-    #         a_axes_remained.append(i)
-    # a_axes = a_axes_remained[:] + a_axes_summed[:]
-    
-    # b_axes_remained = []
-    # for i in range(b.ndim):
-    #     if not (i in b_axes_summed):
-    #         b_axes_remained.append(i)
-    # b_axes = b_axes_summed[:] + b_axes_remained[:]
-    
-    # out = _npi.tensordot(a.as_np_ndarray(), b.as_np_ndarray(), a_axes, a_axes_remained, 
-    #   a_axes_summed, b_axes, b_axes_remained, b_axes_summed)
-    # print(out.shape)
-    # print('777777777777777777777')
-    # return out.reshape(out.shape[1 : out.ndim - 1])
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
 
 

@@ -40,20 +40,19 @@ struct TensordotParam : public dmlc::Parameter<TensordotParam> {
   }
 };
 
-/** 
- * recovers 0 size shapes.
-*/
-inline void recover0Size(TShape* shape) {
-  for (auto& i: *shape) {
-    if (i == -1) {
-      i = 0;
-    }
-  }
-}
-
-inline void getMatrixDimensions(int& ad1, int& ad2, int& bd1, int& bd2, const mxnet::Tuple<int>& a_axes_remained, 
-  const mxnet::Tuple<int>& a_axes_summed, const mxnet::Tuple<int>& b_axes_remained, 
-  const mxnet::Tuple<int>& b_axes_summed, const mxnet::TShape& a_shape, const mxnet::TShape& b_shape) {
+/**
+ * Gets matrix dimensions of a and b after transpose and reshape. 
+ */
+inline void getMatrixDimensions(int& ad1, 
+  int& ad2, 
+  int& bd1, 
+  int& bd2, 
+  const mxnet::Tuple<int>& a_axes_remained, 
+  const mxnet::Tuple<int>& a_axes_summed, 
+  const mxnet::Tuple<int>& b_axes_remained, 
+  const mxnet::Tuple<int>& b_axes_summed, 
+  const mxnet::TShape& a_shape, 
+  const mxnet::TShape& b_shape) {
   ad1 = 1;
   ad2 = 1;
   bd1 = 1;
@@ -73,28 +72,9 @@ inline void getMatrixDimensions(int& ad1, int& ad2, int& bd1, int& bd2, const mx
   } 
 }
 
-// inline void leftPadding1(mxnet::TShape& shape, Tuple<int>& axes) {
-//   std::vector<int> newShape;
-//   newShape.push_back(1);
-//   for (auto& i : shape) {
-//     newShape.push_back(i);
-//   }
-//   shape = mxnet::TShape(newShape.begin(), newShape.end());
-
-//   for (auto& i : axes) {
-//     i++;
-//   }
-// }
-
-// inline void rightPadding1(mxnet::TShape& shape) {
-//   std::vector<int> newShape;
-//   for (auto& i : shape) {
-//     newShape.push_back(i);
-//   }
-//   newShape.push_back(1);
-//   shape = mxnet::TShape(newShape.begin(), newShape.end());
-// }
-
+/**
+ * gets new axes of a and b after transpose and reshape.
+ */
 inline void getReorderedAxes(const mxnet::Tuple<int>& a_axes_summed, 
   mxnet::Tuple<int>& a_axes_remained, 
   mxnet::Tuple<int>& a_axes, 
@@ -139,6 +119,9 @@ inline void getReorderedAxes(const mxnet::Tuple<int>& a_axes_summed,
     b_axes = mxnet::Tuple<int>(b_axes_vector);
   }
 
+/**
+ * gets shapes of a and b after transpose and reshape.
+ */
 inline mxnet::TShape getReorderedShape(const mxnet::TShape& shape, const mxnet::Tuple<int>& axes) {
   mxnet::TShape newShape(shape);
   for (int i = 0; i < axes.ndim(); i++) {
@@ -147,6 +130,9 @@ inline mxnet::TShape getReorderedShape(const mxnet::TShape& shape, const mxnet::
   return newShape;
 }
 
+/**
+ * gets matrix dot.
+ */
 template<typename xpu>
 inline void matrixDot (const OpContext& ctx,
                    const TBlob& a,
@@ -169,21 +155,25 @@ inline void matrixDot (const OpContext& ctx,
   });
 
 }
-// forward function. gets f(x) by multi-thread.
-template<typename xpu>  // cpu and gpu                                                
-void TensordotOpForward(const nnvm::NodeAttrs& attrs, // a,b,c                    
-                        const OpContext& ctx,  // calculation orders in GPU                               
-                        const std::vector<TBlob>& inputs, // x                    
-                        const std::vector<OpReqType>& req, // write, add, or null. How do new values deal with old values. Mostly write, sometimes add and null for backward function.                   
-                        const std::vector<TBlob>& outputs) { // y                  
 
-  CHECK_EQ(inputs.size(), 2U);  // assert # of input = 1 (x)                                               
-  CHECK_EQ(outputs.size(), 1U); // assert # of output = 1 (y)                                              
-  CHECK_EQ(req.size(), 1U);     // same as # of output     
-    
+/**
+ * forward function
+ */
+template<typename xpu>  // cpu and gpu                                                
+void TensordotOpForward(const nnvm::NodeAttrs& attrs,                     
+                        const OpContext& ctx,                                
+                        const std::vector<TBlob>& inputs,                 
+                        const std::vector<OpReqType>& req, 
+                        const std::vector<TBlob>& outputs) {                   
+
+  CHECK_EQ(inputs.size(), 2U);                                                 
+  CHECK_EQ(outputs.size(), 1U);                                               
+  CHECK_EQ(req.size(), 1U);         
+  
   if (req[0] == kNullOp) {
     return;
   }
+
   const TBlob& a = inputs[0];
   const TBlob& b = inputs[1];
   const TBlob& out = outputs[0];
@@ -196,8 +186,8 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs, // a,b,c
     return;
   }
 
-  mxnet::TShape a_shape = a.shape_;
-  mxnet::TShape b_shape = b.shape_;
+  const mxnet::TShape& a_shape = a.shape_;
+  const mxnet::TShape& b_shape = b.shape_;
 
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();  
   CHECK_EQ(out.type_flag_, a.type_flag_)
@@ -210,10 +200,12 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs, // a,b,c
     
                                                               
   const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
-  Tuple<int> a_axes_summed = param.a_axes_summed;
-  Tuple<int> b_axes_summed = param.b_axes_summed;  
- // leftPadding1(a_shape, a_axes_summed);
- // rightPadding1(b_shape);
+  const Tuple<int> a_axes_summed& = param.a_axes_summed;
+  const Tuple<int> b_axes_summed& = param.b_axes_summed;  
+
+  if (a_axes_summed.ndim() != b_axes_summed.ndim()) {
+    return;
+  }
 
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
@@ -222,10 +214,7 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs, // a,b,c
   getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
     b_axes, a_shape, b_shape);
 
-  if (a_axes_summed.ndim() != b_axes_summed.ndim()) {
-    return;
-  }
-
+  // get output shape
   std::vector<int> out_dim;
   for (int i = 0; i < a_axes_remained.ndim(); i++) {
     out_dim.push_back(a_shape[a_axes_remained[i]]);
@@ -252,26 +241,22 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs, // a,b,c
     }  
 
     Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
-      (Shape1(a.Size() + b.Size()), s); // TODO
+      (Shape1(a.Size() + b.Size()), s); 
     DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
     DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
     TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask); 
     TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask); 
   
-    std::cout << a.shape_ << std::endl; //TODO
-    std::cout << a_res.shape_ << std::endl; //TODO
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, a_res, mxnet::TShape(a_axes.begin(), a_axes.end()));     
-//    a_res.shape_ = mxnet::TShape({ad1, ad2});
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res, mxnet::TShape(b_axes.begin(), b_axes.end())); 
-//    b_res.shape_ = mxnet::TShape({bd1, bd2});
-    std::cout << "\n\n" << ad1 << ' ' << bd2 << ' ' << a_res.shape_ << ' ' << b_res.shape_ << ' ' 
-      << "000000000000000000000000000000000000\n\n" << std::endl; //TODO
-    matrixDot<xpu>(ctx, a_res, b_res, out, req[0], ad1, ad2, bd2); 
-    std::cout << "\n\n11111111111111111111111111111111111\n\n" << std::endl; //TODO
-    std::cout << "\n\n2222222222222222222222222222222222222\n\n" << std::endl; //TODO                         
+
+    matrixDot<xpu>(ctx, a_res, b_res, out, req[0], ad1, ad2, bd2);                         
   });                                                                                                                                               
 }     
 
+/**
+ * gets shapes for inverse transpose.
+ */
 inline mxnet::TShape getReverseShape(const mxnet::Tuple<int>& shape) {
   mxnet::TShape shape2(shape.begin(), shape.end());
   for (int i = 0; i < shape.ndim(); i++) {
@@ -280,8 +265,9 @@ inline mxnet::TShape getReverseShape(const mxnet::Tuple<int>& shape) {
   return shape2;
 }
 
-
-// backward function. gets dL/dx = dL/dy * dy/dx.
+/**
+ * backward function.
+ */
 template<typename xpu>                                                       
 void TensordotOpBackward(const nnvm::NodeAttrs& attrs,                       
                          const OpContext& ctx,                               
@@ -289,9 +275,10 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
                          const std::vector<OpReqType>& req,                  
                          const std::vector<TBlob>& outputs) { 
 
-  CHECK_EQ(inputs.size(), 3U); // input = [dy/dx, y]. check # of inputs                                              
-  CHECK_EQ(outputs.size(), 2U); // check # of outputs                                             
-  CHECK_EQ(req.size(), 2U);   // same as output                                               
+  CHECK_EQ(inputs.size(), 3U);                                              
+  CHECK_EQ(outputs.size(), 2U);                                             
+  CHECK_EQ(req.size(), 2U);   
+
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                           
   const TBlob& out_grad = inputs[0];                                         
   const TBlob& a = inputs[1];     
@@ -299,14 +286,12 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
   const TBlob& grad_a = outputs[0];
   const TBlob& grad_b = outputs[1];    
   
-  mxnet::TShape a_shape = a.shape_;
-  mxnet::TShape b_shape = b.shape_;
+  const mxnet::TShape& a_shape = a.shape_;
+  const mxnet::TShape& b_shape = b.shape_;
 
   const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
-  Tuple<int> a_axes_summed = param.a_axes_summed;
-  Tuple<int> b_axes_summed = param.b_axes_summed;  
-  //leftPadding1(a_shape, a_axes_summed);
-  //rightPadding1(b_shape);
+  const Tuple<int> a_axes_summed& = param.a_axes_summed;
+  const Tuple<int> b_axes_summed& = param.b_axes_summed;  
 
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
