@@ -61,6 +61,8 @@ Then you can run training on a subset of examples through the repl using:
 (train-convnet {:devs [(context/cpu 0)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :fastText})
 ```
 
+Expect a validation accuracy of `~0.67` with the above parameters.
+
 ## Usage with word2vec
 
 You can also use word2vec embeddings in order to train the text classification model.
