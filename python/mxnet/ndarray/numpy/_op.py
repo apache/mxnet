@@ -81,7 +81,7 @@ def ones(shape, dtype=None, **kwargs):
     ctx : Context, optional
         An optional device context (default is the current default context).
 
-    Returns
+    Returns:q
     -------
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
@@ -603,7 +603,8 @@ def split(ary, indices_or_sections, axis=0):
             raise ValueError('array split does not result in an equal division')
         section_size = int(axis_size / sections)
         indices = [i * section_size for i in range(sections)]
-    elif isinstance(indices_or_sections, tuple):
+    elif isinstance(indices_or_sections, tuple) or isinstance(indices_or_sections, set) \
+                                                or isinstance(indices_or_sections, list):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
