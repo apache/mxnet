@@ -83,6 +83,8 @@ class MNIST(dataset._DownloadedDataset):
         with gzip.open(label_file, 'rb') as fin:
             struct.unpack(">II", fin.read(8))
             label = np.frombuffer(fin.read(), dtype=np.uint8).astype(np.int32)
+            if is_np_array():
+                label = _mx_np.array(label, dtype=label.dtype)
 
         with gzip.open(data_file, 'rb') as fin:
             struct.unpack(">IIII", fin.read(16))

@@ -49,9 +49,11 @@ def _verify_np_symbol(op_name, func_name, sym):
         raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
                         'This is a numpy operator which can only accept '
                         'MXNet numpy ndarrays, while received a legacy ndarray. '
-                        'Please call `as_np_ndarray()` upon the legacy ndarray to '
-                        'convert it to an MXNet numpy ndarray, and then feed the converted '
-                        'array to this operator.'
+                        'Please ensure that you have activated numpy semantics by calling '
+                        '`npx.set_np()` in your code. If you still see this error with numpy '
+                        'semantics activated, please call `as_np_ndarray()` upon the legacy '
+                        'ndarray to convert it to an MXNet numpy ndarray, and then feed the '
+                        'converted array to this operator.'
                         .format(op_name, func_name))
 
 

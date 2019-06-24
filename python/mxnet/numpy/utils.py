@@ -15,19 +15,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""MXNet NumPy module."""
+"""Util functions for the numpy module."""
 
-from __future__ import division, absolute_import, print_function
 
-from . import random
-from . import linalg
-from .multiarray import *  # pylint: disable=wildcard-import
-from . import _op
-from . import _register
-from ._op import *  # pylint: disable=wildcard-import
-from .utils import *  # pylint: disable=wildcard-import
-from .function_base import *  # pylint: disable=wildcard-import
-from .stride_tricks import *  # pylint: disable=wildcard-import
-from .io import *  # pylint: disable=wildcard-import
+from __future__ import absolute_import
 
-__all__ = []
+import numpy as onp
+
+__all__ = ['float16', 'float32', 'float64', 'uint8', 'int32', 'int8', 'int64', 'pi']
+
+float16 = onp.float16
+float32 = onp.float32
+float64 = onp.float64
+uint8 = onp.uint8
+int32 = onp.int32
+int8 = onp.int8
+int64 = onp.int64
+
+pi = onp.pi

@@ -109,3 +109,67 @@ def _np_repeat(a, repeats, axis=None):
         the given axis.
     """
     pass
+
+
+def _npi_multinomial(a):
+    """Draw samples from a multinomial distribution.
+
+    The multinomial distribution is a multivariate generalisation of the binomial distribution.
+    Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
+    where the outcome can be 1 through 6. Each sample drawn from the distribution represents n such experiments.
+    Its values, ``X_i = [X_0, X_1, ..., X_p]``, represent the number of times the outcome was ``i``.
+
+
+    Parameters
+    ----------
+    n : int
+        Number of experiments.
+    pvals : sequence of floats, length p
+        Probabilities of each of the p different outcomes. These should sum to 1
+        (however, the last element is always assumed to account for the remaining
+        probability, as long as ``sum(pvals[:-1]) <= 1)``.
+    size : int or tuple of ints, optional
+        Output shape. If the given shape is, e.g., ``(m, n, k)``, then ``m * n * k`` sam-
+        ples are drawn. Default is None, in which case a single value is returned.
+
+    Returns
+    -------
+    out : ndarray
+        The drawn samples, of shape size, if that was provided. If not, the shape is ``(N,)``.
+        In other words, each entry ``out[i,j,...,:]`` is an N-dimensional value drawn from the distribution.
+    """
+    pass
+
+
+def _np_cumsum(a, axis=None, dtype=None, out=None):
+    """
+    Return the cumulative sum of the elements along a given axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    axis : int, optional
+        Axis along which the cumulative sum is computed. The default
+        (None) is to compute the cumsum over the flattened array.
+    dtype : dtype, optional
+        Type of the returned array and of the accumulator in which the
+        elements are summed.  If `dtype` is not specified, it defaults
+        to the dtype of `a`, unless `a` has an integer dtype with a
+        precision less than that of the default platform integer.  In
+        that case, the default platform integer is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output
+        but the type will be cast if necessary. See `doc.ufuncs`
+        (Section "Output arguments") for more details.
+
+    Returns
+    -------
+    cumsum_along_axis : ndarray.
+        A new array holding the result is returned unless `out` is
+        specified, in which case a reference to `out` is returned. The
+        result has the same size as `a`, and the same shape as `a` if
+        `axis` is not None or `a` is a 1-d array.
+    """
+    pass

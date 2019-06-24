@@ -64,6 +64,24 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
   }
 };
 
+struct NumpyMaxParam : public dmlc::Parameter<NumpyMaxParam> {
+  dmlc::optional<mxnet::Tuple<int>> axis;
+  bool keepdims;
+  dmlc::optional<double> initial;
+  DMLC_DECLARE_PARAMETER(NumpyMaxParam) {
+    DMLC_DECLARE_FIELD(axis)
+      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .describe("Axis or axes along which a sum is performed. The default, axis=None, will sum "
+                "all of the elements of the input array. If axis is negative it counts from the "
+                "last to the first axis.");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false)
+      .describe("If this is set to `True`, the reduced axes are left "
+                "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
+      .describe("Starting value for the sum.");
+  }
+};
+
 inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
                                        const dmlc::optional<mxnet::Tuple<int>>& axis,
                                        bool keepdims) {
@@ -152,6 +170,39 @@ inline bool NumpyReduceAxesShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
+inline bool NumpyMaxShape(const nnvm::NodeAttrs& attrs,
+                                 std::vector<TShape> *in_attrs,
+                                 std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if (!shape_is_known(in_attrs->at(0))) {
+    return false;
+  }
+  const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
+  // check the case where the reduction axis should not be zero
+  bool is_all_reducded_axes_not_zero = true;
+  const TShape& ishape = (*in_attrs)[0];
+  if (param.axis.has_value()) {
+    const mxnet::Tuple<int>& axes = param.axis.value();
+    for (int i = 0; i < axes.ndim(); ++i) {
+      if (ishape[axes[i]] == 0) {
+        is_all_reducded_axes_not_zero = false;
+        break;
+      }
+    }
+  } else {
+    if (ishape.Size() == 0) {
+      // global reduction should excuted only when input have size more than 0
+      is_all_reducded_axes_not_zero = false;
+    }
+  }
+  CHECK(is_all_reducded_axes_not_zero)
+    << "zero-size array to reduction operation maximum which has no identity";
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     NumpyReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims));
+  return shape_is_known(out_attrs->at(0));
+}
+
 template<bool safe_acc_hint = false>
 inline bool NeedSafeAcc(int itype, int otype) {
   bool rule = (itype != otype) || (itype != mshadow::kFloat32 && itype != mshadow::kFloat64);
@@ -187,6 +238,29 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
+template<typename xpu, typename reducer, typename OP = op::mshadow_op::identity>
+void NumpyMaxCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
+  if (param.initial.has_value()) {
+    LOG(FATAL) << "initial is not supported yet";
+  }
+  if (inputs[0].shape_.Size() == 0U || outputs[0].shape_.Size() == 0U) return;  // zero-size tensor
+  if (param.axis.has_value() && param.axis.value().ndim() == 0) {
+    UnaryOp::IdentityCompute<xpu>(attrs, ctx, inputs, req, outputs);
+  }
+  TShape small;
+  if (param.keepdims) {
+    small = outputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(inputs[0].shape_, param.axis, true);
+  }
+  ReduceAxesComputeImpl<xpu, reducer, false, false, OP>(ctx, inputs, req, outputs, small);
+}
+
 template<typename xpu, bool normalize = false>
 inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                            const OpContext& ctx,
@@ -210,6 +284,83 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 1, IType> igrad = outputs[0].FlatTo1D<xpu, IType>(s);
       igrad /= scalar<IType>(outputs[0].Size()/inputs[0].Size());
     });
+  }
+}
+
+template<typename xpu, typename OP>
+void NumpyMaxBackward(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const NumpyMaxParam& param = nnvm::get<NumpyMaxParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(outputs[0].shape_, param.axis, true);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, OP, false>(ctx, small, inputs, req, outputs);
+}
+
+template<typename xpu, typename OP, bool normalize = false>
+void NumpyReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
+                                     const OpContext& ctx,
+                                     const std::vector<TBlob>& inputs,
+                                     const std::vector<OpReqType>& req,
+                                     const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+  TShape small;
+  if (param.keepdims) {
+    small = inputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(outputs[0].shape_, param.axis, true);
+  }
+  ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
+}
+
+template<typename xpu>
+void NumpyBroadcastToForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
+  if (outputs[0].shape_.Size() == 0U) return;  // zero-size tensor
+  TShape expanded_ishape(outputs[0].shape_.ndim(), 1);
+  const TShape& ishape = inputs[0].shape_;
+  CHECK_LE(ishape.ndim(), expanded_ishape.ndim()) << "output ndim cannot be less than input ndim";
+  const int ndim_delta = expanded_ishape.ndim() - ishape.ndim();
+  for (int i = 0; i < ishape.ndim(); ++i) {
+    expanded_ishape[i + ndim_delta] = ishape[i];
+  }
+  BroadcastComputeImpl<xpu>(attrs, ctx, {inputs[0].reshape(expanded_ishape)},
+                            req, outputs, expanded_ishape);
+}
+
+template<typename xpu>
+void NumpyBroadcastToBackward(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
+  TShape expanded_igrad_shape(inputs[0].shape_.ndim(), 1);
+  const TShape& igrad_shape = outputs[0].shape_;
+  CHECK_LE(igrad_shape.ndim(), expanded_igrad_shape.ndim())
+      << "output ndim cannot be less than input ndim";
+  const int ndim_delta = expanded_igrad_shape.ndim() - igrad_shape.ndim();
+  for (int i = 0; i < igrad_shape.ndim(); ++i) {
+    expanded_igrad_shape[i + ndim_delta] = igrad_shape[i];
+  }
+  if (NeedSafeAcc<true>(inputs[0].type_flag_, outputs[0].type_flag_)) {
+    ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
+        ctx, inputs, req, {outputs[0].reshape(expanded_igrad_shape)}, expanded_igrad_shape);
+  } else {
+    ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(
+        ctx, inputs, req, {outputs[0].reshape(expanded_igrad_shape)}, expanded_igrad_shape);
   }
 }
 

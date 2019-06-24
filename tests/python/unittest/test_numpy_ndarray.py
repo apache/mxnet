@@ -18,12 +18,13 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from __future__ import division
+import os
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
-from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, assert_exception
-from common import with_seed
+from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, assert_exception
+from common import with_seed, TemporaryDirectory
 
 
 @with_seed()
@@ -623,6 +624,94 @@ def test_np_ndarray_indexing():
             # When index = (), this is same a[()] = b is equivalent to b.copyto(a)
             # which should have no problem to do autograd
             test_setitem_autograd(np_array, index)
+
+
+@with_seed()
+@npx.use_np
+def test_np_save_load_ndarrays():
+    shapes = [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0), (4, 5, 6), (0, 0, 0)]
+    array_list = [_np.random.randint(0, 10, size=shape) for shape in shapes]
+    array_list = [np.array(arr, dtype=arr.dtype) for arr in array_list]
+    # test save/load single ndarray
+    for i, arr in enumerate(array_list):
+        with TemporaryDirectory() as work_dir:
+            fname = os.path.join(work_dir, 'dataset.npy')
+            npx.save(fname, arr)
+            arr_loaded = npx.load(fname)
+            assert isinstance(arr_loaded, list)
+            assert len(arr_loaded) == 1
+            assert _np.array_equal(arr_loaded[0].asnumpy(), array_list[i].asnumpy())
+
+    # test save/load a list of ndarrays
+    with TemporaryDirectory() as work_dir:
+        fname = os.path.join(work_dir, 'dataset.npy')
+        npx.save(fname, array_list)
+        array_list_loaded = mx.nd.load(fname)
+        assert isinstance(arr_loaded, list)
+        assert len(array_list) == len(array_list_loaded)
+        assert all(isinstance(arr, np.ndarray) for arr in arr_loaded)
+        for a1, a2 in zip(array_list, array_list_loaded):
+            assert _np.array_equal(a1.asnumpy(), a2.asnumpy())
+
+    # test save/load a dict of str->ndarray
+    arr_dict = {}
+    keys = [str(i) for i in range(len(array_list))]
+    for k, v in zip(keys, array_list):
+        arr_dict[k] = v
+    with TemporaryDirectory() as work_dir:
+        fname = os.path.join(work_dir, 'dataset.npy')
+        npx.save(fname, arr_dict)
+        arr_dict_loaded = npx.load(fname)
+        assert isinstance(arr_dict_loaded, dict)
+        assert len(arr_dict_loaded) == len(arr_dict)
+        for k, v in arr_dict_loaded.items():
+            assert k in arr_dict
+            assert _np.array_equal(v.asnumpy(), arr_dict[k].asnumpy())
+
+
+@retry(5)
+@with_seed()
+@npx.use_np_shape
+def test_np_multinomial():
+    pvals_list = [[0.0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0.0]]
+    sizes = [None, (), (3,), (2, 5, 7), (4, 9)]
+    experiements = 10000
+    for pvals_type in [list, _np.ndarray]:
+        for have_size in [False, True]:
+            for pvals in pvals_list:
+                if have_size:
+                    for size in sizes:
+                        if pvals_type == mx.nd.NDArray:
+                            pvals = mx.nd.array(pvals).as_np_ndarray()
+                        elif pvals_type == _np.ndarray:
+                            pvals = _np.array(pvals)
+                        freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy() / _np.float32(experiements)
+                        # for those cases that didn't need reshape
+                        if size in [None, ()]:
+                            mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
+                        else:
+                            # check the shape
+                            assert freq.shape == size + (len(pvals),), 'freq.shape={}, size + (len(pvals))={}'.format(freq.shape, size + (len(pvals)))
+                            freq = freq.reshape((-1, len(pvals)))
+                            # check the value for each row
+                            for i in range(freq.shape[0]):
+                                mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
+                else:
+                    freq = mx.np.random.multinomial(experiements, pvals).asnumpy() / _np.float32(experiements)
+                    mx.test_utils.assert_almost_equal(freq, pvals, rtol=0.20, atol=1e-1)
+    # check the zero dimension
+    sizes = [(0), (0, 2), (4, 0, 2), (3, 0, 1, 2, 0)]
+    for pvals in pvals_list:
+        for size in sizes:
+            freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
+            assert freq.size == 0
+    # check [] as pvals
+    for pvals in [[], ()]:
+        freq = mx.np.random.multinomial(experiements, pvals).asnumpy()
+        assert freq.size == 0
+        for size in sizes:
+            freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
+            assert freq.size == 0
 
 
 if __name__ == '__main__':
