@@ -33,7 +33,7 @@
   [embedding-size]
   (format "data/glove/glove.6B.%dd.txt" embedding-size))
 
-(def fasttext-file-path "data/fastText/wiki-news-300d-100K.vec")
+(def fasttext-file-path "data/fastText/wiki.simple.vec")
 
 (defn r-string
   "Reads a string from the given DataInputStream `dis` until a space or newline is reached."

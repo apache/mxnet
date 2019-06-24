@@ -52,12 +52,9 @@ and then run
 
 Using fastText instead of glove is fairly straightforward, as the pretrained embedding format is very similar.
 
-Download the wiki news 300d 1M pre-trained word vectors from the fastText [site](https://fasttext.cc/docs/en/english-vectors.html).
-
-Unzip the word vectors and place them in the `data/fastText` directory.
-
-To prevent OOM errors, we will not use all the trained embeddings; instead we'll take
-the first 10%: `head -n 100000 wiki-news-300d-1M.vec > wiki-news-300d-100K.vec`.
+Download the 'Simple English' pretrained wiki word vectors (text) from the fastText
+[site](https://fasttext.cc/docs/en/pretrained-vectors.html) and place them in the
+`data/fastText` directory.
 
 Then you can run training on a subset of examples through the repl using:
 ```
