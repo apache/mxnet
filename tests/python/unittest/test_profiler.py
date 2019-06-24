@@ -411,8 +411,6 @@ def test_custom_operator_profiling_multiple_custom_ops_imperative(seed = None, \
     mx.nd.waitall()
     profiler.dump(False)
     debug_str = profiler.dumps(format = 'json')
-    print(file_name)
-    print(debug_str)
     target_dict = json.loads(debug_str)
     '''
     We are calling _plus_scalar within MyAdd1 and MyAdd2 and outside both the custom 
@@ -445,7 +443,9 @@ def test_custom_operator_profiling_naive_engine():
             'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
     run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_symbolic, \
-            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine", \
+            'MXNET_EXEC_BULK_EXEC_INFERENCE' : 0, \
+            'MXNET_EXEC_BULK_EXEC_TRAIN' : 0}, \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 if __name__ == '__main__':
