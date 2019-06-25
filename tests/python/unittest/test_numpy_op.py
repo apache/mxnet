@@ -998,7 +998,6 @@ def test_np_vsplit():
         indices = tuple(indices)
         return indices
 
-
     shapes = [
         (2, 1, 2, 9),
         (4, 3, 3),

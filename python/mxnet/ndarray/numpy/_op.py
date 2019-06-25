@@ -28,7 +28,7 @@ from ..ndarray import NDArray
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
+           'clip', 'split', 'vsplit', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'vsplit']
 
 
@@ -81,7 +81,7 @@ def ones(shape, dtype=None, **kwargs):
     ctx : Context, optional
         An optional device context (default is the current default context).
 
-    Returns:q
+    Returns
     -------
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
@@ -603,8 +603,7 @@ def split(ary, indices_or_sections, axis=0):
             raise ValueError('array split does not result in an equal division')
         section_size = int(axis_size / sections)
         indices = [i * section_size for i in range(sections)]
-    elif isinstance(indices_or_sections, tuple) or isinstance(indices_or_sections, set) \
-                                                or isinstance(indices_or_sections, list):
+    elif isinstance(indices_or_sections, (list, set, tuple)):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')

@@ -1283,8 +1283,7 @@ def split(ary, indices_or_sections, axis=0):
     sections = 0
     if isinstance(indices_or_sections, int):
         sections = indices_or_sections
-    elif isinstance(indices_or_sections, tuple) or isinstance(indices_or_sections, set) \
-                                                or isinstance(indices_or_sections, list):
+    elif isinstance(indices_or_sections, (list, set, tuple)):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
@@ -1546,7 +1545,7 @@ def log10(x, out=None, **kwargs):
     -------
     y : _Symbol or scalar
         The logarithm to the base 10 of `x`, element-wise. NaNs are
-turned where x is negative. This is a scalar if `x` is a scalar.
+        returned where x is negative. This is a scalar if `x` is a scalar.
 
     Notes
     ----
