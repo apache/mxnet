@@ -485,6 +485,50 @@ def test_np_unary_funcs():
             ref_grad, low, high = func_data
             check_unary_func(func, ref_grad, shape, low, high)
 
+@with_seed()
+@npx.use_np_shape
+def test_np_dsplit():
+    @npx.use_np_shape
+    class TestDSplit(HybridBlock):
+        def __init__(self, indices_or_sections):
+            super(TestDSplit, self).__init__()
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a):
+            return F.np.dsplit(a, self._indices_or_sections)
+
+    for hybridize in [True, False]:
+        for shape_x, i_or_s in [[(1,), (1,)],  # single elements
+                                [(4, 5), (4, 5)],  # normal case
+                                [(3, 2), (3, 2)],  # tall matrices
+                                ((), ()),  # scalar only
+                                [(3, 0, 2), (3, 0, 2)],  # zero-dim
+                                ((3, 4, 5), (4, 5)),
+                                # trailing dim broadcasting
+                                ((3, 4, 5), ()),  # scalar broadcasting
+                                [(4, 3), (4, 1)],  # single broadcasting
+                                ((3, 4, 5), (3, 1, 5))
+                                # single broadcasting in the middle
+                                ]:
+            test_dsplit = TestDSplit(i_or_s)
+            if hybridize:
+                test_dsplit.hybridize()
+
+            x = rand_ndarray(shape_x, dtype=_np.int32).as_np_ndarray()
+            x.attach_grad()
+
+            np_out = _np.dsplit(x.asnumpy(), i_or_s)
+            with mx.autograd.record():
+                mx_out = test_dsplit(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+
+            # Test imperative once again
+            mx_out = np.dsplit(x)
+            np_out = _np.dsplit(x.asnumpy(), i_or_s)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
 
 @with_seed()
 @npx.use_np_shape
