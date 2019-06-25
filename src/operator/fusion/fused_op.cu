@@ -319,7 +319,9 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   this->code_ = code;
 
   // Add boilerplate and type information
-  LOG(INFO) << code_;
+  if (dmlc::GetEnv("MXNET_FUSION_VERBOSE", false) {
+    LOG(INFO) << code_;
+  }
   std::string kernel_params = "";
   std::string tensor_params = "";
   nnvm::Symbol sym;
