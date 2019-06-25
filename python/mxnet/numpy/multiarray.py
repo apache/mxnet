@@ -1343,26 +1343,65 @@ def zeros(shape, dtype=_np.float32, **kwargs):
 
 @set_module('mxnet.numpy')
 def ones(shape, dtype=None, **kwargs):
-    """Return a new array of given shape and type, filled with zeros.
-    This function currently only supports storing multi-dimensional data
-    in row-major (C-style).
+    """
+    ones(shape, dtype=None, order='C', ctx=None)
+
+    Return a new array of given shape and type, filled with ones.
 
     Parameters
     ----------
     shape : int or tuple of int
-        The shape of the empty array.
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
     dtype : str or numpy.dtype, optional
-        An optional value type. Default is `numpy.float32`. Note that this
-        behavior is different from NumPy's `ones` function where `float64`
-        is the default value, because `float32` is considered as the default
-        data type in deep learning.
+        The desired data-type for the array, e.g., `numpy.int8`.  Default is
+        `numpy.float64`.
+    order : {'C'}, optional, default: C
+        Store multi-dimensional data in row-major
+        (C-style) in memory. Note that the column-major is not supported yet.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
     Returns
     -------
     out : ndarray
-        Array of zeros with the given shape, dtype, and ctx.
+
+
+    See Also
+    --------
+    ones_like : Return an array of ones with shape and type of input.
+    empty : Return a new uninitialized array.
+    zeros : Return a new array setting values to zero.
+    full : Return a new array of given shape filled with value.
+
+
+    Examples
+    --------
+    >>> np.ones(5)
+    array([1., 1., 1., 1., 1.])
+
+    >>> np.ones((5,), dtype=int)
+    array([1, 1, 1, 1, 1])
+
+    >>> np.ones((2, 1))
+    array([[1.],
+           [1.]])
+
+    >>> s = (2,2)
+    >>> np.ones(s)
+    array([[1.,  1.],
+           [1.,  1.]])
+
+    Notes
+    -----
+
+    This function differs to the original `numpy.ones
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html>`_ in
+    the following aspects:
+
+    - The default value type is `float32` instead of `float64` in numpy.
+    - Only row-major is supported.
+    - There is an additional `ctx` argument to specify the device, e.g. the i-th
+      GPU.
     """
     return _mx_nd_np.ones(shape, dtype, **kwargs)
 
