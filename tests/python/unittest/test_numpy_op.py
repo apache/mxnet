@@ -356,7 +356,7 @@ def test_npx_sigmoid():
 def test_np_reshape():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
-    ret = data.reshape(())
+    ret = data.reshape(shape=())
     assert type(ret) == mx.sym.np._Symbol
 
     data = np.ones((1, 1, 1))
@@ -365,8 +365,6 @@ def test_np_reshape():
     ret = np.reshape(ret, (1, 1, 1, 1))
     assert ret.shape == (1, 1, 1, 1)
     assert type(ret) == np.ndarray
-    ret2 = ret.reshape(1, 1, -1)
-    assert ret2.shape == (1, 1, 1)
 
 
 @with_seed()
@@ -981,48 +979,6 @@ def test_np_split():
 
 @with_seed()
 @npx.use_np_shape
-def test_np_cumsum():
-    def np_cumsum_backward(ograd, axis=None, dtype=None):
-        return _np.flip(_np.cumsum(_np.flip(ograd, axis=axis), axis=axis, dtype=dtype), axis=axis)
-
-    @npx.use_np_shape
-    class TestCumsum(HybridBlock):
-        def __init__(self, axis=None, dtype=None):
-            super(TestCumsum, self).__init__()
-            self._axis = axis
-            self._dtype = dtype
-
-        def hybrid_forward(self, F, a):
-            return F.np.cumsum(a, axis=self._axis, dtype=self._dtype)
-
-    shapes = [(2, 3, 4), (2, 0, 3), ()]
-    for hybridize in [True, False]:
-        for shape in shapes:
-            for axis in [None] + [i for i in range(0, len(shape))]:
-                for otype in [None, _np.float32, _np.float64]:
-                    test_cumsum = TestCumsum(axis=axis, dtype=otype)
-                    if hybridize:
-                        test_cumsum.hybridize()
-                    for itype in [_np.float16, _np.float32, _np.float64]:
-                        x = rand_ndarray(shape).astype(itype).as_np_ndarray()
-                        x.attach_grad()
-                        np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
-                        with mx.autograd.record():
-                            mx_out = test_cumsum(x)
-                        assert mx_out.shape == np_out.shape
-                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-                        mx_out.backward()
-                        np_backward = np_cumsum_backward(_np.ones(np_out.shape, dtype=otype),
-                                                         axis=axis, dtype=otype).reshape(x.shape)
-                        assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
-
-                        mx_out = np.cumsum(x, axis=axis, dtype=otype)
-                        np_out = _np.cumsum(x.asnumpy(), axis=axis, dtype=otype)
-                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-
-
-@with_seed()
-@npx.use_np_shape
 def test_np_tile():
     config = [
         ((), ()),
@@ -1160,6 +1116,64 @@ def test_np_meshgrid():
 def test_np_broadcast_arrays():
     # TODO(junwu): Add test
     pass
+
+
+@with_seed()
+@npx.use_np_shape
+def test_np_hsplit():
+    class TestHSplit(HybridBlock):
+        def __init__(self, indices_or_sections):
+            super(TestHSplit, self).__init__()
+            self._indices_or_sections = indices_or_sections
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.hsplit(a, indices_or_sections=self._indices_or_sections)
+
+    shapes = [
+        (10,),
+        (3, 8, 5),
+        (3, 0, 5),
+        (3, 8, 5, 6),
+        (3, 0, 5, 6),
+    ]
+    indices_or_sections_num = [
+        (2, 4),
+        (1, 3),
+        (3,),
+        2,
+    ]
+
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for indices_or_sections in indices_or_sections_num:
+                # test gluon
+                test_hsplit = TestHSplit(indices_or_sections=indices_or_sections)
+                if hybridize:
+                    test_hsplit.hybridize()
+
+                a = mx.nd.random.uniform(-1.0, 1.0, shape=shape).as_np_ndarray()
+                a.attach_grad()
+                expected_ret = _np.hsplit(a.asnumpy(),
+                                         indices_or_sections=indices_or_sections)
+                with mx.autograd.record():
+                    y = test_hsplit(a)
+                assert len(y) == len(expected_ret)
+                for mx_out, np_out in zip(y, expected_ret):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3,
+                                        atol=1e-5)
+
+                mx.autograd.backward(y)
+
+                assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape),
+                                    rtol=1e-3, atol=1e-5)
+
+                # test imperative
+                mx_outs = np.hsplit(a, indices_or_sections=indices_or_sections)
+                np_outs = _np.hsplit(a.asnumpy(),
+                                    indices_or_sections=indices_or_sections)
+                for mx_out, np_out in zip(mx_outs, np_outs):
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3,
+                                        atol=1e-5)
 
 
 if __name__ == '__main__':

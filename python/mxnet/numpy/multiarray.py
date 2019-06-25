@@ -45,7 +45,7 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
+           'clip', 'split', 'hsplit', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
            'sinh', 'cosh', 'log10', 'sqrt']
 
 
@@ -2016,3 +2016,40 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _mx_nd_np.sqrt(x, out=out, **kwargs)
+
+@set_module('mxnet.ndarray.numpy')
+def hsplit(ary, indices_or_sections):
+    """Hsplit an array into multiple sub-arrays horizontally.
+
+    This is equivalent to ``split`` with ``axis=0`` if ``ary`` has one
+    dimension, and otherwise that with ``axis=1``.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.
+
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a hsplit does not result in equal division.
+    """
+    return _mx_nd_np.hsplit(ary, indices_or_sections)
+

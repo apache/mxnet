@@ -30,8 +30,9 @@ from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
-           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
+           'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'hsplit',
+           'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10',
+           'sqrt']
 
 
 def _num_outputs(sym):
@@ -1379,6 +1380,51 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         return (_npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step)
     else:
         return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
+
+@set_module('mxnet.ndarray.numpy')
+def hsplit(ary, indices_or_sections):
+    """Hsplit an array into multiple sub-arrays horizontally.
+
+    This is equivalent to ``split`` with ``axis=0`` if ``ary`` has one
+    dimension, and otherwise that with ``axis=1``.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.
+
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a split does not result in equal division.
+    """
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.hsplit(ary, indices, 1, False, sections)
+    return ret
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):

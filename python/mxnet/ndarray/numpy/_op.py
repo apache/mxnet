@@ -27,6 +27,7 @@ from ..ndarray import NDArray
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
+           'clip', 'split', 'hsplit', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
 
@@ -100,23 +101,23 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
 
     Parameters
     --------
-    lhs : ndarray or numeric value
+    lhs : NDArray or numeric value
         Left-hand side operand.
 
-    rhs : ndarray or numeric value
+    rhs : NDArray or numeric value
         Right-hand operand,
 
     fn_array : function
-        Function to be called if both lhs and rhs are of ``ndarray`` type.
+        Function to be called if both lhs and rhs are of ``NDArray`` type.
 
     fn_scalar : function
         Function to be called if both lhs and rhs are numeric values.
 
     lfn_scalar : function
-        Function to be called if lhs is ``ndarray`` while rhs is numeric value
+        Function to be called if lhs is ``NDArray`` while rhs is numeric value
 
     rfn_scalar : function
-        Function to be called if lhs is numeric value while rhs is ``ndarray``;
+        Function to be called if lhs is numeric value while rhs is ``NDArray``;
         if none is provided, then the function is commutative, so rfn_scalar is equal to lfn_scalar
 
     Returns
@@ -882,3 +883,57 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
+
+@set_module('mxnet.ndarray.numpy')
+def hsplit(ary, indices_or_sections):
+    """Hsplit an array into multiple sub-arrays horizontally.
+
+    This is equivalent to ``split`` with ``axis=0`` if ``ary`` has one
+    dimension, and otherwise that with ``axis=1``.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.
+
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a split does not result in equal division.
+    """
+    indices = []
+    axis = 1
+    if(len(ary.shape) == 1):
+        axis = 0
+    axis_size = ary.shape[axis]
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+        if axis_size % sections:
+            raise ValueError('array split does not result in an equal division')
+        section_size = int(axis_size / sections)
+        indices = [i * section_size for i in range(sections)]
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.hsplit(ary, indices, axis, False )
+    if not isinstance(ret, list):
+        raise NotImplementedError('single output from split is not supported yet...')
+    return ret
