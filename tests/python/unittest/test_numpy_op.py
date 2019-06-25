@@ -132,7 +132,9 @@ def test_np_tensordot():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
                 mx_out.backward()
                 np_backward = tensordot_backward(a.asnumpy(), b.asnumpy(), axes)
-                
+                assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = 1e-3, atol=1e-5)
+                assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = 1e-3, atol=1e-5)
+
                 # Test imperative once again
                 mx_out = np.tensordot(a, b, axes)
                 np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
