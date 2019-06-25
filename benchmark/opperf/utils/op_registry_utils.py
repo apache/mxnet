@@ -20,6 +20,7 @@ import ctypes
 from operator import itemgetter
 from mxnet import runtime
 from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
+import mxnet as mx
 
 from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
 
@@ -75,89 +76,19 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     return mx_operators
 
 
-def _get_all_registered_ops():
-    """Get all registered MXNet operator names.
-
-
-    Returns
-    -------
-    ["operator_name"]
-    """
-    plist = ctypes.POINTER(ctypes.c_char_p)()
-    size = ctypes.c_uint()
-
-    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
-                                     ctypes.byref(plist)))
-
-    mx_registered_operator_names = [py_str(plist[i]) for i in range(size.value)]
-    return mx_registered_operator_names
-
-
-def _get_op_handles(op_name):
-    """Get handle for an operator with given name - op_name.
-
-    Parameters
-    ----------
-    op_name: str
-        Name of operator to get handle for.
-    """
-    op_handle = OpHandle()
-    check_call(_LIB.NNGetOpHandle(c_str(op_name), ctypes.byref(op_handle)))
-    return op_handle
-
-
-def _get_op_arguments(op_handle):
-    """Given operator name and handle, fetch operator arguments - number of arguments,
-    argument names, argument types.
-
-    Parameters
-    ----------
-    op_handle: OpHandle
-        Handle for the operator
-
-    Returns
-    -------
-    (narg, arg_names, arg_types)
-    """
-    real_name = ctypes.c_char_p()
-    desc = ctypes.c_char_p()
-    num_args = mx_uint()
-    arg_names = ctypes.POINTER(ctypes.c_char_p)()
-    arg_types = ctypes.POINTER(ctypes.c_char_p)()
-    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
-    key_var_num_args = ctypes.c_char_p()
-    ret_type = ctypes.c_char_p()
-
-    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
-        op_handle, ctypes.byref(real_name), ctypes.byref(desc),
-        ctypes.byref(num_args),
-        ctypes.byref(arg_names),
-        ctypes.byref(arg_types),
-        ctypes.byref(arg_descs),
-        ctypes.byref(key_var_num_args),
-        ctypes.byref(ret_type)))
-
-    narg = int(num_args.value)
-    arg_names = [py_str(arg_names[i]) for i in range(narg)]
-    arg_types = [py_str(arg_types[i]) for i in range(narg)]
-
-    return narg, arg_names, arg_types
-
-
 def _set_op_arguments(mx_operators):
     """Fetch and set operator arguments - nargs, arg_names, arg_types
     """
     for op_name in mx_operators:
-        op_handle = _get_op_handles(op_name)
-        narg, arg_names, arg_types = _get_op_arguments(op_handle)
-        mx_operators[op_name]["params"] = {"narg": narg,
-                                           "arg_names": arg_names,
-                                           "arg_types": arg_types}
+        operator_arguments = mx.operator.get_operator_arguments(op_name)
+        mx_operators[op_name]["params"] = {"narg": operator_arguments.narg,
+                                           "arg_names": operator_arguments.names,
+                                           "arg_types": operator_arguments.types}
 
 
 def _get_all_mxnet_operators():
     # Step 1 - Get all registered op names and filter it
-    operator_names = _get_all_registered_ops()
+    operator_names = mx.operator.get_all_registered_operators()
     mx_operators = _select_ops(operator_names)
 
     # Step 2 - Get all parameters for the operators

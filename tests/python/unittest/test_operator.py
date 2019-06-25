@@ -27,10 +27,11 @@ import itertools
 from distutils.version import LooseVersion
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
 from common import run_in_spawned_process
-from nose.tools import assert_raises
+from nose.tools import assert_raises, ok_
 import unittest
 import os
 
@@ -8653,6 +8654,17 @@ def test_add_n():
         rslt += data[i]
     add_n_rslt = mx.nd.add_n(*data, out=data[0])
     assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
+
+
+def test_get_all_registered_operators():
+    ops = get_all_registered_operators()
+    ok_(isinstance(ops, list))
+    ok_(len(ops) > 0)
+
+
+def test_get_operator_arguments():
+    operator_arguments = get_operator_arguments(mx.operator.get_all_registered_operators()[0])
+    ok_(isinstance(operator_arguments, OperatorArguments))
 
 
 if __name__ == '__main__':
