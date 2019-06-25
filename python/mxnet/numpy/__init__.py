@@ -29,5 +29,6 @@ from .utils import *  # pylint: disable=wildcard-import
 from .function_base import *  # pylint: disable=wildcard-import
 from .stride_tricks import *  # pylint: disable=wildcard-import
 from .io import *  # pylint: disable=wildcard-import
+from .arrayprint import *
 
 __all__ = []
