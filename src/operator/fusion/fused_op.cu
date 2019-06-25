@@ -319,7 +319,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   this->code_ = code;
 
   // Add boilerplate and type information
-  if (dmlc::GetEnv("MXNET_FUSION_VERBOSE", false) {
+  if (dmlc::GetEnv("MXNET_FUSION_VERBOSE", false)) {
     LOG(INFO) << code_;
   }
   std::string kernel_params = "";
