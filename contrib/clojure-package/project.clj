@@ -34,7 +34,14 @@
                  [org.clojure/tools.logging "0.4.0"]
                  [org.apache.logging.log4j/log4j-core "2.8.1"]
                  [org.apache.logging.log4j/log4j-api "2.8.1"]
-                 [org.slf4j/slf4j-log4j12 "1.7.25" :exclusions [org.slf4j/slf4j-api]]]
+                 [org.slf4j/slf4j-log4j12 "1.7.25"]
+                 [org.slf4j/slf4j-api "1.7.5"]
+
+                 [org.scala-lang/scala-library "2.11.8"]
+                 [org.scala-lang/scala-reflect "2.11.8"]
+                 [org.scala-lang.modules/scala-parser-combinators_2.11 "1.0.4"]
+                ]
+
   :pedantic? :skip
   :plugins [[lein-codox "0.10.6" :exclusions [org.clojure/clojure]]
             [lein-cloverage "1.0.10" :exclusions [org.clojure/clojure]]
