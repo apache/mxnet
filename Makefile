@@ -585,10 +585,14 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
+TVM_USE_CUDA = OFF
+ifeq ($(USE_CUDA), 1)
+	TVM_USE_CUDA := ON
+endif
 lib/libtvm_runtime.so:
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh
 	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
-		  -DUSE_SORT=OFF -DUSE_CUDA=OFF -DUSE_CUDNN=OFF \
+		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF \
 		  -B$(TVM_PATH)/build $(TVM_PATH)
 	$(MAKE) -C $(TVM_PATH)/build VERBOSE=1
 	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so
