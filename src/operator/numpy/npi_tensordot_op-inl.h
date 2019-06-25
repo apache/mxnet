@@ -302,7 +302,6 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
                          const std::vector<TBlob>& inputs,                   
                          const std::vector<OpReqType>& req,                  
                          const std::vector<TBlob>& outputs) { 
-
   CHECK_EQ(inputs.size(), 3U);                                              
   CHECK_EQ(outputs.size(), 2U);                                             
   CHECK_EQ(req.size(), 2U);   
@@ -340,6 +339,7 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
     a_T_axes.push_back(a_axes_remained[i]);
   }
   mxnet::TShape a_temp_shape(getReorderedShape(a_shape, a_axes));
+  mxnet::TShape a_T_temp_shape(getReorderedShape(a_shape, a_T_axes));
 
   std::vector<int> b_T_axes;
   for (int i = 0; i < b_axes_remained.ndim(); i++) {
@@ -349,28 +349,29 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
     b_T_axes.push_back(b_axes_summed[i]);
   }
   mxnet::TShape b_temp_shape(getReorderedShape(b_shape, b_axes));
+  mxnet::TShape b_T_temp_shape(getReorderedShape(b_shape, b_T_axes));
 
   MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {                          
     Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
-      (Shape1(a.Size() + b.Size()), s);
+      (Shape1((a.Size() + b.Size()) * 2), s);
     DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
-    DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
+    DType* a_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
+    DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size());
+    DType* b_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size() + b.Size());
+    
     TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask);
     TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask);
+    TBlob a_res2 = TBlob(a_ptr2, a_T_temp_shape, xpu::kDevMask);
+    TBlob b_res2 = TBlob(b_ptr2, b_T_temp_shape, xpu::kDevMask);
 
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, grad_a, mxnet::TShape(a_T_axes.begin(), a_T_axes.end()));
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, grad_b, mxnet::TShape(b_T_axes.begin(), b_T_axes.end())); 
+    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, a_res2, mxnet::TShape(a_T_axes.begin(), a_T_axes.end()));
+    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res2, mxnet::TShape(b_T_axes.begin(), b_T_axes.end())); 
 
-    matrixDot<xpu>(ctx, grad_a, out_grad, b_res, req[1], ad2, ad1, ad1, bd2);
-    matrixDot<xpu>(ctx, out_grad, grad_b, a_res, req[0], ad1, bd2, bd2, bd1);  
+    matrixDot<xpu>(ctx, a_res2, out_grad, b_res, req[1], ad2, ad1, ad1, bd2);
+    matrixDot<xpu>(ctx, out_grad, b_res2, a_res, req[0], ad1, bd2, bd2, bd1);  
 
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a_res, grad_a, getReverseShape(a_axes)); 
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b_res, grad_b, getReverseShape(b_axes)); 
-
-    std::cout << "ddddddddddddddddddddddd\n"; // todo
-    for (auto i: grad_a.shape_) {
-      std::cout << i << '\n';
-    }
   });                                                                                                                                              
 }   
 }  // namespace op
