@@ -23,7 +23,6 @@ from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import image
 from ....base import numeric_types
-from ...utils import _adapt_np_array
 from ....util import is_np_array
 
 
@@ -376,7 +375,6 @@ class Resize(HybridBlock):
         self._size = size
         self._interpolation = interpolation
 
-    @_adapt_np_array
     def hybrid_forward(self, F, x):
         if is_np_array():
             F = F.npx
