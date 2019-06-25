@@ -17,21 +17,21 @@
 
 # Symbol - Neural network graphs
 
-In the [previous tutorial](http://mxnet.io/tutorials/basic/ndarray.html), we introduced [NDArray](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html), the basic data structure for manipulating data in MXNet.
+In the [previous tutorial](http://mxnet.io/tutorials/basic/ndarray.html), we introduced [`NDArray`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html), the basic data structure for manipulating data in MXNet.
 Just using `NDArray` by itself, we can execute a wide range of mathematical operations. In fact, we could define and update a full neural network just by using `NDArray`.
 
 `NDArray` allows you to write programs for scientific computation in an imperative fashion, making full use of the native control of any front-end language. Gluon API uses this approach under the hood (before hybridization) to allow for flexible and debugable networks. So you might wonder, why don't we just use `NDArray` for all computation?
 
-MXNet also provides the Symbol API, an interface for symbolic programming. With symbolic programming, rather than executing operations step by step, we first define a [computation graph](https://mxnet.incubator.apache.org/versions/master/faq/visualize_graph.html). This graph contains placeholders for inputs and designated outputs. We can then compile the graph, yielding a function that can be bound to `NDArray`s and run. MXNet's Symbol API is similar to the network configurations used by [Caffe](http://caffe.berkeleyvision.org/) and the symbolic programming in [Theano](http://deeplearning.net/software/theano/). Gluon API takes advantage of this approach under the hood after the network has been hybridized.
+MXNet also provides the `Symbol API`, an interface for symbolic programming. With symbolic programming, rather than executing operations step by step, we first define a [computation graph](https://mxnet.incubator.apache.org/versions/master/faq/visualize_graph.html). This graph contains placeholders for inputs and designated outputs. We can then compile the graph, yielding a function that can be bound to `NDArray`s and run. MXNet's `Symbol API` is similar to the network configurations used by [Caffe](http://caffe.berkeleyvision.org/) and the symbolic programming in [Theano](http://deeplearning.net/software/theano/). Gluon API takes advantage of this approach under the hood after the network has been hybridized.
 
 Another advantage conferred by symbolic approach is that we can optimize our functions before using them. For example, when we execute mathematical computations in imperative fashion, we don't know at the time that we run each operation, which values will be needed later on. But with symbolic programming, we declare the required outputs in advance. This means that we can recycle memory allocated in intermediate steps, as by performing operations in place. Symbolic API also uses less memory for the
 same network. Refer to [How To](http://mxnet.io/faq/index.html) and [Architecture](http://mxnet.io/architecture/index.html) section to know more.
 
-In our design notes, we present [a more thorough discussion on the comparative strengths of imperative and symbolic programing](http://mxnet.io/architecture/program_model.html). In this document, however, we'll focus on explaining how to use MXNet's Symbol API.
+In our design notes, we present [a more thorough discussion on the comparative strengths of imperative and symbolic programing](http://mxnet.io/architecture/program_model.html). In this document, however, we'll focus on explaining how to use MXNet's `Symbol API`.
 
 In MXNet, we can compose Symbols from other Symbols, using operators, such as simple matrix operations (e.g. `+`), or whole neural network layers (e.g. convolution layer). Operator can take multiple input variables, can produce multiple output symbols and can maintain internal state symbols. For a visual explanation of these concepts, see [Symbolic Configuration and Execution in Pictures](http://mxnet.io/api/python/symbol_in_pictures/symbol_in_pictures.html).
 
-To make things concrete, let's take a hands-on look at the Symbol API. There are a few different ways to compose a [Symbol](http://mxnet.incubator.apache.org/api/python/symbol/symbol.html).
+To make things concrete, let's take a hands-on look at the `Symbol API`. There are a few different ways to compose a [`Symbol`](http://mxnet.incubator.apache.org/api/python/symbol/symbol.html).
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ To complete this tutorial, we need:
     ```
     pip install jupyter
     ```
-- GPUs (optional). A section of this tutorial uses GPUs. If you don't have GPUs on your machine, simply set the variable `gpu_device` to `mx.cpu()`.
+- GPUs (optional). A section of this tutorial uses GPUs, if one is available. If not, the code will automatically switch to CPU.
 
 ## Basic Symbol Composition
 
@@ -94,15 +94,15 @@ mx.viz.plot_network(net,
                     node_attrs={"shape": "oval", "fixedsize": "false"})
 ```
 
-Each symbol takes a unique string name. `NDArray` and `Symbol` both represent a single tensor. *Operators* represent the computation between tensors. Operators take `symbol` or `NDArray` as inputs and might also additionally accept other hyperparameters such as the number of hidden neurons (`num_hidden`) or the activation type (`act_type`) and produce the output.
+Each `Symbol` takes a unique string name. `NDArray` and `Symbol` both represent a single tensor. *Operators* represent the computation between tensors. Operators take `Symbol` or `NDArray` as inputs and might also additionally accept other hyperparameters such as the number of hidden neurons (`num_hidden`) or the activation type (`act_type`) and produce the output.
 
-We can view a `symbol` simply as a function taking several arguments. And we can retrieve those arguments with the following method call:
+We can view a `Symbol` simply as a function taking several arguments. And we can retrieve those arguments with the following method call:
 
 ```python
 net.list_arguments()
 ```
 
-These arguments are the parameters and inputs needed by each symbol:
+These arguments are the parameters and inputs needed by each `Symbol`:
 
 - *data*: Input data needed by the variable *data*.
 - *fc1_weight* and *fc1_bias*: The weight and bias for the first fully connected layer *fc1*.
@@ -122,8 +122,8 @@ In the above example, `FullyConnected` layer has 3 inputs: data, weight, bias. W
 
 ## More Complicated Composition
 
-MXNet provides well-optimized symbols for layers commonly used in deep learning (see [src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)). We can also define new operators in Python. The following example first
-performs an element-wise add between two symbols, then feeds them to the fully connected operator:
+MXNet provides well-optimized Symbols for layers commonly used in deep learning (see [src/operator](https://github.com/dmlc/mxnet/tree/master/src/operator)). We can also define new operators in Python. The following example first
+performs an element-wise add between two Symbols, then feeds them to the fully connected operator:
 
 ```python
 lhs = mx.symbol.Variable('data1')
@@ -132,7 +132,7 @@ net = mx.symbol.FullyConnected(data=lhs + rhs, name='fc1', num_hidden=128)
 net.list_arguments()
 ```
 
-We can also construct a symbol in a more flexible way than the single forward composition depicted in the preceding example:
+We can also construct a `Symbol` in a more flexible way than the single forward composition depicted in the preceding example:
 
 ```python
 data = mx.symbol.Variable('data')
@@ -144,7 +144,7 @@ composed = net2(data2=net1, name='composed')
 composed.list_arguments()
 ```
 
-In this example, *net2* is used as a function to apply to an existing symbol *net1*, and the resulting *composed* symbol will have all the attributes of *net1* and *net2*.
+In this example, `net2` is used as a function to apply to an existing `Symbol` `net1`, and the resulting *composed* `Symbol` will have all the attributes of `net1` and `net2`.
 
 Once you start building some bigger networks, you might want to name some symbols with a common prefix to outline the structure of your network. You can use the [Prefix class](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/name.py#L93) as follows:
 
@@ -225,11 +225,11 @@ mx.viz.plot_network(symbol=in3a, shape=shape,
                     node_attrs={"shape": "oval", "fixedsize": "false"})
 ```
 
-Finally, we can obtain the whole network by chaining multiple inception modules. See a [complete example](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbols/inception-bn.py).
+Finally, we can obtain the whole network by chaining multiple inception modules. See a complete example [here](https://github.com/dmlc/mxnet/blob/master/example/image-classification/symbols/inception-bn.py).
 
 ### Group Multiple Symbols
 
-To construct neural networks with multiple loss layers, we can use `mxnet.sym.Group` to group multiple symbols together. The following example groups two outputs:
+To construct neural networks with multiple loss layers, we can use `mxnet.sym.Group` to group multiple Symbols together. The following example groups two outputs:
 
 ```python
 net = mx.sym.Variable('data')
@@ -261,11 +261,11 @@ The pros for `Symbol`:
 
 ## Symbol Manipulation
 
-One important difference of `Symbol` compared to `NDArray` is that we first declare the computation and then bind the computation with data to run. In this section, we introduce the functions to manipulate a symbol directly. But note that, most of them are wrapped by the high-level packages: [Module](https://mxnet.incubator.apache.org/api/python/module/module.html) and [Gluon](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html).
+One important difference of `Symbol` compared to `NDArray` is that we first declare the computation and then bind the computation with data to run. In this section, we introduce the functions to manipulate a `Symbol` directly. But note that, most of them are wrapped by the high-level packages: [`Module`](https://mxnet.incubator.apache.org/api/python/module/module.html) and [`Gluon`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html).
 
 ### Shape and Type Inference
 
-For each symbol, we can query its arguments, auxiliary states and outputs. We can also infer the output shape and type of the symbol given the known input shape or type of some arguments, which facilitates memory allocation.
+For each `Symbol`, we can query its arguments, auxiliary states and outputs. We can also infer the output shape and type of the `Symbol` given the known input shape or type of some arguments, which facilitates memory allocation.
 
 ```python
 arg_name = c.list_arguments()  # get the names of the inputs
@@ -275,16 +275,16 @@ arg_shape, out_shape, _ = c.infer_shape(a=(2, 3), b=(2, 3))
 # infers output type given the type of input arguments
 arg_type, out_type, _ = c.infer_type(a='float32', b='float32')
 {'input' : dict(zip(arg_name, arg_shape)),
-'output' : dict(zip(out_name, out_shape))}
+ 'output' : dict(zip(out_name, out_shape))}
 {'input' : dict(zip(arg_name, arg_type)),
-'output' : dict(zip(out_name, out_type))}
+ 'output' : dict(zip(out_name, out_type))}
 ```
 
 ### Bind with Data and Evaluate
 
-The symbol `c` constructed above declares what computation should be run. To evaluate it, we first need to feed the arguments, namely free variables, with data.
+The `Symbol` `c` constructed above declares what computation should be run. To evaluate it, we first need to feed the arguments, namely free variables, with data.
 
-We can do it by using the [bind](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Symbol.bind) method, which accepts device context and a `dict` mapping free variable names to `NDArray`s as arguments and returns an [Executor](https://mxnet.incubator.apache.org/api/python/executor/executor.html#mxnet.executor.Executor). The `Executor` provides [forward](https://mxnet.incubator.apache.org/api/python/executor/executor.html#mxnet.executor.Executor.forward) method for evaluation and an attribute `outputs` to get all the results.
+We can do it by using the [`bind`](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Symbol.bind) method, which accepts device context and a `dict` mapping free variable names to `NDArray`s as arguments and returns an [`Executor`](https://mxnet.incubator.apache.org/api/python/executor/executor.html#mxnet.executor.Executor). The `Executor` provides [`forward`](https://mxnet.incubator.apache.org/api/python/executor/executor.html#mxnet.executor.Executor.forward) method for evaluation and an attribute `outputs` to get all the results.
 
 ```python
 ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]),
@@ -294,12 +294,10 @@ print('number of outputs = %d\nthe first output = \n%s' % (
            len(ex.outputs), ex.outputs[0].asnumpy()))
 ```
 
-We can evaluate the same symbol on GPU with different data.
-
-**Note** In order to execute the following section on a cpu set `gpu_device` to `mx.cpu()`.
+We can evaluate the same `Symbol` on GPU with different data.
 
 ```python
-gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
+gpu_device = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 
 ex_gpu = c.bind(ctx=gpu_device, args={'a' : mx.nd.ones([3,4], gpu_device)*2,
                                       'b' : mx.nd.ones([3,4], gpu_device)*3})
@@ -307,7 +305,7 @@ ex_gpu.forward()
 ex_gpu.outputs[0].asnumpy()
 ```
 
-We can also use [eval](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Symbol.eval) method to evaluate the symbol. It combines calls to `bind` and `forward` methods.
+We can also use [eval](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Symbol.eval) method to evaluate the `Symbol`. It combines calls to `bind` and `forward` methods.
 
 ```python
 ex = c.eval(ctx = mx.cpu(), a = mx.nd.ones([2,3]), b = mx.nd.ones([2,3]))
@@ -315,13 +313,13 @@ print('number of outputs = %d\nthe first output = \n%s' % (
             len(ex), ex[0].asnumpy()))
 ```
 
-For neural nets, a more commonly used pattern is [simple_bind](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Symbol.simple_bind), which creates all of the argument arrays for you. Then you can call `forward`, and [backward](https://mxnet.incubator.apache.org/api/python/executor/executor.html#mxnet.executor.Executor.backward) to get gradients if needed.
+For neural nets, a more commonly used pattern is [simple_bind](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Symbol.simple_bind), which creates all of the argument arrays for you. Then you can call `forward`, and [`backward`](https://mxnet.incubator.apache.org/api/python/executor/executor.html#mxnet.executor.Executor.backward) to get gradients if needed.
 
 ### Load and Save
 
-Logically symbols correspond to NDArrays. They both represent a tensor. They both are inputs/outputs of operators. We can either serialize a `Symbol` object by using `pickle`, or by using `save` and `load` methods directly as it is explained in [NDArray tutorial](http://mxnet.io/tutorials/basic/ndarray.html#serialize-from-to-distributed-filesystems).
+Logically Symbols correspond to NDArrays. They both represent a tensor. They both are inputs/outputs of operators. We can either serialize a `Symbol` object by using `pickle`, or by using `save` and `load` methods directly as it is explained in [this NDArray tutorial](http://mxnet.io/tutorials/basic/ndarray.html#serialize-from-to-distributed-filesystems).
 
-When serializing `NDArray`, we serialize the tensor data in it and directly dump to disk in binary format. But symbol uses a concept of graph. Graphs are composed by chaining operators. They are implicitly represented by output symbols. So, when serializing a `Symbol`, we serialize the graph of which the symbol is an output. While serialization, Symbol uses more readable `json` format for serialization. To convert symbol to `json` string, use [tojson](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Symbol.tojson) method.
+When serializing `NDArray`, we serialize the tensor data in it and directly dump to disk in binary format. But `Symbol` uses a concept of graph. Graphs are composed by chaining operators. They are implicitly represented by output Symbols. So, when serializing a `Symbol`, we serialize the graph of which the `Symbol` is an output. While serialization, `Symbol` uses more readable `json` format for serialization. To convert `Symbol` to `json` string, use [`tojson`](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Symbol.tojson) method.
 
 ```python
 print(c.tojson())
@@ -332,7 +330,7 @@ c.tojson() == c2.tojson()
 
 ## Customized Symbol
 
-Most operators such as [mx.sym.Convolution](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Convolution) and [mx.sym.Reshape](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.reshape) are implemented in C++ for better performance. MXNet also allows users to write new operators using any front-end language such as Python. It often makes the developing and debugging much easier. To implement an operator in Python, refer to [How to create new operators](http://mxnet.io/faq/new_op.html).
+Most operators such as [`mx.sym.Convolution`](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.Convolution) and [`mx.sym.Reshape`](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.reshape) are implemented in C++ for better performance. MXNet also allows users to write new operators using any front-end language such as Python. It often makes the developing and debugging much easier. To implement an operator in Python, refer to [How to create new operators](http://mxnet.io/faq/new_op.html).
 
 ## Advanced Usages
 
@@ -341,7 +339,7 @@ Most operators such as [mx.sym.Convolution](https://mxnet.incubator.apache.org/a
 By default, MXNet uses 32-bit floats. But for better accuracy-performance, we can also use a lower precision data type.
 For example, The NVIDIA Tesla Pascal GPUs (e.g. P100) have improved 16-bit float performance, while GTX Pascal GPUs (e.g. GTX 1080) are fast on 8-bit integers.
 
-To convert the data type as per the requirements, we can use [mx.sym.cast](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.cast) operator as follows:
+To convert the data type as per the requirements, we can use [`mx.sym.cast`](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.cast) operator as follows:
 
 ```python
 a = mx.sym.Variable('data')
@@ -356,7 +354,7 @@ print({'input':arg, 'output':out})
 
 ### Variable Sharing
 
-To share the contents between several symbols, we can bind these symbols with the same array as follows:
+To share the contents between several Symbols, we can bind these Symbols with the same array as follows:
 
 ```python
 a = mx.sym.Variable('a')
@@ -437,12 +435,22 @@ result = model.predict(eval_iter).asnumpy()
 print(result)
 ```
 
+In this example we first create training and evaluation datasets. Both of them consist of two individual `NDArray`s. We are using `NDArrayIter` to iterate over all of them.
+
+We define a `Symbol` for both `inputs_left` and `inputs_right` variables, and separate symbols for `shared_weight` and `shared_bias`. We use `shared_weight` and `shared_bias` symbols in both `FullyConnected` layers, making sure that they are using the same data underlying the symbols. This is where weight tying is happening.
+
+In the next lines of the code, we use `Module API` to start the training. We first create a `Module` object and then call `fit` providing data iterators. To use trained model for prediction, we use `predict` method, providing evaluation data iterator.  
+
 ## Recommended Next Steps
 
-- Learn how to [use Module API to train neural network](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/module.html)
+- Learn how to [use Module API to train neural network](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/module.html).
 
-- Explore ways you can [load data from disk](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/data.html)
+- Explore ways you can [load data using Data Iterators](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/data.html).
 
-- [Use pretrained models](https://mxnet.incubator.apache.org/versions/master/tutorials/python/predict_image.html) for image object detection
+- [Use pretrained models](https://mxnet.incubator.apache.org/versions/master/tutorials/python/predict_image.html) for image object detection.
+
+- [Hybridize your models](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/hybrid.html) to get the best from both `Gluon` and `Symbol API`.
+
+- Convert your existing `Module API` code to `Gluon` as it is explained [here](https://mxnet.incubator.apache.org/versions/master/tutorials/python/module_to_gluon.html). 
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
