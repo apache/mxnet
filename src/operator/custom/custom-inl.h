@@ -84,8 +84,7 @@ class CustomOperator {
         profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
         func();
         profiler::CustomOpProfiler::Get()->OnCustomEnd();
-      }
-      else {
+      } else {
         func();
       }
       for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
@@ -110,8 +109,7 @@ class CustomOperator {
           profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
           func();
           profiler::CustomOpProfiler::Get()->OnCustomEnd();
-        }
-        else {
+        } else {
           func();
         }
       } catch (dmlc::Error& e) {
