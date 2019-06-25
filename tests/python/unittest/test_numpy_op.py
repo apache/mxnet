@@ -1138,8 +1138,9 @@ def test_np_hsplit():
     ]
     indices_or_sections_num = [
         (2, 4),
-        (1, 3),
+        (3, 3),
         (3,),
+        (1,),
         2,
     ]
 

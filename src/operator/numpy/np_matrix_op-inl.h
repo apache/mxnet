@@ -240,7 +240,7 @@ inline bool HSplitOpShape(const nnvm::NodeAttrs& attrs,
     if (ishape[real_axis] == 0U) {
       end = start;
     } else {
-      CHECK(start < end)
+      CHECK(start <= end)
         << "start " << start << " is not less than end " << end << "for subarray " << i;
       CHECK(end <= ishape[real_axis])
         << "end " << end << " is no less than the size of the axis " << ishape[real_axis];
