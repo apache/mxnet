@@ -385,7 +385,8 @@ class Block(object):
             try:
                 loaded = _mx_npx.load(filename)
             except MXNetError as e:
-                if 'is_np_shape' in str(e):
+                err_msg = str(e)
+                if 'is_np_shape' in err_msg:
                     warnings.warn("NumPy shape semantics has been activated. Loading model "
                                   "parameters that were saved without NumPy shape semantics "
                                   "in the current environment is not recommended. Trying to "
@@ -401,7 +402,7 @@ class Block(object):
                         'expecting a dict type, got {}'.format(str(type(loaded)))
                     loaded = {k: loaded[k].as_np_ndarray() for k in loaded}
                 else:
-                    raise
+                    raise ValueError(err_msg)
         else:
             loaded = ndarray.load(filename)
         params = self._collect_params_with_prefix()

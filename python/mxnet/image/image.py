@@ -204,8 +204,8 @@ def imdecode(buf, *args, **kwargs):
         array_fn = _mx_np.array if is_np_array() else nd.array
         buf = array_fn(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
 
-    imdecode = _npi.cvimdecode
-    return _internal._cvimdecode(buf, *args, **kwargs)
+    cvimdecode = _npi.cvimdecode if is_np_array() else _internal._cvimdecode()
+    return cvimdecode(buf, *args, **kwargs)
 
 
 def scale_down(src_size, size):
@@ -1216,6 +1216,7 @@ class ImageIter(io.DataIter):
         else:
             self.imgrec = None
 
+        array_fn = _mx_np.array if is_np_array() else nd.array
         if path_imglist:
             logging.info('%s: loading image list %s...', class_name, path_imglist)
             with open(path_imglist) as fin:
@@ -1223,7 +1224,7 @@ class ImageIter(io.DataIter):
                 imgkeys = []
                 for line in iter(fin.readline, ''):
                     line = line.strip().split('\t')
-                    label = nd.array(line[1:-1], dtype=dtype)
+                    label = array_fn(line[1:-1], dtype=dtype)
                     key = int(line[0])
                     imglist[key] = (label, line[-1])
                     imgkeys.append(key)
@@ -1237,11 +1238,11 @@ class ImageIter(io.DataIter):
                 key = str(index)  # pylint: disable=redefined-variable-type
                 index += 1
                 if len(img) > 2:
-                    label = nd.array(img[:-1], dtype=dtype)
+                    label = array_fn(img[:-1], dtype=dtype)
                 elif isinstance(img[0], numeric_types):
-                    label = nd.array([img[0]], dtype=dtype)
+                    label = array_fn([img[0]], dtype=dtype)
                 else:
-                    label = nd.array(img[0], dtype=dtype)
+                    label = array_fn(img[0], dtype=dtype)
                 result[key] = (label, img[-1])
                 imgkeys.append(str(key))
             self.imglist = result
@@ -1377,8 +1378,14 @@ class ImageIter(io.DataIter):
             i = self._cache_idx
             # clear the cache data
         else:
-            batch_data = nd.zeros((batch_size, c, h, w))
-            batch_label = nd.empty(self.provide_label[0][1])
+            if is_np_array():
+                zeros_fn = _mx_np.zeros
+                empty_fn = _mx_np.empty
+            else:
+                zeros_fn = nd.zeros
+                empty_fn = nd.empty
+            batch_data = zeros_fn((batch_size, c, h, w))
+            batch_label = empty_fn(self.provide_label[0][1])
             i = self._batchify(batch_data, batch_label)
         # calculate the padding
         pad = batch_size - i
@@ -1455,4 +1462,7 @@ class ImageIter(io.DataIter):
 
     def postprocess_data(self, datum):
         """Final postprocessing step before image is loaded into the batch."""
-        return nd.transpose(datum, axes=(2, 0, 1))
+        if is_np_array():
+            return datum.transpose(2, 0, 1)
+        else:
+            return nd.transpose(datum, axes=(2, 0, 1))
