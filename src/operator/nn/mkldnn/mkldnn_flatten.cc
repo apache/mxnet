@@ -31,7 +31,7 @@ namespace mxnet {
 namespace op {
 
 class MKLDNNFlattenFwd : public MKLDNNReshapeFwd {
-public:
+ public:
   explicit MKLDNNFlattenFwd(const OpReqType &req,
                             const NDArray &input,
                             const NDArray &output)
@@ -81,7 +81,7 @@ void MKLDNNFlattenForward(const nnvm::NodeAttrs &attrs,
   fwd.Execute(input, output, ws_ptr);
 }
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 
 #endif

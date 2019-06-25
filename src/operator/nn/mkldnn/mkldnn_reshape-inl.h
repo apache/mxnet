@@ -27,6 +27,7 @@
 #define MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_
 
 #if MXNET_USE_MKLDNN == 1
+#include <vector>
 #include "mkldnn_base-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 
@@ -46,14 +47,14 @@ inline bool SupportMKLDNNReshape(const ReshapeParam &param,
 }
 
 class MKLDNNReshapeFwd {
-protected:
+ protected:
   std::shared_ptr<mkldnn::memory> data_;
   std::shared_ptr<mkldnn::memory> out_;
   std::shared_ptr<mkldnn::memory> temp_;
   std::vector<mkldnn::primitive> prims_;
   bool needInvalidateInput = false;
 
-public:
+ public:
   MKLDNNReshapeFwd(const OpReqType &req,
                    const NDArray &input,
                    const NDArray &output);
@@ -76,8 +77,8 @@ void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
                           const NDArray &input,
                           const OpReqType &req,
                           const NDArray &output);
-}
-}
+}  // namespace op
+}  // namespace mxnet
 
-#endif
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_RESHAPE_INL_H_
