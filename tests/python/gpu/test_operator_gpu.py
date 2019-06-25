@@ -2300,6 +2300,52 @@ def test_math():
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
 
+@with_seed()
+@npx.use_np_shape
+def test_np_arctan2():
+    @npx.use_np_shape
+    class TestArctan2(HybridBlock):
+        def __init__(self):
+            super(TestArctan2, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.arctan2(x1, x2)
+
+    shapes = [(), (1,), (1, 1), (1, 2, 3), (1, 0), (3, 0, 6)]
+    #types = ['int32', 'int64', 'float16', 'float32', 'double']
+    types = ['float16', 'float32', 'double']
+    #types = ['float16']
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for oneType in types:
+                test_arctan2 = TestArctan2()
+                if hybridize:
+                    test_arctan2.hybridize()
+                x1 = rand_ndarray(shape).astype(oneType).as_np_ndarray()
+                #print ("x1's type is: ", x1.dtype)
+                x2 = rand_ndarray(shape).astype(oneType).as_np_ndarray()
+                #print ("x2's type is: ", x2.dtype)
+                x1.attach_grad()
+                x2.attach_grad()
+                np_out = np.arctan2(x1.asnumpy(), x2.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_arctan2(x1, x2)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                mx_out.backward()
+                x11 = x1.asnumpy()
+                #print( "x11's type is: ", x11.dtype, "x11's class is: ", x11.__class__)
+                x21 = x2.asnumpy()
+                #print( "x21's type is: ", x21.dtype, "x21's class is: ", x21.__class__)
+                np_backward_1 = x21 / (x11 * x11 + x21 * x21)
+                np_backward_2 = -1 * x11 / (x11 * x11 + x21 * x21)
+                #print( "x1.grad.asnumpy().dtype is: ", x1.grad.asnumpy().dtype, " np_backward_1.dtype is: ", np_backward_1.dtype)
+                assert_almost_equal(x1.grad.asnumpy(), np_backward_1, rtol=1e-3, atol=1e-5)
+                assert_almost_equal(x2.grad.asnumpy(), np_backward_2, rtol=1e-3, atol=1e-5)
+                mx_out = mx.np.arctan2(x1, x2)
+                np_out = np.arctan2(x1.asnumpy(), x2.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
