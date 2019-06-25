@@ -919,7 +919,7 @@ def hsplit(ary, indices_or_sections):
     """
     indices = []
     axis = 1
-    if(len(ary.shape) == 1):
+    if (len(ary.shape) == 1):
         axis = 0
     axis_size = ary.shape[axis]
     if isinstance(indices_or_sections, int):
@@ -932,7 +932,7 @@ def hsplit(ary, indices_or_sections):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
-    ret = _npi.hsplit(ary, indices, axis, False )
+    ret = _npi.hsplit(ary, indices, axis, False)
     if not isinstance(ret, list):
         raise NotImplementedError('single output from split is not supported yet...')
     return ret

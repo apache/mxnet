@@ -2052,4 +2052,3 @@ def hsplit(ary, indices_or_sections):
         a hsplit does not result in equal division.
     """
     return _mx_nd_np.hsplit(ary, indices_or_sections)
-
