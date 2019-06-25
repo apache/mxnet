@@ -1226,8 +1226,8 @@ def test_rsqrt_cos_sin():
 
 @with_seed()
 def test_maximum_minimum():
-    data1 = mx.symbol.Variable('data')
-    data2 = mx.symbol.Variable('data')
+    data1 = mx.symbol.Variable('data1')
+    data2 = mx.symbol.Variable('data2')
     shape = (3, 4)
     data_tmp1 = np.random.rand(3,4)
     data_tmp2 = np.random.rand(3,4)
@@ -3786,8 +3786,8 @@ def mathematical_core_binary(name,
                              data1_init=2.,
                              data2_init=3.,
                              grad_init=2.):
-    data1 = mx.symbol.Variable('data')
-    data2 = mx.symbol.Variable('data')
+    data1 = mx.symbol.Variable('data1')
+    data2 = mx.symbol.Variable('data2')
     shape = (3, 4)
     data_tmp1 = np.random.rand(3, 4)
     data_tmp2 = np.random.rand(3, 4)

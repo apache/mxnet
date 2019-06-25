@@ -28,6 +28,7 @@
 #include <nnvm/pass_functions.h>
 #include <map>
 #include <vector>
+#include <set>
 #include <string>
 #include <utility>
 #include "../common/utils.h"

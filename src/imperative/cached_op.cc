@@ -176,7 +176,8 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
         }
       }
     } else {
-      LOG(WARNING) << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
+      LOG(WARNING)
+        << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
      }
   }
 #endif  // MXNET_USE_CUDA

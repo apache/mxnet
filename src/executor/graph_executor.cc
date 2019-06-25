@@ -1015,7 +1015,8 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
         }
       }
     } else {
-      LOG(WARNING) << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
+      LOG(WARNING)
+        << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
      }
   }
 #endif  // MXNET_USE_CUDA
