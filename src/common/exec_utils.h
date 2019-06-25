@@ -622,6 +622,51 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
   return g;
 }
 
+inline void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables) {
+  using nnvm::Node;
+  using nnvm::NodePtr;
+  using nnvm::NodeEntry;
+  std::unordered_map<Node*, NodePtr> old_new;
+  // use DFSVisit to copy all the nodes
+  DFSVisit(src.outputs, [&old_new, copy_variables](const NodePtr& node) {
+      NodePtr np;
+      if (copy_variables || !node->is_variable()) {
+        np = Node::Create();
+        np->attrs = node->attrs;
+      } else {
+        np = node;
+      }
+      old_new[node.get()] = std::move(np);
+    });
+  // connect nodes of new graph
+  for (const auto &kv : old_new) {
+    for (const NodeEntry& e : kv.first->inputs) {
+      Node *ptr = e.node.get();
+      kv.second->inputs.emplace_back(NodeEntry{old_new[ptr], e.index, e.version});
+    }
+    for (const NodePtr& p : kv.first->control_deps) {
+      kv.second->control_deps.emplace_back(old_new[p.get()]);
+    }
+  }
+  // set the head
+  for (const NodeEntry &e : src.outputs) {
+    (*dst).outputs.emplace_back(NodeEntry{old_new[e.node.get()], e.index, e.version});
+  }
+}
+
+inline bool CheckForInputNameDuplicates(const nnvm::IndexedGraph &idx) {
+  std::set<std::string> names;
+  for (const auto& nid : idx.input_nodes()) {
+    const std::string &name = idx[nid].source->attrs.name;
+    if (names.count(name)) {
+      LOG(WARNING) << "Variable name " << name << " is used more than once!";
+      return false;
+    }
+    names.insert(name);
+  }
+  return true;
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_EXEC_UTILS_H_

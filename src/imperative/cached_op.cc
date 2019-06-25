@@ -80,8 +80,11 @@ void CreateFullGraph(const nnvm::Symbol& sym,
   // construct backward graph
   {
     ograd_entries->reserve(fwd_graph->outputs.size());
-    for (size_t i = 0; i < fwd_graph->outputs.size(); ++i)
-      ograd_entries->emplace_back(Node::Create());
+    for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
+      nnvm::NodePtr np = Node::Create();
+      np->attrs.name = "_head_grad_" + std::to_string(i);
+      ograd_entries->emplace_back(np);
+    }
 
     std::vector<NodeEntry> xs;
     const IndexedGraph& indexed_graph = fwd_graph->indexed_graph();
@@ -146,10 +149,35 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
 #if MXNET_USE_CUDA && !defined(_WIN32)
   if (dmlc::GetEnv("MXNET_USE_FUSION", true) && context.dev_mask() == kGPU &&
       !inlining) {
-    full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
-    *full_graph = exec::FusePointwiseForward(std::move(*full_graph));
-    full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
-    *full_graph = exec::FusePointwiseBackward(std::move(*full_graph));
+    nnvm::Graph unoptimized_graph;
+    common::CopyGraph(&unoptimized_graph, *full_graph, false);
+
+    if (common::CheckForInputNameDuplicates(unoptimized_graph.indexed_graph())) {
+      full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
+      *full_graph = exec::FusePointwiseForward(std::move(*full_graph));
+      full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
+      *full_graph = exec::FusePointwiseBackward(std::move(*full_graph));
+      // Check the topological order of inputs
+      const auto &original_inputs = unoptimized_graph.indexed_graph().input_nodes();
+      const auto &new_inputs = full_graph->indexed_graph().input_nodes();
+      if (original_inputs.size() != new_inputs.size()) {
+        LOG(WARNING)
+          << "Number of inputs after fusion does not match original number of inputs. "
+          << "This is most probably a bug. Disabling fusion for this run.";
+        *full_graph = unoptimized_graph;
+      } else {
+        for (size_t i = 0; i < new_inputs.size(); ++i) {
+          if (unoptimized_graph.indexed_graph()[original_inputs[i]].source->attrs.name !=
+              full_graph->indexed_graph()[new_inputs[i]].source->attrs.name) {
+            LOG(WARNING) << "Disabling fusion due to altered topological order of inputs.";
+            *full_graph = unoptimized_graph;
+            break;
+          }
+        }
+      }
+    } else {
+      LOG(WARNING) << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
+     }
   }
 #endif  // MXNET_USE_CUDA
 
