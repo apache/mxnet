@@ -356,7 +356,7 @@ def test_npx_sigmoid():
 def test_np_reshape():
     # TODO(junwu): Add more test cases
     data = mx.sym.var('a').as_np_ndarray()
-    ret = data.reshape(shape=())
+    ret = data.reshape(())
     assert type(ret) == mx.sym.np._Symbol
 
     data = np.ones((1, 1, 1))
@@ -365,6 +365,8 @@ def test_np_reshape():
     ret = np.reshape(ret, (1, 1, 1, 1))
     assert ret.shape == (1, 1, 1, 1)
     assert type(ret) == np.ndarray
+    ret2 = ret.reshape(1, 1, -1)
+    assert ret2.shape == (1, 1, 1)
 
 
 @with_seed()
@@ -695,7 +697,7 @@ def test_np_linspace():
                 raise ValueError("linspace didn't support retstep = True inside HybridBlock")
             else:
                 return x + F.np.linspace(self._start, self._stop, self._num, \
-                self._endpoint, self._retstep, self._dtype)
+                                         self._endpoint, self._retstep, self._dtype)
 
     for dtype in dtypes:
         x = np.zeros(shape=(), dtype=dtype)
@@ -1185,7 +1187,6 @@ def test_np_hsplit():
         (1,),
         2,
     ]
-
     for hybridize in [True, False]:
         for shape in shapes:
             for indices_or_sections in indices_or_sections_num:
@@ -1197,7 +1198,7 @@ def test_np_hsplit():
                 a = mx.nd.random.uniform(-1.0, 1.0, shape=shape).as_np_ndarray()
                 a.attach_grad()
                 expected_ret = _np.hsplit(a.asnumpy(),
-                                         indices_or_sections=indices_or_sections)
+                                          indices_or_sections=indices_or_sections)
                 with mx.autograd.record():
                     y = test_hsplit(a)
                 assert len(y) == len(expected_ret)
@@ -1213,7 +1214,7 @@ def test_np_hsplit():
                 # test imperative
                 mx_outs = np.hsplit(a, indices_or_sections=indices_or_sections)
                 np_outs = _np.hsplit(a.asnumpy(),
-                                    indices_or_sections=indices_or_sections)
+                                     indices_or_sections=indices_or_sections)
                 for mx_out, np_out in zip(mx_outs, np_outs):
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3,
                                         atol=1e-5)
