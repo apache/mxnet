@@ -46,8 +46,7 @@ from ..ndarray.numpy import _internal as _npi
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
-           'sinh', 'cosh', 'log10', 'sqrt']
-
+           'sinh', 'cosh', 'log10', 'sqrt', 'dsplit']
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -2016,3 +2015,14 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _mx_nd_np.sqrt(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def dsplit(ary, indices_or_sections):
+    """
+    Split array into multiple sub-arrays along the 3rd axis (depth).
+    `dsplit` is equivalent to `split` with ``axis=2``, the array is
+    always split along the third axis provided the array dimension
+    is greater than or equal to 3.
+    """
+    return split(ary, indices_or_sections, axis=2)

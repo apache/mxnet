@@ -28,7 +28,19 @@ from ..ndarray import NDArray
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
-           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
+           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'dsplit']
+
+
+@set_module('mxnet.ndarray.numpy')
+def dsplit(ary, indices_or_sections):
+    """
+    Split array into multiple sub-arrays along the 3rd axis (depth).
+    `dsplit` is equivalent to `split` with ``axis=2``, the array is
+    always split along the third axis provided the array dimension
+    is greater than or equal to 3.
+    """
+    return split(ary, indices_or_sections, axis=2)
+
 
 
 @set_module('mxnet.ndarray.numpy')
