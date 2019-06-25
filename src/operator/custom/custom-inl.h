@@ -80,9 +80,14 @@ class CustomOperator {
             const std::vector<NDArray>& outputs,
             const std::string op_type = "") {
     if (naive_engine_) {
-      profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
-      func();
-      profiler::CustomOpProfiler::Get()->OnCustomEnd();
+      if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kImperative)) {
+        profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
+        func();
+        profiler::CustomOpProfiler::Get()->OnCustomEnd();
+      }
+      else {
+        func();
+      }
       for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
         if (arrs[i].storage_type() == kDefaultStorage ||
             arrs[i].storage_type() == kUndefinedStorage)
@@ -101,9 +106,14 @@ class CustomOperator {
       bool prev_training = Imperative::Get()->set_is_training(training);
 
       try {
-        profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
-        func();
-        profiler::CustomOpProfiler::Get()->OnCustomEnd();
+        if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kImperative)) {
+          profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
+          func();
+          profiler::CustomOpProfiler::Get()->OnCustomEnd();
+        }
+        else {
+          func();
+        }
       } catch (dmlc::Error& e) {
         exception_ =
             std::make_shared<std::exception_ptr>(std::current_exception());

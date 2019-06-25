@@ -53,14 +53,10 @@ class CustomOpProfiler {
    * \param op_type The registed name of the custom operator
    */
   void OnCustomBegin(const std::string& op_type) {
-    profiler::Profiler *profiler = profiler::Profiler::Get();
     const Tid tid = std::this_thread::get_id();
     const std::string task_name = MakePythonCodeName(op_type);
     std::lock_guard<std::mutex> lock(mutex_);
     tid_to_op_type_[tid] = op_type;
-    if (!profiler->IsProfiling(profiler::Profiler::kImperative)) {
-      return;
-    }
     tasks_[tid] = std::make_unique<ProfileTask>(task_name.c_str(), &custom_op_domain);
     tasks_[tid]->start();
   }
@@ -73,10 +69,9 @@ class CustomOpProfiler {
     const Tid tid = std::this_thread::get_id();
     std::lock_guard<std::mutex> lock(mutex_);
     tid_to_op_type_.erase(tid);
-    // this can happen if we are not profiling
-    if (tasks_.find(tid) == tasks_.end()) {
-      return;
-    }
+    // this should never fail
+    CHECK(tasks_.find(tid) != tasks_.end()) << "thread_id not found. " <<
+        "Please use OnCustomBegin() and OnCustomEnd() in pairs.";
     tasks_[tid]->stop();
     tasks_.erase(tid);
   }
