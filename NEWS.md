@@ -22,40 +22,40 @@ MXNet Change Log
 ### New Features
 
 #### Automatic Mixed Precision(experimental)
-Training Deep Learning networks is a very computationally intensive task. Novel model architectures tend to have increasing number of layers and parameters, which slows down training. Fortunately, new generations of training hardware as well as software optimizations, make it a feasible task. 
-However, where most of the (both hardware and software) optimization opportunities exists is in exploiting lower precision (like FP16) to, for example, utilize Tensor Cores available on new Volta and Turing GPUs. While training in FP16 showed great success in image classification tasks, other more complicated neural networks typically stayed in FP32 due to difficulties in applying the FP16 training guidelines.
-That is where AMP (Automatic Mixed Precision) comes into play. It automatically applies the guidelines of FP16 training, using FP16 precision where it provides the most benefit, while conservatively keeping in full FP32 precision operations unsafe to do in FP16. To learn more about AMP, checkout this [tutorial](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/amp/amp_tutorial.md). 
+Training Deep Learning networks is a very computationally intensive task. Novel model architectures tend to have increasing numbers of layers and parameters, which slow down training. Fortunately, software optimizations and new generations of training hardware make it a feasible task. 
+However, most of the hardware and software optimization opportunities exist in exploiting lower precision (e.g. FP16) to, for example, utilize Tensor Cores available on new Volta and Turing GPUs. While training in FP16 showed great success in image classification tasks, other more complicated neural networks typically stayed in FP32 due to difficulties in applying the FP16 training guidelines.
+That is where AMP (Automatic Mixed Precision) comes into play. It automatically applies the guidelines of FP16 training, using FP16 precision where it provides the most benefit, while conservatively keeping in full FP32 precision operations unsafe to do in FP16. To learn more about AMP, check out this [tutorial](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/amp/amp_tutorial.md). 
 
 #### MKL-DNN Reduced precision inference and RNN API support
-Two advanced features, fused computation and reduced-precision kernels, are introduced by MKL-DNN in the recent version. These features can significantly speed up the inference performance on CPU for a broad range of deep learning topologies. MXNet MKL-DNN backend provides optimized implementations for various operators covering a broad range of applications including image classification, object detection, natural language processing. Refer to the [MKL-DNN operator documentation](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for more information.
+Two advanced features, fused computation and reduced-precision kernels, are introduced by MKL-DNN in the recent version. These features can significantly speed up the inference performance on CPU for a broad range of deep learning topologies. MXNet MKL-DNN backend provides optimized implementations for various operators covering a broad range of applications including image classification, object detection, and natural language processing. Refer to the [MKL-DNN operator documentation](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for more information.
 
 #### Dynamic Shape(experimental)
 MXNet now supports Dynamic Shape in both imperative and symbolic mode. MXNet used to require that operators statically infer the output shapes from the input shapes. However, there exist some operators that don't meet this requirement. Examples are:
 * while_loop: its output size depends on the number of iterations in the loop.
 * boolean indexing: its output size depends on the value of the input data.
 * many operators can be extended to take a shape symbol as input and the shape symbol can determine the output shape of these operators (with this extension, the symbol interface of MXNet can fully support shape).
-To support dynamic shape and such operators, we have modified MXNet backend including graph binding, the MXNet executor and the operator interface. Now MXNet supports operators with dynamic shape such as [`contrib.while_loop`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.while_loop), [`contrib.cond`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.cond), and [`mxnet.ndarray.contrib.boolean_mask`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#contrib)
+To support dynamic shape and such operators, we have modified MXNet backend. Now MXNet supports operators with dynamic shape such as [`contrib.while_loop`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.while_loop), [`contrib.cond`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.cond), and [`mxnet.ndarray.contrib.boolean_mask`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#contrib)
 Note: Currently dynamic shape does not work with Gluon defferred initialization.
 
 #### Large Tensor Support
-Current MXNet only supports maximal tensors size around 4 billon (2^32). This is because uint32_t is used as default data type for tensor size as well as indexing variables. 
+Currently, MXNet supports maximal tensor size of around 4 billon (2^32). This is due to uint32_t being used as the default data type for tensor size, as well as variable indexing.
 This limitation has created many problems when larger tensors are used in the model. 
-A naive solution to this problem is to replace all uint32_t in the MXNet backend source code by int64_t. 
-This solution is not viable, however, because many data structures use uint32_t as data type for its members. 
+A naive solution to this problem is to replace all uint32_t in the MXNet backend source code to int64_t.
+This solution is not viable, however, because many data structures use uint32_t as the data type for its members.
 Unnecessarily replacing these variables to int64_t will increase the memory consumption causing another limitation. Second, MXNet has many submodule dependencies. 
-Updating the variable types in MXNet repository is not enough. We also need to make sure different libraries, such as MKLDNN, MShadow etc. supports the int64_t integer data type. 
-Third, many front end APIs assumes unsigned 32-bit integer interface. Only updating the interface in C/C++ will cause all the language bindings to fail.
+Updating the variable types in the MXNet repository is not enough. We also need to make sure different libraries, such as MKLDNN, MShadow etc. supports the int64_t integer data type. 
+Third, many front end APIs assume unsigned 32-bit integer interface. Only updating the interface in C/C++ will cause all the language bindings to fail.
 Therefore, we need a systematic approach to enhance MXNet to support large tensors. 
 Now you can enable large tensor support by changing the following build flag to 1: `USE_INT64_TENSOR_SIZE = 1`. Note this is set to 0 by default.
 For more details please refer to the [design document](https://cwiki.apache.org/confluence/display/MXNET/Large+Tensor+Support).
 
 #### Dependency Update
-MXNet now added support for CUDA 10, CUDA 10.1, cudnn7.5, NCCL 2.4.2, numpy 1.16.0 to benefit from the latest features and performance improvements.
+MXNet has added support for CUDA 10, CUDA 10.1, cudnn7.5, NCCL 2.4.2, and numpy 1.16.0.
 These updates are available through PyPI packages and build from source, refer to [installation guid](https://mxnet.incubator.apache.org/versions/master/install/index.html) for more details.
 
 #### Gluon Fit API(experimental)
-Training a model in Gluon requires users to write the training loop, this is useful because of its imperative nature, however repeating the same code across multiple models can become tedious and repetitive with boilerplate code. 
-The training loop can also be overwhelming to some users new to deep learning. We have introduced a Estimator and Fit API to help facilitate training loop.
+Training a model in Gluon requires users to write the training loop. This is useful because of its imperative nature, however repeating the same code across multiple models can become tedious and repetitive with boilerplate code. 
+The training loop can also be overwhelming to some users new to deep learning. We have introduced an Estimator and Fit API to help facilitate training loop.
 Note: this feature is still experimental, for more details, refer to [design document](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design).
 
 #### New Operators
@@ -362,7 +362,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Performance improving for MKL-DNN Quantized FullyConnected (#14528)
 * speedup SequenceMask on GPU (#14445)
 * Dual stream cudnn Convolution backward() with MXNET_GPU_WORKER_NSTREAMS=2. (#14006)
-* Speedup _contrib_index_copy (#14359)
+* Speedup `_contrib_index_copy` (#14359)
 * use mkl sparse matrix to improve performance (#14492)
 * Re-enable static cached_op optimization (#14931)
 * Speed up SequenceReverse (#14627)
@@ -692,7 +692,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * [MXNET-244] Work around likely compiler bug on nested inlines and temporary acces… (#13535)
 * Use curl to download sample data instead of wget. (#13761)
 * fix bipartite match memory corruption (#13727)
-* remove attributs clear on TRT nodes for GetOptimizedSymbol (#13703)
+* remove attributes clear on TRT nodes for GetOptimizedSymbol (#13703)
 * fix redirection issues; set default version to master (#13796)
 * fix for params with no dims in onnx (#13413)
 * Remove semicolon in libmxnet.sym file (#13822)
