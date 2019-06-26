@@ -498,18 +498,13 @@ def test_np_dsplit():
             return F.np.dsplit(a, self._indices_or_sections)
 
     for hybridize in [True, False]:
-        for shape_x, i_or_s in [[(1,), (1,)],  # single elements
-                                [(4, 5), (4, 5)],  # normal case
-                                [(3, 2), (3, 2)],  # tall matrices
-                                ((), ()),  # scalar only
-                                [(3, 0, 2), (3, 0, 2)],  # zero-dim
-                                ((3, 4, 5), (4, 5)),
-                                # trailing dim broadcasting
-                                ((3, 4, 5), ()),  # scalar broadcasting
-                                [(4, 3), (4, 1)],  # single broadcasting
-                                ((3, 4, 5), (3, 1, 5))
-                                # single broadcasting in the middle
-                                ]:
+        for shape_x, i_or_s in [
+            ((2, 5, 10, 3), 5),
+            [(2, 3, 4), 2],
+            [(2, 0, 6, 0), 3]  # zero dims
+            # [(2, 0, 6, 0), (2, 3)]  # zero dims
+            # [(0, 3, 5), (1, 3)],  # first dim being zero
+        ]:
             test_dsplit = TestDSplit(i_or_s)
             if hybridize:
                 test_dsplit.hybridize()
@@ -517,17 +512,27 @@ def test_np_dsplit():
             x = rand_ndarray(shape_x, dtype=_np.int32).as_np_ndarray()
             x.attach_grad()
 
-            np_out = _np.dsplit(x.asnumpy(), i_or_s)
+            np_outs = _np.dsplit(x.asnumpy(), i_or_s)
             with mx.autograd.record():
-                mx_out = test_dsplit(x)
-            assert mx_out.shape == np_out.shape
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-            mx_out.backward()
+                mx_outs = test_dsplit(x)
+            assert len(mx_outs) == len(np_outs)
+            for mx_out, np_out in zip(mx_outs, np_outs):
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3,
+                                    atol=1e-5)
+
+            mx.autograd.backward(mx_outs)
+            assert_almost_equal(x.grad.asnumpy(),
+                                _np.ones(x.shape),
+                                rtol=1e-3, atol=1e-5)
 
             # Test imperative once again
-            mx_out = np.dsplit(x)
-            np_out = _np.dsplit(x.asnumpy(), i_or_s)
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_outs = np.dsplit(x, i_or_s)
+            np_outs = _np.dsplit(x.asnumpy(), i_or_s)
+            for mx_out, np_out in zip(mx_outs, np_outs):
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3,
+                                    atol=1e-5)
 
 
 @with_seed()
