@@ -433,7 +433,8 @@ if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
-  if(OPENMP_FOUND)
+  # cmake 3.0 use OPENMP_FOUND, but cmake > 3.7 use OpenMP_FOUND
+  if(OPENMP_FOUND OR OpenMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
       set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
