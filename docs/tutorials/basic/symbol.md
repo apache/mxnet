@@ -369,7 +369,9 @@ ex.outputs[0].asnumpy()
 
 ### Weight tying
 
-You can use same principle to tie weights of different layers. In the example below two `FullyConnected` layers share same weights and biases, but process different data. Find a full example below.
+You can use same principle to tie weights of different layers. In the example below two `FullyConnected` layers share same weights and biases, but process different data. Let's demonstrate how we can do it.
+
+In this example we first create training and evaluation datasets. Both of them consist of two individual `NDArray`s. We are using `NDArrayIter` to iterate over all of them.
 
 ```python
 import numpy as np
@@ -398,7 +400,11 @@ eval_iter = mx.io.NDArrayIter({'inputs_left': eval_data1,
                               eval_label, batch_size, shuffle=False, 
                               label_name='labels',
                               last_batch_handle='pad')
+```
 
+We define a `Symbol` for both `inputs_left` and `inputs_right` variables, and separate symbols for `shared_weight` and `shared_bias`. We use `shared_weight` and `shared_bias` symbols in both `FullyConnected` layers, making sure that they are using the same data underlying the symbols. This is where weight tying is happening.
+
+```python
 num_hidden_nodes = 2
 
 # Assume the left and right inputs have the same shape as each other
@@ -419,7 +425,11 @@ fc_right_sym = mx.sym.FullyConnected(data=inputs_right, weight=shared_weight,
 
 combined = mx.sym.concat(fc_left_sym, fc_right_sym)
 output = mx.sym.SoftmaxOutput(data=combined, label=labels, name='softmax')
+```
 
+In the next lines of the code, we use `Module API` to start the training. We first create a `Module` object and then call `fit` providing data iterators. To use trained model for prediction, we use `predict` method, providing evaluation data iterator.  
+
+```python
 model = mx.mod.Module(
     symbol=output,
     data_names=['inputs_left', 'inputs_right'],
@@ -434,12 +444,6 @@ model.fit(train_iter, eval_iter,
 result = model.predict(eval_iter).asnumpy()
 print(result)
 ```
-
-In this example we first create training and evaluation datasets. Both of them consist of two individual `NDArray`s. We are using `NDArrayIter` to iterate over all of them.
-
-We define a `Symbol` for both `inputs_left` and `inputs_right` variables, and separate symbols for `shared_weight` and `shared_bias`. We use `shared_weight` and `shared_bias` symbols in both `FullyConnected` layers, making sure that they are using the same data underlying the symbols. This is where weight tying is happening.
-
-In the next lines of the code, we use `Module API` to start the training. We first create a `Module` object and then call `fit` providing data iterators. To use trained model for prediction, we use `predict` method, providing evaluation data iterator.  
 
 ## Recommended Next Steps
 
