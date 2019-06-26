@@ -1485,7 +1485,7 @@ def stack(arrays, axis=0, out=None):
     >>> np.stack((a, b), axis=-1)
     array([[1., 2.],
            [2., 3.],
-           [3., 4.]], dtype=float32)    
+           [3., 4.]], dtype=float32)
     """
     return _mx_nd_np.stack(arrays, axis=axis, out=out)
 
@@ -1865,6 +1865,7 @@ def expand_dims(a, axis):
     return _npi.expand_dims(a, axis)
 
 
+# pylint: disable=line-too-long
 @set_module('mxnet.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -1910,6 +1911,7 @@ def split(ary, indices_or_sections, axis=0):
     [array([0., 1., 2.], dtype=float32), array([3., 4.], dtype=float32), array([5.], dtype=float32), array([6., 7.], dtype=float32)]
     """
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
+# pylint: enable=line-too-long
 
 
 @set_module('mxnet.numpy')
@@ -2115,7 +2117,6 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _mx_nd_np.sqrt(x, out=out, **kwargs)
-
 
 
 @set_module('mxnet.numpy')
@@ -2452,7 +2453,7 @@ def rint(x, out=None, **kwargs):
 def log2(x, out=None, **kwargs):
     """
     Base-2 logarithm of x.
-    
+
     Parameters
     ----------
     x : array_like
@@ -2523,7 +2524,7 @@ def degrees(x, out=None, **kwargs):
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
         Base-2 logarithm of x. This is a scalar if x is a scalar.
-    
+
     Examples
     --------
     >>> x = np.array([0, 1, 2, 2**4])

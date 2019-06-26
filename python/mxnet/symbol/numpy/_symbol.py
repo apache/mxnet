@@ -1060,7 +1060,7 @@ def stack(arrays, axis=0, out=None):
     >>> np.stack((a, b), axis=-1)
     array([[1., 2.],
            [2., 3.],
-           [3., 4.]], dtype=float32)    
+           [3., 4.]], dtype=float32)
     """
     def get_list(arrays):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
@@ -1280,6 +1280,7 @@ def expand_dims(a, axis):
     return _npi.expand_dims(a, axis)
 
 
+# pylint: disable=line-too-long
 @set_module('mxnet.symbol.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -1334,6 +1335,7 @@ def split(ary, indices_or_sections, axis=0):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.split(ary, indices, axis, False, sections)
     return ret
+# pylint: enable=line-too-long
 
 
 @set_module('mxnet.symbol.numpy')
@@ -1603,6 +1605,7 @@ def sqrt(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
 
 
+# pylint: disable=line-too-long
 @set_module('mxnet.symbol.numpy')
 def abs(x, out=None, **kwargs):
     r"""abs(x, out=None, **kwargs)
@@ -1830,7 +1833,7 @@ def rint(x, out=None, **kwargs):
 def log2(x, out=None, **kwargs):
     """
     Base-2 logarithm of x.
-    
+
     Parameters
     ----------
     x : array_like
@@ -1847,7 +1850,7 @@ def log2(x, out=None, **kwargs):
     -------
     y : ndarray
         Base-2 logarithm of x. This is a scalar if x is a scalar.
-    
+
     Examples
     --------
     >>> x = np.array([0, 1, 2, 2**4])
@@ -1877,7 +1880,7 @@ def radians(x, out=None, **kwargs):
     -------
     y : ndarray
         The corresponding radian values. This is a scalar if x is a scalar.
-    
+
     Examples
     --------
     >>> deg = np.arange(12.) * 30.
@@ -1888,6 +1891,7 @@ def radians(x, out=None, **kwargs):
 
     """
     return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
+# pylint: enable=line-too-long
 
 
 _set_np_symbol_class(_Symbol)
