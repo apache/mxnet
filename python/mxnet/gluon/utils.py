@@ -93,7 +93,7 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
     else:
         if is_np_array():
             indices = [step * i for i in range(1, num_slice)]
-            slices = _mx_np.split(data,  indices_or_sections=indices, axis=batch_axis)
+            slices = _mx_np.split(data, indices_or_sections=indices, axis=batch_axis)
         else:
             slices = [ndarray.slice_axis(data, batch_axis, i*step, (i+1)*step)
                       if i < num_slice - 1 else

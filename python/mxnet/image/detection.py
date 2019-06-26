@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=unused-import
+# pylint: disable=unused-import, too-many-lines
 """Read images and perform augmentations for object detection."""
 
 from __future__ import absolute_import, print_function
@@ -35,7 +35,7 @@ from .image import RandomOrderAug, ColorJitterAug, LightingAug, ColorNormalizeAu
 from .image import ResizeAug, ForceResizeAug, CastAug, HueJitterAug, RandomGrayAug
 from .image import fixed_crop, ImageIter, Augmenter
 from ..util import is_np_array
-from .. import numpy as _mx_np
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
 class DetAugmenter(object):

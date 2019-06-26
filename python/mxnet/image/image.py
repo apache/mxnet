@@ -28,7 +28,7 @@ import logging
 import json
 import warnings
 import numpy as np
-from .. import numpy as _mx_np
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
 try:
@@ -204,7 +204,7 @@ def imdecode(buf, *args, **kwargs):
         array_fn = _mx_np.array if is_np_array() else nd.array
         buf = array_fn(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
 
-    cvimdecode = _npi.cvimdecode if is_np_array() else _internal._cvimdecode()
+    cvimdecode = _npi.cvimdecode if is_np_array() else _internal._cvimdecode
     return cvimdecode(buf, *args, **kwargs)
 
 

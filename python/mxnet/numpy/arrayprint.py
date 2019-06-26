@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""ndarray print format controller."""
+
 from __future__ import absolute_import, print_function
 
 import numpy as onp

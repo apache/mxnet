@@ -387,14 +387,10 @@ class Block(object):
             except MXNetError as e:
                 err_msg = str(e)
                 if 'is_np_shape' in err_msg:
-                    warnings.warn("NumPy shape semantics has been activated. Loading model "
-                                  "parameters that were saved without NumPy shape semantics "
-                                  "in the current environment is not recommended. Trying to "
-                                  "recover from the parameter loading failure by temporarily "
-                                  "deactivating the NumPy shape semantics. It will be reactivated "
-                                  "once loading finishes. It is recommended to save and load "
-                                  "parameters within the consistent semantics to avoid unexpected "
-                                  "failure.")
+                    # Loading failure due to parameters saved without numpy semantics.
+                    # Temporarily disable numpy semantics and load parameters. After it's
+                    # done, resume the numpy semantics. This is fine because the cases
+                    # numpy ndarray covers is a superset of the legacy ndarray's.
                     with np_array(False):
                         with np_shape(False):
                             loaded = ndarray.load(filename)
