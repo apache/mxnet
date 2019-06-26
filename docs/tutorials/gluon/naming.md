@@ -120,7 +120,7 @@ Note that `model1.dense0` is still named as `dense0_` instead of `dense2_`, foll
 
 **It is recommended that you manually specify a prefix for the top level `Block`, i.e. `model = Model(prefix='mymodel_')`, to avoid potential confusion in naming.**
 
-The same principle  applies to container blocks like [`Sequential`](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential). `name_scope` can be used inside as well as outside of `__init__`:
+The same principle applies to container blocks like [`Sequential`](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential). `name_scope` can be used inside as well as outside of `__init__`. It is recommended to use `name_scope` with container blocks as the naming of the parameters inside of it tends to be more clear.
 
 ```python
 net = gluon.nn.Sequential()
@@ -151,7 +151,7 @@ print(model0.collect_params(), '\n')
 print(model1.collect_params())
 ```
 
-As a result, if you try to save parameters from model0 and load it with model1, you'll get an error due to unmatching names:
+As a result, if you try to save parameters of `model0` and then load it into `model1`, you'll get an error due to unmatching names:
 
 ```python
 model0.collect_params().save('model.params')
@@ -184,6 +184,8 @@ print(alexnet.output.prefix)
 - In Gluon Model Zoo, all image classification models follow the format where the feature extraction layers are named `features` while the output layer is named `output`.
 
 - Note that the output layer is a `Dense` block with 1000 dimension outputs.
+
+- Some networks, including `AlexNet`, provide a way to directly specify number of output classes by using `classes` argument. We will still show how to do it in a replacing block manner for demonstration purposes.
 
 To change the output to 100 dimension, we replace it with a new `Block` which has only 100 units.
 
