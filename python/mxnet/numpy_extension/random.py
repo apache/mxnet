@@ -28,7 +28,7 @@ def seed(seed, ctx='all'):  # pylint: disable=redefined-outer-name
     """Seeds the random number generators in MXNet.
 
     This affects the behavior of modules in MXNet that uses random number generators,
-    like the dropout operator and `NDArray`'s random sampling operators.
+    like the dropout operator and `ndarray`'s random sampling operators.
 
     Parameters
     ----------
