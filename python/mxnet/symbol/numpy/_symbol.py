@@ -31,7 +31,8 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'hsplit']
+           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
+           'ceil', 'log1p', 'tanh']
 
 
 def _num_outputs(sym):
@@ -1556,49 +1557,133 @@ def sqrt(x, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
-def hsplit(ary, indices_or_sections):
-    """Hsplit an array into multiple sub-arrays horizontally.
+def ceil(x, out=None, **kwargs):
+    """
+    Return the ceiling of the input, element-wise.
 
-    This is equivalent to ``split`` with ``axis=0`` if ``ary`` has one
-    dimension, and otherwise that with ``axis=1``.
+    The ceil of the scalar `x` is the smallest integer `i`, such that
+    `i >= x`.  It is often denoted as :math:`\lceil x \rceil`.
 
     Parameters
     ----------
-    ary : ndarray
-        Array to be divided into sub-arrays.
-    indices_or_sections : int or 1-D array
-        If `indices_or_sections` is an integer, N, the array will be divided
-        into N equal arrays along `axis`.  If such a split is not possible,
-        an error is raised.
-
-        If `indices_or_sections` is a 1-D array of sorted integers, the entries
-        indicate where along `axis` the array is split.
-
-        If an index exceeds the dimension of the array along `axis`,
-        an empty sub-array is returned correspondingly.
-
+    x : array_like
+        ndarray  int float and double
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
 
     Returns
     -------
-    sub-arrays : list of ndarrays
-        A list of sub-arrays.
+    y : ndarray
+        The corresponding hyperbolic sine values.
 
-    Raises
-    ------
-    ValueError
-        If `indices_or_sections` is given as an integer, but
-        a split does not result in equal division.
+    Notes
+    ----
+    Not Support scalar.
+
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.ceil(a)
+    array([-1., -1., -0.,  1.,  2.,  2.,  2.], dtype=float32)
+
     """
-    indices = []
-    sections = 0
-    if isinstance(indices_or_sections, int):
-        sections = indices_or_sections
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must either int or tuple of ints')
-    ret = _npi.hsplit(ary, indices, 1, False, sections)
-    return ret
+    return _unary_func_helper(x, _npi.ceil, _np.ceil, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log1p(x, out=None, **kwargs):
+    """
+    Return the natural logarithm of one plus the input array, element-wise.
+
+    Calculates ``log(1 + x)``.
+
+    Parameters
+    ----------
+    x : array_like
+        ndarray int float double
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray
+        The corresponding hyperbolic sine values.
+
+    Notes
+    ----
+    Not Support scalar.
+
+    >>> np.log1p(np.array(1e-99))
+    Operator _npi_log1p inferring shapes failed.
+
+    Examples
+    --------
+    >>> np.log1p(1e-99)
+    1e-99
+
+    """
+    return _unary_func_helper(x, _npi.log1p, _np.log1p, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def tanh(x, out=None, **kwargs):
+    """
+    Compute hyperbolic tangent element-wise.
+
+    Equivalent to ``np.sinh(x)/np.cosh(x)`` or ``-1j * np.tan(1j*x)``.
+
+    Parameters
+    ----------
+    x : array_like
+        ndarray int float double
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+    Returns
+    -------
+    y : ndarray
+        The corresponding hyperbolic tangent values.
+
+    Notes
+    -----
+    If `out` is provided, the function writes the result into it,
+    and returns a reference to `out`.  (See Examples)
+
+    Not support scalar
+    Do not support complex computation don't deal with imaginary number
+
+    >>> np.tanh(np.pi*1j)
+    TypeError: type <type 'complex'> not supported
+
+    Examples
+    --------
+    >>> np.tanh(np.array([0, np.pi]))
+    array([0.       , 0.9962721], dtype=float32)
+
+    >>> # Example of providing the optional output parameter illustrating
+    >>> # that what is returned is a reference to said parameter
+    >>> out1 = np.array([1])
+    >>> out2 = np.tanh(np.array([0.1]), out1)
+    >>> out2 is out1
+    True
+
+    >>> # Example of ValueError due to provision of shape mis-matched `out`
+    >>> np.tanh(np.zeros((3,3)),np.zeros((2,2)))
+    Incompatible attr in node  at 0-th output: expected [3,3], got [2,2]
+
+    """
+    return _unary_func_helper(x, _npi.tanh, _np.tanh, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)

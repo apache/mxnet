@@ -2085,7 +2085,8 @@ def ceil(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray
+    x : array_like
+        ndarray  int float and double
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it
@@ -2100,7 +2101,7 @@ def ceil(x, out=None, **kwargs):
 
     Notes
     ----
-    Not Support scalar. Only support ndarray
+    Not Support scalar.
 
     Examples
     --------
@@ -2121,7 +2122,8 @@ def log1p(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray
+    x : array_like
+        ndarray int float double
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it
@@ -2136,14 +2138,15 @@ def log1p(x, out=None, **kwargs):
 
     Notes
     ----
-    Not Support scalar. Only support ndarray
+    Not Support scalar.
+
+    >>> np.log1p(np.array(1e-99))
+    Operator _npi_log1p inferring shapes failed.
 
     Examples
     --------
-    >>> np.log1p(np.array((1e-99, 1e-99)))
-    array([0., 0.], dtype=float32)
-    >>> np.log(1 + np.array((1e-99, 1e-99)))
-    array([0., 0.], dtype=float32)
+    >>> np.log1p(1e-99)
+    1e-99
 
     """
     return _mx_nd_np.log1p(x, out=out, **kwargs)
@@ -2159,55 +2162,44 @@ def tanh(x, out=None, **kwargs):
     Parameters
     ----------
     x : array_like
+        ndarray int float double
         Input array.
-    out : ndarray, None, or tuple of ndarray and None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have length equal to the number of outputs.
-    where : array_like, optional
-        Values of True indicate to calculate the ufunc at that position, values
-        of False indicate to leave the value in the output alone.
-    **kwargs
-        For other keyword-only arguments, see the
-        :ref:`ufunc docs <ufuncs.kwargs>`.
-
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
     Returns
     -------
     y : ndarray
         The corresponding hyperbolic tangent values.
-        This is a scalar if `x` is a scalar.
 
     Notes
     -----
     If `out` is provided, the function writes the result into it,
     and returns a reference to `out`.  (See Examples)
 
-    References
-    ----------
-    .. [1] M. Abramowitz and I. A. Stegun, Handbook of Mathematical Functions.
-           New York, NY: Dover, 1972, pg. 83.
-           http://www.math.sfu.ca/~cbm/aands/
+    Not support scalar
+    Do not support complex computation don't deal with imaginary number
 
-    .. [2] Wikipedia, "Hyperbolic function",
-           https://en.wikipedia.org/wiki/Hyperbolic_function
+    >>> np.tanh(np.pi*1j)
+    TypeError: type <type 'complex'> not supported
 
     Examples
     --------
-    >>> np.tanh((0, np.pi*1j, np.pi*1j/2))
-    array([ 0. +0.00000000e+00j,  0. -1.22460635e-16j,  0. +1.63317787e+16j])
+    >>> np.tanh(np.array([0, np.pi]))
+    array([0.       , 0.9962721], dtype=float32)
 
     >>> # Example of providing the optional output parameter illustrating
     >>> # that what is returned is a reference to said parameter
-    >>> out2 = np.tanh([0.1], out1)
+    >>> out1 = np.array([1])
+    >>> out2 = np.tanh(np.array([0.1]), out1)
     >>> out2 is out1
     True
 
     >>> # Example of ValueError due to provision of shape mis-matched `out`
     >>> np.tanh(np.zeros((3,3)),np.zeros((2,2)))
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
-    ValueError: invalid return array shape
+    Incompatible attr in node  at 0-th output: expected [3,3], got [2,2]
 
     """
     return _mx_nd_np.tanh(x, out=out, **kwargs)
