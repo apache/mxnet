@@ -4,7 +4,7 @@ namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(_np_arctan2)
 .set_attr<FCompute>("FCompute<gpu>", Arctan2OpForward<gpu>);
-NNVM_REGISTER_OP(_np_backward_arctan2)
+NNVM_REGISTER_OP(_backward_np_arctan2)
 .set_attr<FCompute>("FCompute<gpu>", Arctan2OpBackward<gpu>);
 
 }
