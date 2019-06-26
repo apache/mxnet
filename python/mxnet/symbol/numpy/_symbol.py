@@ -31,7 +31,7 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
+           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'hsplit']
 
 
 def _num_outputs(sym):
@@ -1553,6 +1553,52 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def hsplit(ary, indices_or_sections):
+    """Hsplit an array into multiple sub-arrays horizontally.
+
+    This is equivalent to ``split`` with ``axis=0`` if ``ary`` has one
+    dimension, and otherwise that with ``axis=1``.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D array
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.
+
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+
+    Raises
+    ------
+    ValueError
+        If `indices_or_sections` is given as an integer, but
+        a split does not result in equal division.
+    """
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.hsplit(ary, indices, 1, False, sections)
+    return ret
 
 
 _set_np_symbol_class(_Symbol)

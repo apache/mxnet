@@ -28,7 +28,7 @@ from ..ndarray import NDArray
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
-           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
+           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'ceil', 'log1p', 'tanh']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -53,6 +53,42 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     -------
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
+
+    Notes
+    -----
+    Not support parameter order
+    Not support zero-size (like np.zeros(0) will return error!)
+    Not support zero-dim tensor
+    numpy 1.16  inputs can be list and ndarray
+    but mxnet.np can only support int and tuple
+
+    >>> np.zeros((2,), dtype=[('x', 'i4'), ('y', 'i4')]) # custom dtype
+    not support custom dtypes
+
+    See Also
+    --------
+    zeros_like : Return an array of zeros with shape and type of input.
+    empty : Return a new uninitialized array.
+    ones : Return a new array setting values to one.
+    full : Return a new array of given shape filled with value.
+
+    Examples
+    --------
+    >>> np.zeros(5)
+    array([0., 0., 0., 0., 0.], dtype=float32)
+
+    >>> np.zeros((5,), dtype=int)
+    array([0, 0, 0, 0, 0])
+
+    >>> np.zeros((2, 1))
+    array([[0.],
+       [0.]], dtype=float32)
+
+    >>> s = (2,2)
+    >>> np.zeros(s)
+    array([[0., 0.],
+       [0., 0.]], dtype=float32)
+
     """
     _sanity_check_params('zeros', ['order'], kwargs)
     ctx = kwargs.pop('ctx', current_context())
@@ -304,6 +340,27 @@ def concatenate(seq, axis=0, out=None):
     -------
     res : ndarray
         The concatenated array.
+
+    Notes
+    -----
+    Not support axis = None
+    Not support zero-shape and zero-dim
+
+    >>> np.concatenate((a, b), axis=None)
+    Invalid Parameter format for dim expect int but value='None',
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> b = np.array([[5, 6]])
+    >>> np.concatenate((a, b), axis=0)
+    array([[1., 2.],
+       [3., 4.],
+       [5., 6.]], dtype=float32)
+    >>> np.concatenate((a, b.T), axis=1)
+    array([[1., 2., 5.],
+       [3., 4., 6.]], dtype=float32)
+
     """
     return _npi.concatenate(*seq, dim=axis, out=out)
 
@@ -864,7 +921,7 @@ def sqrt(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or scalar
+    x : ndarray
         The values whose square-roots are required.
     out : ndarray, or None, optional
         A location into which the result is stored. If provided, it must have
@@ -882,3 +939,141 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def ceil(x, out=None, **kwargs):
+    """
+    Return the ceiling of the input, element-wise.
+
+    The ceil of the scalar `x` is the smallest integer `i`, such that
+    `i >= x`.  It is often denoted as :math:`\lceil x \rceil`.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray
+        The corresponding hyperbolic sine values.
+
+    Notes
+    ----
+    Not Support scalar. Only support ndarray
+
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.ceil(a)
+    array([-1., -1., -0.,  1.,  2.,  2.,  2.], dtype=float32)
+
+    """
+    return _unary_func_helper(x, _npi.ceil, _np.ceil, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def log1p(x, out=None, **kwargs):
+    """
+    Return the natural logarithm of one plus the input array, element-wise.
+
+    Calculates ``log(1 + x)``.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs broadcast to. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output is the same as that of the input if the input is an ndarray.
+
+    Returns
+    -------
+    y : ndarray
+        The corresponding hyperbolic sine values.
+
+    Notes
+    ----
+    Not Support scalar. Only support ndarray
+
+    Examples
+    --------
+    >>> np.log1p(np.array((1e-99, 1e-99)))
+    array([0., 0.], dtype=float32)
+    >>> np.log(1 + np.array((1e-99, 1e-99)))
+    array([0., 0.], dtype=float32)
+
+    """
+    return _unary_func_helper(x, _npi.log1p, _np.log1p, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def tanh(x, out=None, **kwargs):
+    """
+    Compute hyperbolic tangent element-wise.
+
+    Equivalent to ``np.sinh(x)/np.cosh(x)`` or ``-1j * np.tan(1j*x)``.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values
+        of False indicate to leave the value in the output alone.
+    **kwargs
+        For other keyword-only arguments, see the
+        :ref:`ufunc docs <ufuncs.kwargs>`.
+
+    Returns
+    -------
+    y : ndarray
+        The corresponding hyperbolic tangent values.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    If `out` is provided, the function writes the result into it,
+    and returns a reference to `out`.  (See Examples)
+
+    References
+    ----------
+    .. [1] M. Abramowitz and I. A. Stegun, Handbook of Mathematical Functions.
+           New York, NY: Dover, 1972, pg. 83.
+           http://www.math.sfu.ca/~cbm/aands/
+
+    .. [2] Wikipedia, "Hyperbolic function",
+           https://en.wikipedia.org/wiki/Hyperbolic_function
+
+    Examples
+    --------
+    >>> np.tanh((0, np.pi*1j, np.pi*1j/2))
+    array([ 0. +0.00000000e+00j,  0. -1.22460635e-16j,  0. +1.63317787e+16j])
+
+    >>> # Example of providing the optional output parameter illustrating
+    >>> # that what is returned is a reference to said parameter
+    >>> out2 = np.tanh([0.1], out1)
+    >>> out2 is out1
+    True
+
+    >>> # Example of ValueError due to provision of shape mis-matched `out`
+    >>> np.tanh(np.zeros((3,3)),np.zeros((2,2)))
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+    ValueError: invalid return array shape
+
+    """
+    return _unary_func_helper(x, _npi.tanh, _np.tanh, out=out, **kwargs)
