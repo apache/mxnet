@@ -173,3 +173,72 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
         `axis` is not None or `a` is a 1-d array.
     """
     pass
+
+
+def _np_amax(a, axis=None, out=None):
+    """
+    amax(a, axis=None, out=None, keepdims=_Null, initial=_Null)
+    Return the maximum of an array or maximum along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+        Python native iterables not supported.
+
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to operate. By default, flattened input is
+        used.
+
+        Negative indices not supported.
+
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `amax` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+
+    initial : scalar, optional
+        The minimum value of an output element. Must be present to allow
+        computation on empty slice.
+
+        Not supported yet.
+
+
+    Returns
+    -------
+    amax : ndarray or scalar
+        Maximum of `a`. If `axis` is None, the result is a scalar value.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+
+    Examples
+    --------
+    >>> a = np.arange(4).reshape((2,2))
+    >>> a
+    array([[0, 1],
+           [2, 3]])
+    >>> np.amax(a)           # Maximum of the flattened array
+    array(3)
+    >>> np.amax(a, axis=0)   # Maxima along the first axis
+    array([2, 3])
+    >>> np.amax(a, axis=1)   # Maxima along the second axis
+    array([1, 3])
+
+    >>> np.amax(a, axis=1, keepdims=True)
+    array([[1],
+          [3]])
+
+    """
+    pass
