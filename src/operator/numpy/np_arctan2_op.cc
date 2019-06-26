@@ -31,7 +31,7 @@ Example:
 .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
 .set_attr<nnvm::FInferType>("FInferType", Arctan2OpType)
 .set_attr<FCompute>("FCompute<cpu>", Arctan2OpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_np_backward_arctan2"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_np_arctan2"})
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -39,7 +39,7 @@ Example:
 .add_argument("x1", "NDArray-or-Symbol", "The input array")
 .add_argument("x2", "NDArray-or-Symbol", "The input array");
 
-NNVM_REGISTER_OP(_np_backward_arctan2)
+NNVM_REGISTER_OP(_backward_np_arctan2)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
