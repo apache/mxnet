@@ -25,8 +25,9 @@
  * 3. Load the inference dataset and create a new ImageRecordIter.
  * 4. Run the forward pass and obtain throughput & accuracy.
  */
-
-#include <cstdlib>
+#ifndef _WIN32
+#include <sys/time.h>
+#endif
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -42,6 +43,20 @@
 #include "mxnet-cpp/initializer.h"
 
 using namespace mxnet::cpp;
+
+double ms_now() {
+  double ret;
+#ifdef _WIN32
+  auto timePoint = std::chrono::high_resolution_clock::now().time_since_epoch();
+  ret = std::chrono::duration<double, std::milli>(timePoint).count();
+#else
+  struct timeval time;
+  gettimeofday(&time, NULL);
+  ret = 1e+3 * time.tv_sec + 1e-3 * time.tv_usec;
+#endif
+  return ret;
+}
+
 
 // define the data type for NDArray, aliged with the definition in mshadow/base.h
 enum TypeFlag {
@@ -371,18 +386,16 @@ void Predictor::BenchmarkScore(int num_inference_batches) {
   }
 
   // Run the forward pass.
-  // double ms = get_msec();
-  auto tic = std::chrono::system_clock::now();
+  double ms = ms_now();
   for (int i = 0; i < num_inference_batches; i++) {
     executor_->Forward(false);
     NDArray::WaitAll();
   }
-  double sec = std::chrono::duration_cast<std::chrono::milliseconds>
-               (std::chrono::system_clock::now() - tic).count() / 1000.0;
+  ms = ms_now() - ms;
   LG << " benchmark completed!";
   LG << " batch size: " << input_shape_[0] << " num batch: " << num_inference_batches
-     << " throughput: " << input_shape_[0] * num_inference_batches / sec
-     << " imgs/s latency:" << sec / input_shape_[0] / num_inference_batches * 1000.0 << " ms";
+     << " throughput: " << 1000.0 * input_shape_[0] * num_inference_batches / ms
+     << " imgs/s latency:" << ms / input_shape_[0] / num_inference_batches << " ms";
 }
 
 /*
@@ -417,7 +430,7 @@ void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
     return;
   }
 
-  auto tic = std::chrono::system_clock::now();
+  double ms = ms_now();
   while (val_iter_->Next()) {
     auto data_batch = val_iter_->GetDataBatch();
     data_batch.data.CopyTo(&args_map_["data"]);
@@ -433,8 +446,7 @@ void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
       break;
     }
   }
-  double sec = std::chrono::duration_cast<std::chrono::milliseconds>
-               (std::chrono::system_clock::now() - tic).count() / 1000.0;
+  ms = ms_now() - ms;
   auto args_name = net_.ListArguments();
   LG << "INFO:" << "Dataset for inference: " << dataset_;
   LG << "INFO:" << "label_name = " << args_name[args_name.size()-1];
@@ -448,7 +460,7 @@ void Predictor::Score(int num_skipped_batches, int num_inference_batches) {
      << " images ";
   LG << "INFO:" << "Batch size = " << input_shape_[0] << " for inference";
   LG << "INFO:" << "Accuracy: " << val_acc.Get();
-  LG << "INFO:" << "Throughput: " << (nBatch * input_shape_[0] / sec)
+  LG << "INFO:" << "Throughput: " << (1000.0 * nBatch * input_shape_[0] / ms)
      << " images per second";
 }
 
