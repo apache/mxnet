@@ -190,14 +190,22 @@ void AttachOpResources(const Graph& g,
  */
 Graph DetectInplaceAddTo(Graph g);
 
-using NodeEntryMapCounter =
-  std::unordered_map<nnvm::NodeEntry, uint32_t, nnvm::NodeEntryHash, nnvm::NodeEntryEqual>;
-/*!\brief
- * This is to count how many time each output is used by another node (or the output of the graph)
+/*!
+ * \brief Fuse pointwise operations in the forward pass
+ *
+ * \param g input graph (needs to be entire graph, not just forward part)
+ *
+ * \return graph with fused pointwise operations in the forward pass
  */
-NodeEntryMapCounter GetNodeEntryCount(const Graph& g);
-
 Graph FusePointwiseForward(Graph&& g);
+
+/*!
+ * \brief Fuse pointwise operations in the backward pass
+ *
+ * \param g input graph (needs to be entire graph, not just forward part)
+ *
+ * \return graph with fused pointwise operations in the backward pass
+ */
 Graph FusePointwiseBackward(Graph&& g);
 
 /*!

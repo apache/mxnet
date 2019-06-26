@@ -28,7 +28,6 @@
 #include <nnvm/pass_functions.h>
 #include <map>
 #include <vector>
-#include <set>
 #include <string>
 #include <utility>
 #include "../common/utils.h"
@@ -623,50 +622,24 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
   return g;
 }
 
-inline void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables) {
-  using nnvm::Node;
-  using nnvm::NodePtr;
-  using nnvm::NodeEntry;
-  std::unordered_map<Node*, NodePtr> old_new;
-  // use DFSVisit to copy all the nodes
-  DFSVisit(src.outputs, [&old_new, copy_variables](const NodePtr& node) {
-      NodePtr np;
-      if (copy_variables || !node->is_variable()) {
-        np = Node::Create();
-        np->attrs = node->attrs;
-      } else {
-        np = node;
-      }
-      old_new[node.get()] = std::move(np);
-    });
-  // connect nodes of new graph
-  for (const auto &kv : old_new) {
-    for (const NodeEntry& e : kv.first->inputs) {
-      Node *ptr = e.node.get();
-      kv.second->inputs.emplace_back(NodeEntry{old_new[ptr], e.index, e.version});
-    }
-    for (const NodePtr& p : kv.first->control_deps) {
-      kv.second->control_deps.emplace_back(old_new[p.get()]);
-    }
-  }
-  // set the head
-  for (const NodeEntry &e : src.outputs) {
-    (*dst).outputs.emplace_back(NodeEntry{old_new[e.node.get()], e.index, e.version});
-  }
-}
+/*!
+ * \brief Copy the graph, optionally leaving original Variable nodes
+ *
+ * \param dst destination graph
+ * \param src source graph being copied
+ * \param copy_variable whether to copy or reuse Variable nodes from the
+ *                      source graph
+ */
+void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables);
 
-inline bool CheckForInputNameDuplicates(const nnvm::IndexedGraph &idx) {
-  std::set<std::string> names;
-  for (const auto& nid : idx.input_nodes()) {
-    const std::string &name = idx[nid].source->attrs.name;
-    if (names.count(name)) {
-      LOG(WARNING) << "Variable name " << name << " is used more than once!";
-      return false;
-    }
-    names.insert(name);
-  }
-  return true;
-}
+/*!
+ * \brief Check whether graph contains any duplicated names in its inputs
+ *
+ * \param idx Indexed graph being checked
+ *
+ * \return true if there are no duplicates, false otherwise
+ */
+bool CheckForInputNameDuplicates(const nnvm::IndexedGraph &idx);
 
 }  // namespace common
 }  // namespace mxnet

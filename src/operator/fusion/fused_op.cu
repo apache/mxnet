@@ -152,53 +152,51 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     const auto& node = g[i];
     const auto* source = node.source;
     if (source != nullptr) {
-        if (source->is_variable()) {
-            if (load_index[i]) {
-              const auto& var_name = source->attrs.name;
-              code += "const auto vec_" + var_name + " = load_index<nvec>(" + \
-                       var_name + ", offset);\n";
-              variables[{i, 0}] = var_name;
-            }
-            CHECK_EQ(outputs[i], 1);
-        } else {
-            std::string op_name = source->op()->name;
-            if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-                int arg_id = node.inputs[0].node_id;
-                const auto& var_name = g[arg_id].source->attrs.name;
-                const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-                load_index[arg_id] = 0;
-                auto parse_tuple = [](const std::string& input, const std::string def) {
-                    std::string out = input;
-                    replaceString(&out, "(", "{");
-                    replaceString(&out, ")", "}");
-                    replaceString(&out, "None", def);
-                    return out;
-                };
-                std::string begin = parse_tuple(source->attrs.dict.at("begin"), "0");
-                std::string end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
-                if (op_name == "slice") {
-                    // step = parse_tuple(source->attrs.dict.at("step"), "1");
-                } else if (op_name == "slice_axis") {
-                    std::string axis = source->attrs.dict.at("axis");
-                    std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
-                    std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
-                    code += "Shape<ndim_" + var_name + "> "+ begin_var_name + ";\n";
-                    code += "Shape<ndim_" + var_name + "> "+ end_var_name + ";\n";
-                    code += begin_var_name + ".set(0);\n";
-                    code += end_var_name + ".set(INT_MAX);\n";
-                    code += begin_var_name + "["+axis+"] = " + begin + ";\n";
-                    code += end_var_name + "["+axis+"] = " + end + ";\n";
-                    begin = begin_var_name;
-                    end = end_var_name;
-                }
-                code += "const auto " + vec_name + " = load_slice<nvec>(" + \
-                        var_name + ", " + var_name + "_shape," + begin + \
-                         "," + end + ", offset);\n";
-                CHECK_EQ(outputs[i], 1);
-                variables[{i, 0}] = vec_name;
-                continue;
-            }
+      if (source->is_variable()) {
+        if (load_index[i]) {
+          const auto& var_name = source->attrs.name;
+          code += "const auto vec_" + var_name + " = load_index<nvec>(" +
+                   var_name + ", offset);\n";
+          variables[{i, 0}] = var_name;
         }
+        CHECK_EQ(outputs[i], 1);
+      } else {
+        std::string op_name = source->op()->name;
+        if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
+          int arg_id = node.inputs[0].node_id;
+          const auto& var_name = g[arg_id].source->attrs.name;
+          const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
+          load_index[arg_id] = 0;
+          auto parse_tuple = [](const std::string& input, const std::string def) {
+            std::string out = input;
+            replaceString(&out, "(", "{");
+            replaceString(&out, ")", "}");
+            replaceString(&out, "None", def);
+            return out;
+          };
+          std::string begin = parse_tuple(source->attrs.dict.at("begin"), "0");
+          std::string end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
+          if (op_name == "slice_axis") {
+            std::string axis = source->attrs.dict.at("axis");
+            std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
+            std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
+            code += "Shape<ndim_" + var_name + "> "+ begin_var_name + ";\n";
+            code += "Shape<ndim_" + var_name + "> "+ end_var_name + ";\n";
+            code += begin_var_name + ".set(0);\n";
+            code += end_var_name + ".set(INT_MAX);\n";
+            code += begin_var_name + "["+axis+"] = " + begin + ";\n";
+            code += end_var_name + "["+axis+"] = " + end + ";\n";
+            begin = begin_var_name;
+            end = end_var_name;
+          }
+          code += "const auto " + vec_name + " = load_slice<nvec>(" +
+                  var_name + ", " + var_name + "_shape," + begin +
+                  "," + end + ", offset);\n";
+          CHECK_EQ(outputs[i], 1);
+          variables[{i, 0}] = vec_name;
+          continue;
+        }
+      }
     }
   }
 
@@ -450,23 +448,23 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   int ndim = outputs[0].ndim();
   int nvec = 1;
 
-  size_t counter = 0;
-  for (const auto& blob : inputs) {
+  CHECK_EQ(inputs.size(), inputs_.size());
+  for (size_t counter = 0; counter < inputs.size(); ++counter) {
+    const auto& blob = inputs[counter];
     in_dtypes.push_back(blob.type_flag_);
     in_ndims.push_back(blob.ndim());
     initialized_ = initialized_ && (blob.type_flag_ == inputs_[counter].dtype);
     inputs_[counter].dtype = blob.type_flag_;
     nvec = max(nvec, mshadowTypeToVectorLength(blob.type_flag_));
-    ++counter;
   }
 
-  counter = 0;
-  for (const auto& blob : outputs) {
+  CHECK_EQ(outputs.size(), outputs_.size());
+  for (size_t counter = 0; counter < outputs.size(); ++counter) {
+    const auto& blob = outputs[counter];
     out_dtypes.push_back(blob.type_flag_);
     initialized_ = initialized_ && (blob.type_flag_ == outputs_[counter].dtype);
     outputs_[counter].dtype = blob.type_flag_;
     nvec = max(nvec, mshadowTypeToVectorLength(blob.type_flag_));
-    ++counter;
   }
 
   // Check and save compute capability of the current GPU

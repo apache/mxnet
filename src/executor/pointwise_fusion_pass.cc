@@ -62,8 +62,18 @@ namespace {
     if (n->op() == nullptr)
       return false;
     std::string op_name = n->op()->name;
-    if (slice_ops.count(op_name))
+    if (slice_ops.count(op_name)) {
+      if (op_name == "slice") {
+        // slice with non-default step attribute is not supported
+        // currently
+        if (n->attrs.dict.count("step") &&
+            !(n->attrs.dict.at("step") == "()" ||
+              n->attrs.dict.at("step") == "[]")) {
+          return false;
+        }
+      }
       return true;
+    }
     return false;
   }
 
