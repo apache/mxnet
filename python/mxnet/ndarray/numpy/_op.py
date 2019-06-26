@@ -188,7 +188,7 @@ def stack(arrays, axis=0, out=None):
 
     Parameters
     ----------
-    arrays : sequence of NDArray
+    arrays : sequence of ndarray
         Each array must have the same shape.
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
@@ -207,7 +207,7 @@ def stack(arrays, axis=0, out=None):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.stack.html>`_ in
     the following ways:
 
-    - only sequence of NDArray is accepted as valid input
+    - only sequence of ndarray is accepted as valid input
 
     Examples
     --------
@@ -642,7 +642,7 @@ def split(ary, indices_or_sections, axis=0):
 
     Parameters
     ----------
-    ary : NDArray
+    ary : ndarray
         Array to be divided into sub-arrays.
     indices_or_sections : int or 1-D array
         If `indices_or_sections` is an integer, N, the array will be divided
@@ -1321,7 +1321,7 @@ def rint(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : NDArray or scalor
+    x : ndarray or scalar
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to.
@@ -1338,7 +1338,7 @@ def rint(x, out=None, **kwargs):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
     the following way(s):
 
-    - only NDArray or scalor is accpted as valid input, tuple of NDArray is not supported
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
 
     Examples
     --------
@@ -1356,7 +1356,7 @@ def log2(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : NDArray or scalor
+    x : ndarray or scalar
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to.
@@ -1373,7 +1373,7 @@ def log2(x, out=None, **kwargs):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
     the following way(s):
 
-    - only NDArray or scalor is accpted as valid input, tuple of NDArray is not supported
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
 
     Examples
     --------
@@ -1391,7 +1391,7 @@ def radians(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : NDArray or scalor
+    x : ndarray or scalar
         Input array in degrees.
     out : ndarray or None
         A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -1407,15 +1407,15 @@ def radians(x, out=None, **kwargs):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
     the following way(s):
 
-    - only NDArray or scalor is accpted as valid input, tuple of NDArray is not supported
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
 
     Examples
     --------
     >>> deg = np.arange(12.) * 30.
     >>> np.radians(deg)
     array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
-        3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
-        dtype=float32)
+           3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
+           dtype=float32)
 
     """
     return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
