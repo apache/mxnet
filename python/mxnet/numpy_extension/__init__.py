@@ -31,5 +31,6 @@ from ..util import use_np_array, np_array, is_np_array
 from ..util import set_np, use_np, reset_np
 from ..ndarray import waitall
 from .utils import *  # pylint: disable=wildcard-import
+from .random import *  # pylint: disable=wildcard-import
 
 __all__ = []
