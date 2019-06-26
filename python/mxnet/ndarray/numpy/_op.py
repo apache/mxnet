@@ -24,6 +24,12 @@ from ...util import _sanity_check_params, set_module
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
+import collections
+
+try:
+    abc = collections.abc
+except AttributeError:
+    abc = collections
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
@@ -599,7 +605,7 @@ def split(ary, indices_or_sections, axis=0):
             raise ValueError('array split does not result in an equal division')
         section_size = int(axis_size / sections)
         indices = [i * section_size for i in range(sections)]
-    elif isinstance(indices_or_sections, tuple):
+    elif isinstance(indices_or_sections, abc.Iterable):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')

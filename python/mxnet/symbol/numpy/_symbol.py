@@ -28,12 +28,17 @@ from ...context import current_context
 from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
+import collections
+
+try:
+    abc = collections.abc
+except AttributeError:
+    abc = collections
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh',
-           'log10', 'sqrt',
-           'dsplit']
+           'log10', 'sqrt', 'dsplit']
 
 
 def _num_outputs(sym):
@@ -1279,7 +1284,7 @@ def split(ary, indices_or_sections, axis=0):
     sections = 0
     if isinstance(indices_or_sections, int):
         sections = indices_or_sections
-    elif isinstance(indices_or_sections, tuple):
+    elif isinstance(indices_or_sections, abc.Iterable):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
