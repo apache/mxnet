@@ -393,10 +393,10 @@ class Block(object):
                     # numpy ndarray covers is a superset of the legacy ndarray's.
                     with np_array(False):
                         with np_shape(False):
-                            loaded = ndarray.load(filename)
-                    assert isinstance(loaded, dict),\
-                        'expecting a dict type, got {}'.format(str(type(loaded)))
-                    loaded = {k: loaded[k].as_np_ndarray() for k in loaded}
+                            loaded_nds = ndarray.load(filename)
+                    assert isinstance(loaded_nds, dict),\
+                        'expecting a dict type, got {}'.format(str(type(loaded_nds)))
+                    loaded = {k: loaded_nds[k].as_np_ndarray() for k in loaded_nds}
                 else:
                     raise ValueError(err_msg)
         else:
