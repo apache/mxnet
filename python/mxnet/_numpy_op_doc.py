@@ -17,7 +17,6 @@
 
 # pylint: skip-file
 
-
 """Doc placeholder for numpy ops with prefix _np."""
 
 def _np_reshape(a, newshape, order='C'):
@@ -319,6 +318,57 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
     pass
 
 
+def _np_mean(a, axis=None, dtype=None, out=None, keepdims=None):
+    """
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+    float64 intermediate and return values are used for integer inputs.
+
+    Parameters	
+    ----------
+    a : array_like
+        Array containing numbers whose mean is desired. If a is not an array, a conversion is attempted.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes, 
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : ndarray, optional
+        Alternate output array in which to place the result. The default is None; if provided,
+        it must have the same shape as the expected output, but the type will be cast if necessary. 
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of ndarray, however any non-default value will be. If the sub-class’
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : ndarray, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5, dtype=float32)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55, dtype=float32)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    pass
+
+
 def  _np_copy(a, out=None):
     """
     copy(a, out=None)
@@ -366,3 +416,116 @@ def  _np_copy(a, out=None):
     array([0.])
     """
     pass
+
+
+def _np_transpose(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : ndarray
+        a with its axes permuted. A view is returned whenever possible.
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]], dtype=float32)
+    >>> np.transpose(x)
+    array([[0., 2.],
+           [1., 3.]], dtype=float32)
+    >>> x = np.ones((1, 2, 3))
+    >>> np.transpose(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    pass
+
+
+# def _npi_split(ary, indices_or_sections, axis=0):
+#     """
+#     Split an array into multiple sub-arrays.
+
+#     Parameters
+#     ----------
+#     ary : ndarray
+#         Array to be divided into sub-arrays.
+#     indices_or_sections : int or 1-D array
+#         If indices_or_sections is an integer, N, the array will be divided into N equal arrays along axis. If such a split is not possible, an error is raised.
+#         If indices_or_sections is a 1-D array of sorted integers, the entries indicate where along axis the array is split. For example, [2, 3] would, for axis=0, result in
+#             ary[:2]
+#             ary[2:3]
+#             ary[3:]
+#         Index must be within the dimension of the array on the speficied axis.
+#     axis : int, optional
+#         The axis along which to split, default is 0.
+    
+#     Returns
+#     -------
+#     sub-arrays : list of ndarrays
+#         A list of sub-arrays.
+
+#     Raises
+#     ------
+#     ValueError
+#         If indices_or_sections is given as an integer, but a split does not result in equal division.
+
+#     Examples
+#     --------
+#     >>> x = np.arange(9.0)
+#     >>> np.split(x, 3)
+#     [array([0., 1., 2.], dtype=float32), array([3., 4., 5.], dtype=float32), array([6., 7., 8.], dtype=float32)]
+#     >>> np.split(x, (3, 5, 6))
+#     [array([0., 1., 2.], dtype=float32), array([3., 4.], dtype=float32), array([5.], dtype=float32), array([6., 7.], dtype=float32)]
+#     """
+#     pass
+
+
+# def _npi_stack(arrays, axis=0, out=None):
+#     """
+#     Join a sequence of arrays along a new axis.
+#     The axis parameter specifies the index of the new axis in the dimensions of the result. For example, if axis=0 it will be the first dimension and if axis=-1 it will be the last dimension.
+    
+#     Parameters
+#     ----------
+#     arrays : sequence of array_like
+#         Each array must have the same shape.
+#     axis : int, optional
+#         The axis in the result array along which the input arrays are stacked.
+#     out : ndarray, optional
+#         If provided, the destination to place the result. The shape must be correct, matching that of what stack would have returned if no out argument were specified.
+
+#     Returns
+#     -------
+#     stacked : ndarray
+#         The stacked array has one more dimension than the input arrays.
+
+#     Examples
+#     --------
+#     >>> arrays = [np.random.uniform(size=(3, 4)) for _ in range(10)]
+#     >>> np.stack(arrays, axis=0).shape
+#     (10, 3, 4)
+#     >>> np.stack(arrays, axis=1).shape
+#     (3, 10, 4)
+#     >>> np.stack(arrays, axis=2).shape
+#     (3, 4, 10)
+#     >>> a = np.array([1, 2, 3])
+#     >>> b = np.array([2, 3, 4])
+#     >>> np.stack((a, b))
+#     array([[1., 2., 3.],
+#            [2., 3., 4.]], dtype=float32)
+#     >>> np.stack((a, b), axis=-1)
+#     array([[1., 2.],
+#            [2., 3.],
+#            [3., 4.]], dtype=float32)
+#     """
+#     pass

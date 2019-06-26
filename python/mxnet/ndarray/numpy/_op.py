@@ -30,7 +30,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
-           'degrees']
+           'degrees', 'log2', 'rint', 'radians']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -199,7 +199,27 @@ def stack(arrays, axis=0, out=None):
     Returns
     -------
     stacked : ndarray
-        The stacked array has one more dimension than the input arrays."""
+        The stacked array has one more dimension than the input arrays.
+
+    Examples
+    --------
+    >>> arrays = [np.random.uniform(size=(3, 4)) for _ in range(10)]
+    >>> np.stack(arrays, axis=0).shape
+    (10, 3, 4)
+    >>> np.stack(arrays, axis=1).shape
+    (3, 10, 4)
+    >>> np.stack(arrays, axis=2).shape
+    (3, 4, 10)
+    >>> a = np.array([1, 2, 3])
+    >>> b = np.array([2, 3, 4])
+    >>> np.stack((a, b))
+    array([[1., 2., 3.],
+           [2., 3., 4.]], dtype=float32)
+    >>> np.stack((a, b), axis=-1)
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]], dtype=float32)    
+    """
     def get_list(arrays):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
             raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
@@ -628,8 +648,7 @@ def split(ary, indices_or_sections, axis=0):
           - ary[2:3]
           - ary[3:]
 
-        If an index exceeds the dimension of the array along `axis`,
-        an empty sub-array is returned correspondingly.
+        Index `must be within` the dimension of the array along `axis`.
     axis : int, optional
         The axis along which to split, default is 0.
 
@@ -643,6 +662,14 @@ def split(ary, indices_or_sections, axis=0):
     ValueError
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division.
+
+    Examples
+    --------
+    >>> x = np.arange(9.0)
+    >>> np.split(x, 3)
+    [array([0., 1., 2.], dtype=float32), array([3., 4., 5.], dtype=float32), array([6., 7., 8.], dtype=float32)]
+    >>> np.split(x, (3, 5, 6))
+    [array([0., 1., 2.], dtype=float32), array([3., 4.], dtype=float32), array([5.], dtype=float32), array([6., 7.], dtype=float32)]
     """
     indices = []
     axis_size = ary.shape[axis]
@@ -1267,3 +1294,96 @@ def degrees(x, out=None, **kwargs):
 
     """
     return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
+
+
+def rint(x, out=None, **kwargs):
+    """
+    Round elements of the array to the nearest integer.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
+    **kwargs
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.rint(a)
+    array([-2., -2., -0.,  0.,  1.,  2.,  2.], dtype=float32)
+    """
+    return _unary_func_helper(x, _npi.rint, _np.rint, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def log2(x, out=None, **kwargs):
+    """
+    Base-2 logarithm of x.
+    
+    Parameters
+    ----------
+    x : array_like
+        Input values.
+        List of complex numbers is not supported currently.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
+    **kwargs
+        For other keyword-only arguments, see the ufunc docs.
+
+    Returns
+    -------
+    y : ndarray
+        Base-2 logarithm of x. This is a scalar if x is a scalar.
+    
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 2**4])
+    >>> np.log2(x)
+    array([-inf,   0.,   1.,   4.], dtype=float32)
+    """
+    return _unary_func_helper(x, _npi.log2, _np.log2, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def radians(x, out=None, **kwargs):
+    """
+    Convert angles from degrees to radians.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array in degrees.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
+    **kwargs
+        For other keyword-only arguments, see the ufunc docs.
+        The corresponding radian values. This is a scalar if x is a scalar.
+
+    Returns
+    -------
+    y : ndarray
+        The corresponding radian values. This is a scalar if x is a scalar.
+
+    Examples
+    --------
+    >>> deg = np.arange(12.) * 30.
+    >>> np.radians(deg)
+    array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
+        3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
+        dtype=float32)
+
+    """
+    return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)

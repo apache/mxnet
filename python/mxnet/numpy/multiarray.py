@@ -47,7 +47,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
-           'degrees']
+           'degrees', 'log2', 'rint', 'radians']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1466,7 +1466,27 @@ def stack(arrays, axis=0, out=None):
     Returns
     -------
     stacked : ndarray
-        The stacked array has one more dimension than the input arrays."""
+        The stacked array has one more dimension than the input arrays.
+
+    Examples
+    --------
+    >>> arrays = [np.random.uniform(size=(3, 4)) for _ in range(10)]
+    >>> np.stack(arrays, axis=0).shape
+    (10, 3, 4)
+    >>> np.stack(arrays, axis=1).shape
+    (3, 10, 4)
+    >>> np.stack(arrays, axis=2).shape
+    (3, 4, 10)
+    >>> a = np.array([1, 2, 3])
+    >>> b = np.array([2, 3, 4])
+    >>> np.stack((a, b))
+    array([[1., 2., 3.],
+           [2., 3., 4.]], dtype=float32)
+    >>> np.stack((a, b), axis=-1)
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]], dtype=float32)    
+    """
     return _mx_nd_np.stack(arrays, axis=axis, out=out)
 
 
@@ -1866,8 +1886,7 @@ def split(ary, indices_or_sections, axis=0):
           - ary[2:3]
           - ary[3:]
 
-        If an index exceeds the dimension of the array along `axis`,
-        an empty sub-array is returned correspondingly.
+        Index `must be within` the dimension of the array along `axis`.
     axis : int, optional
         The axis along which to split, default is 0.
 
@@ -1880,7 +1899,16 @@ def split(ary, indices_or_sections, axis=0):
     ------
     ValueError
         If `indices_or_sections` is given as an integer, but
-        a split does not result in equal division."""
+        a split does not result in equal division.
+
+    Examples
+    --------
+    >>> x = np.arange(9.0)
+    >>> np.split(x, 3)
+    [array([0., 1., 2.], dtype=float32), array([3., 4., 5.], dtype=float32), array([6., 7., 8.], dtype=float32)]
+    >>> np.split(x, (3, 5, 6))
+    [array([0., 1., 2.], dtype=float32), array([3., 4.], dtype=float32), array([5.], dtype=float32), array([6., 7.], dtype=float32)]
+    """
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
 
 
@@ -2271,6 +2299,7 @@ def arctan(x, out=None, **kwargs):
     """
     return _mx_nd_np.arctan(x, out=out, **kwargs)
 
+
 @set_module('mxnet.numpy')
 def sign(x, out=None):
     """
@@ -2356,6 +2385,94 @@ def log(x, out=None, **kwargs):
 
     Notes
     -----
+     Currently only supports data of real values and ``inf`` as input. Returns data of real value, ``inf``, ``-inf`` and
+    ``nan`` according to the input.
+
+    This function differs from the original `numpy.log
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.log.html>`_ in
+    the following aspects:
+
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float64)
+    >>> np.log(a)
+    array([  0.,   1.,   2., -inf], dtype=float64)
+
+
+    Due to internal calculation mechanism, using default float32 dtype may cause some special behavior:
+
+    >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float32)
+    >>> np.log(a)
+    array([  0.,  0.99999994,   2., -inf])
+
+    Scalar calculation:
+
+    >>> np.log(1)
+    0.0
+
+    """
+    return _mx_nd_np.degrees(x, out=out, **kwargs)
+
+
+def rint(x, out=None, **kwargs):
+    """
+    Round elements of the array to the nearest integer.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
+    **kwargs
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.rint(a)
+    array([-2., -2., -0.,  0.,  1.,  2.,  2.], dtype=float32)
+    """
+    return _mx_nd_np.rint(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def log2(x, out=None, **kwargs):
+    """
+    Base-2 logarithm of x.
+    
+    Parameters
+    ----------
+    x : array_like
+        Input values.
+        List of complex numbers is not supported currently.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
+    **kwargs
+        For other keyword-only arguments, see the ufunc docs.
+
+    Returns
+    -------
+    y : ndarray
+        The natural logarithm of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
     Currently only supports data of real values and ``inf`` as input. Returns data of real value, ``inf``, ``-inf`` and
     ``nan`` according to the input.
 
@@ -2405,40 +2522,46 @@ def degrees(x, out=None, **kwargs):
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
+        Base-2 logarithm of x. This is a scalar if x is a scalar.
+    
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 2**4])
+    >>> np.log2(x)
+    array([-inf,   0.,   1.,   4.], dtype=float32)
+    """
+    return _mx_nd_np.log2(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def radians(x, out=None, **kwargs):
+    """
+    Convert angles from degrees to radians.
+
+    Parameters
+    ----------
+    x : array_like
+        Input array in degrees.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
+    **kwargs
+        For other keyword-only arguments, see the ufunc docs.
+        The corresponding radian values. This is a scalar if x is a scalar.
 
     Returns
     -------
     y : ndarray
-        The corresponding degree values; if `out` was supplied this is a
-        reference to it.
-        This is a scalar if `x` is a scalar.
-
-    Notes
-    -------
-    This function differs from the original `numpy.degrees
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
-    the following aspects:
-
-    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
-    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
-    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
-    - ``out`` param does not support scalar input case.
+        The corresponding radian values. This is a scalar if x is a scalar.
 
     Examples
     --------
-    Convert a radian array to degrees
-
-    >>> rad = np.arange(12.) * np.pi / 6
-    >>> np.degrees(rad)
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
-
-    Use specified ``out`` ndarray:
-
-    >>> out = np.zeros((rad.shape))
-    >>> np.degrees(rad, out)
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
-    >>> out
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+    >>> deg = np.arange(12.) * 30.
+    >>> np.radians(deg)
+    array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
+        3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
+        dtype=float32)
 
     """
-    return _mx_nd_np.degrees(x, out=out, **kwargs)
+    return _mx_nd_np.radians(x, out=out, **kwargs)
