@@ -31,13 +31,14 @@ private[mxnet] class LibInfo {
   @native def mxListAllOpNames(names: ListBuffer[String]): Int
   @native def nnGetOpHandle(opName: String, opHandle: RefLong): Int
   // NDArray
-  @native def mxImperativeInvoke(creator: FunctionHandle,
+  @native def mxImperativeInvokeEx(creator: FunctionHandle,
                                  inputs: Array[NDArrayHandle],
                                  outputsGiven: Array[NDArrayHandle],
                                  outputs: ArrayBuffer[NDArrayHandle],
                                  numParams: Int,
                                  paramKeys: Array[String],
-                                 paramVals: Array[String]): Int
+                                 paramVals: Array[String],
+                                 outStype: ArrayBuffer[Int]): Int
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
   @native def mxNDArrayCreateEx(shape: Array[Int],
@@ -120,6 +121,9 @@ private[mxnet] class LibInfo {
   @native def mxNDArraySave(fname: String,
                             handles: Array[NDArrayHandle],
                             keys: Array[String]): Int
+  @native def mxNDArrayGetAuxNDArray(handle: NDArrayHandle,
+                                     location: Int,
+                                     out: NDArrayHandleRef): Int
   @native def mxNDArrayGetContext(handle: NDArrayHandle, devTypeId: RefInt, devId: RefInt): Int
   @native def mxNDArraySaveRawBytes(handle: NDArrayHandle, buf: ArrayBuffer[Byte]): Int
   @native def mxNDArrayLoadFromRawBytes(bytes: Array[Byte], handle: NDArrayHandleRef): Int

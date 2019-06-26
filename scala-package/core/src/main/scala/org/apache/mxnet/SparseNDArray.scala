@@ -35,7 +35,7 @@ object SparseNDArray {
     checkCall(_LIB.mxNDArraySyncCopyFromNDArray(handle, dataND.handle, -1))
     checkCall(_LIB.mxNDArraySyncCopyFromNDArray(handle, indptrND.handle, 0))
     checkCall(_LIB.mxNDArraySyncCopyFromNDArray(handle, indicesND.handle, 1))
-    new SparseNDArray(handle, false)
+    new SparseNDArray(handle)
   }
 
   def rowSparseArray(data: Array[_], indices: Array[Float],
@@ -52,7 +52,7 @@ object SparseNDArray {
       DType.Float32, Array(indices.dtype), Array(indices.shape))
     checkCall(_LIB.mxNDArraySyncCopyFromNDArray(handle, data.handle, -1))
     checkCall(_LIB.mxNDArraySyncCopyFromNDArray(handle, indices.handle, 0))
-    new SparseNDArray(handle, false)
+    new SparseNDArray(handle)
   }
 
   private def newAllocHandle(stype : SparseFormat,
@@ -82,7 +82,7 @@ object SparseNDArray {
 }
 
 class SparseNDArray private[mxnet] (override private[mxnet] val handle: NDArrayHandle,
-                                    override val writable: Boolean)
+                                    override val writable: Boolean = true)
   extends NDArray(handle, writable) {
 
   private lazy val dense: NDArray = toDense
@@ -102,4 +102,26 @@ class SparseNDArray private[mxnet] (override private[mxnet] val handle: NDArrayH
   override def at(idx: Int): NDArray = {
     dense.at(idx)
   }
+
+  def getIndptr: NDArray = {
+    if (this.sparseFormat == SparseFormat.ROW_SPARSE) {
+      throw new UnsupportedOperationException("Not Supported for row sparse")
+    }
+    getAuxNDArray(0)
+  }
+
+  def getIndices: NDArray = {
+    if (this.sparseFormat == SparseFormat.ROW_SPARSE) {
+      getAuxNDArray(0)
+    } else {
+      getAuxNDArray(1)
+    }
+  }
+
+  private def getAuxNDArray(idx: Int): NDArray = {
+    val handle = new NDArrayHandleRef
+    checkCall(_LIB.mxNDArrayGetAuxNDArray(this.handle, idx, handle))
+    new NDArray(handle.value, false)
+  }
+
 }

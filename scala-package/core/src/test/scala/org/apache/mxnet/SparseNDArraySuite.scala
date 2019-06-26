@@ -36,6 +36,8 @@ class SparseNDArraySuite  extends FunSuite {
                          0.0f, 0.0f, 0.0f, 0.0f,
                          0.0f, 9.0f, 0.0f, 0.0f))
     assert(sparseND.sparseFormat == SparseFormat.CSR)
+    assert(sparseND.getIndptr.toArray sameElements indptr)
+    assert(sparseND.getIndices.toArray sameElements indices)
   }
 
   test("create Row Sparse NDArray") {
@@ -49,6 +51,7 @@ class SparseNDArraySuite  extends FunSuite {
     assert(sparseND.sparseFormat == SparseFormat.ROW_SPARSE)
     assert(sparseND.shape == Shape(6, 2))
     assert(sparseND.at(1).toArray sameElements Array(1f, 2f))
+    assert(sparseND.getIndices.toArray sameElements indices)
   }
 
 

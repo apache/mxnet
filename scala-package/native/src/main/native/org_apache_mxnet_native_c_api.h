@@ -41,11 +41,12 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_nnGetOpHandle
 
 /*
  * Class:     org_apache_mxnet_LibInfo
- * Method:    mxImperativeInvoke
+ * Method:    mxImperativeInvokeEx
  * Signature: (J[J[JLscala/collection/mutable/ArrayBuffer;I[Ljava/lang/String;[Ljava/lang/String;)I
  */
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvoke
-  (JNIEnv *, jobject, jlong, jlongArray, jlongArray, jobject, jint, jobjectArray, jobjectArray);
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvokeEx
+  (JNIEnv *, jobject, jlong, jlongArray, jlongArray, jobject,
+   jint, jobjectArray, jobjectArray, jobject);
 
 /*
  * Class:     org_apache_mxnet_LibInfo
@@ -214,6 +215,15 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayLoad
  */
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySave
   (JNIEnv *, jobject, jstring, jlongArray, jobjectArray);
+
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxNDArrayGetAuxNDArray
+ * Signature: (JLorg/apache/mxnet/Base/RefInt;Lorg/apache/mxnet/Base/RefInt;)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetAuxNDArray
+  (JNIEnv *, jobject, jlong, jint, jobject);
 
 /*
  * Class:     org_apache_mxnet_LibInfo
