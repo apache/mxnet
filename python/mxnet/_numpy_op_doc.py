@@ -16,9 +16,10 @@
 # under the License.
 
 # pylint: skip-file
+# from base import _Null
+
 
 """Doc placeholder for numpy ops with prefix _np."""
-
 
 def _np_reshape(a, newshape, order='C'):
     """
@@ -223,3 +224,124 @@ def _np_dot(a, b, out=None):
     array(29884.)
     """
     pass
+
+
+# def _np_sum(a, axis=None, dtype=None, out=None, keepdims=_Null):
+def _np_sum(a, axis=None, dtype=None, out=None):
+    """
+    Sum of array elements over a given axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Elements to sum.
+    axis : None or int, optional
+        Axis or axes along which a sum is performed.  The default,
+        axis=None, will sum all of the elements of the input array.  If
+        axis is negative it counts from the last to the first axis.
+    dtype : dtype, optional
+        The type of the returned array and of the accumulator in which the
+        elements are summed. The default type is float32.
+    out : mxnet.ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and dtype as the expected output.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `sum` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-classes `sum` method does not implement `keepdims` any
+        exceptions will be raised.
+
+    Returns
+    -------
+    sum_along_axis : ndarray
+        An mxnet.ndarray with the same shape as `a`, with the specified
+        axis removed. If an output array is specified, a reference to
+        `out` is returned.
+
+    Notes
+    -----
+    - Input type does not support Python native iterables.
+    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+    - Arithmetic is modular when using integer types, and no error is raised on overflow.
+    - The sum of an empty array is the neutral element 0:
+
+    >>> a = np.empty(1)
+    >>> np.sum(a)
+    array(0., dtype=float32)
+
+    Examples
+    --------
+    >>> a = np.array([0.5, 1.5])
+    >>> np.sum(a)
+    2.0
+    >>> a = np.array([0.5, 0.7, 0.2, 1.5])
+    >>> np.sum(a, dtype=np.int32)
+    2
+    >>> a = np.array([[0, 1], [0, 5]])
+    >>> np.sum(a)
+    6
+    >>> np.sum(a, axis=0)
+    array([0., 6.], dtype=float32)
+    >>> np.sum(a, axis=1)
+    array([1., 5.], dtype=float32)
+
+    With output ndarray:
+    >>> a = np.array([[0, 1], [0, 5]])
+    >>> b = np.ones((2,), dtype=np.float32)
+    >>> np.sum(a, axis = 0, out=b)
+    array([0., 6.], dtype=float32)
+
+    If the accumulator is too small, overflow occurs:
+    >>> np.ones(128, dtype=np.int8).sum(dtype=np.int8)
+    array(-128, dtype=int8)
+    """
+    pass
+
+
+def  _np_copy(a, order='K'):
+    """
+    Return an array copy of the given object.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    order : {'C', 'K'}, optional
+        Controls the memory layout of the copy. 'C' means C-order,
+        'K' means match the layout of `a` as closely as possible.
+
+    Returns
+    -------
+    arr : ndarray
+        Array interpretation of `a`.
+
+    Notes
+    -------
+    - Input type does not support Python native iterables.
+    - Only supports 'C' and 'K' mode for ``order`` parameter.
+    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+
+    Examples
+    --------
+    Create an array x, with a reference y and a copy z:
+
+    >>> x = np.array([1, 2, 3])
+    >>> y = x
+    >>> z = np.copy(x)
+
+    Note that, when we modify x, y changes, but not z:
+    >>> x[0] = 10
+    >>> x[0] == y[0]
+    array([1.], dtype=float32)
+    >>> x[0] == z[0]
+    array([0.], dtype=float32)
+    """
+    pass
+
+
+

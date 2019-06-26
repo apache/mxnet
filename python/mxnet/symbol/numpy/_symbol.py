@@ -32,7 +32,7 @@ from . import _internal as _npi
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
-           'abs', 'exp', 'arctan']
+           'abs', 'exp', 'arctan', 'sign', 'log', 'degrees']
 
 
 def _num_outputs(sym):
@@ -1135,20 +1135,55 @@ def argmax(a, axis=None, out=None):
 
     Parameters
     ----------
-    a : ndarray
+    a : _Symbol
         Input array. Only support ndarrays of dtype `float16`, `float32`, and `float64`.
     axis : int, optional
         By default, the index is into the flattened array, otherwise
         along the specified axis.
-    out : array, optional
+    out : _Symbol, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
 
     Returns
     -------
-    index_array : ndarray of indices whose dtype is same as the input ndarray.
+    index_array : _Symbol of indices whose dtype is same as the input ndarray.
         Array of indices into the array. It has the same shape as `a.shape`
         with the dimension along `axis` removed.
+
+     Notes
+    -----
+    - In case of multiple occurrences of the maximum values, the indices
+    corresponding to the first occurrence are returned.
+
+    - The ``out`` ndarray must have the same dtype as the expected output.
+
+    Examples
+    --------
+    >>> a = np.arange(6).reshape(2,3) + 10
+    >>> a
+    array([[10., 11., 12.],
+       [13., 14., 15.]], dtype=float32)
+    >>> np.argmax(a)
+    array(5., dtype=float32)
+    >>> np.argmax(a, axis=0)
+    array([1., 1., 1.], dtype=float32)
+    >>> np.argmax(a, axis=1)
+    array([2., 2.], dtype=float32)
+
+    >>> b = np.arange(6)
+    >>> b[1] = 5
+    >>> b
+    array([0., 5., 2., 3., 4., 5.], dtype=float32)
+    >>> np.argmax(b)  # Only the first occurrence is returned.
+    array(1., dtype=float32)
+
+    Specify out ndarray:
+    >>> a = np.arange(6).reshape(2,3) + 10
+    >>> b = np.zeros((2,), dtype=np.float32)
+    >>> np.argmax(a, axis=1, out=b)
+    array([2., 2.], dtype=float32)
+    >>> b
+    array([2., 2.], dtype=float32)
     """
     return _npi.argmax(a, axis=axis, keepdims=False, out=out)
 
@@ -1309,20 +1344,49 @@ def tile(A, reps):
     Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
     (1, 1, 2, 2).
 
-    Note : Although tile may be used for broadcasting, it is strongly
-    recommended to use numpy's broadcasting operations and functions.
-
     Parameters
     ----------
     A : _Symbol
         The input array.
-    reps : tuple of integers
+    reps : a single integer or tuple of integers
         The number of repetitions of `A` along each axis.
 
     Returns
     -------
     c : _Symbol
         The tiled output array.
+
+    Examples
+    -------
+    >>> a = np.array([0, 1, 2])
+    >>> np.tile(a, 2)
+    array([0., 1., 2., 0., 1., 2.], dtype=float32)
+    >>> np.tile(a, (2, 2))
+    array([[0., 1., 2., 0., 1., 2.],
+       [0., 1., 2., 0., 1., 2.]], dtype=float32)
+    >>> np.tile(a, (2, 1, 2))
+    array([[[0., 1., 2., 0., 1., 2.]],
+
+       [[0., 1., 2., 0., 1., 2.]]], dtype=float32)
+
+
+    >>> b = np.array([[1, 2], [3, 4]])
+    >>> np.tile(b, 2)
+    array([[1., 2., 1., 2.],
+       [3., 4., 3., 4.]], dtype=float32)
+    >>> np.tile(b, (2, 1))
+    array([[1., 2.],
+           [3., 4.],
+           [1., 2.],
+           [3., 4.]], dtype=float32)
+
+    >>> c = np.array([1,2,3,4])
+    >>> np.tile(c,(4,1))
+    array([[1., 2., 3., 4.],
+       [1., 2., 3., 4.],
+       [1., 2., 3., 4.],
+       [1., 2., 3., 4.]], dtype=float32)
+
     """
     return _npi.tile(A, reps)
 
@@ -1582,6 +1646,56 @@ def abs(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
 
+@set_module('mxnet.symbol.numpy')
+def sign(x, out=None, **kwargs):
+    """
+    Returns an element-wise indication of the sign of a number.
+
+    The `sign` function returns ``-1 if x < 0, 0 if x==0, 1 if x > 0``. Only supports real number.
+
+    Parameters
+    ----------
+    x : ndarray or a scalar
+        Input values.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray
+        The sign of `x`.
+        This is a scalar if `x` is a scalar.
+
+    Note
+    -------
+    - Only supports real number as input elements.
+    - Input type does not support Python native iterables.
+    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+
+    Examples
+    --------
+    >>> a = np.array([-5., 4.5])
+    >>> np.sign(a)
+    array([-1.,  1.], dtype=float32)
+
+    Scalars as input:
+    >>> np.sign(4.0)
+    1.0
+    >>> np.sign(0)
+    0
+
+    Use out parameter:
+    >>> b = np.zeros((2, ))
+    >>> np.sign(a, out=b)
+    array([-1.,  1.], dtype=float32)
+    >>> b
+    array([-1.,  1.], dtype=float32)
+
+    """
+    return _unary_func_helper(x, _npi.sign, _np.sign, out=out, **kwargs)
+
 
 @set_module('mxnet.symbol.numpy')
 def exp(x, out=None, **kwargs):
@@ -1642,6 +1756,102 @@ def arctan(x, out=None, **kwargs):
     The inverse tangent is also known as `atan` or tan^{-1}.
     """
     return _unary_func_helper(x, _npi.arctan, _np.arctan, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log(x, out=None, **kwargs):
+    """
+    log(x, out=None)
+
+    Natural logarithm, element-wise.
+
+    The natural logarithm `log` is the inverse of the exponential function,
+    so that `log(exp(x)) = x`. The natural logarithm is logarithm in base
+    `e`.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input value. Elements must be of real value.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray
+        The natural logarithm of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    - Does not support complex number for now
+    - Input type does not support Python native iterables.
+    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+
+    References
+    ----------
+    .. [1] M. Abramowitz and I.A. Stegun, "Handbook of Mathematical Functions",
+           10th printing, 1964, pp. 67. http://www.math.sfu.ca/~cbm/aands/
+    .. [2] Wikipedia, "Logarithm". https://en.wikipedia.org/wiki/Logarithm
+
+    Examples
+    --------
+    >>> a = np.array([1, np.exp(1), np.exp(2), 0])
+    [  0.   1.   2. -inf]
+
+    """
+    return _unary_func_helper(x, _npi.log, _np.log, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def degrees(x, out=None, **kwargs):
+    """
+    degrees(x, out=None)
+
+    Convert angles from radians to degrees.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input value. Elements must be of real value.
+    out :
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray of floats
+        The corresponding degree values; if `out` was supplied this is a
+        reference to it.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -------
+    - Input type does not support Python native iterables.
+    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+
+    Examples
+    --------
+    Convert a radian array to degrees
+
+    >>> rad = np.arange(12.) * np.pi / 6
+    >>> np.degrees(rad)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
+       330.], dtype=float32)
+
+    >>> out = np.zeros((rad.shape))
+    >>> np.degrees(rad, out)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
+       330.], dtype=float32)
+    >>> out
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
+       330.], dtype=float32)
+
+    """
+    return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)
