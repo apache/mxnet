@@ -90,7 +90,8 @@ class LeakyReLU(HybridBlock):
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-        return F.LeakyReLU(x, act_type='leaky', slope=self._alpha, name='fwd')
+        leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU
+        return leaky_relu(x, act_type='leaky', slope=self._alpha, name='fwd')
 
     def __repr__(self):
         s = '{name}({alpha})'
