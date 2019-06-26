@@ -320,15 +320,16 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
 
 def _np_mean(a, axis=None, dtype=None, out=None, keepdims=None):
     """
+    mean(a=None, axis=_Null, dtype=_Null, keepdims=_Null, out=None, name=None, **kwargs)
+
     Compute the arithmetic mean along the specified axis.
     Returns the average of the array elements.
     The average is taken over the flattened array by default, otherwise over the specified axis.
-    float64 intermediate and return values are used for integer inputs.
 
     Parameters	
     ----------
-    a : array_like
-        Array containing numbers whose mean is desired. If a is not an array, a conversion is attempted.
+    a : `NDArray`
+        NDArray containing numbers whose mean is desired.
     axis : None or int or tuple of ints, optional
         Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
         If this is a tuple of ints, a mean is performed over multiple axes, 
@@ -336,9 +337,6 @@ def _np_mean(a, axis=None, dtype=None, out=None, keepdims=None):
     dtype : data-type, optional
         Type to use in computing the mean. For integer inputs, the default is float32;
         for floating point inputs, it is the same as the input dtype.
-    out : ndarray, optional
-        Alternate output array in which to place the result. The default is None; if provided,
-        it must have the same shape as the expected output, but the type will be cast if necessary. 
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left in the result
         as dimensions with size one. With this option, the result will broadcast correctly
@@ -346,12 +344,26 @@ def _np_mean(a, axis=None, dtype=None, out=None, keepdims=None):
         If the default value is passed, then keepdims will not be passed through to the mean
         method of sub-classes of ndarray, however any non-default value will be. If the sub-class’
         method does not implement keepdims any exceptions will be raised.
+    out : ndarray, optional
+        Alternate output array in which to place the result. The default is None; if provided,
+        it must have the same shape as the expected output, but the type will be cast if necessary. 
+    name : string, optional
+        Name of the resulting symbol
 
     Returns
     -------
     m : ndarray, see dtype parameter above
         If out=None, returns a new array containing the mean values,
         otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only NDArray is accepted as valid input, python iterables are not supported
+    - default data type for integer input is float32
 
     Examples
     --------
@@ -424,16 +436,29 @@ def _np_transpose(a, axes=None):
 
     Parameters
     ----------
-    a : array_like
+    a : NDArray
         Input array.
     axes : list of ints, optional
         By default, reverse the dimensions,
         otherwise permute the axes according to the values given.
+    out : ndarray, optional
+        Alternate output array in which to place the result. The default is None; if provided,
+        it must have the same shape as the expected output, but the type will be cast if necessary. 
+    name : string, optional
+        Name of the resulting symbol
 
     Returns
     -------
     p : ndarray
         a with its axes permuted. A view is returned whenever possible.
+
+    Notes
+    -----
+    This function differs from the original `numpy.transpose
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.transpose.html>`_ in
+    the following way(s):
+
+    - only NDArray is accepted as valid input, python iterables are not supported
 
     Examples
     --------

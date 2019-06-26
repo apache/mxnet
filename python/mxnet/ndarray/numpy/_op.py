@@ -188,7 +188,7 @@ def stack(arrays, axis=0, out=None):
 
     Parameters
     ----------
-    arrays : sequence of array_like
+    arrays : sequence of NDArray
         Each array must have the same shape.
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
@@ -198,8 +198,16 @@ def stack(arrays, axis=0, out=None):
 
     Returns
     -------
-    stacked : ndarray
+    out : ndarray
         The stacked array has one more dimension than the input arrays.
+
+    Notes
+    -----
+    This function differs from the original `numpy.stack
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.stack.html>`_ in
+    the following ways:
+
+    - only sequence of NDArray is accepted as valid input
 
     Examples
     --------
@@ -634,7 +642,7 @@ def split(ary, indices_or_sections, axis=0):
 
     Parameters
     ----------
-    ary : ndarray
+    ary : NDArray
         Array to be divided into sub-arrays.
     indices_or_sections : int or 1-D array
         If `indices_or_sections` is an integer, N, the array will be divided
@@ -663,6 +671,14 @@ def split(ary, indices_or_sections, axis=0):
     ValueError
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division.
+
+    Notes
+    -----
+    This function differs from the original `numpy.split
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.split.html>`_ in
+    the following ways:
+
+    - Index exceeding the dimension the dimension of the array is currently not supported.
 
     Examples
     --------
@@ -1305,18 +1321,24 @@ def rint(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : array_like
+    x : NDArray or scalor
         Input array.
-    out : ndarray, None, or tuple of ndarray and None, optional
-        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
-    where : array_like, optional
-        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
-    **kwargs
+    out : ndarray or None
+        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to.
+        If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------
     out : ndarray or scalar
         Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.rint
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
+    the following way(s):
+
+    - only NDArray or scalor is accpted as valid input, tuple of NDArray is not supported
 
     Examples
     --------
@@ -1330,30 +1352,34 @@ def rint(x, out=None, **kwargs):
 @set_module('mxnet.ndarray.numpy')
 def log2(x, out=None, **kwargs):
     """
-    Base-2 logarithm of x.
+    Round elements of the array to the nearest integer.
 
     Parameters
     ----------
-    x : array_like
-        Input values.
-        List of complex numbers is not supported currently.
-    out : ndarray, None, or tuple of ndarray and None, optional
-        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
-    where : array_like, optional
-        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
-    **kwargs
-        For other keyword-only arguments, see the ufunc docs.
+    x : NDArray or scalor
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to.
+        If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------
-    y : ndarray
-        Base-2 logarithm of x. This is a scalar if x is a scalar.
+    out : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.rint
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
+    the following way(s):
+
+    - only NDArray or scalor is accpted as valid input, tuple of NDArray is not supported
 
     Examples
     --------
-    >>> x = np.array([0, 1, 2, 2**4])
-    >>> np.log2(x)
-    array([-inf,   0.,   1.,   4.], dtype=float32)
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.rint(a)
+    array([-2., -2., -0.,  0.,  1.,  2.,  2.], dtype=float32)
     """
     return _unary_func_helper(x, _npi.log2, _np.log2, out=out, **kwargs)
 
@@ -1365,20 +1391,23 @@ def radians(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : array_like
+    x : NDArray or scalor
         Input array in degrees.
-    out : ndarray, None, or tuple of ndarray and None, optional
+    out : ndarray or None
         A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
-    where : array_like, optional
-        Values of True indicate to calculate the ufunc at that position, values of False indicate to leave the value in the output alone.
-    **kwargs
-        For other keyword-only arguments, see the ufunc docs.
-        The corresponding radian values. This is a scalar if x is a scalar.
 
     Returns
     -------
     y : ndarray
         The corresponding radian values. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.radians
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
+    the following way(s):
+
+    - only NDArray or scalor is accpted as valid input, tuple of NDArray is not supported
 
     Examples
     --------
