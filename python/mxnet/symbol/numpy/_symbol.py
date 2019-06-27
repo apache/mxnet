@@ -36,10 +36,12 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
 
 @set_module('mxnet.symbol.numpy')
 def absolute(x, out=None, **kwargs):
-    r"""Calculate the absolute value element-wise.
+    r"""
+    Calculate the absolute value element-wise.
     np.abs is a shorthand for this function.
 
-    Parameters:	
+    Parameters
+    ----------
     x : _Symbol
     Input array.
 
@@ -51,12 +53,13 @@ def absolute(x, out=None, **kwargs):
     **kwargs
     For other keyword-only arguments, see the ufunc docs.
 
-    Returns:	
+    Returns
+    ----------	
     absolute : _Symbol
-    An ndarray containing the absolute value of each element in x. For complex input, a + ib, 
-    the absolute value is \sqrt{ a^2 + b^2 }. This is a scalar if x is a scalar.
+    An ndarray containing the absolute value of each element in x.  
     
-    Examples:
+    Examples
+    ----------
     >>> x = np.array([-1.2, 1.2])
     >>> np.absolute(x)
     array([ 1.2,  1.2])
@@ -65,9 +68,11 @@ def absolute(x, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def cbrt(x, out=None, **kwargs):
-    r"""Return the cube-root of an array, element-wise.
+    r"""
+    Return the cube-root of an array, element-wise.
 
-    Parameters:	
+    Parameters
+    ----------	
     x : _Symbol
     The values whose cube-roots are required.
 
@@ -79,13 +84,14 @@ def cbrt(x, out=None, **kwargs):
     **kwargs
     For other keyword-only arguments, see the ufunc docs.
 
-    Returns:	
+    Returns
+    ----------	
     y : _Symbol
     An array of the same shape as x, containing the cube cube-root of each element in x. 
     If out was provided, y is a reference to it. This is a scalar if x is a scalar.
 
     Examples
-
+    ----------
     >>> np.cbrt([1,8,27])
     array([ 1.,  2.,  3.])
     """
@@ -93,10 +99,12 @@ def cbrt(x, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def arccos(x, out=None, **kwargs):
-    r"""Trigonometric inverse cosine, element-wise.
+    r"""
+    Trigonometric inverse cosine, element-wise.
     The inverse of cos so that, if y = cos(x), then x = arccos(y).
 
-    Parameters:	
+    Parameters
+    ----------
     x : _Symbol
     x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
 
@@ -108,15 +116,18 @@ def arccos(x, out=None, **kwargs):
     **kwargs
     For other keyword-only arguments, see the ufunc docs.
 
-    Returns:	
+    Returns
+    ----------	
     angle : _Symbol
     The angle of the ray intersecting the unit circle at the given x-coordinate in radians [0, pi]. 
     This is a scalar if x is a scalar.
 
     See also
-    cos, arctan, arcsin, emath.arccos
+    ----------
+    cos, arctan, arcsin
 
     Notes
+    ----------
 
     arccos is a multivalued function: for each x there are infinitely many numbers z such that 
     cos(z) = x. The convention is to return the angle z whose real part lies in [0, pi].
@@ -125,13 +136,10 @@ def arccos(x, out=None, **kwargs):
     For each value that cannot be expressed as a real number or infinity, it yields nan and sets 
     the invalid floating point error flag.
 
-    For complex-valued input, arccos is a complex analytic function that has branch cuts [-inf, -1] 
-    and [1, inf] and is continuous from above on the former and from below on the latter.
-
     The inverse cos is also known as acos or cos^-1.
 
     Examples
-
+    ----------
     We expect the arccos of 1 to be 0, and of -1 to be pi:
 
     >>> np.arccos([1, -1])
@@ -1341,22 +1349,45 @@ def swapaxes(a, axis1, axis2):
 
 @set_module('mxnet.symbol.numpy')
 def expand_dims(a, axis):
-    """Expand the shape of an array.
-
+    """
+    Expand the shape of an array.
     Insert a new axis that will appear at the `axis` position in the expanded
+    array shape.
 
     Parameters
     ----------
-    a : _Symbol
+    a : array_like
         Input array.
     axis : int
         Position in the expanded axes where the new axis is placed.
 
     Returns
     -------
-    res : _Symbol
+    res : ndarray
         Output array. The number of dimensions is one greater than that of
         the input array.
+
+    See Also
+    --------
+    squeeze : The inverse operation, removing singleton dimensions
+    reshape : Insert, remove, and combine dimensions, and resize existing ones
+
+    Examples
+    --------
+    >>> x = np.array([1,2])
+    >>> x.shape
+    (2,)
+    >>> y = np.expand_dims(x, axis=0)
+    >>> y
+    array([[1, 2]])
+    >>> y.shape
+    (1, 2)
+    >>> y = np.expand_dims(x, axis=1) 
+    >>> y
+    array([[1],
+           [2]])
+    >>> y.shape
+    (2, 1)
     """
     return _npi.expand_dims(a, axis)
 
