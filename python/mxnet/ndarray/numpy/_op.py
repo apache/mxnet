@@ -294,28 +294,29 @@ def argmax(a, axis=None, out=None):
     >>> a = np.arange(6).reshape(2,3) + 10
     >>> a
     array([[10., 11., 12.],
-       [13., 14., 15.]], dtype=float32)
+           [13., 14., 15.]])
     >>> np.argmax(a)
-    array(5., dtype=float32)
+    array(5.)
     >>> np.argmax(a, axis=0)
-    array([1., 1., 1.], dtype=float32)
+    array([1., 1., 1.])
     >>> np.argmax(a, axis=1)
-    array([2., 2.], dtype=float32)
+    array([2., 2.])
 
     >>> b = np.arange(6)
     >>> b[1] = 5
     >>> b
-    array([0., 5., 2., 3., 4., 5.], dtype=float32)
+    array([0., 5., 2., 3., 4., 5.])
     >>> np.argmax(b)  # Only the first occurrence is returned.
-    array(1., dtype=float32)
+    array(1.)
 
-    Specify out ndarray:
+    Specify ``out`` ndarray:
+
     >>> a = np.arange(6).reshape(2,3) + 10
-    >>> b = np.zeros((2,), dtype=np.float32)
+    >>> b = np.zeros((2,))
     >>> np.argmax(a, axis=1, out=b)
-    array([2., 2.], dtype=float32)
+    array([2., 2.])
     >>> b
-    array([2., 2.], dtype=float32)
+    array([2., 2.])
     """
     return _npi.argmax(a, axis=axis, keepdims=False, out=out)
 
@@ -683,30 +684,30 @@ def tile(A, reps):
     --------
     >>> a = np.array([0, 1, 2])
     >>> np.tile(a, 2)
-    array([0., 1., 2., 0., 1., 2.], dtype=float32)
+    array([0., 1., 2., 0., 1., 2.])
     >>> np.tile(a, (2, 2))
     array([[0., 1., 2., 0., 1., 2.],
-       [0., 1., 2., 0., 1., 2.]], dtype=float32)
+       [0., 1., 2., 0., 1., 2.]])
     >>> np.tile(a, (2, 1, 2))
     array([[[0., 1., 2., 0., 1., 2.]],
-       [[0., 1., 2., 0., 1., 2.]]], dtype=float32)
+          [[0., 1., 2., 0., 1., 2.]]])
 
     >>> b = np.array([[1, 2], [3, 4]])
     >>> np.tile(b, 2)
     array([[1., 2., 1., 2.],
-       [3., 4., 3., 4.]], dtype=float32)
+       [3., 4., 3., 4.]])
     >>> np.tile(b, (2, 1))
     array([[1., 2.],
-           [3., 4.],
-           [1., 2.],
-           [3., 4.]], dtype=float32)
+          [3., 4.],
+          [1., 2.],
+          [3., 4.]])
 
     >>> c = np.array([1,2,3,4])
     >>> np.tile(c,(4,1))
     array([[1., 2., 3., 4.],
-       [1., 2., 3., 4.],
-       [1., 2., 3., 4.],
-       [1., 2., 3., 4.]], dtype=float32)
+          [1., 2., 3., 4.],
+          [1., 2., 3., 4.],
+          [1., 2., 3., 4.]])
     """
     return _npi.tile(A, reps)
 
@@ -1024,20 +1025,22 @@ def sign(x, out=None, **kwargs):
     --------
     >>> a = np.array([-5., 4.5])
     >>> np.sign(a)
-    array([-1.,  1.], dtype=float32)
+    array([-1.,  1.])
 
     Scalars as input:
+
     >>> np.sign(4.0)
     1.0
     >>> np.sign(0)
     0
 
-    Use out parameter:
+    Use ``out`` parameter:
+
     >>> b = np.zeros((2, ))
     >>> np.sign(a, out=b)
-    array([-1.,  1.], dtype=float32)
+    array([-1.,  1.])
     >>> b
-    array([-1.,  1.], dtype=float32)
+    array([-1.,  1.])
 
     """
     return _unary_func_helper(x, _npi.sign, _np.sign, out=out, **kwargs)
@@ -1167,8 +1170,20 @@ def log(x, out=None, **kwargs):
 
     Examples
     --------
-    >>> a = np.array([1, np.exp(1), np.exp(2), 0])
-    [  0.   1.   2. -inf]
+    >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float64)
+    >>> np.log(a)
+    array([  0.,   1.,   2., -inf], dtype=float64)
+
+    Due to internal calculation mechanism, using float32 type may cause some special behavior
+
+    >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float32)
+    >>> np.log(a)
+    array([0.        , 0.99999994, 2.        ,       -inf])
+
+    Scalar calculation:
+
+    >>> np.log(1)
+    0.0
 
     """
     return _unary_func_helper(x, _npi.log, _np.log, out=out, **kwargs)
@@ -1208,16 +1223,15 @@ def degrees(x, out=None, **kwargs):
 
     >>> rad = np.arange(12.) * np.pi / 6
     >>> np.degrees(rad)
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
-       330.], dtype=float32)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+
+    Use specified ``out`` ndarray:
 
     >>> out = np.zeros((rad.shape))
     >>> np.degrees(rad, out)
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
-       330.], dtype=float32)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
     >>> out
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
-       330.], dtype=float32)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
 
     """
     return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)

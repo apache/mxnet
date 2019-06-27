@@ -254,9 +254,9 @@ def _np_sum(a, axis=None, dtype=None, out=None):
         `ndarray`, however any non-default value will be.  If the
         sub-classes `sum` method does not implement `keepdims` any
         exceptions will be raised.
-    initial: Currently only supports None as input.
+    initial: Currently only supports None as input, optional
         Starting value for the sum.
-        Currently not implemented. Please use None as input.
+        Currently not implemented. Please pass in None if needed.
     out : ndarray, optional
         Alternative output array in which to place the result. It must have
         the same shape and dtype as the expected output.
@@ -278,32 +278,32 @@ def _np_sum(a, axis=None, dtype=None, out=None):
 
     >>> a = np.empty(1)
     >>> np.sum(a)
-    array(0., dtype=float32)
+    array(0.)
 
     Examples
     --------
     >>> a = np.array([0.5, 1.5])
     >>> np.sum(a)
-    2.0
+    array(2.)
     >>> a = np.array([0.5, 0.7, 0.2, 1.5])
     >>> np.sum(a, dtype=np.int32)
-    2
+    array(2, dtype=int32)
     >>> a = np.array([[0, 1], [0, 5]])
     >>> np.sum(a)
-    6
+    array(6.)
     >>> np.sum(a, axis=0)
-    array([0., 6.], dtype=float32)
+    array([0., 6.])
     >>> np.sum(a, axis=1)
-    array([1., 5.], dtype=float32)
+    array([1., 5.])
 
     With output ndarray:
 
     >>> a = np.array([[0, 1], [0, 5]])
     >>> b = np.ones((2,), dtype=np.float32)
     >>> np.sum(a, axis = 0, out=b)
-    array([0., 6.], dtype=float32)
+    array([0., 6.])
     >>> b
-    array([0., 6.], dtype=float32)
+    array([0., 6.])
 
     If the accumulator is too small, overflow occurs:
 
@@ -313,9 +313,9 @@ def _np_sum(a, axis=None, dtype=None, out=None):
     pass
 
 
-def  _np_copy(a, order='K'):
+def  _np_copy(a, out=None):
     """
-    copy(a, out=None, name=None)
+    copy(a, out=None)
 
     Return an array copy of the given object.
 
@@ -326,7 +326,6 @@ def  _np_copy(a, order='K'):
     out : ndarray, optional
         Alternative output array in which to place the result. It must have
         the same shape and dtype as the expected output.
-    name:
 
     Returns
     -------
@@ -351,9 +350,9 @@ def  _np_copy(a, order='K'):
 
     >>> x[0] = 10
     >>> x[0] == y[0]
-    array([1.], dtype=float32)
+    array([1.])
     >>> x[0] == z[0]
-    array([0.], dtype=float32)
+    array([0.])
     """
     pass
 

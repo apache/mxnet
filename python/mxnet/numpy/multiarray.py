@@ -1520,7 +1520,7 @@ def argmax(a, axis=None, out=None):
     axis : int, optional
         By default, the index is into the flattened array, otherwise
         along the specified axis.
-    out : array, optional
+    out : ndarray, optional
         If provided, the result will be inserted into this array. It should
         be of the appropriate shape and dtype.
 
@@ -1530,7 +1530,7 @@ def argmax(a, axis=None, out=None):
         Array of indices into the array. It has the same shape as `a.shape`
         with the dimension along `axis` removed.
 
-     Notes
+    Notes
     -----
     - In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
@@ -1542,29 +1542,29 @@ def argmax(a, axis=None, out=None):
     >>> a = np.arange(6).reshape(2,3) + 10
     >>> a
     array([[10., 11., 12.],
-       [13., 14., 15.]], dtype=float32)
+           [13., 14., 15.]])
     >>> np.argmax(a)
-    array(5., dtype=float32)
+    array(5.)
     >>> np.argmax(a, axis=0)
-    array([1., 1., 1.], dtype=float32)
+    array([1., 1., 1.])
     >>> np.argmax(a, axis=1)
-    array([2., 2.], dtype=float32)
+    array([2., 2.])
 
     >>> b = np.arange(6)
     >>> b[1] = 5
     >>> b
-    array([0., 5., 2., 3., 4., 5.], dtype=float32)
+    array([0., 5., 2., 3., 4., 5.])
     >>> np.argmax(b)  # Only the first occurrence is returned.
-    array(1., dtype=float32)
+    array(1.)
 
-    Specify out ndarray:
+    Specify ``out`` ndarray:
+
     >>> a = np.arange(6).reshape(2,3) + 10
-    >>> b = np.zeros((2,), dtype=np.float32)
+    >>> b = np.zeros((2,))
     >>> np.argmax(a, axis=1, out=b)
-    array([2., 2.], dtype=float32)
+    array([2., 2.])
     >>> b
-    array([2., 2.], dtype=float32)
-
+    array([2., 2.])
     """
     return _mx_nd_np.argmax(a, axis, out)
 
@@ -2113,32 +2113,32 @@ def tile(A, reps):
     --------
     >>> a = np.array([0, 1, 2])
     >>> np.tile(a, 2)
-    array([0., 1., 2., 0., 1., 2.], dtype=float32)
+    array([0., 1., 2., 0., 1., 2.])
     >>> np.tile(a, (2, 2))
     array([[0., 1., 2., 0., 1., 2.],
-       [0., 1., 2., 0., 1., 2.]], dtype=float32)
+       [0., 1., 2., 0., 1., 2.]])
     >>> np.tile(a, (2, 1, 2))
     array([[[0., 1., 2., 0., 1., 2.]],
-       [[0., 1., 2., 0., 1., 2.]]], dtype=float32)
+          [[0., 1., 2., 0., 1., 2.]]])
 
     >>> b = np.array([[1, 2], [3, 4]])
     >>> np.tile(b, 2)
     array([[1., 2., 1., 2.],
-       [3., 4., 3., 4.]], dtype=float32)
+       [3., 4., 3., 4.]])
     >>> np.tile(b, (2, 1))
     array([[1., 2.],
-           [3., 4.],
-           [1., 2.],
-           [3., 4.]], dtype=float32)
+          [3., 4.],
+          [1., 2.],
+          [3., 4.]])
 
     >>> c = np.array([1,2,3,4])
     >>> np.tile(c,(4,1))
     array([[1., 2., 3., 4.],
-       [1., 2., 3., 4.],
-       [1., 2., 3., 4.],
-       [1., 2., 3., 4.]], dtype=float32)
+          [1., 2., 3., 4.],
+          [1., 2., 3., 4.],
+          [1., 2., 3., 4.]])
     """
-    return _npi.tile(A, reps)
+    return _mx_nd_np.tile(A, reps)
 
 
 @set_module('mxnet.numpy')
@@ -2286,28 +2286,30 @@ def sign(x, out=None):
     --------
     >>> a = np.array([-5., 4.5])
     >>> np.sign(a)
-    array([-1.,  1.], dtype=float32)
+    array([-1.,  1.])
 
     Scalars as input:
+
     >>> np.sign(4.0)
     1.0
     >>> np.sign(0)
     0
 
-    Use out parameter:
+    Use ``out`` parameter:
+
     >>> b = np.zeros((2, ))
     >>> np.sign(a, out=b)
-    array([-1.,  1.], dtype=float32)
+    array([-1.,  1.])
     >>> b
-    array([-1.,  1.], dtype=float32)
+    array([-1.,  1.])
 
     """
-    return _mx_nd_np.sign(x, out=out, **kwargs)
+    return _mx_nd_np.sign(x, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
-def exp(x, out=None, **kwargs):
-    return _mx_nd_np.exp(x, out=out, **kwargs)
+def exp(x, out=None):
+    return _mx_nd_np.exp(x, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -2350,8 +2352,20 @@ def log(x, out=None, **kwargs):
 
     Examples
     --------
+    >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float64)
+    >>> np.log(a)
+    array([  0.,   1.,   2., -inf], dtype=float64)
+
+    Due to internal calculation mechanism, using default float32 dtype may cause some special behavior
+
     >>> a = np.array([1, np.exp(1), np.exp(2), 0])
-    [  0.   1.   2. -inf]
+    >>> np.log(a)
+    array([0.        , 0.99999994, 2.        ,       -inf])
+
+    Scalar calculation:
+
+    >>> np.log(1)
+    0.0
 
     """
     return _mx_nd_np.log(x, out=out, **kwargs)
@@ -2375,7 +2389,7 @@ def degrees(x, out=None, **kwargs):
 
     Returns
     -------
-    y : ndarray of floats
+    y : ndarray
         The corresponding degree values; if `out` was supplied this is a
         reference to it.
         This is a scalar if `x` is a scalar.
@@ -2391,16 +2405,15 @@ def degrees(x, out=None, **kwargs):
 
     >>> rad = np.arange(12.) * np.pi / 6
     >>> np.degrees(rad)
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
-       330.], dtype=float32)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
+
+    Use specified ``out`` ndarray:
 
     >>> out = np.zeros((rad.shape))
     >>> np.degrees(rad, out)
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
-       330.], dtype=float32)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
     >>> out
-    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300.,
-       330.], dtype=float32)
+    array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
 
     """
     return _mx_nd_np.degrees(x, out=out, **kwargs)
