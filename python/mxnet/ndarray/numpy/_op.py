@@ -34,36 +34,30 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
 @set_module('mxnet.ndarray.numpy')
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
-    This function currently only supports storing multi-dimensional data
-    in row-major (C-style).
 
     Parameters
     ----------
-    shape : int or tuple of int
-        The shape of the empty array.
-    dtype : str or numpy.dtype, optional
-        An optional value type. Default is `numpy.float32`. Note that this
-        behavior is different from NumPy's `ones` function where `float64`
-        is the default value, because `float32` is considered as the default
-        data type in deep learning.
+    shape : int , tuple of ints or list of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    dtype : data-type, optional
+        The desired data-type for the array, e.g., `numpy.int8`.  Default is
+        `numpy.float64`.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
     Returns
     -------
     out : ndarray
-        Array of zeros with the given shape, dtype, and ctx.
+        Array of zeros with the given shape, dtype, and order.
 
     Notes
     -----
-    Not support parameter order
-    Not support zero-size (like np.zeros(0) will return error!)
-    Not support zero-dim tensor
-    numpy 1.16  inputs can be list and ndarray
-    but mxnet.np can only support int and tuple
+    - Not support zero-dim and zero-size shape
+    - Not support ndarray type
+    - Not support custom dtype
 
     >>> np.zeros((2,), dtype=[('x', 'i4'), ('y', 'i4')]) # custom dtype
-    not support custom dtypes
+    mxnet.base.MXNetError: Invalid Input.
 
     See Also
     --------
@@ -75,19 +69,26 @@ def zeros(shape, dtype=_np.float32, **kwargs):
     Examples
     --------
     >>> np.zeros(5)
-    array([0., 0., 0., 0., 0.], dtype=float32)
+    array([0., 0., 0., 0., 0.])
 
     >>> np.zeros((5,), dtype=int)
     array([0, 0, 0, 0, 0])
 
     >>> np.zeros((2, 1))
     array([[0.],
-       [0.]], dtype=float32)
+       [0.]])
 
     >>> s = (2,2)
     >>> np.zeros(s)
     array([[0., 0.],
-       [0., 0.]], dtype=float32)
+       [0., 0.]])
+
+    if you install mxnet gpu version, you can use gpu.
+
+    >>> from mxnet import npx
+    >>> np.zeros((2,3), ctx=npx.gpu(0))
+    array([[0., 0., 0.],
+       [0., 0., 0.]], dtype=float32, ctx=gpu(0))
 
     """
     _sanity_check_params('zeros', ['order'], kwargs)
@@ -325,7 +326,7 @@ def concatenate(seq, axis=0, out=None):
 
     Parameters
     ----------
-    a1, a2, ... : sequence of array_like
+    seq: sequence of ndarray
         The arrays must have the same shape, except in the dimension
         corresponding to `axis` (the first, by default).
     axis : int, optional
@@ -343,8 +344,8 @@ def concatenate(seq, axis=0, out=None):
 
     Notes
     -----
-    Not support axis = None
-    Not support zero-shape and zero-dim
+    - Not support axis = None
+    - Not support zero-size and zero-dim
 
     >>> np.concatenate((a, b), axis=None)
     Invalid Parameter format for dim expect int but value='None',
@@ -356,10 +357,10 @@ def concatenate(seq, axis=0, out=None):
     >>> np.concatenate((a, b), axis=0)
     array([[1., 2.],
        [3., 4.],
-       [5., 6.]], dtype=float32)
+       [5., 6.]])
     >>> np.concatenate((a, b.T), axis=1)
     array([[1., 2., 5.],
-       [3., 4., 6.]], dtype=float32)
+       [3., 4., 6.]])
 
     """
     return _npi.concatenate(*seq, dim=axis, out=out)
@@ -943,16 +944,16 @@ def sqrt(x, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def ceil(x, out=None, **kwargs):
-    """
+    r"""
     Return the ceiling of the input, element-wise.
 
-    The ceil of the scalar `x` is the smallest integer `i`, such that
+    The ceil of the ndarray `x` is the smallest integer `i`, such that
     `i >= x`.  It is often denoted as :math:`\lceil x \rceil`.
 
     Parameters
     ----------
-    x : array_like
-        ndarray  int float and double
+    x :
+        ndarray int float or double
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it
@@ -962,18 +963,19 @@ def ceil(x, out=None, **kwargs):
 
     Returns
     -------
-    y : ndarray
+    y :
+        ndarray int float or double
         The corresponding hyperbolic sine values.
 
     Notes
     ----
-    Not Support scalar.
+    Not Support zero-size and zero-shape.
 
     Examples
     --------
     >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
     >>> np.ceil(a)
-    array([-1., -1., -0.,  1.,  2.,  2.,  2.], dtype=float32)
+    array([-1., -1., -0.,  1.,  2.,  2.,  2.])
 
     """
     return _unary_func_helper(x, _npi.ceil, _np.ceil, out=out, **kwargs)
@@ -981,15 +983,15 @@ def ceil(x, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def log1p(x, out=None, **kwargs):
-    """
+    r"""
     Return the natural logarithm of one plus the input array, element-wise.
 
     Calculates ``log(1 + x)``.
 
     Parameters
     ----------
-    x : array_like
-        ndarray int float double
+    x :
+        ndarray
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it
@@ -1004,7 +1006,7 @@ def log1p(x, out=None, **kwargs):
 
     Notes
     ----
-    Not Support scalar.
+    - Not Support zero-size and zero-dim.
 
     >>> np.log1p(np.array(1e-99))
     Operator _npi_log1p inferring shapes failed.
@@ -1027,8 +1029,8 @@ def tanh(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : array_like
-        ndarray int float double
+    x :
+        ndarray int float or double
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it
@@ -1037,7 +1039,7 @@ def tanh(x, out=None, **kwargs):
         output is the same as that of the input if the input is an ndarray.
     Returns
     -------
-    y : ndarray
+    y : ndarray int float or double
         The corresponding hyperbolic tangent values.
 
     Notes
@@ -1045,16 +1047,19 @@ def tanh(x, out=None, **kwargs):
     If `out` is provided, the function writes the result into it,
     and returns a reference to `out`.  (See Examples)
 
-    Not support scalar
-    Do not support complex computation don't deal with imaginary number
+    - Not support zero-size and zero-dim
+    - Not support complex computation (like imaginary number)
 
     >>> np.tanh(np.pi*1j)
     TypeError: type <type 'complex'> not supported
 
     Examples
     --------
-    >>> np.tanh(np.array([0, np.pi]))
-    array([0.       , 0.9962721], dtype=float32)
+    >>> np.tanh(np.array[0, np.pi]))
+    array([0.       , 0.9962721])
+
+    >>> np.tanh(np.pi)
+    0.99627207622075
 
     >>> # Example of providing the optional output parameter illustrating
     >>> # that what is returned is a reference to said parameter
@@ -1065,7 +1070,10 @@ def tanh(x, out=None, **kwargs):
 
     >>> # Example of ValueError due to provision of shape mis-matched `out`
     >>> np.tanh(np.zeros((3,3)),np.zeros((2,2)))
-    Incompatible attr in node  at 0-th output: expected [3,3], got [2,2]
+    mxnet.base.MXNetError:
+    [07:17:36] ../src/ndarray/./../operator/tensor/../elemwise_op_common.h:135:
+    Check failed: assign(&dattr, vec.at(i)): Incompatible attr in node
+    at 0-th output: expected [3,3], got [2,2]
 
     """
     return _unary_func_helper(x, _npi.tanh, _np.tanh, out=out, **kwargs)

@@ -21,7 +21,8 @@
 
 
 def _np_reshape(a, newshape, order='C'):
-    """Gives a new shape to an array without changing its data.
+    """
+    Gives a new shape to an array without changing its data.
 
     Parameters
     ----------
@@ -32,24 +33,70 @@ def _np_reshape(a, newshape, order='C'):
         an integer, then the result will be a 1-D array of that length.
         One shape dimension can be -1. In this case, the value is
         inferred from the length of the array and remaining dimensions.
-    order : {'C'}, optional
+    order : {'C', 'F', 'A'}, optional
         Read the elements of `a` using this index order, and place the
         elements into the reshaped array using this index order.  'C'
         means to read / write the elements using C-like index order,
         with the last axis index changing fastest, back to the first
-        axis index changing slowest. Other order types such as 'F'/'A'
-        may be added in the future.
+        axis index changing slowest. 'F' means to read / write the
+        elements using Fortran-like index order, with the first index
+        changing fastest, and the last index changing slowest. Note that
+        the 'C' and 'F' options take no account of the memory layout of
+        the underlying array, and only refer to the order of indexing.
+        'A' means to read / write the elements in Fortran-like index
+        order if `a` is Fortran *contiguous* in memory, C-like order
+        otherwise.
 
     Returns
     -------
     reshaped_array : ndarray
-        It will be always a copy of the original array. This behavior is different
-        from the official NumPy package where views of the original array may be
-        generated.
+        This will be a new view object if possible; otherwise, it will
+        be a copy.  Note there is no guarantee of the *memory layout* (C- or
+        Fortran- contiguous) of the returned array.
 
-    See Also
+
+    Notes
+    -----
+    It is not always possible to change the shape of an array without
+    copying the data. If you want an error to be raised when the data is copied,
+    you should assign the new shape to the shape attribute of the array::
+
+     >>> a = np.zeros((10, 2))
+     # A transpose makes the array non-contiguous
+     >>> b = a.T
+     # Taking a view makes it possible to modify the shape without modifying
+     # the initial object.
+
+    >>> a = np.arange(6).reshape((3, 2))
+    >>> a
+    array([[0., 1.],
+       [2., 3.],
+       [4., 5.]])
+
+    You can think of reshaping as first raveling the array (using the given
+    index order), then inserting the elements from the raveled array into the
+    new array using the same kind of index ordering as was used for the
+    raveling.
+
+    >>> np.reshape(a, (2, 3)) # C-like index ordering
+    array([[0., 1., 2.],
+       [3., 4., 5.]])
+
+    - order only support C-order
+    - input not support scalar
+    - not support zero-size shape
+
+    Examples
     --------
-    ndarray.reshape : Equivalent method.
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.reshape(a, 6)
+    array([1., 2., 3., 4., 5., 6.])
+
+    >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
+    array([[1, 2],
+           [3, 4],
+           [5, 6]])
+
     """
     pass
 
@@ -177,14 +224,11 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 def _np_max(axis=None, out=None, keepdims=False, initial=None):
     """
-    numpy.amax  equivalent function
-
-    amax(a, axis=None, out=None, keepdims=<no value>, initial=<no value>)
     Return the maximum of an array or maximum along an axis.
 
     Parameters
     ----------
-    a : array_like. a must be NDArray type
+    a : NDArray
         Input data.
     axis : None or int or tuple of ints, optional
         Axis or axes along which to operate.  By default, flattened input is
@@ -226,15 +270,14 @@ def _np_max(axis=None, out=None, keepdims=False, initial=None):
 
     See Also
     --------
-    argmax :
-        Return the indices of the maximum values.
+    amax     equivalent function
 
     Notes
     -----
 
-        1. Not support index < 0.
-        2. Not support initial.
-        3. Not support input is a scalar (like np.max(np.array(1)) will return error)
+        1. Not support axis < 0.
+        2. Parameter initial is not supported yet
+        3. Not support zero-size and zero-dim
 
         Examples not work:
 
@@ -242,111 +285,22 @@ def _np_max(axis=None, out=None, keepdims=False, initial=None):
         >>> b[2] = np.NaN
         'module' object has no attribute 'NaN'
         >>> np.amax(b)
-        >>> np.nanmax(b)
-         'module' object has no attribute 'nanmax'
 
-        >>> np.max([[-50], [10]], axis=-1, initial=0)
-        Argument a must have NDArray type, but got [[-50], [10]]
-        >>> np.max([5], initial=6)
-        Argument a must have NDArray type, but got [5]
+        >>> np.max(np.array([[-50], [10]]), axis= -1)
+        i >= 0 && i < ndim(): axis = -1 must be in range [0, 2)
 
     Examples
     --------
     >>> a = np.arange(4).reshape((2,2))
     >>> a
     array([[0., 1.],
-       [2., 3.]], dtype=float32)
+       [2., 3.]])
     >>> np.amax(a)           # Maximum of the flattened array
-    array(3., dtype=float32)
+    array(3.)
     >>> np.amax(a, axis=0)   # Maxima along the first axis
-    array([2., 3.], dtype=float32)
+    array([2., 3.])
     >>> np.amax(a, axis=1)   # Maxima along the second axis
-    array([1., 3.], dtype=float32)
-
+    array([1., 3.])
 
     """
     pass
-
-
-def np_reshape(a, newshape, order='C'):
-    """
-    Gives a new shape to an array without changing its data.
-
-    Parameters
-    ----------
-    a : array_like
-        Array to be reshaped.
-    newshape : int or tuple of ints
-        The new shape should be compatible with the original shape. If
-        an integer, then the result will be a 1-D array of that length.
-        One shape dimension can be -1. In this case, the value is
-        inferred from the length of the array and remaining dimensions.
-    order : {'C', 'F', 'A'}, optional
-        Read the elements of `a` using this index order, and place the
-        elements into the reshaped array using this index order.  'C'
-        means to read / write the elements using C-like index order,
-        with the last axis index changing fastest, back to the first
-        axis index changing slowest. 'F' means to read / write the
-        elements using Fortran-like index order, with the first index
-        changing fastest, and the last index changing slowest. Note that
-        the 'C' and 'F' options take no account of the memory layout of
-        the underlying array, and only refer to the order of indexing.
-        'A' means to read / write the elements in Fortran-like index
-        order if `a` is Fortran *contiguous* in memory, C-like order
-        otherwise.
-
-    Returns
-    -------
-    reshaped_array : ndarray
-        This will be a new view object if possible; otherwise, it will
-        be a copy.  Note there is no guarantee of the *memory layout* (C- or
-        Fortran- contiguous) of the returned array.
-
-
-    Notes
-    -----
-    It is not always possible to change the shape of an array without
-    copying the data. If you want an error to be raised when the data is copied,
-    you should assign the new shape to the shape attribute of the array::
-
-     >>> a = np.zeros((10, 2))
-     # A transpose makes the array non-contiguous
-     >>> b = a.T
-     # Taking a view makes it possible to modify the shape without modifying
-     # the initial object.
-
-    >>> a = np.arange(6).reshape((3, 2))
-    >>> a
-    array([[0., 1.],
-       [2., 3.],
-       [4., 5.]], dtype=float32)
-
-    You can think of reshaping as first raveling the array (using the given
-    index order), then inserting the elements from the raveled array into the
-    new array using the same kind of index ordering as was used for the
-    raveling.
-
-    >>> np.reshape(a, (2, 3)) # C-like index ordering
-    array([[0., 1., 2.],
-       [3., 4., 5.]], dtype=float32)
-
-    >>> np.reshape(a, (2, 3), order='F') # Fortran-like index ordering
-    array([[0., 1., 2.],
-       [3., 4., 5.]], dtype=float32)
-
-    1. order only support C-order
-    2. input not support scalar
-    3. input type must be  ndarray type
-
-    Examples
-    --------
-    >>> a = np.array([[1,2,3], [4,5,6]])
-    >>> np.reshape(a, 6)
-    array([1., 2., 3., 4., 5., 6.], dtype=float32)
-
-    >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
-    array([[1, 2],
-           [3, 4],
-           [5, 6]])
-
-    """
