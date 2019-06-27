@@ -423,8 +423,53 @@ class ndarray(NDArray):
         return self
 
     def __repr__(self):
-        """Returns a string representation of the array."""
+        """
+        Returns a string representation of the array. The dtype of the ndarray will not
+        be appended to the string if it is `float32`. The context of the ndarray will
+        be appended for devices other than CPU.
+
+        Examples
+        --------
+        >>> from mxnet import np, npx
+        >>> a = np.random.uniform(size=(2, 3))
+        >>> a
+        array([[0.5488135 , 0.5928446 , 0.71518934],
+               [0.84426576, 0.60276335, 0.8579456 ]])
+        >>> print(a)
+        [[0.5488135  0.5928446  0.71518934]
+         [0.84426576 0.60276335 0.8579456 ]]
+        >>> a.dtype
+        <class 'numpy.float32'>
+        >>> b = a.astype(np.float64)
+        >>> b
+        array([[0.54881352, 0.59284461, 0.71518934],
+               [0.84426576, 0.60276335, 0.85794562]], dtype=float64)
+        >>> print(b)
+        [[0.54881352 0.59284461 0.71518934]
+         [0.84426576 0.60276335 0.85794562]]
+        >>> b.dtype
+        <class 'numpy.float64'>
+        >>> c = a.copyto(npx.gpu(0))
+        >>> c
+        array([[0.5488135 , 0.5928446 , 0.71518934],
+               [0.84426576, 0.60276335, 0.8579456 ]], ctx=gpu(0))
+        >>> print(c)
+        [[0.5488135  0.5928446  0.71518934]
+         [0.84426576 0.60276335 0.8579456 ]] @gpu(0)
+        >>> d = b.copyto(npx.gpu(0))
+        >>> d
+        array([[0.54881352, 0.59284461, 0.71518934],
+               [0.84426576, 0.60276335, 0.85794562]], dtype=float64, ctx=gpu(0))
+        >>> print(d)
+        [[0.54881352 0.59284461 0.71518934]
+         [0.84426576 0.60276335 0.85794562]] @gpu(0)
+        """
         array_str = self.asnumpy().__repr__()
+        dtype = self.dtype
+        if dtype == _np.float64:
+            array_str = array_str[:-1] + ', dtype=float64)'
+        elif dtype == _np.float32:
+            array_str = array_str[:array_str.rindex(', dtype=')] + ')'
         context = self.context
         if context.device_type == 'cpu':
             return array_str
@@ -814,11 +859,7 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tile')
 
     def transpose(self, *axes):  # pylint: disable=arguments-differ
-        """Convenience fluent method for :py:func:`transpose`.
-
-        The arguments are the same as for :py:func:`transpose`, with
-        this array as data.
-        """
+        """Permute the dimensions of an array."""
         return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
 
     def flip(self, *args, **kwargs):
