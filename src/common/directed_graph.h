@@ -139,6 +139,10 @@ class DirectedGraph {
     return nodes_.at(node_key);
   }
 
+  const Node& node(NodeKey_t node_key) const {
+    return nodes_.at(node_key);
+  }
+
   EdgeRange edges() const {
     return EdgeRange(*this);
   }
