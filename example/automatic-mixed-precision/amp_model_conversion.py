@@ -89,7 +89,7 @@ if __name__ == '__main__':
         prefix, epoch = download_model(model_name=args.model, logger=logger)
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
         result_sym, result_arg_params, result_aux_params = amp.convert_model(sym, arg_params, aux_params,
-                                                                             cast_optional_params=arg.cast_optional_params)
+                                                                             cast_optional_params=args.cast_optional_params)
         sym_name = "%s-amp-symbol.json" % (prefix)
         save_symbol(sym_name, result_sym, logger)
         param_name = '%s-%04d.params' % (prefix + '-amp', epoch)
@@ -109,6 +109,7 @@ if __name__ == '__main__':
         net = gluoncv.model_zoo.get_model(args.model, pretrained=True)
         net.hybridize()
         result_before1 = net.forward(mx.nd.zeros((1, 3, 224, 224)))
+        net.export("{}".format(args.model))
         net = amp.convert_hybrid_block(net, cast_optional_params=args.cast_optional_params)
         net.export("{}-amp".format(args.model), remove_amp_cast=False)
         if args.run_dummy_inference:
