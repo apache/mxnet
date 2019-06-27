@@ -20,7 +20,11 @@
 """Doc placeholder for numpy ops with prefix _np."""
 
 def _np_reshape(a, newshape, order='C'):
-    """Gives a new shape to an array without changing its data.
+    """
+    reshape(a, newshape, order='C')
+    
+    Gives a new shape to an array without changing its data.
+
     Parameters
     ----------
     a : ndarray

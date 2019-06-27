@@ -1356,14 +1356,14 @@ def expand_dims(a, axis):
 
     Parameters
     ----------
-    a : array_like
+    a : _Symbol
         Input array.
     axis : int
         Position in the expanded axes where the new axis is placed.
 
     Returns
     -------
-    res : ndarray
+    res : _Symbol
         Output array. The number of dimensions is one greater than that of
         the input array.
 
