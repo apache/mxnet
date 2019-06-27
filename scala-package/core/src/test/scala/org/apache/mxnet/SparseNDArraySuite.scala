@@ -54,5 +54,27 @@ class SparseNDArraySuite  extends FunSuite {
     assert(sparseND.getIndices.toArray sameElements indices)
   }
 
+  test("Test retain") {
+    val arr = Array(
+      Array(1f, 2f),
+      Array(3f, 4f),
+      Array(5f, 6f)
+    )
+    val indices = Array(0f, 1f, 3f)
+    val rspIn = SparseNDArray.rowSparseArray(arr, indices, Shape(4, 2), Context.cpu())
+    printf(rspIn.toString)
+    val toRetain = Array(0f, 3f)
+    val rspOut = SparseNDArray.retain(rspIn, toRetain)
+    assert(rspOut.at(0).toArray sameElements Array(1f, 2f))
+    assert(rspOut.getIndices.toArray sameElements Array(0f, 3f))
+  }
+
+  test("Test add") {
+    val nd = NDArray.array(Array(1f, 2f, 3f), Shape(3)).toSparse(Some(SparseFormat.ROW_SPARSE))
+    val nd2 = nd + nd
+    assert(nd2.isInstanceOf[SparseNDArray])
+    assert(nd2.toArray sameElements Array(2f, 4f, 6f))
+  }
+
 
 }

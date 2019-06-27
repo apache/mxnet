@@ -22,6 +22,15 @@ import org.apache.mxnet.DType.DType
 import org.apache.mxnet.SparseFormat.SparseFormat
 
 object SparseNDArray {
+  /**
+    * Create a Compressed Sparse Row Storage (CSR) Format Matrix
+    * @param data the data to feed
+    * @param indices The indices array stores the column index for each non-zero element in data
+    * @param indptr The indptr array is what will help identify the rows where the data appears
+    * @param shape the shape of CSR NDArray to be created
+    * @param ctx the context of this NDArray
+    * @return SparseNDArray
+    */
   def csrMatrix(data: Array[Float], indices: Array[Float],
                 indptr: Array[Float], shape: Shape, ctx: Context): SparseNDArray = {
     val fmt = SparseFormat.CSR
@@ -38,6 +47,15 @@ object SparseNDArray {
     new SparseNDArray(handle)
   }
 
+  /**
+    * RowSparseNDArray stores the matrix in row sparse format,
+    * which is designed for arrays of which most row slices are all zeros
+    * @param data Any Array(Array(... Array(Float)))
+    * @param indices the indices to store the data
+    * @param shape shape of the NDArray
+    * @param ctx Context
+    * @return SparseNDArray
+    */
   def rowSparseArray(data: Array[_], indices: Array[Float],
                      shape: Shape, ctx: Context): SparseNDArray = {
     val dataND = NDArray.toNDArray(data)
@@ -45,6 +63,15 @@ object SparseNDArray {
     rowSparseArray(dataND, indicesND, shape, ctx)
   }
 
+  /**
+    * RowSparseNDArray stores the matrix in row sparse format,
+    * which is designed for arrays of which most row slices are all zeros
+    * @param data NDArray input
+    * @param indices in NDArray. Only DType.Int64 supported
+    * @param shape shape of the NDArray
+    * @param ctx Context
+    * @return
+    */
   def rowSparseArray(data: NDArray, indices: NDArray,
                      shape: Shape, ctx: Context): SparseNDArray = {
     val fmt = SparseFormat.ROW_SPARSE
@@ -53,6 +80,14 @@ object SparseNDArray {
     checkCall(_LIB.mxNDArraySyncCopyFromNDArray(handle, data.handle, -1))
     checkCall(_LIB.mxNDArraySyncCopyFromNDArray(handle, indices.handle, 0))
     new SparseNDArray(handle)
+  }
+
+  def retain(sparseNDArray: SparseNDArray, indices: Array[Float]): SparseNDArray = {
+    if (sparseNDArray.sparseFormat == SparseFormat.CSR) {
+      throw new IllegalArgumentException("CSR not supported")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_sparse_retain",
+      Seq(sparseNDArray, NDArray.toNDArray(indices))).head.toSparse()
   }
 
   private def newAllocHandle(stype : SparseFormat,
@@ -81,6 +116,15 @@ object SparseNDArray {
   }
 }
 
+/**
+  * Sparse NDArray is the child class of NDArray designed to hold the Sparse format
+  *
+  * <p> Currently, Rowsparse and CSR typed NDArray is supported. Most of the Operators
+  * will convert Sparse NDArray to dense. Basic operators like <code>add</code> will
+  * have optimization for sparse operattions</p>
+  * @param handle The pointer that SparseNDArray holds
+  * @param writable whether the NDArray is writable
+  */
 class SparseNDArray private[mxnet] (override private[mxnet] val handle: NDArrayHandle,
                                     override val writable: Boolean = true)
   extends NDArray(handle, writable) {
@@ -91,6 +135,10 @@ class SparseNDArray private[mxnet] (override private[mxnet] val handle: NDArrayH
     dense.toString
   }
 
+  /**
+    * Convert a SparseNDArray to dense NDArray
+    * @return NDArray
+    */
   def toDense: NDArray = {
       NDArray.api.cast_storage(this, SparseFormat.DEFAULT.toString).head
   }
@@ -103,6 +151,10 @@ class SparseNDArray private[mxnet] (override private[mxnet] val handle: NDArrayH
     dense.at(idx)
   }
 
+  /**
+    * Get the indptr Array
+    * @return NDArray
+    */
   def getIndptr: NDArray = {
     if (this.sparseFormat == SparseFormat.ROW_SPARSE) {
       throw new UnsupportedOperationException("Not Supported for row sparse")
@@ -110,6 +162,10 @@ class SparseNDArray private[mxnet] (override private[mxnet] val handle: NDArrayH
     getAuxNDArray(0)
   }
 
+  /**
+    * Get the indice Array
+    * @return NDArray
+    */
   def getIndices: NDArray = {
     if (this.sparseFormat == SparseFormat.ROW_SPARSE) {
       getAuxNDArray(0)

@@ -48,6 +48,7 @@ private[mxnet] class LibInfo {
                                 delayAlloc: Int,
                                 dtype: Int,
                                 out: NDArrayHandleRef): Int
+  // scalastyle:off parameterNum
   @native def mxNDArrayCreateSparseEx(storageType: Int,
                                       shape: Array[Int],
                                       ndim: Int,
@@ -60,6 +61,7 @@ private[mxnet] class LibInfo {
                                       auxNdims: Array[Int],
                                       auxShapes: Array[Int],
                                       out: NDArrayHandleRef): Int
+  // scalastyle:on parameterNum
   @native def mxNDArrayWaitAll(): Int
   @native def mxNDArrayWaitToRead(handle: NDArrayHandle): Int
   @native def mxListFunctions(functions: ListBuffer[FunctionHandle]): Int

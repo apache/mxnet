@@ -1328,14 +1328,24 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     if (this.context == context) this else this.copyTo(context)
   }
 
+  /**
+    * check if NDArray is SparseNDArray
+    * @return Boolean
+    */
   def isSparse: Boolean = {
-    this.sparseFormat.id != 0
+      this.sparseFormat.id != 0
   }
 
+  /**
+    * Convert a NDArray to SparseNDArray
+    *
+    * @param sfOption the target sparse type
+    * @return SparseNDArray
+    */
   def toSparse(sfOption : Option[SparseFormat] = None): SparseNDArray = {
     val sf = sfOption.getOrElse(SparseFormat.ROW_SPARSE)
     if (sf.id == 0) throw new IllegalArgumentException("Require Sparse")
-    if (this.sparseFormat.id != 0 && sfOption.isEmpty) {
+    if (isSparse && sfOption.isEmpty) {
         this.asInstanceOf[SparseNDArray]
     } else {
       NDArray.api.cast_storage(this, sf.toString).head.asInstanceOf[SparseNDArray]
