@@ -46,8 +46,112 @@ from ..ndarray.numpy import _internal as _npi
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
-           'sinh', 'cosh', 'log10', 'sqrt']
+           'sinh', 'cosh', 'log10', 'sqrt', 'absolute', 'cbrt', 'arccos']
 
+@set_module('mxnet.numpy')
+def absolute(x, out=None, **kwargs):
+    r"""Calculate the absolute value element-wise.
+    np.abs is a shorthand for this function.
+
+    Parameters:	
+    x : array_like
+    Input array.
+
+    out : ndarray, None, or tuple of ndarray and None, optional
+    A location into which the result is stored. If provided, it must have a shape 
+    that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
+    A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+
+    **kwargs
+    For other keyword-only arguments, see the ufunc docs.
+
+    Returns:	
+    absolute : ndarray
+    An ndarray containing the absolute value of each element in x. For complex input, a + ib, 
+    the absolute value is \sqrt{ a^2 + b^2 }. This is a scalar if x is a scalar.
+    
+    Examples:
+    >>> x = np.array([-1.2, 1.2])
+    >>> np.absolute(x)
+    array([ 1.2,  1.2])
+    """
+    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+def cbrt(x, out=None, **kwargs):
+    r"""Return the cube-root of an array, element-wise.
+
+    Parameters:	
+    x : array_like
+    The values whose cube-roots are required.
+
+    out : ndarray, None, or tuple of ndarray and None, optional
+    A location into which the result is stored. If provided, it must have a shape that the 
+    inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
+    A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+
+    **kwargs
+    For other keyword-only arguments, see the ufunc docs.
+
+    Returns:	
+    y : ndarray
+    An array of the same shape as x, containing the cube cube-root of each element in x. 
+    If out was provided, y is a reference to it. This is a scalar if x is a scalar.
+
+    Examples
+
+    >>> np.cbrt([1,8,27])
+    array([ 1.,  2.,  3.])
+    """
+    return _unary_func_helper(x, _npi.cbrt, _np.cbrt, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+def arccos(x, out=None, **kwargs):
+    r"""Trigonometric inverse cosine, element-wise.
+    The inverse of cos so that, if y = cos(x), then x = arccos(y).
+
+    Parameters:	
+    x : array_like
+    x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
+
+    out : ndarray, None, or tuple of ndarray and None, optional
+    A location into which the result is stored. If provided, it must have a shape that 
+    the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
+    A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+
+    **kwargs
+    For other keyword-only arguments, see the ufunc docs.
+
+    Returns:	
+    angle : ndarray
+    The angle of the ray intersecting the unit circle at the given x-coordinate in radians [0, pi]. 
+    This is a scalar if x is a scalar.
+
+    See also
+    cos, arctan, arcsin, emath.arccos
+
+    Notes
+
+    arccos is a multivalued function: for each x there are infinitely many numbers z such that 
+    cos(z) = x. The convention is to return the angle z whose real part lies in [0, pi].
+
+    For real-valued input data types, arccos always returns real output. 
+    For each value that cannot be expressed as a real number or infinity, it yields nan and sets 
+    the invalid floating point error flag.
+
+    For complex-valued input, arccos is a complex analytic function that has branch cuts [-inf, -1] 
+    and [1, inf] and is continuous from above on the former and from below on the latter.
+
+    The inverse cos is also known as acos or cos^-1.
+
+    Examples
+
+    We expect the arccos of 1 to be 0, and of -1 to be pi:
+
+    >>> np.arccos([1, -1])
+    array([ 0.        ,  3.14159265])
+    """
+    return _unary_func_helper(x, _npi.arccos, _np.arccos, out=out, **kwargs)
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -423,53 +527,8 @@ class ndarray(NDArray):
         return self
 
     def __repr__(self):
-        """
-        Returns a string representation of the array. The dtype of the ndarray will not
-        be appended to the string if it is `float32`. The context of the ndarray will
-        be appended for devices other than CPU.
-
-        Examples
-        --------
-        >>> from mxnet import np, npx
-        >>> a = np.random.uniform(size=(2, 3))
-        >>> a
-        array([[0.5488135 , 0.5928446 , 0.71518934],
-               [0.84426576, 0.60276335, 0.8579456 ]])
-        >>> print(a)
-        [[0.5488135  0.5928446  0.71518934]
-         [0.84426576 0.60276335 0.8579456 ]]
-        >>> a.dtype
-        <class 'numpy.float32'>
-        >>> b = a.astype(np.float64)
-        >>> b
-        array([[0.54881352, 0.59284461, 0.71518934],
-               [0.84426576, 0.60276335, 0.85794562]], dtype=float64)
-        >>> print(b)
-        [[0.54881352 0.59284461 0.71518934]
-         [0.84426576 0.60276335 0.85794562]]
-        >>> b.dtype
-        <class 'numpy.float64'>
-        >>> c = a.copyto(npx.gpu(0))
-        >>> c
-        array([[0.5488135 , 0.5928446 , 0.71518934],
-               [0.84426576, 0.60276335, 0.8579456 ]], ctx=gpu(0))
-        >>> print(c)
-        [[0.5488135  0.5928446  0.71518934]
-         [0.84426576 0.60276335 0.8579456 ]] @gpu(0)
-        >>> d = b.copyto(npx.gpu(0))
-        >>> d
-        array([[0.54881352, 0.59284461, 0.71518934],
-               [0.84426576, 0.60276335, 0.85794562]], dtype=float64, ctx=gpu(0))
-        >>> print(d)
-        [[0.54881352 0.59284461 0.71518934]
-         [0.84426576 0.60276335 0.85794562]] @gpu(0)
-        """
+        """Returns a string representation of the array."""
         array_str = self.asnumpy().__repr__()
-        dtype = self.dtype
-        if dtype == _np.float64:
-            array_str = array_str[:-1] + ', dtype=float64)'
-        elif dtype == _np.float32:
-            array_str = array_str[:array_str.rindex(', dtype=')] + ')'
         context = self.context
         if context.device_type == 'cpu':
             return array_str
@@ -859,7 +918,11 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tile')
 
     def transpose(self, *axes):  # pylint: disable=arguments-differ
-        """Permute the dimensions of an array."""
+        """Convenience fluent method for :py:func:`transpose`.
+
+        The arguments are the same as for :py:func:`transpose`, with
+        this array as data.
+        """
         return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
 
     def flip(self, *args, **kwargs):
@@ -1645,6 +1708,12 @@ def divide(x1, x2, out=None):
     -------
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
+
+    Examples
+    -------
+    >>> x = np.array([1,2])
+    >>> np.divide(3, x)
+    array([3. , 1.5])
     """
     return _mx_nd_np.divide(x1, x2, out=out)
 

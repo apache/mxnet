@@ -103,7 +103,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_reciprocal"});
 
 // abs
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_absolute, "x", mshadow_op::abs)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_absolute, "x", mshadow_op::abs)
 .add_alias("_np_abs")
 .describe(R"code(Returns element-wise absolute value of the input.
 Example::
@@ -183,7 +183,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sqrt"});
 
 // cbrt
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_cbrt, "x", mshadow_op::cube_root)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_cbrt, "x", mshadow_op::cube_root)
 .describe(R"code(Return the cube-root of an array, element-wise.
 Example::
    cbrt([1, 8, -125]) = [1, 2, -5]
@@ -287,7 +287,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arcsin, "x", mshadow_op::arcsin)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsin" });
 
 // arccos
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arccos, "x", mshadow_op::arccos)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arccos, "x", mshadow_op::arccos)
 .describe(R"code(Returns element-wise inverse cosine of the input array.
 The input should be in range `[-1, 1]`.
 The output is in the closed interval :math:`[0, \pi]`

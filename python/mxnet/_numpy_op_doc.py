@@ -19,13 +19,53 @@
 
 """Doc placeholder for numpy ops with prefix _np."""
 
+def _np_expand_dims(a, axis):
+    """
+    Expand the shape of an array.
+    Insert a new axis that will appear at the `axis` position in the expanded
+    array shape.
+    .. note:: Previous to NumPy 1.13.0, neither ``axis < -a.ndim - 1`` nor
+       ``axis > a.ndim`` raised errors or put the new axis where documented.
+       Those axis values are now deprecated and will raise an AxisError in the
+       future.
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    axis : int
+        Position in the expanded axes where the new axis is placed.
+    Returns
+    -------
+    res : ndarray
+        Output array. The number of dimensions is one greater than that of
+        the input array.
+    See Also
+    --------
+    squeeze : The inverse operation, removing singleton dimensions
+    reshape : Insert, remove, and combine dimensions, and resize existing ones
+    doc.indexing, atleast_1d, atleast_2d, atleast_3d
+    Examples
+    --------
+    >>> x = np.array([1,2])
+    >>> x.shape
+    (2,)
+    The following is equivalent to ``x[np.newaxis,:]`` or ``x[np.newaxis]``:
+    >>> y = np.expand_dims(x, axis=0)
+    >>> y
+    array([[1, 2]])
+    >>> y.shape
+    (1, 2)
+    >>> y = np.expand_dims(x, axis=1)  # Equivalent to x[:,np.newaxis]
+    >>> y
+    array([[1],
+           [2]])
+    >>> y.shape
+    (2, 1)
+    """
+    pass
 
 def _np_reshape(a, newshape, order='C'):
-    """
-    reshape(a, newshape, order='C')
-
-    Gives a new shape to an array without changing its data.
-
+    """Gives a new shape to an array without changing its data.
     Parameters
     ----------
     a : ndarray
@@ -42,14 +82,12 @@ def _np_reshape(a, newshape, order='C'):
         with the last axis index changing fastest, back to the first
         axis index changing slowest. Other order types such as 'F'/'A'
         may be added in the future.
-
     Returns
     -------
     reshaped_array : ndarray
         It will be always a copy of the original array. This behavior is different
         from the official NumPy package where views of the original array may be
         generated.
-
     See Also
     --------
     ndarray.reshape : Equivalent method.
@@ -58,31 +96,62 @@ def _np_reshape(a, newshape, order='C'):
 
 
 def _np_ones_like(a):
-    """Return an array of ones with the same shape and type as a given array.
-
+    """
+    Return an array of ones with the same shape and type as a given array.
     Parameters
     ----------
-    a : ndarray
+    a : array_like
         The shape and data-type of `a` define these same attributes of
         the returned array.
-
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        .. versionadded:: 1.6.0
+    order : {'C', 'F', 'A', or 'K'}, optional
+        Overrides the memory layout of the result. 'C' means C-order,
+        'F' means F-order, 'A' means 'F' if `a` is Fortran contiguous,
+        'C' otherwise. 'K' means match the layout of `a` as closely
+        as possible.
+        .. versionadded:: 1.6.0
+    subok : bool, optional.
+        If True, then the newly created array will use the sub-class
+        type of 'a', otherwise it will be a base-class array. Defaults
+        to True.
     Returns
     -------
     out : ndarray
         Array of ones with the same shape and type as `a`.
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full_like : Return a new array with shape of input filled with value.
+    ones : Return a new array setting values to one.
+    Examples
+    --------
+    >>> x = np.arange(6)
+    >>> x = x.reshape((2, 3))
+    >>> x
+    array([[0, 1, 2],
+           [3, 4, 5]])
+    >>> np.ones_like(x)
+    array([[1, 1, 1],
+           [1, 1, 1]])
+    >>> y = np.arange(3, dtype=float)
+    >>> y
+    array([ 0.,  1.,  2.])
+    >>> np.ones_like(y)
+    array([ 1.,  1.,  1.])
     """
     pass
 
 
 def _np_zeros_like(a):
     """Return an array of zeros with the same shape and type as a given array.
-
     Parameters
     ----------
     a : ndarray
         The shape and data-type of `a` define these same attributes of
         the returned array.
-
     Returns
     -------
     out : ndarray
@@ -92,11 +161,11 @@ def _np_zeros_like(a):
 
 
 def _np_repeat(a, repeats, axis=None):
-    """Repeat elements of an array.
-
+    """
+    Repeat elements of an array.
     Parameters
     ----------
-    a : ndarray
+    a : array_like
         Input array.
     repeats : int or array of ints
         The number of repetitions for each element.  `repeats` is broadcasted
@@ -104,25 +173,32 @@ def _np_repeat(a, repeats, axis=None):
     axis : int, optional
         The axis along which to repeat values.  By default, use the
         flattened input array, and return a flat output array.
-
     Returns
     -------
     repeated_array : ndarray
         Output array which has the same shape as `a`, except along
         the given axis.
+    See Also
+    --------
+    tile : Tile an array.
+    Examples
+    --------
+    >>> x = np.array([[1,2],[3,4]])
+    >>> np.repeat(x, 2)
+    array([1, 1, 2, 2, 3, 3, 4, 4])
+    >>> np.repeat(x, 3, axis=1)
+    array([[1, 1, 1, 2, 2, 2],
+           [3, 3, 3, 4, 4, 4]])
     """
     pass
 
 
 def _npi_multinomial(a):
     """Draw samples from a multinomial distribution.
-
     The multinomial distribution is a multivariate generalisation of the binomial distribution.
     Take an experiment with one of ``p`` possible outcomes. An example of such an experiment is throwing a dice,
     where the outcome can be 1 through 6. Each sample drawn from the distribution represents n such experiments.
     Its values, ``X_i = [X_0, X_1, ..., X_p]``, represent the number of times the outcome was ``i``.
-
-
     Parameters
     ----------
     n : int
@@ -134,7 +210,6 @@ def _npi_multinomial(a):
     size : int or tuple of ints, optional
         Output shape. If the given shape is, e.g., ``(m, n, k)``, then ``m * n * k`` sam-
         ples are drawn. Default is None, in which case a single value is returned.
-
     Returns
     -------
     out : ndarray
@@ -147,7 +222,6 @@ def _npi_multinomial(a):
 def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
     Return the cumulative sum of the elements along a given axis.
-
     Parameters
     ----------
     a : array_like
@@ -166,7 +240,6 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
         have the same shape and buffer length as the expected output
         but the type will be cast if necessary. See `doc.ufuncs`
         (Section "Output arguments") for more details.
-
     Returns
     -------
     cumsum_along_axis : ndarray.
