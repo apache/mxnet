@@ -39,7 +39,7 @@ Example::
   data = [[1, 2], [3, 4], [5, 6]]
   indices = [0, 1, 3]
   shape = (4, 2)
-  rsp_in = row_sparse(data, indices)
+  rsp_in = row_sparse_array(data, indices)
   to_retain = [0, 3]
   rsp_out = retain(rsp_in, to_retain)
   rsp_out.data = [[1, 2], [5, 6]]
