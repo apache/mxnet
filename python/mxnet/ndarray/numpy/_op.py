@@ -896,8 +896,9 @@ def sqrt(x, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def arctanh(x, out=None, where=True, **kwargs):
+    r"""
+    arctanh(x, out=None, where=True, **kwargs)
 
-    """
     Inverse hyperbolic tangent element-wise.
 
     Parameters:	
@@ -926,6 +927,8 @@ def arctanh(x, out=None, where=True, **kwargs):
 @set_module('mxnet.ndarray.numpy')
 def tan(x, out=None, where=True, **kwargs):
     r"""
+    tan(x, out=None, where=True, **kwargs)
+
     Compute tangent element-wise.
     Equivalent to np.sin(x)/np.cos(x) element-wise.
     
@@ -953,9 +956,8 @@ def tan(x, out=None, where=True, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def fix(x, out=None):
-    """
+    r"""
     Round to nearest integer towards zero.
-    
     Round an array of floats element-wise to nearest integer towards zero. The rounded values are returned as floats.
     
     Parameters:	
@@ -974,7 +976,9 @@ def fix(x, out=None):
 @set_module('mxnet.ndarray.numpy')
 def negative(x, out=None, where=True, **kwargs):
 
-    """
+    r""" 
+    negative(x, out=None, where=True)
+
     Numerical negative, element-wise.
 
     Parameters:	
