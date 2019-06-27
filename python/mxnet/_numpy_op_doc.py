@@ -242,3 +242,33 @@ def _np_amax(a, axis=None, out=None):
 
     """
     pass
+
+
+def _np_squeeze(a, axis=None):
+    """
+    Remove single-dimensional entries from the shape of an array.
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+
+    axis : None or int or tuple of ints, optional
+
+    Returns
+    -------
+    squeezed : ndarray
+        The input array, but with all or a subset of the
+        dimensions of length 1 removed. This is always `a` itself
+        or a view into `a`.
+    Examples
+    --------
+    >>> x = np.array([[[0], [1], [2]]])
+    >>> x.shape
+    (1, 3, 1)
+    >>> np.squeeze(x).shape
+    (3,)
+    >>> np.squeeze(x, axis=(2,)).shape
+    (1, 3)
+    """
+    pass
+
