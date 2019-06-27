@@ -33,7 +33,8 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot', 'trunc', 'logical_not',
+           'arccosh']
 
 
 def _num_outputs(sym):
@@ -1257,12 +1258,16 @@ def concatenate(seq, axis=0, out=None):
 
 @set_module('mxnet.symbol.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
-    """Return evenly spaced values within a given interval.
+    r"""
+    arange(start, stop=None, step=1, dtype=None, ctx=None)
+
+    Return evenly spaced values within a given interval.
 
     Values are generated within the half-open interval ``[start, stop)``
     (in other words, the interval including `start` but excluding `stop`).
     For integer arguments the function is equivalent to the Python built-in
-    `range` function, but returns an ndarray rather than a list.
+    `range` function, but returns an ndarray with default type 'float32'
+    rather than a list.
 
     Parameters
     ----------
@@ -1280,10 +1285,17 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         `start` must also be given.
     dtype : dtype
         The type of the output array. The default is `float32`.
+    ctx : None or mxnet.cpu() or mxnet.gpu(gpuid), optional
+        Device context to put the created array in.
+
+    Notes
+    -----
+    This function differs from the original numpy.arange in the following aspects:
+        - Have a new parameter 'ctx'.
 
     Returns
     -------
-    arange : ndarray
+    arange : _Symbol
         Array of evenly spaced values.
 
         For floating point arguments, the length of the result is
@@ -1725,6 +1737,111 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
+def trunc(x, out=None, **kwargs):
+    r"""
+    trunc(x, out=None)
+
+    Return the truncated value of the input, element-wise.
+
+    The truncated value of the scalar `x` is the nearest integer `i` which
+    is closer to zero than `x` is. In short, the fractional part of the
+    signed number `x` is discarded.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input data.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        The truncated value of each element in `x`.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    This function differs from the original numpy.trunc in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+    """
+    return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def logical_not(x, out=None, **kwargs):
+    r"""
+    logical_not(x, out=None)
+
+    Compute the truth value of NOT x element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Logical NOT is applied to the elements of `x`.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : bool or _Symbol
+        Boolean result with the same shape as `x` of the NOT operation
+        on elements of `x`.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    This function differs from the original numpy.logical_not in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+    """
+    return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def arccosh(x, out=None, **kwargs):
+    r"""
+    arccosh(x, out=None)
+
+    Inverse hyperbolic cosine, element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    arccosh : _Symbol
+        Array of the same shape as `x`.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    `arccosh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `cosh(z) = x`.
+
+    For real-valued input data types, `arccosh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+
+    This function differs from the original numpy.arccosh in the following aspects:
+        - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Do not support complex-valued input.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
+        - If `x` is plain python numeric, the result won't be stored in out.
+    """
+    return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
+
+
 def sin(x, out=None, **kwargs):
     r"""Trigonometric sine, element-wise.
 

@@ -147,7 +147,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // trunc
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_trunc, "x", mshadow_op::trunc)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_trunc, "x", mshadow_op::trunc)
 .describe(R"code(Return the truncated value of the input, element-wise.
 The truncated value of the scalar x is the nearest integer i which is closer to
 zero than x is. In short, the fractional part of the signed number x is discarded.
@@ -247,7 +247,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_expm1, "x", mshadow_op::expm1)
 
 
 // logical_not
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_logical_not, "x", mshadow_op::nt)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_logical_not, "x", mshadow_op::nt)
 .describe(R"code(Compute the truth value of NOT x element-wise.
 Example::
   logical_not([-2., 0., 1.]) = [0., 1., 0.]
@@ -353,7 +353,7 @@ computed element-wise.
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsinh" });
 
 // arccosh
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arccosh, "x", mshadow_op::arccosh)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arccosh, "x", mshadow_op::arccosh)
 .describe(R"code(Returns the element-wise inverse hyperbolic cosine of the input array, \
 computed element-wise.
 )code" ADD_FILELINE)

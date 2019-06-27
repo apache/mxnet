@@ -53,7 +53,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_ceil, mshadow_op::ceil);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_floor, mshadow_op::floor);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_trunc, mshadow_op::trunc);
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_trunc, mshadow_op::trunc);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_fix, mshadow_op::fix);
 
@@ -76,7 +76,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_log1p, mshadow_op::log1p);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_expm1, mshadow_op::expm1);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_logical_not, mshadow_op::nt);
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_logical_not, mshadow_op::nt);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sin, mshadow_op::sin);
 
@@ -102,7 +102,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_tanh, mshadow_op::tanh);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arcsinh, mshadow_op::arcsinh);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arccosh, mshadow_op::arccosh);
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arccosh, mshadow_op::arccosh);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arctanh, mshadow_op::arctanh);
 
