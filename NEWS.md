@@ -35,7 +35,7 @@ MXNet now supports Dynamic Shape in both imperative and symbolic mode. MXNet use
 * boolean indexing: its output size depends on the value of the input data.
 * many operators can be extended to take a shape symbol as input and the shape symbol can determine the output shape of these operators (with this extension, the symbol interface of MXNet can fully support shape).
 To support dynamic shape and such operators, we have modified MXNet backend. Now MXNet supports operators with dynamic shape such as [`contrib.while_loop`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.while_loop), [`contrib.cond`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#mxnet.ndarray.contrib.cond), and [`mxnet.ndarray.contrib.boolean_mask`](https://mxnet.incubator.apache.org/api/python/ndarray/contrib.html#contrib)
-Note: Currently dynamic shape does not work with Gluon defferred initialization.
+Note: Currently dynamic shape does not work with Gluon deferred initialization.
 
 #### Large Tensor Support
 Currently, MXNet supports maximal tensor size of around 4 billon (2^32). This is due to uint32_t being used as the default data type for tensor size, as well as variable indexing.
