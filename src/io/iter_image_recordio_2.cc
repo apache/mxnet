@@ -828,7 +828,8 @@ class ImageRecordIter2Wrapper : public IIterator<DataBatch> {
       dtype = prefetch_param.dtype.value();
     }
     if (prefetch_param.ctx == PrefetcherParam::CtxType::kCPU) {
-      LOG(INFO) << "Create ImageRecordIter2 optimized for CPU backend. Use omp threads instead of preprocess_threads.";
+      LOG(INFO) << "Create ImageRecordIter2 optimized for CPU backend."
+                << "Use omp threads instead of preprocess_threads.";
       switch (dtype) {
         case mshadow::kFloat32:
           record_iter_ = new ImageRecordIter2CPU<float>();
