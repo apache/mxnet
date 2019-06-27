@@ -152,6 +152,19 @@ class SparseNDArray private[mxnet] (override private[mxnet] val handle: NDArrayH
   }
 
   /**
+    * Get the Data portion from the row Sparse NDArray
+    * @return NDArray
+    */
+  def getData: NDArray = {
+    val handle = new NDArrayHandleRef
+    if (this.sparseFormat == SparseFormat.CSR) {
+      throw new UnsupportedOperationException("Not Supported for CSR")
+    }
+    _LIB.mxNDArrayGetDataNDArray(this.handle, handle)
+    new NDArray(handle.value, false)
+  }
+
+  /**
     * Get the indptr Array
     * @return NDArray
     */

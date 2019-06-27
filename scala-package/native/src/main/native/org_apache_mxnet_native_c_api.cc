@@ -474,6 +474,15 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxFloat64NDArraySyncCopyFro
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetDataNDArray
+  (JNIEnv *env, jobject obj, jlong arrayPtr, jobject ndArrayHandle) {
+  NDArrayHandle out;
+  int ret = MXNDArrayGetDataNDArray(reinterpret_cast<NDArrayHandle>(arrayPtr),
+                                     &out);
+  SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetAuxNDArray
   (JNIEnv *env, jobject obj, jlong arrayPtr, jint location, jobject ndArrayHandle) {
   NDArrayHandle out;

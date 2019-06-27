@@ -65,7 +65,7 @@ class SparseNDArraySuite  extends FunSuite {
     printf(rspIn.toString)
     val toRetain = Array(0f, 3f)
     val rspOut = SparseNDArray.retain(rspIn, toRetain)
-    assert(rspOut.at(0).toArray sameElements Array(1f, 2f))
+    assert(rspOut.getData.toArray sameElements Array(1f, 2f, 5f, 6f))
     assert(rspOut.getIndices.toArray sameElements Array(0f, 3f))
   }
 

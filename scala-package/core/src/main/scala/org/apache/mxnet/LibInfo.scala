@@ -123,6 +123,7 @@ private[mxnet] class LibInfo {
   @native def mxNDArraySave(fname: String,
                             handles: Array[NDArrayHandle],
                             keys: Array[String]): Int
+  @native def mxNDArrayGetDataNDArray(handle: NDArrayHandle, out: NDArrayHandleRef): Int
   @native def mxNDArrayGetAuxNDArray(handle: NDArrayHandle,
                                      location: Int,
                                      out: NDArrayHandleRef): Int
