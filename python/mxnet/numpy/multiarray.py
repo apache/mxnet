@@ -1455,7 +1455,7 @@ def stack(arrays, axis=0, out=None):
 
     Parameters
     ----------
-    arrays : sequence of ndarray
+    arrays : sequence of ndarrays
         Each array must have the same shape.
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
@@ -2446,7 +2446,8 @@ def rint(x, out=None, **kwargs):
     x : ndarray or scalar
         Input array.
     out : ndarray or None
-        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to.
+        A location into which the result is stored.
+        If provided, it must have a shape that the inputs broadcast to.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -2481,7 +2482,8 @@ def log2(x, out=None, **kwargs):
     x : ndarray or scalar
         Input values.
     out : ndarray or None
-        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to.
+        A location into which the result is stored.
+        If provided, it must have a shape that the inputs broadcast to.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -2570,7 +2572,9 @@ def radians(x, out=None, **kwargs):
     x : ndarray or scalar
         Input array in degrees.
     out : ndarray or None
-        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+        A location into which the result is stored.
+        If provided, it must have a shape that the inputs broadcast to.
+        If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------

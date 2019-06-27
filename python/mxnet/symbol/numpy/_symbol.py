@@ -1030,17 +1030,17 @@ def stack(arrays, axis=0, out=None):
 
     Parameters
     ----------
-    arrays : sequence of ndarray
+    arrays : sequence of _Symbols
         Each array must have the same shape.
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
-    out : ndarray, optional
+    out : _Symbol, optional
         If provided, the destination to place the result. The shape must be correct,
         matching that of what stack would have returned if no out argument were specified.
 
     Returns
     -------
-    out : ndarray
+    out : _Symbol
         The stacked array has one more dimension than the input arrays.
 
     Notes
@@ -1295,7 +1295,7 @@ def split(ary, indices_or_sections, axis=0):
 
     Parameters
     ----------
-    ary : ndarray
+    ary : _Symbol
         Array to be divided into sub-arrays.
     indices_or_sections : int or 1-D array
         If `indices_or_sections` is an integer, N, the array will be divided
@@ -1316,7 +1316,7 @@ def split(ary, indices_or_sections, axis=0):
 
     Returns
     -------
-    sub-arrays : list of ndarrays
+    sub-arrays : list of _Symbols
         A list of sub-arrays.
 
     Raises
@@ -1621,7 +1621,6 @@ def sqrt(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
 
 
-# pylint: disable=line-too-long
 @set_module('mxnet.symbol.numpy')
 def abs(x, out=None, **kwargs):
     r"""abs(x, out=None, **kwargs)
@@ -1823,15 +1822,16 @@ def rint(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or scalar
+    x : _Symbol or scalar
         Input array.
-    out : ndarray or None
-        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to.
+    out : _Symbol or None
+        A location into which the result is stored.
+        If provided, it must have a shape that the inputs broadcast to.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------
-    out : ndarray or scalar
+    out : _Symbol or scalar
         Output array is same shape and type as x. This is a scalar if x is a scalar.
 
     Notes
@@ -1840,7 +1840,7 @@ def rint(x, out=None, **kwargs):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
     the following way(s):
 
-    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - only _Symbol or scalar is accpted as valid input, tuple of _Symbol is not supported
 
     Examples
     --------
@@ -1858,15 +1858,16 @@ def log2(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or scalar
+    x : _Symbol or scalar
         Input array.
-    out : ndarray or None
-        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to.
+    out : _Symbol or None
+        A location into which the result is stored.
+        If provided, it must have a shape that the inputs broadcast to.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------
-    out : ndarray or scalar
+    out : _Symbol or scalar
         Output array is same shape and type as x. This is a scalar if x is a scalar.
 
     Notes
@@ -1875,7 +1876,7 @@ def log2(x, out=None, **kwargs):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
     the following way(s):
 
-    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - only _Symbol or scalar is accpted as valid input, tuple of _Symbols is not supported
 
     Examples
     --------
@@ -1893,14 +1894,16 @@ def radians(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or scalar
+    x : _Symbol or scalar
         Input array in degrees.
-    out : ndarray or None
-        A location into which the result is stored. If provided, it must have a shape that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    out : _Symbol or None
+        A location into which the result is stored.
+        If provided, it must have a shape that the inputs broadcast to.
+        If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------
-    y : ndarray
+    y : _Symbol
         The corresponding radian values. This is a scalar if x is a scalar.
 
     Notes
@@ -1909,7 +1912,7 @@ def radians(x, out=None, **kwargs):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
     the following way(s):
 
-    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - only _Symbol or scalar is accpted as valid input, tuple of _Symbol is not supported
 
     Examples
     --------
@@ -1921,7 +1924,6 @@ def radians(x, out=None, **kwargs):
 
     """
     return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
-# pylint: enable=line-too-long
 
 
 _set_np_symbol_class(_Symbol)
