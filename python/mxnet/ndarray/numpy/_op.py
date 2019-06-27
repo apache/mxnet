@@ -1038,7 +1038,7 @@ def tanh(x, out=None, **kwargs):
         output is the same as that of the input if the input is an ndarray.
     Returns
     -------
-    y : ndarray int float or double
+    y : ndarray int float or double.
         The corresponding hyperbolic tangent values.
 
     Notes
