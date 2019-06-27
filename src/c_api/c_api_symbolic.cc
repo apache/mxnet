@@ -901,7 +901,8 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
                             const int *arg_type_data,
                             mx_uint num_ind_ptr,
                             const int* ind_ptr,
-                            const int *target_dtype,
+                            const int* target_dtype,
+                            const int cast_optional_params,
                             const mx_uint num_target_dtype_op_names,
                             const mx_uint num_fp32_op_names,
                             const mx_uint num_widest_dtype_op_names,
@@ -986,12 +987,20 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
 
   g.attrs["inferred_dtypes"] = std::make_shared<dmlc::any>(std::move(inferred_dtypes));
   g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
-  g = ApplyPass(std::move(g), "AMPInferUnknown");
-  const nnvm::DTypeVector& inferred_dtype_result = g.GetAttr<nnvm::DTypeVector>("inferred_dtype_result");
-  const nnvm::IndexedGraph &idx = g.indexed_graph();
 
-  // set node name -> input dtype mapping using infer dtype
-  _SetInputDTypes(idx, inferred_dtype_result, &node_name_dtype_map, &node_without_dtype_map);
+  if (cast_optional_params) {
+    g = ApplyPass(std::move(g), "AMPInferUnknown");
+    const nnvm::DTypeVector &inferred_dtype_result =
+        g.GetAttr<nnvm::DTypeVector>("inferred_dtype_result");
+    const nnvm::IndexedGraph &idx = g.indexed_graph();
+    // set node name -> input dtype mapping using infer dtype
+    _SetInputDTypes(idx, inferred_dtype_result, &node_name_dtype_map, &node_without_dtype_map);
+  } else {
+    const nnvm::IndexedGraph &idx = g.indexed_graph();
+    // set node name -> input dtype mapping using infer dtype
+    _SetInputDTypes(idx, inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
+  }
+
 
   result_sym->outputs = g.outputs;
   *ret_sym_handle = result_sym;

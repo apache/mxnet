@@ -352,7 +352,8 @@ def unscale(optimizer_or_trainer):
 
 def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                    fp32_ops=None, conditional_fp32_ops=None,
-                   excluded_sym_names=None, data_names=None):
+                   excluded_sym_names=None, data_names=None,
+                   cast_optional_params=False):
     """Given a symbol object representing a neural network of data type FP32 and target_dtype,
     add cast layers according to the op lists (target_dtype_ops, fp32_ops,
     conditional_fp32_ops) if provided, otherwise use the default
@@ -381,6 +382,10 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
         from being casted to FP16 or FP32.
     data_names : list of strs, optional
         A list of strings that represent input data tensor names to the model
+    cast_optional_params : bool, default False
+        Whether to cast the arg_params and aux_params that don't require to be in FP16
+        because of a cast layer following it, but will reduce the computation and memory
+        overhead of the model if casted.
     """
     assert isinstance(sym, Symbol), "First argument to convert_symbol should be Symbol"
 
@@ -482,6 +487,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
                                             mx_uint(len(indptr)),
                                             c_array_buf(ctypes.c_int, array('i', indptr)),
                                             ctypes.byref(ctypes.c_int(target_dtype)),
+                                            ctypes.c_int(cast_optional_params),
                                             mx_uint(len(target_dtype_ops)),
                                             mx_uint(len(fp32_ops)),
                                             mx_uint(len(widest_dtype_ops)),
@@ -500,7 +506,8 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     return Symbol(out)
 
 def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dtype_ops=None,
-                  fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=None):
+                  fp32_ops=None, conditional_fp32_ops=None, excluded_sym_names=None,
+                  cast_optional_params=False):
     """API for converting a model from FP32 model to a mixed precision model.
     MXNet tries to convert the FP32 model to mixed precision model by adding
     cast layers using amp_cast and amp_multicast operators which can be used for inference use cases.
@@ -533,6 +540,10 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
     excluded_sym_names : list of strs
         A list of strings that represent the names of symbols that users want to exclude
         from being executed in lower precision.
+    cast_optional_params : bool, default False
+        Whether to cast the arg_params and aux_params that don't require to be in FP16
+        because of a cast layer following it, but will reduce the computation and memory
+        overhead of the model if casted.
     """
     if excluded_sym_names is None:
         excluded_sym_names = []
@@ -555,7 +566,8 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
 
     sym = convert_symbol(sym, target_dtype, target_dtype_ops,
                          fp32_ops, conditional_fp32_ops,
-                         excluded_sym_names, data_names)
+                         excluded_sym_names, data_names,
+                         cast_optional_params)
 
     # If dtype is set for params, cast the param to that dtype
     attr_dict = sym.attr_dict()
@@ -576,7 +588,8 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
 
 def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
                          fp32_ops=None, conditional_fp32_ops=None,
-                         excluded_sym_names=None, ctx=gpu(0)):
+                         excluded_sym_names=None, ctx=gpu(0),
+                         cast_optional_params=False):
     """Given a hybrid block/symbol block representing a FP32 model and a target_dtype,
     return a block with mixed precision support which can be used for inference use cases.
 
@@ -600,6 +613,10 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
         from being quantized
     ctx : Context
         Context on which model parameters should live
+    cast_optional_params : bool, default False
+        Whether to cast the arg_params and aux_params that don't require to be in FP16
+        because of a cast layer following it, but will reduce the computation and memory
+        overhead of the model if casted.
     """
     from ...gluon import HybridBlock, SymbolBlock
     assert isinstance(block, HybridBlock), "block input should be a HybridBlock"
@@ -615,7 +632,8 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
         input_names.append(inp.name)
     converted_sym = convert_symbol(sym, target_dtype, target_dtype_ops,
                                    fp32_ops, conditional_fp32_ops,
-                                   excluded_sym_names, data_names=input_names)
+                                   excluded_sym_names, data_names=input_names,
+                                   cast_optional_params=cast_optional_params)
 
     arg_names = set(converted_sym.list_arguments())
     aux_names = set(converted_sym.list_auxiliary_states())
