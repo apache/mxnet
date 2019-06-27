@@ -397,7 +397,7 @@ struct ConvolutionGrad {
 };
 
 NNVM_REGISTER_OP(Convolution)
-.add_alias("_npx_Convolution")
+.add_alias("_npx_convolution")
 .describe(R"code(Compute *N*-D convolution on *(N+2)*-D input.
 
 In the 2-D convolution, given input data with shape *(batch_size,

@@ -192,7 +192,7 @@ Example::
     .add_arguments(SequenceMaskParam::__FIELDS__());
 
 NNVM_REGISTER_OP(SequenceMask)
-.add_alias("_npx_SequenceMask");
+.add_alias("_npx_sequence_mask");
 
 }  // namespace op
 }  // namespace mxnet
