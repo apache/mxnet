@@ -2097,7 +2097,7 @@ def ceil(x, out=None, **kwargs):
     Returns
     -------
     y :
-        ndarray int float or double
+        ndarray int float or double.
         The corresponding hyperbolic sine values.
 
     Notes
