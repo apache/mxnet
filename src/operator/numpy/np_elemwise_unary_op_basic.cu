@@ -100,7 +100,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_cosh, mshadow_op::cosh);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_tanh, mshadow_op::tanh);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arcsinh, mshadow_op::arcsinh);
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arcsinh, mshadow_op::arcsinh);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arccosh, mshadow_op::arccosh);
 

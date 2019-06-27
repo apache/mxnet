@@ -346,7 +346,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_tanh, "x", mshadow_op::tanh)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tanh" });
 
 // arcsinh
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arcsinh, "x", mshadow_op::arcsinh)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arcsinh, "x", mshadow_op::arcsinh)
 .describe(R"code(Returns the element-wise inverse hyperbolic sine of the input array, \
 computed element-wise.
 )code" ADD_FILELINE)

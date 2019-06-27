@@ -28,7 +28,8 @@ from ..ndarray import NDArray
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
-           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'floor', 'expm1']
+           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'floor', 'expm1',
+           'arcsinh']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -908,7 +909,7 @@ def floor(x, out=None, **kwargs):
 
     Returns
     -------
-    y : ndarray or scalar
+    y : ndarray
         The floor of each element in `x`.
     Notes
     -----
@@ -941,13 +942,13 @@ def expm1(x, out=None, **kwargs):
     Calculate ``exp(x) - 1`` for all elements in the array.
     Parameters
     ----------
-    x : array_like
+    x : ndarray
        Input values.
-    out : ndarray, None, or tuple of ndarray and None, optional
+    out : ndarray, None, or tuple of exactly one ndarray, optional
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have length equal to the number of outputs.
+        keyword argument) must have exactly one element.
     where : array_like, optional
         Values of True indicate to calculate the ufunc at that position, values
         of False indicate to leave the value in the output alone.
@@ -983,3 +984,61 @@ def expm1(x, out=None, **kwargs):
     - if a tuple is passed into `out`, it must have exactly one ndarray.
     """
     return _unary_func_helper(x, _npi.expm1, _np.expm1, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def arcsinh(x, out=None, **kwargs):
+    """
+    Inverse hyperbolic sine element-wise.
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray, None, or tuple of exactly one ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have exactly one element.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values
+        of False indicate to leave the value in the output alone.
+
+        Not supported yet.
+    Returns
+    -------
+    out : ndarray
+        Array of of the same shape as `x`.
+    Notes
+    -----
+    `arcsinh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `sinh(z) = x`. The convention is to return the
+    `z` whose imaginary part lies in `[-pi/2, pi/2]`.
+    For real-valued input data types, `arcsinh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    returns ``nan`` and sets the `invalid` floating point error flag.
+    For complex-valued input, `arccos` is a complex analytical function that
+    has branch cuts `[1j, infj]` and `[-1j, -infj]` and is continuous from
+    the right on the former and from the left on the latter.
+    The inverse hyperbolic sine is also known as `asinh` or ``sinh^-1``.
+    References
+    ----------
+    .. [1] M. Abramowitz and I.A. Stegun, "Handbook of Mathematical Functions",
+           10th printing, 1964, pp. 86. http://www.math.sfu.ca/~cbm/aands/
+    .. [2] Wikipedia, "Inverse hyperbolic function",
+           http://en.wikipedia.org/wiki/Arcsinh
+    Examples
+    --------
+    np.arcsinh(np.array([10.0]))
+    array([2.9982228])
+    Notes
+    -----
+    This function differs to the original `numpy.arcsinh
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsinh.html>`_ in
+    the following aspects:
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `a` only supports ndarray.
+    - `a` doe snot support scalar.
+    - `where` has no effect.
+    - if a tuple is passed into `out`, it must have exactly one ndarray.
+    """
+    return _unary_func_helper(x, _npi.arcsinh, _np.arcsinh, out=out, **kwargs)
