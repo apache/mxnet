@@ -89,7 +89,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * move choose_element_0index to operator (#14273)
 * Optimize NMS (#14290)
 * Optimize NMS part 2 (#14352)
-* add backgroud class in box_nms (#14058)
+* add background class in box_nms (#14058)
 * Use cudnn for dropout by default (#14278)
 * In-place updates for Nadam, Adadelta, Adamax and SGLD (#13960)
 * Aggregate SGD (#13346)
