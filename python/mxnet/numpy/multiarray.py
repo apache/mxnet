@@ -56,10 +56,10 @@ def absolute(x, out=None, **kwargs):
 
     Parameters
     ----------	
-    x : array_like
+    x : ndarray
     Input array.
 
-    out : ndarray, None, or tuple of ndarray and None, optional
+    out : ndarray, optional
     A location into which the result is stored. If provided, it must have a shape 
     that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -87,10 +87,10 @@ def cbrt(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : array_like
+    x : ndarray
     The values whose cube-roots are required.
 
-    out : ndarray, None, or tuple of ndarray and None, optional
+    out : ndarray, optional
     A location into which the result is stored. If provided, it must have a shape that the 
     inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -119,10 +119,10 @@ def arccos(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : array_like
+    x : ndarray
     x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
 
-    out : ndarray, None, or tuple of ndarray and None, optional
+    out : ndarray, optional
     A location into which the result is stored. If provided, it must have a shape that 
     the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.

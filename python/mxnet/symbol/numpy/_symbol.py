@@ -45,7 +45,7 @@ def absolute(x, out=None, **kwargs):
     x : _Symbol
     Input array.
 
-    out : _Symbol, None, or tuple of ndarray and None, optional
+    out : _Symbol, optional
     A location into which the result is stored. If provided, it must have a shape 
     that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -57,12 +57,6 @@ def absolute(x, out=None, **kwargs):
     ----------	
     absolute : _Symbol
     An ndarray containing the absolute value of each element in x.  
-    
-    Examples
-    ----------
-    >>> x = np.array([-1.2, 1.2])
-    >>> np.absolute(x)
-    array([ 1.2,  1.2])
     """
     return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
 
@@ -76,7 +70,7 @@ def cbrt(x, out=None, **kwargs):
     x : _Symbol
     The values whose cube-roots are required.
 
-    out : _Symbol, None, or tuple of ndarray and None, optional
+    out : _Symbol, optional
     A location into which the result is stored. If provided, it must have a shape that the 
     inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -89,11 +83,6 @@ def cbrt(x, out=None, **kwargs):
     y : _Symbol
     An array of the same shape as x, containing the cube cube-root of each element in x. 
     If out was provided, y is a reference to it. This is a scalar if x is a scalar.
-
-    Examples
-    ----------
-    >>> np.cbrt([1,8,27])
-    array([ 1.,  2.,  3.])
     """
     return _unary_func_helper(x, _npi.cbrt, _np.cbrt, out=out, **kwargs)
 
@@ -108,7 +97,7 @@ def arccos(x, out=None, **kwargs):
     x : _Symbol
     x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
 
-    out : ndarray, None, or tuple of ndarray and None, optional
+    out : ndarray, optional
     A location into which the result is stored. If provided, it must have a shape that 
     the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -137,13 +126,6 @@ def arccos(x, out=None, **kwargs):
     the invalid floating point error flag.
 
     The inverse cos is also known as acos or cos^-1.
-
-    Examples
-    ----------
-    We expect the arccos of 1 to be 0, and of -1 to be pi:
-
-    >>> np.arccos([1, -1])
-    array([ 0.        ,  3.14159265])
     """
     return _unary_func_helper(x, _npi.arccos, _np.arccos, out=out, **kwargs)
 

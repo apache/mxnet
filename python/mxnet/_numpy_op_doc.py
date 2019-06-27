@@ -62,7 +62,7 @@ def _np_ones_like(a):
     
     Parameters
     ----------
-    a : array_like
+    a : ndarray
         The shape and data-type of `a` define these same attributes of
         the returned array.
     
@@ -81,11 +81,11 @@ def _np_ones_like(a):
     >>> x = np.arange(6)
     >>> x = x.reshape((2, 3))
     >>> x
-    array([[0, 1, 2],
-           [3, 4, 5]])
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
     >>> np.ones_like(x)
-    array([[1, 1, 1],
-           [1, 1, 1]])
+    array([[1., 1., 1.],
+           [1., 1., 1.]])
     >>> y = np.arange(3, dtype=float)
     >>> y
     array([ 0.,  1.,  2.])
@@ -118,7 +118,7 @@ def _np_repeat(a, repeats, axis=None):
 
     Parameters
     ----------
-    a : array_like
+    a : ndarray
         Input array.
     repeats : int or array of ints
         The number of repetitions for each element.  `repeats` is broadcasted
@@ -141,10 +141,10 @@ def _np_repeat(a, repeats, axis=None):
     --------
     >>> x = np.array([[1,2],[3,4]])
     >>> np.repeat(x, 2)
-    array([1, 1, 2, 2, 3, 3, 4, 4])
+    array([1., 1., 2., 2., 3., 3., 4., 4.])
     >>> np.repeat(x, 3, axis=1)
-    array([[1, 1, 1, 2, 2, 2],
-           [3, 3, 3, 4, 4, 4]])
+    array([[1., 1., 1., 2., 2., 2.],
+           [3., 3., 3., 4., 4., 4.]])
     """
     pass
 
