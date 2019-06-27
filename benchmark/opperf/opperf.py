@@ -40,7 +40,8 @@ from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operato
 from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
-from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark
+from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark,\
+    get_current_runtime_features
 
 
 def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
@@ -56,7 +57,7 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
 
     # Run all Unary operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_unary_operators_benchmarks(ctx=ctx, dtype=dtype))
-
+    """
     # Run all Binary Broadcast, element_wise operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_binary_broadcast_operators_benchmarks(ctx=ctx,
                                                                                          dtype=dtype))
@@ -86,7 +87,7 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
 
     # Run all Convolution operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_convolution_operators_benchmarks(ctx=ctx, dtype=dtype))
-
+    """
     # ****************************** PREPARE FINAL RESULTS ********************************
     final_benchmark_result_map = merge_map_list(mxnet_operator_benchmark_results)
     return final_benchmark_result_map
@@ -130,15 +131,17 @@ def main():
     # 2. RUN BENCHMARKS
     ctx = _parse_mxnet_context(args.ctx)
     dtype = args.dtype
-    final_benchmark_results = run_all_mxnet_operator_benchmarks(ctx=ctx, dtype=args.dtype)
+    final_benchmark_results = run_all_mxnet_operator_benchmarks(ctx=ctx, dtype=dtype)
 
     # 3. PREPARE OUTPUTS
-    save_to_file(final_benchmark_results, args.output_file, args.output_format)
+    run_time_features = get_current_runtime_features()
+    save_to_file(final_benchmark_results, args.output_file, args.output_format, run_time_features)
 
     # 4. Generate list of MXNet operators not covered in benchmarks
     ops_not_covered = get_operators_with_no_benchmark(final_benchmark_results.keys())
     for idx, op in enumerate(ops_not_covered):
         print(f"{idx}. {op}")
+
     return 0
 
 
