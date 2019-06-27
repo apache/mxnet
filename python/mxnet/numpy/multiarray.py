@@ -1269,8 +1269,6 @@ class ndarray(NDArray):
     def broadcast_like(self, other):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
 
-    def sqrt(self, *args, **kwargs):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute sqrt')
 
     @property
     def shape(self):
@@ -1876,71 +1874,6 @@ def split(ary, indices_or_sections, axis=0):
 
 
 @set_module('mxnet.numpy')
-def tile(A, reps):
-    """
-    Construct an array by repeating A the number of times given by reps.
-
-    If `reps` has length ``d``, the result will have dimension of
-    ``max(d, A.ndim)``.
-
-    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
-    axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
-    or shape (1, 1, 3) for 3-D replication. If this is not the desired
-    behavior, promote `A` to d-dimensions manually before calling this
-    function.
-
-    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
-    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
-    (1, 1, 2, 2).
-
-    Parameters
-    ----------
-    A : ndarray
-        The input array.
-    reps : a single integer or tuple of integers
-        The number of repetitions of `A` along each axis.
-
-    Returns
-    -------
-    c : ndarray
-        The tiled output array.
-
-    Examples
-    -------
-    >>> a = np.array([0, 1, 2])
-    >>> np.tile(a, 2)
-    array([0., 1., 2., 0., 1., 2.], dtype=float32)
-    >>> np.tile(a, (2, 2))
-    array([[0., 1., 2., 0., 1., 2.],
-       [0., 1., 2., 0., 1., 2.]], dtype=float32)
-    >>> np.tile(a, (2, 1, 2))
-    array([[[0., 1., 2., 0., 1., 2.]],
-
-       [[0., 1., 2., 0., 1., 2.]]], dtype=float32)
-
-
-    >>> b = np.array([[1, 2], [3, 4]])
-    >>> np.tile(b, 2)
-    array([[1., 2., 1., 2.],
-       [3., 4., 3., 4.]], dtype=float32)
-    >>> np.tile(b, (2, 1))
-    array([[1., 2.],
-           [3., 4.],
-           [1., 2.],
-           [3., 4.]], dtype=float32)
-
-    >>> c = np.array([1,2,3,4])
-    >>> np.tile(c,(4,1))
-    array([[1., 2., 3., 4.],
-       [1., 2., 3., 4.],
-       [1., 2., 3., 4.],
-       [1., 2., 3., 4.]], dtype=float32)
-
-    """
-    return _npi.tile(A, reps)
-
-
-@set_module('mxnet.numpy')
 def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, **kwargs):
     """Return evenly spaced numbers over a specified interval.
 
@@ -2143,6 +2076,69 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _mx_nd_np.sqrt(x, out=out, **kwargs)
+
+
+
+@set_module('mxnet.numpy')
+def tile(A, reps):
+    """
+    Construct an array by repeating A the number of times given by reps.
+
+    If `reps` has length ``d``, the result will have dimension of
+    ``max(d, A.ndim)``.
+
+    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
+    axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
+    or shape (1, 1, 3) for 3-D replication. If this is not the desired
+    behavior, promote `A` to d-dimensions manually before calling this
+    function.
+
+    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
+    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
+    (1, 1, 2, 2).
+
+    Parameters
+    ----------
+    A : ndarray
+        The input array.
+    reps : a single integer or tuple of integers
+        The number of repetitions of `A` along each axis.
+
+    Returns
+    -------
+    c : ndarray
+        The tiled output array.
+
+    Examples
+    --------
+    >>> a = np.array([0, 1, 2])
+    >>> np.tile(a, 2)
+    array([0., 1., 2., 0., 1., 2.], dtype=float32)
+    >>> np.tile(a, (2, 2))
+    array([[0., 1., 2., 0., 1., 2.],
+       [0., 1., 2., 0., 1., 2.]], dtype=float32)
+    >>> np.tile(a, (2, 1, 2))
+    array([[[0., 1., 2., 0., 1., 2.]],
+       [[0., 1., 2., 0., 1., 2.]]], dtype=float32)
+
+    >>> b = np.array([[1, 2], [3, 4]])
+    >>> np.tile(b, 2)
+    array([[1., 2., 1., 2.],
+       [3., 4., 3., 4.]], dtype=float32)
+    >>> np.tile(b, (2, 1))
+    array([[1., 2.],
+           [3., 4.],
+           [1., 2.],
+           [3., 4.]], dtype=float32)
+
+    >>> c = np.array([1,2,3,4])
+    >>> np.tile(c,(4,1))
+    array([[1., 2., 3., 4.],
+       [1., 2., 3., 4.],
+       [1., 2., 3., 4.],
+       [1., 2., 3., 4.]], dtype=float32)
+    """
+    return _npi.tile(A, reps)
 
 
 @set_module('mxnet.numpy')

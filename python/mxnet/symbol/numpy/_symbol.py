@@ -1357,7 +1357,7 @@ def tile(A, reps):
         The tiled output array.
 
     Examples
-    -------
+    --------
     >>> a = np.array([0, 1, 2])
     >>> np.tile(a, 2)
     array([0., 1., 2., 0., 1., 2.], dtype=float32)
@@ -1366,9 +1366,7 @@ def tile(A, reps):
        [0., 1., 2., 0., 1., 2.]], dtype=float32)
     >>> np.tile(a, (2, 1, 2))
     array([[[0., 1., 2., 0., 1., 2.]],
-
        [[0., 1., 2., 0., 1., 2.]]], dtype=float32)
-
 
     >>> b = np.array([[1, 2], [3, 4]])
     >>> np.tile(b, 2)
@@ -1386,7 +1384,6 @@ def tile(A, reps):
        [1., 2., 3., 4.],
        [1., 2., 3., 4.],
        [1., 2., 3., 4.]], dtype=float32)
-
     """
     return _npi.tile(A, reps)
 
