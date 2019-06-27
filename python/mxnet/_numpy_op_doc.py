@@ -214,14 +214,12 @@ def _np_amax(a, axis=None, out=None):
 
         Not supported yet.
 
-
     Returns
     -------
     amax : ndarray or scalar
         Maximum of `a`. If `axis` is None, the result is a scalar value.
         If `axis` is given, the result is an array of dimension
         ``a.ndim - 1``.
-
 
     Examples
     --------
@@ -239,6 +237,16 @@ def _np_amax(a, axis=None, out=None):
     >>> np.amax(a, axis=1, keepdims=True)
     array([[1],
           [3]])
+
+    Notes
+    -----
+    This function differs to the original `numpy.amax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.amax.html>`_ in
+    the following aspects:
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `a` only supports ndarray
+    - `axis` doe snot support negative value
+    - `initial` is not supported
 
     """
     pass
@@ -269,6 +277,14 @@ def _np_squeeze(a, axis=None):
     (3,)
     >>> np.squeeze(x, axis=(2,)).shape
     (1, 3)
+
+    Notes
+    -----
+    This function differs to the original `numpy.squeeze
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.squeeze.html>`_ in
+    the following aspects:
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `a` only supports ndarray
     """
     pass
 
@@ -307,6 +323,14 @@ def _npi_ones(shape, dtype=None, order='C'):
     >>> np.ones(s)
     array([[ 1.,  1.],
            [ 1.,  1.]])
+
+    Notes
+    -----
+    This function differs to the original `numpy.ones
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html>`_ in
+    the following aspects:
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `order` is not supported
     """
 
 def _npi_random_uniform(low=0.0, high=1.0, size=None):
@@ -347,6 +371,15 @@ def _npi_random_uniform(low=0.0, high=1.0, size=None):
     --------
     Draw samples from the distribution:
      s = np.random.uniform(-1, 0, 1000)
-    All values are within the given interval
+    All values are within the given interval.
+
+    Notes
+    -----
+    This function differs to the original `numpy.random.uniform
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.amax.html>`_ in
+    the following aspects:
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `low` and `high` do not accept array-like of floats
+    - `size` is not optional
     """
     pass
