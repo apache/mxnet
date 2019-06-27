@@ -82,7 +82,7 @@ namespace {
     auto node = nnvm::Node::Create();
     subgraph_sym.outputs = subgraph.outputs;
     node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(subgraph_sym));
-    std::ostringstream name_oss, params_oss;
+    std::ostringstream name_oss;
     // the name of the new node will be the concatenation of all the node names in the subgraph
     DFSVisit(subgraph.outputs, [&name_oss](const nnvm::NodePtr n) {
       if (n->op() != nullptr)
@@ -91,12 +91,6 @@ namespace {
     auto subgraph_name = name_oss.str();
     subgraph_name.pop_back();
     node->attrs.name = subgraph_name;
-    // in case the subgraph contains some of the weights
-    for (auto &e : subgraph_sym.ListInputNames(nnvm::Symbol::kAll)) {
-      params_oss << e << ";";
-    }
-    auto params_names = params_oss.str();
-    params_names.pop_back();
     node->attrs.dict["num_inputs"] = std::to_string(inputs_size);
     node->attrs.dict["num_outputs"] = std::to_string(subgraph.outputs.size());
     node->attrs.op = Op::Get("_FusedOp");

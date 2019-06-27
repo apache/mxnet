@@ -81,6 +81,7 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
   {"_Minimum"                          , {{"min(%, %)", "_0", "_1"}}},
   {"_minimum"                          , {{"min(%, %)", "_0", "_1"}}},
   {"amp_cast"                          , {{"identity(%)", "_0"}}},
+  {"_backward_amp_cast"                , {{"identity(%)", "_0"}}},
   {"relu"                              , {{"relu(%)", "_0"}}},
   {"sigmoid"                           , {{"sigmoid(%)", "_0"}}},
   {"softsign"                          , {{"softsign(%)", "_0"}}},
@@ -436,13 +437,6 @@ inline DType hypot(const DType a, const DType2 b) {
 template <typename OutType, typename DType>
 inline typename LoadType<OutType>::Type cast(const DType val) {
   return static_cast<typename LoadType<OutType>::Type>(val);
-}
-
-// TODO(ptredak): this is not exactly identity, needs type inference
-// in the middle of the graph to do it right
-template <typename DType>
-inline DType amp_multicast(const DType val) {
-  return val;
 }
 
 // activations

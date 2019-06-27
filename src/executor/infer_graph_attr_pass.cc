@@ -134,7 +134,7 @@ void GetAttrFromFusedNode(uint32_t nid,
   const auto& inferred_attrs = finfer(fwd_ptr->attrs);
   const auto& input_attrs = inferred_attrs.first;
   const auto& output_attrs = inferred_attrs.second;
-  CHECK(input_attrs.size() == inode.source->op()->num_outputs) <<
+  CHECK(input_attrs.size() == inode.source->num_outputs()) <<
     "Number of outputs of the gradient node " << inode.source->attrs.name <<
     " does not match the number of inputs of the corresponding forward node";
   // Set the attributes of output gradients

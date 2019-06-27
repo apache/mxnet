@@ -279,6 +279,19 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           variables[{i, 0}] = var_name;
           continue;
         }
+
+        if (op_name == "amp_multicast" || op_name == "_backward_amp_multicast") {
+          CHECK_EQ(outputs[i], node.inputs.size());
+          for (size_t counter = 0; counter < outputs[i]; ++counter) {
+            const auto& input = node.inputs[counter];
+            var_name = "temp" + std::to_string(temp_name_counter++);
+            const auto& arg = variables[{input.node_id, input.index}];
+            code += "const auto " + var_name + " = " + arg + ";\n";
+            variables[{i, counter}] = var_name;
+          }
+          continue;
+        }
+
         LOG(FATAL) << "Unrecognized op " + op_name;
       }
     } else {
