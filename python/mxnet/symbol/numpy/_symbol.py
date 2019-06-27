@@ -1578,14 +1578,13 @@ def floor(x, out=None, **kwargs):
     -------
     y : _Symbol
         The floor of each element in `x`.
+
     Notes
     -----
     Some spreadsheet programs calculate the "floor-towards-zero", in other
     words ``floor(-2.5) == -2``.  MXNet instead uses the definition of
     `floor` where `floor(-2.5) == -3`.
 
-    Notes
-    -----
     - `a` doe snot support scalar.
     - `where` has no effect.
     """
@@ -1615,8 +1614,6 @@ def expm1(x, out=None, **kwargs):
     This function provides greater precision than ``exp(x) - 1``
     for small values of ``x``.
 
-    Notes
-    -----
     - `a` doe snot support scalar.
     - `where` has no effect.
     """
@@ -1653,12 +1650,6 @@ def arcsinh(x, out=None, **kwargs):
     has branch cuts `[1j, infj]` and `[-1j, -infj]` and is continuous from
     the right on the former and from the left on the latter.
     The inverse hyperbolic sine is also known as `asinh` or ``sinh^-1``.
-    References
-    ----------
-    .. [1] M. Abramowitz and I.A. Stegun, "Handbook of Mathematical Functions",
-           10th printing, 1964, pp. 86. http://www.math.sfu.ca/~cbm/aands/
-    .. [2] Wikipedia, "Inverse hyperbolic function",
-           http://en.wikipedia.org/wiki/Arcsinh
 
     - `a` doe snot support scalar.
     - `where` has no effect.

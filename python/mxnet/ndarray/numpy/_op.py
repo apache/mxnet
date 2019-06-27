@@ -916,14 +916,7 @@ def floor(x, out=None, **kwargs):
     Some spreadsheet programs calculate the "floor-towards-zero", in other
     words ``floor(-2.5) == -2``.  MXNet instead uses the definition of
     `floor` where `floor(-2.5) == -3`.
-    Examples
-    --------
-    a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
-    np.floor(a)
-    array([-2., -2., -1.,  0.,  1.,  1.,  2.])
 
-    Notes
-    -----
     This function differs to the original `numpy.floor
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.floor.html>`_ in
     the following aspects:
@@ -932,6 +925,12 @@ def floor(x, out=None, **kwargs):
     - `a` doe snot support scalar.
     - `where` has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
+
+    Examples
+    --------
+    a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    np.floor(a)
+    array([-2., -2., -1.,  0.,  1.,  1.,  2.])
     """
     return _unary_func_helper(x, _npi.floor, _np.floor, out=out, **kwargs)
 
@@ -962,6 +961,16 @@ def expm1(x, out=None, **kwargs):
     -----
     This function provides greater precision than ``exp(x) - 1``
     for small values of ``x``.
+
+    This function differs to the original `numpy.expm1
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.expm1.html>`_ in
+    the following aspects:
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `a` only supports ndarray.
+    - `a` doe snot support scalar.
+    - `where` has no effect.
+    - if a tuple is passed into `out`, it must have exactly one ndarray.
+
     Examples
     --------
     The true value of ``exp(1e-10) - 1`` is ``1.00000000005e-10`` to
@@ -971,17 +980,6 @@ def expm1(x, out=None, **kwargs):
     1.00000000005e-10
      np.exp(1e-10) - 1
     1.000000082740371e-10
-
-    Notes
-    -----
-    This function differs to the original `numpy.expm1
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.expm1.html>`_ in
-    the following aspects:
-    - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray.
-    - `a` doe snot support scalar.
-    - `where` has no effect.
-    - if a tuple is passed into `out`, it must have exactly one ndarray.
     """
     return _unary_func_helper(x, _npi.expm1, _np.expm1, out=out, **kwargs)
 
@@ -1020,18 +1018,7 @@ def arcsinh(x, out=None, **kwargs):
     has branch cuts `[1j, infj]` and `[-1j, -infj]` and is continuous from
     the right on the former and from the left on the latter.
     The inverse hyperbolic sine is also known as `asinh` or ``sinh^-1``.
-    References
-    ----------
-    .. [1] M. Abramowitz and I.A. Stegun, "Handbook of Mathematical Functions",
-           10th printing, 1964, pp. 86. http://www.math.sfu.ca/~cbm/aands/
-    .. [2] Wikipedia, "Inverse hyperbolic function",
-           http://en.wikipedia.org/wiki/Arcsinh
-    Examples
-    --------
-    np.arcsinh(np.array([10.0]))
-    array([2.9982228])
-    Notes
-    -----
+
     This function differs to the original `numpy.arcsinh
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsinh.html>`_ in
     the following aspects:
@@ -1040,5 +1027,10 @@ def arcsinh(x, out=None, **kwargs):
     - `a` doe snot support scalar.
     - `where` has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
+
+    Examples
+    --------
+    np.arcsinh(np.array([10.0]))
+    array([2.9982228])
     """
     return _unary_func_helper(x, _npi.arcsinh, _np.arcsinh, out=out, **kwargs)
