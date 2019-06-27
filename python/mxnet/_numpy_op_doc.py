@@ -301,8 +301,7 @@ def _npi_ones(shape, dtype=None, order='C'):
     shape : int or sequence of ints
         Shape of the new array, e.g., ``(2, 3)`` or ``2``.
     dtype : data-type, optional
-        The desired data-type for the array, e.g., `int`.  Default is
-        `float32`.
+        The desired data-type for the array, e.g., `int`. Default is `float32`.
     order : {'C', 'F'}, optional, default: C
         Whether to store multi-dimensional data in row-major
         (C-style) or column-major (Fortran-style) order in
