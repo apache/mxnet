@@ -241,7 +241,7 @@ Calculates ``log(1 + x)``.
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log1p"});
 
 // expm1
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_expm1, "x", mshadow_op::expm1)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_expm1, "x", mshadow_op::expm1)
 .describe(R"code(Calculate ``exp(x) - 1`` for all elements in the array.)code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_expm1"});
 

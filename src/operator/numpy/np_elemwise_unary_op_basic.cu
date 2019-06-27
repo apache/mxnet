@@ -74,7 +74,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_log2, mshadow_op::log2);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_log1p, mshadow_op::log1p);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_expm1, mshadow_op::expm1);
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_expm1, mshadow_op::expm1);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_logical_not, mshadow_op::nt);
 

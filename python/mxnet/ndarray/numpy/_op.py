@@ -28,7 +28,7 @@ from ..ndarray import NDArray
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
-           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'floor']
+           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'floor', 'expm1']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -887,7 +887,6 @@ def sqrt(x, out=None, **kwargs):
 @set_module('mxnet.ndarray.numpy')
 def floor(x, out=None, **kwargs):
     """
-    floor(x, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True[, signature, extobj])
     Return the floor of the input, element-wise.
     The floor of the scalar `x` is the largest integer `i`, such that
     `i <= x`.  It is often denoted as :math:`\lfloor x \rfloor`.
@@ -906,8 +905,7 @@ def floor(x, out=None, **kwargs):
         of False indicate to leave the value in the output alone.
 
         Not supported yet.
-    **kwargs
-        For other keyword-only arguments.
+
     Returns
     -------
     y : ndarray or scalar
@@ -935,3 +933,53 @@ def floor(x, out=None, **kwargs):
     - if a tuple is passed into `out`, it must have exactly one ndarray.
     """
     return _unary_func_helper(x, _npi.floor, _np.floor, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def expm1(x, out=None, **kwargs):
+    """
+    Calculate ``exp(x) - 1`` for all elements in the array.
+    Parameters
+    ----------
+    x : array_like
+       Input values.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values
+        of False indicate to leave the value in the output alone.
+
+        Not supported yet.
+    Returns
+    -------
+    out : ndarray
+        Element-wise exponential minus one: ``out = exp(x) - 1``.
+    Notes
+    -----
+    This function provides greater precision than ``exp(x) - 1``
+    for small values of ``x``.
+    Examples
+    --------
+    The true value of ``exp(1e-10) - 1`` is ``1.00000000005e-10`` to
+    about 32 significant digits. This example shows the superiority of
+    expm1 in this case.
+     np.expm1(1e-10)
+    1.00000000005e-10
+     np.exp(1e-10) - 1
+    1.000000082740371e-10
+
+    Notes
+    -----
+    This function differs to the original `numpy.expm1
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.expm1.html>`_ in
+    the following aspects:
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `a` only supports ndarray.
+    - `a` doe snot support scalar.
+    - `where` has no effect.
+    - if a tuple is passed into `out`, it must have exactly one ndarray.
+    """
+    return _unary_func_helper(x, _npi.expm1, _np.expm1, out=out, **kwargs)
