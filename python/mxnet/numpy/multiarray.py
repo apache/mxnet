@@ -1470,6 +1470,7 @@ def stack(arrays, axis=0, out=None):
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
     r"""
     arange(start, stop=None, step=1, dtype=None, ctx=None)
+    
     Return evenly spaced values within a given interval.
 
     Values are generated within the half-open interval ``[start, stop)``
@@ -1921,6 +1922,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
 def trunc(x, out=None, **kwargs):
     r"""
     trunc(x, out=None)
+
     Return the truncated value of the input, element-wise.
 
     The truncated value of the scalar `x` is the nearest integer `i` which
@@ -1940,6 +1942,7 @@ def trunc(x, out=None, **kwargs):
     y : ndarray or scalar
         The truncated value of each element in `x`.
         This is a scalar if `x` is a scalar.
+
     Notes
     -----
     This function differs to the original numpy.trunc in the following aspects:
@@ -1957,6 +1960,7 @@ def trunc(x, out=None, **kwargs):
 def logical_not(x, out=None, **kwargs):
     r"""
     logical_not(x, out=None)
+
     Compute the truth value of NOT x element-wise.
 
     Parameters
@@ -1995,6 +1999,7 @@ def logical_not(x, out=None, **kwargs):
 def arccosh(x, out=None, **kwargs):
     r"""
     arccosh(x, out=None)
+
     Inverse hyperbolic cosine, element-wise.
 
     Parameters

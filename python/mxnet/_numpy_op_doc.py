@@ -180,6 +180,7 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
     r"""
     prod(a, axis=None, dtype=None, out=None, keepdims=_Null)
+
     Return the product of array elements over a given axis.
     
     Parameters
@@ -228,9 +229,9 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
  
     This function differs tp the original numpy.prod in the following aspects:
         
-        Do not support initial.
-        Do not support empty ndarray or scalar as input.
-        Keepdims must be 0 or 1. Otherwise, an error will raise.
+        - Do not support initial.
+        - Do not support empty ndarray or scalar as input.
+        - Keepdims must be 0 or 1. Otherwise, an error will raise.
 
     Examples
     --------
@@ -256,6 +257,7 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
 def _np__random_shuffle(x):
     r"""
     random.shuffle(x)
+    
     Modify a sequence in-place by shuffling its contents.
     
     This function only shuffles the array along the first axis of a

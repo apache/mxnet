@@ -100,6 +100,7 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
 def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     r"""
     normal(loc=0.0, scale=1.0, size=None)
+
     Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -162,7 +163,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     >>> abs(mu - (float)(np.mean(s))) < 0.01
     True
 
-    >>>np.random.normal(1,1,dtype='float16',size=(2,3))
+    >>> np.random.normal(1,1,dtype='float16',size=(2,3))
     array([[ 0.905 ,  1.433 , -0.3403],
            [ 1.994 ,  1.205 ,  2.512 ]], dtype=float16)
     """

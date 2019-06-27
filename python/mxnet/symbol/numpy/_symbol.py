@@ -1079,7 +1079,10 @@ def concatenate(seq, axis=0, out=None):
 
 @set_module('mxnet.symbol.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
-    r"""Return evenly spaced values within a given interval.
+    r"""
+    arange(start, stop=None, step=1, dtype=None, ctx=None)
+    
+    Return evenly spaced values within a given interval.
 
     Values are generated within the half-open interval ``[start, stop)``
     (in other words, the interval including `start` but excluding `stop`).
@@ -1420,6 +1423,7 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
 def trunc(x, out=None, **kwargs):
     r"""
     trunc(x, out=None)
+
     Return the truncated value of the input, element-wise.
 
     The truncated value of the scalar `x` is the nearest integer `i` which
@@ -1451,6 +1455,7 @@ def trunc(x, out=None, **kwargs):
 def logical_not(x, out=None, **kwargs):
     r"""
     logical_not(x, out=None)
+
     Compute the truth value of NOT x element-wise.
 
     Parameters
@@ -1479,6 +1484,7 @@ def logical_not(x, out=None, **kwargs):
 def arccosh(x, out=None, **kwargs):
     r"""
     arccosh(x, out=None)
+
     Inverse hyperbolic cosine, element-wise.
 
     Parameters
