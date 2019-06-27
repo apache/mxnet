@@ -983,10 +983,15 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g = mxnet::exec::InferType(std::move(g), std::move(arg_types), "");
   const nnvm::DTypeVector &inferred_dtypes =
       g.GetAttr<nnvm::DTypeVector>("dtype");
+
+  g.attrs["inferred_dtypes"] = std::make_shared<dmlc::any>(std::move(inferred_dtypes));
+  g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
+  g = ApplyPass(std::move(g), "AMPInferUnknown");
+  const nnvm::DTypeVector& inferred_dtype_result = g.GetAttr<nnvm::DTypeVector>("inferred_dtype_result");
   const nnvm::IndexedGraph &idx = g.indexed_graph();
 
   // set node name -> input dtype mapping using infer dtype
-  _SetInputDTypes(idx, inferred_dtypes, &node_name_dtype_map, &node_without_dtype_map);
+  _SetInputDTypes(idx, inferred_dtype_result, &node_name_dtype_map, &node_without_dtype_map);
 
   result_sym->outputs = g.outputs;
   *ret_sym_handle = result_sym;

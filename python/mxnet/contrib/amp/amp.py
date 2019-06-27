@@ -455,7 +455,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     # Add all names in list for the nodes in the symbol which don't have
     # __dtype__ set
     attr_dict = sym.attr_dict()
-    if not data_names:
+    if data_names is None:
         data_names = []
         for sym_name in sym.list_inputs():
             if not sym_name in attr_dict:

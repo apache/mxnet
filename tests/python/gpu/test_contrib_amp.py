@@ -169,14 +169,26 @@ def test_amp_conversion():
         exe.forward(is_train=False, **inputs)
         exe.outputs[0].asnumpy()
 
-        inputs['fc1_weight'] = inputs['fc1_weight'].astype(np.float16)
-        inputs['fc1_bias'] = inputs['fc1_bias'].astype(np.float16)
+        inputs2 = {}
+        inputs2['data'] = mx.nd.ones((1, 3, 224, 224))
+        inputs2['fc1_weight'] = inputs['fc1_weight'].astype(np.float16)
+        inputs2['fc1_bias'] = inputs['fc1_bias'].astype(np.float16)
 
         # Test with a real world model, tweak inputs for convert_symbol
         converted_sym = amp.convert_symbol(sym, target_dtype="float16",
                                            target_dtype_ops=["Convolution"], data_names=["data"])
         exe = converted_sym.simple_bind(mx.gpu(0), data=(1, 3, 224, 224), grad_req='null')
-        exe.forward(is_train=False, **inputs)
+        converted_args = converted_sym.list_arguments()
+        converted_auxs = converted_sym.list_auxiliary_states()
+        for i, key in enumerate(exe.arg_arrays):
+            if converted_args[i] in arg_params:
+                arg_params[converted_args[i]] = arg_params[converted_args[i]].astype(exe.arg_arrays[i].dtype)
+        for i, key in enumerate(exe.aux_arrays):
+            if converted_auxs[i] in aux_params:
+                aux_params[converted_auxs[i]] = aux_params[converted_auxs[i]].astype(exe.aux_arrays[i].dtype)
+
+        inputs2.update(arg_params)
+        exe.forward(is_train=False, **inputs2)
         exe.outputs[0].wait_to_read()
 
     def check_amp_convert_model():
@@ -263,7 +275,6 @@ def test_module_backward_compatibility():
     conv_layer_filter_dims = [2, 3]
     conv_layer_strides = [1, 1]
     dimension = 5
-
     data_len = 10
 
     data = mx.sym.var("data")
@@ -299,6 +310,80 @@ def test_module_backward_compatibility():
     mod.set_params(arg_params, aux_params)
     assert arg_params["fullyconnected_weight"].dtype == np.float16, \
         "Module API is overwriting the inferred dtype for a mixed precision model"
+
+
+@with_seed()
+def test_fp16_casting():
+    data = mx.sym.var("data")
+    out1 = mx.sym.amp_cast(data, dtype="float16")
+    out2 = mx.sym.amp_cast(data, dtype="float32")
+    out3 = mx.sym.amp_cast(data, dtype="float16")
+    # When two ops from data, with different dtypes,
+    # data should be float32
+    res = mx.sym.Group([out1, out2])
+    final_res = amp.convert_symbol(res, data_names=[])
+    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2))
+    assert exe.arg_arrays[0].dtype == np.float32
+
+    # When two ops from data, both casted to float16,
+    # data should be float16
+    res = mx.sym.Group([out1, out3])
+    final_res = amp.convert_symbol(res, data_names=[])
+    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2))
+    assert exe.arg_arrays[0].dtype == np.float16
+
+    # AMP Multicast test where one node is float32, another is float16
+    data = mx.sym.var("data", dtype=np.float32)
+    data2 = mx.sym.var("data2", dtype=np.float16)
+    out4 = mx.sym.amp_multicast(data, data2, num_outputs=2)
+    final_res = amp.convert_symbol(out4)
+    exe = final_res.simple_bind(ctx=mx.gpu(), data2=(1, 2), data=(1, 2))
+    assert exe.arg_arrays[0].dtype == np.float16
+
+    # AMP Multicast test where two non input nodes are float16,
+    # and one input node is float32
+    data = mx.sym.var("data", dtype=np.float32)
+    data2 = mx.sym.var("data2", dtype=np.float16)
+    data3 = mx.sym.var("data3", dtype=np.float16)
+    out5 = mx.sym.amp_multicast(data,
+                                mx.sym.elemwise_add(data2, data3),
+                                num_outputs=2)
+    final_res = amp.convert_symbol(out5, target_dtype_ops=[],
+                                   fp32_ops=[])
+    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2), data3=(1, 2))
+    assert exe.arg_arrays[0].dtype == np.float32
+
+    # AMP Multicast test where three input nodes one fp16, one fp32
+    # one unknown
+    data = mx.sym.var("data", dtype=np.float16)
+    data2 = mx.sym.var("data2", dtype=np.float32)
+    data3 = mx.sym.var("data3")
+    out6 = mx.sym.amp_multicast(data, data2, data3, num_outputs=3)
+    final_res = amp.convert_symbol(out6, target_dtype_ops=[],
+                                   fp32_ops=[])
+    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2),
+                                data3=(1, 2))
+    assert exe.arg_arrays[2].dtype == np.float32
+
+    # Input node to amp_multicast and amp_cast, if dtypes conflict
+    # and input node is already fp16, it should still be fp16
+    data = mx.sym.var("data", dtype=np.float16)
+    data2 = mx.sym.var("data2", dtype=np.float32)
+    out7 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="float16")])
+    final_res = amp.convert_symbol(out7, target_dtype_ops=[],
+                                   fp32_ops=[])
+    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
+    assert exe.arg_arrays[0].dtype == np.float16
+
+    # Input node to amp_multicast and amp_cast, if dtypes conflict
+    # and input node is already fp32, it should be changed to fp16
+    data = mx.sym.var("data", dtype=np.float32)
+    data2 = mx.sym.var("data2", dtype=np.float16)
+    out8 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="float16")])
+    final_res = amp.convert_symbol(out8, target_dtype_ops=[],
+                                   fp32_ops=[])
+    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
+    assert exe.arg_arrays[0].dtype == np.float16
 
 
 if __name__ == '__main__':
