@@ -173,3 +173,113 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
         `axis` is not None or `a` is a 1-d array.
     """
     pass
+
+def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
+    """
+    prod(a, axis=None, dtype=None, out=None, keepdims=None)
+    Return the product of array elements over a given axis.
+    
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a product is performed.  The default,
+        axis=None, will calculate the product of all the elements in the
+        input array. If axis is negative it counts from the last to the
+        first axis.
+    
+        If axis is a tuple of ints, a product is performed on all of the
+        axes specified in the tuple instead of a single axis or all the
+        axes as before.
+    dtype : dtype, optional
+        The type of the returned array, as well as of the accumulator in
+        which the elements are multiplied.  Default is numpy.float32.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape as the expected output, but the type of the output
+        values will be cast if necessary.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the
+        result as dimensions with size one. With this option, the result
+        will broadcast correctly against the input array.
+    
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `prod` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+    
+    Returns
+    -------
+    product_along_axis : ndarray, see `dtype` parameter above.
+
+    Notes
+    -----
+    Arithmetic is modular when using integer types, and no error is
+    raised on overflow.  That means that, on a 32-bit platform:
+    
+    >>> x = np.array([536870910, 536870910, 536870910, 536870910]).astype('int')
+    >>> np.prod(x) 
+    array(0)
+ 
+    This function differs tp the original numpy.prod in the following aspects:
+        
+        Do not support initial.
+        Do not support empty ndarray or scalar as input.
+        Keepdims must be 0 or 1. Otherwise, an error will raise.
+
+    Examples
+    --------
+    By default, calculate the product of all elements:
+    
+    >>> x = np.array([1.,2.])
+    >>> np.prod(x)
+    array(2., dtype=float32)
+    
+    Even when the input array is two-dimensional:
+    
+    >>> x = np.array([[1.,2.],[3.,4.]])
+    >>> np.prod(x)
+    array(24., dtype=float32)
+    
+    But we can also specify the axis over which to multiply:
+    >>> x = np.array([[1.,2.],[3.,4.]])
+    >>> np.prod(x, axis=1)
+    array([ 2., 12.], dtype=float32)
+    """
+    pass
+
+def _np__random_shuffle(x):
+    """
+    random.shuffle(x)
+    Modify a sequence in-place by shuffling its contents.
+    
+    This function only shuffles the array along the first axis of a
+    multi-dimensional array. The order of sub-arrays is changed but
+    their contents remains the same.
+    
+    Parameters
+    ----------
+    x : ndarray
+        The ndarray to be shuffled.
+    
+    Returns
+    -------
+    None
+    
+    Examples
+    --------
+    >>> arr = np.arange(10)
+    >>> np.random.shuffle(arr)
+    array([0., 2., 3., 5., 9., 1., 6., 8., 4., 7.], dtype=float32)
+    
+    Multi-dimensional arrays are only shuffled along the first axis:
+    
+    >>> arr = np.arange(9).reshape((3, 3))
+    >>> np.random.shuffle(arr)
+    array([[0., 1., 2.],
+           [6., 7., 8.],
+           [3., 4., 5.]], dtype=float32)
+    """
+    pass

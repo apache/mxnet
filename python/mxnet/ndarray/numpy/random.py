@@ -98,7 +98,9 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
 
 
 def normal(loc=0.0, scale=1.0, size=None, **kwargs):
-    """Draw random samples from a normal (Gaussian) distribution.
+    """
+    normal(loc=0.0, scale=1.0, size=None)
+    Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
     by *loc* (mean) and *scale* (standard deviation).
@@ -116,8 +118,6 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
         a single value is returned if loc and scale are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
-    ctx : Context, optional
-        Device context of output. Default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
 
@@ -129,6 +129,20 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     Notes
     -----
     This function currently does not support ``loc`` and ``scale`` as ndarrays.
+    
+    Examples
+    --------
+    >>> mu, sigma = 0, 0.1 # mean and standard deviation
+    >>> s = np.random.normal(mu, sigma, 1000)
+    
+    Verify the mean and the variance:
+    
+    >>> abs(mu - (float)(np.mean(s))) < 0.01
+    True
+
+    >>>np.random.normal(1,1,dtype='float16',size=(2,3))
+    array([[ 0.905 ,  1.433 , -0.3403],
+           [ 1.994 ,  1.205 ,  2.512 ]], dtype=float16)
     """
     dtype = kwargs.pop('dtype', None)
     if dtype is None:

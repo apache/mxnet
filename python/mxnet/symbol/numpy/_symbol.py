@@ -31,7 +31,8 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
+           'expand_dims', 'tile', 'linspace', 'trunc', 'logical_not', 'arccosh', 'sin', 'cos', 
+           'sinh', 'cosh', 'log10', 'sqrt']
 
 
 def _num_outputs(sym):
@@ -1083,7 +1084,8 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     Values are generated within the half-open interval ``[start, stop)``
     (in other words, the interval including `start` but excluding `stop`).
     For integer arguments the function is equivalent to the Python built-in
-    `range` function, but returns an ndarray rather than a list.
+    `range` function, but returns an ndarray with default type 'float32' 
+    rather than a list.
 
     Parameters
     ----------
@@ -1111,6 +1113,17 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         ``ceil((stop - start)/step)``.  Because of floating point overflow,
         this rule may result in the last element of `out` being greater
         than `stop`.
+    
+    Examples
+    --------
+    >>> np.arange(3)
+    array([0., 1., 2.], dtype=float32)
+    >>> np.arange(3,7)
+    array([3., 4., 5., 6.], dtype=float32)
+    >>> np.arange(3,7,2)
+    array([3., 5.], dtype=float32)
+    >>> np.arange(0,5,1,'int32')
+    array([0, 1, 2, 3, 4], dtype=int32)
     """
     if dtype is None:
         dtype = 'float32'
@@ -1407,8 +1420,132 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
+@set_module('mxnet.symbol.numpy')
+def trunc(x, out=None, **kwargs):
+    """
+    trunc(x, out=None)
+    Return the truncated value of the input, element-wise.
+
+    The truncated value of the scalar `x` is the nearest integer `i` which
+    is closer to zero than `x` is. In short, the fractional part of the
+    signed number `x` is discarded.
+    
+    Parameters
+    ----------
+    x : ndarray
+        Input data.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. 
+    
+    Returns
+    -------
+    y : ndarray
+        The truncated value of each element in `x`.
+    
+    Notes
+    -----
+    This function differs to the original numpy.trunc in the following aspects:
+      Do not support where.
+      Only support ndarray. 
+      Do not support scalar.
+    
+    
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.trunc(a)
+    array([-1., -1., -0.,  0.,  1.,  1.,  2.], dtype=float32)
+    """
+    return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
 
 @set_module('mxnet.symbol.numpy')
+def logical_not(x, out=None, **kwargs):
+    """
+    logical_not(x, out=None)
+    Compute the truth value of NOT x element-wise.
+
+    Parameters
+    ----------
+    x : ndarray
+        Logical NOT is applied to the elements of `x`.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. 
+    
+    Returns
+    -------
+    y : ndarray of bool
+        Boolean result with the same shape as `x` of the NOT operation
+        on elements of `x`.
+    
+    Notes
+    -----
+    This function differs to the original numpy.logical_not in the following aspects:
+      Do not support where.
+      Only support ndarray. 
+      Do not support scalar.
+
+    Examples
+    --------
+    ***>>> x= np.array([True, False, 0, 1])
+    >>> np.logical_not(x)
+    array([0., 1., 1., 0.], dtype=float32)
+    
+    >>> x = np.arange(5)
+    >>> np.logical_not(x<3)
+    array([0., 0., 0., 1., 1.], dtype=float32)
+    """
+    return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
+
+@set_module('mxnet.symbol.numpy')
+def arccosh(x, out=None, **kwargs):
+    """
+    arccosh(x, out=None)
+    Inverse hyperbolic cosine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. 
+    
+    Returns
+    -------
+    arccosh : ndarray
+        Array of the same shape as `x`.
+    
+    Notes
+    -----
+    `arccosh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `cosh(z) = x`. The convention is to return the
+    `z` whose imaginary part lies in `[-pi, pi]` and the real part in
+    ``[0, inf]``.
+    
+    For real-valued input data types, `arccosh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+    
+    For complex-valued input, `arccosh` is a complex analytical function that
+    has a branch cut `[-inf, 1]` and is continuous from above on it.
+    
+    Notes
+    -----
+    This function differs to the original numpy.logical_not in the following aspects:
+      Do not support where.
+      Only support ndarray. 
+      Do not support scalar.
+
+    Examples
+    --------
+    >>> a = np.array([3.2, 5.0])
+    >>> np.arccosh(a)
+    array([1.8309381, 2.2924316], dtype=float32)
+    """
+    return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
+
 def sin(x, out=None, **kwargs):
     r"""Trigonometric sine, element-wise.
 

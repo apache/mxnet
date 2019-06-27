@@ -45,8 +45,8 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
-           'sinh', 'cosh', 'log10', 'sqrt']
+           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'trunc', 'logical_not', 
+           'arccosh', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
 
 
 # This function is copied from ndarray.py since pylint
@@ -963,7 +963,7 @@ class ndarray(NDArray):
 
         The arguments are the same as for :py:func:`trunc`, with
         this array as data.
-        """
+        """ 
         raise AttributeError('mxnet.numpy.ndarray object has no attribute trunc')
 
     def sin(self, *args, **kwargs):
@@ -1427,12 +1427,15 @@ def stack(arrays, axis=0, out=None):
 
 @set_module('mxnet.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
-    """Return evenly spaced values within a given interval.
+    """
+    arange(start, stop=None, step=1, dtype=None, ctx=None)
+    Return evenly spaced values within a given interval.
 
     Values are generated within the half-open interval ``[start, stop)``
     (in other words, the interval including `start` but excluding `stop`).
     For integer arguments the function is equivalent to the Python built-in
-    `range` function, but returns an ndarray rather than a list.
+    `range` function, but returns an ndarray with default type 'float32' 
+    rather than a list.
 
     Parameters
     ----------
@@ -1460,6 +1463,17 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         ``ceil((stop - start)/step)``.  Because of floating point overflow,
         this rule may result in the last element of `out` being greater
         than `stop`.
+
+    Examples
+    --------
+    >>> np.arange(3)
+    array([0., 1., 2.], dtype=float32)
+    >>> np.arange(3,7)
+    array([3., 4., 5., 6.], dtype=float32)
+    >>> np.arange(3,7,2)
+    array([3., 5.], dtype=float32)
+    >>> np.arange(0,5,1,'int32')
+    array([0, 1, 2, 3, 4], dtype=int32)
     """
     return _mx_nd_np.arange(start, stop, step, dtype, ctx)
 
@@ -1855,7 +1869,130 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     """
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, **kwargs)
 
+@set_module('mxnet.numpy')
+def trunc(x, out=None, **kwargs):
+    """
+    trunc(x, out=None)
+    Return the truncated value of the input, element-wise.
 
+    The truncated value of the scalar `x` is the nearest integer `i` which
+    is closer to zero than `x` is. In short, the fractional part of the
+    signed number `x` is discarded.
+    
+    Parameters
+    ----------
+    x : ndarray
+        Input data.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to.
+    
+    Returns
+    -------
+    y : ndarray
+        The truncated value of each element in `x`.
+    
+    Notes
+    -----
+    This function differs to the original numpy.trunc in the following aspects:
+      Do not support where.
+      Only support ndarray. 
+      Do not support scalar.
+    
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.trunc(a)
+    array([-1., -1., -0.,  0.,  1.,  1.,  2.], dtype=float32)
+    """
+    return _mx_nd_np.trunc(x, out=out, **kwargs)
+   
+@set_module('mxnet.numpy')
+def logical_not(x, out=None, **kwargs):
+    """
+    logical_not(x, out=None)
+    Compute the truth value of NOT x element-wise.
+
+    Parameters
+    ----------
+    x : ndarray
+        Logical NOT is applied to the elements of `x`.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to.
+    
+    Returns
+    -------
+    y : ndarray of bool
+        Boolean result with the same shape as `x` of the NOT operation
+        on elements of `x`.
+    
+    Notes
+    -----
+    This function differs to the original numpy.logical_not in the following aspects:
+      Do not support where.
+      Only support ndarray. 
+      Do not support scalar.
+
+    Examples
+    --------
+    >>> x= np.array([True, False, 0, 1])
+    >>> np.logical_not(x)
+    array([0., 1., 1., 0.], dtype=float32)
+ 
+    >>> x = np.arange(5)
+    >>> np.logical_not(x<3)
+    array([0., 0., 0., 1., 1.], dtype=float32)
+    """
+    return _mx_nd_np.logical_not(x, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+def arccosh(x, out=None, **kwargs):
+    """
+    arccosh(x, out=None)
+    Inverse hyperbolic cosine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to.
+    
+    Returns
+    -------
+    arccosh : ndarray
+        Array of the same shape as `x`.
+    
+    Notes
+    -----
+    `arccosh` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that `cosh(z) = x`. The convention is to return the
+    `z` whose imaginary part lies in `[-pi, pi]` and the real part in
+    ``[0, inf]``.
+    
+    For real-valued input data types, `arccosh` always returns real output.
+    For each value that cannot be expressed as a real number or infinity, it
+    yields ``nan`` and sets the `invalid` floating point error flag.
+    
+    For complex-valued input, `arccosh` is a complex analytical function that
+    has a branch cut `[-inf, 1]` and is continuous from above on it.
+    
+    This function differs to the original numpy.logical_not in the following aspects:
+      Do not support where.
+      Only support ndarray. 
+      Do not support scalar.
+ 
+    Examples
+    --------
+    >>> np.arccosh([np.e, 10.0])
+    array([ 1.65745445,  2.99322285])
+    >>> np.arccosh(1)
+    0.0
+    """
+    return _mx_nd_np.arccosh(x, out=out, **kwargs)
+     
 @set_module('mxnet.numpy')
 def sin(x, out=None, **kwargs):
     r"""Trigonometric sine, element-wise.
