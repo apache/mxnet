@@ -19,105 +19,51 @@ package AI::MXNet;
 use v5.14.0;
 use strict;
 use warnings;
+use AI::MXNet::NS 'global';
 use AI::MXNet::Base;
-use AI::MXNet::Callback;
-use AI::MXNet::NDArray;
-use AI::MXNet::Symbol;
+use AI::MXNet::Callback 'callback';
+use AI::MXNet::NDArray qw(nd ndarray);
+use AI::MXNet::Context 'context';
+use AI::MXNet::Symbol qw(sym symbol);
 use AI::MXNet::Executor;
 use AI::MXNet::Executor::Group;
 use AI::MXNet::CudaModule;
-use AI::MXNet::Random;
-use AI::MXNet::Initializer;
-use AI::MXNet::Optimizer;
-use AI::MXNet::KVStore;
+use AI::MXNet::Random qw(rnd random);
+use AI::MXNet::Initializer qw(init initializer);
+use AI::MXNet::Optimizer qw(optimizer opt);
+use AI::MXNet::KVStore 'kv';
 use AI::MXNet::KVStoreServer;
-use AI::MXNet::IO;
-use AI::MXNet::Metric;
+use AI::MXNet::IO 'io';
+use AI::MXNet::Metric 'metric';
 use AI::MXNet::LRScheduler;
-use AI::MXNet::Monitor;
+use AI::MXNet::Monitor 'mon';
 use AI::MXNet::Profiler;
 use AI::MXNet::Module::Base;
-use AI::MXNet::Module;
+use AI::MXNet::Module qw(mod module);
 use AI::MXNet::Module::Bucketing;
-use AI::MXNet::RNN;
-use AI::MXNet::Visualization;
-use AI::MXNet::RecordIO;
-use AI::MXNet::Image;
-use AI::MXNet::Contrib;
-use AI::MXNet::LinAlg;
+use AI::MXNet::RNN 'rnn';
+use AI::MXNet::Visualization 'viz';
+use AI::MXNet::RecordIO 'recordio';
+use AI::MXNet::Image qw(img image);
+use AI::MXNet::Contrib 'contrib';
+use AI::MXNet::LinAlg 'linalg';
 use AI::MXNet::CachedOp;
-use AI::MXNet::AutoGrad;
-use AI::MXNet::Gluon;
+use AI::MXNet::AutoGrad 'autograd';
+use AI::MXNet::Gluon 'gluon';
 use AI::MXNet::NDArray::Sparse;
 use AI::MXNet::Symbol::Sparse;
-use AI::MXNet::Engine;
+use AI::MXNet::Engine 'engine';
 our $VERSION = '1.4';
 
-sub import
-{
-    my ($class, $short_name) = @_;
-    if($short_name)
-    {
-        $short_name =~ s/[^\w:]//g;
-        if(length $short_name)
-        {
-            my $short_name_package =<<"EOP";
-            package $short_name;
-            no warnings 'redefine';
-            sub nd { 'AI::MXNet::NDArray' }
-            sub ndarray { 'AI::MXNet::NDArray' }
-            sub sym { 'AI::MXNet::Symbol' }
-            sub symbol { 'AI::MXNet::Symbol' }
-            sub init { 'AI::MXNet::Initializer' }
-            sub initializer { 'AI::MXNet::Initializer' }
-            sub optimizer { 'AI::MXNet::Optimizer' }
-            sub opt { 'AI::MXNet::Optimizer' }
-            sub rnd { 'AI::MXNet::Random' }
-            sub random { 'AI::MXNet::Random' }
-            sub Context { shift; AI::MXNet::Context->new(\@_) }
-            sub context { 'AI::MXNet::Context' }
-            sub cpu { AI::MXNet::Context->cpu(\$_[1]//0) }
-            sub cpu_pinned { AI::MXNet::Context->cpu_pinned(\$_[1]//0) }
-            sub gpu { AI::MXNet::Context->gpu(\$_[1]//0) }
-            sub kv { 'AI::MXNet::KVStore' }
-            sub recordio { 'AI::MXNet::RecordIO' }
-            sub io { 'AI::MXNet::IO' }
-            sub metric { 'AI::MXNet::Metric' }
-            sub mod { 'AI::MXNet::Module' }
-            sub module { 'AI::MXNet::Module' }
-            sub mon { 'AI::MXNet::Monitor' }
-            sub viz { 'AI::MXNet::Visualization' }
-            sub rnn { 'AI::MXNet::RNN' }
-            sub callback { 'AI::MXNet::Callback' }
-            sub img { 'AI::MXNet::Image' }
-            sub image { 'AI::MXNet::Image' }
-            sub contrib { 'AI::MXNet::Contrib' }
-            sub linalg { 'AI::MXNet::LinAlg' }
-            sub autograd { 'AI::MXNet::AutoGrad' }
-            sub engine { 'AI::MXNet::Engine' }
-            sub name { '$short_name' }
-            sub rtc { '$short_name' }
-            sub gluon { 'AI::MXNet::Gluon' }
-            sub CudaModule { shift; AI::MXNet::CudaModule->new(\@_) }
-            sub AttrScope { shift; AI::MXNet::Symbol::AttrScope->new(\@_) }
-            *AI::MXNet::Symbol::AttrScope::current = sub { \$${short_name}::AttrScope; };
-            \$${short_name}::AttrScope = AI::MXNet::Symbol::AttrScope->new;
-            sub Prefix { AI::MXNet::Symbol::Prefix->new(prefix => \$_[1]) }
-            *AI::MXNet::Symbol::NameManager::current = sub { \$${short_name}::NameManager; };
-            *AI::MXNet::Symbol::NameManager::set_current = sub { \$${short_name}::NameManager = \$_[1]; };
-            \$${short_name}::NameManager = AI::MXNet::Symbol::NameManager->new;
-            *AI::MXNet::Context::current_ctx = sub { \$${short_name}::Context; };
-            *AI::MXNet::Context::current_context = sub { \$${short_name}::Context; };
-            *AI::MXNet::Context::set_current = sub { \$${short_name}::Context = \$_[1]; };
-            \$${short_name}::Context = AI::MXNet::Context->new(device_type => 'cpu', device_id => 0);
-            package nd;
-            \@nd::ISA = ('AI::MXNet::NDArray');
-            1;
-EOP
-            eval $short_name_package;
-        }
-    }
-}
+sub cpu { AI::MXNet::Context->cpu($_[1]//0) }
+sub cpu_pinned { AI::MXNet::Context->cpu_pinned($_[1]//0) }
+sub gpu { AI::MXNet::Context->gpu($_[1]//0) }
+sub name { __PACKAGE__ }
+sub rtc { __PACKAGE__ }
+sub Prefix { AI::MXNet::Symbol::Prefix->new(prefix => $_[1]) }
+our $AttrScope = AI::MXNet::Symbol::AttrScope->new;
+our $NameManager = AI::MXNet::Symbol::NameManager->new;
+our $Context = AI::MXNet::Context->new(device_type => 'cpu', device_id => 0);
 
 1;
 __END__
