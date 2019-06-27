@@ -322,7 +322,8 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
 * MXNET_BACKWARD_GRAPH_DUMP
   - Values: {true,false,1,0}
-  - If enabled, the graph will be dump during the backward pass
+  - If enabled, the forward and backward graph will be dumpped to stdout when running backward or
+    autograd.grad
 
 Settings for Minimum Memory Usage
 ---------------------------------

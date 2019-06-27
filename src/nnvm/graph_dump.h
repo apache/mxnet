@@ -28,8 +28,9 @@
 #define NNVM_GRAPH_DUMP_H_
 #pragma once
 
-#include "nnvm/node.h"
+#include <vector>
 #include <string>
+#include "nnvm/node.h"
 
 namespace nnvm {
 

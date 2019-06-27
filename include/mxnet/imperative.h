@@ -161,8 +161,7 @@ class Imperative {
  private:
   friend class NDArray;
   Imperative() :
-    backward_graph_dump_enabled_(dmlc::GetEnv("MXNET_BACKWARD_GRAPH_DUMP", false))
-  {
+    backward_graph_dump_enabled_(dmlc::GetEnv("MXNET_BACKWARD_GRAPH_DUMP", false)) {
     if (PreferBulkExecTrain())
       backward_bulk_size_ = BulkExecMaxNodeTrainBwd();
   }

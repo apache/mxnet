@@ -64,7 +64,7 @@ std::string unnamed(const std::string &s) {
  *      w -> x_mul_w
  * }
  */
-std::string SerializeDot(DumpGraph_t& g) {
+std::string SerializeDot(const DumpGraph_t& g) {
   ostringstream os;
   os << "digraph G {" << endl;
   for (auto edge_it : g.edges()) {
@@ -84,22 +84,26 @@ std::string SerializeDot(DumpGraph_t& g) {
   return os.str();
 }
 
-}  // end anon ns
+}  // namespace
 
 namespace nnvm {
 
 
+/**
+ * We convert the NNVM graph to a directed graph to enumerate the edges and call a serialization
+ * function
+ */
 std::string GraphDump(const std::vector<NodeEntry>& output_nodes) {
+    // Traverse the NNVM graph in topological order
     vector<NodePtr> topo_order;
     DFSVisit(output_nodes, [&](const NodePtr& nodePtr) {
-        //cout << "Node: " << nodePtr.get() << " " << nodePtr->attrs.name << endl;
         topo_order.push_back(nodePtr);
     });
     set<NodePtr> outputs;
     transform(begin(output_nodes), end(output_nodes), inserter(outputs, end(outputs)),
         [](const NodeEntry& ne) { return ne.node; });
 
-    // Build directed graph;
+    // Build a generic directed graph, gather nodes
     DumpGraph_t g;
     typedef DumpGraph_t::NodeKey_t node_key_t;
     unordered_map<NodePtr, node_key_t > node_ptr_to_node_key;
@@ -112,9 +116,11 @@ std::string GraphDump(const std::vector<NodeEntry>& output_nodes) {
       node_ptr_to_node_key.emplace(node_ptr, node_key);
     }
 
+    // Add edges to the graph
     for (const DumpNode& node : g) {
       node_key_t dst_key = node_ptr_to_node_key.at(node.node_ptr_);
-      for (const NodeEntry& node_entry: node.node_ptr_->inputs) {
+      // Use inputs from the nodes to get edges
+      for (const NodeEntry& node_entry : node.node_ptr_->inputs) {
         node_key_t src_key = node_ptr_to_node_key.at(node_entry.node);
         g.addEdge(src_key, dst_key);
       }

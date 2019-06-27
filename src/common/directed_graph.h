@@ -172,11 +172,11 @@ class DirectedGraph {
   }
 
   EdgeIterator outEdgesBegin(NodeKey_t node) const {
-    return edges_.lower_bound(node);
+    return EdgeIterator(edges_.lower_bound(node));
   }
 
   EdgeIterator outEdgesEnd(NodeKey_t node) const {
-    return edges_.upper_bound(node);
+    return EdgeIterator(edges_.upper_bound(node));
   }
 
   NodeIterator nodesBegin() const {
