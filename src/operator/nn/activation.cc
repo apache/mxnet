@@ -154,7 +154,7 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
 
 
 MXNET_OPERATOR_REGISTER_UNARY(Activation)
-.add_alias("_npx_Activation")
+.add_alias("_npx_activation")
 .describe(R"code(Applies an activation function element-wise to the input.
 
 The following activation functions are supported:
