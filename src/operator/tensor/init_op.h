@@ -257,11 +257,12 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
-template<typename ParamType>
+template<typename ParamType, int inum = 0U>
 inline bool InitType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_attrs,
                        std::vector<int> *out_attrs) {
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), inum);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
   return true;
@@ -499,7 +500,7 @@ struct range_fwd {
   }
 };
 
-template<typename xpu>
+template<typename xpu, typename ParamType>
 void RangeCompute(const nnvm::NodeAttrs& attrs,
                   const OpContext& ctx,
                   const std::vector<TBlob>& inputs,
@@ -507,7 +508,7 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       // Force unsigned params to take two's complement form on ARM to ensure consistency with x86
       // results.  Casting negative floats to unsigned types is undefined in the CPP standard.
@@ -550,30 +551,6 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
                           * param.repeat;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
   return true;
-}
-
-template<typename xpu>
-void RangeLikeCompute(const nnvm::NodeAttrs& attrs,
-                      const OpContext& ctx,
-                      const std::vector<TBlob>& inputs,
-                      const std::vector<OpReqType>& req,
-                      const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const RangeLikeParam& param = nnvm::get<RangeLikeParam>(attrs.parsed);
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      // Force unsigned params to take two's complement form on ARM to ensure consistency with x86
-      // results.  Casting negative floats to unsigned types is undefined in the CPP standard.
-      auto step = std::is_signed<DType>() ? param.step : static_cast<index_t>(param.step);
-      auto start = std::is_signed<DType>() ? param.start : static_cast<index_t>(param.start);
-      Kernel<range_fwd, xpu>::Launch(s,
-                                     outputs[0].Size(),
-                                     static_cast<int>(param.repeat),
-                                     static_cast<DType>(start),
-                                     static_cast<DType>(step),
-                                     req[0],
-                                     outputs[0].dptr<DType>());
-  });
 }
 
 inline bool RangeLikeShape(const nnvm::NodeAttrs& attrs,

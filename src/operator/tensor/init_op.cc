@@ -97,7 +97,7 @@ NNVM_REGISTER_OP(_arange)
 .set_attr_parser(RangeParamParser)
 .set_attr<mxnet::FInferShape>("FInferShape", RangeShape)
 .set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
-.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
 .add_arguments(RangeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_arange_like)
@@ -128,10 +128,10 @@ Examples::
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RangeLikeParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", RangeLikeShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<RangeLikeParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<RangeLikeParam, 1>)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 0); })
-.set_attr<FCompute>("FCompute<cpu>", RangeLikeCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeLikeParam>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "The input");
 
