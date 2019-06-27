@@ -179,8 +179,9 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 
 def _np_amax(a, axis=None, out=None):
-    """
+    r"""
     amax(a, axis=None, out=None, keepdims=_Null, initial=_Null)
+
     Return the maximum of an array or maximum along an axis.
 
     Parameters
@@ -236,7 +237,6 @@ def _np_amax(a, axis=None, out=None):
     array([2, 3])
     >>> np.amax(a, axis=1)   # Maxima along the second axis
     array([1, 3])
-
     >>> np.amax(a, axis=1, keepdims=True)
     array([[1],
           [3]])
@@ -246,18 +246,19 @@ def _np_amax(a, axis=None, out=None):
     This function differs to the original `numpy.amax
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.amax.html>`_ in
     the following aspects:
+
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray.
     - `axis` doe snot support negative value.
     - `initial` is not supported.
-
     """
     pass
 
 
 def _np_squeeze(a, axis=None):
-    """
+    r"""
     Remove single-dimensional entries from the shape of an array.
+
     Parameters
     ----------
     a : ndarray
@@ -271,6 +272,7 @@ def _np_squeeze(a, axis=None):
         The input array, but with all or a subset of the
         dimensions of length 1 removed. This is always `a` itself
         or a view into `a`.
+
     Examples
     --------
     >>> x = np.array([[[0], [1], [2]]])
@@ -286,6 +288,7 @@ def _np_squeeze(a, axis=None):
     This function differs to the original `numpy.squeeze
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.squeeze.html>`_ in
     the following aspects:
+
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray.
     """
@@ -293,25 +296,30 @@ def _np_squeeze(a, axis=None):
 
 
 def _npi_ones(shape, dtype=None, order='C'):
-    """
+    r"""
     ones(shape, dtype=None, order='C')
     Return a new array of given shape and type, filled with ones.
+
     Parameters
     ----------
     shape : int or sequence of ints
         Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+
     dtype : data-type, optional
         The desired data-type for the array, e.g., `int`. Default is `float32`.
+
     order : {'C', 'F'}, optional, default: C
         Whether to store multi-dimensional data in row-major
         (C-style) or column-major (Fortran-style) order in
         memory.
 
         Not Supported yet.
+
     Returns
     -------
     out : ndarray
         Array of ones with the given shape, dtype, and order.
+
     Examples
     --------
     >>> np.ones(5)
@@ -331,18 +339,21 @@ def _npi_ones(shape, dtype=None, order='C'):
     This function differs to the original `numpy.ones
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html>`_ in
     the following aspects:
+
     - The default value type is `float32` instead of `float64` in numpy.
     - `order` is not supported.
     """
 
+
 def _npi_random_uniform(low=0.0, high=1.0, size=None):
-    """
+    r"""
     uniform(low=0.0, high=1.0, size=None)
     Draw samples from a uniform distribution.
     Samples are uniformly distributed over the half-open interval
     ``[low, high)`` (includes low, but excludes high).  In other words,
     any value within the given interval is equally likely to be drawn
     by `uniform`.
+
     Parameters
     ----------
     low : float, optional
@@ -355,10 +366,12 @@ def _npi_random_uniform(low=0.0, high=1.0, size=None):
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
         ``m * n * k`` samples are drawn.
         Otherwise, ``np.broadcast(low, high).size`` samples are drawn.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized uniform distribution.
+
     Notes
     -----
     The probability density function of the uniform distribution is
@@ -369,10 +382,13 @@ def _npi_random_uniform(low=0.0, high=1.0, size=None):
     and may eventually raise an error, i.e. do not rely on this
     function to behave when passed arguments satisfying that
     inequality condition.
+
     Examples
     --------
     Draw samples from the distribution:
-     s = np.random.uniform(-1, 0, 1000)
+
+    >>> s = np.random.uniform(-1, 0, 1000)
+
     All values are within the given interval.
 
     Notes
@@ -380,6 +396,7 @@ def _npi_random_uniform(low=0.0, high=1.0, size=None):
     This function differs to the original `numpy.random.uniform
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.random.uniform.html>`_ in
     the following aspects:
+
     - The default value type is `float32` instead of `float64` in numpy.
     - `low` and `high` do not accept array-like of floats.
     - `size` is not optional.

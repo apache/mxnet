@@ -2061,20 +2061,24 @@ def sqrt(x, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 def floor(x, out=None, **kwargs):
-    """
+    r"""
     Return the floor of the input, element-wise.
     The floor of the scalar `x` is the largest integer `i`, such that
     `i <= x`.  It is often denoted as :math:`\lfloor x \rfloor`.
+
     Parameters
     ----------
     x : ndarray
         Input data.
+
         Does not support scalar.
+
     out : ndarray, None, or tuple of exactly one ndarray, optional
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
         keyword argument) must have exactly one element.
+
     where : array_like, optional
         Values of True indicate to calculate the ufunc at that position, values
         of False indicate to leave the value in the output alone.
@@ -2085,6 +2089,7 @@ def floor(x, out=None, **kwargs):
     -------
     y : ndarray
         The floor of each element in `x`.
+
     Notes
     -----
     Some spreadsheet programs calculate the "floor-towards-zero", in other
@@ -2094,6 +2099,7 @@ def floor(x, out=None, **kwargs):
     This function differs to the original `numpy.floor
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.floor.html>`_ in
     the following aspects:
+
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray.
     - `a` doe snot support scalar.
@@ -2102,8 +2108,8 @@ def floor(x, out=None, **kwargs):
 
     Examples
     --------
-    a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
-    np.floor(a)
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.floor(a)
     array([-2., -2., -1.,  0.,  1.,  1.,  2.])
     """
     return _mx_nd_np.floor(x, out=out, **kwargs)
@@ -2111,26 +2117,33 @@ def floor(x, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 def expm1(x, out=None, **kwargs):
-    """
+    r"""
     Calculate ``exp(x) - 1`` for all elements in the array.
+
     Parameters
     ----------
     x : ndarray
-       Input values.
+        Input values.
+
     out : ndarray, None, or tuple of exactly one ndarray, optional
+
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
         keyword argument) must have exactly one element.
+
     where : array_like, optional
+
         Values of True indicate to calculate the ufunc at that position, values
         of False indicate to leave the value in the output alone.
 
         Not supported yet.
+
     Returns
     -------
     out : ndarray
         Element-wise exponential minus one: ``out = exp(x) - 1``.
+
     Notes
     -----
     This function provides greater precision than ``exp(x) - 1``
@@ -2139,6 +2152,7 @@ def expm1(x, out=None, **kwargs):
     This function differs to the original `numpy.expm1
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.expm1.html>`_ in
     the following aspects:
+
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray.
     - `a` doe snot support scalar.
@@ -2147,44 +2161,47 @@ def expm1(x, out=None, **kwargs):
 
     Examples
     --------
-    The true value of ``exp(1e-10) - 1`` is ``1.00000000005e-10`` to
-    about 32 significant digits. This example shows the superiority of
-    expm1 in this case.
-     np.expm1(1e-10)
+    >>> np.expm1(1e-10)
     1.00000000005e-10
-     np.exp(1e-10) - 1
-    1.000000082740371e-10
     """
     return _mx_nd_np.expm1(x, out=out, **kwargs)
 
 
 @set_module('mxnet.numpy')
 def arcsinh(x, out=None, **kwargs):
-    """
+    r"""
     Inverse hyperbolic sine element-wise.
+
     Parameters
     ----------
     x : ndarray
         Input array.
+
     out : ndarray, None, or tuple of exactly one ndarray, optional
+
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
         keyword argument) must have exactly one element.
+
     where : array_like, optional
+
         Values of True indicate to calculate the ufunc at that position, values
         of False indicate to leave the value in the output alone.
 
         Not supported yet.
+
     Returns
     -------
     out : ndarray
         Array of of the same shape as `x`.
+
     Notes
     -----
     `arcsinh` is a multivalued function: for each `x` there are infinitely
     many numbers `z` such that `sinh(z) = x`. The convention is to return the
     `z` whose imaginary part lies in `[-pi/2, pi/2]`.
+
     For real-valued input data types, `arcsinh` always returns real output.
     For each value that cannot be expressed as a real number or infinity, it
     returns ``nan`` and sets the `invalid` floating point error flag.
@@ -2196,6 +2213,7 @@ def arcsinh(x, out=None, **kwargs):
     This function differs to the original `numpy.arcsinh
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsinh.html>`_ in
     the following aspects:
+
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray.
     - `a` doe snot support scalar.
@@ -2204,7 +2222,7 @@ def arcsinh(x, out=None, **kwargs):
 
     Examples
     --------
-    np.arcsinh(np.array([10.0]))
+    >>> np.arcsinh(np.array([10.0]))
     array([2.9982228])
     """
     return _mx_nd_np.arcsinh(x, out=out, **kwargs)

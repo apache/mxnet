@@ -1558,10 +1558,11 @@ def sqrt(x, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def floor(x, out=None, **kwargs):
-    """
+    r"""
     Return the floor of the input, element-wise.
     The floor of the scalar `x` is the largest integer `i`, such that
     `i <= x`.  It is often denoted as :math:`\lfloor x \rfloor`.
+
     Parameters
     ----------
     x : _Symbol
@@ -1593,8 +1594,9 @@ def floor(x, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def expm1(x, out=None, **kwargs):
-    """
+    r"""
     Calculate ``exp(x) - 1`` for all elements in the array.
+
     Parameters
     ----------
     x : _Symbol
@@ -1605,10 +1607,12 @@ def expm1(x, out=None, **kwargs):
         of False indicate to leave the value in the output alone.
 
         Not supported yet.
+
     Returns
     -------
     out : _Symbol
         Element-wise exponential minus one: ``out = exp(x) - 1``.
+
     Notes
     -----
     This function provides greater precision than ``exp(x) - 1``
@@ -1622,8 +1626,9 @@ def expm1(x, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def arcsinh(x, out=None, **kwargs):
-    """
+    r"""
     Inverse hyperbolic sine element-wise.
+
     Parameters
     ----------
     x : _Symbol
@@ -1634,10 +1639,12 @@ def arcsinh(x, out=None, **kwargs):
         of False indicate to leave the value in the output alone.
 
         Not supported yet.
+
     Returns
     -------
     out : _Symbol
         Array of of the same shape as `x`.
+
     Notes
     -----
     `arcsinh` is a multivalued function: for each `x` there are infinitely
