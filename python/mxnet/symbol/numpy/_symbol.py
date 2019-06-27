@@ -31,8 +31,8 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
-           'abs', 'exp', 'arctan']
+           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 
+           'arctanh', 'tan', 'fix', 'negative']
 
 
 def _num_outputs(sym):
@@ -293,9 +293,23 @@ class _Symbol(Symbol):
         raise AttributeError('_Symbol object has no attribute pad')
 
     def swapaxes(self, axis1, axis2):  # pylint: disable=arguments-differ
-        """Return a copy of the array with axis1 and axis2 interchanged.
-        Refer to `mxnet.numpy.swapaxes` for full documentation.
+        """Interchange two axes of an array.
+
+        Parameters:	
+        -----------
+        a : array_like
+            Input array.
+        axis1 : int
+            First axis.
+        axis2 : int
+            Second axis.
+
+        Returns:	
+        -------
+        a_swapped : ndarray
+                    Swapped array. This is always a copy of the input array.
         """
+
         return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
@@ -1007,6 +1021,35 @@ def multiply(x1, x2, out=None):
 
 @set_module('mxnet.symbol.numpy')
 def divide(x1, x2, out=None):
+
+    """
+    Returns a true division of the inputs, element-wise.
+    Instead of the Python traditional ‘floor division’, 
+    this returns a true division. True division adjusts 
+    the output type to present the best answer, regardless 
+    of input types.
+
+    Parameters:	
+    ----------
+    x1 : symbolic or scalar 
+         Dividend array.
+    x2 : symbolic or scalar 
+         Divisor array.
+    out : None or symbolic or scalar, optional
+          A location into which the result is stored. If provided, 
+          it must have a shape that the inputs broadcast to. 
+          If not provided or None, a freshly-allocated array is returned. 
+    where : symbolic or array, optional
+            Values of True indicate to calculate the ufunc at that position, 
+            values of False indicate to leave the value in the output alone.
+    **kwargs : For other keyword-only arguments, see the ufunc docs.
+
+    Returns:	
+    --------
+    y : symbolic or scalar 
+        Result is scalar if both inputs are scalar, ndarray otherwise.
+    """
+
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
                          _npi.rtrue_divide_scalar, out)
 
@@ -1155,9 +1198,8 @@ def argmax(a, axis=None, out=None):
 
 @set_module('mxnet.symbol.numpy')
 def clip(a, a_min, a_max, out=None):
-    """clip(a, a_min, a_max, out=None)
+    """Clip (limit) the values in an array.
 
-    Clip (limit) the values in an array.
     Given an interval, values outside the interval are clipped to
     the interval edges.  For example, if an interval of ``[0, 1]``
     is specified, values smaller than 0 become 0, and values larger
@@ -1175,10 +1217,10 @@ def clip(a, a_min, a_max, out=None):
         Maximum value. If `None`, clipping is not performed on upper
         interval edge. Not more than one of `a_min` and `a_max` may be
         `None`.
-    out : _Symbol or `None`
+    out : _Symbol, optional
         The results will be placed in this array. It may be the input
         array for in-place clipping.  `out` must be of the right shape
-        to hold the output.  Its type is preserved.
+        to hold the output.
 
     Returns
     -------
@@ -1186,10 +1228,6 @@ def clip(a, a_min, a_max, out=None):
         An array with the elements of `a`, but where values
         < `a_min` are replaced with `a_min`, and those > `a_max`
         with `a_max`.
-
-    Notes
-    -----
-    array_like `a_min` and `a_max` are not supported.
     """
     if a_min is None and a_max is None:
         raise ValueError('array_clip: must set either max or min')
@@ -1216,8 +1254,9 @@ def swapaxes(a, axis1, axis2):
     Returns
     -------
     a_swapped : _Symbol
-        Swapped array symbol.
+                Swapped array symbol.
     """
+
     return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
 
 
@@ -1562,86 +1601,126 @@ def sqrt(x, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
-def abs(x, out=None, **kwargs):
-    r"""abs(x, out=None, **kwargs)
+def arctanh(x, out=None, where=True, **kwargs):
+    r"""
+    arctanh(x, out=None, where=True)
 
-    Calculate the absolute value element-wise.
+    Inverse hyperbolic tangent element-wise.
 
-    Parameters
+    Parameters:	
+
+    -----------
+    x : _Symbol or scalar 
+        Input array.
+    out : _Symbol or scalar 
+         A location into which the result is stored. If provided, 
+         it must have a shape that the inputs broadcast to. 
+         If not provided or None, a freshly-allocated array is returned. 
+         A tuple (possible only as a keyword argument) 
+         must have length equal to the number of outputs.
+    where : array_like, optional
+         Values of True indicate to calculate the ufunc at that position, 
+         values of False indicate to leave the value in the output alone.
+    Returns:	
+
+    -------
+    out : _Symbol or scalar
+          Array of the same shape as x. This is a scalar if x is a scalar.
+    Examples
+
+    >>> np.arctan(0.7)
+    0.8673005276940531
+    """
+
+    return _unary_func_helper(x, _npi.arctanh, _np.arctanh, out=out, **kwargs)
+
+@set_module('mxnet.symbol.numpy')
+def tan(x, out=None, where=True, **kwargs):
+    r"""
+    tan(x, out=None, where=True)
+
+    Compute tangent element-wise.
+    Equivalent to np.sin(x)/np.cos(x) element-wise.
+    
+    Parameters:	
     ----------
+    x : _Symbol or scalar 
+        Input array.
+    out : _Symbol or scalar or None.
+        A location into which the result is stored. If provided, 
+        it must have a shape that the inputs broadcast to. If not provided or None, 
+        a freshly-allocated array is returned. A tuple (possible only as a keyword argument) 
+        must have length equal to the number of outputs.
+
+    where : array_like, optional
+            Values of True indicate to calculate the ufunc at that position, 
+            values of False indicate to leave the value in the output alone.
+
+    Returns:	
+    -------
+    y : _Symbol or scalar 
+        The corresponding tangent values. This is a scalar if x is a scalar.
+    r"""
+
+    return _unary_func_helper(x, _npi.tan, _np.tan, out=out, **kwargs)
+
+@set_module('mxnet.symbol.numpy')
+def fix(x, out=None):
+    """
+    Round to nearest integer towards zero.
+    
+    Round an array of floats element-wise to nearest integer towards zero. The rounded values are returned as floats.
+    
+    Parameters:	
+    ----------
+    x : Symbol or scalar  
+        An array of floats to be rounded
+    out : Symbol or scalar, optional
+          Output array
+
+    Returns:	
+    ---------
+    y : _Symbol or scalar  
+
+    Examples:
+    ----------
+    >>> np.fix(3.14)
+    3
+    """
+    return _unary_func_helper(x, _npi.fix, _np.fix, out=out)
+
+@set_module('mxnet.symbol.numpy')
+def negative(x, out=None, where=True, **kwargs):
+    r"""
+    negative(x, out=None, where=True)
+
+    Numerical negative, element-wise.
+
+    Parameters:	
+
+    ------------
     x : _Symbol or scalar
         Input array.
-    out : _Symbol or None
-        Dummy parameter to keep the consistency with the ndarray counterpart.
+    out : _Symbol or None, optional
+          A location into which the result is stored. 
+          If provided, it must have a shape that the inputs broadcast to. 
+          If not provided or None, a freshly-allocated array is returned. 
+          A tuple (possible only as a keyword argument) must have length 
+          equal to the number of outputs.
+    where : _Symbol or scalar, optional
+            Values of True indicate to calculate the ufunc at that position, 
+            values of False indicate to leave the value in the output alone.
 
-    Returns
+    Returns: 
     -------
-    absolute : _Symbol
-        An ndarray containing the absolute value of
-        each element in `x`. This is a scalar if `x` is a scalar.
+    y : _Symbol or scalar
+        Returned array or scalar: y = -x. This is a scalar if x is a scalar.
+
+    Examples:
+    ---------
+    >>> np.negative(1)
+    -1
     """
-    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
-
-
-@set_module('mxnet.symbol.numpy')
-def exp(x, out=None, **kwargs):
-    r"""exp(x, out=None, **kwargs)
-
-    Calculate the exponential of all elements in the input array.
-
-    Parameters
-    ----------
-    x : _Symbol or scalar
-        Input values.
-    out : _Symbol or None
-        Dummy parameter to keep the consistency with the ndarray counterpart.
-
-    Returns
-    -------
-    out : _Symbol
-        Output array, element-wise exponential of `x`.
-        This is a scalar if `x` is a scalar.
-    """
-    return _unary_func_helper(x, _npi.exp, _np.exp, out=out, **kwargs)
-
-
-@set_module('mxnet.symbol.numpy')
-def arctan(x, out=None, **kwargs):
-    r"""arctan(x, out=None, **kwargs)
-
-    Trigonometric inverse tangent, element-wise.
-
-    The inverse of tan, so that if ``y = tan(x)`` then ``x = arctan(y)``.
-
-    Parameters
-    ----------
-    x : _Symbol or scalar
-        Input values.
-    out : _Symbol or None
-        Dummy parameter to keep the consistency with the ndarray counterpart.
-
-    Returns
-    -------
-    out : _Symbol
-        Out has the same shape as `x`. It lies is in
-        ``[-pi/2, pi/2]`` (``arctan(+/-inf)`` returns ``+/-pi/2``).
-        This is a scalar if `x` is a scalar.
-
-    Notes
-    -----
-    `arctan` is a multi-valued function: for each `x` there are infinitely
-    many numbers `z` such that tan(`z`) = `x`.  The convention is to return
-    the angle `z` whose real part lies in [-pi/2, pi/2].
-
-    For real-valued input data types, `arctan` always returns real output.
-    For each value that cannot be expressed as a real number or infinity,
-    it yields ``nan`` and sets the `invalid` floating point error flag.
-
-    For complex-valued input, we do not have support for them yet.
-
-    The inverse tangent is also known as `atan` or tan^{-1}.
-    """
-    return _unary_func_helper(x, _npi.arctan, _np.arctan, out=out, **kwargs)
-
+    return _unary_func_helper(x, _npi.negative, _np.negative, out=out)
 
 _set_np_symbol_class(_Symbol)

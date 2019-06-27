@@ -46,8 +46,7 @@ from ..ndarray.numpy import _internal as _npi
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
-           'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan']
-
+           'sinh', 'cosh', 'log10', 'sqrt', 'arctanh', 'tan', 'fix', 'negative']
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -423,55 +422,8 @@ class ndarray(NDArray):
         return self
 
     def __repr__(self):
-        """
-        Returns a string representation of the array. The dtype of the ndarray will not
-        be appended to the string if it is `float32`. The context of the ndarray will
-        be appended for devices other than CPU.
-
-        Examples
-        --------
-        >>> from mxnet import np, npx
-        >>> a = np.random.uniform(size=(2, 3))
-        >>> a
-        array([[0.5488135 , 0.5928446 , 0.71518934],
-               [0.84426576, 0.60276335, 0.8579456 ]])
-        >>> print(a)
-        [[0.5488135  0.5928446  0.71518934]
-         [0.84426576 0.60276335 0.8579456 ]]
-        >>> a.dtype
-        <class 'numpy.float32'>
-        >>> b = a.astype(np.float64)
-        >>> b
-        array([[0.54881352, 0.59284461, 0.71518934],
-               [0.84426576, 0.60276335, 0.85794562]], dtype=float64)
-        >>> print(b)
-        [[0.54881352 0.59284461 0.71518934]
-         [0.84426576 0.60276335 0.85794562]]
-        >>> b.dtype
-        <class 'numpy.float64'>
-        >>> c = a.copyto(npx.gpu(0))
-        >>> c
-        array([[0.5488135 , 0.5928446 , 0.71518934],
-               [0.84426576, 0.60276335, 0.8579456 ]], ctx=gpu(0))
-        >>> print(c)
-        [[0.5488135  0.5928446  0.71518934]
-         [0.84426576 0.60276335 0.8579456 ]] @gpu(0)
-        >>> d = b.copyto(npx.gpu(0))
-        >>> d
-        array([[0.54881352, 0.59284461, 0.71518934],
-               [0.84426576, 0.60276335, 0.85794562]], dtype=float64, ctx=gpu(0))
-        >>> print(d)
-        [[0.54881352 0.59284461 0.71518934]
-         [0.84426576 0.60276335 0.85794562]] @gpu(0)
-        """
+        """Returns a string representation of the array."""
         array_str = self.asnumpy().__repr__()
-        dtype = self.dtype
-        if 'dtype=' in array_str:
-            if dtype == _np.float32:
-                array_str = array_str[:array_str.rindex(',')] + ')'
-        elif dtype != _np.float32:
-            array_str = array_str[:-1] + ', dtype={})'.format(dtype.__name__)
-
         context = self.context
         if context.device_type == 'cpu':
             return array_str
@@ -693,9 +645,29 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pad')
 
     def swapaxes(self, axis1, axis2):  # pylint: disable=arguments-differ
-        """Return a copy of the array with axis1 and axis2 interchanged.
-        Refer to `mxnet.numpy.swapaxes` for full documentation.
+        """Interchange two axes of an array.
+
+        Parameters:	
+        -----------
+        a : array_like
+            Input array.
+        axis1 : int
+            First axis.
+        axis2 : int
+            Second axis.
+
+        Returns:	
+        -------
+        a_swapped : ndarray
+
+        Examples:
+        >>> x = np.array([[1,2,3]])
+        >>> np.swapaxes(x,0,1)
+        array([[1],
+              [2],
+              [3]])     
         """
+
         return swapaxes(self, axis1, axis2)
 
     def split(self, *args, **kwargs):
@@ -861,7 +833,11 @@ class ndarray(NDArray):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute tile')
 
     def transpose(self, *axes):  # pylint: disable=arguments-differ
-        """Permute the dimensions of an array."""
+        """Convenience fluent method for :py:func:`transpose`.
+
+        The arguments are the same as for :py:func:`transpose`, with
+        this array as data.
+        """
         return _mx_np_op.transpose(self, axes=axes if len(axes) != 0 else None)
 
     def flip(self, *args, **kwargs):
@@ -1704,9 +1680,8 @@ def power(x1, x2, out=None):
 
 @set_module('mxnet.numpy')
 def clip(a, a_min, a_max, out=None):
-    """clip(a, a_min, a_max, out=None)
+    """Clip (limit) the values in an array.
 
-    Clip (limit) the values in an array.
     Given an interval, values outside the interval are clipped to
     the interval edges.  For example, if an interval of ``[0, 1]``
     is specified, values smaller than 0 become 0, and values larger
@@ -1727,7 +1702,7 @@ def clip(a, a_min, a_max, out=None):
     out : ndarray, optional
         The results will be placed in this array. It may be the input
         array for in-place clipping.  `out` must be of the right shape
-        to hold the output.  Its type is preserved.
+        to hold the output.
 
     Returns
     -------
@@ -1735,20 +1710,6 @@ def clip(a, a_min, a_max, out=None):
         An array with the elements of `a`, but where values
         < `a_min` are replaced with `a_min`, and those > `a_max`
         with `a_max`.
-
-    Notes
-    -----
-    array_like `a_min` and `a_max` are not supported.
-
-    Examples
-    --------
-    >>> a = np.arange(10)
-    >>> np.clip(a, 1, 8)
-    array([1., 1., 2., 3., 4., 5., 6., 7., 8., 8.], dtype=float32)
-    >>> a
-    array([0., 1., 2., 3., 4., 5., 6., 7., 8., 9.], dtype=float32)
-    >>> np.clip(a, 3, 6, out=a)
-    array([3., 3., 3., 3., 4., 5., 6., 6., 6., 6.], dtype=float32)
     """
     return _mx_nd_np.clip(a, a_min, a_max, out=out)
 
@@ -1769,7 +1730,7 @@ def swapaxes(a, axis1, axis2):
     Returns
     -------
     a_swapped : ndarray
-        Swapped array. This is always a copy of the input array.
+                Swapped array. This is always a copy of the input array.
     """
     return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
 
@@ -2075,116 +2036,128 @@ def sqrt(x, out=None, **kwargs):
     """
     return _mx_nd_np.sqrt(x, out=out, **kwargs)
 
+@set_module('mxnet.numpy')
+def arctanh(x, out=None, where=True, **kwargs):
+    r"""
+    arctanh(x, out=None, where=True)
+
+    Inverse hyperbolic tangent element-wise.
+
+    Parameters:	
+
+    -----------
+    x : ndarray 
+        Input array.
+    out : ndarray, None, or tuple of ndarray and None.
+          A location into which the result is stored. If provided, 
+          it must have a shape that the inputs broadcast to. 
+          If not provided or None, a freshly-allocated array is returned. 
+          A tuple (possible only as a keyword argument) 
+          must have length equal to the number of outputs.
+    where : ndarray, optional
+            Values of True indicate to calculate the ufunc at that position, 
+            values of False indicate to leave the value in the output alone.
+    Returns:	
+    --------
+    out : ndarray or scalar
+          ndarray of the same shape as x. This is a scalar if x is a scalar.
+    Examples
+
+    >>> np.arctan(0.7)
+    0.8673005276940531
+    """
+
+    return _mx_nd_np.arctanh(x, out=out, **kwargs)
 
 @set_module('mxnet.numpy')
-def abs(x, out=None, **kwargs):
-    r"""abs(x, out=None, **kwargs)
+def tan(x, out=None, where=True, **kwargs):
+    r"""
+    tan(x, out=None, where=True)
 
-    Calculate the absolute value element-wise.
-
-    Parameters
+    Compute tangent element-wise.
+    Equivalent to np.sin(x)/np.cos(x) element-wise.
+    
+    Parameters:	
     ----------
+    x : ndarray 
+        Input array.
+    out : ndarray or none, optional
+          A location into which the result is stored. If provided, 
+          it must have a shape that the inputs broadcast to. If not provided or None, 
+          a freshly-allocated array is returned. A tuple (possible only as a keyword argument) 
+          must have length equal to the number of outputs.
+    where : ndarray, optional
+            Values of True indicate to calculate the ufunc at that position, 
+            values of False indicate to leave the value in the output alone.
+
+    Returns:	
+    -------
+    y : ndarray
+    The corresponding tangent values. This is a scalar if x is a scalar.
+
+    Examples:
+    ---------
+    >>> np.tan(0.5)
+    0.5463024898437905 
+    """
+
+    return _mx_nd_np.tan(x, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+def fix(x, out=None):
+    """
+    Round an array of floats element-wise to nearest integer towards zero. 
+    The rounded values are returned as floats.
+    
+    Parameters:	
+    ----------
+    x : ndarray 
+        An array of floats to be rounded
+    out : ndarray, optional
+        Output array
+
+    Returns:	
+    -------
+    y : ndarray of floats
+
+    Examples
+    --------- 
+    >>> np.fix(3.14)
+    3
+    """
+    return _mx_nd_np.fix(x, out=out)
+
+@set_module('mxnet.numpy')
+def negative(x, out=None, where=True, **kwargs):
+    r"""
+    negative(x, out=None, where=True)
+
+    Numerical negative, element-wise.
+
+    Parameters:	
+
+    ------------
     x : ndarray or scalar
         Input array.
-    out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned.
+    out : ndarray, None, or tuple of ndarray and None, optional
+          A location into which the result is stored. 
+          If provided, it must have a shape that the inputs broadcast to. 
+          If not provided or None, a freshly-allocated array is returned. 
+          A tuple (possible only as a keyword argument) must have length 
+          equal to the number of outputs.
+    where : ndarray, optional
+            Values of True indicate to calculate the ufunc at that position, 
+            values of False indicate to leave the value in the output alone.
 
-    Returns
+    Returns: 
     -------
-    absolute : ndarray
-        An ndarray containing the absolute value of
-        each element in `x`. This is a scalar if `x` is a scalar.
+    y : ndarray or scalar
+        Returned array or scalar: y = -x. This is a scalar if x is a scalar.
 
-    Examples
+    Examples:
     --------
-    >>> x = np.array([-1.2, 1.2])
-    >>> np.abs(x)
-    array([1.2, 1.2])
+    >>> np.negative(1)
+    -1
     """
-    return _mx_nd_np.abs(x, out=out, **kwargs)
 
-
-@set_module('mxnet.numpy')
-def exp(x, out=None, **kwargs):
-    r"""exp(x, out=None, **kwargs)
-
-    Calculate the exponential of all elements in the input array.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input values.
-    out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned.
-
-    Returns
-    -------
-    out : ndarray or scalar
-        Output array, element-wise exponential of `x`.
-        This is a scalar if `x` is a scalar.
-
-    Examples
-    --------
-    >>> np.exp(1)
-    2.718281828459045
-    >>> x = np.array([-1, 1, -2, 2])
-    >>> np.exp(x)
-    array([0.36787945, 2.7182817 , 0.13533528, 7.389056  ])
-    """
-    return _mx_nd_np.exp(x, out=out, **kwargs)
-
-
-@set_module('mxnet.numpy')
-def arctan(x, out=None, **kwargs):
-    r"""arctan(x, out=None, **kwargs)
-
-    Trigonometric inverse tangent, element-wise.
-
-    The inverse of tan, so that if ``y = tan(x)`` then ``x = arctan(y)``.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input values.
-    out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned.
-
-    Returns
-    -------
-    out : ndarray or scalar
-        Out has the same shape as `x`. It lies is in
-        ``[-pi/2, pi/2]`` (``arctan(+/-inf)`` returns ``+/-pi/2``).
-        This is a scalar if `x` is a scalar.
-
-    Notes
-    -----
-    `arctan` is a multi-valued function: for each `x` there are infinitely
-    many numbers `z` such that tan(`z`) = `x`.  The convention is to return
-    the angle `z` whose real part lies in [-pi/2, pi/2].
-
-    For real-valued input data types, `arctan` always returns real output.
-    For each value that cannot be expressed as a real number or infinity,
-    it yields ``nan`` and sets the `invalid` floating point error flag.
-
-    For complex-valued input, we do not have support for them yet.
-
-    The inverse tangent is also known as `atan` or tan^{-1}.
-
-    Examples
-    --------
-    We expect the arctan of 0 to be 0, and of 1 to be pi/4:
-
-    >>> x = np.array([0, 1])
-    >>> np.arctan(x)
-    array([0.       , 0.7853982])
-
-    >>> np.pi/4
-    0.7853981633974483
-    """
-    return _mx_nd_np.arctan(x, out=out, **kwargs)
+    return _mx_nd_np.negative(x, out=out)
