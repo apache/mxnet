@@ -634,7 +634,7 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
 #endif
 
 NNVM_REGISTER_OP(RNN)
-.add_alias("_npx_RNN")
+.add_alias("_npx_rnn")
 .describe(R"code(Applies recurrent layers to input data. Currently, vanilla RNN, LSTM and GRU are
 implemented, with both multi-layer and bidirectional support.
 

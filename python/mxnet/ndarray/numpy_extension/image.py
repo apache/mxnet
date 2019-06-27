@@ -15,20 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""MXNet NumPy module."""
-
-from __future__ import division, absolute_import, print_function
-
-from . import random
-from . import linalg
-from .multiarray import *  # pylint: disable=wildcard-import
-from . import _op
-from . import _register
-from ._op import *  # pylint: disable=wildcard-import
-from .utils import *  # pylint: disable=wildcard-import
-from .function_base import *  # pylint: disable=wildcard-import
-from .stride_tricks import *  # pylint: disable=wildcard-import
-from .io import *  # pylint: disable=wildcard-import
-from .arrayprint import *  # pylint: disable=wildcard-import
+"""Image pre-processing operators."""
 
 __all__ = []
