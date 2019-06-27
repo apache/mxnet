@@ -244,9 +244,9 @@ def _np_amax(a, axis=None, out=None):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.amax.html>`_ in
     the following aspects:
     - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray
-    - `axis` doe snot support negative value
-    - `initial` is not supported
+    - `a` only supports ndarray.
+    - `axis` doe snot support negative value.
+    - `initial` is not supported.
 
     """
     pass
@@ -284,7 +284,7 @@ def _np_squeeze(a, axis=None):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.squeeze.html>`_ in
     the following aspects:
     - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray
+    - `a` only supports ndarray.
     """
     pass
 
@@ -330,7 +330,7 @@ def _npi_ones(shape, dtype=None, order='C'):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html>`_ in
     the following aspects:
     - The default value type is `float32` instead of `float64` in numpy.
-    - `order` is not supported
+    - `order` is not supported.
     """
 
 def _npi_random_uniform(low=0.0, high=1.0, size=None):
@@ -379,7 +379,7 @@ def _npi_random_uniform(low=0.0, high=1.0, size=None):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.random.uniform.html>`_ in
     the following aspects:
     - The default value type is `float32` instead of `float64` in numpy.
-    - `low` and `high` do not accept array-like of floats
-    - `size` is not optional
+    - `low` and `high` do not accept array-like of floats.
+    - `size` is not optional.
     """
     pass
