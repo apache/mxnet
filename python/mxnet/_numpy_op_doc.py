@@ -178,8 +178,8 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
     pass
 
 def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
-    """
-    prod(a, axis=None, dtype=None, out=None, keepdims=None)
+    r"""
+    prod(a, axis=None, dtype=None, out=None, keepdims=_Null)
     Return the product of array elements over a given axis.
     
     Parameters
@@ -238,23 +238,23 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
     
     >>> x = np.array([1.,2.])
     >>> np.prod(x)
-    array(2., dtype=float32)
+    array(2.)
     
     Even when the input array is two-dimensional:
     
     >>> x = np.array([[1.,2.],[3.,4.]])
     >>> np.prod(x)
-    array(24., dtype=float32)
+    array(24.)
     
     But we can also specify the axis over which to multiply:
     >>> x = np.array([[1.,2.],[3.,4.]])
     >>> np.prod(x, axis=1)
-    array([ 2., 12.], dtype=float32)
+    array([ 2., 12.])
     """
     pass
 
 def _np__random_shuffle(x):
-    """
+    r"""
     random.shuffle(x)
     Modify a sequence in-place by shuffling its contents.
     
@@ -275,7 +275,7 @@ def _np__random_shuffle(x):
     --------
     >>> arr = np.arange(10)
     >>> np.random.shuffle(arr)
-    array([0., 2., 3., 5., 9., 1., 6., 8., 4., 7.], dtype=float32)
+    array([0., 2., 3., 5., 9., 1., 6., 8., 4., 7.])
     
     Multi-dimensional arrays are only shuffled along the first axis:
     
@@ -283,6 +283,6 @@ def _np__random_shuffle(x):
     >>> np.random.shuffle(arr)
     array([[0., 1., 2.],
            [6., 7., 8.],
-           [3., 4., 5.]], dtype=float32)
+           [3., 4., 5.]])
     """
     pass

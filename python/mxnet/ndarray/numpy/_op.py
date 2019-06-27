@@ -209,7 +209,7 @@ def stack(arrays, axis=0, out=None):
 
 @set_module('mxnet.ndarray.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
-    """Return evenly spaced values within a given interval.
+    r"""Return evenly spaced values within a given interval.
 
     Values are generated within the half-open interval ``[start, stop)``
     (in other words, the interval including `start` but excluding `stop`).
@@ -233,6 +233,13 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         `start` must also be given.
     dtype : dtype
         The type of the output array. The default is `float32`.
+    ctx : mxnet.cpu() or mxnet.gpu(gpuid)
+        Device context to put the created array in.    
+
+    Notes
+    -----
+    This function differs to the original numpy.logical_not in the following aspects:
+        - Have a new parameter 'ctx'.
 
     Returns
     -------
@@ -247,11 +254,11 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     Examples
     --------
     >>> np.arange(3)
-    array([0., 1., 2.], dtype=float32)
+    array([0., 1., 2.])
     >>> np.arange(3,7)
-    array([3., 4., 5., 6.], dtype=float32)
+    array([3., 4., 5., 6.])
     >>> np.arange(3,7,2)
-    array([3., 5.], dtype=float32)
+    array([3., 5.])
     >>> np.arange(0,5,1,'int32')
     array([0, 1, 2, 3, 4], dtype=int32)
     """
@@ -734,7 +741,7 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def trunc(x, out=None, **kwargs):
-    """
+    r"""
     trunc(x, out=None)
     Return the truncated value of the input, element-wise.
 
@@ -744,83 +751,80 @@ def trunc(x, out=None, **kwargs):
     
     Parameters
     ----------
-    x : ndarray
+    x : ndarray or scalar
         Input data.
-    out : ndarray, optional
+    out : ndarray or None, optional 
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. 
     
     Returns
     -------
-    y : ndarray
+    y : ndarray or scalar
         The truncated value of each element in `x`.
-    
+        This is a scalar if `x` is a scalar.
+
     Notes
     -----
     This function differs to the original numpy.trunc in the following aspects:
-      Do not support where.
-      Only support ndarray. 
-      Do not support scalar.
-    
+        - Do not support where.
     
     Examples
     --------
     >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
     >>> np.trunc(a)
-    array([-1., -1., -0.,  0.,  1.,  1.,  2.], dtype=float32)
+    array([-1., -1., -0.,  0.,  1.,  1.,  2.])
     """
     return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
 
 @set_module('mxnet.ndarray.numpy')
 def logical_not(x, out=None, **kwargs):
-    """
+    r"""
     logical_not(x, out=None)
     Compute the truth value of NOT x element-wise.
 
     Parameters
     ----------
-    x : ndarray
+    x : ndarray or scalar
         Logical NOT is applied to the elements of `x`.
-    out : ndarray, optional
+    out : ndarray or None, optional
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. 
     
     Returns
     -------
-    y : ndarray of bool
+    y : bool or ndarray of bool
         Boolean result with the same shape as `x` of the NOT operation
         on elements of `x`.
-    
+        This is a scalar if `x` is a scalar.
+
     Notes
     -----
     This function differs to the original numpy.logical_not in the following aspects:
-      Do not support where.
-      Only support ndarray. 
-      Do not support scalar.
+        - Do not support where.
 
     Examples
     --------
     ***>>> x= np.array([True, False, 0, 1])
     >>> np.logical_not(x)
-    array([0., 1., 1., 0.], dtype=float32)
+    array([0., 1., 1., 0.])
     
     >>> x = np.arange(5)
     >>> np.logical_not(x<3)
-    array([0., 0., 0., 1., 1.], dtype=float32)
+    array([0., 0., 0., 1., 1.])
     """
     return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
 
 @set_module('mxnet.ndarray.numpy')
 def arccosh(x, out=None, **kwargs):
-    """
+    r"""
     arccosh(x, out=None)
     Inverse hyperbolic cosine, element-wise.
 
     Parameters
     ----------
-    x : ndarray
+    x : ndarray or scalar
         Input array.
-    out : ndarray, optional
+    out : ndarray or None, optional
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. 
     
@@ -828,7 +832,8 @@ def arccosh(x, out=None, **kwargs):
     -------
     arccosh : ndarray
         Array of the same shape as `x`.
-    
+        This is a scalar if `x` is a scalar.
+
     Notes
     -----
     `arccosh` is a multivalued function: for each `x` there are infinitely
@@ -843,18 +848,17 @@ def arccosh(x, out=None, **kwargs):
     For complex-valued input, `arccosh` is a complex analytical function that
     has a branch cut `[-inf, 1]` and is continuous from above on it.
     
-    Notes
-    -----
     This function differs to the original numpy.logical_not in the following aspects:
-      Do not support where.
-      Only support ndarray. 
-      Do not support scalar.
+        - Do not support where.
 
     Examples
     --------
     >>> a = np.array([3.2, 5.0])
     >>> np.arccosh(a)
-    array([1.8309381, 2.2924316], dtype=float32)
+    array([1.8309381, 2.2924316])
+
+    >>> np.arccosh(1)
+    0.0
     """
     return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
 

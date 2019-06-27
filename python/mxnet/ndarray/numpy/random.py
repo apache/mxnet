@@ -98,7 +98,7 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
 
 
 def normal(loc=0.0, scale=1.0, size=None, **kwargs):
-    """
+    r"""
     normal(loc=0.0, scale=1.0, size=None)
     Draw random samples from a normal (Gaussian) distribution.
 
@@ -129,13 +129,35 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     Notes
     -----
     This function currently does not support ``loc`` and ``scale`` as ndarrays.
+    The probability density for the Gaussian distribution is
+
+    .. math:: p(x) = \frac{1}{\sqrt{ 2 \pi \sigma^2 }}
+                     e^{ - \frac{ (x - \mu)^2 } {2 \sigma^2} },
     
+    where :math:`\mu` is the mean and :math:`\sigma` the standard
+    deviation. The square of the standard deviation, :math:`\sigma^2`,
+    is called the variance.
+    
+    The function has its peak at the mean, and its "spread" increases with
+    the standard deviation (the function reaches 0.607 times its maximum at
+    :math:`x + \sigma` and :math:`x - \sigma` [2]_).  This implies that
+    `numpy.random.normal` is more likely to return samples lying close to
+    the mean, rather than those far away.
+    
+    References
+    ----------
+    .. [1] Wikipedia, "Normal distribution",
+           https://en.wikipedia.org/wiki/Normal_distribution
+    .. [2] P. R. Peebles Jr., "Central Limit Theorem" in "Probability,
+           Random Variables and Random Signal Principles", 4th ed., 2001,
+           pp. 51, 51, 125.
+ 
     Examples
     --------
     >>> mu, sigma = 0, 0.1 # mean and standard deviation
     >>> s = np.random.normal(mu, sigma, 1000)
     
-    Verify the mean and the variance:
+    Verify the mean:
     
     >>> abs(mu - (float)(np.mean(s))) < 0.01
     True
