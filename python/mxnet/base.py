@@ -757,6 +757,7 @@ _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
 
 _NP_EXT_OP_PREFIX = '_npx_'
+_NP_EXT_OP_SUBMODULE_LIST = ['_image_']
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
 
@@ -797,7 +798,7 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
         submodule_name_list = _NP_OP_SUBMODULE_LIST
     elif np_module_name == 'numpy_extension':
         op_name_prefix = _NP_EXT_OP_PREFIX
-        submodule_name_list = []
+        submodule_name_list = _NP_EXT_OP_SUBMODULE_LIST
     elif np_module_name == 'numpy._internal':
         op_name_prefix = _NP_INTERNAL_OP_PREFIX
         submodule_name_list = []
