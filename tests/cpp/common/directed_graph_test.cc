@@ -48,7 +48,7 @@ struct Node {
 
 struct Edge {
   Edge() : cost(1) {}
-  Edge(size_t cost) : cost(cost) {}
+  explicit Edge(size_t cost) : cost(cost) {}
   size_t cost;
 };
 
@@ -59,17 +59,17 @@ TEST(DirectedGraphTest, withPayload) {
   auto x = Node{"x", 0};
   auto w = Node{"w", 0};
   auto b = Node{"b", 0};
-  g.addNode(x); // 0
-  g.addNode(w); // 1
-  g.addNode(b); // 2
+  g.addNode(x);  // 0
+  g.addNode(w);  // 1
+  g.addNode(b);  // 2
   g.addNode(Node{"mul", 2});  // 3
   g.addNode(Node{"add", 2});  // 4
-  g.addEdge(0,3);
-  g.addEdge(1,3);
+  g.addEdge(0, 3);
+  g.addEdge(1, 3);
   auto mul_edge_rhs = Edge{10};
   auto mul_edge_lhs = Edge{10};
-  g.addEdge(2,4, mul_edge_rhs);
-  g.addEdge(3,4, mul_edge_lhs);
+  g.addEdge(2, 4, mul_edge_rhs);
+  g.addEdge(3, 4, mul_edge_lhs);
 
   EXPECT_EQ(g.numNodes(), 5);
   EXPECT_EQ(g.numEdges(), 4);
@@ -85,17 +85,17 @@ TEST(DirectedGraphTest, iterators) {
   auto x = Node{"x", 0};
   auto w = Node{"w", 0};
   auto b = Node{"b", 0};
-  g.addNode(x); // 0
-  g.addNode(w); // 1
-  g.addNode(b); // 2
+  g.addNode(x);  // 0
+  g.addNode(w);  // 1
+  g.addNode(b);  // 2
   g.addNode(Node{"mul", 2});  // 3
   g.addNode(Node{"add", 2});  // 4
-  g.addEdge(0,3); // 0
-  g.addEdge(1,3); // 1
+  g.addEdge(0, 3);  // 0
+  g.addEdge(1, 3);  // 1
   auto mul_edge_rhs = Edge{10};
   auto mul_edge_lhs = Edge{10};
-  g.addEdge(2, 4, mul_edge_rhs); // 2
-  g.addEdge(3, 4, mul_edge_lhs); // 3
+  g.addEdge(2, 4, mul_edge_rhs);  // 2
+  g.addEdge(3, 4, mul_edge_lhs);  // 3
   size_t edge_cnt = 0;
   vector<size_t> costs;
   for (auto ei = g.edgesBegin(); ei != g.edgesEnd(); ++ei) {

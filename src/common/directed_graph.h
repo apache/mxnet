@@ -45,6 +45,7 @@ template<class Node_ = Empty, class EdgeAttrs_ = Empty,
 class DirectedGraph {
  protected:
   const EdgeAttrs_ default_edge = EdgeAttrs_();
+
  public:
   SELF_t DirectedGraph_t;
   typedef Node_ Node;
@@ -118,7 +119,7 @@ class DirectedGraph {
     }
   };
 
-  DirectedGraph(NodeKey_t num_nodes = 0) :
+  explicit DirectedGraph(NodeKey_t num_nodes = 0) :
       edges_() {
     nodes_.reserve(num_nodes);
   }
@@ -201,4 +202,4 @@ class DirectedGraph {
 
 };  // namespace graph
 };  // namespace common
-#endif
+#endif  // MXNET_COMMON_DIRECTED_GRAPH_H_

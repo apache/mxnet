@@ -25,11 +25,11 @@
  */
 
 #include "./graph_dump.h"
+#include <vector>
+#include <string>
 #include "common/directed_graph.h"
 #include "dmlc/json.h"
 #include "nnvm/graph.h"
-#include <vector>
-#include <string>
 
 using std::vector;
 using std::string;
@@ -39,73 +39,50 @@ using common::graph::DirectedGraph;
 using namespace nnvm;
 
 namespace {
-  // Helper class
-  struct DumpNode {
-    NodePtr node_ptr_;
-    bool is_input;
-    bool is_op;
-    bool is_output;
-  };
-  typedef DirectedGraph<DumpNode> DumpGraph_t;
+// Helper class
+struct DumpNode {
+  NodePtr node_ptr_;
+  bool is_input;
+  bool is_op;
+  bool is_output;
+};
+typedef DirectedGraph<DumpNode> DumpGraph_t;
 
-  /**
-   * Serialize a graph to Json
-   * @param g
-   * @return json content
-   */
-  std::string SerializeJson(DumpGraph_t& g) {
-    ostringstream os;
-    dmlc::JSONWriter json_writer(&os);
-    json_writer.BeginObject();
-    vector<string> inputs;
-    vector<string> outputs;
-    for (const DumpNode& node : g) {
-      if (node.is_input)
-        inputs.push_back(node.node_ptr_->attrs.name);
-      else if (node.is_output)
-        outputs.push_back(node.node_ptr_->attrs.name);
-    }
-    json_writer.WriteObjectKeyValue("inputs", inputs);
-    json_writer.WriteObjectKeyValue("outputs", outputs);
-    json_writer.EndObject();
-    return os.str();
-  }
+std::string unnamed(const std::string &s) {
+  if (s.empty())
+    return "unnamed";
+  return s;
+}
 
-  std::string unnamed(const std::string &s) {
-    if (s.empty())
-      return "unnamed";
-    return s;
+/**
+ * Serialize a graph to dot format
+ * @param g a graph to serialize to dot format
+ * @return a string with a dot file content
+ * example result:
+ * digraph G {
+ *      x -> x_mul_w
+ *      w -> x_mul_w
+ * }
+ */
+std::string SerializeDot(DumpGraph_t& g) {
+  ostringstream os;
+  os << "digraph G {" << endl;
+  for (auto edge_it : g.edges()) {
+    ostringstream src_name_os;
+    ostringstream dst_name_os;
+    const NodePtr& src = g.node(edge_it->src).node_ptr_;
+    const NodePtr& dst = g.node(edge_it->dst).node_ptr_;
+    if (src->op())
+      src_name_os << src->op()->name << " ";
+    if (dst->op())
+      dst_name_os << dst->op()->name << " ";
+    src_name_os << unnamed(src->attrs.name);
+    dst_name_os << unnamed(dst->attrs.name);
+    os << "  \"" << src_name_os.str() << "\" -> \"" << dst_name_os.str() << "\"" << endl;
   }
-
-  /**
-   * Serialize a graph to dot format
-   * @param g a graph to serialize to dot format
-   * @return a string with a dot file content
-   * example result:
-   * digraph G {
-   *      x -> x_mul_w
-   *      w -> x_mul_w
-   * }
-   */
-  std::string SerializeDot(DumpGraph_t& g) {
-    ostringstream os;
-    os << "digraph G {" << endl;
-    for (auto edge_it : g.edges()) {
-      ostringstream src_name_os;
-      ostringstream dst_name_os;
-      const NodePtr& src = g.node(edge_it->src).node_ptr_;
-      const NodePtr& dst = g.node(edge_it->dst).node_ptr_;
-      if (src->op())
-        src_name_os << src->op()->name << " ";
-      if (dst->op())
-        dst_name_os << dst->op()->name << " ";
-      src_name_os << unnamed(src->attrs.name);
-      dst_name_os << unnamed(dst->attrs.name);
-      os << "  \"" << src_name_os.str() << "\" -> \"" << dst_name_os.str() << "\"" << endl;
-    }
-    os << "}";
-    return os.str();
-  }
+  os << "}";
+  return os.str();
+}
 
 }  // end anon ns
 

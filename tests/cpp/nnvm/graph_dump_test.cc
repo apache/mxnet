@@ -29,7 +29,7 @@ using namespace std;
 TEST(Graph_dump, basic) {
   auto x = NodeEntry(Node::Create(nullptr, "x"));
   auto w = NodeEntry(Node::Create(nullptr, "w"));
-  auto x_mul_w = MakeNode("dot", "x_mul_w", {x,w});
+  auto x_mul_w = MakeNode("dot", "x_mul_w", {x, w});
   vector<NodeEntry> outputs = {x_mul_w};
   string graph_dump = GraphDump(outputs);
   cout << graph_dump << endl;
