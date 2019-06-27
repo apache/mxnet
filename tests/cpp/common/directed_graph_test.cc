@@ -25,9 +25,9 @@ using namespace std;
 
 TEST(DirectedGraphTest, basic) {
   DirectedGraph<> g;
-  g.addEdge(0,4);
-  g.addEdge(3,5);
-  g.addEdge(2,1);
+  g.addEdge(0, 4);
+  g.addEdge(3, 5);
+  g.addEdge(2, 1);
   EXPECT_EQ(g.numNodes(), 6);
   EXPECT_EQ(g.numEdges(), 3);
 }
@@ -52,7 +52,7 @@ struct Edge {
   size_t cost;
 };
 
-};
+};  // namespace
 
 TEST(DirectedGraphTest, withPayload) {
   DirectedGraph<Node, Edge> g;
@@ -94,8 +94,8 @@ TEST(DirectedGraphTest, iterators) {
   g.addEdge(1,3); // 1
   auto mul_edge_rhs = Edge{10};
   auto mul_edge_lhs = Edge{10};
-  g.addEdge(2,4, mul_edge_rhs); // 2
-  g.addEdge(3,4, mul_edge_lhs); // 3
+  g.addEdge(2, 4, mul_edge_rhs); // 2
+  g.addEdge(3, 4, mul_edge_lhs); // 3
   size_t edge_cnt = 0;
   vector<size_t> costs;
   for (auto ei = g.edgesBegin(); ei != g.edgesEnd(); ++ei) {
@@ -115,12 +115,12 @@ TEST(DirectedGraphTest, iterators) {
 
 TEST(DirectedGraphTest, iterators2) {
   DirectedGraph<> g;
-  g.addEdge(3,5);
-  g.addEdge(0,1);
-  g.addEdge(0,1);
-  g.addEdge(2,4);
-  g.addEdge(0,1);
-  g.addEdge(2,5);
+  g.addEdge(3, 5);
+  g.addEdge(0, 1);
+  g.addEdge(0, 1);
+  g.addEdge(2, 4);
+  g.addEdge(0, 1);
+  g.addEdge(2, 5);
 
   typedef DirectedGraph<>::NodeKey_t node_t;
   vector<pair<node_t, node_t>> edges;
@@ -159,11 +159,11 @@ TEST(DirectedGraphTest, iterators2) {
   }
   EXPECT_EQ(edges.size(), 6);
   typedef pair<size_t, size_t> p_t;
-  EXPECT_TRUE(edges[0] == p_t(0,1));
-  EXPECT_TRUE(edges[1] == p_t(0,1));
-  EXPECT_TRUE(edges[2] == p_t(0,1));
-  EXPECT_TRUE(edges[3] == p_t(2,4));
-  EXPECT_TRUE(edges[4] == p_t(2,5));
-  EXPECT_TRUE(edges[5] == p_t(3,5));
+  EXPECT_TRUE(edges[0] == p_t(0, 1));
+  EXPECT_TRUE(edges[1] == p_t(0, 1));
+  EXPECT_TRUE(edges[2] == p_t(0, 1));
+  EXPECT_TRUE(edges[3] == p_t(2, 4));
+  EXPECT_TRUE(edges[4] == p_t(2, 5));
+  EXPECT_TRUE(edges[5] == p_t(3, 5));
 }
 

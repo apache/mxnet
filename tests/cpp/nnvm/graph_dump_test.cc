@@ -27,11 +27,10 @@ using namespace std;
  * Test that enum and string values are in sync
  */
 TEST(Graph_dump, basic) {
-  Graph g;
   auto x = NodeEntry(Node::Create(nullptr, "x"));
   auto w = NodeEntry(Node::Create(nullptr, "w"));
   auto x_mul_w = MakeNode("dot", "x_mul_w", {x,w});
-  g.outputs.emplace_back(std::move(x_mul_w));
-  string graph_dump = GraphDump(g);
+  vector<NodeEntry> outputs = {x_mul_w};
+  string graph_dump = GraphDump(outputs);
   cout << graph_dump << endl;
 }

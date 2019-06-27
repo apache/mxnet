@@ -16,6 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#ifndef MXNET_COMMON_DIRECTED_GRAPH_H_
+#define MXNET_COMMON_DIRECTED_GRAPH_H_
 
 /*!
  * \file static_graph.h
@@ -38,7 +40,8 @@ namespace graph {
 
 struct Empty {};
 
-template<class Node_=Empty, class EdgeAttrs_=Empty, typename NodeKey_t_=size_t, typename EdgeKey_t_=size_t>
+template<class Node_ = Empty, class EdgeAttrs_ = Empty,
+    typename NodeKey_t_ = size_t, typename EdgeKey_t_ = size_t>
 class DirectedGraph {
  protected:
   const EdgeAttrs_ default_edge = EdgeAttrs_();
@@ -53,9 +56,8 @@ class DirectedGraph {
     Edge(NodeKey_t src, NodeKey_t dst, const EdgeAttrs& attrs) :
         EdgeAttrs(attrs),
         src(src),
-        dst(dst)
-     {
-     }
+        dst(dst) {
+    }
     NodeKey_t src;
     NodeKey_t dst;
     bool operator<(const Edge &other) const {
@@ -80,7 +82,7 @@ class DirectedGraph {
     using reference_type = Edge&;
     using const_pointer_type = const Edge*;
     InternalEdgeIterator internal_edge_iterator_;
-    EdgeIterator(const InternalEdgeIterator& ei) :
+    explicit EdgeIterator(const InternalEdgeIterator& ei) :
       internal_edge_iterator_(ei) {
     }
     EdgeIterator& operator++() {
@@ -99,13 +101,13 @@ class DirectedGraph {
       return true;
     }
     bool operator!=(const EdgeIterator& other) const {
-      return ! ((*this) == other);
+      return !((*this) == other);
     }
   };
 
   struct EdgeRange {
     const DirectedGraph_t& graph_;
-    EdgeRange(const DirectedGraph_t& g) :
+    explicit EdgeRange(const DirectedGraph_t& g) :
       graph_(g) {
     }
     EdgeIterator begin() {
@@ -197,5 +199,6 @@ class DirectedGraph {
   std::multimap<NodeKey_t, Edge> edges_;
 };
 
-};  // end namespace common
-};  // end namespace graph
+};  // namespace graph
+};  // namespace common
+#endif
