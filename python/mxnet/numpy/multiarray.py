@@ -78,7 +78,7 @@ def absolute(x, out=None, **kwargs):
     >>> np.absolute(x)
     array([ 1.2,  1.2])
     """
-    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
+    return _mx_nd_np.absolute(x, out=out, **kwargs)
 
 @set_module('mxnet.numpy')
 def cbrt(x, out=None, **kwargs):
@@ -109,7 +109,7 @@ def cbrt(x, out=None, **kwargs):
     >>> np.cbrt([1,8,27])
     array([ 1.,  2.,  3.])
     """
-    return _unary_func_helper(x, _npi.cbrt, _np.cbrt, out=out, **kwargs)
+    return _mx_nd_np.cbrt(x, out=out, **kwargs)
 
 @set_module('mxnet.numpy')
 def arccos(x, out=None, **kwargs):
@@ -159,7 +159,7 @@ def arccos(x, out=None, **kwargs):
     >>> np.arccos([1, -1])
     array([ 0.        ,  3.14159265])
     """
-    return _unary_func_helper(x, _npi.arccos, _np.arccos, out=out, **kwargs)
+    return _mx_nd_np.arccos(x, out=out, **kwargs)
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable

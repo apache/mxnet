@@ -61,7 +61,7 @@ def absolute(x, out=None, **kwargs):
     >>> np.absolute(x)
     array([ 1.2,  1.2])
     """
-    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
+    return _unary_func_helper(x, _npi.absolute, _np.absolute, out=out, **kwargs)
 
 @set_module('mxnet.ndarray.numpy')
 def cbrt(x, out=None, **kwargs):
