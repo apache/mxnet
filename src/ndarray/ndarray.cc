@@ -1728,7 +1728,7 @@ bool NDArray::Load(dmlc::Stream *strm) {
     CHECK(!Imperative::Get()->is_np_shape())
         << "ndarray was not saved in np shape semantics, but being loaded in np shape semantics."
            " Please turn off np shape semantics in Python using `with np_shape(False)`"
-           " to scope of the code of loading the ndarray.";
+           " to scope the code of loading the ndarray.";
   }
   if (magic != NDARRAY_V2_MAGIC && magic != NDARRAY_V3_MAGIC) {
     return LegacyLoad(strm, magic);

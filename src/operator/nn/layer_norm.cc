@@ -127,7 +127,7 @@ void LayerNormGradCompute<cpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(LayerNorm)
-.add_alias("_npx_LayerNorm")
+.add_alias("_npx_layer_norm")
 .describe(R"code(Layer normalization.
 
 Normalizes the channels of the input tensor by mean and variance, and applies a scale ``gamma`` as
