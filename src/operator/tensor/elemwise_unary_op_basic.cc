@@ -650,6 +650,7 @@ Example::
 DMLC_REGISTER_PARAMETER(CastParam);
 NNVM_REGISTER_OP(Cast)
 .add_alias("cast")
+.add_alias("_npx_cast")
 .describe(R"code(Casts all elements of the input to a new type.
 
 .. note:: ``Cast`` is deprecated. Use ``cast`` instead.

@@ -34,14 +34,9 @@ bool NumpyBinaryScalarType(const nnvm::NodeAttrs& attrs,
                            std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const int itype = in_attrs->at(0);
-  if (itype == -1) return false;
-  auto is_float = [](const int dtype) {
-    return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
-  };
-  CHECK(is_float(itype)) << "numpy binary scalar op currently only supports float dtype";
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, itype);
-  return true;
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  return in_attrs->at(0) != -1;
 }
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)              \
