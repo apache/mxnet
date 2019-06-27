@@ -230,5 +230,9 @@ Example::
 "corners of designated region of interest. `batch_index` indicates the index of corresponding "
 "image in the input array")
 .add_arguments(ROIPoolingParam::__FIELDS__());
+
+NNVM_REGISTER_OP(ROIPooling)
+.add_alias("_npx_roi_pooling");
+
 }  // namespace op
 }  // namespace mxnet

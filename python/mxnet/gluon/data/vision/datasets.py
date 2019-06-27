@@ -188,8 +188,9 @@ class CIFAR10(dataset._DownloadedDataset):
         data = np.concatenate(data)
         label = np.concatenate(label)
 
-        self._data = nd.array(data, dtype=data.dtype)
-        self._label = label
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        self._data = array_fn(data, dtype=data.dtype)
+        self._label = array_fn(label, dtype=label.dtype) if is_np_array() else label
 
 
 class CIFAR100(CIFAR10):

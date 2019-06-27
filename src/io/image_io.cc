@@ -357,6 +357,7 @@ inline void copyMakeBorder(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_cvimdecode)
+.add_alias("_npi_cvimdecode")
 .describe("Decode image with OpenCV. \n"
           "Note: return image in RGB by default, "
           "instead of OpenCV's default BGR.")
@@ -368,6 +369,7 @@ NNVM_REGISTER_OP(_cvimdecode)
 .add_arguments(ImdecodeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_cvimread)
+.add_alias("_npi_cvimread")
 .describe("Read and decode image with OpenCV. \n"
           "Note: return image in RGB by default, "
           "instead of OpenCV's default BGR.")
@@ -378,6 +380,7 @@ NNVM_REGISTER_OP(_cvimread)
 .add_arguments(ImreadParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_cvimresize)
+.add_alias("_npi_cvimresize")
 .describe("Resize image with OpenCV. \n")
 .set_num_inputs(1)
 .set_num_outputs(1)
