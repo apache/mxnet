@@ -308,3 +308,45 @@ def _npi_ones(shape, dtype=None, order='C'):
     array([[ 1.,  1.],
            [ 1.,  1.]])
     """
+
+def _npi_random_uniform(low=0.0, high=1.0, size=None):
+    """
+    uniform(low=0.0, high=1.0, size=None)
+    Draw samples from a uniform distribution.
+    Samples are uniformly distributed over the half-open interval
+    ``[low, high)`` (includes low, but excludes high).  In other words,
+    any value within the given interval is equally likely to be drawn
+    by `uniform`.
+    Parameters
+    ----------
+    low : float, optional
+        Lower boundary of the output interval.  All values generated will be
+        greater than or equal to low.  The default value is 0.
+    high : float, optional
+        Upper boundary of the output interval.  All values generated will be
+        less than high.  The default value is 1.0.
+    size : int or tuple of ints
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.
+        Otherwise, ``np.broadcast(low, high).size`` samples are drawn.
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized uniform distribution.
+    Notes
+    -----
+    The probability density function of the uniform distribution is
+    .. math:: p(x) = \frac{1}{b - a}
+    anywhere within the interval ``[a, b)``, and zero elsewhere.
+    When ``high`` == ``low``, values of ``low`` will be returned.
+    If ``high`` < ``low``, the results are officially undefined
+    and may eventually raise an error, i.e. do not rely on this
+    function to behave when passed arguments satisfying that
+    inequality condition.
+    Examples
+    --------
+    Draw samples from the distribution:
+     s = np.random.uniform(-1, 0, 1000)
+    All values are within the given interval
+    """
+    pass
