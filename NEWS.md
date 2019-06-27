@@ -211,7 +211,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Add unpooled gpu memory type (#14716)
 * [MXNET-1398] Enable zero-copy from numpy to MXNet NDArray (#14733)
 * Use DEFAULT macro in C APIs (#14767)
-* Avoid uneccesary vector copies in imperative_utils.cc (#14665)
+* Avoid unnecessary vector copies in imperative_utils.cc (#14665)
 * Support populating errors back to MXNet engine in callback (#13922)
 * Restore save/load ndarray to 1.4.1 (#15073)
 * Enable serializing/deserializing ndarrays in np_shape semantics (#15090)
