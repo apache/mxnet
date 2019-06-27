@@ -1564,14 +1564,10 @@ def floor(x, out=None, **kwargs):
     `i <= x`.  It is often denoted as :math:`\lfloor x \rfloor`.
     Parameters
     ----------
-    x : ndarray
+    x : _Symbol
         Input data.
         Does not support scalar.
-    out : ndarray, None, or tuple of exactly one ndarray, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element.
+    out : _Symbol or None, optional
     where : array_like, optional
         Values of True indicate to calculate the ufunc at that position, values
         of False indicate to leave the value in the output alone.
@@ -1580,29 +1576,18 @@ def floor(x, out=None, **kwargs):
 
     Returns
     -------
-    y : ndarray
+    y : _Symbol
         The floor of each element in `x`.
     Notes
     -----
     Some spreadsheet programs calculate the "floor-towards-zero", in other
     words ``floor(-2.5) == -2``.  MXNet instead uses the definition of
     `floor` where `floor(-2.5) == -3`.
-    Examples
-    --------
-    a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
-    np.floor(a)
-    array([-2., -2., -1.,  0.,  1.,  1.,  2.])
 
     Notes
     -----
-    This function differs to the original `numpy.floor
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.floor.html>`_ in
-    the following aspects:
-    - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray.
     - `a` doe snot support scalar.
     - `where` has no effect.
-    - if a tuple is passed into `out`, it must have exactly one ndarray.
     """
     return _unary_func_helper(x, _npi.floor, _np.floor, out=out, **kwargs)
 
@@ -1613,13 +1598,9 @@ def expm1(x, out=None, **kwargs):
     Calculate ``exp(x) - 1`` for all elements in the array.
     Parameters
     ----------
-    x : ndarray
+    x : _Symbol
        Input values.
-    out : ndarray, None, or tuple of exactly one ndarray, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element.
+    out : _Symbol or None, optional
     where : array_like, optional
         Values of True indicate to calculate the ufunc at that position, values
         of False indicate to leave the value in the output alone.
@@ -1627,32 +1608,17 @@ def expm1(x, out=None, **kwargs):
         Not supported yet.
     Returns
     -------
-    out : ndarray
+    out : _Symbol
         Element-wise exponential minus one: ``out = exp(x) - 1``.
     Notes
     -----
     This function provides greater precision than ``exp(x) - 1``
     for small values of ``x``.
-    Examples
-    --------
-    The true value of ``exp(1e-10) - 1`` is ``1.00000000005e-10`` to
-    about 32 significant digits. This example shows the superiority of
-    expm1 in this case.
-     np.expm1(1e-10)
-    1.00000000005e-10
-     np.exp(1e-10) - 1
-    1.000000082740371e-10
 
     Notes
     -----
-    This function differs to the original `numpy.expm1
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.expm1.html>`_ in
-    the following aspects:
-    - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray.
     - `a` doe snot support scalar.
     - `where` has no effect.
-    - if a tuple is passed into `out`, it must have exactly one ndarray.
     """
     return _unary_func_helper(x, _npi.expm1, _np.expm1, out=out, **kwargs)
 
@@ -1663,13 +1629,9 @@ def arcsinh(x, out=None, **kwargs):
     Inverse hyperbolic sine element-wise.
     Parameters
     ----------
-    x : ndarray
+    x : _Symbol
         Input array.
-    out : ndarray, None, or tuple of exactly one ndarray, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element.
+    out : _Symbol or None, optional
     where : array_like, optional
         Values of True indicate to calculate the ufunc at that position, values
         of False indicate to leave the value in the output alone.
@@ -1677,7 +1639,7 @@ def arcsinh(x, out=None, **kwargs):
         Not supported yet.
     Returns
     -------
-    out : ndarray
+    out : _Symbol
         Array of of the same shape as `x`.
     Notes
     -----
@@ -1697,20 +1659,9 @@ def arcsinh(x, out=None, **kwargs):
            10th printing, 1964, pp. 86. http://www.math.sfu.ca/~cbm/aands/
     .. [2] Wikipedia, "Inverse hyperbolic function",
            http://en.wikipedia.org/wiki/Arcsinh
-    Examples
-    --------
-    np.arcsinh(np.array([10.0]))
-    array([2.9982228])
-    Notes
-    -----
-    This function differs to the original `numpy.arcsinh
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsinh.html>`_ in
-    the following aspects:
-    - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray.
+
     - `a` doe snot support scalar.
     - `where` has no effect.
-    - if a tuple is passed into `out`, it must have exactly one ndarray.
     """
     return _unary_func_helper(x, _npi.arcsinh, _np.arcsinh, out=out, **kwargs)
 
