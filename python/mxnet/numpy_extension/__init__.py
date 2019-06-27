@@ -21,6 +21,7 @@
 
 from __future__ import absolute_import
 from . import _op
+from . import image
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 from ..context import *  # pylint: disable=wildcard-import
@@ -30,5 +31,6 @@ from ..util import use_np_array, np_array, is_np_array
 from ..util import set_np, use_np, reset_np
 from ..ndarray import waitall
 from .utils import *  # pylint: disable=wildcard-import
+from .random import *  # pylint: disable=wildcard-import
 
 __all__ = []

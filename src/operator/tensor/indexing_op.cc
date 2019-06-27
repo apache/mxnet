@@ -466,7 +466,7 @@ DMLC_REGISTER_PARAMETER(ScatterNDParam);
 
 NNVM_REGISTER_OP(Embedding)
 MXNET_ADD_SPARSE_OP_ALIAS(Embedding)
-.add_alias("_npx_Embedding")
+.add_alias("_npx_embedding")
 .describe(R"code(Maps integer indices to vector representations (embeddings).
 
 This operator maps words to real-valued vectors in a high-dimensional space,

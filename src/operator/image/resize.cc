@@ -34,6 +34,7 @@ namespace image {
 DMLC_REGISTER_PARAMETER(ResizeParam);
 
 NNVM_REGISTER_OP(_image_resize)
+.add_alias("_npx__image_resize")
 .describe(R"code(Resize an image NDArray of shape (H x W x C) or (N x H x W x C) 
 to the given size
 Example:
