@@ -275,6 +275,7 @@ def _np_squeeze(a, axis=None):
 
 def _npi_ones(shape, dtype=None, order='C'):
     """
+    ones(shape, dtype=None, order='C')
     Return a new array of given shape and type, filled with ones.
     Parameters
     ----------
