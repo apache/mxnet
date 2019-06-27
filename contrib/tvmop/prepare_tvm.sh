@@ -1,8 +1,25 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 #!/bin/sh
 
-LLVM_ROOT="http://releases.llvm.org/6.0.1/"
-LLVM_VERSION="6.0.1"
-LLVM_PKG="clang+llvm-6.0.1-x86_64-linux-gnu"
+LLVM_VERSION="8.0.0"
+LLVM_ROOT="http://releases.llvm.org/${LLVM_VERSION}/"
+LLVM_PKG="clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu"
 
 os=`uname`
 if [ "$os" = "Linux" ] && [ "$(arch)" = "x86_64" ]; then
@@ -21,8 +38,8 @@ fi
 
 LLVM_URL=${LLVM_ROOT}${LLVM_PKG}.tar.xz
 
-TVM_PATH=`dirname $0`/3rdparty/tvm
-DST=`dirname $0`/3rdparty/tvm/build
+TVM_PATH=`dirname $0`/../../3rdparty/tvm
+DST=${TVM_PATH}/build
 rm -rf $DST
 mkdir -p $DST
 DST=`cd $DST; pwd`

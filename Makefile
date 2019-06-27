@@ -56,10 +56,6 @@ ifndef TVM_PATH
 	TVM_PATH = $(TPARTYDIR)/tvm
 endif
 
-ifndef TVM_OP_PATH
-	TVM_OP_PATH = $(ROOTDIR)/contrib/tvmop
-endif
-
 ifndef LLVM_PATH
 	LLVM_PATH = $(TVM_PATH)/build/llvm
 endif
@@ -590,18 +586,19 @@ ifeq ($(USE_CUDA), 1)
 	TVM_USE_CUDA := ON
 endif
 lib/libtvm_runtime.so:
-	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh
+	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
+	cd $(TVM_PATH)/build; \
 	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
-		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF \
-		  -B$(TVM_PATH)/build $(TVM_PATH)
-	$(MAKE) -C $(TVM_PATH)/build VERBOSE=1
-	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so
+		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
+	$(MAKE) VERBOSE=1; \
+	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
+	cd $(ROOTDIR)
 
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
 	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib:$PYTHONPATH \
 		LD_LIBRARY_PATH=$(TVM_PATH)/build \
-	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -i $(TVM_OP_PATH) -o $(ROOTDIR)/lib/libtvmop.so
+	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -o $(ROOTDIR)/lib/libtvmop.so
 
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
