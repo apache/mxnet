@@ -75,6 +75,8 @@ if __name__ == '__main__':
     parser.add_argument('--use-gluon-model', action='store_true', default=False,
                         help='If enabled, will download pretrained model from Gluon-CV '
                              'and convert to mixed precision model ')
+    parser.add_argument('--cast-optional-params', action='store_true', default=False,
+                        help='If enabled, will try to cast params to target dtype wherever possible')
     args = parser.parse_args()
     logging.basicConfig()
     logger = logging.getLogger('logger')
@@ -86,7 +88,8 @@ if __name__ == '__main__':
 
         prefix, epoch = download_model(model_name=args.model, logger=logger)
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
-        result_sym, result_arg_params, result_aux_params = amp.convert_model(sym, arg_params, aux_params)
+        result_sym, result_arg_params, result_aux_params = amp.convert_model(sym, arg_params, aux_params,
+                                                                             cast_optional_params=arg.cast_optional_params)
         sym_name = "%s-amp-symbol.json" % (prefix)
         save_symbol(sym_name, result_sym, logger)
         param_name = '%s-%04d.params' % (prefix + '-amp', epoch)
@@ -106,7 +109,7 @@ if __name__ == '__main__':
         net = gluoncv.model_zoo.get_model(args.model, pretrained=True)
         net.hybridize()
         result_before1 = net.forward(mx.nd.zeros((1, 3, 224, 224)))
-        net = amp.convert_hybrid_block(net)
+        net = amp.convert_hybrid_block(net, cast_optional_params=args.cast_optional_params)
         net.export("{}-amp".format(args.model), remove_amp_cast=False)
         if args.run_dummy_inference:
             logger.info("Running inference on the mixed precision model with dummy inputs, batch size: 1")
