@@ -31,7 +31,8 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
-           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt']
+           'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
+           'floor']
 
 
 def _num_outputs(sym):
@@ -1553,6 +1554,59 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def floor(x, out=None, **kwargs):
+    """
+    floor(x, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True[, signature, extobj])
+    Return the floor of the input, element-wise.
+    The floor of the scalar `x` is the largest integer `i`, such that
+    `i <= x`.  It is often denoted as :math:`\lfloor x \rfloor`.
+    Parameters
+    ----------
+    x : ndarray
+        Input data.
+        Does not support scalar.
+    out : ndarray, None, or tuple of exactly one ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have exactly one element.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values
+        of False indicate to leave the value in the output alone.
+
+        Not supported yet.
+    **kwargs
+        For other keyword-only arguments.
+    Returns
+    -------
+    y : ndarray or scalar
+        The floor of each element in `x`.
+    Notes
+    -----
+    Some spreadsheet programs calculate the "floor-towards-zero", in other
+    words ``floor(-2.5) == -2``.  MXNet instead uses the definition of
+    `floor` where `floor(-2.5) == -3`.
+    Examples
+    --------
+    a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    np.floor(a)
+    array([-2., -2., -1.,  0.,  1.,  1.,  2.])
+
+    Notes
+    -----
+    This function differs to the original `numpy.floor
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.floor.html>`_ in
+    the following aspects:
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `a` only supports ndarray.
+    - `a` doe snot support scalar.
+    - `where` has no effect.
+    - if a tuple is passed into `out`, it must have exactly one ndarray.
+    """
+    return _unary_func_helper(x, _npi.floor, _np.floor, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)

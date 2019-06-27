@@ -138,7 +138,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // floor
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_floor, "x", mshadow_op::floor)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_floor, "x", mshadow_op::floor)
 .describe(R"code(Return the floor of the input, element-wise.
 The floor of the scalar x is the largest integer i, such that i <= x.
 Example::

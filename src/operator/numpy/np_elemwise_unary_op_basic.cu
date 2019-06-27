@@ -51,7 +51,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_rint, mshadow_op::rint);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_ceil, mshadow_op::ceil);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_floor, mshadow_op::floor);
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_floor, mshadow_op::floor);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_trunc, mshadow_op::trunc);
 
