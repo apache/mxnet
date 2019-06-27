@@ -105,7 +105,7 @@ def _parse_mxnet_context(ctx):
 
 def main():
     # 1. GET USER INPUTS
-    parser = argparse.ArgumentParser(description='Run all the MXNet operators (NDArray) benchmarks')
+    parser = argparse.ArgumentParser(description='Run all the MXNet operator benchmarks')
 
     parser.add_argument('--ctx', type=str, default='cpu',
                         help='Global context to run all benchmarks. By default, cpu on a '
