@@ -320,8 +320,6 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
 
 def _np_mean(a, axis=None, dtype=None, out=None, keepdims=None):
     """
-    mean(a=None, axis=_Null, dtype=_Null, keepdims=_Null, out=None, name=None, **kwargs)
-
     Compute the arithmetic mean along the specified axis.
     Returns the average of the array elements.
     The average is taken over the flattened array by default, otherwise over the specified axis.
@@ -342,8 +340,10 @@ def _np_mean(a, axis=None, dtype=None, out=None, keepdims=None):
         as dimensions with size one. With this option, the result will broadcast correctly
         against the input array.
         If the default value is passed, then keepdims will not be passed through to the mean
-        method of sub-classes of ndarray, however any non-default value will be. If the sub-class’
+        method of sub-classes of ndarray, however any non-default value will be. If the sub-class
         method does not implement keepdims any exceptions will be raised.
+    initial : scalar, deprecated
+        The initial value to start with. Default to None.
     out : ndarray, optional
         Alternate output array in which to place the result. The default is None; if provided,
         it must have the same shape as the expected output, but the type will be cast if necessary. 
