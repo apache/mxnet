@@ -160,8 +160,9 @@ class Imperative {
 
  private:
   friend class NDArray;
-  /*! \brief make constructor protected. */
-  Imperative() {
+  Imperative() :
+    backward_graph_dump_enabled_(dmlc::GetEnv("MXNET_BACKWARD_GRAPH_DUMP", false))
+  {
     if (PreferBulkExecTrain())
       backward_bulk_size_ = BulkExecMaxNodeTrainBwd();
   }
@@ -191,6 +192,7 @@ class Imperative {
   std::atomic<uint64_t> variable_count_{0};
   /*! \brief default backward bulk size */
   int backward_bulk_size_{0};
+  bool backward_graph_dump_enabled_{};
 };
 
 }  // namespace mxnet

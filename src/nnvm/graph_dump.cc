@@ -38,6 +38,7 @@ using common::graph::DirectedGraph;
 using namespace nnvm;
 
 namespace {
+  // Helper class
   struct DumpNode {
     NodePtr node_ptr_;
     bool is_input;
@@ -69,6 +70,12 @@ namespace {
     return os.str();
   }
 
+  std::string unnamed(const std::string &s) {
+    if (s.empty())
+      return "unnamed";
+    return s;
+  }
+
   /**
    * Serialize a graph to dot format
    * @param g a graph to serialize to dot format
@@ -83,13 +90,22 @@ namespace {
     ostringstream os;
     os << "digraph G {" << endl;
     for (auto edge_it : g.edges()) {
-      string src_name = g.node(edge_it->src).node_ptr_->attrs.name;
-      string dst_name = g.node(edge_it->dst).node_ptr_->attrs.name;
-      os << "  " << src_name << " -> " << dst_name << endl;
+      ostringstream src_name_os;
+      ostringstream dst_name_os;
+      const NodePtr& src = g.node(edge_it->src).node_ptr_;
+      const NodePtr& dst = g.node(edge_it->dst).node_ptr_;
+      if (src->op())
+        src_name_os << src->op()->name << " ";
+      if (dst->op())
+        dst_name_os << dst->op()->name << " ";
+      src_name_os << unnamed(src->attrs.name);
+      dst_name_os << unnamed(dst->attrs.name);
+      os << "  \"" << src_name_os.str() << "\" -> \"" << dst_name_os.str() << "\"" << endl;
     }
     os << "}";
     return os.str();
   }
+
 }  // end anon ns
 
 namespace nnvm {
@@ -98,7 +114,7 @@ namespace nnvm {
 std::string GraphDump(const Graph& graph) {
     vector<NodePtr> topo_order;
     DFSVisit(graph.outputs, [&](const NodePtr& nodePtr) {
-        cout << "Node: " << nodePtr.get() << " " << nodePtr->attrs.name << endl;
+        //cout << "Node: " << nodePtr.get() << " " << nodePtr->attrs.name << endl;
         topo_order.push_back(nodePtr);
     });
     set<NodePtr> outputs;
