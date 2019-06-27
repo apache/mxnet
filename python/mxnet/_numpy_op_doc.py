@@ -376,7 +376,7 @@ def _npi_random_uniform(low=0.0, high=1.0, size=None):
     Notes
     -----
     This function differs to the original `numpy.random.uniform
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.amax.html>`_ in
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.random.uniform.html>`_ in
     the following aspects:
     - The default value type is `float32` instead of `float64` in numpy.
     - `low` and `high` do not accept array-like of floats
