@@ -360,7 +360,7 @@ std::vector<NDArray*> Imperative::Backward(
 
   if (backward_graph_dump_enabled_) {
     std::cout << "Forward graph: " << std::endl;
-    std::cout << GraphDump(graph) << std::endl;
+    std::cout << GraphDump(graph.outputs) << std::endl;
   }
 
   Graph g_graph = pass::MXGradient(
@@ -381,7 +381,7 @@ std::vector<NDArray*> Imperative::Backward(
 
   if (backward_graph_dump_enabled_) {
     std::cout << "Backward graph: " << std::endl;
-    std::cout << GraphDump(g_graph) << std::endl;
+    std::cout << GraphDump(g_graph.outputs) << std::endl;
   }
 
   const auto& idx = graph.indexed_graph();

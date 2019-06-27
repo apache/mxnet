@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "nnvm/graph.h"
+#include "nnvm/node.h"
 #include <string>
 
 namespace nnvm {
@@ -35,6 +35,6 @@ namespace nnvm {
 /*!
  * Returns a human readable graph
  */
-std::string GraphDump(const Graph& graph);
+std::string GraphDump(const std::vector<NodeEntry>& graph);
 
 }  // end namespace nnvm

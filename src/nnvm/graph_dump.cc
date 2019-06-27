@@ -27,6 +27,7 @@
 #include "./graph_dump.h"
 #include "common/directed_graph.h"
 #include "dmlc/json.h"
+#include "nnvm/graph.h"
 #include <vector>
 #include <string>
 
@@ -111,14 +112,14 @@ namespace {
 namespace nnvm {
 
 
-std::string GraphDump(const Graph& graph) {
+std::string GraphDump(const std::vector<NodeEntry>& output_nodes) {
     vector<NodePtr> topo_order;
-    DFSVisit(graph.outputs, [&](const NodePtr& nodePtr) {
+    DFSVisit(output_nodes, [&](const NodePtr& nodePtr) {
         //cout << "Node: " << nodePtr.get() << " " << nodePtr->attrs.name << endl;
         topo_order.push_back(nodePtr);
     });
     set<NodePtr> outputs;
-    transform(begin(graph.outputs), end(graph.outputs), inserter(outputs, end(outputs)),
+    transform(begin(output_nodes), end(output_nodes), inserter(outputs, end(outputs)),
         [](const NodeEntry& ne) { return ne.node; });
 
     // Build directed graph;
