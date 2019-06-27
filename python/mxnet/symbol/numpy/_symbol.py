@@ -1617,7 +1617,7 @@ def sqrt(x, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def ceil(x, out=None, **kwargs):
-    r"""
+    """
     Return the ceiling of the input, element-wise.
 
     The ceil of the ndarray `x` is the smallest integer `i`, such that
@@ -1641,7 +1641,7 @@ def ceil(x, out=None, **kwargs):
 
     Notes
     ----
-    Not Support zero-size and zero-shape.
+    - Not Support zero-size and zero-shape.
 
     Examples
     --------

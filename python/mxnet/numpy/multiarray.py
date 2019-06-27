@@ -2086,8 +2086,7 @@ def ceil(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x :
-        ndarray int float or double
+    x : ndarray int float or double.
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it
@@ -2103,7 +2102,7 @@ def ceil(x, out=None, **kwargs):
 
     Notes
     ----
-    Not Support zero-size and zero-shape.
+    - Not Support zero-size and zero-dim shape.
 
     Examples
     --------
@@ -2117,7 +2116,7 @@ def ceil(x, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 def log1p(x, out=None, **kwargs):
-    r"""
+    """
     Return the natural logarithm of one plus the input array, element-wise.
 
     Calculates ``log(1 + x)``.
@@ -2125,7 +2124,7 @@ def log1p(x, out=None, **kwargs):
     Parameters
     ----------
     x :
-        ndarray
+        ndarray.
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it
@@ -2164,7 +2163,7 @@ def tanh(x, out=None, **kwargs):
     Parameters
     ----------
     x :
-        ndarray int float or double
+        ndarray int float or double.
         Input array.
     out : ndarray or None
         A location into which the result is stored. If provided, it
