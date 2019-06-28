@@ -466,10 +466,12 @@ class ndarray(NDArray):
         """
         array_str = self.asnumpy().__repr__()
         dtype = self.dtype
-        if dtype == _np.float64:
-            array_str = array_str[:-1] + ', dtype=float64)'
-        elif dtype == _np.float32:
-            array_str = array_str[:array_str.rindex(', dtype=')] + ')'
+        if 'dtype=' in array_str:
+            if dtype == _np.float32:
+                array_str = array_str[:array_str.rindex(',')] + ')'
+        elif dtype != _np.float32:
+            array_str = array_str[:-1] + ', dtype={})'.format(dtype.__name__)
+
         context = self.context
         if context.device_type == 'cpu':
             return array_str
