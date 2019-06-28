@@ -2509,7 +2509,7 @@ def rint(x, out=None, **kwargs):
         Input array.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have a shape that the inputs broadcast to.
+        If provided, it must have the same shape as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -2524,6 +2524,8 @@ def rint(x, out=None, **kwargs):
     the following way(s):
 
     - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
 
     Examples
     --------
@@ -2545,7 +2547,7 @@ def log2(x, out=None, **kwargs):
         Input values.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have a shape that the inputs broadcast to.
+        If provided, it must have the same shape as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -2614,6 +2616,8 @@ def degrees(x, out=None, **kwargs):
     the following way(s):
 
     - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
 
     Examples
     --------
@@ -2635,7 +2639,7 @@ def radians(x, out=None, **kwargs):
         Input array in degrees.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have a shape that the inputs broadcast to.
+        If provided, it must have the same shape as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -2650,6 +2654,8 @@ def radians(x, out=None, **kwargs):
     the following way(s):
 
     - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
 
     Examples
     --------
