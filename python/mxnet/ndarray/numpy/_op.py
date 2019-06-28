@@ -947,6 +947,7 @@ def floor(x, out=None, **kwargs):
     - `a` only supports ndarray or Python int.
     - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
+    The effect is `out` does not support broadcasting.
 
     Examples
     --------
@@ -994,6 +995,7 @@ def expm1(x, out=None, **kwargs):
     - `a` does not support scalar.
     - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
+    The effect is `out` does not support broadcasting.
 
     Examples
     --------
@@ -1055,6 +1057,7 @@ def arcsinh(x, out=None, **kwargs):
     - `a` only supports ndarray or Python int.
     - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
+    The effect is `out` does not support broadcasting.
 
     Examples
     --------
