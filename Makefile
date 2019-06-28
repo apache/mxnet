@@ -581,9 +581,12 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-TVM_USE_CUDA = OFF
+TVM_USE_CUDA := OFF
 ifeq ($(USE_CUDA), 1)
 	TVM_USE_CUDA := ON
+	ifneq ($(USE_CUDA_PATH), NONE)
+		TVM_USE_CUDA := $(USE_CUDA_PATH)
+	endif
 endif
 lib/libtvm_runtime.so:
 	echo "Compile TVM"

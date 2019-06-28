@@ -72,7 +72,7 @@ inline PackedFunc GetFunction(const std::shared_ptr<Module> &module,
       default:
         LOG(FATAL) << "Unknown dtype " << arg.type_flag_;
     }
-    func_name << ":" << arg.shape_.ndim();
+    func_name << "_" << arg.shape_.ndim();
   }
   return module->GetFunction(func_name.str(), false);
 }

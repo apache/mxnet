@@ -50,7 +50,7 @@ class OpDef:
             yield self.func(**each_kwargs)
 
     def get_op_name(self, args):
-        return self.name + ''.join(["%s:%d" % (arg.dtype, len(arg.shape)) for arg in args])
+        return self.name + ''.join(["%s_%d" % (arg.dtype, len(arg.shape)) for arg in args])
 
     def get_binds(self, args):
         if self.auto_broadcast:

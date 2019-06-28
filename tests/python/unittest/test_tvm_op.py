@@ -26,6 +26,13 @@ def test_tvm_broadcast_add():
         c_np = a.asnumpy() + b.asnumpy()
         assert same(c.asnumpy(), c_np)
 
+def test_tvm_broadcast_add_gpu():
+    a = mx.nd.normal(shape=(2, 3, 4), ctx=mx.gpu())
+    b = mx.nd.normal(shape=(1, 3, 4), ctx=mx.gpu())
+    c = mx.nd.contrib.tvm_vadd(a, b)
+    c_np = a.asnumpy() + b.asnumpy()
+    assert same(c.asnumpy(), c_np)
+
 
 if __name__ == '__main__':
     import nose
