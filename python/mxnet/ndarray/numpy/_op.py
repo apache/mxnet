@@ -85,6 +85,29 @@ def ones(shape, dtype=None, **kwargs):
     -------
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
+
+    Examples
+    --------
+    >>> np.ones(5)
+    array([ 1.,  1.,  1.,  1.,  1.])
+    >>> np.ones((5,), dtype=int)
+    array([1, 1, 1, 1, 1])
+    >>> np.ones((2, 1))
+    array([[ 1.],
+           [ 1.]])
+    >>> s = (2,2)
+    >>> np.ones(s)
+    array([[ 1.,  1.],
+           [ 1.,  1.]])
+
+    Notes
+    -----
+    This function differs to the original `numpy.ones
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.ones.html>`_ in
+    the following aspects:
+
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `order` is not supported.
     """
     _sanity_check_params('zeros', ['order'], kwargs)
     ctx = kwargs.pop('ctx', current_context())
