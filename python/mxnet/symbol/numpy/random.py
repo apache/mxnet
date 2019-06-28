@@ -97,7 +97,10 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
 
 
 def normal(loc=0.0, scale=1.0, size=None, **kwargs):
-    """Draw random samples from a normal (Gaussian) distribution.
+    r"""
+    normal(loc=0.0, scale=1.0, size=None, dtype='float32', ctx=None, out=None)
+
+    Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
     by *loc* (mean) and *scale* (standard deviation).

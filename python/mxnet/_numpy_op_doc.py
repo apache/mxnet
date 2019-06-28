@@ -248,6 +248,7 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
     array(24.)
     
     But we can also specify the axis over which to multiply:
+    
     >>> x = np.array([[1.,2.],[3.,4.]])
     >>> np.prod(x, axis=1)
     array([ 2., 12.])

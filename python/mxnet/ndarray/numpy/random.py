@@ -99,7 +99,7 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
 
 def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     r"""
-    normal(loc=0.0, scale=1.0, size=None)
+    normal(loc=0.0, scale=1.0, size=None, dtype='float32', out=None)
 
     Draw random samples from a normal (Gaussian) distribution.
 
