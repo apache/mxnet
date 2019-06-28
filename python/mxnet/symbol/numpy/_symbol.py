@@ -1721,13 +1721,6 @@ def negative(x, out=None, where=True, **kwargs):
     >>> np.negative(1)
     -1
     """
->>>>>>> add examples.
-
-    Examples:
-    ---------
-    >>> np.negative(1)
-    -1
-    """
     return _unary_func_helper(x, _npi.negative, _np.negative, out=out)
 
 _set_np_symbol_class(_Symbol)

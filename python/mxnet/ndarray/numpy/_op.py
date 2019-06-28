@@ -1002,7 +1002,6 @@ def negative(x, out=None, where=True, **kwargs):
     Numerical negative, element-wise.
 
     Parameters:	
-
     ------------
     x : ndarray or scalar
         Input array.
