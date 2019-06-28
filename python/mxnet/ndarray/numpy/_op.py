@@ -917,16 +917,15 @@ def floor(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or int
+    x : ndarray or Python int
         Input values.
-        Does not support scalar.
 
     out : ndarray, None, or tuple of exactly one ndarray, optional
 
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element. If `x` is a int,
+        keyword argument) must have exactly one element. If `x` is a Python int,
         nothing will be written to `out`.
 
     Returns
@@ -946,8 +945,7 @@ def floor(x, out=None, **kwargs):
 
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray or Python int.
-    - `a` does not support scalar.
-    - `where` has no effect.
+    - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
 
     Examples
@@ -966,16 +964,15 @@ def expm1(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or int
+    x : ndarray or Python int
         Input values.
-        Does not support scalar.
 
     out : ndarray, None, or tuple of exactly one ndarray, optional
 
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element. If `x` is a int,
+        keyword argument) must have exactly one element. If `x` is a Python int,
         nothing will be written to `out`.
 
     Returns
@@ -995,7 +992,7 @@ def expm1(x, out=None, **kwargs):
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray or Python int.
     - `a` does not support scalar.
-    - `where` has no effect.
+    - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
 
     Examples
@@ -1021,7 +1018,8 @@ def arcsinh(x, out=None, **kwargs):
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element.
+        keyword argument) must have exactly one element. If `x` is a Python int,
+        nothing will be written to `out`.
 
     where : array_like, optional
 
@@ -1055,8 +1053,7 @@ def arcsinh(x, out=None, **kwargs):
 
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray or Python int.
-    - `a` does not support scalar.
-    - `where` has no effect.
+    - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
 
     Examples
