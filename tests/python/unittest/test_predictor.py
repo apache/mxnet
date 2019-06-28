@@ -95,8 +95,8 @@ def test_predictor_fp16():
     block.add(mx.gluon.nn.Dense(3))
     block.cast(np.float16)
     block.hybridize()
-    block.initialize(ctx=mx.gpu(0))
-    tmp = mx.nd.array(input1, dtype=np.float16, ctx=mx.gpu(0))
+    block.initialize(ctx=mx.current_context())
+    tmp = mx.nd.array(input1, dtype=np.float16, ctx=mx.current_context())
     out1 = block.forward(tmp)
     block.export(prefix)
 
@@ -106,12 +106,13 @@ def test_predictor_fp16():
                           dev_type="gpu",
                           dev_id=0,
                           type_dict={"data": input1.dtype})
-    predictor.forward(data=input1)
-    predictor_out1 = predictor.get_output(0)
-    assert out1.asnumpy().dtype == predictor_out1.dtype, \
-        "Dtypes of output from C predict API doesnt match with gluon"
+    if ctx.current_context().dev_type == "gpu":
+        predictor.forward(data=input1)
+        predictor_out1 = predictor.get_output(0)
+        assert out1.asnumpy().dtype == predictor_out1.dtype, \
+            "Dtypes of output from C predict API doesnt match with gluon"
 
-    assert_almost_equal(out1.asnumpy(), predictor_out1, rtol=1e-5, atol=1e-6)
+        assert_almost_equal(out1.asnumpy(), predictor_out1, rtol=1e-5, atol=1e-6)
 
 
 if __name__ == '__main__':
