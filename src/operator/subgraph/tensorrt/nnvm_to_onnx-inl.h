@@ -84,7 +84,13 @@ void ConvDeconvConvertHelper(NodeProto *node_proto,
                              ConvDeconvType type);
 
 // Forward declarations
-void ConvertConvolution(NodeProto *node_proto,
+void ConvertIdentity(NodeProto* node_proto,
+                     const NodeAttrs &attrs,
+                     const nnvm::IndexedGraph& ig,
+                     const array_view<IndexedGraph::NodeEntry> &inputs);
+
+void ConvertConvolution(
+                        NodeProto *node_proto,
                         const NodeAttrs &attrs,
                         const nnvm::IndexedGraph &ig,
                         const array_view<IndexedGraph::NodeEntry> &inputs);
@@ -134,7 +140,7 @@ void ConvertBatchNorm(NodeProto *node_proto,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertElementwiseAdd(NodeProto *node_proto,
+void ConvertElementwiseSub(NodeProto *node_proto,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
@@ -168,6 +174,7 @@ std::string ConvertNnvmGraphToOnnx(const nnvm::Graph &g,
     std::unordered_map<std::string, NDArray>* params_map);
 
 static const std::unordered_map<std::string, ConverterFunction> converter_map = {
+  {"_copy", ConvertIdentity},
   {"Activation", ConvertActivation},
   {"BatchNorm", ConvertBatchNorm},
   {"clip", ConvertClip},
