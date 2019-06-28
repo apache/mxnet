@@ -630,8 +630,10 @@ inline bool RangeLikeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   int real_axis = -1;
   if (param.axis.has_value()) {
-    real_axis = param.axis.value() < 0 ? (param.axis.value() + (*in_attrs)[0].ndim()) : param.axis.value();
-    CHECK(real_axis >=0 && real_axis < (*in_attrs)[0].ndim()) << "cannot handle param.axis " << param.axis.value() << ".";
+    real_axis = param.axis.value() < 0 ?
+        (param.axis.value() + (*in_attrs)[0].ndim()) : param.axis.value();
+    CHECK(real_axis >=0 && real_axis < (*in_attrs)[0].ndim())
+        << "cannot handle param.axis " << param.axis.value() << ".";
   }
   if (real_axis == -1) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
