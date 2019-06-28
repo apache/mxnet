@@ -20,7 +20,7 @@ import numpy as np
 from itertools import product
 import copy
 
-from mxnet.test_utils import assert_allclose
+from mxnet.test_utils import assert_almost_equal
 
 def check_unsupported_single_sym(sym):
     wrapped_sym = mx.sym.Group([mx.sym.identity(s) for s in sym])
@@ -74,15 +74,8 @@ def check_single_sym(sym, arg_params_shapes=None, aux_params_shapes=None,
 
         trt_fp32_outputs = [arr.asnumpy() for arr in trt_fp32_executor.outputs]
         for j, (orig, fp16, fp32) in enumerate(zip(orig_outputs, trt_fp16_outputs, trt_fp32_outputs)):
-            #abs_orig = abs(orig)
-            #diff32 = abs(fp32 - orig)
-            #diff16 = abs(fp16.astype('float32') - orig)
-            #_atol32 = diff32 - rtol_fp32 * abs_orig
-            #_atol16 = diff16 - rtol_fp16 * abs_orig
-            #print("{}: diff32({:.2E}) | diff16({:.2E}) | atol32({:.2E}) | atol16({:.2E}) | orig.min({:.2E})".format(
-            #      j, diff32.max(), diff16.max(), _atol32.max(), _atol16.max(), abs_orig.min()))
-            assert_allclose(fp32, orig, rtol=rtol_fp32, atol=atol_fp32)
-            assert_allclose(fp16.astype('float32'), orig, rtol=rtol_fp16, atol=atol_fp16)
+            assert_almost_equal(fp32, orig, rtol=rtol_fp32, atol=atol_fp32)
+            assert_almost_equal(fp16.astype('float32'), orig, rtol=rtol_fp16, atol=atol_fp16)
 
 def test_noop():
     data = mx.sym.Variable('data')
@@ -108,7 +101,7 @@ def test_fp16():
     executor.copy_params_from(arg_params, {})
     executor.forward(is_train=False)
     outputs = executor.outputs[0].asnumpy()
-    assert_allclose(outputs, arr, rtol=0., atol=0.)
+    assert_almost_equal(outputs, arr, rtol=0., atol=0.)
 
 def test_convolution2d():
     data = mx.sym.Variable('data')
@@ -318,15 +311,8 @@ def check_batch_norm(sym, arg_params_shapes=None, aux_params_shapes=None,
         for j, (orig, fp16, fp32) in enumerate(zip(orig_outputs,
                                                    trt_fp16_outputs,
                                                    trt_fp32_outputs)):
-            #abs_orig = abs(orig)
-            #diff32 = abs(fp32 - orig)
-            #diff16 = abs(fp16.astype('float32') - orig)
-            #_atol32 = diff32 - rtol_fp32 * abs_orig
-            #_atol16 = diff16 - rtol_fp16 * abs_orig
-            #print("{}: diff32({:.2E}) | diff16({:.2E}) | atol32({:.2E}) | atol16({:.2E}) | orig.min({:.2E})".format(
-            #      j, diff32.max(), diff16.max(), _atol32.max(), _atol16.max(), abs_orig.min()))
-            assert_allclose(fp32, orig, rtol=rtol_fp32, atol=atol_fp32)
-            assert_allclose(fp16.astype('float32'), orig, rtol=rtol_fp16, atol=atol_fp16)
+            assert_almost_equal(fp32, orig, rtol=rtol_fp32, atol=atol_fp32)
+            assert_almost_equal(fp16.astype('float32'), orig, rtol=rtol_fp16, atol=atol_fp16)
 
 def test_batch_norm():
     data = mx.sym.Variable('data')

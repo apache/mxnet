@@ -34,6 +34,13 @@
 #include <string>
 #include <vector>
 
+#include "../../nn/activation-inl.h"
+#include "../../nn/batch_norm-inl.h"
+#include "../../nn/concat-inl.h"
+#include "../../nn/convolution-inl.h"
+#include "../../nn/dropout-inl.h"
+#include "../../nn/fully_connected-inl.h"
+#include "../../nn/pooling-inl.h"
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "nnvm_to_onnx-inl.h"
