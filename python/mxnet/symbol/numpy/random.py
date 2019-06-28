@@ -86,6 +86,7 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
     Notes
     -----
     This function currently does not support ``low`` and ``high`` as symbols.
+    `size` is not optional.
     """
     dtype = kwargs.pop('dtype', None)
     if dtype is None:

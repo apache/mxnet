@@ -24,8 +24,9 @@ __all__ = ['uniform', 'normal']
 
 
 def uniform(low=0.0, high=1.0, size=None, **kwargs):
-    """Draw samples from a uniform distribution.
-
+    r"""
+    uniform(low=0.0, high=1.0, size=None)
+    Draw samples from a uniform distribution.
     Samples are uniformly distributed over the half-open interval
     ``[low, high)`` (includes low, but excludes high).  In other words,
     any value within the given interval is equally likely to be drawn
@@ -36,30 +37,47 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
     low : float, optional
         Lower boundary of the output interval.  All values generated will be
         greater than or equal to low.  The default value is 0.
-    high : float
+    high : float, optional
         Upper boundary of the output interval.  All values generated will be
         less than high.  The default value is 1.0.
-    size : int or tuple of ints, optional
+    size : int or tuple of ints
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
-        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
-        a scalar tensor containing a single value is returned if
-        ``low`` and ``high`` are both scalars.
-    dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
-    ctx : Context, optional
-        Device context of output. Default is current context.
-    out : ndarray, optional
-        Store output to an existing ndarray.
+        ``m * n * k`` samples are drawn.
+        Otherwise, ``np.broadcast(low, high).size`` samples are drawn.
 
     Returns
     -------
-    out : ndarray
+    out : ndarray or scalar
         Drawn samples from the parameterized uniform distribution.
-
 
     Notes
     -----
-    This function currently does not support ``low`` and ``high`` as ndarrays.
+    The probability density function of the uniform distribution is
+    .. math:: p(x) = \frac{1}{b - a}
+    anywhere within the interval ``[a, b)``, and zero elsewhere.
+    When ``high`` == ``low``, values of ``low`` will be returned.
+    If ``high`` < ``low``, the results are officially undefined
+    and may eventually raise an error, i.e. do not rely on this
+    function to behave when passed arguments satisfying that
+    inequality condition.
+
+    Examples
+    --------
+    Draw samples from the distribution:
+
+    >>> s = np.random.uniform(-1, 0, 1000)
+
+    All values are within the given interval.
+
+    Notes
+    -----
+    This function differs to the original `numpy.random.uniform
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.random.uniform.html>`_ in
+    the following aspects:
+
+    - The default value type is `float32` instead of `float64` in numpy.
+    - `low` and `high` do not accept array-like of floats.
+    - `size` is not optional.
     """
     return _mx_nd_np.random.uniform(low, high, size, **kwargs)
 
