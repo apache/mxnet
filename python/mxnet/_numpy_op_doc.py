@@ -319,63 +319,63 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
 
 
 def _np_mean(a, axis=None, dtype=None, out=None, keepdims=None):
-    """
-    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+    # """
+    # mean(a, axis=None, dtype=None, out=None, keepdims=None)
 
-    Compute the arithmetic mean along the specified axis.
-    Returns the average of the array elements.
-    The average is taken over the flattened array by default, otherwise over the specified axis.
+    # Compute the arithmetic mean along the specified axis.
+    # Returns the average of the array elements.
+    # The average is taken over the flattened array by default, otherwise over the specified axis.
 
-    Parameters	
-    ----------
-    a : `ndarray`
-        ndarray containing numbers whose mean is desired.
-    axis : None or int or tuple of ints, optional
-        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
-        If this is a tuple of ints, a mean is performed over multiple axes, 
-        instead of a single axis or all the axes as before.
-    dtype : data-type, optional
-        Type to use in computing the mean. For integer inputs, the default is float32;
-        for floating point inputs, it is the same as the input dtype.
-    out : ndarray, optional
-        Alternate output array in which to place the result. The default is None; if provided,
-        it must have the same shape as the expected output, but the type will be cast if necessary.
-    keepdims : bool, optional
-        If this is set to True, the axes which are reduced are left in the result
-        as dimensions with size one. With this option, the result will broadcast correctly
-        against the input array.
-        If the default value is passed, then keepdims will not be passed through to the mean
-        method of sub-classes of ndarray, however any non-default value will be. If the sub-class
-        method does not implement keepdims any exceptions will be raised.
+    # Parameters	
+    # ----------
+    # a : `ndarray`
+    #     ndarray containing numbers whose mean is desired.
+    # axis : None or int or tuple of ints, optional
+    #     Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+    #     If this is a tuple of ints, a mean is performed over multiple axes, 
+    #     instead of a single axis or all the axes as before.
+    # dtype : data-type, optional
+    #     Type to use in computing the mean. For integer inputs, the default is float32;
+    #     for floating point inputs, it is the same as the input dtype.
+    # keepdims : bool, optional
+    #     If this is set to True, the axes which are reduced are left in the result
+    #     as dimensions with size one. With this option, the result will broadcast correctly
+    #     against the input array.
+    #     If the default value is passed, then keepdims will not be passed through to the mean
+    #     method of sub-classes of ndarray, however any non-default value will be. If the sub-class
+    #     method does not implement keepdims any exceptions will be raised.
+    # out : ndarray, optional
+    #     Alternate output array in which to place the result. The default is None; if provided,
+    #     it must have the same shape as the expected output, but the type will be cast if necessary.
 
-    Returns
-    -------
-    m : ndarray, see dtype parameter above
-        If out=None, returns a new array containing the mean values,
-        otherwise a reference to the output array is returned.
+    # Returns
+    # -------
+    # m : ndarray, see dtype parameter above
+    #     If out=None, returns a new array containing the mean values,
+    #     otherwise a reference to the output array is returned.
 
-    Notes
-    -----
-    This function differs from the original `numpy.mean
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
-    the following way(s):
+    # Notes
+    # -----
+    # This function differs from the original `numpy.mean
+    # <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    # the following way(s):
 
-    - only ndarray is accepted as valid input, python iterables are not supported
-    - default data type for integer input is float32
+    # - only ndarray is accepted as valid input, python iterables are not supported
+    # - default data type for integer input is float32
 
-    Examples
-    --------
-    >>> a = np.array([[1, 2], [3, 4]])
-    >>> np.mean(a)
-    array(2.5, dtype=float32)
-    >>> a = np.zeros((2, 512*512), dtype=np.float32)
-    >>> a[0,:] = 1.0
-    >>> a[1,:] = 0.1
-    >>> np.mean(a)
-    array(0.55, dtype=float32)
-    >>> np.mean(a, dtype=np.float64)
-    array(0.55)
-    """
+    # Examples
+    # --------
+    # >>> a = np.array([[1, 2], [3, 4]])
+    # >>> np.mean(a)
+    # array(2.5, dtype=float32)
+    # >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    # >>> a[0,:] = 1.0
+    # >>> a[1,:] = 0.1
+    # >>> np.mean(a)
+    # array(0.55, dtype=float32)
+    # >>> np.mean(a, dtype=np.float64)
+    # array(0.55)
+    # """
     pass
 
 
