@@ -100,13 +100,20 @@
 
 (defn load-glove [glove-file-path]
   (println "Loading the glove pre-trained word embeddings from " glove-file-path)
-  (into {} (read-text-embedding-pairs (line-seq (io/reader glove-file-path)))))
+  (->> (io/reader glove-file-path)
+       line-seq
+       read-text-embedding-pairs
+       (into {})))
 
 (def remove-fasttext-metadata rest)
 
 (defn load-fasttext [fasttext-file-path]
   (println "Loading the fastText pre-trained word embeddings from " fasttext-file-path)
-  (into {} (read-text-embedding-pairs (remove-fasttext-metadata (line-seq (io/reader fasttext-file-path))))))
+  (->> (io/reader fasttext-file-path)
+       line-seq
+       remove-fasttext-metadata
+       read-text-embedding-pairs
+       (into {})))
 
 (defn clean-str [s]
   (-> s
