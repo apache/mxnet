@@ -63,7 +63,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sqrt, mshadow_op::square_root);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_cbrt, mshadow_op::cube_root);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_exp, mshadow_op::exp);
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_exp, mshadow_op::exp);
 
 NNVM_REGISTER_OP(_np_log)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::log>);
@@ -88,7 +88,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arcsin, mshadow_op::arcsin);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arccos, mshadow_op::arccos);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_arctan, mshadow_op::arctan);
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arctan, mshadow_op::arctan);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_degrees, mshadow_op::degrees);
 

@@ -104,7 +104,7 @@ Example::
 
 // abs
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_absolute, "x", mshadow_op::abs)
-.add_alias("_np_abs")
+.add_alias("_npi_abs")
 .describe(R"code(Returns element-wise absolute value of the input.
 Example::
    absolute([-2, 0, 3]) = [2, 0, 3]
@@ -191,7 +191,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_cbrt"});
 
 // exp
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_exp, "x", mshadow_op::exp)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_exp, "x", mshadow_op::exp)
 .describe(R"code(Calculate the exponential of all elements in the input array.
 Example::
    exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
@@ -298,7 +298,7 @@ The storage type of ``arccos`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccos" });
 
 // arctan
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arctan, "x", mshadow_op::arctan)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arctan, "x", mshadow_op::arctan)
 .describe(R"code(Returns element-wise inverse tangent of the input array.
 .. math::
    arctan([-1, 0, 1]) = [-\pi/4, 0, \pi/4]
