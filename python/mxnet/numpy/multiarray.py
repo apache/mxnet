@@ -2159,5 +2159,4 @@ def negative(x, out=None, where=True, **kwargs):
     >>> np.negative(1)
     -1
     """
-
     return _mx_nd_np.negative(x, out=out)
