@@ -33,7 +33,7 @@
   [embedding-size]
   (format "data/glove/glove.6B.%dd.txt" embedding-size))
 
-(def fasttext-file-path "data/fastText/wiki.simple.vec")
+(def fasttext-file-path "data/fasttext/wiki.simple.vec")
 
 (defn r-string
   "Reads a string from the given DataInputStream `dis` until a space or newline is reached."
@@ -205,7 +205,7 @@
         vocab-embeddings (case pretrained-embedding
                            :glove (->> (load-glove (glove-file-path embedding-size))
                                        (build-vocab-embeddings vocab embedding-size))
-                           :fastText (->> (load-fasttext fasttext-file-path)
+                           :fasttext (->> (load-fasttext fasttext-file-path)
                                           (build-vocab-embeddings vocab embedding-size))
                            :word2vec (->> (load-word2vec-model w2v-file-path embedding-size {:vocab vocab})
                                           (:word2vec)
