@@ -355,6 +355,3 @@ def  _np_copy(a, out=None):
     array([0.])
     """
     pass
-
-
-
