@@ -32,6 +32,7 @@
 #include <NvInfer.h>
 
 #include <fstream>
+#include <memory>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -39,6 +40,26 @@
 #include <tuple>
 
 namespace onnx_to_tensorrt {
+
+struct InferDeleter {
+  template<typename T>
+    void operator()(T* obj) const {
+      if ( obj ) {
+        obj->destroy();
+      }
+    }
+};
+
+template<typename T>
+using unique_ptr = std::unique_ptr<T, InferDeleter>;
+
+template<typename T>
+inline unique_ptr<T> InferObject(T* obj) {
+  if ( !obj ) {
+    throw std::runtime_error("Failed to create object");
+  }
+  return unique_ptr<T>(obj, InferDeleter());
+}
 
 class TRT_Logger : public nvinfer1::ILogger {
   nvinfer1::ILogger::Severity _verbosity;
@@ -62,7 +83,9 @@ class TRT_Logger : public nvinfer1::ILogger {
   }
 };
 
-std::tuple<nvinfer1::ICudaEngine*, nvonnxparser::IParser*, TRT_Logger*> onnxToTrtCtx(
+std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
+           unique_ptr<nvonnxparser::IParser>,
+           std::unique_ptr<TRT_Logger> > onnxToTrtCtx(
         const std::string& onnx_model,
         int32_t max_batch_size = 32,
         size_t max_workspace_size = 1L << 30,
