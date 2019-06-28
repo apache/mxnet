@@ -30,7 +30,6 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'arctanh', 'tan', 'fix', 'negative']
 
-
 @set_module('mxnet.ndarray.numpy')
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
@@ -404,12 +403,17 @@ def divide(x1, x2, out=None):
     where : array_like, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    **kwargs : For other keyword-only arguments, see the ufunc docs.
 
     Returns:	
     --------
     y : ndarray
     Result is scalar if both inputs are scalar, ndarray otherwise.
+
+    Examples:
+
+    >>> x = np.arange(5)
+    >>> np.true_divide(x, 4)
+    array([ 0.  ,  0.25,  0.5 ,  0.75,  1.  ])
     """
 
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
@@ -525,6 +529,13 @@ def swapaxes(a, axis1, axis2):
     Returns:	
     -------
     a_swapped : ndarray
+
+    Examples:
+    >>> x = np.array([[1,2,3]])
+    >>> np.swapaxes(x,0,1)
+    array([[1],
+          [2],
+          [3]])     
     """
 
     return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
@@ -756,8 +767,10 @@ def sin(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.sin, _np.sin, out=out, **kwargs)
 
+<<<<<<< HEAD
 
-
+=======
+>>>>>>> 20c25ef... merge
 @set_module('mxnet.ndarray.numpy')
 def cos(x, out=None, **kwargs):
     r"""Cosine, element-wise.
@@ -902,6 +915,7 @@ def arctanh(x, out=None, where=True, **kwargs):
     Inverse hyperbolic tangent element-wise.
 
     Parameters:	
+
     -----------
     x : ndarray 
         Input array.
@@ -914,12 +928,14 @@ def arctanh(x, out=None, where=True, **kwargs):
     where : ndarray, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    **kwargs : For other keyword-only arguments, see the ufunc docs.
-
     Returns:	
     --------
     out : ndarray or scalar
           ndarray of the same shape as x. This is a scalar if x is a scalar.
+    Examples
+
+    >>> np.arctan(0.7)
+    0.8673005276940531
     """
 
     return _unary_func_helper(x, _npi.arctanh, _np.arctanh, out=out, **kwargs)
@@ -944,21 +960,25 @@ def tan(x, out=None, where=True, **kwargs):
     where : ndarray, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    **kwargs : For other keyword-only arguments, see the ufunc docs.
 
     Returns:	
     -------
     y : ndarray
     The corresponding tangent values. This is a scalar if x is a scalar.
-    r"""
+
+    Examples:
+
+    >>> np.tan(0.5)
+    0.5463024898437905 
+    """
 
     return _unary_func_helper(x, _npi.tan, _np.tan, out=out, **kwargs)
 
 @set_module('mxnet.ndarray.numpy')
 def fix(x, out=None):
     r"""
-    Round to nearest integer towards zero.
-    Round an array of floats element-wise to nearest integer towards zero. The rounded values are returned as floats.
+    Round an array of floats element-wise to nearest integer towards zero. 
+    The rounded values are returned as floats.
     
     Parameters:	
     ----------
@@ -970,18 +990,23 @@ def fix(x, out=None):
     Returns:	
     -------
     y : ndarray of floats
+
+    Examples
+    
+    >>> np.fix(3.14)
+    3
     """
     return _unary_func_helper(x, _npi.fix, _np.fix, out=out)
 
 @set_module('mxnet.ndarray.numpy')
 def negative(x, out=None, where=True, **kwargs):
-
     r""" 
     negative(x, out=None, where=True)
 
     Numerical negative, element-wise.
 
     Parameters:	
+
     ------------
     x : ndarray or scalar
         Input array.
@@ -990,12 +1015,15 @@ def negative(x, out=None, where=True, **kwargs):
     where : ndarray, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    kwargs : For other keyword-only arguments, see the ufunc docs.
 
     Returns: 
     -------
     y : ndarray or scalar
         Returned array or scalar: y = -x. This is a scalar if x is a scalar.
-    """
 
+    Examples
+
+    >>> np.negative(1)
+    -1
+    """
     return _unary_func_helper(x, _npi.negative, _np.negative, out=out)

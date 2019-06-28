@@ -1608,6 +1608,7 @@ def arctanh(x, out=None, where=True, **kwargs):
     Inverse hyperbolic tangent element-wise.
 
     Parameters:	
+
     -----------
     x : _Symbol or scalar 
         Input array.
@@ -1620,13 +1621,15 @@ def arctanh(x, out=None, where=True, **kwargs):
     where : array_like, optional
          Values of True indicate to calculate the ufunc at that position, 
          values of False indicate to leave the value in the output alone.
-    **kwargs
-         For other keyword-only arguments, see the ufunc docs.
-
     Returns:	
+
     -------
     out : _Symbol or scalar
           Array of the same shape as x. This is a scalar if x is a scalar.
+    Examples
+
+    >>> np.arctan(0.7)
+    0.8673005276940531
     """
 
     return _unary_func_helper(x, _npi.arctanh, _np.arctanh, out=out, **kwargs)
@@ -1652,7 +1655,6 @@ def tan(x, out=None, where=True, **kwargs):
     where : array_like, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    **kwargs : For other keyword-only arguments, see the ufunc docs.
 
     Returns:	
     -------
@@ -1678,7 +1680,12 @@ def fix(x, out=None):
 
     Returns:	
     -------
-    y : Symbol or scalar  
+    y : _Symbol or scalar  
+
+    Examples
+
+    >>> np.fix(3.14)
+    3
     """
     return _unary_func_helper(x, _npi.fix, _np.fix, out=out)
 
@@ -1690,6 +1697,7 @@ def negative(x, out=None, where=True, **kwargs):
     Numerical negative, element-wise.
 
     Parameters:	
+
     ------------
     x : _Symbol or scalar
         Input array.
@@ -1702,12 +1710,16 @@ def negative(x, out=None, where=True, **kwargs):
     where : _Symbol or scalar, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    kwargs For other keyword-only arguments, see the ufunc docs.
 
     Returns: 
     -------
     y : _Symbol or scalar
         Returned array or scalar: y = -x. This is a scalar if x is a scalar.
+
+    Examples
+
+    >>> np.negative(1)
+    -1
     """
 
     return _unary_func_helper(x, _npi.negative, _np.negative, out=out)

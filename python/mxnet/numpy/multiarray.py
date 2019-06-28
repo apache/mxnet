@@ -48,7 +48,6 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
            'sinh', 'cosh', 'log10', 'sqrt', 'arctanh', 'tan', 'fix', 'negative']
 
-
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
 def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
@@ -660,6 +659,13 @@ class ndarray(NDArray):
         Returns:	
         -------
         a_swapped : ndarray
+
+        Examples:
+        >>> x = np.array([[1,2,3]])
+        >>> np.swapaxes(x,0,1)
+        array([[1],
+              [2],
+              [3]])     
         """
 
         return swapaxes(self, axis1, axis2)
@@ -2034,9 +2040,11 @@ def sqrt(x, out=None, **kwargs):
 def arctanh(x, out=None, where=True, **kwargs):
     r"""
     arctanh(x, out=None, where=True)
+
     Inverse hyperbolic tangent element-wise.
 
     Parameters:	
+
     -----------
     x : ndarray 
         Input array.
@@ -2049,12 +2057,14 @@ def arctanh(x, out=None, where=True, **kwargs):
     where : ndarray, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    **kwargs : For other keyword-only arguments, see the ufunc docs.
-
     Returns:	
     --------
     out : ndarray or scalar
           ndarray of the same shape as x. This is a scalar if x is a scalar.
+    Examples
+
+    >>> np.arctan(0.7)
+    0.8673005276940531
     """
 
     return _mx_nd_np.arctanh(x, out=out, **kwargs)
@@ -2063,6 +2073,7 @@ def arctanh(x, out=None, where=True, **kwargs):
 def tan(x, out=None, where=True, **kwargs):
     r"""
     tan(x, out=None, where=True)
+
     Compute tangent element-wise.
     Equivalent to np.sin(x)/np.cos(x) element-wise.
     
@@ -2078,13 +2089,18 @@ def tan(x, out=None, where=True, **kwargs):
     where : ndarray, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    **kwargs: For other keyword-only arguments, see the ufunc docs.
 
     Returns:	
     -------
     y : ndarray
     The corresponding tangent values. This is a scalar if x is a scalar.
+
+    Examples:
+
+    >>> np.tan(0.5)
+    0.5463024898437905 
     """
+
     return _mx_nd_np.tan(x, out=out, **kwargs)
 
 @set_module('mxnet.numpy')
@@ -2103,6 +2119,11 @@ def fix(x, out=None):
     Returns:	
     -------
     y : ndarray of floats
+
+    Examples
+    
+    >>> np.fix(3.14)
+    3
     """
     return _mx_nd_np.fix(x, out=out)
 
@@ -2114,6 +2135,7 @@ def negative(x, out=None, where=True, **kwargs):
     Numerical negative, element-wise.
 
     Parameters:	
+
     ------------
     x : ndarray or scalar
         Input array.
@@ -2126,14 +2148,16 @@ def negative(x, out=None, where=True, **kwargs):
     where : ndarray, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    kwargs For other keyword-only arguments, see the ufunc docs.
 
     Returns: 
     -------
     y : ndarray or scalar
         Returned array or scalar: y = -x. This is a scalar if x is a scalar.
+
+    Examples
+
+    >>> np.negative(1)
+    -1
     """
 
     return _mx_nd_np.negative(x, out=out)
-
-
