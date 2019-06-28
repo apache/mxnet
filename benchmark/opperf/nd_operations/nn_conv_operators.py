@@ -70,8 +70,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
                                                                       "pool_type": pool_type,
                                                                       "global_pool": global_pool,
                                                                       "stride": 1,
-                                                                      "pad": 1,
-                                                                      "layout": 'NCW'}
+                                                                      "pad": 1}
                                                                      ],
                                                              warmup=warmup,
                                                              runs=runs)
@@ -85,8 +84,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
                                                                       "pool_type": pool_type,
                                                                       "global_pool": global_pool,
                                                                       "stride": (1, 1),
-                                                                      "pad": (0, 0),
-                                                                      "layout": 'NCHW'}
+                                                                      "pad": (0, 0)}
                                                                      ],
                                                              warmup=warmup,
                                                              runs=runs)
