@@ -257,7 +257,7 @@ class Predictor(object):
         for k, v in kwargs.items():
             if not isinstance(v, np.ndarray):
                 raise ValueError("Expect numpy ndarray as input")
-            if k in self.type_dict:
+            if self.type_dict and k in self.type_dict:
                 v = np.asarray(v, dtype=self.type_dict[k], order='C')
             else:
                 v = np.asarray(v, dtype=np.float32, order='C')

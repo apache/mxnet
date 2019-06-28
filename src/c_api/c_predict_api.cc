@@ -226,8 +226,15 @@ int _CreatePartialOut(const char* symbol_json_str,
     g = mxnet::exec::InferShape(std::move(g), std::move(in_shapes), "__shape__");
     g = mxnet::exec::InferType(std::move(g), std::move(in_types), "__dtype__");
     bool infer_complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
+    // This is tricky for AMP Use case, for example, with only weights input types
+    // cannot be inferred in AMP. Thus for AMP converted model type_dict will be
+    // required
+    bool infer_type_complete = (g.GetAttr<size_t>("dtype_num_unknown_nodes") == 0);
     CHECK(infer_complete)
       << "The shape information of is not enough to get the shapes";
+    CHECK(infer_type_complete)
+        << "The type information is not enough, please provide input arg_types "
+           "with provided_arg_dtype_names and provided_arg_dtypes";
     CopyAttr(g.indexed_graph(),
              g.GetAttr<mxnet::ShapeVector>("shape"),
              &arg_shapes, &out_shapes, &aux_shapes);
