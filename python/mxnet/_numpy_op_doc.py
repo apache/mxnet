@@ -180,7 +180,7 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 def _np_amax(a, axis=None, out=None):
     r"""
-    amax(a, axis=None, out=None, keepdims=_Null, initial=_Null)
+    amax(a, axis=None, keepdims=_Null, initial=_Null, out=None)
 
     Return the maximum of an array or maximum along an axis.
 
@@ -195,11 +195,6 @@ def _np_amax(a, axis=None, out=None):
         used.
 
         Negative indices not supported.
-
-    out : ndarray, optional
-        Alternative output array in which to place the result.  Must
-        be of the same shape and buffer length as the expected output.
-        See `doc.ufuncs` (Section "Output arguments") for more details.
 
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left
@@ -216,7 +211,13 @@ def _np_amax(a, axis=None, out=None):
         The minimum value of an output element. Must be present to allow
         computation on empty slice.
 
-        Not supported yet.
+        only None is supported.
+
+
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
 
     Returns
     -------
@@ -250,7 +251,8 @@ def _np_amax(a, axis=None, out=None):
     - The default value type is `float32` instead of `float64` in numpy.
     - `a` only supports ndarray.
     - `axis` doe snot support negative value.
-    - `initial` is not supported.
+    - `initial` only supports None.
+    - `out` is the last parameter.
     """
     pass
 
