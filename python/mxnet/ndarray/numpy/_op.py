@@ -651,7 +651,7 @@ def split(ary, indices_or_sections, axis=0):
 
 
 @set_module('mxnet.ndarray.numpy')
-def tile(A, reps):
+def tile(x, reps):
     """
     Construct an array by repeating A the number of times given by reps.
 
@@ -670,8 +670,8 @@ def tile(A, reps):
 
     Parameters
     ----------
-    A : ndarray
-        The input array.
+    A : ndarray or scalar
+        A input array or a scalar to repeat.
     reps : a single integer or tuple of integers
         The number of repetitions of `A` along each axis.
 
@@ -687,29 +687,35 @@ def tile(A, reps):
     array([0., 1., 2., 0., 1., 2.])
     >>> np.tile(a, (2, 2))
     array([[0., 1., 2., 0., 1., 2.],
-       [0., 1., 2., 0., 1., 2.]])
+           [0., 1., 2., 0., 1., 2.]])
     >>> np.tile(a, (2, 1, 2))
     array([[[0., 1., 2., 0., 1., 2.]],
-          [[0., 1., 2., 0., 1., 2.]]])
+           [[0., 1., 2., 0., 1., 2.]]])
 
     >>> b = np.array([[1, 2], [3, 4]])
     >>> np.tile(b, 2)
     array([[1., 2., 1., 2.],
-       [3., 4., 3., 4.]])
+           [3., 4., 3., 4.]])
     >>> np.tile(b, (2, 1))
     array([[1., 2.],
-          [3., 4.],
-          [1., 2.],
-          [3., 4.]])
+           [3., 4.],
+           [1., 2.],
+           [3., 4.]])
 
     >>> c = np.array([1,2,3,4])
     >>> np.tile(c,(4,1))
     array([[1., 2., 3., 4.],
-          [1., 2., 3., 4.],
-          [1., 2., 3., 4.],
-          [1., 2., 3., 4.]])
+           [1., 2., 3., 4.],
+           [1., 2., 3., 4.],
+           [1., 2., 3., 4.]])
+
+    Scalar as input:
+
+    >>> np.tile(2, 3)
+    array([2, 2, 2])
+
     """
-    return _npi.tile(A, reps)
+    return _unary_func_helper(x, _npi.tile, _np.tile, reps=reps)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1019,7 +1025,7 @@ def sign(x, out=None, **kwargs):
     -------
     - Only supports real number as input elements.
     - Input type does not support Python native iterables.
-    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+    - ``out`` param: cannot perform auto type change. ``out`` ndarray's dtype must be the same as the expected output.
 
     Examples
     --------
@@ -1160,7 +1166,7 @@ def log(x, out=None, **kwargs):
     -----
     - Does not support complex number for now
     - Input type does not support Python native iterables.
-    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+    - ``out`` param: cannot perform auto type change. ``out`` ndarray's dtype must be the same as the expected output.
 
     References
     ----------
@@ -1178,7 +1184,7 @@ def log(x, out=None, **kwargs):
 
     >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float32)
     >>> np.log(a)
-    array([0.        , 0.99999994, 2.        ,       -inf])
+    array([  0.,  0.99999994,   2., -inf])
 
     Scalar calculation:
 
@@ -1215,7 +1221,7 @@ def degrees(x, out=None, **kwargs):
     Notes
     -------
     - Input type does not support Python native iterables.
-    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+    - ``out`` param: cannot perform auto type change. ``out`` ndarray's dtype must be the same as the expected output.
 
     Examples
     --------

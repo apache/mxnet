@@ -1300,7 +1300,7 @@ def split(ary, indices_or_sections, axis=0):
 
 
 @set_module('mxnet.symbol.numpy')
-def tile(A, reps):
+def tile(x, reps):
     """
     Construct an array by repeating A the number of times given by reps.
 
@@ -1319,8 +1319,8 @@ def tile(A, reps):
 
     Parameters
     ----------
-    A : _Symbol
-        The input array.
+    A : _Symbol or scalar
+        The input array or scalar to repeat.
     reps : a single integer or tuple of integers
         The number of repetitions of `A` along each axis.
 
@@ -1329,7 +1329,7 @@ def tile(A, reps):
     c : _Symbol
         The tiled output array.
     """
-    return _npi.tile(A, reps)
+    return _unary_func_helper(x, _npi.tile, _np.tile, reps=reps)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -1613,7 +1613,7 @@ def sign(x, out=None, **kwargs):
     -------
     - Only supports real number as input elements.
     - Input type does not support Python native iterables.
-    - "out" param: cannot perform auto type change. out symbol's dtype must be the same as the expected output.
+    - ``out`` param: cannot perform auto type change. ``out`` symbol's dtype must be the same as the expected output.
 
     """
     return _unary_func_helper(x, _npi.sign, _np.sign, out=out, **kwargs)
@@ -1709,7 +1709,7 @@ def log(x, out=None, **kwargs):
     Notes
     -----
     - Currently does not support complex number
-    - "out" param: cannot perform auto type change. out symbol's dtype must be the same as the expected output.
+    - ``out`` param: cannot perform auto type change. ``out`` symbol's dtype must be the same as the expected output.
 
     References
     ----------
@@ -1746,7 +1746,7 @@ def degrees(x, out=None, **kwargs):
 
     Notes
     -------
-    - "out" param: cannot perform auto type change. out symbol's dtype must be the same as the expected output.
+    - ``out`` param: cannot perform auto type change. ``out`` symbol's dtype must be the same as the expected output.
 
     """
     return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
