@@ -405,7 +405,7 @@ class _TokenEmbedding(vocab.Vocabulary):
                        for token in tokens]
 
         if is_np_array():
-            embedding_fn = _mx_npx.Embedding
+            embedding_fn = _mx_npx.embedding
             array_fn = _mx_np.array
         else:
             embedding_fn = nd.Embedding
