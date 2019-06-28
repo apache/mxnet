@@ -57,7 +57,7 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
 
     # Run all Unary operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_unary_operators_benchmarks(ctx=ctx, dtype=dtype))
-    """
+
     # Run all Binary Broadcast, element_wise operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_binary_broadcast_operators_benchmarks(ctx=ctx,
                                                                                          dtype=dtype))
@@ -87,7 +87,7 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
 
     # Run all Convolution operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_convolution_operators_benchmarks(ctx=ctx, dtype=dtype))
-    """
+
     # ****************************** PREPARE FINAL RESULTS ********************************
     final_benchmark_result_map = merge_map_list(mxnet_operator_benchmark_results)
     return final_benchmark_result_map

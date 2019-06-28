@@ -16,7 +16,6 @@
 # under the License.
 
 import mxnet as mx
-from mxnet import nd
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
 from benchmark.opperf.rules.default_params import MX_OP_MODULE
@@ -52,7 +51,7 @@ MXNet NDArray NN Convolution Operators
 """
 
 
-def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
     pool_types = ['avg', 'max', 'sum']
     global_pool_types = [0, 1]
 
@@ -96,7 +95,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, r
     return mx_pooling_op_results
 
 
-def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
     # Conv1D Benchmarks
     conv1d_benchmark_res = []
     for conv_data in [(32, 3, 256), (32, 3, 64)]:

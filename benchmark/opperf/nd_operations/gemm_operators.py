@@ -16,7 +16,6 @@
 # under the License.
 
 import mxnet as mx
-from mxnet import nd
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
 from benchmark.opperf.rules.default_params import MX_OP_MODULE
@@ -35,7 +34,7 @@ TODO
 """
 
 
-def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the GEMM
     operators (dot, batch_dot) in MXNet.
 
@@ -45,9 +44,9 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
-    warmup: int, default 10
+    warmup: int, default 25
         Number of times to run for warmup
-    runs: int, default 50
+    runs: int, default 100
         Number of runs to capture benchmark results
 
     Returns
