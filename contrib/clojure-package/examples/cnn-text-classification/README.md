@@ -29,7 +29,7 @@ You also must download the glove word embeddings. The suggested one to use is th
 ## Usage
 
 You can run through the repl with
-`(train-convnet {:devs [(context/cpu 0)] :embedding-size 50 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :glove})`
+`(train-convnet {:devs [(context/default-context)] :embedding-size 50 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :glove})`
 or
 `JVM_OPTS="-Xmx1g" lein run` (cpu)
 
@@ -58,7 +58,7 @@ Download the 'Simple English' pretrained wiki word vectors (text) from the fastT
 
 Then you can run training on a subset of examples through the repl using:
 ```
-(train-convnet {:devs [(context/cpu 0)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :fastText})
+(train-convnet {:devs [(context/default-context)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :fastText})
 ```
 
 Expect a validation accuracy of `~0.67` with the above parameters.
@@ -72,7 +72,7 @@ you'll need to unzip them and place them in the `contrib/clojure-package/data` d
 
 Then you can run training on a subset of examples through the repl using:
 ```
-(train-convnet {:devs [(context/cpu 0)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :word2vec})
+(train-convnet {:devs [(context/default-context)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :word2vec})
 ```
 Note that loading word2vec embeddings consumes memory and takes some time.
 
@@ -80,7 +80,7 @@ You can also train them using `JVM_OPTS="-Xmx8g" lein run` once you've modified
 the parameters to `train-convnet` (see above) in `src/cnn_text_classification/classifier.clj`.
 In order to run training with word2vec on the complete data set, you will need to run:
 ```
-(train-convnet {:devs [(context/cpu 0)] :embedding-size 300 :batch-size 100 :test-size 1000 :num-epoch 10 :pretrained-embedding :word2vec})
+(train-convnet {:devs [(context/default-context)] :embedding-size 300 :batch-size 100 :test-size 1000 :num-epoch 10 :pretrained-embedding :word2vec})
 ```
 You should be able to achieve an accuracy of `~0.78` using the parameters above.
 
