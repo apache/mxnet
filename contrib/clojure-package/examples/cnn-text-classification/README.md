@@ -54,7 +54,7 @@ Using fastText instead of glove is fairly straightforward, as the pretrained emb
 
 Download the 'Simple English' pretrained wiki word vectors (text) from the fastText
 [site](https://fasttext.cc/docs/en/pretrained-vectors.html) and place them in the
-`data/fasttext` directory.
+`data/fasttext` directory. Alternatively just run `./get_fasttext_data.sh`.
 
 Then you can run training on a subset of examples through the repl using:
 ```
