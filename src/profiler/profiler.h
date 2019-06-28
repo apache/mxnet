@@ -1172,7 +1172,7 @@ struct ProfileOperator : public ProfileEvent {
       , as_task_(name, &domain_)
       , name_(name)
       , attributes_(attributes)
-      , profiling(!IsDeprecatedOperator(name)) {
+      , profiling_(!IsDeprecatedOperator(name)) {
     if (IsSubOperatorOfCustom(name)) {
       as_task_.setDomain(&custom_op_domain);
       SetCategories(custom_op_domain.name());
@@ -1190,7 +1190,7 @@ struct ProfileOperator : public ProfileEvent {
   void start(mxnet::Context::DeviceType dev_type, uint32_t dev_id) {
     dev_type_ = dev_type;
     dev_id_ = dev_id;
-    if (profiling) {
+    if (profiling_) {
       ProfileEvent::start();
       as_task_.start();
     }
@@ -1199,7 +1199,7 @@ struct ProfileOperator : public ProfileEvent {
    * \brief Stop the profiling scope
    */
   void stop() override {
-    if (profiling) {
+    if (profiling_) {
       as_task_.stop();
       ProfileEvent::stop();
     }
@@ -1278,7 +1278,7 @@ struct ProfileOperator : public ProfileEvent {
   /*! \brief Optional operator attributes */
   std::unique_ptr<Attributes> attributes_;
   /*! \brief Whether to profile or not */
-  const bool profiling;
+  const bool profiling_;
 };
 
 /*
