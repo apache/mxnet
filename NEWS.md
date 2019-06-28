@@ -18,6 +18,24 @@
 MXNet Change Log
 ================
 
+## 1.4.1
+
+Apache MXNet (incubating) 1.4.1 is a maintenance release incorporating important bug fixes and important performance improvements. All users of Apache MXNet (incubating) 1.4.0 are advised to upgrade. You can install Apache MXNet (incubating) 1.4.1 at the usual place. Please review these Release Notes to learn the bug fixes.
+
+### Bug-fixes
+* Java bug-fix cherry pick (#14834)
+* Use DEFAULT macro in C APIs (#14767) (#14789)
+* Set idx2name for Optimizer object (#14703) (#14772)
+* Add pin_device_id option to Gluon DataLoader (#14136) (#14771)
+* Tidy up storage allocation and deallocation (#14480) (#14768)
+* Add MXEnginePushAsync and MXEnginePushSync C APIs (#14615) (#14770)
+* Less cudaGet/SetDevice calls in Gluon execution (#13764)
+* Fix nightly build of 1.4.x (#14556)
+* Memory fixes. Resolves #10867, and resolves #14080 (#14372) (#14586)
+* Fixes for data links (#14526)
+* Backport of Windows CI Fixes (#14420)
+
+
 ## 1.4.0
 
 - [New Features](#new-features)

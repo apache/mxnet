@@ -915,6 +915,7 @@ def test_sparse_nd_fluent():
 
     check_fluent_regular('csr', 'slice', {'begin': (2, 5), 'end': (4, 7)}, shape=(5, 17))
     check_fluent_regular('row_sparse', 'clip', {'a_min': -0.25, 'a_max': 0.75})
+    check_fluent_regular('csr', 'clip', {'a_min': -0.25, 'a_max': 0.75})
 
     for func in ['sum', 'mean', 'norm']:
         check_fluent_regular('csr', func, {'axis': 0})
@@ -962,6 +963,11 @@ def test_sparse_nd_check_format():
     indptr_list = [0, -2, 2, 3]
     a = mx.nd.sparse.csr_matrix((data_list, indices_list, indptr_list), shape=shape)
     assertRaises(mx.base.MXNetError, a.check_format)
+    # CSR format should be 2 Dimensional.
+    a = mx.nd.array([1, 2, 3])
+    assertRaises(ValueError, a.tostype, 'csr')
+    a = mx.nd.array([[[1, 2, 3]]])
+    assertRaises(ValueError, a.tostype, 'csr')
     # Row Sparse format indices should be less than the number of rows
     shape = (3, 2)
     data_list = [[1, 2], [3, 4]]

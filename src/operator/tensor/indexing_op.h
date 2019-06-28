@@ -145,7 +145,7 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector *out_attrs) {
   using namespace mshadow;
   const mxnet::TShape &dshape = (*in_attrs)[embedding::kData];
-  if (!shape_is_known(dshape)) return false;
+  if (!ndim_is_known(dshape)) return false;
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight, Shape2(param.input_dim,
                                                            param.output_dim));
@@ -1075,7 +1075,7 @@ inline bool BatchTakeOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_attrs, 1, (*out_attrs)[0]);
   }
   if ((*in_attrs)[0].ndim() == 0) return false;
-  CHECK_GE((*in_attrs)[0].ndim(), 2U) << "Data array must have at least 2 dimensional";
+  CHECK_GE((*in_attrs)[0].ndim(), 2) << "Data array must have at least 2 dimensional";
   if ((*out_attrs)[0].ndim() == 0) return false;
   CHECK_EQ((*in_attrs)[0].Size()/(*in_attrs)[0][(*in_attrs)[0].ndim()-1],
            (*out_attrs)[0].Size())
@@ -1273,7 +1273,9 @@ inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0], -1);
 
-  for (int i = 0; i < ishape.ndim() - 1; ++i) oshape[i] = ishape[i+1];
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
+    oshape[i] = ishape[i+1];
+  }
   for (int i = 0; i < dshape.ndim() - ishape[0]; ++i) {
     oshape[ishape.ndim()-1+i] = dshape[ishape[0] + i];
   }

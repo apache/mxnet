@@ -100,4 +100,4 @@ If you need help with using MXNet, have questions about applying it to a particu
 We track bugs and new feature requests in the MXNet Github repo in the issues folder: [mxnet/issues](https://github.com/apache/incubator-mxnet/issues).
 
 ## Roadmap
-MXNet is evolving fast. To see what's next and what we are working on internally, go to the [MXNet Roadmap](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Roadmap).
+MXNet is evolving fast. To see what's next and what we are working on internally, go to the [MXNet Roadmap](https://cwiki.apache.org/confluence/display/MXNET/Roadmap).

@@ -17,7 +17,7 @@
 
 package org.apache.mxnetexamples.gan
 
-import org.apache.mxnet.{Context, CustomMetric, DataBatch, IO, NDArray, NDArrayCollector, Shape, Symbol, Xavier}
+import org.apache.mxnet.{Context, CustomMetric, DataBatch, IO, NDArray, ResourceScope, Shape, Symbol, Xavier}
 import org.apache.mxnet.optimizer.Adam
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -104,7 +104,7 @@ object GanMnist {
 
   def runTraining(dataPath : String, context : Context,
                   outputPath : String, numEpoch : Int): Float = {
-    val output = NDArrayCollector.auto().withScope {
+    val output = ResourceScope.using() {
       val lr = 0.0005f
       val beta1 = 0.5f
       val batchSize = 100
@@ -147,7 +147,7 @@ object GanMnist {
         t = 0
         while (mnistIter.hasNext) {
           dataBatch = mnistIter.next()
-          NDArrayCollector.auto().withScope {
+          ResourceScope.using() {
             gMod.update(dataBatch)
             gMod.dLabel.set(0f)
             metricAcc.update(Array(gMod.dLabel), gMod.outputsFake)

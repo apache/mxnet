@@ -82,6 +82,9 @@ def test_gluon_customop():
 def test_gluon_custom_layer():
     assert _test_tutorial_nb('gluon/custom_layer')
 
+def test_gluon_transforms():
+    assert _test_tutorial_nb('gluon/transforms')
+
 def test_gluon_data_augmentation():
     assert _test_tutorial_nb('gluon/data_augmentation')
 
@@ -102,6 +105,9 @@ def test_gluon_autograd():
 
 def test_gluon_gluon():
     assert _test_tutorial_nb('gluon/gluon')
+
+def test_gluon_multi_gpu():
+    assert _test_tutorial_nb('gluon/multi_gpu')
 
 def test_gluon_save_load_params():
     assert _test_tutorial_nb('gluon/save_load_params')
@@ -198,3 +204,6 @@ def test_vision_cnn_visualization():
 
 def test_control_flow():
     assert _test_tutorial_nb('control_flow/ControlFlowTutorial')
+
+def test_amp():
+    assert _test_tutorial_nb('amp/amp_tutorial')

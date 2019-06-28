@@ -67,6 +67,9 @@ NNVM_REGISTER_OP(_arange)
 NNVM_REGISTER_OP(_contrib_arange_like)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeLikeParam>);
 
+NNVM_REGISTER_OP(_linspace)
+.set_attr<FCompute>("FCompute<gpu>", LinspaceCompute<gpu>);
+
 NNVM_REGISTER_OP(zeros_like)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", FillComputeZerosEx<gpu>);

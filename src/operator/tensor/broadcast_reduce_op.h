@@ -304,13 +304,30 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
+  if (!ndim_is_known((*in_attrs)[0])) return false;
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
+                                         param.keepdims, param.exclude));
+  return shape_is_known((*out_attrs)[0]);
+}
+
+inline bool ReduceMinMaxAxesShape(const nnvm::NodeAttrs& attrs,
+                                  mxnet::ShapeVector *in_attrs,
+                                  mxnet::ShapeVector *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
   if (!shape_is_known((*in_attrs)[0])) return false;
+  CHECK_GT((*in_attrs)[0].Size(), 0U)
+    << "Reduction input's size should > 0 "
+    << (*in_attrs)[0];
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
                                          param.keepdims, param.exclude));
   return true;
 }
+
 
 inline bool NormType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_attrs,
@@ -362,7 +379,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
 
 inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector *in_attrs,
-                            mxnet::ShapeVector *out_attrs) {
+                             mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
@@ -372,7 +389,7 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
     << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
   mxnet::TShape oshape = param.shape;
   for (int i = 0; i < ishape.ndim(); ++i) {
-    if (oshape[i] != -1) {
+    if (oshape[i] != 0) {
       CHECK(ishape[i] == oshape[i] || ishape[i] == 1)
         << "Array cannot be broadcasted from " << ishape << " to " << param.shape;
     } else {
@@ -1166,12 +1183,28 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
+                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "for more details.");
+  }
   if (param.ord == 1) {
-    ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
+    if (safe_acc) {
+      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
         ctx, inputs, req, outputs, small);
+    } else {
+      ReduceAxesComputeImpl<xpu, mshadow_op::sum, false, false, mshadow_op::abs>(
+        ctx, inputs, req, outputs, small);
+    }
   } else if (param.ord == 2) {
-    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, true, false, mshadow_op::identity>(
+    if (safe_acc) {
+      ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, true, false, mshadow_op::identity>(
         ctx, inputs, req, outputs, small);
+    } else {
+      ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
+        ctx, inputs, req, outputs, small);
+    }
   }
 }
 
@@ -1345,7 +1378,7 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
   const mxnet::TShape& ishape = (*in_attrs)[0];
-  if (ishape.ndim() == 0) return false;
+  if (!ndim_is_known(ishape)) return false;
   const PickParam& param = nnvm::get<PickParam>(attrs.parsed);
   if (!param.axis) LOG(FATAL)
     << "axis=None is not supported by pick yet. Must specify an axis.";
@@ -1359,7 +1392,7 @@ inline bool PickOpShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_attrs, 1,
                        ReduceAxisShapeImpl(ishape, param.axis, false));
   }
-  return true;
+  return shape_is_known((*out_attrs)[0]);
 }
 
 inline bool PickOpType(const nnvm::NodeAttrs& attrs,
@@ -1484,6 +1517,16 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
   .set_num_outputs(1)                                           \
   .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
   .set_attr<mxnet::FInferShape>("FInferShape", ReduceAxesShape)  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
+  .add_argument("data", "NDArray-or-Symbol", "The input")       \
+  .add_arguments(ReduceAxesParam::__FIELDS__())
+
+#define MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(name)             \
+  NNVM_REGISTER_OP(name)                                        \
+  .set_num_inputs(1)                                            \
+  .set_num_outputs(1)                                           \
+  .set_attr_parser(AxesParamParser<ReduceAxesParam>)            \
+  .set_attr<mxnet::FInferShape>("FInferShape", ReduceMinMaxAxesShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .add_argument("data", "NDArray-or-Symbol", "The input")       \
   .add_arguments(ReduceAxesParam::__FIELDS__())

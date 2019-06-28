@@ -24,7 +24,7 @@ from mxnet import gluon
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal, set_default_context
-from mxnet.test_utils import almost_equal
+from mxnet.test_utils import almost_equal, same
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import assertRaises, setup_module, with_seed, teardown
@@ -90,20 +90,29 @@ def test_to_tensor():
     transformer = transforms.ToTensor()
     assertRaises(MXNetError, transformer, invalid_data_in)
 
+    # Bounds (0->0, 255->1)
+    data_in = np.zeros((10, 20, 3)).astype(dtype=np.uint8)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert same(out_nd.asnumpy(), np.transpose(np.zeros(data_in.shape, dtype=np.float32), (2, 0, 1)))
+
+    data_in = np.full((10, 20, 3), 255).astype(dtype=np.uint8)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert same(out_nd.asnumpy(), np.transpose(np.ones(data_in.shape, dtype=np.float32), (2, 0, 1)))
+
 @with_seed()
 def test_resize():
     # Test with normal case 3D input float type
     data_in_3d = nd.random.uniform(0, 255, (300, 300, 3))
     out_nd_3d = transforms.Resize((100, 100))(data_in_3d)
     data_in_4d_nchw = nd.moveaxis(nd.expand_dims(data_in_3d, axis=0), 3, 1)
-    data_expected_3d = (nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, 100, 100), 1, 3))[0]
+    data_expected_3d = (nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, height=100, width=100), 1, 3))[0]
     assert_almost_equal(out_nd_3d.asnumpy(), data_expected_3d.asnumpy())
 
     # Test with normal case 4D input float type
     data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3))
     out_nd_4d = transforms.Resize((100, 100))(data_in_4d)
     data_in_4d_nchw = nd.moveaxis(data_in_4d, 3, 1)
-    data_expected_4d = nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, 100, 100), 1, 3)
+    data_expected_4d = nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, height=100, width=100), 1, 3)
     assert_almost_equal(out_nd_4d.asnumpy(), data_expected_4d.asnumpy())
 
     # Test invalid interp

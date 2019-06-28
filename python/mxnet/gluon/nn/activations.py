@@ -153,12 +153,13 @@ class ELU(HybridBlock):
     Outputs:
         - **out**: output tensor with the same shape as `data`.
     """
+
     def __init__(self, alpha=1.0, **kwargs):
         super(ELU, self).__init__(**kwargs)
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
-        return F.where(x > 0, x, self._alpha * (F.exp(x) - 1.0))
+        return F.LeakyReLU(x, act_type='elu', slope=self._alpha)
 
 
 class SELU(HybridBlock):

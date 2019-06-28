@@ -34,6 +34,7 @@ DMLC_REGISTER_PARAMETER(InitOpWithoutDTypeParam);
 DMLC_REGISTER_PARAMETER(RangeParam);
 DMLC_REGISTER_PARAMETER(RangeLikeParam);
 DMLC_REGISTER_PARAMETER(EyeParam);
+DMLC_REGISTER_PARAMETER(LinspaceParam);
 
 NNVM_REGISTER_OP(_zeros_without_dtype)
 .describe("fill target with zeros without default dtype")
@@ -134,6 +135,16 @@ Examples::
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeLikeParam>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "The input");
+
+NNVM_REGISTER_OP(_linspace)
+.describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LinspaceParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LinspaceShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<LinspaceParam>)
+.set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
+.add_arguments(RangeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(zeros_like)
 MXNET_ADD_SPARSE_OP_ALIAS(zeros_like)

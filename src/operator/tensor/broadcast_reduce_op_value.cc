@@ -186,7 +186,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nanprod)
 .set_num_inputs(3)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::nanprod_grad>);
 
-MXNET_OPERATOR_REGISTER_REDUCE(max)
+MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(max)
 .add_alias("max_axis")
 .describe(get_reduce_axes_description("max", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::maximum>)
@@ -200,7 +200,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_max)
 .set_num_inputs(3)
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesBackwardUseInOut<cpu, mshadow_op::eq>);
 
-MXNET_OPERATOR_REGISTER_REDUCE(min)
+MXNET_OPERATOR_REGISTER_MINMAX_REDUCE(min)
 .add_alias("min_axis")
 .describe(get_reduce_axes_description("min", __LINE__))
 .set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::minimum>)
@@ -286,12 +286,12 @@ NNVM_REGISTER_OP(broadcast_like)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
-      if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
-      auto lhs = MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
-                                 {{"keepdims", "true"}});
-      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
-                         {n->inputs[1]}, nullptr, &n);
-      lhs.push_back(nnvm::NodeEntry{ng, 0, 0});
+      if (CheckGradAllZero(ograds))
+        return MakeZeroGradNodes(n, ograds);
+      std::vector<nnvm::NodeEntry> lhs = MakeNonlossGradNode("_broadcast_backward", n, ograds, {},
+            {{"keepdims", "true"}});
+      lhs.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                       {n->inputs[1]}, nullptr, &n));
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
