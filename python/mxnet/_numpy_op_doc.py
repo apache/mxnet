@@ -240,7 +240,7 @@ def _np_amax(a, axis=None, out=None):
     array([1, 3])
     >>> np.amax(a, axis=1, keepdims=True)
     array([[1],
-          [3]])
+           [3]])
 
     Notes
     -----
