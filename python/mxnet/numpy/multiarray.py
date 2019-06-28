@@ -2096,7 +2096,7 @@ def tan(x, out=None, where=True, **kwargs):
     The corresponding tangent values. This is a scalar if x is a scalar.
 
     Examples:
-
+    ---------
     >>> np.tan(0.5)
     0.5463024898437905 
     """
@@ -2121,7 +2121,7 @@ def fix(x, out=None):
     y : ndarray of floats
 
     Examples
-    
+    --------- 
     >>> np.fix(3.14)
     3
     """
@@ -2154,8 +2154,8 @@ def negative(x, out=None, where=True, **kwargs):
     y : ndarray or scalar
         Returned array or scalar: y = -x. This is a scalar if x is a scalar.
 
-    Examples
-
+    Examples:
+    --------
     >>> np.negative(1)
     -1
     """

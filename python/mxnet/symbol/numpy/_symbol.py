@@ -1679,11 +1679,11 @@ def fix(x, out=None):
           Output array
 
     Returns:	
-    -------
+    ---------
     y : _Symbol or scalar  
 
-    Examples
-
+    Examples:
+    ----------
     >>> np.fix(3.14)
     3
     """
@@ -1716,12 +1716,11 @@ def negative(x, out=None, where=True, **kwargs):
     y : _Symbol or scalar
         Returned array or scalar: y = -x. This is a scalar if x is a scalar.
 
-    Examples
-
+    Examples:
+    ---------
     >>> np.negative(1)
     -1
     """
-
     return _unary_func_helper(x, _npi.negative, _np.negative, out=out)
 
 _set_np_symbol_class(_Symbol)
