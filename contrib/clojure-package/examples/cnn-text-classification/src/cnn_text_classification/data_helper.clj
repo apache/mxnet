@@ -64,7 +64,7 @@
           vect (mapv (fn [_] (read-float dis)) (range embedding-size))]
       (cons [word vect] (lazy-seq (load-w2v-vectors dis embedding-size (dec num-vectors)))))))
 
-(defn load-word2vec-model
+(defn load-word2vec-model!
   "Loads the word2vec model stored in a binary format from the given `path`.
   By default only the first 100 embeddings are loaded."
   ([path embedding-size opts]
@@ -90,7 +90,7 @@
        (println "Finished")
        {:num-embed dim :word2vec word2vec})))
   ([path embedding-size]
-   (load-word2vec-model path embedding-size {:max-vectors 100})))
+   (load-word2vec-model! path embedding-size {:max-vectors 100})))
 
 (defn read-text-embedding-pairs [pairs]
   (for [^String line pairs
@@ -98,7 +98,7 @@
     [(aget fields 0)
      (mapv #(Float/parseFloat ^String %) (rest fields))]))
 
-(defn load-glove [glove-file-path]
+(defn load-glove! [glove-file-path]
   (println "Loading the glove pre-trained word embeddings from " glove-file-path)
   (->> (io/reader glove-file-path)
        line-seq
@@ -107,7 +107,7 @@
 
 (def remove-fasttext-metadata rest)
 
-(defn load-fasttext [fasttext-file-path]
+(defn load-fasttext! [fasttext-file-path]
   (println "Loading the fastText pre-trained word embeddings from " fasttext-file-path)
   (->> (io/reader fasttext-file-path)
        line-seq
@@ -203,11 +203,11 @@
         sentences-padded  (pad-sentences sentences)
         vocab (build-vocab sentences-padded)
         vocab-embeddings (case pretrained-embedding
-                           :glove (->> (load-glove (glove-file-path embedding-size))
+                           :glove (->> (load-glove! (glove-file-path embedding-size))
                                        (build-vocab-embeddings vocab embedding-size))
-                           :fasttext (->> (load-fasttext fasttext-file-path)
+                           :fasttext (->> (load-fasttext! fasttext-file-path)
                                           (build-vocab-embeddings vocab embedding-size))
-                           :word2vec (->> (load-word2vec-model w2v-file-path embedding-size {:vocab vocab})
+                           :word2vec (->> (load-word2vec-model! w2v-file-path embedding-size {:vocab vocab})
                                           (:word2vec)
                                           (build-vocab-embeddings vocab embedding-size))
                            vocab)
