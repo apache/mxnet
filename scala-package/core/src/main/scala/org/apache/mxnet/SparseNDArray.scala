@@ -151,6 +151,11 @@ class SparseNDArray private[mxnet] (override private[mxnet] val handle: NDArrayH
     dense.at(idx)
   }
 
+  override def slice(start: Int, end: Int): NDArray = {
+    printf(s"\n\nSlice being called!!\n\nstart:$start end:$end")
+    NDArray.api.slice(this, Shape(start), Shape(end))
+  }
+
   /**
     * Get the Data portion from the row Sparse NDArray
     * @return NDArray

@@ -17,6 +17,7 @@
 
 package org.apache.mxnet
 
+import org.apache.mxnet.io.NDArrayIter
 import org.scalatest.FunSuite
 import org.slf4j.LoggerFactory
 
@@ -62,7 +63,6 @@ class SparseNDArraySuite  extends FunSuite {
     )
     val indices = Array(0f, 1f, 3f)
     val rspIn = SparseNDArray.rowSparseArray(arr, indices, Shape(4, 2), Context.cpu())
-    printf(rspIn.toString)
     val toRetain = Array(0f, 3f)
     val rspOut = SparseNDArray.retain(rspIn, toRetain)
     assert(rspOut.getData.toArray sameElements Array(1f, 2f, 5f, 6f))
@@ -74,6 +74,19 @@ class SparseNDArraySuite  extends FunSuite {
     val nd2 = nd + nd
     assert(nd2.isInstanceOf[SparseNDArray])
     assert(nd2.toArray sameElements Array(2f, 4f, 6f))
+  }
+
+  test("Test DataIter") {
+    val nd = NDArray.array(Array(1f, 2f, 3f), Shape(1, 3)).toSparse(Some(SparseFormat.CSR))
+    val arr = IndexedSeq(nd, nd, nd, nd)
+    val iter = new NDArrayIter(arr)
+    while (iter.hasNext) {
+      val tempArr = iter.next().data
+      tempArr.foreach(ele => {
+        assert(ele.sparseFormat == SparseFormat.CSR)
+        assert(ele.shape == Shape(1, 3))
+      })
+    }
   }
 
 
