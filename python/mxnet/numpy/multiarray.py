@@ -1934,8 +1934,7 @@ def trunc(x, out=None, **kwargs):
     x : ndarray or scalar
         Input data.
     out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to.
+        A location into which the result is stored. 
     
     Returns
     -------
@@ -1948,6 +1947,8 @@ def trunc(x, out=None, **kwargs):
     This function differs to the original numpy.trunc in the following aspects:
         - Do not support where.
         - Can't cast type automatically.
+        - Input can't broadcast to out.
+        - If x is plain python numeric, the result won't be stored in out.
     
     Examples
     --------
@@ -1969,8 +1970,7 @@ def logical_not(x, out=None, **kwargs):
     x : ndarray or scalar
         Logical NOT is applied to the elements of `x`.
     out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to.
+        A location into which the result is stored. 
     
     Returns
     -------
@@ -1984,6 +1984,8 @@ def logical_not(x, out=None, **kwargs):
     This function differs to the original numpy.logical_not in the following aspects:
         - Do not support where.
         - Can't cast type automatically.
+        - Input can't broadcast to out.
+        - If x is plain python numeric, the result won't be stored in out.
       
     Examples
     --------
@@ -2009,8 +2011,7 @@ def arccosh(x, out=None, **kwargs):
     x : ndarray or scalar
         Input array.
     out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to.
+        A location into which the result is stored. 
     
     Returns
     -------
@@ -2035,6 +2036,8 @@ def arccosh(x, out=None, **kwargs):
     This function differs to the original numpy.logical_not in the following aspects:
         - Do not support where.
         - Can't cast type automatically.
+        - Input can't broadcast to out.
+        - If x is plain python numeric, the result won't be stored in out.
  
     Examples
     --------

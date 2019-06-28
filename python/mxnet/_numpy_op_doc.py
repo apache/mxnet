@@ -213,8 +213,7 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
         Must be None.
     out : ndarray, optional
         Alternative output array in which to place the result. It must have
-        the same shape as the expected output, but the type of the output
-        values will be cast if necessary.
+        the same shape as the expected output and the same type.
     
     Returns
     -------
