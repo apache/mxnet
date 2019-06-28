@@ -206,6 +206,16 @@ Let's zoom in to check the time taken by operators
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
+### Profiling Custom Operators
+Should the existing NDArray operators fail to meet all your model's needs, MXNet supports [`custom operators`](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/customop.html) that you can define in python. In forward() and backward()of a custom operator, there are two kinds of code: `pure python` code (Numpy operators inclued) and `sub-operators` (NDArray operators called within foward() and backward()). With that said, MXNet can profile the execution time of both kinds without additional setup. More specifically, the MXNet profiler will break a single custom operator call into a `pure python` event and several `sub-operator` events if there is any. Furthermore, all those events will have a prefix in their names, which is conviniently the name of the custom operator you called.
+
+![Custom Operator Profiling Screenshot](https://cwiki.apache.org/confluence/download/attachments/118172065/image2019-6-14_15-23-42.png?version=1&modificationDate=1560551022000&api=v2)
+
+As shown by the sreenshot, in the `Custom Operator` domain where all the custom-operator-related events fall into, you can easily visualize the execution time of each segment of your custom operator.
+
+Please note that: to be able to see the above-dscribed information, you need to set `profile_imperative` to `True` even when you are using custom operators in [`symbolic mode`](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/symbol.html). The reason is that within custom operators, `pure python code` and `sub-operators` are still called imperatively.  
+
+
 ## Advanced: Using NVIDIA Profiling Tools
 
 MXNet's Profiler is the recommended starting point for profiling MXNet code, but NVIDIA also provides a couple of tools for low-level profiling of CUDA code: [NVProf](https://devblogs.nvidia.com/cuda-pro-tip-nvprof-your-handy-universal-gpu-profiler/), [Visual Profiler](https://developer.nvidia.com/nvidia-visual-profiler) and [Nsight Compute](https://developer.nvidia.com/nsight-compute). You can use these tools to profile all kinds of executables, so they can be used for profiling Python scripts running MXNet. And you can use these in conjunction with the MXNet Profiler to see high-level information from MXNet alongside the low-level CUDA kernel information.
