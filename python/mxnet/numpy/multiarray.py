@@ -2068,22 +2068,17 @@ def floor(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray
-        Input data.
-
+    x : ndarray or int
+        Input values.
         Does not support scalar.
 
     out : ndarray, None, or tuple of exactly one ndarray, optional
+
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element.
-
-    where : array_like, optional
-        Values of True indicate to calculate the ufunc at that position, values
-        of False indicate to leave the value in the output alone.
-
-        Not supported yet.
+        keyword argument) must have exactly one element. If `x` is a int,
+        nothing will be written to `out`.
 
     Returns
     -------
@@ -2101,8 +2096,8 @@ def floor(x, out=None, **kwargs):
     the following aspects:
 
     - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray.
-    - `a` doe snot support scalar.
+    - `a` only supports ndarray or Python int.
+    - `a` does not support scalar.
     - `where` has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
 
@@ -2122,26 +2117,21 @@ def expm1(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray
+    x : ndarray or int
         Input values.
+        Does not support scalar.
 
     out : ndarray, None, or tuple of exactly one ndarray, optional
 
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element.
-
-    where : array_like, optional
-
-        Values of True indicate to calculate the ufunc at that position, values
-        of False indicate to leave the value in the output alone.
-
-        Not supported yet.
+        keyword argument) must have exactly one element. If `x` is a int,
+        nothing will be written to `out`.
 
     Returns
     -------
-    out : ndarray
+    out : ndarray or int
         Element-wise exponential minus one: ``out = exp(x) - 1``.
 
     Notes
@@ -2154,8 +2144,8 @@ def expm1(x, out=None, **kwargs):
     the following aspects:
 
     - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray.
-    - `a` doe snot support scalar.
+    - `a` only supports ndarray or Python int.
+    - `a` does not support scalar.
     - `where` has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
 
@@ -2174,8 +2164,8 @@ def arcsinh(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray
-        Input array.
+    x : ndarray or Python int
+        Input values.
 
     out : ndarray, None, or tuple of exactly one ndarray, optional
 
@@ -2215,8 +2205,8 @@ def arcsinh(x, out=None, **kwargs):
     the following aspects:
 
     - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray.
-    - `a` doe snot support scalar.
+    - `a` only supports ndarray or Python int.
+    - `a` does not support scalar.
     - `where` has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
 
