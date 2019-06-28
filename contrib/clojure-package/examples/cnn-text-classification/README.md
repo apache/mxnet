@@ -54,11 +54,11 @@ Using fastText instead of glove is fairly straightforward, as the pretrained emb
 
 Download the 'Simple English' pretrained wiki word vectors (text) from the fastText
 [site](https://fasttext.cc/docs/en/pretrained-vectors.html) and place them in the
-`data/fastText` directory.
+`data/fasttext` directory.
 
 Then you can run training on a subset of examples through the repl using:
 ```
-(train-convnet {:devs [(context/default-context)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :fastText})
+(train-convnet {:devs [(context/default-context)] :embedding-size 300 :batch-size 100 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :fasttext})
 ```
 
 Expect a validation accuracy of `~0.67` with the above parameters.
