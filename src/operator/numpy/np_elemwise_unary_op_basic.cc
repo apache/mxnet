@@ -87,7 +87,7 @@ NNVM_REGISTER_OP(__name$)                                                       
 .add_argument(__input_name$, "NDArray-or-Symbol", "The input array.")
 
 // negative
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_negative, "x", mshadow_op::negation)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_negative, "x", mshadow_op::negation)
 .describe(R"code(Numerical negative, element-wise.
 Example::
     negative([1.,  -1.]) = [-1.,  1.]
@@ -157,7 +157,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // fix
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_fix, "x", mshadow_op::fix)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_fix, "x", mshadow_op::fix)
 .describe(R"code(Round to nearest integer towards zero.
 Round an array of floats element-wise to nearest integer towards zero.
 The rounded values are returned as floats.
@@ -271,7 +271,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_cos, "x", mshadow_op::cos)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_cos"});
 
 // tan
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_tan, "x", mshadow_op::tan)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_tan, "x", mshadow_op::tan)
 .describe(R"code(Computes the element-wise tangent of the input array.
 .. math::
    tan([0, \pi/4, \pi/2]) = [0, 1, -inf]
@@ -360,7 +360,7 @@ computed element-wise.
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccosh" });
 
 // arctanh
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arctanh, "x", mshadow_op::arctanh)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arctanh, "x", mshadow_op::arctanh)
 .describe(R"code(Returns the element-wise inverse hyperbolic tangent of the input array, \
 computed element-wise.
 )code" ADD_FILELINE)
