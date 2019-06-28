@@ -201,7 +201,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
         for floating point inputs, it is the same as the input dtype.
     out : ndarray, optional
         Alternate output array in which to place the result. The default is None; if provided,
-        it must have the same shape as the expected output, but the type will be cast if necessary.
+        it must have the same shape and type as the expected output
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left in the result
         as dimensions with size one. With this option, the result will broadcast correctly
@@ -1386,7 +1386,7 @@ def rint(x, out=None, **kwargs):
         Input array.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have the same shape as the input.
+        If provided, it must have the same shape and type as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -1424,7 +1424,7 @@ def log2(x, out=None, **kwargs):
         Input array.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have the shape as the input.
+        If provided, it must have the same shape and type as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -1462,7 +1462,7 @@ def radians(x, out=None, **kwargs):
         Input array in degrees.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have the same shape as the input.
+        If provided, it must have the same shape and type as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns

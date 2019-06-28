@@ -1468,7 +1468,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
         for floating point inputs, it is the same as the input dtype.
     out : ndarray, optional
         Alternate output array in which to place the result. The default is None; if provided,
-        it must have the same shape as the expected output, but the type will be cast if necessary.
+        it must have the same shape and type as the expected output.
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left in the result
         as dimensions with size one. With this option, the result will broadcast correctly
@@ -1522,8 +1522,8 @@ def stack(arrays, axis=0, out=None):
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
     out : ndarray, optional
-        If provided, the destination to place the result. The shape must be correct,
-        matching that of what stack would have returned if no out argument were specified.
+        If provided, the destination to place the result. The shape and type must be the
+        same with that of what stack would have returned if no out argument were specified.
 
     Returns
     -------
@@ -2509,7 +2509,7 @@ def rint(x, out=None, **kwargs):
         Input array.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have the same shape as the input.
+        If provided, it must have the same shape and type as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -2547,7 +2547,7 @@ def log2(x, out=None, **kwargs):
         Input values.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have the same shape as the input.
+        If provided, it must have the same shape and type as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
@@ -2639,7 +2639,7 @@ def radians(x, out=None, **kwargs):
         Input array in degrees.
     out : ndarray or None
         A location into which the result is stored.
-        If provided, it must have the same shape as the input.
+        If provided, it must have the same shape and type as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
