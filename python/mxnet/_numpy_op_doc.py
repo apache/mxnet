@@ -273,8 +273,13 @@ def _np__random_shuffle(x):
     
     Returns
     -------
-    None
+    shuffle : ndarray
     
+    Notes
+    -----
+    This function differs to the original numpy.logical_not in the following aspects:
+        - Result is returned rather than contained in x.
+
     Examples
     --------
     >>> arr = np.arange(10)
