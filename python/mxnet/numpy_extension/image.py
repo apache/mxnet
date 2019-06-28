@@ -17,4 +17,6 @@
 
 """Image pre-processing operators."""
 
+from ..image import *  # pylint: disable=wildcard-import, unused-wildcard-import
+
 __all__ = []
