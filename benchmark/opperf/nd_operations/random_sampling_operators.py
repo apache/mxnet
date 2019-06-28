@@ -34,7 +34,7 @@ from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 from benchmark.opperf.utils.op_registry_utils import get_all_random_sampling_operators
 
 
-def run_mx_random_sampling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+def run_mx_random_sampling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the random sampling
     operators in MXNet.
 
@@ -44,9 +44,9 @@ def run_mx_random_sampling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', w
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
-    warmup: int, default 10
+    warmup: int, default 25
         Number of times to run for warmup
-    runs: int, default 50
+    runs: int, default 100
         Number of runs to capture benchmark results
 
     Returns
