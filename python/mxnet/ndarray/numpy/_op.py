@@ -767,10 +767,6 @@ def sin(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.sin, _np.sin, out=out, **kwargs)
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 20c25ef... merge
 @set_module('mxnet.ndarray.numpy')
 def cos(x, out=None, **kwargs):
     r"""Cosine, element-wise.
