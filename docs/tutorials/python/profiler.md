@@ -211,7 +211,7 @@ Should the existing NDArray operators fail to meet all your model's needs, MXNet
 
 ![Custom Operator Profiling Screenshot](https://cwiki.apache.org/confluence/download/attachments/118172065/image2019-6-14_15-23-42.png?version=1&modificationDate=1560551022000&api=v2)
 
-As shown by the sreenshot, in the `Custom Operator` domain where all the custom-operator-related events fall into, you can easily visualize the execution time of each segment of your custom operator. For example, we know that "CustomAddTwo::sqrt" is a `sub-operator` of custom operator "CustomAddTwo", and we also know when it is exectued accurately.
+As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, you can easily visualize the execution time of each segment of your custom operator. For example, we know that `CustomAddTwo::sqrt` is a sub-operator of custom operator `CustomAddTwo`, and we also know when it is executed accurately.
 
 Please note that: to be able to see the above-dscribed information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/symbol.html). The reason is that within custom operators, `pure python code` and `sub-operators` are still called imperatively.  
 
