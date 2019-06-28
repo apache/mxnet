@@ -124,7 +124,7 @@ std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
   trt_builder->setMaxBatchSize(max_batch_size);
   trt_builder->setMaxWorkspaceSize(max_workspace_size);
   trt_builder->setDebugSync(debug_builder);
-  unique_ptr<nvinfer1::ICudaEngine> trt_engine = InferObject(trt_builder->buildCudaEngine(*trt_network));
+  auto trt_engine = InferObject(trt_builder->buildCudaEngine(*trt_network));
   trt_builder->destroy();
   trt_network->destroy();
   return std::make_tuple(std::move(trt_engine), std::move(trt_parser), std::move(trt_logger));
