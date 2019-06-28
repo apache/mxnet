@@ -20,8 +20,8 @@ from mxnet.test_utils import same
 
 def test_tvm_broadcast_add():
     if "tvm_vadd" in dir(mx.nd.contrib):
-        a = mx.nd.normal(shape=[2,3])
-        b = mx.nd.normal(shape=[1,3])
+        a = mx.nd.normal(shape=(2, 3, 4))
+        b = mx.nd.normal(shape=(1, 3, 1))
         c = mx.nd.contrib.tvm_vadd(a, b)
         c_np = a.asnumpy() + b.asnumpy()
         assert same(c.asnumpy(), c_np)
