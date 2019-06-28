@@ -436,9 +436,9 @@ class Flatten(HybridBlock):
     def __init__(self, **kwargs):
         super(Flatten, self).__init__(**kwargs)
 
-    @_adapt_np_array
     def hybrid_forward(self, F, x):
-        return F.Flatten(x)
+        flatten = F.npx.batch_flatten if is_np_array() else F.flatten
+        return flatten(x)
 
     def __repr__(self):
         return self.__class__.__name__

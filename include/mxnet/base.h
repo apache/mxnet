@@ -451,7 +451,9 @@ inline int32_t Context::GetGPUCount() {
   }
   int32_t count;
   cudaError_t e = cudaGetDeviceCount(&count);
-  if (e == cudaErrorNoDevice) {
+  // TODO(junwu): Remove e == 35
+  // This is skipped for working around wheel build system with older CUDA driver.
+  if (e == cudaErrorNoDevice || e == 35) {
     return 0;
   }
   CHECK_EQ(e, cudaSuccess) << " CUDA: " << cudaGetErrorString(e);
