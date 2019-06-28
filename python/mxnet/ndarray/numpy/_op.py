@@ -258,11 +258,11 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     --------
     >>> np.arange(3)
     array([0., 1., 2.])
-    >>> np.arange(3,7)
+    >>> np.arange(3, 7)
     array([3., 4., 5., 6.])
-    >>> np.arange(3,7,2)
+    >>> np.arange(3, 7, 2)
     array([3., 5.])
-    >>> np.arange(0,5,1,'int32')
+    >>> np.arange(0, 5, 1, 'int32')
     array([0, 1, 2, 3, 4], dtype=int32)
     """
     if dtype is None:
@@ -771,6 +771,7 @@ def trunc(x, out=None, **kwargs):
     -----
     This function differs to the original numpy.trunc in the following aspects:
         - Do not support where.
+        - Can't cast type automatically.
     
     Examples
     --------
@@ -806,6 +807,7 @@ def logical_not(x, out=None, **kwargs):
     -----
     This function differs to the original numpy.logical_not in the following aspects:
         - Do not support where.
+        - Can't cast type automatically.
 
     Examples
     --------
@@ -856,6 +858,7 @@ def arccosh(x, out=None, **kwargs):
     
     This function differs to the original numpy.logical_not in the following aspects:
         - Do not support where.
+        - Can't cast type automatically.
 
     Examples
     --------

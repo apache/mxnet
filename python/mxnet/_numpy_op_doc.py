@@ -179,7 +179,7 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
     r"""
-    prod(a, axis=None, dtype=None, out=None, keepdims=_Null)
+    prod(a, axis=None, dtype=None, keepdims=_Null, initial=None, out=None)
 
     Return the product of array elements over a given axis.
     
@@ -199,10 +199,6 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
     dtype : dtype, optional
         The type of the returned array, as well as of the accumulator in
         which the elements are multiplied.  Default is numpy.float32.
-    out : ndarray, optional
-        Alternative output array in which to place the result. It must have
-        the same shape as the expected output, but the type of the output
-        values will be cast if necessary.
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left in the
         result as dimensions with size one. With this option, the result
@@ -213,6 +209,12 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
         `ndarray`, however any non-default value will be.  If the
         sub-class' method does not implement `keepdims` any
         exceptions will be raised.
+    initial : None, optional
+        Must be None.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape as the expected output, but the type of the output
+        values will be cast if necessary.
     
     Returns
     -------
@@ -227,11 +229,11 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
     >>> np.prod(x) 
     array(0)
  
-    This function differs tp the original numpy.prod in the following aspects:
+    This function differs to the original numpy.prod in the following aspects:
         
-        - Do not support initial.
         - Do not support empty ndarray or scalar as input.
         - Keepdims must be 0 or 1. Otherwise, an error will raise.
+        - Can't cast type automatically.
 
     Examples
     --------
@@ -248,7 +250,7 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
     array(24.)
     
     But we can also specify the axis over which to multiply:
-    
+
     >>> x = np.array([[1.,2.],[3.,4.]])
     >>> np.prod(x, axis=1)
     array([ 2., 12.])

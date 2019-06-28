@@ -112,6 +112,10 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     `numpy.random.normal` is more likely to return samples lying close to
     the mean, rather than those far away.
     
+    This function differs to the original numpy.prod in the following aspects:
+    
+        - Argument must be named from the fourth.
+
     References
     ----------
     .. [1] Wikipedia, "Normal distribution",

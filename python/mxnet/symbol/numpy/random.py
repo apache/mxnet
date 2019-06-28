@@ -131,6 +131,11 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     Notes
     -----
     This function currently does not support ``loc`` and ``scale`` as `_Symbol`s.
+    
+    This function differs to the original numpy.prod in the following aspects:
+    
+        - Argument must be named from the fourth.
+
     """
     dtype = kwargs.pop('dtype', None)
     if dtype is None:

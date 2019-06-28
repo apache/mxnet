@@ -1448,6 +1448,7 @@ def trunc(x, out=None, **kwargs):
     -----
     This function differs to the original numpy.trunc in the following aspects:
         - Do not support where. 
+        - Can't cast type automatically.
     """    
     return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
 
@@ -1477,6 +1478,7 @@ def logical_not(x, out=None, **kwargs):
     -----
     This function differs to the original numpy.logical_not in the following aspects:
         - Do not support where.
+        - Can't cast type automatically.
     """
     return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
 
@@ -1517,6 +1519,7 @@ def arccosh(x, out=None, **kwargs):
     
     This function differs to the original numpy.logical_not in the following aspects:
         - Do not support where.
+        - Can't cast type automatically.
     """
     return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
 
