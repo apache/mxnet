@@ -121,14 +121,15 @@ source ~/.rc
 ## Install MXNet for Python
 
 To use a prepared Python wheel, download it to your Jetson, and run it.
-The following wheel was cross-compiled for Jetson using MXNet v1.4.1.
-* https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.1/mxnet-1.4.1-py3-none-any.whl
+* [MXNet 1.4.0 - Python 3](https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.0/mxnet-1.4.0-cp36-cp36m-linux_aarch64.whl)
+* [MXNet 1.4.0 - Python 2](https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.0/mxnet-1.4.0-cp27-cp27mu-linux_aarch64.whl)
+
 
 It should download the required dependencies, but if you have issues,
 install the dependencies in the prerequisites section, then run the pip wheel.
 
 ```bash
-sudo pip install mxnet-1.4.1-py3-none-any.whl
+sudo pip install mxnet-1.4.0-cp36-cp36m-linux_aarch64.whl
 ```
 
 <!--
@@ -175,7 +176,7 @@ Refer to the [Java setup](https://mxnet.incubator.apache.org/versions/master/ins
 
 ## Use a Pre-compiled MXNet Binary
 
-If you want to just use the pre-compiled binary you can download it from S3:
+If you want to just use a pre-compiled binary you can download it from S3:
 * https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.1/libmxnet.so
 
 Place this file in `$MXNET_HOME/lib`.
