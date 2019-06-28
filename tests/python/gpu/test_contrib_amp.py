@@ -227,6 +227,22 @@ def test_amp_conversion():
         mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
                                     label=[mx.nd.ones((1,))]))
         mod.get_outputs()[0].asnumpy()
+        assert mod._arg_params["stage2_unit1_conv2_weight"].dtype == np.float32
+
+        # Call convert_model with cast_optional_params set to True
+        result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
+                                                                             arg_params,
+                                                                             aux_params,
+                                                                             target_dtype="float16",
+                                                                             target_dtype_ops=["Convolution"], cast_optional_params=True)
+        mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.gpu())
+        mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
+        mod.set_params(result_arg_params, result_aux_params)
+        mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
+                                    label=[mx.nd.ones((1,))]))
+        mod.get_outputs()[0].asnumpy()
+        assert mod._arg_params["stage2_unit1_conv2_weight"].dtype == np.float16
+
 
     def check_amp_convert_hybrid_block():
         # Test conversion for hybrid block on CPU
@@ -275,6 +291,14 @@ def test_amp_conversion():
         converted_model = amp.convert_hybrid_block(net, target_dtype="float16", target_dtype_ops=["Convolution"])
         result = converted_model.forward(mx.nd.zeros((1, 3, 224, 224)), mx.nd.zeros((1, )))
         result = converted_model.forward(mx.nd.zeros((1, 3, 224, 224)), mx.nd.zeros((1, )))
+        params = converted_model.collect_params()
+        assert params["stage2_unit1_conv2_weight"].dtype == np.float32
+
+        # Pass cast_optional_params as True to convert_hybrid_block
+        converted_model = amp.convert_hybrid_block(net, target_dtype="float16", target_dtype_ops=["Convolution"],
+                                                   cast_optional_params=True)
+        params = converted_model.collect_params()
+        assert params["stage2_unit1_conv2_weight"].dtype == np.float16
 
     with mx.Context(mx.gpu(0)):
         check_amp_convert_symbol()
