@@ -514,6 +514,7 @@ int MXPredReshape(mx_uint num_input_nodes,
                                    p->exec.get()));
     ret->out_shapes = out_shapes;
     ret->out_arrays = ret->exec->outputs();
+    ret->out_dtypes = p->out_dtypes;
   }
   *out = ret.release();
   API_END();

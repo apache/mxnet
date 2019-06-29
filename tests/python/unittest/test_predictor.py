@@ -81,39 +81,6 @@ def test_load_ndarray():
     for k in nd_data.keys():
         assert_almost_equal(nd_data[k].asnumpy(), nd_load[k], rtol=1e-5, atol=1e-6)
 
-@with_seed()
-def test_predictor_fp16():
-    prefix = 'test_predictor_simple_dense'
-    symbol_file = "%s-symbol.json" % prefix
-    param_file = "%s-0000.params" % prefix
-
-    input1 = np.random.uniform(size=(1, 3))
-    input1 = input1.astype(np.float16)
-
-    block = mx.gluon.nn.HybridSequential()
-    block.add(mx.gluon.nn.Dense(7))
-    block.add(mx.gluon.nn.Dense(3))
-    block.cast(np.float16)
-    block.hybridize()
-    block.initialize(ctx=mx.current_context())
-    tmp = mx.nd.array(input1, dtype=np.float16, ctx=mx.current_context())
-    out1 = block.forward(tmp)
-    block.export(prefix)
-
-    predictor = Predictor(open(symbol_file, "r").read(),
-                          open(param_file, "rb").read(),
-                          {"data": input1.shape},
-                          dev_type="gpu",
-                          dev_id=0,
-                          type_dict={"data": input1.dtype})
-    if ctx.current_context().dev_type == "gpu":
-        predictor.forward(data=input1)
-        predictor_out1 = predictor.get_output(0)
-        assert out1.asnumpy().dtype == predictor_out1.dtype, \
-            "Dtypes of output from C predict API doesnt match with gluon"
-
-        assert_almost_equal(out1.asnumpy(), predictor_out1, rtol=1e-5, atol=1e-6)
-
 
 if __name__ == '__main__':
     import nose
