@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=unnecessary-pass
+# pylint: disable=unnecessary-pass, too-many-lines
 """Neural network parameter."""
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
@@ -955,23 +955,51 @@ class ParameterDict(object):
                 assert name.startswith(restore_prefix), \
                     "restore_prefix is '%s' but Parameters name '%s' does not start " \
                     "with '%s'"%(restore_prefix, name, restore_prefix)
-        lprefix = len(restore_prefix)
         ndarray_load = ndarray.load(filename)
+        self.load_dict(ndarray_load, ctx, allow_missing,
+                       ignore_extra, restore_prefix, filename, cast_dtype, dtype_source)
+
+    def load_dict(self, param_dict, ctx=None, allow_missing=False,
+                  ignore_extra=False, restore_prefix='', filename=None, cast_dtype=False,
+                  dtype_source="current"):
+        """Load parameters from dict
+
+        Parameters
+        ----------
+        param_dict : dict
+            Dictionary containing model parameters, preprended with arg: and aux: names
+        ctx : Context or list of Context
+            Context(s) initialize loaded parameters on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represented in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this ParameterDict.
+        restore_prefix : str, default ''
+            prepend prefix to names of stored parameters before loading
+        filename : str, default None
+        cast_dtype : bool, default False
+            Cast the data type of the NDArray loaded from the checkpoint to the dtype
+            provided by the Parameter if any
+        """
+        lprefix = len(restore_prefix)
         loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
-                  for k, v in ndarray_load.items()] if isinstance(ndarray_load, dict) else ndarray_load
+                  for k, v in param_dict.items()] if isinstance(param_dict, dict) else param_dict
         arg_dict = {restore_prefix+k: v for k, v in loaded}
+        error_str = "file: %s" % (filename) if filename else "param_dict"
         if not allow_missing:
             for name in self.keys():
                 assert name in arg_dict, \
-                    "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
+                    "Parameter '%s' is missing in %s, which contains parameters: %s. " \
                     "Please make sure source and target networks have the same prefix."%(
-                        name[lprefix:], filename, _brief_print_list(arg_dict.keys()))
+                        name[lprefix:], error_str, _brief_print_list(arg_dict.keys()))
         for name in arg_dict:
             if name not in self._params:
                 assert ignore_extra, \
-                    "Parameter '%s' loaded from file '%s' is not present in ParameterDict, " \
+                    "Parameter '%s' loaded from %s is not present in ParameterDict, " \
                     "choices are: %s. Set ignore_extra to True to ignore. " \
                     "Please make sure source and target networks have the same prefix."%(
-                        name[lprefix:], filename, _brief_print_list(self._params.keys()))
+                        name[lprefix:], error_str, _brief_print_list(self._params.keys()))
                 continue
-            self[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
+            self[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype,
+                                  dtype_source=dtype_source)

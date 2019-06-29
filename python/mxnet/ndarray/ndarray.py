@@ -2227,6 +2227,10 @@ fixed-size items.
         NDArray, CSRNDArray or RowSparseNDArray
             A copy of the array with the chosen storage stype
         """
+        if stype == 'csr' and len(self.shape) != 2:
+            raise ValueError("To convert to a CSR, the NDArray should be 2 Dimensional. Current "
+                             "shape is %s" % str(self.shape))
+
         return op.cast_storage(self, stype=stype)
 
     def to_dlpack_for_read(self):
