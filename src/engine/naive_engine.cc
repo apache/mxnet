@@ -163,7 +163,6 @@ class NaiveEngine final : public Engine {
       this->DeleteOperator(p);
     };
     std::unique_ptr<NaiveOpr, decltype(opr_deleter)> opr(nullptr, opr_deleter);
-    //std::unique_ptr<NaiveOpr> opr;
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
     // GenerateDisplayName() will return a pointer to the correct name of the operator
     const char* display_name = profiling ?
