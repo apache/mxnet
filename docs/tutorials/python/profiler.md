@@ -257,7 +257,7 @@ profiler.dump()
 
 Here, we have created a custom operator called `MyAddOne`, and within its `foward()` function, we simply add one to the input. We can visualize the dump file in `chrome://tracing/`:
 
-![Custom Operator Profiling Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_custom_operator_chrome.png.png)
+![Custom Operator Profiling Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_custom_operator_chrome.png)
 
 As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are exectued.
 
