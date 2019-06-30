@@ -211,7 +211,8 @@ Should the existing NDArray operators fail to meet all your model's needs, MXNet
 
 Let's try profiling custom operators with the following code example:
 
-'''python
+```python
+
 import mxnet as mx
 from mxnet import nd
 from mxnet import profiler
@@ -252,8 +253,7 @@ mx.nd.waitall()
 
 profiler.set_state('stop')
 profiler.dump()
-
-'''
+```
 
 Here, we have created a custom operator called `MyAddOne`, and within its `foward()` function, we simply add one to the input. We can visualize the dump file in `chrome://tracing/`:
 
