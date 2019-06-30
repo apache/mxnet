@@ -210,6 +210,7 @@ The above picture visualizes the sequence in which the operators were executed a
 Should the existing NDArray operators fail to meet all your model's needs, MXNet supports [Custom Operators](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/customop.html) that you can define in Python. In `forward()` and `backward()` of a custom operator, there are two kinds of code: "pure Python" code (NumPy operators included) and "sub-operators" (NDArray operators called within `forward()` and `backward()`). With that said, MXNet can profile the execution time of both kinds without additional setup. Specifically, the MXNet profiler will break a single custom operator call into a pure Python event and several sub-operator events if there are any. Furthermore, all of those events will have a prefix in their names, which is, conveniently, the name of the custom operator you called.
 
 Let's try profiling custom operators with the following code example:
+
 '''python
 import mxnet as mx
 from mxnet import nd
@@ -253,8 +254,11 @@ profiler.set_state('stop')
 profiler.dump()
 
 '''
+
 Here, we have created a custom operator called `MyAddOne`, and within its `foward()` function, we simply add one to the input. We can visualize the dump file in `chrome://tracing/`:
+
 ![Custom Operator Profiling Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_custom_operator_chrome.png.png)
+
 As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are exectued.
 
 Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/symbol.html). The reason is that within custom operators, pure python code and sub-operators are still called imperatively.  
