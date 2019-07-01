@@ -54,7 +54,7 @@ def absolute(x, out=None, **kwargs):
     ----------	
     absolute : ndarray
     An ndarray containing the absolute value of each element in x.  
-    
+
     Examples
     ----------
     >>> x = np.array([-1.2, 1.2])
@@ -62,6 +62,7 @@ def absolute(x, out=None, **kwargs):
     array([ 1.2,  1.2])
     """
     return _unary_func_helper(x, _npi.absolute, _np.absolute, out=out, **kwargs)
+
 
 @set_module('mxnet.ndarray.numpy')
 def cbrt(x, out=None, **kwargs):
@@ -93,6 +94,7 @@ def cbrt(x, out=None, **kwargs):
     array([ 1.,  2.,  3.])
     """
     return _unary_func_helper(x, _npi.cbrt, _np.cbrt, out=out, **kwargs)
+
 
 @set_module('mxnet.ndarray.numpy')
 def arccos(x, out=None, **kwargs):
@@ -142,6 +144,7 @@ def arccos(x, out=None, **kwargs):
     array([ 0.        ,  3.14159265])
     """
     return _unary_func_helper(x, _npi.arccos, _np.arccos, out=out, **kwargs)
+
 
 @set_module('mxnet.ndarray.numpy')
 def zeros(shape, dtype=_np.float32, **kwargs):
@@ -645,25 +648,25 @@ def expand_dims(a, axis):
     Expand the shape of an array.
     Insert a new axis that will appear at the `axis` position in the expanded
     array shape.
-    
+
     Parameters
     ----------
-    a : array_like
+    a : ndarray
         Input array.
     axis : int
         Position in the expanded axes where the new axis is placed.
-    
+
     Returns
     -------
     res : ndarray
         Output array. The number of dimensions is one greater than that of
         the input array.
-    
+
     See Also
     --------
     squeeze : The inverse operation, removing singleton dimensions
     reshape : Insert, remove, and combine dimensions, and resize existing ones
-    
+
     Examples
     --------
     >>> x = np.array([1,2])

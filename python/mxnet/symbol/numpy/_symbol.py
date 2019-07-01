@@ -45,7 +45,7 @@ def absolute(x, out=None, **kwargs):
     x : _Symbol
     Input array.
 
-    out : _Symbol, optional
+    out : Dummy parameter to keep the consistency with the ndarray counterpart, optional
     A location into which the result is stored. If provided, it must have a shape 
     that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -60,6 +60,7 @@ def absolute(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
 
+
 @set_module('mxnet.symbol.numpy')
 def cbrt(x, out=None, **kwargs):
     r"""
@@ -70,7 +71,7 @@ def cbrt(x, out=None, **kwargs):
     x : _Symbol
     The values whose cube-roots are required.
 
-    out : _Symbol, optional
+    out : Dummy parameter to keep the consistency with the ndarray counterpart, optional
     A location into which the result is stored. If provided, it must have a shape that the 
     inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -86,6 +87,7 @@ def cbrt(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.cbrt, _np.cbrt, out=out, **kwargs)
 
+
 @set_module('mxnet.symbol.numpy')
 def arccos(x, out=None, **kwargs):
     r"""
@@ -97,7 +99,7 @@ def arccos(x, out=None, **kwargs):
     x : _Symbol
     x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
 
-    out : ndarray, optional
+    out : Dummy parameter to keep the consistency with the ndarray counterpart, optional
     A location into which the result is stored. If provided, it must have a shape that 
     the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
@@ -128,6 +130,7 @@ def arccos(x, out=None, **kwargs):
     The inverse cos is also known as acos or cos^-1.
     """
     return _unary_func_helper(x, _npi.arccos, _np.arccos, out=out, **kwargs)
+    
 
 def _num_outputs(sym):
     return len(sym.as_nd_ndarray())
@@ -1110,7 +1113,7 @@ def divide(x1, x2, out=None):
     x2 : _Symbol
         Divisor array.
 
-    out : ndarray
+    out : Dummy parameter to keep the consistency with the ndarray counterpart, optional
         A location into which the result is stored. If provided, it must have a shape
         that the inputs broadcast to. If not provided or None, a freshly-allocated array
         is returned.

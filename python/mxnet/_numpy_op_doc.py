@@ -22,7 +22,7 @@
 def _np_reshape(a, newshape, order='C'):
     """
     reshape(a, newshape, order='C')
-    
+
     Gives a new shape to an array without changing its data.
 
     Parameters
@@ -59,23 +59,23 @@ def _np_ones_like(a):
     ones_like(a)
 
     Return an array of ones with the same shape and type as a given array.
-    
+
     Parameters
     ----------
     a : ndarray
         The shape and data-type of `a` define these same attributes of
         the returned array.
-    
+
     Returns
     -------
     out : ndarray
         Array of ones with the same shape and type as `a`.
-    
+
     See Also
     --------
     zeros_like : Return an array of zeros with shape and type of input.
     ones : Return a new array setting values to one.
-    
+
     Examples
     --------
     >>> x = np.arange(6)
@@ -126,7 +126,7 @@ def _np_repeat(a, repeats, axis=None):
     axis : int, optional
         The axis along which to repeat values.  By default, use the
         flattened input array, and return a flat output array.
-    
+
     Returns
     -------
     repeated_array : ndarray
