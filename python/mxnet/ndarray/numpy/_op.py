@@ -47,9 +47,6 @@ def absolute(x, out=None, **kwargs):
     that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
 
-    **kwargs
-    For other keyword-only arguments, see the ufunc docs.
-
     Returns
     ----------	
     absolute : ndarray
@@ -78,9 +75,6 @@ def cbrt(x, out=None, **kwargs):
     A location into which the result is stored. If provided, it must have a shape that the 
     inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
-
-    **kwargs
-    For other keyword-only arguments, see the ufunc docs.
 
     Returns
     ----------	
@@ -111,9 +105,6 @@ def arccos(x, out=None, **kwargs):
     A location into which the result is stored. If provided, it must have a shape that 
     the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
     A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
-
-    **kwargs
-    For other keyword-only arguments, see the ufunc docs.
 
     Returns
     ----------	

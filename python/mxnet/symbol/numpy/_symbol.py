@@ -48,9 +48,6 @@ def absolute(x, out=None, **kwargs):
     out : _Symbol or None
     Dummy parameter to keep the consistency with the ndarray counterpart.
 
-    **kwargs
-    For other keyword-only arguments, see the ufunc docs.
-
     Returns
     ----------	
     absolute : _Symbol
@@ -71,9 +68,6 @@ def cbrt(x, out=None, **kwargs):
 
     out : _Symbol or None
     Dummy parameter to keep the consistency with the ndarray counterpart.
-
-    **kwargs
-    For other keyword-only arguments, see the ufunc docs.
 
     Returns
     ----------	
@@ -97,9 +91,6 @@ def arccos(x, out=None, **kwargs):
 
     out : _Symbol or None
     Dummy parameter to keep the consistency with the ndarray counterpart.
-
-    **kwargs
-    For other keyword-only arguments, see the ufunc docs.
 
     Returns
     ----------	
