@@ -813,7 +813,7 @@ def logical_not(x, out=None, **kwargs):
 
     Examples
     --------
-    ***>>> x= np.array([True, False, 0, 1])
+    >>> x= np.array([True, False, 0, 1])
     >>> np.logical_not(x)
     array([0., 1., 1., 0.])
     
