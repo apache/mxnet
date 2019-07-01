@@ -99,7 +99,7 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
 
 def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     r"""
-    normal(loc=0.0, scale=1.0, size=None, dtype='float32', out=None)
+    normal(loc=0.0, scale=1.0, size=None, dtype='float32', ctx=None, out=None)
 
     Draw random samples from a normal (Gaussian) distribution.
 
@@ -125,8 +125,10 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
         a single value is returned if loc and scale are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
-    out : ``ndarray``, optional
-        Store output to an existing ``ndarray``.
+    ctx : None or mxnet.cpu() or mxnet.gpu(gpuid), optional
+        Device context to put the created array in.
+    out : ndarray, optional
+        Store output to an existing ndarray.
 
     Returns
     -------

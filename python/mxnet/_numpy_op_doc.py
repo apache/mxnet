@@ -231,7 +231,7 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
     This function differs to the original numpy.prod in the following aspects:
         
         - Keepdims must be 0 or 1. Otherwise, an error will raise.
-        - Cannot cast type automatically. Dtype of 'out' must be same as the expected one.
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
 
     Examples
     --------
@@ -277,7 +277,7 @@ def _np__random_shuffle(x):
     Notes
     -----
     This function differs to the original numpy.random.shuffle in the following aspects:
-        - Result is returned rather than contained in x.
+        - Result is returned rather than contained in `x`.
 
     Examples
     --------
