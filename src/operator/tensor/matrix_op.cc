@@ -28,7 +28,6 @@
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../nn/mkldnn/mkldnn_base-inl.h"
 #include "../nn/mkldnn/mkldnn_slice-inl.h"
-#include "../nn/mkldnn/mkldnn_reshape-inl.h"
 
 namespace mxnet {
 namespace op {

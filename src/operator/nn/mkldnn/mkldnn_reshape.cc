@@ -26,7 +26,6 @@
 #if MXNET_USE_MKLDNN == 1
 
 #include <mkldnn.hpp>
-#include "../../tensor/matrix_op-inl.h"
 #include "mkldnn_reshape-inl.h"
 
 namespace mxnet {
@@ -35,46 +34,46 @@ namespace op {
 MKLDNNReshapeFwd::MKLDNNReshapeFwd(const OpReqType &req,
                                    const NDArray &input,
                                    const NDArray &output) {
-    auto engine = CpuEngine::Get()->get_engine();
+  auto engine = CpuEngine::Get()->get_engine();
 
-    // data_
-    auto in_mem = input.GetMKLDNNData();
-    auto in_pd = in_mem->get_primitive_desc();
-    data_ = std::make_shared<mkldnn::memory>(in_pd, nullptr);
+  // data_
+  auto in_mem = input.GetMKLDNNData();
+  auto in_pd = in_mem->get_primitive_desc();
+  data_ = std::make_shared<mkldnn::memory>(in_pd, nullptr);
 
-    // temp_
-    auto temp_dims = mkldnn::memory::dims(input.shape().begin(), input.shape().end());
-    auto temp_type = static_cast<mkldnn::memory::data_type>(in_pd.desc().data.data_type);
-    auto temp_fmt = static_cast<mkldnn::memory::format>(GetDefaultFormat(in_pd.desc()));
-    auto temp_desc = mkldnn::memory::desc(temp_dims, temp_type, temp_fmt);
-    auto temp_pd = mkldnn::memory::primitive_desc(temp_desc, engine);
-    temp_ = std::make_shared<mkldnn::memory>(temp_pd, nullptr);
+  // temp_
+  auto temp_dims = mkldnn::memory::dims(input.shape().begin(), input.shape().end());
+  auto temp_type = static_cast<mkldnn::memory::data_type>(in_pd.desc().data.data_type);
+  auto temp_fmt = static_cast<mkldnn::memory::format>(GetDefaultFormat(in_pd.desc()));
+  auto temp_desc = mkldnn::memory::desc(temp_dims, temp_type, temp_fmt);
+  auto temp_pd = mkldnn::memory::primitive_desc(temp_desc, engine);
+  temp_ = std::make_shared<mkldnn::memory>(temp_pd, nullptr);
 
-    // destination
-    out_ = std::make_shared<mkldnn::memory>(temp_pd, nullptr);
+  // destination
+  out_ = std::make_shared<mkldnn::memory>(temp_pd, nullptr);
 
-    if (req == kWriteInplace) {
-      // If the input has MKL-DNN internal layout, we need reorder it to a temporal buffer with
-      // default layout and copy from the temporal buffer back to output buffer which has the same
-      // address with input buffer.
-      // If the input has default layout, then nothing need to do.
-      if (input.IsMKLDNNData()) {
-        prims_.push_back(mkldnn::reorder(*data_, *temp_));   // reorder to default
-        prims_.push_back(mkldnn::reorder(*temp_, *out_));    // copy back
-        needInvalidateInput = true;
-      }
-    } else if (req == kWriteTo) {
-      if (input.IsMKLDNNData()) {
-        prims_.push_back(mkldnn::reorder(*data_, *temp_));   // reorder to default
-        prims_.push_back(mkldnn::reorder(*temp_, *out_));    // copy to the output buffer
-        needInvalidateInput = false;
-      } else {
-        prims_.push_back(mkldnn::reorder(*data_, *out_));    // copy directly from input to output
-        needInvalidateInput = false;
-      }
-    } else {
-      LOG(FATAL) << "not supported req type: " << req;
+  if (req == kWriteInplace) {
+    // If the input has MKL-DNN internal layout, we need reorder it to a temporal buffer with
+    // default layout and copy from the temporal buffer back to output buffer which has the same
+    // address with input buffer.
+    // If the input has default layout, then nothing need to do.
+    if (input.IsMKLDNNData()) {
+      prims_.push_back(mkldnn::reorder(*data_, *temp_));   // reorder to default
+      prims_.push_back(mkldnn::reorder(*temp_, *out_));    // copy back
+      needInvalidateInput = true;
     }
+  } else if (req == kWriteTo) {
+    if (input.IsMKLDNNData()) {
+      prims_.push_back(mkldnn::reorder(*data_, *temp_));   // reorder to default
+      prims_.push_back(mkldnn::reorder(*temp_, *out_));    // copy to the output buffer
+      needInvalidateInput = false;
+    } else {
+      prims_.push_back(mkldnn::reorder(*data_, *out_));    // copy directly from input to output
+      needInvalidateInput = false;
+    }
+  } else {
+    LOG(FATAL) << "not supported req type: " << req;
+  }
 }
 
 int MKLDNNReshapeFwd::GetWorkspaceSize() {

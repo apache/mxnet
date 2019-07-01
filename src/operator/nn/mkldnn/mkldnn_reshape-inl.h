@@ -72,11 +72,7 @@ MKLDNNReshapeFwd &GetReshapeForward(const ReshapeParam& param,
                                     const OpReqType &req,
                                     const NDArray &input,
                                     const NDArray &output);
-void MKLDNNReshapeForward(const nnvm::NodeAttrs& attrs,
-                          const OpContext &ctx,
-                          const NDArray &input,
-                          const OpReqType &req,
-                          const NDArray &output);
+
 }  // namespace op
 }  // namespace mxnet
 
