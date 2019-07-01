@@ -2551,5 +2551,3 @@ def arctan(x, out=None, **kwargs):
     0.7853981633974483
     """
     return _mx_nd_np.arctan(x, out=out, **kwargs)
-
->>>>>>> `out` param comment modified
