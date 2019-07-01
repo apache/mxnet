@@ -927,7 +927,6 @@ class ndarray(NDArray):
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the average of the array elements along given axis."""
-        # return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
         return _npi.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     # TODO(junwu): Use mxnet std op instead of onp.std
@@ -1446,6 +1445,7 @@ def minimum(x1, x2, out=None):
         The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
     return _mx_nd_np.minimum(x1, x2, out=out)
 
+
 @set_module('mxnet.numpy')
 def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
     """
@@ -1457,7 +1457,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 
     Parameters
     ----------
-    a : `ndarray`
+    a : ndarray
         ndarray containing numbers whose mean is desired.
     axis : None or int or tuple of ints, optional
         Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.

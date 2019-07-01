@@ -1020,6 +1020,7 @@ def mod(x1, x2, out=None):
 def power(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
 
+
 @set_module('mxnet.symbol.numpy')
 def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
     """

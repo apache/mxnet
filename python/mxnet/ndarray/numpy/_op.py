@@ -17,6 +17,7 @@
 # under the License.
 
 """Namespace for numpy operators used in Gluon dispatched by F=ndarray."""
+
 # pylint: disable=too-many-lines
 from __future__ import absolute_import
 import numpy as _np
@@ -190,7 +191,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 
     Parameters
     ----------
-    a : `ndarray`
+    a : ndarray
         ndarray containing numbers whose mean is desired.
     axis : None or int or tuple of ints, optional
         Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
