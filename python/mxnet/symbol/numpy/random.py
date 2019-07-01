@@ -155,6 +155,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     This function differs from the original numpy.random.normal in the following aspects:
     
         - Argument must be named from the fourth.
+        - Have a new parameter 'ctx'.
 
     References
     ----------
