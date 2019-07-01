@@ -255,7 +255,7 @@ def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
     initial: Currently only supports None as input, optional
         Starting value for the sum.
         Currently not implemented. Please use ``None`` as input or skip this argument.
-    out : ndarray, optional
+    out : ndarray or None, optional
         Alternative output array in which to place the result. It must have
         the same shape and dtype as the expected output.
 
@@ -329,7 +329,7 @@ def  _np_copy(a, out=None):
     ----------
     a : ndarray
         Input data.
-    out : ndarray, optional
+    out : ndarray or None, optional
         Alternative output array in which to place the result. It must have
         the same shape and dtype as the expected output.
 

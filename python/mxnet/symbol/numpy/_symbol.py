@@ -1140,7 +1140,7 @@ def argmax(a, axis=None, out=None):
     axis : int, optional
         By default, the index is into the flattened array, otherwise
         along the specified axis.
-    out : _Symbol, optional
+    out : _Symbol or None, optional
         Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns

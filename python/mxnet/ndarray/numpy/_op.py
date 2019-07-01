@@ -272,9 +272,10 @@ def argmax(a, axis=None, out=None):
     axis : int, optional
         By default, the index is into the flattened array, otherwise
         along the specified axis.
-    out : ndarray, optional
-        If provided, the result will be inserted into this array. It should
-        be of the appropriate shape and dtype.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
 
     Returns
     -------
@@ -1219,7 +1220,7 @@ def degrees(x, out=None, **kwargs):
     ----------
     x : ndarray
         Input value. Elements must be of real value.
-    out :
+    out : ndarray or None, optional
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
