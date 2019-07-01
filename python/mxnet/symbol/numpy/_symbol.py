@@ -1434,8 +1434,8 @@ def trunc(x, out=None, **kwargs):
     ----------
     x : _Symbol or scalar
         Input data.
-    out : _Symbol or None, optional
-        A location into which the result is stored. 
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
     
     Returns
     -------
@@ -1464,8 +1464,8 @@ def logical_not(x, out=None, **kwargs):
     ----------
     x : _Symbol or scalar
         Logical NOT is applied to the elements of `x`.
-    out : _Symbol or None, optional
-        A location into which the result is stored. 
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
     
     Returns
     -------
@@ -1495,8 +1495,8 @@ def arccosh(x, out=None, **kwargs):
     ----------
     x : _Symbol or scalar
         Input array.
-    out : _Symbol or None, optional
-        A location into which the result is stored. 
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
     
     Returns
     -------
