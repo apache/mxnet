@@ -1569,11 +1569,6 @@ def floor(x, out=None, **kwargs):
         Input data.
         Does not support scalar.
     out : _Symbol or None, optional
-    where : array_like, optional
-        Values of True indicate to calculate the ufunc at that position, values
-        of False indicate to leave the value in the output alone.
-
-        Not supported yet.
 
     Returns
     -------
@@ -1587,7 +1582,7 @@ def floor(x, out=None, **kwargs):
     `floor` where `floor(-2.5) == -3`.
 
     - `a` doe snot support scalar.
-    - `where` has no effect.
+    - This function can accept a hidden optional parameter `where`, but it has no effect.
     """
     return _unary_func_helper(x, _npi.floor, _np.floor, out=out, **kwargs)
 

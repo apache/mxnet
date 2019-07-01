@@ -2068,7 +2068,7 @@ def floor(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or Python int
+    x : ndarray or Python native numeric
         Input values.
 
     out : ndarray, None, or tuple of exactly one ndarray, optional
@@ -2076,13 +2076,13 @@ def floor(x, out=None, **kwargs):
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element. If `x` is a Python int,
-        nothing will be written to `out`.
+        keyword argument) must have exactly one element. If `x` is a Python native
+        numeric, nothing will be written to `out`.
 
     Returns
     -------
-    y : ndarray
-        The floor of each element in `x`.
+    y : ndarray or float
+        The floor of each element in `x`, or float if `x` is a Python native numeric.
 
     Notes
     -----
@@ -2095,7 +2095,7 @@ def floor(x, out=None, **kwargs):
     the following aspects:
 
     - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray or Python int.
+    - `a` only supports ndarray or Python native numeric.
     - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
     The effect is `out` does not support broadcasting.
@@ -2116,7 +2116,7 @@ def expm1(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or Python int
+    x : ndarray or Python native numeric
         Input values.
 
     out : ndarray, None, or tuple of exactly one ndarray, optional
@@ -2124,12 +2124,12 @@ def expm1(x, out=None, **kwargs):
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element. If `x` is a Python int,
-        nothing will be written to `out`.
+        keyword argument) must have exactly one element. If `x` is a Python native
+        numeric, nothing will be written to `out`.
 
     Returns
     -------
-    out : ndarray or int
+    out : ndarray or float
         Element-wise exponential minus one: ``out = exp(x) - 1``.
 
     Notes
@@ -2142,7 +2142,7 @@ def expm1(x, out=None, **kwargs):
     the following aspects:
 
     - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray or Python int.
+    - `a` only supports ndarray or Python native numeric.
     - `a` does not support scalar.
     - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
@@ -2163,7 +2163,7 @@ def arcsinh(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray or Python int
+    x : ndarray or Python native numeric
         Input values.
 
     out : ndarray, None, or tuple of exactly one ndarray, optional
@@ -2171,8 +2171,8 @@ def arcsinh(x, out=None, **kwargs):
         A location into which the result is stored. If provided, it must have
         a shape that the inputs broadcast to. If not provided or `None`,
         a freshly-allocated array is returned. A tuple (possible only as a
-        keyword argument) must have exactly one element. If `x` is a Python int,
-        nothing will be written to `out`.
+        keyword argument) must have exactly one element. If `x` is a Python native
+        numeric, nothing will be written to `out`.
 
     where : array_like, optional
 
@@ -2205,7 +2205,7 @@ def arcsinh(x, out=None, **kwargs):
     the following aspects:
 
     - The default value type is `float32` instead of `float64` in numpy.
-    - `a` only supports ndarray or Python int.
+    - `a` only supports ndarray or Python native numeric.
     - `where` can be passed as a keyword parameter, but has no effect.
     - if a tuple is passed into `out`, it must have exactly one ndarray.
     The effect is `out` does not support broadcasting.

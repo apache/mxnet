@@ -65,7 +65,7 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
     high : float
         Upper boundary of the output interval.  All values generated will be
         less than high.  The default value is 1.0.
-    size : int or tuple of ints, optional
+    size : int or tuple of ints
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a scalar tensor containing a single value is returned if
@@ -86,7 +86,6 @@ def uniform(low=0.0, high=1.0, size=None, **kwargs):
     Notes
     -----
     This function currently does not support ``low`` and ``high`` as symbols.
-    `size` is not optional.
     """
     dtype = kwargs.pop('dtype', None)
     if dtype is None:
