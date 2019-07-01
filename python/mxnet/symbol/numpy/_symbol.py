@@ -1120,7 +1120,7 @@ def divide(x1, x2, out=None):
 
     Returns
     -------
-    out : ndarray or scalar
+    out : _Symbol
         This is a scalar if both x1 and x2 are scalars.
     """
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
