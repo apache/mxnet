@@ -1918,6 +1918,7 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     """
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, **kwargs)
 
+
 @set_module('mxnet.numpy')
 def trunc(x, out=None, **kwargs):
     r"""
@@ -1957,7 +1958,8 @@ def trunc(x, out=None, **kwargs):
     array([-1., -1., -0.,  0.,  1.,  1.,  2.])
     """
     return _mx_nd_np.trunc(x, out=out, **kwargs)
-   
+
+
 @set_module('mxnet.numpy')
 def logical_not(x, out=None, **kwargs):
     r"""
@@ -1998,6 +2000,7 @@ def logical_not(x, out=None, **kwargs):
     array([0., 0., 0., 1., 1.])
     """
     return _mx_nd_np.logical_not(x, out=out, **kwargs)
+
 
 @set_module('mxnet.numpy')
 def arccosh(x, out=None, **kwargs):

@@ -177,6 +177,7 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
     pass
 
+
 def _np_prod(a, axis=None, dtype=None, keepdims=None, out=None):
     r"""
     prod(x, axis=None, dtype=None, keepdims=_Null, initial=None, out=None)
@@ -254,6 +255,7 @@ def _np_prod(a, axis=None, dtype=None, keepdims=None, out=None):
     array([2., 12.])
     """
     pass
+
 
 def _np__random_shuffle(x):
     r"""

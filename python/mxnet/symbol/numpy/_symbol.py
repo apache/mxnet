@@ -1419,6 +1419,7 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
+
 @set_module('mxnet.symbol.numpy')
 def trunc(x, out=None, **kwargs):
     r"""
@@ -1453,6 +1454,7 @@ def trunc(x, out=None, **kwargs):
     """    
     return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
 
+
 @set_module('mxnet.symbol.numpy')
 def logical_not(x, out=None, **kwargs):
     r"""
@@ -1483,6 +1485,7 @@ def logical_not(x, out=None, **kwargs):
         - If `x` is plain python numeric, the result won't be stored in out.
     """
     return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
+
 
 @set_module('mxnet.symbol.numpy')
 def arccosh(x, out=None, **kwargs):
@@ -1523,6 +1526,7 @@ def arccosh(x, out=None, **kwargs):
         - If `x` is plain python numeric, the result won't be stored in out.
     """
     return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
+
 
 def sin(x, out=None, **kwargs):
     r"""Trigonometric sine, element-wise.

@@ -742,6 +742,7 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
+
 @set_module('mxnet.ndarray.numpy')
 def trunc(x, out=None, **kwargs):
     r"""
@@ -781,6 +782,7 @@ def trunc(x, out=None, **kwargs):
     array([-1., -1., -0.,  0.,  1.,  1.,  2.])
     """
     return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
+
 
 @set_module('mxnet.ndarray.numpy')
 def logical_not(x, out=None, **kwargs):
@@ -822,6 +824,7 @@ def logical_not(x, out=None, **kwargs):
     array([0., 0., 0., 1., 1.])
     """
     return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
+
 
 @set_module('mxnet.ndarray.numpy')
 def arccosh(x, out=None, **kwargs):
@@ -871,6 +874,7 @@ def arccosh(x, out=None, **kwargs):
     0.0
     """
     return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
+
 
 @set_module('mxnet.ndarray.numpy')
 def sin(x, out=None, **kwargs):
