@@ -1605,9 +1605,7 @@ def sign(x, out=None, **kwargs):
     x : _Symbol or a scalar
         Input values.
     out : _Symbol or None, optional
-        A location into which the result is stored.
-        If provided, it must have the same shape and dtype as input.
-        If not provided or `None`, a freshly-allocated array is returned.
+        Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     -------
