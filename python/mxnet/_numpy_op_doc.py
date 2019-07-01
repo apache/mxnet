@@ -16,7 +16,6 @@
 # under the License.
 
 # pylint: skip-file
-# from base import _Null
 
 
 """Doc placeholder for numpy ops with prefix _np."""
