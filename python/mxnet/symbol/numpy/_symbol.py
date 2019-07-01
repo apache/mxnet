@@ -45,10 +45,8 @@ def absolute(x, out=None, **kwargs):
     x : _Symbol
     Input array.
 
-    out : Dummy parameter to keep the consistency with the ndarray counterpart, optional
-    A location into which the result is stored. If provided, it must have a shape 
-    that the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
-    A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    out : _Symbol or None
+    Dummy parameter to keep the consistency with the ndarray counterpart.
 
     **kwargs
     For other keyword-only arguments, see the ufunc docs.
@@ -71,10 +69,8 @@ def cbrt(x, out=None, **kwargs):
     x : _Symbol
     The values whose cube-roots are required.
 
-    out : Dummy parameter to keep the consistency with the ndarray counterpart, optional
-    A location into which the result is stored. If provided, it must have a shape that the 
-    inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
-    A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    out : _Symbol or None
+    Dummy parameter to keep the consistency with the ndarray counterpart.
 
     **kwargs
     For other keyword-only arguments, see the ufunc docs.
@@ -99,10 +95,8 @@ def arccos(x, out=None, **kwargs):
     x : _Symbol
     x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
 
-    out : Dummy parameter to keep the consistency with the ndarray counterpart, optional
-    A location into which the result is stored. If provided, it must have a shape that 
-    the inputs broadcast to. If not provided or None, a freshly-allocated array is returned. 
-    A tuple (possible only as a keyword argument) must have length equal to the number of outputs.
+    out : _Symbol or None
+    Dummy parameter to keep the consistency with the ndarray counterpart.
 
     **kwargs
     For other keyword-only arguments, see the ufunc docs.
@@ -1113,10 +1107,8 @@ def divide(x1, x2, out=None):
     x2 : _Symbol
         Divisor array.
 
-    out : Dummy parameter to keep the consistency with the ndarray counterpart, optional
-        A location into which the result is stored. If provided, it must have a shape
-        that the inputs broadcast to. If not provided or None, a freshly-allocated array
-        is returned.
+    out : _Symbol or None
+    Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     -------
