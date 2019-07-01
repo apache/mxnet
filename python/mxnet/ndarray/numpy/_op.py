@@ -241,7 +241,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
 
     Notes
     -----
-    This function differs to the original numpy.arange in the following aspects:
+    This function differs from the original numpy.arange in the following aspects:
         - Have a new parameter 'ctx'.
 
     Returns
@@ -768,7 +768,7 @@ def trunc(x, out=None, **kwargs):
 
     Notes
     -----
-    This function differs to the original numpy.trunc in the following aspects:
+    This function differs from the original numpy.trunc in the following aspects:
         - Do not support `where`, a parameter in numpy which indicates where to calculate.
         - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
         - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
@@ -805,7 +805,7 @@ def logical_not(x, out=None, **kwargs):
 
     Notes
     -----
-    This function differs to the original numpy.logical_not in the following aspects:
+    This function differs from the original numpy.logical_not in the following aspects:
         - Do not support `where`, a parameter in numpy which indicates where to calculate.
         - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
         - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
@@ -854,7 +854,7 @@ def arccosh(x, out=None, **kwargs):
     For each value that cannot be expressed as a real number or infinity, it
     yields ``nan`` and sets the `invalid` floating point error flag.
     
-    This function differs to the original numpy.arccosh in the following aspects:
+    This function differs from the original numpy.arccosh in the following aspects:
         - Do not support `where`, a parameter in numpy which indicates where to calculate.
         - Do not support complex-valued input.
         - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
