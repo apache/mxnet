@@ -412,8 +412,8 @@ def divide(x1, x2, out=None):
     Examples:
 
     >>> x = np.arange(5)
-    >>> np.true_divide(x, 4)
-    array([ 0.  ,  0.25,  0.5 ,  0.75,  1.  ])
+    >>> np.divide(x, 4)
+    array([ 0.  ,  0.25,  0.5 ,  0.75,  1.  ], dtype=float32)
     """
 
     return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
@@ -519,7 +519,7 @@ def swapaxes(a, axis1, axis2):
 
     Parameters:	
     -----------
-    a : array_like
+    a : ndarray 
         Input array.
     axis1 : int
         First axis.
@@ -533,9 +533,9 @@ def swapaxes(a, axis1, axis2):
     Examples:
     >>> x = np.array([[1,2,3]])
     >>> np.swapaxes(x,0,1)
-    array([[1],
-          [2],
-          [3]])     
+    array([[1.],
+           [2.],
+           [3.]])     
     """
 
     return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
@@ -906,7 +906,7 @@ def sqrt(x, out=None, **kwargs):
 @set_module('mxnet.ndarray.numpy')
 def arctanh(x, out=None, where=True, **kwargs):
     r"""
-    arctanh(x, out=None, where=True, **kwargs)
+    arctanh(x, out=None, where=True)
 
     Inverse hyperbolic tangent element-wise.
 
@@ -915,7 +915,7 @@ def arctanh(x, out=None, where=True, **kwargs):
     -----------
     x : ndarray 
         Input array.
-    out : ndarray, None, or tuple of ndarray and None.
+    out : ndarray, None.
           A location into which the result is stored. If provided, 
           it must have a shape that the inputs broadcast to. 
           If not provided or None, a freshly-allocated array is returned. 

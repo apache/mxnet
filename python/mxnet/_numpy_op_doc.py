@@ -176,7 +176,7 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
 
 def _np_broadcast_to(array, shape, subok=False):
     r"""
-    _np_broadcast_to(array, shape)
+    broadcast_to(array, shape)
     Broadcast an array to a new shape.
 
     Parameters:	

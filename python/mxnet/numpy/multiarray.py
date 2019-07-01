@@ -649,7 +649,7 @@ class ndarray(NDArray):
 
         Parameters:	
         -----------
-        a : array_like
+        a : ndarray 
             Input array.
         axis1 : int
             First axis.
@@ -2042,7 +2042,6 @@ def arctanh(x, out=None, where=True, **kwargs):
     arctanh(x, out=None, where=True)
 
     Inverse hyperbolic tangent element-wise.
-
     Parameters:	
 
     -----------
@@ -2062,7 +2061,7 @@ def arctanh(x, out=None, where=True, **kwargs):
     out : ndarray or scalar
           ndarray of the same shape as x. This is a scalar if x is a scalar.
     Examples
-
+    --------
     >>> np.arctan(0.7)
     0.8673005276940531
     """

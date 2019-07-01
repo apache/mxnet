@@ -1031,7 +1031,7 @@ def divide(x1, x2, out=None):
 
     Parameters:	
     ----------
-    x1 : symbolic or scalar 
+    x1 : Symbolic or scalar 
          Dividend array.
     x2 : symbolic or scalar 
          Divisor array.
@@ -1042,7 +1042,6 @@ def divide(x1, x2, out=None):
     where : symbolic or array, optional
             Values of True indicate to calculate the ufunc at that position, 
             values of False indicate to leave the value in the output alone.
-    **kwargs : For other keyword-only arguments, see the ufunc docs.
 
     Returns:	
     --------
@@ -1660,7 +1659,7 @@ def tan(x, out=None, where=True, **kwargs):
     -------
     y : _Symbol or scalar 
         The corresponding tangent values. This is a scalar if x is a scalar.
-    r"""
+    """
 
     return _unary_func_helper(x, _npi.tan, _np.tan, out=out, **kwargs)
 
@@ -1673,9 +1672,9 @@ def fix(x, out=None):
     
     Parameters:	
     ----------
-    x : Symbol or scalar  
+    x : _Symbol or scalar  
         An array of floats to be rounded
-    out : Symbol or scalar, optional
+    out : _Symbol or scalar, optional
           Output array
 
     Returns:	
