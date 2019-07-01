@@ -102,9 +102,15 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
 
     Draw random samples from a normal (Gaussian) distribution.
 
-    Samples are distributed according to a normal distribution parametrized
-    by *loc* (mean) and *scale* (standard deviation).
+    The probability density function of the normal distribution, first
+    derived by De Moivre and 200 years later by both Gauss and Laplace
+    independently [1]_, is often called the bell curve because of
+    its characteristic shape (see the example below).
 
+    The normal distributions occurs often in nature.  For example, it
+    describes the commonly occurring distribution of samples influenced
+    by a large number of tiny, random disturbances, each with its own
+    unique distribution [2]_.
 
     Parameters
     ----------
@@ -131,11 +137,32 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     Notes
     -----
     This function currently does not support ``loc`` and ``scale`` as `_Symbol`s.
+    The probability density for the Gaussian distribution is
+
+    .. math:: p(x) = \frac{1}{\sqrt{ 2 \pi \sigma^2 }}
+                     e^{ - \frac{ (x - \mu)^2 } {2 \sigma^2} },
+    
+    where :math:`\mu` is the mean and :math:`\sigma` the standard
+    deviation. The square of the standard deviation, :math:`\sigma^2`,
+    is called the variance.
+    
+    The function has its peak at the mean, and its "spread" increases with
+    the standard deviation (the function reaches 0.607 times its maximum at
+    :math:`x + \sigma` and :math:`x - \sigma` [2]_).  This implies that
+    `numpy.random.normal` is more likely to return samples lying close to
+    the mean, rather than those far away.
     
     This function differs to the original numpy.prod in the following aspects:
     
         - Argument must be named from the fourth.
 
+    References
+    ----------
+    .. [1] Wikipedia, "Normal distribution",
+           https://en.wikipedia.org/wiki/Normal_distribution
+    .. [2] P. R. Peebles Jr., "Central Limit Theorem" in "Probability,
+           Random Variables and Random Signal Principles", 4th ed., 2001,
+           pp. 51, 51, 125.
     """
     dtype = kwargs.pop('dtype', None)
     if dtype is None:

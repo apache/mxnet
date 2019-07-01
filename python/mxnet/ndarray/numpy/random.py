@@ -103,9 +103,15 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
 
     Draw random samples from a normal (Gaussian) distribution.
 
-    Samples are distributed according to a normal distribution parametrized
-    by *loc* (mean) and *scale* (standard deviation).
+    The probability density function of the normal distribution, first
+    derived by De Moivre and 200 years later by both Gauss and Laplace
+    independently [1]_, is often called the bell curve because of
+    its characteristic shape (see the example below).
 
+    The normal distributions occurs often in nature.  For example, it
+    describes the commonly occurring distribution of samples influenced
+    by a large number of tiny, random disturbances, each with its own
+    unique distribution [2]_.
 
     Parameters
     ----------
