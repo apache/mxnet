@@ -287,7 +287,14 @@ def argmax(a, axis=None, out=None):
     - In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
-    - The ``out`` ndarray must have the same dtype as the expected output.
+    This function differs from the original `numpy.argmax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
 
     Examples
     --------
@@ -652,28 +659,28 @@ def split(ary, indices_or_sections, axis=0):
 
 @set_module('mxnet.ndarray.numpy')
 def tile(x, reps):
-    """
-    Construct an array by repeating A the number of times given by reps.
+    r"""
+    Construct an array by repeating x the number of times given by reps.
 
     If `reps` has length ``d``, the result will have dimension of
-    ``max(d, A.ndim)``.
+    ``max(d, x.ndim)``.
 
-    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
+    If ``x.ndim < d``, `x` is promoted to be d-dimensional by prepending new
     axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
     or shape (1, 1, 3) for 3-D replication. If this is not the desired
-    behavior, promote `A` to d-dimensions manually before calling this
+    behavior, promote `x` to d-dimensions manually before calling this
     function.
 
-    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
-    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
+    If ``x.ndim > d``, `reps` is promoted to `x`.ndim by pre-pending 1's to it.
+    Thus for an `x` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
     (1, 1, 2, 2).
 
     Parameters
     ----------
-    A : ndarray or scalar
-        A input array or a scalar to repeat.
+    x : ndarray or scalar
+        An input array or a scalar to repeat.
     reps : a single integer or tuple of integers
-        The number of repetitions of `A` along each axis.
+        The number of repetitions of `x` along each axis.
 
     Returns
     -------
@@ -696,7 +703,7 @@ def tile(x, reps):
     >>> np.tile(b, 2)
     array([[1., 2., 1., 2.],
            [3., 4., 3., 4.]])
-    >>> np.tile(b, (2, 1))
+    >>> np.(b, (2, 1))
     array([[1., 2.],
            [3., 4.],
            [1., 2.],
@@ -712,7 +719,7 @@ def tile(x, reps):
     Scalar as input:
 
     >>> np.tile(2, 3)
-    array([2, 2, 2])
+    array([2, 2, 2]) # repeating integer `2`
 
     """
     return _unary_func_helper(x, _npi.tile, _np.tile, reps=reps)
@@ -1024,8 +1031,10 @@ def sign(x, out=None, **kwargs):
     Note
     -------
     - Only supports real number as input elements.
-    - Input type does not support Python native iterables.
-    - ``out`` param: cannot perform auto type change. ``out`` ndarray's dtype must be the same as the expected output.
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
 
     Examples
     --------
@@ -1164,15 +1173,18 @@ def log(x, out=None, **kwargs):
 
     Notes
     -----
-    - Does not support complex number for now
-    - Input type does not support Python native iterables.
-    - ``out`` param: cannot perform auto type change. ``out`` ndarray's dtype must be the same as the expected output.
+     Currently only supports data of real values and ``inf`` as input. Returns data of real value, ``inf``, ``-inf`` and
+    ``nan`` according to the input.
 
-    References
-    ----------
-    .. [1] M. Abramowitz and I.A. Stegun, "Handbook of Mathematical Functions",
-           10th printing, 1964, pp. 67. http://www.math.sfu.ca/~cbm/aands/
-    .. [2] Wikipedia, "Logarithm". https://en.wikipedia.org/wiki/Logarithm
+    This function differs from the original `numpy.log
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.log.html>`_ in
+    the following aspects:
+
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
 
     Examples
     --------
@@ -1180,7 +1192,8 @@ def log(x, out=None, **kwargs):
     >>> np.log(a)
     array([  0.,   1.,   2., -inf], dtype=float64)
 
-    Due to internal calculation mechanism, using float32 type may cause some special behavior
+
+    Due to internal calculation mechanism, using default float32 dtype may cause some special behavior:
 
     >>> a = np.array([1, np.exp(1), np.exp(2), 0], dtype=np.float32)
     >>> np.log(a)
@@ -1220,8 +1233,14 @@ def degrees(x, out=None, **kwargs):
 
     Notes
     -------
-    - Input type does not support Python native iterables.
-    - ``out`` param: cannot perform auto type change. ``out`` ndarray's dtype must be the same as the expected output.
+    This function differs from the original `numpy.degrees
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
 
     Examples
     --------

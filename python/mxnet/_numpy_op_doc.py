@@ -226,9 +226,8 @@ def _np_dot(a, b, out=None):
     pass
 
 
-# def _np_sum(a, axis=None, dtype=None, out=None, keepdims=_Null):
-def _np_sum(a, axis=None, dtype=None, out=None):
-    """
+def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
+    r"""
     sum(a, axis=_Null, dtype=_Null, keepdims=_Null, initial=_Null, out=None)
 
     Sum of array elements over a given axis.
@@ -256,7 +255,7 @@ def _np_sum(a, axis=None, dtype=None, out=None):
         exceptions will be raised.
     initial: Currently only supports None as input, optional
         Starting value for the sum.
-        Currently not implemented. Please pass in None if needed.
+        Currently not implemented. Please use ``None`` as input or skip this argument.
     out : ndarray, optional
         Alternative output array in which to place the result. It must have
         the same shape and dtype as the expected output.
@@ -279,6 +278,14 @@ def _np_sum(a, axis=None, dtype=None, out=None):
     >>> a = np.empty(1)
     >>> np.sum(a)
     array(0.)
+
+    This function differs from the original `numpy.sum
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.sum.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - "out" param: cannot perform auto type cast. out ndarray's dtype must be the same as the expected output.
+    - "initial" param is not supported yet. Please use ``None`` as input or skip it.
 
     Examples
     --------
@@ -334,8 +341,13 @@ def  _np_copy(a, out=None):
 
     Notes
     -------
-    - Input type does not support Python native iterables.
-    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+    This function differs from the original `numpy.copy
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.copy.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
     - Does not support "order" parameter.
 
     Examples
@@ -346,7 +358,7 @@ def  _np_copy(a, out=None):
     >>> y = x
     >>> z = np.copy(x)
 
-    Note that, when we modify x, y changes, but not z:
+    Note that, when ``x`` is modified, ``y`` is also modified, but not ``z``:
 
     >>> x[0] = 10
     >>> x[0] == y[0]
