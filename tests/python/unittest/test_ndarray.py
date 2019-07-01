@@ -822,10 +822,7 @@ def test_order():
         # test for ret_typ=indices
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="indices", k=3, is_ascend=True).asnumpy()
         # Test the default dtype
-        if is_large_tensor_enabled:
-            assert nd_ret_topk.dtype == np.int64
-        else:
-            assert nd_ret_topk.dtype == np.int32
+        assert nd_ret_topk.dtype == np.float32
         gt = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk, gt)
         nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="indices", k=2, is_ascend=False, dtype=np.float64).asnumpy()
@@ -866,10 +863,7 @@ def test_order():
         nd_ret_topk_val = nd_ret_topk_val.asnumpy()
         nd_ret_topk_ind = nd_ret_topk_ind.asnumpy()
         assert nd_ret_topk_val.dtype == dtype
-        if is_large_tensor_enabled:
-            assert nd_ret_topk_ind.dtype == np.int64
-        else:
-            assert nd_ret_topk_ind.dtype == np.int32
+        assert nd_ret_topk_ind.dtype == np.float32
         gt_val = gt_topk(a_npy, axis=1, ret_typ="value", k=3, is_ascend=True)
         gt_ind = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk_val, gt_val)
