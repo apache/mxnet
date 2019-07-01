@@ -854,11 +854,9 @@ def arccosh(x, out=None, **kwargs):
     For each value that cannot be expressed as a real number or infinity, it
     yields ``nan`` and sets the `invalid` floating point error flag.
     
-    For complex-valued input, `arccosh` is a complex analytical function that
-    has a branch cut `[-inf, 1]` and is continuous from above on it.
-    
     This function differs to the original numpy.arccosh in the following aspects:
         - Do not support `where`, a parameter in numpy which indicates where to calculate.
+        - Do not support complex-valued input.
         - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
         - Cannot broadcast automatically. Shape of `out` must be same as the expected one.
         - If `x` is plain python numeric, the result won't be stored in out.
