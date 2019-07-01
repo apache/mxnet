@@ -1500,7 +1500,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
 
     Notes
     -----
-    This function differs to the original numpy.logical_not in the following aspects:
+    This function differs to the original numpy.arange in the following aspects:
         - Have a new parameter 'ctx'.
 
     Returns
@@ -2033,7 +2033,7 @@ def arccosh(x, out=None, **kwargs):
     For complex-valued input, `arccosh` is a complex analytical function that
     has a branch cut `[-inf, 1]` and is continuous from above on it.
     
-    This function differs to the original numpy.logical_not in the following aspects:
+    This function differs to the original numpy.arccosh in the following aspects:
         - Do not support 'where', a parameter in numpy which indicates where to calculate.
         - Cannot cast type automatically. Dtype of 'out' must be same as the expected one.
         - Cannot broadcast automatically. Shape of 'out' must be same as the expected one.

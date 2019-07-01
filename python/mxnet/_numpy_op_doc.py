@@ -213,7 +213,7 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
         Must be None.
     out : ndarray, optional
         Alternative output array in which to place the result. It must have
-        the same shape as the expected output and the same type.
+        the same shape and type as the expected output.
     
     Returns
     -------
@@ -230,29 +230,28 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
  
     This function differs to the original numpy.prod in the following aspects:
         
-        - Do not support empty ndarray or scalar as input.
         - Keepdims must be 0 or 1. Otherwise, an error will raise.
-        - Can't cast type automatically.
+        - Cannot cast type automatically. Dtype of 'out' must be same as the expected one.
 
     Examples
     --------
     By default, calculate the product of all elements:
     
-    >>> x = np.array([1.,2.])
+    >>> x = np.array([1., 2.])
     >>> np.prod(x)
     array(2.)
     
     Even when the input array is two-dimensional:
     
-    >>> x = np.array([[1.,2.],[3.,4.]])
+    >>> x = np.array([[1., 2.],[3., 4.]])
     >>> np.prod(x)
     array(24.)
     
     But we can also specify the axis over which to multiply:
 
-    >>> x = np.array([[1.,2.],[3.,4.]])
+    >>> x = np.array([[1., 2.],[3., 4.]])
     >>> np.prod(x, axis=1)
-    array([ 2., 12.])
+    array([2., 12.])
     """
     pass
 
@@ -260,7 +259,7 @@ def _np__random_shuffle(x):
     r"""
     random.shuffle(x)
     
-    Modify a sequence in-place by shuffling its contents.
+    Modify a sequence by shuffling its contents.
     
     This function only shuffles the array along the first axis of a
     multi-dimensional array. The order of sub-arrays is changed but
@@ -277,7 +276,7 @@ def _np__random_shuffle(x):
     
     Notes
     -----
-    This function differs to the original numpy.logical_not in the following aspects:
+    This function differs to the original numpy.random.shuffle in the following aspects:
         - Result is returned rather than contained in x.
 
     Examples
