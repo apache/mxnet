@@ -177,15 +177,15 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
     pass
 
-def _np_prod(a, axis=None, dtype=None, out=None, keepdims=None):
+def _np_prod(a, axis=None, dtype=None, keepdims=None, out=None):
     r"""
-    prod(a, axis=None, dtype=None, keepdims=_Null, initial=None, out=None)
+    prod(x, axis=None, dtype=None, keepdims=_Null, initial=None, out=None)
 
     Return the product of array elements over a given axis.
     
     Parameters
     ----------
-    a : ndarray
+    x : ndarray
         Input data.
     axis : None or int or tuple of ints, optional
         Axis or axes along which a product is performed.  The default,
