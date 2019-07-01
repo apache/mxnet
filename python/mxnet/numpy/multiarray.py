@@ -46,7 +46,7 @@ from ..ndarray.numpy import _internal as _npi
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
-           'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan']
+           'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'gcd']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1554,6 +1554,26 @@ def concatenate(seq, axis=0, out=None):
         The concatenated array.
     """
     return _mx_nd_np.concatenate(seq, axis=axis, out=out)
+
+@set_module('mxnet.numpy')
+def gcd(x1, x2, out=None):
+    """
+    Returns the greatest common divisor of |x1| and |x2|
+
+    Parameters:	
+    ----------
+    x1, x2 : array_like, int
+             Arrays of values
+
+    Returns:	
+    --------
+    y : ndarray or scalar
+        The greatest common divisor of the absolute value of 
+        the inputs This is a scalar if both x1 and x2 are scalars.
+    """
+
+    return _mx_nd_np.gcd(x1, x2, out)
+
 
 
 @set_module('mxnet.numpy')

@@ -29,7 +29,7 @@ from ..ndarray import NDArray
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
-           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan']
+           'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'gcd']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -330,6 +330,26 @@ def add(x1, x2, out=None):
         The sum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars.
     """
     return _ufunc_helper(x1, x2, _npi.add, _np.add, _npi.add_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def gcd(x1, x2, out=None):
+    """
+    Returns the greatest common divisor of |x1| and |x2|
+
+    Parameters:	
+    ----------
+    x1, x2 : array_like, int
+             Arrays of values
+
+    Returns:	
+    --------
+    y : ndarray or scalar
+        The greatest common divisor of the absolute value of 
+        the inputs This is a scalar if both x1 and x2 are scalars.
+    """
+
+    return _ufunc_helper(x1, x2, _npi.gcd, _np.gcd, _np.gcd, None, out)
 
 
 @set_module('mxnet.ndarray.numpy')

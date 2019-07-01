@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_np_gcd)
+NNVM_REGISTER_OP(_npi_gcd)
 .set_attr<FCompute>("FCompute<gpu>", GcdOpForward<gpu>);
 
 }  // namespace op

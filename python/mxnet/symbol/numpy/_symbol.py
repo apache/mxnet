@@ -32,7 +32,7 @@ from . import _internal as _npi
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
-           'abs', 'exp', 'arctan']
+           'abs', 'exp', 'arctan', 'gcd']
 
 
 def _num_outputs(sym):
@@ -993,6 +993,9 @@ def minimum(x1, x2, out=None):
 def add(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.add, _np.add, _npi.add_scalar, None, out)
 
+@set_module('mxnet.symbol.numpy')
+def gcd(x1, x2, out=None):
+    return _ufunc_helper(x1, x2, _npi.gcd, _np.gcd, _np.gcd, None, out)
 
 @set_module('mxnet.symbol.numpy')
 def subtract(x1, x2, out=None):
