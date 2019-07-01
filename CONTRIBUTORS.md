@@ -209,6 +209,7 @@ List of Contributors
 * [Rahul Padmanabhan](https://github.com/rahul3)
 * [Yuxi Hu](https://github.com/yuxihu)
 * [Harsh Patel](https://github.com/harshp8l)
+* [Thoralf Klein](https://github.com/tklein23)
 
 Label Bot
 ---------
