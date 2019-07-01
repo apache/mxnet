@@ -1446,10 +1446,10 @@ def trunc(x, out=None, **kwargs):
     Notes
     -----
     This function differs to the original numpy.trunc in the following aspects:
-        - Do not support where. 
-        - Can't cast type automatically.
-        - Input can't broadcast to out.
-        - If x is plain python numeric, the result won't be stored in out.
+        - Do not support 'where', a parameter in numpy which indicates where to calculate. 
+        - Cannot cast type automatically. Dtype of 'out' must be same as the expected one.
+        - Cannot broadcast automatically. Shape of 'out' must be same as the expected one.
+        - If 'x' is plain python numeric, the result won't be stored in out.
     """    
     return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
 
@@ -1477,10 +1477,10 @@ def logical_not(x, out=None, **kwargs):
     Notes
     -----
     This function differs to the original numpy.logical_not in the following aspects:
-        - Do not support where.
-        - Can't cast type automatically.
-        - Input can't broadcast to out.
-        - If x is plain python numeric, the result won't be stored in out.
+        - Do not support 'where', a parameter in numpy which indicates where to calculate.
+        - Cannot cast type automatically. Dtype of 'out' must be same as the expected one.
+        - Cannot broadcast automatically. Shape of 'out' must be same as the expected one.
+        - If 'x' is plain python numeric, the result won't be stored in out.
     """
     return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
 
@@ -1519,10 +1519,10 @@ def arccosh(x, out=None, **kwargs):
     has a branch cut `[-inf, 1]` and is continuous from above on it.
     
     This function differs to the original numpy.logical_not in the following aspects:
-        - Do not support where.
-        - Can't cast type automatically.
-        - Input can't broadcast to out.
-        - If x is plain python numeric, the result won't be stored in out.
+        - Do not support 'where', a parameter in numpy which indicates where to calculate.
+        - Cannot cast type automatically. Dtype of 'out' must be same as the expected one.
+        - Cannot broadcast automatically. Shape of 'out' must be same as the expected one.
+        - If 'x' is plain python numeric, the result won't be stored in out.
     """
     return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
 
