@@ -1339,7 +1339,7 @@ def tile(A, reps):
     c : _Symbol
         The tiled output array.
     """
-    return _unary_func_helper(x, _npi.tile, _np.tile, reps=reps)
+    return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
 
 
 @set_module('mxnet.symbol.numpy')

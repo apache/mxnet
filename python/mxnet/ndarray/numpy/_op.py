@@ -727,7 +727,7 @@ def tile(A, reps):
     array([2, 2, 2]) # repeating integer `2`
 
     """
-    return _unary_func_helper(x, _npi.tile, _np.tile, reps=reps)
+    return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
 
 
 @set_module('mxnet.ndarray.numpy')

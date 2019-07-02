@@ -2155,7 +2155,7 @@ def tile(A, reps):
     array([2, 2, 2]) # repeating integer `2`
 
     """
-    return _mx_nd_np.tile(x, reps)
+    return _mx_nd_np.tile(A, reps)
 
 
 @set_module('mxnet.numpy')
