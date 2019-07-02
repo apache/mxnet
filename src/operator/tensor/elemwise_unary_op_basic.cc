@@ -121,20 +121,7 @@ The storage type of ``sigmoid`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
-                                               unary_bwd<mshadow_op::sigmoid_grad>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto fx = nnvm::NodeEntry{n->inputs[1]};
-    auto gx_ograd = nnvm::NodeEntry{n};
-
-    std::vector<nnvm::NodeEntry> ret;
-       
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], gx_ograd}, nullptr, &n));
-    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], fx}, nullptr, &n));
-    return ret;
-  });
+                                               unary_bwd<mshadow_op::sigmoid_grad>);
 
 DMLC_REGISTER_PARAMETER(HardSigmoidParam);
 MXNET_OPERATOR_REGISTER_UNARY(hard_sigmoid)
