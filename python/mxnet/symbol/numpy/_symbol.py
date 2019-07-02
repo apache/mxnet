@@ -1293,18 +1293,51 @@ def split(ary, indices_or_sections, axis=0):
 
 @set_module('mxnet.symbol.numpy')
 def vsplit(ary, indices_or_sections):
-    """
+    r"""
+    vsplit(ary, indices_or_sections)
+
     Split an array into multiple sub-arrays vertically (row-wise).
-    This is equivalent to split with axis=0 (default), the array is always split along the first axis regardless
-    of the array dimension.
+
+    ``vsplit`` is equivalent to ``split`` with `axis=0` (default): the array is always split
+    along the first axis regardless of the array dimension.
 
     Parameters
     ----------
-    array : an input ndarray
+    ary : _Symbol
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1 - D Python tuple, list or set.
+        If `indices_or_sections` is an integer, N, the array will be divided into N equal arrays
+        along axis 0.  If such a split is not possible, an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries indicate where
+        along axis 0 the array is split.  For example, ``[2, 3]`` would result in
+
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+
+        If an index exceeds the dimension of the array along axis 0, an error will be thrown.
 
     Returns
     -------
-    A list of multiple ndarrays.
+    sub-arrays : list of _Symbols
+        A list of sub-arrays.
+
+    See Also
+    --------
+    split : Split an array into multiple sub-arrays of equal size.
+
+    Notes
+    -------
+    This function differs from the original `numpy.degrees
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
+    the following aspects:
+
+    - Currently parameter ``indices_or_sections`` does not support ndarray, but supports scalar,
+    tuple
+    - In ``indices_or_sections``, if an index exceeds the dimension of the array along axis 0,
+    an error will be thrown.
+
     """
     return split(ary, indices_or_sections, 0)
 
