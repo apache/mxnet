@@ -879,7 +879,7 @@ def log10(x, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def sqrt(x, out=None, **kwargs):
-    """
+    r"""
     Return the non-negative square-root of an array, element-wise.
 
     Parameters
@@ -939,7 +939,7 @@ def arctanh(x, out=None, where=True, **kwargs):
 @set_module('mxnet.ndarray.numpy')
 def tan(x, out=None, where=True, **kwargs):
     r"""
-    tan(x, out=None, where=True, **kwargs)
+    tan(x, out=None, where=True)
 
     Compute tangent element-wise.
     Equivalent to np.sin(x)/np.cos(x) element-wise.
