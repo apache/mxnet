@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file simple_partition_pass.h
- * \brief
+ * \brief Simple pass for partitioning a graph.
  * \author Clement Fuji Tsang
  */
 #ifndef MXNET_EXECUTOR_SIMPLE_PARTITION_PASS_H_
@@ -43,7 +43,7 @@ namespace exec {
 
 /*!
  * \brief Custom graph class, which will contain bi-directional nodes
- * we need to compute DFS and reverse DFS for graph partitioning
+ * we need to compute DFS and reverse DFS for graph partitioning.
  */
 class BidirectionalGraph {
  public:
@@ -215,7 +215,7 @@ using NodeEntrySet = std::unordered_set<nnvm::NodeEntry, nnvm::NodeEntryHash,
 using NodeRawPtrSet = std::unordered_set<nnvm::Node*>;
 
 /*!
- * \brief get the output nodes of the subgraph in the main graph
+ * \brief Get the output nodes of the subgraph in the main graph.
  * \return a map between the node in the main graph and the output index of the subgraph node
 */
 nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_set) {
@@ -239,7 +239,7 @@ nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_
 }
 
 /*!
- * \brief create new input nodes of the subgraph and plug them
+ * \brief Create new input nodes of the subgraph and plug them.
  * \return the inputs of the subgraph node in the main graph
 */
 std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_set) {
@@ -286,7 +286,7 @@ std::unordered_map<uint32_t, uint32_t> GetGraphInputsMap(const Graph& g) {
 }
 
 /*!
- * \brief helper function to display what nodes are in a specific subset
+ * \brief Helper function to display what nodes are in a specific subset.
  */
 void dispNodesSet(Graph g, NodeRawPtrSet s) {
   DFSVisit(g.outputs, [&s](const nnvm::NodePtr n){

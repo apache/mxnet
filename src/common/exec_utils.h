@@ -623,7 +623,7 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
 }
 
 /*!
- * \brief Copy the graph, optionally leaving original Variable nodes
+ * \brief Copy the graph, optionally leaving original Variable nodes.
  *
  * \param dst destination graph
  * \param src source graph being copied
@@ -633,7 +633,7 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
 void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables);
 
 /*!
- * \brief Check whether graph contains any duplicated names in its inputs
+ * \brief Check whether graph contains any duplicated names in its inputs.
  *
  * \param idx Indexed graph being checked
  *

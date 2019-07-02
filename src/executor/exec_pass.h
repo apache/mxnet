@@ -191,7 +191,7 @@ void AttachOpResources(const Graph& g,
 Graph DetectInplaceAddTo(Graph g);
 
 /*!
- * \brief Fuse pointwise operations in the forward pass
+ * \brief Fuse pointwise operations in the forward pass.
  *
  * \param g input graph (needs to be entire graph, not just forward part)
  *
@@ -200,7 +200,7 @@ Graph DetectInplaceAddTo(Graph g);
 Graph FusePointwiseForward(Graph&& g);
 
 /*!
- * \brief Fuse pointwise operations in the backward pass
+ * \brief Fuse pointwise operations in the backward pass.
  *
  * \param g input graph (needs to be entire graph, not just forward part)
  *

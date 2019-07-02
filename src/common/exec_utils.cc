@@ -19,7 +19,7 @@
 
 /*!
  * \file exec_utils.cc
- * \brief implementation of executor util functions
+ * \brief Implementation of executor util functions.
  */
 
 #include "exec_utils.h"
