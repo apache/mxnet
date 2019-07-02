@@ -326,6 +326,32 @@ def test_softmax():
     assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
 
+def test_argsort():
+    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
+    s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
+    mx.nd.waitall()
+    assert (s[0].asnumpy() == (LARGE_X - 1)).all()
+
+
+def test_sort():
+    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
+    s = nd.sort(b, axis=0, is_ascend=False)
+    assert np.sum(s[-1][SMALL_Y//2:SMALL_Y].asnumpy() == 0).all()
+    s = nd.sort(b, is_ascend=False)
+    assert np.sum(s[0].asnumpy() == 0).all()
+
+
+def test_topk():
+    b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
+    k = nd.topk(b, k=10, axis=0, dtype=np.int64)
+    assert np.sum(k.asnumpy() == (LARGE_X - 1)) == SMALL_Y
+    ind, val = mx.nd.topk(b, k=3, axis=0, dtype=np.int64, ret_typ="both", is_ascend=False)
+    assert np.all(ind == val)
+    b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
+    l = nd.topk(b, k=1, axis=-1, dtype=np.int64, ret_typ="value")
+    assert l.sum() == np.sum(np.arange(0, SMALL_Y))
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

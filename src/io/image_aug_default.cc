@@ -163,8 +163,8 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(saturation).set_default(0.0f)
         .describe("Add a random value in ``[-saturation, saturation]`` to "
                   "the saturation of image.");
-        DMLC_DECLARE_FIELD(pca_noise).set_default(0.0f)
-                .describe("Add PCA based noise to the image.");
+    DMLC_DECLARE_FIELD(pca_noise).set_default(0.0f)
+        .describe("Add PCA based noise to the image.");
     DMLC_DECLARE_FIELD(random_h).set_default(0)
         .describe("Add a random value in ``[-random_h, random_h]`` to "
                   "the H channel in HSL color space.");

@@ -17,13 +17,11 @@
 
 """Utilities to interact with MXNet operator registry."""
 import ctypes
-import sys
+from operator import itemgetter
+from mxnet import runtime
 from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
 
-from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS
-
-# We will use all operators inside NDArray Module
-mx_nd_module = sys.modules["mxnet.ndarray.op"]
+from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
 
 # Operators where parameter have special criteria that cannot be cleanly automated.
 # Example: sample_multinomial operator has a parameter 'data'. It expects values to sum up to 1.
@@ -62,7 +60,7 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     for cur_op_name in operator_names:
         if not cur_op_name.startswith(filters):
             mx_operators[cur_op_name] = {"has_backward": False,
-                                         "nd_op_handle": getattr(mx_nd_module, cur_op_name)}
+                                         "nd_op_handle": getattr(MX_OP_MODULE, cur_op_name)}
 
         if cur_op_name.startswith("_backward_"):
             operators_with_backward.append(cur_op_name)
@@ -329,3 +327,19 @@ def get_operators_with_no_benchmark(operators_with_benchmark):
     """
     all_mxnet_operators = _get_all_mxnet_operators().keys()
     return list(set(all_mxnet_operators) - set(operators_with_benchmark))
+
+
+def get_current_runtime_features():
+    """Get all current runtime time flags/configuration for MXNet.
+
+    Returns
+    -------
+    Map of current runtime features such as compile flags used by MXNet.
+        Example: {'runtime_features': {'OPENCV' : '✔ OPENCV', 'CUDA': '✖ CUDA'}}
+    """
+    features = runtime.Features()
+    runtime_features = {}
+    for feature, config in sorted(features.items(), key=itemgetter(0)):
+        runtime_features[feature] = config
+
+    return {'runtime_features': runtime_features}

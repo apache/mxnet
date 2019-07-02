@@ -287,8 +287,11 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
   BulkFlush();
-
   ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
+  if (profiling) {
+    threaded_opr->opr_name =
+        profiler::CustomOpProfiler::Get()->GenerateDisplayName(threaded_opr->opr_name);
+  }
   OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
 
@@ -333,9 +336,10 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
         << device_count_;
   }
 #endif
-  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
-  opr->temporary = true;
   const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
+  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars,
+                                 prop, opr_name, wait);
+  opr->temporary = true;
   Push(opr, exec_ctx, priority, profiling);
 }
 

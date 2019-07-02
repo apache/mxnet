@@ -14,10 +14,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import sys
+
+# We will use all operators inside NDArray Module
+# If you want to run benchmark for all operators in different namespace,
+# for example mxnet.numpy.op, update here. All operators for benchmarks
+# will be picked up from this module
+MX_OP_MODULE = sys.modules["mxnet.ndarray.op"]
+
 
 """Default Input Tensor shapes to use for benchmarking"""
-
-""""""
 
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
