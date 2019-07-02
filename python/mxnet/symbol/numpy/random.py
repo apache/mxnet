@@ -154,7 +154,7 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
 
     This function differs from the original numpy.random.normal in the following aspects:
     
-        - Arguments must be provided with name from the fourth. For example, `dtype='float32'`
+        - The last three arguments must be provided with name. For example, `dtype='float32'`
           is legal while `'float32'` only is not allowed.
         - Have a new parameter 'ctx'.
 
