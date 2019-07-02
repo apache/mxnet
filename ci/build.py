@@ -416,6 +416,10 @@ def main() -> int:
                         help="Only build the container, don't build the project",
                         action='store_true')
 
+    parser.add_argument("-R", "--run-only",
+                        help="Only run the container, don't rebuild the container",
+                        action='store_true')
+
     parser.add_argument("-a", "--all",
                         help="build for all platforms",
                         action='store_true')
@@ -492,8 +496,12 @@ def main() -> int:
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
         if args.docker_registry:
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-        build_docker(platform=platform, docker_binary=docker_binary, registry=args.docker_registry,
+        if not args.run_only:
+            build_docker(platform=platform, docker_binary=docker_binary, registry=args.docker_registry,
                      num_retries=args.docker_build_retries, no_cache=args.no_cache)
+        else:
+            logging.info("Skipping docker build step.")
+
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
