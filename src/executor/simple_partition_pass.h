@@ -312,9 +312,9 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
     for (auto p : sub_outputs_in_main) {
       subgraph.outputs[p.second] = p.first;
     }
-    // To generate a subgraph an input have to be replace by data node (no op)
-    // and it have to be agnostic to the node from which it's an output
-    // (For exemple even if two inputs are two different outputs from the same node)
+    // To generate a subgraph an input has to be replaced by data node (no op)
+    // and it has to be agnostic to the node from which it's an output
+    // (For example, even if two inputs are two different outputs from the same node)
     auto inputs = GetSubgraphInputs(subgraph, subgraph_set);
     auto subgraph_node = create_subgraph_node(subgraph);
     subgraph_node->inputs = inputs;
