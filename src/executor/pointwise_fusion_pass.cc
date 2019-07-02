@@ -100,7 +100,8 @@ namespace {
 }  // namespace
 
 /*!
- * \brief Replace a set of nodes by a subgraph node
+ * \brief Replace a set of nodes by a subgraph node.
+ *        This function is used specifically in pointwise fusion.
  */
 template<typename FCreateNode>
 Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_sets,
@@ -115,7 +116,8 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     }
     // To generate a subgraph an input has to be replaced by data node (no op)
     // and it has to be agnostic to the node from which it's an output
-    // (For example, even if two inputs are two different outputs from the same node)
+    // (For example, even if two inputs are two different outputs from the same node,
+    // they need to be replaced by two completely separate data nodes)
     auto inputs = GetSubgraphInputs(subgraph, subgraph_set);
     auto subgraph_node = create_subgraph_node(subgraph, inputs.size());
     subgraph_node->inputs = inputs;
