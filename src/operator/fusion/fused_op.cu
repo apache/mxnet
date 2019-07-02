@@ -110,7 +110,9 @@ std::string ParseOpDescription(const std::vector<std::string>& op_desc,
 
 void AddPointerAndShape(const TBlob& data,
                         std::vector<void*> *ptrs,
-                        std::vector<std::vector<int>>* shapes) {
+                        std::vector<std::vector<int>>* shapes,
+                        mshadow::Stream<gpu> * s) {
+  using namespace mshadow;
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     int ndim = data.ndim();
     Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
@@ -534,10 +536,10 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<void*> ptrs;
   std::vector<std::vector<int>> shapes;
   for (const auto &data : inputs) {
-    AddPointerAndShape(data, &ptrs, &shapes);
+    AddPointerAndShape(data, &ptrs, &shapes, s);
   }
   for (const auto &data : outputs) {
-    AddPointerAndShape(data, &ptrs, &shapes);
+    AddPointerAndShape(data, &ptrs, &shapes, s);
   }
 
   for (auto &tensor_shapes : shapes) {
