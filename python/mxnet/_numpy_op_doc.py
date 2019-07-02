@@ -227,7 +227,7 @@ def _np_dot(a, b, out=None):
 
 def _np_sum(a, axis=0, dtype=None, keepdims=None, initial=None, out=None):
     r"""
-    sum(a, axis=_Null, dtype=_Null, keepdims=_Null, initial=_Null, out=None)
+    sum(a, axis=None, dtype=None, keepdims=_Null, initial=_Null, out=None)
 
     Sum of array elements over a given axis.
 

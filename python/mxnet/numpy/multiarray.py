@@ -1535,7 +1535,7 @@ def argmax(a, axis=None, out=None):
 
     Notes
     -----
-    - In case of multiple occurrences of the maximum values, the indices
+    In case of multiple occurrences of the maximum values, the indices
     corresponding to the first occurrence are returned.
 
     This function differs from the original `numpy.argmax
@@ -1543,6 +1543,7 @@ def argmax(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -2090,29 +2091,29 @@ def sqrt(x, out=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
-def tile(x, reps):
-    """
-    Construct an array by repeating x the number of times given by reps.
+def tile(A, reps):
+    r"""
+    Construct an array by repeating A the number of times given by reps.
 
     If `reps` has length ``d``, the result will have dimension of
-    ``max(d, x.ndim)``.
+    ``max(d, A.ndim)``.
 
-    If ``x.ndim < d``, `x` is promoted to be d-dimensional by prepending new
+    If ``A.ndim < d``, `A` is promoted to be d-dimensional by prepending new
     axes. So a shape (3,) array is promoted to (1, 3) for 2-D replication,
     or shape (1, 1, 3) for 3-D replication. If this is not the desired
-    behavior, promote `x` to d-dimensions manually before calling this
+    behavior, promote `A` to d-dimensions manually before calling this
     function.
 
-    If ``x.ndim > d``, `reps` is promoted to `x`.ndim by pre-pending 1's to it.
-    Thus for an `x` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
+    If ``A.ndim > d``, `reps` is promoted to `A`.ndim by pre-pending 1's to it.
+    Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
     (1, 1, 2, 2).
 
     Parameters
     ----------
-    x : ndarray or scalar
+    A : ndarray or scalar
         An input array or a scalar to repeat.
     reps : a single integer or tuple of integers
-        The number of repetitions of `x` along each axis.
+        The number of repetitions of `A` along each axis.
 
     Returns
     -------
