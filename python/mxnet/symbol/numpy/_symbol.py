@@ -1042,8 +1042,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
         Type to use in computing the mean. For integer inputs, the default is float32;
         for floating point inputs, it is the same as the input dtype.
     out : _Symbol, optional
-        Alternate output array in which to place the result. The default is None; if provided,
-        it must have the same shape and type as the expected output.
+        Dummy parameter to keep the consistency with the ndarray counterpart.
     keepdims : bool, optional
         If this is set to True, the axes which are reduced are left in the result
         as dimensions with size one. With this option, the result will broadcast correctly
@@ -1071,12 +1070,12 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     --------
     >>> a = np.array([[1, 2], [3, 4]])
     >>> np.mean(a)
-    array(2.5, dtype=float32)
+    array(2.5)
     >>> a = np.zeros((2, 512*512), dtype=np.float32)
     >>> a[0,:] = 1.0
     >>> a[1,:] = 0.1
     >>> np.mean(a)
-    array(0.55, dtype=float32)
+    array(0.55)
     >>> np.mean(a, dtype=np.float64)
     array(0.55)
     """
@@ -1085,10 +1084,11 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
 
 @set_module('mxnet.symbol.numpy')
 def stack(arrays, axis=0, out=None):
-    """Join a sequence of arrays along a new axis.
+    """
+    Join a sequence of arrays along a new axis.
 
-        The axis parameter specifies the index of the new axis in the dimensions of the result.
-        For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+    The axis parameter specifies the index of the new axis in the dimensions of the result.
+    For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
 
     Parameters
     ----------
@@ -1097,8 +1097,7 @@ def stack(arrays, axis=0, out=None):
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
     out : _Symbol, optional
-        If provided, the destination to place the result. The shape and type must be the same
-        with that of what stack would have returned if no out argument were specified.
+        Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     -------
@@ -1126,11 +1125,11 @@ def stack(arrays, axis=0, out=None):
     >>> b = np.array([2, 3, 4])
     >>> np.stack((a, b))
     array([[1., 2., 3.],
-           [2., 3., 4.]], dtype=float32)
+           [2., 3., 4.]])
     >>> np.stack((a, b), axis=-1)
     array([[1., 2.],
            [2., 3.],
-           [3., 4.]], dtype=float32)
+           [3., 4.]])
     """
     def get_list(arrays):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
@@ -1399,9 +1398,9 @@ def split(ary, indices_or_sections, axis=0):
     --------
     >>> x = np.arange(9.0)
     >>> np.split(x, 3)
-    [array([0., 1., 2.], dtype=float32), array([3., 4., 5.], dtype=float32), array([6., 7., 8.], dtype=float32)]
+    [array([0., 1., 2.]), array([3., 4., 5.]), array([6., 7., 8.])]
     >>> np.split(x, (3, 5, 6))
-    [array([0., 1., 2.], dtype=float32), array([3., 4.], dtype=float32), array([5.], dtype=float32), array([6., 7.], dtype=float32)]
+    [array([0., 1., 2.]), array([3., 4.]), array([5.]), array([6., 7.])]
     """
     indices = []
     sections = 0
@@ -1887,9 +1886,7 @@ def rint(x, out=None, **kwargs):
     x : _Symbol or scalar
         Input array.
     out : _Symbol or None
-        A location into which the result is stored.
-        If provided, it must have the same shape and type as the input.
-        If not provided or None, a freshly-allocated array is returned.
+        Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     -------
@@ -1906,11 +1903,6 @@ def rint(x, out=None, **kwargs):
      - broadcasting to `out` of different shape is currently not supported
     - when input is plain python numerics, the result will not be stored in the `out` param
 
-    Examples
-    --------
-    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
-    >>> np.rint(a)
-    array([-2., -2., -0.,  0.,  1.,  2.,  2.], dtype=float32)
     """
     return _unary_func_helper(x, _npi.rint, _np.rint, out=out, **kwargs)
 
@@ -1918,37 +1910,33 @@ def rint(x, out=None, **kwargs):
 @set_module('mxnet.symbol.numpy')
 def log2(x, out=None, **kwargs):
     """
-    Round elements of the array to the nearest integer.
+    Base-2 logarithm of x.
 
     Parameters
     ----------
-    x : _Symbol or scalar
-        Input array.
-    out : _Symbol or None
+    x : _Symbol
+        Input values.
+    out : ndarray or None
         A location into which the result is stored.
         If provided, it must have the same shape and type as the input.
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------
-    out : _Symbol or scalar
-        Output array is same shape and type as x. This is a scalar if x is a scalar.
+    y : _Symbol
+        The logarithm base two of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
 
     Notes
     -----
-    This function differs from the original `numpy.rint
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
+    This function differs from the original `numpy.log2
+    <https://www.google.com/search?q=numpy+log2>`_ in
     the following way(s):
 
-    - only _Symbol or scalar is accpted as valid input, tuple of _Symbols is not supported
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
     - broadcasting to `out` of different shape is currently not supported
     - when input is plain python numerics, the result will not be stored in the `out` param
 
-    Examples
-    --------
-    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
-    >>> np.rint(a)
-    array([-2., -2., -0.,  0.,  1.,  2.,  2.], dtype=float32)
     """
     return _unary_func_helper(x, _npi.log2, _np.log2, out=out, **kwargs)
 
@@ -1963,9 +1951,7 @@ def radians(x, out=None, **kwargs):
     x : _Symbol or scalar
         Input array in degrees.
     out : _Symbol or None
-        A location into which the result is stored.
-        If provided, it must have the same shape and type as the input.
-        If not provided or None, a freshly-allocated array is returned.
+       Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     -------
