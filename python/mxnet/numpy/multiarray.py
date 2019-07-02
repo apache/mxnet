@@ -30,7 +30,7 @@ except ImportError:
 
 from array import array as native_array
 import sys
-import ctypes
+import ctypesqji
 import warnings
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
@@ -1511,7 +1511,10 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
 
 @set_module('mxnet.numpy')
 def argmax(a, axis=None, out=None):
-    """Returns the indices of the maximum values along an axis.
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
 
     Parameters
     ----------
@@ -2270,6 +2273,8 @@ def arctan(x, out=None, **kwargs):
 @set_module('mxnet.numpy')
 def sign(x, out=None):
     """
+    sign(x, out=None)
+
     Returns an element-wise indication of the sign of a number.
 
     The `sign` function returns ``-1 if x < 0, 0 if x==0, 1 if x > 0``. Only supports real number.

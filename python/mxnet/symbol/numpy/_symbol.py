@@ -1131,7 +1131,10 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
 
 @set_module('mxnet.symbol.numpy')
 def argmax(a, axis=None, out=None):
-    """Returns the indices of the maximum values along an axis.
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
 
     Parameters
     ----------
@@ -1595,7 +1598,9 @@ def abs(x, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def sign(x, out=None, **kwargs):
-    """
+    r"""
+    sign(x, out=None)
+
     Returns an element-wise indication of the sign of a number.
 
     The `sign` function returns ``-1 if x < 0, 0 if x==0, 1 if x > 0``. Only supports real number.
