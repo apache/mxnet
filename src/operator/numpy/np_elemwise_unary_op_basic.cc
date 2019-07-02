@@ -112,7 +112,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
 
 // sign
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sign, "x", mshadow_op::sign)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sign, "x", mshadow_op::sign)
 .describe(R"code(Returns an element-wise indication of the sign of a number.
 The sign function returns -1 if x < 0, 0 if x==0, 1 if x > 0.
 Example::
@@ -199,7 +199,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
 
 // log
-NNVM_REGISTER_OP(_np_log)
+NNVM_REGISTER_OP(_npi_log)
 .describe(R"code(Returns element-wise Natural logarithmic value of the input.
 The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 )code" ADD_FILELINE)
@@ -306,7 +306,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arctan, "x", mshadow_op::arctan)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctan" });
 
 // degrees
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_degrees, "x", mshadow_op::degrees)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_degrees, "x", mshadow_op::degrees)
 .describe(R"code(Converts each element of the input array from radians to degrees.
 .. math::
    degrees([0, \pi/2, \pi, 3\pi/2, 2\pi]) = [0, 90, 180, 270, 360]
