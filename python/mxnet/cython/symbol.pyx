@@ -96,17 +96,15 @@ def _set_np_symbol_class(cls):
     _np_symbol_cls = cls
 
 
-cdef NewSymbol(SymbolHandle handle, int is_np_op):
+cdef NewSymbol(SymbolHandle handle, int is_np_sym=0):
     """Create a new symbol given handle"""
-    if is_np_op:
-        sym = _np_symbol_cls(None)
-    else:
-        sym = _symbol_cls(None)
+    create_symbol_fn = _np_symbol_cls if is_np_sym else _symbol_cls
+    sym = create_symbol_fn(None)
     (<SymbolBase>sym).chandle = handle
     return sym
 
 
-def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op):
+def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op=0):
     cdef unsigned long long ihandle = handle
     cdef OpHandle chandle = <OpHandle>ihandle
     cdef vector[string] ckeys
