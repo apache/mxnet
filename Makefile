@@ -588,6 +588,7 @@ ifeq ($(USE_CUDA), 1)
 		TVM_USE_CUDA := $(USE_CUDA_PATH)
 	endif
 endif
+
 lib/libtvm_runtime.so:
 	echo "Compile TVM"
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \

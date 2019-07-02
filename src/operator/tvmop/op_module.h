@@ -23,6 +23,7 @@
  * \brief Invoke registered TVM operators.
  * \author Yizhi Liu
  */
+#if MXNET_USE_TVM_OP
 #ifndef MXNET_OP_MODULE_H
 #define MXNET_OP_MODULE_H
 
@@ -56,4 +57,5 @@ class TVMOpModule {
 }  // namespace op
 }  // namespace mxnet
 
-#endif //MXNET_OP_MODULE_H
+#endif  // MXNET_OP_MODULE_H
+#endif  // MXNET_USE_TVM_OP

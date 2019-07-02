@@ -496,7 +496,9 @@ MXNET_DLL int MXGetVersion(int *out);
  * \param libpath TVM operators lib file
  * \return 0 when success, -1 when failure happens
  */
+#if MXNET_USE_TVM_OP
 MXNET_DLL int MXLoadTVMOp(const char *libpath);
+#endif  // MXNET_USE_TVM_OP
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion

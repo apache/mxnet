@@ -23,6 +23,7 @@
  * \brief
  * \author Yizhi Liu
  */
+#ifdef MXNET_USE_TVM_OP
 #include <tvm/runtime/packed_func.h>
 #include <tvm/runtime/registry.h>
 #include <tvm/runtime/c_runtime_api.h>
@@ -60,3 +61,4 @@ NNVM_REGISTER_OP(_contrib_tvm_vadd)
 
 }  // namespace op
 }  // namespace mxnet
+#endif  // MXNET_USE_TVM_OP

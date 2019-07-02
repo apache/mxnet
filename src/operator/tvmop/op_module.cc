@@ -23,6 +23,7 @@
  * \brief Invoke registered TVM operators.
  * \author Yizhi Liu
  */
+#if MXNET_USE_TVM_OP
 #include <tvm/runtime/packed_func.h>
 #include <tvm/runtime/registry.h>
 #include <tvm/runtime/c_runtime_api.h>
@@ -109,5 +110,6 @@ void TVMOpModule::Call(const std::string &func_name,
 #endif
 }
 
-}
-}
+}  // namespace runtime
+}  // namespace tvm
+#endif  // MXNET_USE_TVM_OP

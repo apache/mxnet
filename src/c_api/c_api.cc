@@ -160,11 +160,13 @@ int MXGetVersion(int *out) {
   API_END();
 }
 
+#if MXNET_USE_TVM_OP
 int MXLoadTVMOp(const char *libpath) {
   API_BEGIN();
   tvm::runtime::TVMOpModule::Get()->Load(libpath);
   API_END();
 }
+#endif // MXNET_USE_TVM_OP
 
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
