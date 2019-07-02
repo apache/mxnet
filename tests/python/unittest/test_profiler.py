@@ -427,6 +427,7 @@ def test_custom_operator_profiling_multiple_custom_ops_imperative(seed = None, \
         and '_plus_scalar' in target_dict['Time']['operator']
     profiler.set_state('stop')
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_symbolic():
     run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
             {'MXNET_EXEC_BULK_EXEC_INFERENCE' : 0, \
