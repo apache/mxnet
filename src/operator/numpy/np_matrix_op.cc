@@ -464,5 +464,44 @@ NNVM_REGISTER_OP(_np_squeeze)
 .add_argument("a", "NDArray-or-Symbol[]", "data to squeeze")
 .add_arguments(SqueezeParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_npi_hsplit)
+    .add_alias("_npi_hsplit")
+    .describe(R"code(Splits an array along a particular axis= 1 into multiple sub-arrays.
+
+`squeeze_axis=True` removes the axis with length 1 from the shapes of the output arrays.
+**Note** that setting `squeeze_axis` to ``1`` removes axis with length 1 only
+along the `axis` which it is split.
+Also `squeeze_axis` can be set to true only if ``input.shape[axis] == indices_or_sections``.
+
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(1)
+.set_num_outputs(SplitNumOutputs)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+                                 [](const NodeAttrs& attrs) {
+                                   return std::vector<std::string>{"data"};
+                                 })
+.set_attr<mxnet::FInferShape>("FInferShape", HSplitOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SplitOpType)
+.set_attr<FCompute>("FCompute<cpu>", HSplitOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+                            [](const NodeAttrs& n) {
+                              return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                            })
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_npi_hsplit_backward"})
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(SplitParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_hsplit_backward)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(SplitNumOutputs)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+                            [](const NodeAttrs& n) {
+                              return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+                            })
+.set_attr<FCompute>("FCompute<cpu>", HSplitOpBackward<cpu>);
+
 }  // namespace op
 }  // namespace mxnet
