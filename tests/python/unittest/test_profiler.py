@@ -24,6 +24,7 @@ import os
 import json
 from collections import OrderedDict
 from common import run_in_spawned_process
+import unittest
 
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
     profiler.set_config(profile_symbolic=True,
