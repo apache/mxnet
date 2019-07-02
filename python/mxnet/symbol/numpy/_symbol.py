@@ -31,8 +31,8 @@ from . import _internal as _npi
 
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'vsplit',
-           'swapaxes','expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10',
-           'sqrt','abs', 'exp', 'arctan']
+           'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10',
+           'sqrt', 'abs', 'exp', 'arctan']
 
 
 def _num_outputs(sym):
