@@ -24,12 +24,14 @@
  * \author Yizhi Liu
  */
 #if MXNET_USE_TVM_OP
-#ifndef MXNET_OP_MODULE_H
-#define MXNET_OP_MODULE_H
+#ifndef MXNET_OPERATOR_TVMOP_OP_MODULE_H_
+#define MXNET_OPERATOR_TVMOP_OP_MODULE_H_
 
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
 #include <mutex>
+#include <string>
+#include <vector>
 
 namespace tvm {
 namespace runtime {
@@ -54,8 +56,8 @@ class TVMOpModule {
   std::shared_ptr<Module> module_ptr_;
 };
 
-}  // namespace op
-}  // namespace mxnet
+}  // namespace runtime
+}  // namespace tvm
 
-#endif  // MXNET_OP_MODULE_H
+#endif  // MXNET_OPERATOR_TVMOP_OP_MODULE_H_
 #endif  // MXNET_USE_TVM_OP

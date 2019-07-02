@@ -27,6 +27,8 @@
 #include <tvm/runtime/packed_func.h>
 #include <tvm/runtime/registry.h>
 #include <tvm/runtime/c_runtime_api.h>
+#include <string>
+#include <vector>
 #include "op_module.h"
 
 using namespace tvm::runtime;

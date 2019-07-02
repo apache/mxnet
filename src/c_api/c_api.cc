@@ -166,7 +166,7 @@ int MXLoadTVMOp(const char *libpath) {
   tvm::runtime::TVMOpModule::Get()->Load(libpath);
   API_END();
 }
-#endif // MXNET_USE_TVM_OP
+#endif  // MXNET_USE_TVM_OP
 
 int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_BEGIN();
