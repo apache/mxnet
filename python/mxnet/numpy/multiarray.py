@@ -1846,9 +1846,23 @@ def vsplit(ary, indices_or_sections):
     ----------
     array : an input ndarray
 
+    indices_or_sections : int or 1-D array
+
+        If indices_or_sections is an integer, N, the array will be divided into N equal arrays along axis. If such a split is not possible, an error is raised.
+
+        If indices_or_sections is a 1-D array of sorted integers, the entries indicate where along axis the array is split. For example, `[2, 3]` would, for axis=0, result in
+
+            - ary[:2]
+            - ary[2:3]
+            - ary[3:]
+
+    If an index exceeds the dimension of the array along axis, an empty sub-array is returned correspondingly.
+
+
     Returns
     -------
-    A list of multiple ndarrays.
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
     """
     return split(ary, indices_or_sections, 0)
 
