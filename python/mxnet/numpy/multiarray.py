@@ -2025,9 +2025,7 @@ def arccosh(x, out=None, **kwargs):
     Notes
     -----
     `arccosh` is a multivalued function: for each `x` there are infinitely
-    many numbers `z` such that `cosh(z) = x`. The convention is to return the
-    `z` whose imaginary part lies in `[-pi, pi]` and the real part in
-    ``[0, inf]``.
+    many numbers `z` such that `cosh(z) = x`.
     
     For real-valued input data types, `arccosh` always returns real output.
     For each value that cannot be expressed as a real number or infinity, it
