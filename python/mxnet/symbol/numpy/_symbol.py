@@ -43,15 +43,15 @@ def absolute(x, out=None, **kwargs):
     Parameters
     ----------
     x : _Symbol
-    Input array.
+        Input array.
 
     out : _Symbol or None
-    Dummy parameter to keep the consistency with the ndarray counterpart.
+        Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     ----------	
     absolute : _Symbol
-    An ndarray containing the absolute value of each element in x.  
+        An ndarray containing the absolute value of each element in x.  
     """
     return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
 
@@ -64,16 +64,16 @@ def cbrt(x, out=None, **kwargs):
     Parameters
     ----------	
     x : _Symbol
-    The values whose cube-roots are required.
+        The values whose cube-roots are required.
 
     out : _Symbol or None
-    Dummy parameter to keep the consistency with the ndarray counterpart.
+        Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     ----------	
     y : _Symbol
-    An array of the same shape as x, containing the cube cube-root of each element in x. 
-    If out was provided, y is a reference to it. This is a scalar if x is a scalar.
+        An array of the same shape as x, containing the cube cube-root of each element in x. 
+        If out was provided, y is a reference to it. This is a scalar if x is a scalar.
     """
     return _unary_func_helper(x, _npi.cbrt, _np.cbrt, out=out, **kwargs)
 
@@ -87,16 +87,16 @@ def arccos(x, out=None, **kwargs):
     Parameters
     ----------
     x : _Symbol
-    x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
+        x-coordinate on the unit circle. For real arguments, the domain is [-1, 1].
 
     out : _Symbol or None
-    Dummy parameter to keep the consistency with the ndarray counterpart.
+        Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     ----------	
     angle : _Symbol
-    The angle of the ray intersecting the unit circle at the given x-coordinate in radians [0, pi]. 
-    This is a scalar if x is a scalar.
+        The angle of the ray intersecting the unit circle at the given x-coordinate in radians [0, pi]. 
+        This is a scalar if x is a scalar.
 
     See also
     ----------
@@ -1099,7 +1099,7 @@ def divide(x1, x2, out=None):
         Divisor array.
 
     out : _Symbol or None
-    Dummy parameter to keep the consistency with the ndarray counterpart.
+        Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     -------
