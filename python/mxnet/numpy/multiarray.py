@@ -44,7 +44,7 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
-           'mod', 'power']
+           'mod', 'power', 'copysign']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1549,3 +1549,46 @@ def power(x1, x2, out=None):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _mx_nd_np.power(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+def copysign(x1, x2, out=None):
+    r"""copysign(x1, x2, out=None)
+
+    Change the sign of x1 to that of x2, element-wise.
+
+    If `x2` is a scalar, its sign will be copied to all elements of `x1`.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Values to change the sign of.
+    x2 : ndarray or scalar
+        The sign of `x2` is copied to `x1`.
+    out : ndarray or None, optional
+        A location into which the result is stored. It must be of the
+        right shape and right type to hold the output. If not provided
+        or `None`,a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        The values of `x1` with the sign of `x2`.
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Examples
+    --------
+    >>> np.copysign(1.3, -1)
+    -1.3
+    >>> 1/np.copysign(0, 1)
+    inf
+    >>> 1/np.copysign(0, -1)
+    -inf
+
+    >>> a = np.array([-1, 0, 1])
+    >>> np.copysign(a, -1.1)
+    array([-1., -0., -1.])
+    >>> np.copysign(a, np.arange(3)-1)
+    array([-1.,  0.,  1.])
+    """
+    return _mx_nd_np.copysign(x1, x2, out=out)

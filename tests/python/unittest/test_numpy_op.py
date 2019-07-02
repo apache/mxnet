@@ -149,6 +149,66 @@ def test_npx_slice():
             assert same(a.grad.asnumpy(), expected_grad)
 
 
+@with_seed()
+@use_np
+def test_np_copysign():
+    class TestCopysign(HybridBlock):
+        def __init__(self):
+            super(TestCopysign, self).__init__()
+
+        def hybrid_forward(self, F, a1, a2):
+	            return F.np.copysign(a1, a2)
+
+    def get_grad(a1, a2):
+        sign = _np.logical_or(_np.logical_and(a1 < 0, a2 < 0),
+                              _np.logical_and(a1 >= 0, a2 >= 0))
+        sign = 2 * sign.astype(int) - 1
+        sign = sign.reshape(-1, *a1.shape)
+        sign = _np.sum(sign, axis=0)
+        return sign, _np.zeros_like(a2)
+
+    shapes = [
+        (),
+        (1),
+        (2, 1),
+        (3, 2, 1),
+        (4, 3, 2, 1),
+        (2, 4, 3, 2, 1)
+    ]
+    types = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
+    for a1shape in shapes:
+        for a2shape in shapes:
+            for hybridize in [True, False]:
+                for dtype in types:
+                    test_copysign = TestCopysign()
+                    if hybridize:
+                        test_copysign.hybridize()
+                    rtol = 1e-3
+                    atol = 1e-5
+                    a1_np = _np.array(_np.random.uniform(-1.0, 1.0, a1shape), dtype=dtype)
+                    a2_np = _np.array(_np.random.uniform(-1.0, 1.0, a2shape), dtype=dtype)
+                    a1 = mx.nd.array(a1_np).as_np_ndarray()
+                    a2 = mx.nd.array(a2_np).as_np_ndarray()
+                    a1.attach_grad()
+                    a2.attach_grad()
+                    expected_np = _np.copysign(a1_np, a2_np)
+                    with mx.autograd.record():
+                        mx_out = test_copysign(a1, a2)
+                    assert mx_out.shape == expected_np.shape
+                    assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+                    # Test gradient
+                    mx_out.backward()
+                    a1_grad, a2_grad = get_grad(a1_np, a2_np)
+                    assert_almost_equal(a1.grad.asnumpy(), a1_grad, rtol=rtol, atol=atol)
+                    assert_almost_equal(a2.grad.asnumpy(), a2_grad, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    mx_out = np.copysign(a1, a2)
+                    expected_np = _np.copysign(a1_np, a2_np)
+                    assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -417,6 +417,16 @@ MXNET_BINARY_MATH_OP(rdiv, math::id(b) / math::id(a));
 
 MXNET_BINARY_MATH_OP(rdiv_grad, -math::id(b) / math::sqr(a));
 
+MXNET_BINARY_MATH_OP(copysign, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? a : -a);
+
+MXNET_BINARY_MATH_OP(copysign_grad, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? 1: -1);
+
+MXNET_BINARY_MATH_OP(copysign_rgrad, 0);
+
+MXNET_BINARY_MATH_OP(rcopysign, (b >= 0 && a >= 0) || (b < 0 && a < 0) ? b : -b);
+
+MXNET_BINARY_MATH_OP(rcopysign_grad, 0);
+
 struct mod : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
