@@ -744,7 +744,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_abs, unary_bwd<mshadow_
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: dL/dxgrad
       // inputs[0]: dL/dy
-      // inputs[1]: y
+      // inputs[1]: x
       // f(x) -> abs(x)
       // f'(x) = 1 if x > 0 else -1
       // f''(x) = 0

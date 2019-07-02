@@ -112,7 +112,7 @@ def test_reciprocal():
         return nd.reciprocal(x)
 
     def grad_grad_op(x):
-        return 2/x**3
+        return 2 / x**3
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
@@ -132,7 +132,6 @@ def test_abs():
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, abs, grad_grad_op)
-
 
 
 def check_second_order_unary(x, op, grad_grad_op):
