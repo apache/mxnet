@@ -227,7 +227,9 @@ const std::map<std::string, std::string> slice_ops = {
 
 const std::vector<std::string> variable_io_ops = {
   "add_n",
-  "_backward_Activation"
+  "_backward_Activation",
+  "amp_multicast",
+  "_backward_amp_multicast"
 };
 
 const char function_definitions[] = R"code(
@@ -268,7 +270,7 @@ inline half store(const float input, half* ref) {
 
 template <int size>
 struct VectorConfig {
-    static_assert(size >= 4, "Error");
+    static_assert(size >= 4, "VectorConfig needs to have size of at least 4B");
     using IndexType = float;
 };
 
@@ -280,6 +282,11 @@ struct VectorConfig<8> {
 template <>
 struct VectorConfig<16> {
     using IndexType = double2;
+};
+
+template <>
+struct VectorConfig<32> {
+    using IndexType = double4;
 };
 
 template <typename DType, int nvec>
@@ -298,6 +305,7 @@ union VectorType {
 template <int ndim>
 struct Shape {
    int x[ndim];
+   size_t size;
    inline const int& operator [](const int i) const {
        return x[i];
    }
@@ -312,15 +320,22 @@ struct Shape {
    }
  };
 
-template <int nvec, typename DType>
-inline VectorType<DType, nvec> load_index(const DType * input, int i) {
-  const auto* vector_input = reinterpret_cast<const typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(input + i);
-  VectorType<DType, nvec> ret = {*vector_input};
-  return ret;
+template <int nvec, typename DType, int ndim>
+inline VectorType<DType, nvec> load_index(const DType * input, int i, const Shape<ndim> &shape) {
+  if (i < shape.size) {
+    const auto* vector_input = reinterpret_cast<
+                                const typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(
+                                    input + i);
+    VectorType<DType, nvec> ret = {*vector_input};
+    return ret;
+  } else {
+    VectorType<DType, nvec> ret({0});
+    return ret;
+  }
 }
 
 template <int nvec, typename DType, int ndim>
-inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim> shape, Shape<ndim> begin, Shape<ndim> end, int offset) {
+inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>& shape, Shape<ndim> begin, Shape<ndim> end, int offset) {
   int idx[nvec];
   bool mem_aligned = true;
 
@@ -362,21 +377,29 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
     }
     return ret;
   }
-  return load_index<nvec>(input, idx[0]);
+  return load_index<nvec>(input, idx[0], shape);
 }
 
 
 
-template <int nvec, typename DType>
-inline void store_index(const VectorType<DType, nvec> value, int i, DType * output) {
-  auto vector_output = reinterpret_cast<typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
-  vector_output[i] = value.y;
+template <int nvec, typename DType, int ndim>
+inline void store_index(const VectorType<DType, nvec> value, int i,
+                        DType * output, const Shape<ndim>& shape) {
+  if (i < shape.size) {
+    auto vector_output = reinterpret_cast<
+                          typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
+    vector_output[i] = value.y;
+  }
 }
 
-template <int nvec, typename DType>
-inline void store_add_index(const VectorType<DType, nvec> value, int i, DType * output) {
-  auto vector_output = reinterpret_cast<typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
-  vector_output[i] += value.y;
+template <int nvec, typename DType, int ndim>
+inline void store_add_index(const VectorType<DType, nvec> value, int i,
+                            DType * output, const Shape<ndim>& shape) {
+  if (i < shape.size) {
+    auto vector_output = reinterpret_cast<
+                          typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
+    vector_output[i] += value.y;
+  }
 }
 
 template <typename DType>

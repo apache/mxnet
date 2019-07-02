@@ -106,6 +106,7 @@ class FusedOp {
                     const std::vector<int> &in_dtypes,
                     const std::vector<int> &out_dtypes,
                     const std::vector<int> &in_ndims,
+                    const std::vector<int> &out_ndims,
                     const int nvec,
                     const std::string& kernel_name);
   void CompileCode(const std::string &kernel_name);

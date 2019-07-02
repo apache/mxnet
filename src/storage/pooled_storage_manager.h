@@ -106,8 +106,8 @@ class GPUPooledStorageManager final : public StorageManager {
   }
 
   size_t RoundAllocSize(size_t size) {
-    // Round up small allocs to the page_size_ to consolidate the pool lookups
-    size = std::max(size, page_size_);
+    // Round up small allocs to multiple of page_size_ to consolidate the pool lookups
+    size = RoundToMultiple(size, page_size_);
     // To ensure proper freeing under some driver variants, make sure
     // large allocs entirely occupy their slabs, which cannot then be
     // locked by smaller permanent allocations sharing the slab.

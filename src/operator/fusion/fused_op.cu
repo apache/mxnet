@@ -108,12 +108,32 @@ std::string ParseOpDescription(const std::vector<std::string>& op_desc,
   return fmt;
 }
 
+void AddPointerAndShape(const TBlob& data,
+                        std::vector<void*> *ptrs,
+                        std::vector<std::vector<int>>* shapes) {
+  MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+    int ndim = data.ndim();
+    Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
+    ptrs->push_back(tensor.dptr_);
+    shapes->push_back(std::vector<int>(ndim + 2));
+    std::vector<int>& tensor_shapes = shapes->back();
+    size_t total_size = 1;
+    for (int i = ndim-1; i >= 0; i--) {
+      tensor_shapes[i] = data.shape_[i];
+      total_size *= data.shape_[i];
+    }
+    size_t * shape_size_ptr = reinterpret_cast<size_t*>(&tensor_shapes[ndim]);
+    *shape_size_ptr = total_size;
+  });
+}
+
 }  // namespace
 
 void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
                            const std::vector<int> &in_dtypes,
                            const std::vector<int> &out_dtypes,
                            const std::vector<int> &in_ndims,
+                           const std::vector<int> &out_ndims,
                            const int nvec,
                            const std::string &kernel_name) {
   const auto& g = this->symbol_.indexed_graph();
@@ -156,7 +176,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         if (load_index[i]) {
           const auto& var_name = source->attrs.name;
           code += "const auto vec_" + var_name + " = load_index<nvec>(" +
-                   var_name + ", offset);\n";
+                   var_name + ", offset, " + var_name + "_shape);\n";
           variables[{i, 0}] = var_name;
         }
         CHECK_EQ(outputs[i], 1);
@@ -315,10 +335,12 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     const std::string& var = variables[{entry.node_id, entry.index}];
     if (req[counter] == kWriteTo || req[counter] == kWriteInplace) {
       const auto var_name = "output" + std::to_string(counter);
-      code += "store_index(vec_" + var_name + ", i, " + var_name + ");\n";
+      code += "store_index(vec_" + var_name + ", i, " + var_name + ", " +
+              var_name + "_shape);\n";
     } else if (req[counter] == kAddTo) {
       const auto var_name = "output" + std::to_string(counter);
-      code += "store_add_index(vec_" + var_name + ", i, " + var_name + ");\n";
+      code += "store_add_index(vec_" + var_name + ", i, " + var_name + ", " +
+              var_name + "_shape);\n";
     } else if (req[counter] == kNullOp) {
       // NULL req, do not do anything
     } else {
@@ -353,19 +375,24 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
-      kernel_params += ", ";
     }
+    kernel_params += ", ";
   }
   for (const auto &type : out_dtypes) {
     std::string type_name = mshadowTypeToString(type);
     std::string out_name = "output" + std::to_string(i - in_dtypes.size());
     std::string dtype_var = "DType_" + out_name;
+    std::string dim_var = "ndim_" + out_name;
+    aux_code = "static const int " + dim_var + " = " + \
+                std::to_string(out_ndims[i - in_dtypes.size()]) + ";\n" + aux_code;
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
     tensor_params += dtype_var + "* " + out_name;
+    kernel_params += " const Shape<" + dim_var + "> " + out_name+"_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
     }
+    kernel_params += ", ";
   }
   kernel_params += tensor_params;
   code_ = std::string(fusion::fp16_support_string) + "\n" +
@@ -458,7 +485,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<int> in_dtypes;
   std::vector<int> in_ndims;
   std::vector<int> out_dtypes;
-  int ndim = outputs[0].ndim();
+  std::vector<int> out_ndims;
   int nvec = 1;
 
   CHECK_EQ(inputs.size(), inputs_.size());
@@ -475,6 +502,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   for (size_t counter = 0; counter < outputs.size(); ++counter) {
     const auto& blob = outputs[counter];
     out_dtypes.push_back(blob.type_flag_);
+    out_ndims.push_back(blob.ndim());
     initialized_ = initialized_ && (blob.type_flag_ == outputs_[counter].dtype);
     outputs_[counter].dtype = blob.type_flag_;
     nvec = max(nvec, mshadowTypeToVectorLength(blob.type_flag_));
@@ -487,37 +515,31 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   saved_reqs_ = req;
 
   if (!initialized_) {
-    this->GenerateCode(req, in_dtypes, out_dtypes, in_ndims, nvec, attrs.name);
+    this->GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims, nvec, attrs.name);
     this->CompileCode(attrs.name);
     initialized_ = true;
   }
   Stream<gpu>* s = ctx.get_stream<gpu>();
   auto stream = Stream<gpu>::GetStream(s);
   std::vector<void*> args;
-  size_t N = (outputs[0].shape_.Size() + nvec - 1)/nvec;
+  size_t N = 0;
+  for (const auto& output : outputs) {
+    N = std::max(N, output.shape_.Size());
+  }
+  N = (N + nvec - 1)/nvec;
   args.push_back(&N);
 
   unsigned int num_blocks = (N + FusedOp::NTHREADS - 1) / FusedOp::NTHREADS;
+
   std::vector<void*> ptrs;
   std::vector<std::vector<int>> shapes;
   for (const auto &data : inputs) {
-    MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
-      int ndim = data.ndim();
-      Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
-      ptrs.push_back(tensor.dptr_);
-      shapes.push_back(std::vector<int>(ndim));
-      std::vector<int>& tensor_shapes = shapes.back();
-      for (int i = ndim-1; i >= 0; i--) {
-        tensor_shapes[i] = data.shape_[i];
-      }
-    });
+    AddPointerAndShape(data, &ptrs, &shapes);
   }
   for (const auto &data : outputs) {
-    MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
-      Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
-      ptrs.push_back(tensor.dptr_);
-    });
+    AddPointerAndShape(data, &ptrs, &shapes);
   }
+
   for (auto &tensor_shapes : shapes) {
     args.push_back(tensor_shapes.data());
   }
