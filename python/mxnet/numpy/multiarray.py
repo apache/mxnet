@@ -30,7 +30,7 @@ except ImportError:
 
 from array import array as native_array
 import sys
-import ctypesqji
+import ctypes
 import warnings
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
