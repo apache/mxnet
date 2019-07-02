@@ -178,7 +178,7 @@ data_on_ctx = data.as_in_context(ctx)
 data_on_ctx.wait_to_read()
 ```
 
-    192 µs ± 51.1 µs per loop (mean ± std. dev. of 7 runs, 1 loop each)
+    192 microseconds +- 51.1 microseconds per loop (mean +- std. dev. of 7 runs, 1 loop each)
 
 
 
@@ -199,7 +199,7 @@ data_on_ctx = data.as_in_context(ctx)
 data_on_ctx.wait_to_read()
 ```
 
-    4 ms ± 36.8 µs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+    4 ms +- 36.8 microseconds per loop (mean +- std. dev. of 7 runs, 100 loops each)
 
 
 Although results will change depending on system specifications and degree of sparsity, the sparse array can be transferred from CPU to GPU significantly faster than the dense array. We see a ~25x speed up for sparse vs dense for this specific batch of data.
@@ -278,6 +278,7 @@ def print_memory_allocation(net, block_idxs):
 
 ### Benchmark: `FullyConnected`
 
+We'll create a network using `nn.Dense` and benchmark the training.
 
 ```python
 net = mx.gluon.nn.Sequential()
@@ -310,10 +311,10 @@ for batch in data_iter:
     loss.wait_to_read()
 ```
 
-    532 ms ± 3.47 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+    532 ms +- 3.47 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
 
 
-![fully_connected](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected.png)
+![fully connected](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected.png)
 
 We can see the first [`FullyConnected`](https://mxnet.incubator.apache.org/versions/master/api/python/ndarray/ndarray.html?highlight=fullyconnected#mxnet.ndarray.FullyConnected) operator takes a significant proportion of time to execute (~25% of the iteration) because there are 1,000,000 input features (to 128). After this, the other [`FullyConnected`](https://mxnet.incubator.apache.org/versions/master/api/python/ndarray/ndarray.html?highlight=fullyconnected#mxnet.ndarray.FullyConnected) operators are much faster because they have input features of 128 (to 8) and 8 (to 1). On the backward pass, we see the same pattern (but in reverse). And finally, the parameter update step takes a large amount of time on the weight matrix of the first `FullyConnected` `Block`. When checking the memory allocations below, we can see the weight matrix of the first `FullyConnected` `Block` is responsible for 99.999% of the memory compared to other [`FullyConnected`](https://mxnet.incubator.apache.org/versions/master/api/python/ndarray/ndarray.html?highlight=fullyconnected#mxnet.ndarray.FullyConnected) weight matrices.
 
@@ -368,14 +369,14 @@ for batch in data_iter:
     loss.wait_to_read()
 ```
 
-    528 ms ± 22.7 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+    528 ms +- 22.7 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
 
 
-![fully_connected_sparse](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse.png)
+![fully connected sparse](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse.png)
 
 We see the forward pass of `dot` and `add` (equivalent to [`FullyConnected`](https://mxnet.incubator.apache.org/versions/master/api/python/ndarray/ndarray.html?highlight=fullyconnected#mxnet.ndarray.FullyConnected) operator) is much faster now: 1.54ms vs 0.26ms. And this explains the reduction in overall time for the epoch. We didn't gain any benefit on the backward pass or parameter updates though.
 
-![fully_connected_sparse_backward](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse_backward.png)
+![fully connected sparse backward](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse_backward.png)
 
 Our first weight matrix and its gradients still take up the same amount of memory as before.
 
@@ -430,10 +431,10 @@ for batch in data_iter:
     loss.wait_to_read()
 ```
 
-    334 ms ± 16.9 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+    334 ms +- 16.9 ms per loop (mean +- std. dev. of 7 runs, 1 loop each)
 
 
-![fully_connected_sparse_grad_backward](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse_grad_backward.png)
+![fully connected sparse grad backward](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse_grad_backward.png)
 
 We can see a huge reduction in the time taken for the backward pass and parameter update step: 3.99ms vs 0.18ms. And this reduces the overall time of the epoch significantly. Our gradient consumes a much smaller amount of memory and means only a subset of parameters need updating as part of the `sgd_update` step. Some optimizers don't support sparse gradients however, so reference the specific optimizer's documentation for more details.
 
@@ -454,16 +455,16 @@ print_memory_allocation(net, block_idxs=[0, 2, 4])
 
 ### Advanced: Sparse `weight`
 
-You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. 
+You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. See [`contrib.SparseEmbedding `](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/nn/basic_layers.py#L118) for an example of this.
 
 # Conclusion
 
-As part of this tutorial, we learnt how to write sparse data to disk in LibSVM format and load it back in sparse batches with the [`LibSVMIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=libsvmiter). We learnt how to improve the performance of Gluon's [`nn.Dense`](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/nn.html?highlight=dense#mxnet.gluon.nn.Dense) on sparse arrays using `mx.nd.sparse`. And lastly, we set `grad_stype` to `'row_sparse'` to reduce the size of the gradient and speed up the parameter update step.
+As part of this tutorial, we learned how to write sparse data to disk in LibSVM format and load it back in sparse batches with the [`LibSVMIter`](https://mxnet.incubator.apache.org/api/python/io/io.html?highlight=libsvmiter). We learned how to improve the performance of Gluon's [`nn.Dense`](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/nn.html?highlight=dense#mxnet.gluon.nn.Dense) on sparse arrays using `mx.nd.sparse`. And lastly, we set `grad_stype` to `'row_sparse'` to reduce the size of the gradient and speed up the parameter update step.
 
 ## Recommended Next Steps
 
-* More detail on the [`CSRNDArray`](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html?highlight=csrndarray#mxnet.ndarray.sparse.CSRNDArray) sparse array format can be found [here]().
-* More detail on the [`RowSparseNDArray`](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html?highlight=rowsparsendarray#mxnet.ndarray.sparse.RowSparseNDArray) sparse array format can be found [here]().
-* Users of the Module API can see a symbolic only example in [this tutorial]().
+* More detail on the [`CSRNDArray`](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html?highlight=csrndarray#mxnet.ndarray.sparse.CSRNDArray) sparse array format can be found in [this tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/csr.html).
+* More detail on the [`RowSparseNDArray`](https://mxnet.incubator.apache.org/api/python/ndarray/sparse.html?highlight=rowsparsendarray#mxnet.ndarray.sparse.RowSparseNDArray) sparse array format can be found in [this tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/row_sparse.html).
+* Users of the Module API can see a symbolic only example in [this tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/sparse/train.html).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
