@@ -33,6 +33,7 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 from .... import base
+from .... util import is_np_array
 
 # Helpers
 def _conv3x3(channels, stride, in_channels):
@@ -81,7 +82,8 @@ class BasicBlockV1(HybridBlock):
         if self.downsample:
             residual = self.downsample(residual)
 
-        x = F.Activation(residual+x, act_type='relu')
+        act = F.npx.activation if is_np_array() else F.Activation
+        x = act(residual+x, act_type='relu')
 
         return x
 
@@ -129,7 +131,8 @@ class BottleneckV1(HybridBlock):
         if self.downsample:
             residual = self.downsample(residual)
 
-        x = F.Activation(x + residual, act_type='relu')
+        act = F.npx.activation if is_np_array() else F.Activation
+        x = act(x + residual, act_type='relu')
         return x
 
 
@@ -165,13 +168,14 @@ class BasicBlockV2(HybridBlock):
     def hybrid_forward(self, F, x):
         residual = x
         x = self.bn1(x)
-        x = F.Activation(x, act_type='relu')
+        act = F.npx.activation if is_np_array() else F.Activation
+        x = act(x, act_type='relu')
         if self.downsample:
             residual = self.downsample(x)
         x = self.conv1(x)
 
         x = self.bn2(x)
-        x = F.Activation(x, act_type='relu')
+        x = act(x, act_type='relu')
         x = self.conv2(x)
 
         return x + residual
@@ -211,17 +215,18 @@ class BottleneckV2(HybridBlock):
     def hybrid_forward(self, F, x):
         residual = x
         x = self.bn1(x)
-        x = F.Activation(x, act_type='relu')
+        act = F.npx.activation if is_np_array() else F.Activation
+        x = act(x, act_type='relu')
         if self.downsample:
             residual = self.downsample(x)
         x = self.conv1(x)
 
         x = self.bn2(x)
-        x = F.Activation(x, act_type='relu')
+        x = act(x, act_type='relu')
         x = self.conv2(x)
 
         x = self.bn3(x)
-        x = F.Activation(x, act_type='relu')
+        x = act(x, act_type='relu')
         x = self.conv3(x)
 
         return x + residual

@@ -284,7 +284,7 @@ class _RNNLayer(HybridBlock):
         else:
             rnn_args = states
 
-        rnn_fn = F.npx.RNN if is_np_array() else F.RNN
+        rnn_fn = F.npx.rnn if is_np_array() else F.RNN
         rnn = rnn_fn(inputs, params, *rnn_args, use_sequence_length=self._use_sequence_length,
                      state_size=self._hidden_size, projection_size=self._projection_size,
                      num_layers=self._num_layers, bidirectional=self._dir == 2,

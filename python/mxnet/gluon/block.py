@@ -26,7 +26,6 @@ import warnings
 import re
 from collections import OrderedDict
 
-
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
@@ -37,7 +36,7 @@ from .utils import _indent, _brief_print_list, HookHandle
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
 from .. import numpy_extension as _mx_npx
 from .. import numpy as _mx_np, numpy_extension as _mx_npx
-from .. util import is_np_array
+from .. util import is_np_array, np_shape, np_array
 
 
 class _BlockScope(object):
@@ -387,7 +386,25 @@ class Block(object):
         <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
         """
         if is_np_array():
-            loaded = _mx_npx.load(filename)
+            # failure may happen when loading parameters saved as NDArrays within
+            # NumPy semantics. Check the failure type and recover from it if it happens.
+            try:
+                loaded = _mx_npx.load(filename)
+            except MXNetError as e:
+                err_msg = str(e)
+                if 'is_np_shape' in err_msg:
+                    # Loading failure due to parameters saved without numpy semantics.
+                    # Temporarily disable numpy semantics and load parameters. After it's
+                    # done, resume the numpy semantics. This is fine because the cases
+                    # numpy ndarray covers is a superset of the legacy ndarray's.
+                    with np_array(False):
+                        with np_shape(False):
+                            loaded_nds = ndarray.load(filename)
+                    assert isinstance(loaded_nds, dict),\
+                        'expecting a dict type, got {}'.format(str(type(loaded_nds)))
+                    loaded = {k: loaded_nds[k].as_np_ndarray() for k in loaded_nds}
+                else:
+                    raise ValueError(err_msg)
         else:
             loaded = ndarray.load(filename)
         params = self._collect_params_with_prefix()

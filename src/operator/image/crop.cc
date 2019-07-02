@@ -35,6 +35,7 @@ namespace image {
 DMLC_REGISTER_PARAMETER(CropParam);
 
 NNVM_REGISTER_OP(_image_crop)
+.add_alias("_npx__image_crop")
 .describe(R"code(Crop an image NDArray of shape (H x W x C) or (N x H x W x C) 
 to the given size.
 Example:

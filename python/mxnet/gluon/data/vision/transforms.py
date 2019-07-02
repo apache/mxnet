@@ -23,7 +23,7 @@ from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import image
 from ....base import numeric_types
-from ...utils import _adapt_np_array
+from ....util import is_np_array
 
 
 class Compose(Sequential):
@@ -93,6 +93,8 @@ class Cast(HybridBlock):
         self._dtype = dtype
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.cast(x, self._dtype)
 
 
@@ -134,8 +136,9 @@ class ToTensor(HybridBlock):
     def __init__(self):
         super(ToTensor, self).__init__()
 
-    @_adapt_np_array
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.to_tensor(x)
 
 
@@ -189,6 +192,8 @@ class Normalize(HybridBlock):
         self._std = std
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.normalize(x, self._mean, self._std)
 
 
@@ -370,8 +375,9 @@ class Resize(HybridBlock):
         self._size = size
         self._interpolation = interpolation
 
-    @_adapt_np_array
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.resize(x, self._size, self._keep, self._interpolation)
 
 class RandomFlipLeftRight(HybridBlock):
@@ -388,6 +394,8 @@ class RandomFlipLeftRight(HybridBlock):
         super(RandomFlipLeftRight, self).__init__()
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_flip_left_right(x)
 
 
@@ -405,6 +413,8 @@ class RandomFlipTopBottom(HybridBlock):
         super(RandomFlipTopBottom, self).__init__()
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_flip_top_bottom(x)
 
 
@@ -430,6 +440,8 @@ class RandomBrightness(HybridBlock):
         self._args = (max(0, 1-brightness), 1+brightness)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_brightness(x, *self._args)
 
 
@@ -455,6 +467,8 @@ class RandomContrast(HybridBlock):
         self._args = (max(0, 1-contrast), 1+contrast)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_contrast(x, *self._args)
 
 
@@ -480,6 +494,8 @@ class RandomSaturation(HybridBlock):
         self._args = (max(0, 1-saturation), 1+saturation)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_saturation(x, *self._args)
 
 
@@ -505,6 +521,8 @@ class RandomHue(HybridBlock):
         self._args = (max(0, 1-hue), 1+hue)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_hue(x, *self._args)
 
 
@@ -539,6 +557,8 @@ class RandomColorJitter(HybridBlock):
         self._args = (brightness, contrast, saturation, hue)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_color_jitter(x, *self._args)
 
 
@@ -562,4 +582,6 @@ class RandomLighting(HybridBlock):
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_lighting(x, self._alpha)
