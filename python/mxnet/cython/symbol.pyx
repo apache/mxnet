@@ -84,19 +84,27 @@ cdef SymbolSetAttr(SymbolHandle handle, dict kwargs):
 
 
 _symbol_cls = SymbolBase
+_np_symbol_cls = None
 
 def _set_symbol_class(cls):
     global _symbol_cls
     _symbol_cls = cls
 
-cdef NewSymbol(SymbolHandle handle):
+
+def _set_np_symbol_class(cls):
+    global _np_symbol_cls
+    _np_symbol_cls = cls
+
+
+cdef NewSymbol(SymbolHandle handle, int is_np_sym=0):
     """Create a new symbol given handle"""
-    sym = _symbol_cls(None)
+    create_symbol_fn = _np_symbol_cls if is_np_sym else _symbol_cls
+    sym = create_symbol_fn(None)
     (<SymbolBase>sym).chandle = handle
     return sym
 
 
-def _symbol_creator(handle, args, kwargs, keys, vals, name):
+def _symbol_creator(handle, args, kwargs, keys, vals, name, is_np_op=0):
     cdef unsigned long long ihandle = handle
     cdef OpHandle chandle = <OpHandle>ihandle
     cdef vector[string] ckeys
@@ -143,4 +151,4 @@ def _symbol_creator(handle, args, kwargs, keys, vals, name):
         &csym_keys[0] if csym_keys.size() != 0 else NULL,
         &sym_args[0] if sym_args.size() != 0 else NULL))
 
-    return NewSymbol(ret_handle)
+    return NewSymbol(ret_handle, is_np_op)
