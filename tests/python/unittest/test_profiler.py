@@ -434,24 +434,22 @@ def test_custom_operator_profiling_multiple_custom_ops_symbolic():
             'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
-'''
-Flaky, commenting out for now, will come back
-'''
-# def test_custom_operator_profiling_naive_engine():
-#     # run the three tests above using Naive Engine
-#     run_in_spawned_process(test_custom_operator_profiling, \
-#             {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
-#             'test_custom_operator_profiling_naive.json')
-#     run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
-#             {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
-#             'imperative', \
-#             'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
-#     run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
-#             {'MXNET_ENGINE_TYPE' : "NaiveEngine", \
-#             'MXNET_EXEC_BULK_EXEC_INFERENCE' : 0, \
-#             'MXNET_EXEC_BULK_EXEC_TRAIN' : 0}, \
-#             'symbolic', \
-#             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+def test_custom_operator_profiling_naive_engine():
+    # run the three tests above using Naive Engine
+    run_in_spawned_process(test_custom_operator_profiling, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
+            'test_custom_operator_profiling_naive.json')
+    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
+            'imperative', \
+            'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
+    run_in_spawned_process(test_custom_operator_profiling_multiple_custom_ops_imperative, \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine", \
+            'MXNET_EXEC_BULK_EXEC_INFERENCE' : 0, \
+            'MXNET_EXEC_BULK_EXEC_TRAIN' : 0}, \
+            'symbolic', \
+            'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 if __name__ == '__main__':
     import nose
