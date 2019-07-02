@@ -255,13 +255,30 @@ profiler.set_state('stop')
 profiler.dump()
 ```
 
-Here, we have created a custom operator called `MyAddOne`, and within its `foward()` function, we simply add one to the input. We can visualize the dump file in `chrome://tracing/`:
+Here, we have created a custom operator called `MyAddOne`, and within its `forward()` function, we simply add one to the input. We can visualize the dump file in `chrome://tracing/`:
 
 ![Custom Operator Profiling Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_custom_operator_chrome.png)
 
-As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are exectued.
+As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are executed.
 
-Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/symbol.html). The reason is that within custom operators, pure python code and sub-operators are still called imperatively.  
+Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.incubator.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
+```python 
+# Set profile_all to True
+profiler.set_config(profile_all=True, aggregate_stats=True, continuous_dump = True)
+# OR, Explicitly Set profile_symbolic and profile_imperative to True
+profiler.set_config(profile_symbolic = False, profile_imperative = False, \
+    aggregate_stats=True, continuous_dump = True)
+
+profiler.set_state('run')
+# Use Symbolic Mode
+a = mx.symbol.Variable('a')
+b = mx.symbol.Custom(data=a, op_type='MyAddOne')
+c = b.bind(mx.cpu(), {'a': inp})
+y = c.forward()
+mx.nd.waitall()
+profiler.set_state('stop')
+profiler.dump()
+```
 
 ## Advanced: Using NVIDIA Profiling Tools
 
