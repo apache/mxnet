@@ -116,6 +116,7 @@ def tensordot(a, b, axes = 2):
     else:
         return _npi.tensordot_inplace(a, b, axes)
 
+
 @set_module('mxnet.ndarray.numpy')
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
