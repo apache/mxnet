@@ -30,7 +30,7 @@ import mxnet as mx
 import numpy as np
 ```
 
-An Amazon EC2 p3.2xlarge instance was used to benchmark the code in this tutorial. You are likely to get difference results and find different bottlenecks on other hardware, but these tips and tricks should still help improve training speed for bottleneck components. A GPU is recommended for this example.
+An Amazon EC2 p3.2xlarge instance was used to benchmark the code in this tutorial. You are likely to get different results and find different bottlenecks on other hardware, but these tips and tricks should still help improve training speed for bottleneck components. A GPU is recommended for this example.
 
 
 ```python
@@ -52,13 +52,13 @@ print('{} samples'.format(len(dataset)))
     50000 samples
 
 
-So we can learn how to identify training bottlenecks, let's intentionally introduce a short `sleep` into the data loading pipeline. We transform each 32x32 CIFAR-10 image to 244x244 so we can use it with the ResNet-50 network designed for ImageNet. [CIFAR-10 specific ResNet networks](https://gluon-cv.mxnet.io/api/model_zoo.html#gluoncv.model_zoo.get_cifar_resnet) exist but we use the more standard ImageNet variants in this example.
+So we can learn how to identify training bottlenecks, let's intentionally introduce a short `sleep` into the data loading pipeline. We transform each 32x32 CIFAR-10 image to 224x224 so we can use it with the ResNet-50 network designed for ImageNet. [CIFAR-10 specific ResNet networks](https://gluon-cv.mxnet.io/api/model_zoo.html#gluoncv.model_zoo.get_cifar_resnet) exist but we use the more standard ImageNet variants in this example.
 
 
 ```python
 def transform_fn(x):
     time.sleep(0.01)  # artificial slow-down
-    image = mx.image.imresize(x, w=244, h=244)
+    image = mx.image.imresize(x, w=224, h=224)
     return image.astype('float32').transpose((2, 0, 1))
 
 dataset = dataset.transform_first(transform_fn)
@@ -136,8 +136,8 @@ print('average samples/sec: {:.4f}'.format(num_samples/total_time))
 
     .........................
     
-    average iterations/sec: 4.2862
-    average samples/sec: 68.5795
+    average iterations/sec: 4.4936
+    average samples/sec: 71.8975
 
 
 Although ~70 samples per second might sound respectable, let's see if we can do any better by identifying the bottleneck in the training loop and optimizing that component. A significant amount of time can be wasted by optimizing components that aren't bottlenecks.
@@ -220,19 +220,19 @@ benchmark_network(data, label, net, loss_fn, trainer)
     
     ........................
     
-    total startup time: 0.1723
-    average iterations/sec: 6.1231
-    average samples/sec: 97.9701
+    total startup time: 0.1697
+    average iterations/sec: 6.2201
+    average samples/sec: 99.5217
     
      ### benchmark_network 
     
     ........................
     
-    average iterations/sec: 13.6279
-    average samples/sec: 218.0460
+    average iterations/sec: 15.1908
+    average samples/sec: 243.0525
 
 
-Our data loading pipeline appears to be the bottleneck for training: ~100 samples/second compared with ~200 samples/second for network execution. One limiting factor could be disk throughput when reading samples (using a SSD instead of HDD can help with this), but in this case we intentionally added a delay in data transformation. Augmentation can often be a bottleneck in training if the following trick isn't applied.
+Our data loading pipeline appears to be the bottleneck for training: ~100 samples/second compared with ~250 samples/second for network execution. One limiting factor could be disk throughput when reading samples (using a SSD instead of HDD can help with this), but in this case we intentionally added a delay in data transformation. Augmentation can often be a bottleneck in training if the following trick isn't applied.
 
 ## Tips & Tricks #1: Use multiple workers on `DataLoader`
 
@@ -270,19 +270,19 @@ benchmark_network(data, label, net, loss_fn, trainer, iters=10)
     
     ........................
     
-    total startup time: 0.1967
-    average iterations/sec: 45.6467
-    average samples/sec: 730.3466
+    total startup time: 0.1935
+    average iterations/sec: 46.2375
+    average samples/sec: 739.7994
     
      ### benchmark_network 
     
     .........
     
-    average iterations/sec: 13.2545
-    average samples/sec: 212.0723
+    average iterations/sec: 14.8614
+    average samples/sec: 237.7819
 
 
-Our data loading pipeline is no longer the bottleneck for training throughput: ~700 samples per second versus ~200 samples per second for network execution as before. We can now focus our attention on improving the network throughput.
+Our data loading pipeline is no longer the bottleneck for training throughput: ~700 samples per second versus ~250 samples per second for network execution as before. Check out [NVIDIA DALI](https://docs.nvidia.com/deeplearning/sdk/dali-developer-guide/docs/examples/mxnet/gluon.html) if you need to futher optimize your data pipeline. We can now focus our attention on improving the network throughput.
 
 ## Tips & Tricks #2: Hybridize the network
 
@@ -310,16 +310,16 @@ benchmark_network(data, label, net, loss_fn, trainer)
     
     ........................
     
-    total startup time: 0.2745
-    average iterations/sec: 45.4401
-    average samples/sec: 727.0408
+    total startup time: 0.1847
+    average iterations/sec: 46.3004
+    average samples/sec: 740.8072
     
      ### benchmark_network 
     
     ........................
     
-    average iterations/sec: 14.9461
-    average samples/sec: 239.1383
+    average iterations/sec: 16.5738
+    average samples/sec: 265.1812
 
 
 We can see quite a modest ~10% increase in throughput after hybridization. Gains can depend on a number of factors including the network architecture and the batch size used (a larger increase expected for smaller batch size). Our network execution is still the bottleneck in training so let's focus on that again.
@@ -363,19 +363,19 @@ benchmark_network(data, label, net, loss_fn, trainer)
     
     ........................
     
-    total startup time: 0.7055
-    average iterations/sec: 11.5167
-    average samples/sec: 737.0718
+    total startup time: 0.7195
+    average iterations/sec: 11.7149
+    average samples/sec: 749.7521
     
      ### benchmark_network 
     
     ........................
     
-    average iterations/sec: 4.5625
-    average samples/sec: 291.9993
+    average iterations/sec: 5.5370
+    average samples/sec: 354.3710
 
 
-Once again, we see improvements in throughput. ~20% higher this time. Checking GPU memory usage, we still have room to increase the batch size higher than 64 (on NVIDIA Tesla V100). When the batch size starts to reach very large numbers (>512), simple tricks such as linear scaling of the learning rate might be insufficient for maintaining good convergence. Consider using a [warm-up learning rate schedule](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_schedules_advanced.html) and changing to specialized optimizers such as [LBSGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.LBSGD). 
+Once again, we see improvements in throughput. ~30% higher this time. Checking GPU memory usage, we still have room to increase the batch size higher than 64 (on NVIDIA Tesla V100). When the batch size starts to reach very large numbers (>512), simple tricks such as linear scaling of the learning rate might be insufficient for maintaining good convergence. Consider using a [warm-up learning rate schedule](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_schedules_advanced.html) and changing to specialized optimizers such as [LBSGD](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.LBSGD). 
 
 ## Tips & Tricks #4: Using Mixed-Precision (`float32` and `float16`)
 
@@ -407,25 +407,25 @@ benchmark_network(data, label, net, loss_fn, trainer)
     
     ........................
     
-    total startup time: 0.7095
-    average iterations/sec: 11.5624
-    average samples/sec: 739.9948
+    total startup time: 0.7006
+    average iterations/sec: 11.6537
+    average samples/sec: 745.8338
     
      ### benchmark_network 
     
     ........................
     
-    average iterations/sec: 8.5895
-    average samples/sec: 549.7281
+    average iterations/sec: 11.3614
+    average samples/sec: 727.1298
 
 
-Overall we see a substantial increase in training throughput: ~85% higher than full-precision training.
+Overall we see a substantial increase in training throughput: double compared to full-precision training.
 
 ## Tips & Tricks #5: Others
 
 Many other tips and tricks exist for optimizing the throughput of training.
 
-One area we didn't explicitly benchmark in this tutorial is data transfer from CPU to GPU memory. Usually this isn't an issue, but for very large arrays this can become a bottleneck too. You might be able to compress your data significantly before transferring if your data is sparse (i.e. mostly zero values). Check out the sparse array tutorial for more details and an example of how this can impact training speed.
+One area we didn't explicitly benchmark in this tutorial is data transfer from CPU to GPU memory. Usually this isn't an issue, but for very large arrays this can become a bottleneck too. You might be able to compress your data significantly before transferring if your data is sparse (i.e. mostly zero values). Check out the [sparse array tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/index.html) for more details and an example of how this can impact training speed.
 
 Another useful trick if data pre-processing or data transfer is the bottleneck is pre-fetching batches. You can write your training loop to transfer the next batch of data to GPU before processing the current batch. Once again, this trick is memory permitting.
 
@@ -464,15 +464,15 @@ print('average samples/sec: {:.4f}'.format(num_samples/total_time))
 
     .........................
     
-    average iterations/sec: 6.5281
-    average samples/sec: 417.7994
+    average iterations/sec: 7.9435
+    average samples/sec: 508.3821
 
 
-Using the above tips and tricks we managed to increase the throughput of training by ~500% from the initial benchmark! Our training throughput is less than the throughput of the individual components we tested, but there are additional overheads that we didn't previously measure (such as data transfer to GPU).
+Using the above tips and tricks we managed to increase the throughput of training by ~600% from the initial benchmark! Our training throughput is less than the throughput of the individual components we tested, but there are additional overheads that we didn't previously measure (such as data transfer to GPU).
 
 ## Conclusion
 
-We learned a number of tips and tricks to optimize the throughput of training, and they lead to a considerable increase compared to our initial baseline. As general rules, set `num_workers` on the `DataLoader` to >0, and hybridize your network if you're not debugging. You should increase `batch_size` where possible, but do this with care because of its potential effects on convergence. And finally, consider mixed precision training for substantial speed-ups if you're willing to accept a small drop in network accuracy.
+We learned a number of tips and tricks to optimize the throughput of training, and they lead to a considerable increase compared to our initial baseline. As general rules, set `num_workers` on the `DataLoader` to >0, and hybridize your network if you're not debugging. You should increase `batch_size` where possible, but do this with care because of its potential effects on convergence. And finally, consider mixed precision training for substantial speed-ups.
 
 ## Recommended Next Steps
 
