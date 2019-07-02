@@ -91,6 +91,7 @@ Select API:&nbsp;
    * [Image similiarity search with InfoGAN](/tutorials/gluon/info_gan.html)
 * Practitioner Guides
     * [Gotchas using NumPy](/tutorials/gluon/gotchas_numpy_in_mxnet.html)
+    * [Performance Tips & Tricks](/tutorials/gluon/performance.html)
     * [Multi-GPU training](/tutorials/gluon/multi_gpu.html)<span style="color:red"> (new!) </span>([Alternative](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
     * [Checkpointing and Model Serialization (a.k.a. saving and loading)](/tutorials/gluon/save_load_params.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/> ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html))
     * [Distributed Training](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training)
