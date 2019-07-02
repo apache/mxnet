@@ -54,7 +54,7 @@ class OpDef:
 
     def get_binds(self, args):
         if self.auto_broadcast:
-            return {arg: tvm.decl_buffer(arg.shape, arg.dtype, buffer_type="broadcast")
+            return {arg: tvm.decl_buffer(arg.shape, arg.dtype, buffer_type="auto_broadcast")
                     for arg in args}
         return None
 

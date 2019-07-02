@@ -111,7 +111,7 @@ LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 ifeq ($(USE_TVM_OP), 1)
 	LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
-	CFLAGS += -I$(TVM_PATH)/include
+	CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
 	LDFLAGS += -L$(TVM_PATH)/build -ltvm_runtime
 endif
 
