@@ -973,17 +973,17 @@ def tan(x, out=None, where=True, **kwargs):
 @set_module('mxnet.ndarray.numpy')
 def fix(x, out=None):
     r"""
-    Round an array of floats element-wise to nearest integer towards zero. 
+    Round an array of floats element-wise to nearest integer towards zero.
     The rounded values are returned as floats.
     
-    Parameters:	
+    Parameters:
     ----------
-    x : ndarray 
+    x : ndarray
         An array of floats to be rounded
     out : ndarray, optional
         Output array
 
-    Returns:	
+    Returns:
     -------
     y : ndarray of floats
 
