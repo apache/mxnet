@@ -32,7 +32,7 @@ from . import _internal as _npi
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
-           'abs', 'exp', 'arctan']
+           'abs', 'exp', 'arctan', 'sign', 'log', 'degrees']
 
 
 def _num_outputs(sym):
@@ -1131,24 +1131,42 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
 
 @set_module('mxnet.symbol.numpy')
 def argmax(a, axis=None, out=None):
-    """Returns the indices of the maximum values along an axis.
+    r"""
+    argmax(a, axis=None, out=None)
+
+    Returns the indices of the maximum values along an axis.
 
     Parameters
     ----------
-    a : ndarray
-        Input array. Only support ndarrays of dtype `float16`, `float32`, and `float64`.
+    a : _Symbol
+        Input array. Only support dtype `float16`, `float32`, and `float64`.
     axis : int, optional
         By default, the index is into the flattened array, otherwise
         along the specified axis.
-    out : array, optional
-        If provided, the result will be inserted into this array. It should
-        be of the appropriate shape and dtype.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
 
     Returns
     -------
-    index_array : ndarray of indices whose dtype is same as the input ndarray.
+    index_array : _Symbol of indices whose dtype is same as the input ndarray.
         Array of indices into the array. It has the same shape as `a.shape`
         with the dimension along `axis` removed.
+
+    Notes
+    -----
+    In case of multiple occurrences of the maximum values, the indices
+    corresponding to the first occurrence are returned.
+
+    This function differs from the original `numpy.argmax
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argmax.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - Output has dtype that is same as the input ndarray.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
     """
     return _npi.argmax(a, axis=axis, keepdims=False, out=out)
 
@@ -1293,7 +1311,7 @@ def split(ary, indices_or_sections, axis=0):
 
 @set_module('mxnet.symbol.numpy')
 def tile(A, reps):
-    """
+    r"""
     Construct an array by repeating A the number of times given by reps.
 
     If `reps` has length ``d``, the result will have dimension of
@@ -1309,22 +1327,19 @@ def tile(A, reps):
     Thus for an `A` of shape (2, 3, 4, 5), a `reps` of (2, 2) is treated as
     (1, 1, 2, 2).
 
-    Note : Although tile may be used for broadcasting, it is strongly
-    recommended to use numpy's broadcasting operations and functions.
-
     Parameters
     ----------
-    A : _Symbol
-        The input array.
-    reps : tuple of integers
-        The number of repetitions of `A` along each axis.
+    A : _Symbol or scalar
+        An input array or a scalar to repeat.
+    reps : a single integer or tuple of integers
+        The number of repetitions of `x` along each axis.
 
     Returns
     -------
     c : _Symbol
         The tiled output array.
     """
-    return _npi.tile(A, reps)
+    return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -1582,6 +1597,39 @@ def abs(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
 
+@set_module('mxnet.symbol.numpy')
+def sign(x, out=None, **kwargs):
+    r"""
+    sign(x, out=None)
+
+    Returns an element-wise indication of the sign of a number.
+
+    The `sign` function returns ``-1 if x < 0, 0 if x==0, 1 if x > 0``. Only supports real number.
+
+    Parameters
+    ----------
+    x : _Symbol or a scalar
+        Input values.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The sign of `x`.
+        This is a scalar if `x` is a scalar.
+
+    Note
+    -------
+    - Only supports real number as input elements.
+    - Input type does not support Python native iterables(list, tuple, ...)
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    """
+    return _unary_func_helper(x, _npi.sign, _np.sign, out=out, **kwargs)
+
 
 @set_module('mxnet.symbol.numpy')
 def exp(x, out=None, **kwargs):
@@ -1642,6 +1690,85 @@ def arctan(x, out=None, **kwargs):
     The inverse tangent is also known as `atan` or tan^{-1}.
     """
     return _unary_func_helper(x, _npi.arctan, _np.arctan, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log(x, out=None, **kwargs):
+    """
+    log(x, out=None)
+
+    Natural logarithm, element-wise.
+
+    The natural logarithm `log` is the inverse of the exponential function,
+    so that `log(exp(x)) = x`. The natural logarithm is logarithm in base
+    `e`.
+
+    Parameters
+    ----------
+    x : _Symbol
+        Input value. Elements must be of real value.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The natural logarithm of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+     Currently only supports data of real values and ``inf`` as input. Returns data of real value, ``inf``, ``-inf`` and
+    ``nan`` according to the input.
+
+    This function differs from the original `numpy.log
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.log.html>`_ in
+    the following aspects:
+
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto braodcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    """
+    return _unary_func_helper(x, _npi.log, _np.log, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def degrees(x, out=None, **kwargs):
+    """
+    degrees(x, out=None)
+
+    Convert angles from radians to degrees.
+
+    Parameters
+    ----------
+    x : _Symbol
+        Input value. Elements must be of real value.
+    out : _Symbol or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol of floats
+        The corresponding degree values; if `out` was supplied this is a
+        reference to it.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -------
+    This function differs from the original `numpy.degrees
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` symbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    """
+    return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)
