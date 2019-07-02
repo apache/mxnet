@@ -19,7 +19,7 @@
 
 MXNet supports the Ubuntu Arch64 based operating system so you can run MXNet on NVIDIA Jetson Devices, such as the [TX2](http://www.nvidia.com/object/embedded-systems-dev-kits-modules.html) or [Nano](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit).
 
-These instructions will walk through how to build MXNet and install the corresponding language bindings. Python is the default binding, but you may also try out one of the many language bindings MXNet has to offer. These instructions also cover how to setup MXNet's Java Inference API.
+These instructions will walk through how to build MXNet and install MXNet's Python language binding. 
 
 For the purposes of this install guide we will assume that CUDA is already installed on your Jetson device. The disk image provided by NVIDIA's getting started guides will have the Jetson toolkit preinstalled, and this also includes CUDA. You should double check what versions are installed and which version you plan to use.
 
