@@ -267,7 +267,7 @@ Please note that: to be able to see the previously described information, you ne
 # Set profile_all to True
 profiler.set_config(profile_all=True, aggregate_stats=True, continuous_dump = True)
 # OR, Explicitly Set profile_symbolic and profile_imperative to True
-profiler.set_config(profile_symbolic = False, profile_imperative = False, \
+profiler.set_config(profile_symbolic = True, profile_imperative = True, \
     aggregate_stats=True, continuous_dump = True)
 
 profiler.set_state('run')
