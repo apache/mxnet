@@ -43,6 +43,7 @@
 #include <condition_variable>
 #include <queue>
 #include "../operator_common.h"
+#include "../../profiler/custom_op_profiler.h"
 
 namespace mxnet {
 namespace op {
@@ -76,9 +77,16 @@ class CustomOperator {
             bool training, const std::vector<NDArray>& arrs,
             const std::vector<int>& tags,
             const std::unordered_set<int>& output_tags,
-            const std::vector<NDArray>& outputs) {
+            const std::vector<NDArray>& outputs,
+            const std::string op_type = "") {
     if (naive_engine_) {
-      func();
+      if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kImperative)) {
+        profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
+        func();
+        profiler::CustomOpProfiler::Get()->OnCustomEnd();
+      } else {
+        func();
+      }
       for (size_t i = 0, out_idx = 0; i < arrs.size(); i++) {
         if (arrs[i].storage_type() == kDefaultStorage ||
             arrs[i].storage_type() == kUndefinedStorage)
@@ -97,7 +105,13 @@ class CustomOperator {
       bool prev_training = Imperative::Get()->set_is_training(training);
 
       try {
-        func();
+        if (profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kImperative)) {
+          profiler::CustomOpProfiler::Get()->OnCustomBegin(op_type);
+          func();
+          profiler::CustomOpProfiler::Get()->OnCustomEnd();
+        } else {
+          func();
+        }
       } catch (dmlc::Error& e) {
         exception_ =
             std::make_shared<std::exception_ptr>(std::current_exception());
@@ -143,8 +157,7 @@ class CustomOperator {
 
             ctx.async_on_complete();
           },
-          ctx.run_ctx.ctx, vars, vars2, FnProperty::kNoSkip, 0,
-          "CustomOperator");
+          ctx.run_ctx.ctx, vars, vars2, FnProperty::kNoSkip, 0, "CustomOperatorWait");
     });
     // increase num_threads if there is not enough threads to execute custom operator
     if (q_.size() > num_free_threads_)

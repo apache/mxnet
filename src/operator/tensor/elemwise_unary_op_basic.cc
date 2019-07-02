@@ -1103,20 +1103,26 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
                                                   unary_bwd<mshadow_op::log_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // For f(x) -> f = log
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy
+    // inputs[1]: x
+    // f(x) = y = log(x)
+    // f'(x) = 1/x
     // f''(x) = -1 * (f'(x) * f'(x))
-    auto gx = nnvm::NodeEntry{n};
-    auto ggx_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_mid_grad_grad",
-                            {gx, gx}, nullptr, &n);
-    auto ggx = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                        {nnvm::NodeEntry{ggx_mid}}, nullptr, &n);
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto dlogx = MakeNode("reciprocal", n->attrs.name + "_dlogx",
+                            {n->inputs[1]}, nullptr, &n);
+    auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
+                            {dydx_mul_dldy, nnvm::NodeEntry{dlogx}}, nullptr, &n);
+    auto d2ydx2 = MakeNode("negative", n->attrs.name + "_d2ydx2",
+                        {nnvm::NodeEntry{d2ydx2_mid}}, nullptr, &n);
 
     std::vector<nnvm::NodeEntry> ret;
 
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], gx}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{dlogx}}, nullptr, &n));
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n));
     return ret;
   });
 
@@ -1124,23 +1130,28 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
                                                   unary_bwd<mshadow_op::log10_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // For f(x) -> f = log10
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy
+    // inputs[1]: x
+    // f(x) = y = log10(x)
     // f'(x) = 1 / (log(10) * x)
     // f''(x) = -1 * (f'(x) * 1/x)
-    auto gx = nnvm::NodeEntry{n, 0, 0};
-    auto g_lx = MakeNode("reciprocal", n->attrs.name + "_backward_log_grad",
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
+                            {n->inputs[0]}, nullptr, &n);
+    auto dlogx = MakeNode("reciprocal", n->attrs.name + "_dlogx",
                             {n->inputs[1]}, nullptr, &n);
-    auto ggx_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_mid_grad_grad",
-                            {gx, nnvm::NodeEntry{g_lx}}, nullptr, &n);
-    auto ggx = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                        {nnvm::NodeEntry{ggx_mid}}, nullptr, &n);
+    auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
+                            {dydx_mul_dldy, nnvm::NodeEntry{dlogx}}, nullptr, &n);
+    auto d2ydx2 = MakeNode("negative", n->attrs.name + "_d2ydx2",
+                        {nnvm::NodeEntry{d2ydx2_mid}}, nullptr, &n);
 
     std::vector<nnvm::NodeEntry> ret;
 
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], gx}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n));
     return ret;
   });
 
@@ -1148,23 +1159,28 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
                                                   unary_bwd<mshadow_op::log2_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // For f(x) -> f = log2
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy
+    // inputs[1]: x
+    // f(x) = y = log2(x)
     // f'(x) = 1 / (log(2) * x)
     // f''(x) = -1 * (f'(x) * 1/x)
-    auto gx = nnvm::NodeEntry{n};
-    auto g_lx = MakeNode("reciprocal", n->attrs.name + "_backward_log_grad",
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
+                            {n->inputs[0]}, nullptr, &n);
+    auto dlogx = MakeNode("reciprocal", n->attrs.name + "_dlogx",
                             {n->inputs[1]}, nullptr, &n);
-    auto ggx_mid = MakeNode("elemwise_mul", n->attrs.name + "_backward_mid_grad_grad",
-                            {gx, nnvm::NodeEntry{g_lx}}, nullptr, &n);
-    auto ggx = MakeNode("negative", n->attrs.name + "_backward_grad_grad",
-                        {nnvm::NodeEntry{ggx_mid}}, nullptr, &n);
+    auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
+                            {dydx_mul_dldy, nnvm::NodeEntry{dlogx}}, nullptr, &n);
+    auto d2ydx2 = MakeNode("negative", n->attrs.name + "_d2ydx2",
+                        {nnvm::NodeEntry{d2ydx2_mid}}, nullptr, &n);
 
     std::vector<nnvm::NodeEntry> ret;
 
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                             {ograds[0], gx}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
     ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
-                             {ograds[0], nnvm::NodeEntry{ggx}}, nullptr, &n));
+                             {ograds[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n));
     return ret;
   });
 

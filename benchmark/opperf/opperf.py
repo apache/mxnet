@@ -40,7 +40,8 @@ from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operato
 from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
-from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark
+from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark,\
+    get_current_runtime_features
 
 
 def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
@@ -102,17 +103,18 @@ def _parse_mxnet_context(ctx):
         device_id = int(ctx[4:-1])
         return mx.gpu(device_id)
 
+
 def main():
     # 1. GET USER INPUTS
-    parser = argparse.ArgumentParser(
-        description='Run all the MXNet operators (NDArray) benchmarks')
+    parser = argparse.ArgumentParser(description='Run all the MXNet operator benchmarks')
 
     parser.add_argument('--ctx', type=str, default='cpu',
                         help='Global context to run all benchmarks. By default, cpu on a '
                              'CPU machine, gpu(0) on a GPU machine. '
                              'Valid Inputs - cpu, gpu, gpu(0), gpu(1)...')
     parser.add_argument('--dtype', type=str, default='float32', help='DType (Precision) to run benchmarks. By default, '
-                                                                     'float32. Valid Inputs - float32, float64.')
+                                                                     'float32. Valid Inputs - float32, float64, int32, '
+                                                                     'int64')
     parser.add_argument('-f', '--output-format', type=str, default='json',
                         choices=['json', 'md'],
                         help='Benchmark result output format. By default, json. '
@@ -129,16 +131,19 @@ def main():
     # 2. RUN BENCHMARKS
     ctx = _parse_mxnet_context(args.ctx)
     dtype = args.dtype
-    final_benchmark_results = run_all_mxnet_operator_benchmarks(ctx=ctx, dtype=args.dtype)
+    final_benchmark_results = run_all_mxnet_operator_benchmarks(ctx=ctx, dtype=dtype)
 
     # 3. PREPARE OUTPUTS
-    save_to_file(final_benchmark_results, args.output_file, args.output_format)
+    run_time_features = get_current_runtime_features()
+    save_to_file(final_benchmark_results, args.output_file, args.output_format, run_time_features)
 
     # 4. Generate list of MXNet operators not covered in benchmarks
     ops_not_covered = get_operators_with_no_benchmark(final_benchmark_results.keys())
     for idx, op in enumerate(ops_not_covered):
         print(f"{idx}. {op}")
+
     return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())

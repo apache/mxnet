@@ -162,3 +162,6 @@ coverage.xml
 
 # Local CMake build config
 cmake_options.yml
+
+# header file generated at compile time
+include/mkldnn/mkldnn_version.h

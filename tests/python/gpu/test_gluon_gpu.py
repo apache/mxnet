@@ -227,19 +227,6 @@ def check_layer_bidirectional(size, in_size, proj_size):
 
 
 def check_layer_bidirectional_varseqlen(size, in_size):
-    class RefBiLSTMVarSeqLen(gluon.Block):
-        def __init__(self, size, **kwargs):
-            super(RefBiLSTMVarSeqLen, self).__init__(**kwargs)
-            with self.name_scope():
-                self._lstm_fwd = gluon.rnn.LSTM(size, bidirectional=False, prefix='l0')
-                self._lstm_bwd = gluon.rnn.LSTM(size, bidirectional=False, prefix='r0')
-
-        def forward(self, inpt, sequence_length):
-            fwd = self._lstm_fwd(inpt)
-            bwd_inpt = nd.SequenceReverse(inpt, sequence_length=sequence_length, use_sequence_length=True)
-            bwd = self._lstm_bwd(bwd_inpt)
-            bwd = nd.SequenceReverse(bwd, sequence_length=sequence_length, use_sequence_length=True)
-            return nd.concat(fwd, bwd, dim=2)
     weights = {}
     for d in ['l', 'r']:
         weights['lstm_{}0_i2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, in_size))
@@ -248,31 +235,58 @@ def check_layer_bidirectional_varseqlen(size, in_size):
         weights['lstm_{}0_h2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
 
     net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True, prefix='lstm_')
-    ref_net = RefBiLSTMVarSeqLen(size, prefix='lstm_')
+    ref_net  = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False, prefix='lstm_ref_')
     net.initialize()
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
     for k in weights:
         net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', 'l0l0').replace('r0', 'r0l0')].set_data(weights[k])
-
+        ref_net_params[k.replace("lstm_", "lstm_ref_")].set_data(weights[k])
 
     batch_size = 10
     num_timesteps = 11
     data = mx.random.uniform(shape=(num_timesteps, batch_size, in_size))
+    data_np = data.asnumpy()
 
-    # TODO: figure out why int32 doesn't work here
-    sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("float")
-
-    net_output = net(data, sequence_length=sequence_length).asnumpy()
-    ref_net_output = ref_net(data, sequence_length).asnumpy()
+    sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("int32")
     sequence_length_np = sequence_length.asnumpy().astype("int32")
+
+    # Reference net is processing batch elements one at a time, so that it is "perfectly sized"
+    # Because of that, we need to accumulate gradients in reference net.
+    for p in ref_net.collect_params().values():
+        p.grad_req = 'add'
+
+    ref_net_output = []
+    with autograd.record():
+        net_output = net(data.copy(), sequence_length=sequence_length.copy())
+
+        for b in range(batch_size):
+            data_slice = mx.nd.array(data_np[:sequence_length_np[b], b, :]).reshape(sequence_length_np[b], 1, in_size)
+            ref_output_slice = ref_net(data_slice)
+            ref_net_output.append(ref_output_slice)
+
+    net_output_np = net_output.asnumpy()
 
     # TODO: test state return value as well output
     # Only compare the valid sections for each batch entry
     for b in range(batch_size):
-        assert_allclose(net_output[:sequence_length_np[b], b], ref_net_output[:sequence_length_np[b], b])
+        assert_allclose(net_output_np[:sequence_length_np[b], b], ref_net_output[b].asnumpy().squeeze(1),
+                        rtol=1e-2, atol=1e-6)
+
+    # Now test backward
+    net_output.backward()
+
+    for ref_output_slice in ref_net_output:
+        ref_output_slice.backward()
+
+    ref_net_params = ref_net.collect_params()
+
+    for k in weights:
+        net_grad = net_params[k].grad()
+        ref_net_grad = ref_net_params[k.replace('lstm_', 'lstm_ref_')].grad()
+        assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
+                            rtol=1e-2, atol=1e-6)
 
 
 @with_seed()

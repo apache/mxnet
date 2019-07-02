@@ -26,6 +26,7 @@ from .. import context as ctx
 from .. import ndarray as nd
 from ..io import DataDesc
 from ..executor_manager import _split_input_slice
+from ..ndarray import _DTYPE_MX_TO_NP
 
 
 def _load_general(data, targets, major_axis):
@@ -651,6 +652,13 @@ class DataParallelExecutorGroup(object):
             input_shapes.update(dict(label_shapes))
 
         input_types = {x.name: x.dtype for x in data_shapes}
+        attr_dict = self.symbol.attr_dict()
+
+        for sym_name in self.symbol.list_inputs():
+            if sym_name in input_types and sym_name in attr_dict \
+            and "__dtype__" in attr_dict[sym_name] and attr_dict[sym_name]["__dtype__"] != "-1":
+                input_types[sym_name] = _DTYPE_MX_TO_NP[int(attr_dict[sym_name]["__dtype__"])]
+
         if label_shapes is not None:
             input_types.update({x.name: x.dtype for x in label_shapes})
 

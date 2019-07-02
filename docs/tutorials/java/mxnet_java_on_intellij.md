@@ -44,7 +44,7 @@ brew install opencv
 Run the following commands to install the prerequisites on Ubuntu.
 
 ```
-sudo apt-get install openjdk-8-java maven
+sudo apt-get install openjdk-8-jdk maven
 ```
 
 

@@ -85,7 +85,9 @@ inline std::priority_queue<pi>
 
 void AggregateStats::OnProfileStat(const ProfileStat& stat) {
   std::unique_lock<std::mutex> lk(m_);
-  stat.SaveAggregate(&stats_[stat.categories_.c_str()][stat.name_.c_str()]);
+  if (stat.enable_aggregate_) {
+    stat.SaveAggregate(&stats_[stat.categories_.c_str()][stat.name_.c_str()]);
+  }
 }
 
 void AggregateStats::DumpTable(std::ostream& os, int sort_by, int ascending) {
