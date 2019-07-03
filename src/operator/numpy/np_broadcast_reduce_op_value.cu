@@ -33,7 +33,7 @@ NNVM_REGISTER_OP(_np_sum)
 NNVM_REGISTER_OP(_backward_np_sum)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
 
-NNVM_REGISTER_OP(_np_mean)
+NNVM_REGISTER_OP(_npi_mean)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true, true>);
 
 NNVM_REGISTER_OP(_backward_np_mean)
