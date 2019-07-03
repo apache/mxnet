@@ -44,7 +44,8 @@ namespace cuda {
 
 // Start-up check that the version of cuda compiled-against matches the linked-against version.
 bool CudaVersionChecks() {
-  if (dmlc::GetEnv("MXNET_CUDA_VERSION_CHECKING", true)) {
+  // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
+  if (dmlc::GetEnv("MXNET_CUDA_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
     int linkedAgainstCudaVersion = 0;
     CUDA_CALL(cudaRuntimeGetVersion(&linkedAgainstCudaVersion));
     if (linkedAgainstCudaVersion != CUDA_VERSION)
@@ -88,7 +89,8 @@ namespace cudnn {
 // Start-up check that the version of cudnn compiled-against matches the linked-against version.
 // Also if the user has recompiled their source to a version no longer tested by upstream CI.
 bool CuDNNVersionChecks() {
-  if (dmlc::GetEnv("MXNET_CUDNN_VERSION_CHECKING", true)) {
+  // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
+  if (dmlc::GetEnv("MXNET_CUDNN_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
     size_t linkedAgainstCudnnVersion = cudnnGetVersion();
     if (linkedAgainstCudnnVersion != CUDNN_VERSION)
       LOG(WARNING) << "cuDNN library mismatch: linked-against version " << linkedAgainstCudnnVersion
