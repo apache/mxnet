@@ -28,7 +28,7 @@ from ..symbol import Symbol
 from .._internal import _set_np_symbol_class
 from . import _internal as _npi
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power']
+__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'around']
 
 
 def _num_outputs(sym):
@@ -1008,6 +1008,49 @@ def mod(x1, x2, out=None):
 @set_module('mxnet.symbol.numpy')
 def power(x1, x2, out=None):
     return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def around(x, decimals=0, out=None, **kwargs):
+    r"""
+    around(x, decimals=0, out=None)
+
+    Evenly round to the given number of decimals.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input data.
+    decimals : int, optional
+        Number of decimal places to round to (default: 0).  If
+        decimals is negative, it specifies the number of positions to
+        the left of the decimal point.
+    out : _Symbol, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    rounded_array : _Symbol or scalar
+        An array of the same type as `x`, containing the rounded values.
+        A reference to the result is returned.
+
+    Notes
+    -----
+    For values exactly halfway between rounded decimal values, NumPy
+    rounds to the nearest even value. Thus 1.5 and 2.5 round to 2.0,
+    -0.5 and 0.5 round to 0.0, etc.
+
+    This function differs from the original numpy.prod in the following aspects:
+
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot support complex-valued number.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
 
 
 _set_np_symbol_class(_Symbol)

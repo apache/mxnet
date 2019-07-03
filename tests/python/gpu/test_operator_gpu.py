@@ -2331,6 +2331,7 @@ def test_math():
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
 
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
