@@ -501,6 +501,10 @@ std::vector<NDArray*> Imperative::Backward(
     }
   }
 
+  if (dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false)) {
+    common::LogMemoryPlan(graph);
+  }
+
   // Execution
 
   bool prev_recording = set_is_recording(create_graph);
