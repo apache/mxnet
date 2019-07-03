@@ -176,11 +176,49 @@ struct FullyConnectedGrad {
   }
 };
 
-inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
-                                 const int dev_mask,
-                                 DispatchMode* dispatch_mode,
-                                 std::vector<int> *in_attrs,
-                                 std::vector<int> *out_attrs) {
+
+static std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(
+    const nnvm::NodePtr& n,
+    const std::vector<nnvm::NodeEntry>& ograds) {
+  // FC is y = wx + b
+  CHECK_EQ(ograds.size(), n->num_outputs());
+  using namespace nnvm;
+  using namespace std;
+  //const bool has_bias = n->inputs.size() == 3;
+  enum FCBackwardInputs {
+    kY_ograd,   // head gradient of y
+    kX,
+    kW
+  };
+  enum FCBackwardBackwardOgrads {
+    kO_x_g,
+    kO_w_g,
+    kO_b_g,
+  };
+  std::vector<NodeEntry> ret;
+  const std::vector<NodeEntry>& fc_grad_in = n->inputs;
+  const NodeEntry& y_ograd = fc_grad_in.at(kY_ograd);
+  ret.emplace_back(nnvm::MakeNode("zeros_like", n->attrs.name + "_backward_o_y_g", {y_ograd}));
+  ret.emplace_back(nnvm::MakeNode("dot", n->attrs.name + "_backward_x_gg", {
+      y_ograd,
+      ograds.at(kO_x_g)
+    },
+    {{"transpose_a", "true"}}
+  ));
+  ret.emplace_back(nnvm::MakeNode("dot", n->attrs.name + "_backward_w_gg", {
+      y_ograd,
+      ograds.at(kO_w_g)
+    }
+  ));
+  //ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_do_w_g", {ograds.at(kO_x_g)}, nullptr, &n));
+  return ret;
+}
+
+static bool FCStorageType(const nnvm::NodeAttrs& attrs,
+                          const int dev_mask,
+                          DispatchMode* dispatch_mode,
+                          std::vector<int> *in_attrs,
+                          std::vector<int> *out_attrs) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const bool valid_data = in_attrs->at(0) == kDefaultStorage;
   const bool valid_weight = in_attrs->at(1) == kDefaultStorage ||
@@ -210,11 +248,11 @@ inline static bool FCStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
-                                         const int dev_mask,
-                                         DispatchMode* dispatch_mode,
-                                         std::vector<int> *in_attrs,
-                                         std::vector<int> *out_attrs) {
+static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
+                                  const int dev_mask,
+                                  DispatchMode* dispatch_mode,
+                                  std::vector<int> *in_attrs,
+                                  std::vector<int> *out_attrs) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t out_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), 3U);
@@ -324,7 +362,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{1, 0}};
 })
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FGradient>("FGradient", FullyConnectedBackwardGrad)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 #if MXNET_USE_MKLDNN == 1

@@ -225,7 +225,7 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
                                const std::vector<TBlob>& outputs) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t out_expected = param.no_bias ? 2 : 3;
-  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(inputs.size(), 3U);  // ograd_y, x, w
   CHECK_EQ(outputs.size(), out_expected);
   CHECK_EQ(req.size(), out_expected);
 

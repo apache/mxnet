@@ -354,6 +354,7 @@ class RandomShapes(object):
 @with_seed()
 def test_dense_backward():
     for x in RandomShapes(4,2):
+        print(x)
         net = gluon.nn.Sequential()
         with net.name_scope():
             net.add(gluon.nn.Dense(1))
@@ -362,51 +363,11 @@ def test_dense_backward():
         x.attach_grad()
         with ag.record():
             y = net.forward(x)
+            params = [p.data() for p in net.collect_params().values()]
+            print(params)
             x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
         x_grad.backward()
         same(x.grad, nd.zeros(4))
-
-        with ag.record():
-            y = net.forward(x)
-            x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
-            random_multiplier = nd.random.uniform_like(x_grad)
-            z = (random_multiplier * x_grad).sum()
-        z.backward()
-        same(x.grad, nd.zeros(4))
-
-        with ag.record():
-            y = net.forward(x)
-            x_grad_0 = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
-        x_grad_grad_0 = x.grad
-
-        w_0 = list(net.collect_params().values())[0].data()
-        h_w = nd.ones_like(w_0) * 0.01
-        net.initialize(mxnet.initializer.Constant(w_0 + h_w), force_reinit=True)
-        w_1 = list(net.collect_params().values())[0].data()
-        with ag.record():
-            y = net.forward(x)
-            x_grad_1 = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
-        x_grad_1.backward()
-        x_grad_grad_1 = x.grad
-        ok_(not np.array_equal(x_grad_0, x_grad_1))
-        ok_(np.array_equal(x_grad_grad_0, x_grad_grad_1))
-
-        w = list(net.collect_params().values())[0].data()
-        with ag.record():
-            y = net.forward(x)
-            w_grad_0 = ag.grad(heads=y, variables=w, create_graph=True, retain_graph=True)[0]
-        w_grad_0.backward()
-        w_grad_grad_0 = w.grad
-
-        x = x + nd.ones_like(x) * 0.01
-        with ag.record():
-            y = net.forward(x)
-            w_grad_1 = ag.grad(heads=y, variables=w, create_graph=True, retain_graph=True)[0]
-        w_grad_1.backward()
-        w_grad_grad_1 = w.grad
-        ok_(not np.array_equal(w_grad_0, w_grad_1))
-        ok_(np.array_equal(w_grad_grad_0, w_grad_grad_1))
-
 
 
 if __name__ == '__main__':
