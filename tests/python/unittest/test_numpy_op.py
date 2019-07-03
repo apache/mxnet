@@ -2600,6 +2600,49 @@ def test_np_unique():
                     assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+@use_np
+def test_np_lcm():
+    shapes = [
+        ((3, 1), (3,)),
+        ((3, 1), (3, 5)),
+        ((1, 4), (3, 1)),
+        ((), ()),
+        ((4, 0), ()),
+        ((3, 4, 5), ()),
+        ((), (3, 4, 5)),
+        ((3, 4, 5), (3, 1, 5)),
+        ((5, 1), (5, 2))
+    ]
+
+    class TestLcm(HybridBlock):
+        def __init__(self):
+            super(TestLcm, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.lcm(x1, x2)
+
+    for hybridize in [False]:
+        for shape in shapes:
+            test_lcm = TestLcm()
+            if hybridize:
+                test_lcm.hybridize()
+
+            x1 = rand_ndarray(shape[0]).astype(_np.int32).as_np_ndarray()
+            x2 = rand_ndarray(shape[1]).astype(_np.int32).as_np_ndarray()
+
+            np_out = _np.lcm(x1.asnumpy(), x2.asnumpy())
+            mx_out = test_lcm(x1, x2)
+
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            # Test imperative once again
+            mx_out = np.lcm(x1, x2)
+            np_out = _np.lcm(x1.asnumpy(), x2.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
