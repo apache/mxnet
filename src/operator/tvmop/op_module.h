@@ -23,10 +23,10 @@
  * \brief Invoke registered TVM operators.
  * \author Yizhi Liu
  */
-#if MXNET_USE_TVM_OP
 #ifndef MXNET_OPERATOR_TVMOP_OP_MODULE_H_
 #define MXNET_OPERATOR_TVMOP_OP_MODULE_H_
 
+#if MXNET_USE_TVM_OP
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
 #include <mutex>
@@ -59,5 +59,5 @@ class TVMOpModule {
 }  // namespace runtime
 }  // namespace tvm
 
-#endif  // MXNET_OPERATOR_TVMOP_OP_MODULE_H_
 #endif  // MXNET_USE_TVM_OP
+#endif  // MXNET_OPERATOR_TVMOP_OP_MODULE_H_
