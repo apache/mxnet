@@ -104,7 +104,7 @@ Example::
 
 // abs
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_absolute, "x", mshadow_op::abs)
-.add_alias("_np_abs")
+.add_alias("_npi_abs")
 .describe(R"code(Returns element-wise absolute value of the input.
 Example::
    absolute([-2, 0, 3]) = [2, 0, 3]
@@ -112,7 +112,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
 
 // sign
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sign, "x", mshadow_op::sign)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sign, "x", mshadow_op::sign)
 .describe(R"code(Returns an element-wise indication of the sign of a number.
 The sign function returns -1 if x < 0, 0 if x==0, 1 if x > 0.
 Example::
@@ -191,7 +191,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_cbrt"});
 
 // exp
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_exp, "x", mshadow_op::exp)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_exp, "x", mshadow_op::exp)
 .describe(R"code(Calculate the exponential of all elements in the input array.
 Example::
    exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
@@ -199,7 +199,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
 
 // log
-NNVM_REGISTER_OP(_np_log)
+NNVM_REGISTER_OP(_npi_log)
 .describe(R"code(Returns element-wise Natural logarithmic value of the input.
 The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 )code" ADD_FILELINE)
@@ -298,7 +298,7 @@ The storage type of ``arccos`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccos" });
 
 // arctan
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arctan, "x", mshadow_op::arctan)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arctan, "x", mshadow_op::arctan)
 .describe(R"code(Returns element-wise inverse tangent of the input array.
 .. math::
    arctan([-1, 0, 1]) = [-\pi/4, 0, \pi/4]
@@ -306,7 +306,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arctan, "x", mshadow_op::arctan)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctan" });
 
 // degrees
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_degrees, "x", mshadow_op::degrees)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_degrees, "x", mshadow_op::degrees)
 .describe(R"code(Converts each element of the input array from radians to degrees.
 .. math::
    degrees([0, \pi/2, \pi, 3\pi/2, 2\pi]) = [0, 90, 180, 270, 360]

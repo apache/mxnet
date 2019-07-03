@@ -307,5 +307,9 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxTarget, MultiBoxTargetProp)
 .add_argument("label", "NDArray-or-Symbol", "Object detection labels.")
 .add_argument("cls_pred", "NDArray-or-Symbol", "Class predictions.")
 .add_arguments(MultiBoxTargetParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_contrib_MultiBoxTarget)
+.add_alias("_npx_multibox_target");
+
 }  // namespace op
 }  // namespace mxnet

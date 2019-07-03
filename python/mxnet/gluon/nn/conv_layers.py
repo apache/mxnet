@@ -34,8 +34,13 @@ from ...util import is_np_array
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
-    op = getattr(symbol, op_name)
-    sym = op(symbol.var('data', shape=data_shape), **kwargs)
+    data = symbol.var('data', shape=data_shape)
+    if is_np_array():
+        op = getattr(symbol.npx, op_name)
+        data = data.as_np_ndarray()
+    else:
+        op = getattr(symbol, op_name)
+    sym = op(data, **kwargs)
     return sym.infer_shape_partial()[0]
 
 
@@ -242,9 +247,13 @@ class Conv1D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
+        op_name = kwargs.pop('op_name', 'Convolution')
+        if is_np_array():
+            op_name = 'convolution'
         super(Conv1D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
-            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            in_channels, activation, use_bias, weight_initializer, bias_initializer,
+            op_name, **kwargs)
 
 
 class Conv2D(_Conv):
@@ -322,9 +331,13 @@ class Conv2D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
+        op_name = kwargs.pop('op_name', 'Convolution')
+        if is_np_array():
+            op_name = 'convolution'
         super(Conv2D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
-            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            in_channels, activation, use_bias, weight_initializer, bias_initializer,
+            op_name, **kwargs)
 
 
 class Conv3D(_Conv):
@@ -403,9 +416,13 @@ class Conv3D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
+        op_name = kwargs.pop('op_name', 'Convolution')
+        if is_np_array():
+            op_name = 'convolution'
         super(Conv3D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
-            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            in_channels, activation, use_bias, weight_initializer, bias_initializer,
+            op_name, **kwargs)
 
 
 class Conv1DTranspose(_Conv):
@@ -487,10 +504,13 @@ class Conv1DTranspose(_Conv):
             output_padding = (output_padding,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
+        op_name = kwargs.pop('op_name', 'Deconvolution')
+        if is_np_array():
+            op_name = 'deconvolution'
         super(Conv1DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
-            bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
+            bias_initializer, op_name=op_name, adj=output_padding, **kwargs)
         self.outpad = output_padding
 
 
@@ -578,10 +598,13 @@ class Conv2DTranspose(_Conv):
             output_padding = (output_padding,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
+        op_name = kwargs.pop('op_name', 'Deconvolution')
+        if is_np_array():
+            op_name = 'deconvolution'
         super(Conv2DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
-            bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
+            bias_initializer, op_name=op_name, adj=output_padding, **kwargs)
         self.outpad = output_padding
 
 
@@ -670,10 +693,13 @@ class Conv3DTranspose(_Conv):
             output_padding = (output_padding,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
+        op_name = kwargs.pop('op_name', 'Deconvolution')
+        if is_np_array():
+            op_name = 'deconvolution'
         super(Conv3DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
-            op_name='Deconvolution', adj=output_padding, **kwargs)
+            op_name=op_name, adj=output_padding, **kwargs)
         self.outpad = output_padding
 
 
@@ -700,9 +726,8 @@ class _Pooling(HybridBlock):
         return 'pool'
 
     def hybrid_forward(self, F, x):
-        if is_np_array():
-            F = F.npx
-        return F.Pooling(x, name='fwd', **self._kwargs)
+        pooling = F.npx.pooling if is_np_array() else F.Pooling
+        return pooling(x, name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}(size={kernel}, stride={stride}, padding={pad}, ceil_mode={ceil_mode}'

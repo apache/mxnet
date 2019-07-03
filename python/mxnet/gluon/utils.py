@@ -86,12 +86,19 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
         slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
                   for i in range(num_slice)]
     elif even_split:
-        slices = ndarray.split(data, num_outputs=num_slice, axis=batch_axis)
+        if is_np_array():
+            slices = _mx_np.split(data, indices_or_sections=num_slice, axis=batch_axis)
+        else:
+            slices = ndarray.split(data, num_outputs=num_slice, axis=batch_axis)
     else:
-        slices = [ndarray.slice_axis(data, batch_axis, i*step, (i+1)*step)
-                  if i < num_slice - 1 else
-                  ndarray.slice_axis(data, batch_axis, i*step, size)
-                  for i in range(num_slice)]
+        if is_np_array():
+            indices = [step * i for i in range(1, num_slice)]
+            slices = _mx_np.split(data, indices_or_sections=indices, axis=batch_axis)
+        else:
+            slices = [ndarray.slice_axis(data, batch_axis, i*step, (i+1)*step)
+                      if i < num_slice - 1 else
+                      ndarray.slice_axis(data, batch_axis, i*step, size)
+                      for i in range(num_slice)]
     return slices
 
 
@@ -101,7 +108,7 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
     Parameters
     ----------
-    data : NDArray
+    data : NDArray or ndarray
         A batch of data.
     ctx_list : list of Context
         A list of Contexts.
@@ -112,7 +119,7 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
     Returns
     -------
-    list of NDArray
+    list of NDArrays or ndarrays
         Each corresponds to a context in `ctx_list`.
     """
     array_fn = _mx_np.array if is_np_array() else ndarray.array
@@ -121,11 +128,7 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     if len(ctx_list) == 1:
         return [data.as_in_context(ctx_list[0])]
 
-    # TODO(junwu): temp solution for supporting np.ndarray
-    # rewrite this using np ops
     slices = split_data(data, len(ctx_list), batch_axis, even_split)
-    if is_np_array():
-        slices = [i.as_np_ndarray() for i in slices]
     return [i.as_in_context(ctx) for i, ctx in zip(slices, ctx_list)]
 
 
