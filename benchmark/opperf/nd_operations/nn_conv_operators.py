@@ -51,7 +51,7 @@ MXNet NDArray NN Convolution Operators
 """
 
 
-def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100, inference_mode=False):
     pool_types = ['avg', 'max', 'sum']
     global_pool_types = [0, 1]
 
@@ -62,7 +62,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
         for global_pool in global_pool_types:
             for pool1d_data in [(32, 3, 256), (32, 3, 64)]:
                 pool1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
-                                                             run_backward=True,
+                                                             run_backward=False if inference_mode else True,
                                                              dtype=dtype,
                                                              ctx=ctx,
                                                              inputs=[{"data": pool1d_data,
@@ -76,7 +76,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
                                                              runs=runs)
             for pool2d_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
                 pool2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
-                                                             run_backward=True,
+                                                             run_backward=False if inference_mode else True,
                                                              dtype=dtype,
                                                              ctx=ctx,
                                                              inputs=[{"data": pool2d_data,
@@ -93,12 +93,12 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, r
     return mx_pooling_op_results
 
 
-def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100, inference_mode=False):
     # Conv1D Benchmarks
     conv1d_benchmark_res = []
     for conv_data in [(32, 3, 256), (32, 3, 64)]:
         conv1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
-                                                     run_backward=True,
+                                                     run_backward=False if inference_mode else True,
                                                      dtype=dtype,
                                                      ctx=ctx,
                                                      inputs=[{"data": conv_data,
@@ -117,7 +117,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
     conv2d_benchmark_res = []
     for conv_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
         conv2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
-                                                     run_backward=True,
+                                                     run_backward=False if inference_mode else True,
                                                      dtype=dtype,
                                                      ctx=ctx,
                                                      inputs=[{"data": conv_data,

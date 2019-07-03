@@ -34,7 +34,7 @@ TODO
 """
 
 
-def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100, inference_mode=False):
     """Runs benchmarks with the given context and precision (dtype)for all the GEMM
     operators (dot, batch_dot) in MXNet.
 
@@ -56,7 +56,7 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs
     """
     # Benchmark tests for dot and batch_dot operators
     dot_benchmark_res = run_performance_test(
-        [getattr(MX_OP_MODULE, "dot")], run_backward=True,
+        [getattr(MX_OP_MODULE, "dot")], run_backward=False if inference_mode else True,
         dtype=dtype, ctx=ctx,
         inputs=[{"lhs": (1024, 1024),
                  "rhs": (1024, 1024)},
@@ -70,7 +70,7 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs
         warmup=warmup, runs=runs)
 
     batch_dot_benchmark_res = run_performance_test(
-        [getattr(MX_OP_MODULE, "batch_dot")], run_backward=True,
+        [getattr(MX_OP_MODULE, "batch_dot")], run_backward=False if inference_mode else True,
         dtype=dtype, ctx=ctx,
         inputs=[{"lhs": (32, 1024, 1024),
                  "rhs": (32, 1024, 1024)},

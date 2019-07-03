@@ -35,7 +35,7 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 """
 
 
-def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100, inference_mode=False):
     """Runs benchmarks with the given context and precision (dtype)for all the activation
     operators (relu, sigmoid, softmax) in MXNet.
 
@@ -57,7 +57,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25
     """
     # Relu and its variation
     relu_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "LeakyReLU")],
-                                              run_backward=True,
+                                              run_backward=False if inference_mode else True,
                                               dtype=dtype,
                                               ctx=ctx,
                                               inputs=[{"data": (1024, 1024), "act_type": "leaky", "slope": 0.1},
@@ -79,7 +79,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25
     # Sigmoid => Covered as part of Unary ops
     # Hard_Sigmoid
     hard_sigmoid_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "hard_sigmoid")],
-                                                      run_backward=True,
+                                                      run_backward=False if inference_mode else True,
                                                       dtype=dtype,
                                                       ctx=ctx,
                                                       inputs=[{"data": (1024, 1024), "alpha": 0.25, "beta": 0.5},
@@ -92,7 +92,7 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25
     # Softmax, LogSoftmax
     softmax_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "softmax"),
                                                   getattr(MX_OP_MODULE, "log_softmax")],
-                                                 run_backward=True,
+                                                 run_backward=False if inference_mode else True,
                                                  dtype=dtype,
                                                  ctx=ctx,
                                                  inputs=[{"data": (1024, 1024), "axis": -1, "temperature": 0.5},

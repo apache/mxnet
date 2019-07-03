@@ -35,7 +35,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_unary_operators
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 
 
-def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100, inference_mode=False):
     """Runs benchmarks with the given context and precision (dtype)for all the unary
     operators in MXNet.
 
@@ -56,7 +56,7 @@ def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, 
 
     """
     # Fetch all Unary Operators
-    mx_unary_broadcast_ops = get_all_unary_operators()
+    mx_unary_broadcast_ops = get_all_unary_operators(inference_mode=inference_mode)
     # Run benchmarks
     mx_unary_op_results = run_op_benchmarks(mx_unary_broadcast_ops, dtype, ctx, warmup, runs)
     return mx_unary_op_results

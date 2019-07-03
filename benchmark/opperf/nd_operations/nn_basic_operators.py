@@ -29,10 +29,10 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 """
 
 
-def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
+def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100, inference_mode=False):
     # FullyConnnected operator benchmarks
     fc_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "FullyConnected")],
-                                            run_backward=True,
+                                            run_backward=False if inference_mode else True,
                                             dtype=dtype,
                                             ctx=ctx,
                                             inputs=[{"data": (32, 3, 256, 256),
@@ -50,7 +50,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, 
 
     # Dropout benchmarks
     dropout_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "Dropout")],
-                                                 run_backward=True,
+                                                 run_backward=False if inference_mode else True,
                                                  dtype=dtype,
                                                  ctx=ctx,
                                                  inputs=[{"data": (32, 3, 256, 256),
@@ -63,7 +63,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, 
                                                  runs=runs)
     # BatchNorm benchmarks
     batchnorm_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "BatchNorm")],
-                                                   run_backward=True,
+                                                   run_backward=False if inference_mode else True,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    inputs=[{"data": (32, 3, 256, 256),

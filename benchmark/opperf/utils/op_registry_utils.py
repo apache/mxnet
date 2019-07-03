@@ -28,7 +28,7 @@ from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
 unique_ops = ("sample_multinomial",)
 
 
-def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
+def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True, inference_mode=False):
     """From a given list of operators, filter out all operator names starting with given filters and prepares
     a dictionary of operator with attributes - 'has_backward' and 'nd_op_handle = mxnet.ndarray.op'
 
@@ -70,7 +70,7 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
         for op_with_backward in operators_with_backward:
             op_name = op_with_backward.split("_backward_")[1]
             if op_name in mx_operators:
-                mx_operators[op_name]["has_backward"] = True
+                mx_operators[op_name]["has_backward"] = True if not inference_mode else False
 
     return mx_operators
 
@@ -155,10 +155,10 @@ def _set_op_arguments(mx_operators):
                                            "arg_types": arg_types}
 
 
-def _get_all_mxnet_operators():
+def _get_all_mxnet_operators(inference_mode=False):
     # Step 1 - Get all registered op names and filter it
     operator_names = _get_all_registered_ops()
-    mx_operators = _select_ops(operator_names)
+    mx_operators = _select_ops(operator_names, inference_mode=inference_mode)
 
     # Step 2 - Get all parameters for the operators
     _set_op_arguments(mx_operators)
@@ -212,7 +212,7 @@ def prepare_op_inputs(arg_params):
     return inputs
 
 
-def get_all_unary_operators():
+def get_all_unary_operators(inference_mode=False):
     """Gets all Unary operators registered with MXNet.
 
     Returns
@@ -220,7 +220,7 @@ def get_all_unary_operators():
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
     # Get all mxnet operators
-    mx_operators = _get_all_mxnet_operators()
+    mx_operators = _get_all_mxnet_operators(inference_mode)
 
     # Filter for unary broadcast operators
     unary_broadcast_mx_operators = {}
@@ -231,7 +231,7 @@ def get_all_unary_operators():
     return unary_broadcast_mx_operators
 
 
-def get_all_broadcast_binary_operators():
+def get_all_broadcast_binary_operators(inference_mode=False):
     """Gets all binary broadcast operators registered with MXNet.
 
     Returns
@@ -239,7 +239,7 @@ def get_all_broadcast_binary_operators():
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
     # Get all mxnet operators
-    mx_operators = _get_all_mxnet_operators()
+    mx_operators = _get_all_mxnet_operators(inference_mode)
 
     # Filter for binary broadcast operators
     binary_broadcast_mx_operators = {}
@@ -251,7 +251,7 @@ def get_all_broadcast_binary_operators():
     return binary_broadcast_mx_operators
 
 
-def get_all_elemen_wise_binary_operators():
+def get_all_elemen_wise_binary_operators(inference_mode=False):
     """Gets all binary elemen_wise operators registered with MXNet.
 
     Returns
@@ -259,7 +259,7 @@ def get_all_elemen_wise_binary_operators():
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
     # Get all mxnet operators
-    mx_operators = _get_all_mxnet_operators()
+    mx_operators = _get_all_mxnet_operators(inference_mode)
 
     # Filter for binary elemen_wise operators
     binary_elemen_wise_mx_operators = {}
@@ -271,7 +271,7 @@ def get_all_elemen_wise_binary_operators():
     return binary_elemen_wise_mx_operators
 
 
-def get_all_random_sampling_operators():
+def get_all_random_sampling_operators(inference_mode=False):
     """Gets all Random Sampling operators registered with MXNet.
 
     Returns
@@ -279,7 +279,7 @@ def get_all_random_sampling_operators():
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
     # Get all mxnet operators
-    mx_operators = _get_all_mxnet_operators()
+    mx_operators = _get_all_mxnet_operators(inference_mode)
 
     # Filter for Random Sampling operators
     random_sampling_mx_operators = {}
@@ -289,7 +289,7 @@ def get_all_random_sampling_operators():
     return random_sampling_mx_operators
 
 
-def get_all_reduction_operators():
+def get_all_reduction_operators(inference_mode=False):
     """Gets all Reduction operators registered with MXNet.
 
     Returns
@@ -297,7 +297,7 @@ def get_all_reduction_operators():
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
     # Get all mxnet operators
-    mx_operators = _get_all_mxnet_operators()
+    mx_operators = _get_all_mxnet_operators(inference_mode)
 
     # Filter for Reduction operators
     reduction_mx_operators = {}
