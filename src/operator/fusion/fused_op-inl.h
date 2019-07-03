@@ -46,6 +46,7 @@ __device__ inline float __half2float(const __half h) {
  asm("{  cvt.f32.f16 %0, %1;}\n" : "=f"(val) : "h"(h.__x));
   return val;
 }
+
 typedef __half half;
 )code";
 
@@ -117,6 +118,7 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
   {"flatten"                           , {{"identity(%)", "_0"}}},
   {"Reshape"                           , {{"identity(%)", "_0"}}},
   {"reshape"                           , {{"identity(%)", "_0"}}},
+  {"_backward_reshape"                 , {{"identity(%)", "_0"}}},
   {"expand_dims"                       , {{"identity(%)", "_0"}}},
   {"round"                             , {{"round(%)", "_0"}}},
   {"rint"                              , {{"rint(%)", "_0"}}},
@@ -289,6 +291,16 @@ struct VectorConfig<32> {
     using IndexType = double4;
 };
 
+template <typename DType>
+inline DType add_elem(const DType& x, const DType& y) {
+  return x + y;
+}
+
+template <>
+inline half add_elem(const half& x, const half& y) {
+  return __float2half(__half2float(x) + __half2float(y));
+}
+
 template <typename DType, int nvec>
 union VectorType {
     typename VectorConfig<sizeof(DType)*nvec>::IndexType y;
@@ -299,6 +311,13 @@ union VectorType {
     }
     VectorType (const decltype(y) &y2) {
         y = y2;
+    }
+    inline VectorType<DType, nvec>& operator+=(const VectorType<DType, nvec>& rhs) {
+      #pragma unroll
+      for (int i = 0; i < nvec; ++i) {
+        x[i] = add_elem(x[i], rhs.x[i]);
+      }
+      return *this;
     }
 };
 
@@ -385,7 +404,7 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
 template <int nvec, typename DType, int ndim>
 inline void store_index(const VectorType<DType, nvec> value, int i,
                         DType * output, const Shape<ndim>& shape) {
-  if (i < shape.size) {
+  if (i < (shape.size + nvec - 1) / nvec) {
     auto vector_output = reinterpret_cast<
                           typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
     vector_output[i] = value.y;
@@ -395,10 +414,12 @@ inline void store_index(const VectorType<DType, nvec> value, int i,
 template <int nvec, typename DType, int ndim>
 inline void store_add_index(const VectorType<DType, nvec> value, int i,
                             DType * output, const Shape<ndim>& shape) {
-  if (i < shape.size) {
+  if (i < (shape.size + nvec - 1) / nvec) {
     auto vector_output = reinterpret_cast<
                           typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
-    vector_output[i] += value.y;
+    VectorType<DType, nvec> ret(vector_output[i]);
+    ret += value;
+    vector_output[i] = ret.y;
   }
 }
 

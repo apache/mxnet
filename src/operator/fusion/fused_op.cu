@@ -117,14 +117,17 @@ void AddPointerAndShape(const TBlob& data,
     int ndim = data.ndim();
     Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
     ptrs->push_back(tensor.dptr_);
-    shapes->push_back(std::vector<int>(ndim + 2));
+    // We need alignment to 8 bytes for size_t in the Shape struct
+    // so if ndim is odd, there will be 4B of padding
+    const int offset = ndim % 2 == 0 ? 2 : 3;
+    shapes->push_back(std::vector<int>(ndim + offset));
     std::vector<int>& tensor_shapes = shapes->back();
     size_t total_size = 1;
     for (int i = ndim-1; i >= 0; i--) {
       tensor_shapes[i] = data.shape_[i];
       total_size *= data.shape_[i];
     }
-    size_t * shape_size_ptr = reinterpret_cast<size_t*>(&tensor_shapes[ndim]);
+    size_t * shape_size_ptr = reinterpret_cast<size_t*>(&tensor_shapes[ndim + offset - 2]);
     *shape_size_ptr = total_size;
   });
 }
