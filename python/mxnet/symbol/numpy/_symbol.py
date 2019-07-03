@@ -2054,7 +2054,7 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
     >>> np.logspace(2.0, 3.0, num=4, ctx=npx.gpu(0))
     array([ 100.     ,  215.44347,  464.15887, 1000.     ], ctx=gpu(0))
     """
-    if isinstance(start, (list, tuple, _np.ndarray)) or \git a
+    if isinstance(start, (list, tuple, _np.ndarray)) or \
         isinstance(stop, (list, tuple, _np.ndarray)):
         raise NotImplementedError('start and stop only support int')
     if axis != 0:
