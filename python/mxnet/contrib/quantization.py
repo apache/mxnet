@@ -615,8 +615,9 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
 
     qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                    data_names=data_names, label_names=label_names,
-                                                   ctx=ctx, excluded_sym_names=excluded_sym_names, calib_mode=calib_mode,
-                                                   calib_data=calib_data, num_calib_examples=num_calib_examples, calib_layer=calib_layer,
+                                                   ctx=ctx, excluded_sym_names=excluded_sym_names,
+                                                   calib_mode=calib_mode, calib_data=calib_data,
+                                                   num_calib_examples=num_calib_examples, calib_layer=calib_layer,
                                                    quantized_dtype=quantized_dtype, logger=logger)
 
     qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
