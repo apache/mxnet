@@ -18,7 +18,10 @@
 """Utilities to interact with MXNet operator registry."""
 import ctypes
 from operator import itemgetter
-from mxnet import runtime
+try:
+    from mxnet import runtime
+except ImportError:
+    print("No runtime module available in MXNet. Please use MXNet 1.5.0 or above!")
 from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
 
 from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
