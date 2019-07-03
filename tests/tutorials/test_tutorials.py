@@ -115,7 +115,7 @@ def test_gluon_save_load_params():
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
 
-def test_gluon_hybrid():
+def test_gluon_performance():
     assert _test_tutorial_nb('gluon/performance')
     
 def test_gluon_pretrained_models():
