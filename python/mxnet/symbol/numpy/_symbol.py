@@ -2018,7 +2018,7 @@ def reciprocal(x, out=None, **kwargs):
 
     Notes
     -----
-     .. note::
+    .. note::
         This function is not designed to work with integers.
 
     For integer arguments with absolute value larger than 1 the result is
