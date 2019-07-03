@@ -253,6 +253,8 @@ def test_estimator_gpu(**kwargs):
     test_dataloader = gluon.data.DataLoader(test_set, batch_size)
 
     # Model
+    # using fixed seed to reduce flakiness in accuracy assertion
+    mx.random.seed(7)
     num_hiddens, num_layers = 100, 2
     net = BiRNN(vocab, embed_size, num_hiddens, num_layers)
     net.initialize(mx.init.Xavier(), ctx=ctx)
