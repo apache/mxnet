@@ -146,7 +146,7 @@ Although ~70 samples per second might sound respectable, let's see if we can do 
 
 Monitoring the CPU (with `top`) and GPU utilization (with `nvidia-smi`) provide clues as to where potential bottlenecks lie. With the example above, when simultaneously running these monitoring tool, you might spot a single process on the CPU fixed at ~100% utilization while the GPU utilization behaves erratically and often falls to ~0%. Seeing behaviour like can indicate the CPU is struggling to process data and the GPU is being starved of data.
 
-MXNet's Profiler is another highly recommended tool for identifying bottlenecks, since it gives timing data for individual MXNet operations. Check out this comprehensive tutorial for more details. As a simpler form of analysis, we will split our training loop into two common components:
+MXNet's Profiler is another highly recommended tool for identifying bottlenecks, since it gives timing data for individual MXNet operations. Check out [this comprehensive tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/python/profiler.html) for more details. As a simpler form of analysis, we will split our training loop into two common components:
 
 1. Data Loading
 2. Network Execution (forward and backward passes)
