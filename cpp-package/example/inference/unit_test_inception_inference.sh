@@ -19,17 +19,21 @@
 
 # Downloading the data and model
 mkdir -p model
-wget -nc http://data.mxnet.io/models/imagenet/inception-bn.tar.gz
-wget -nc -O model/dog.jpg https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/dog.jpg?raw=true
-wget -nc -O model/mean_224.nd https://github.com/dmlc/web-data/raw/master/mxnet/example/feature_extract/mean_224.nd
-tar -xvzf inception-bn.tar.gz -C model
-
+python - <<EOF
+import mxnet as mx
+import gluoncv
+from gluoncv.model_zoo import get_model
+net = get_model('InceptionV3', pretrained=True)
+net.hybridize()
+net(mx.nd.zeros((1,3,299,299)))
+net.export("model/model", epoch=1)
+EOF
 
 # Running the example with dog image.
 if [ "$(uname)" == "Darwin" ]; then
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./inception_inference --symbol "./model/model-symbol.json" --params "./model/model-0001.params" --synset "./model/synset.txt" --input_shape "3 299 299" --image "./model/dog.jpg" 2&> inception_inference.log
 else
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./inception_inference --symbol "./model/model-symbol.json" --params "./model/model-0001.params" --synset "./model/synset.txt" --input_shape "3 299 299" --image "./model/dog.jpg" 2&> inception_inference.log
 fi
 result=`grep -c "pug-dog" inception_inference.log`
 if [ $result == 1 ];
