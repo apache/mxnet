@@ -121,7 +121,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
 
 // rint
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_rint, "x", mshadow_op::rint)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_rint, "x", mshadow_op::rint)
 .describe(R"code(Round elements of the array to the nearest integer.
 Example::
    rint([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0]) = [-2., -2., -0.,  0.,  2.,  2.,  2.]
@@ -227,7 +227,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_log10, "x", mshadow_op::log10)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log10"});
 
 // log2
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_log2, "x", mshadow_op::log2)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_log2, "x", mshadow_op::log2)
 .describe(R"code(Returns element-wise Base-2 logarithmic value of the input.
 ``2**log2(x) = x``
 )code" ADD_FILELINE)
@@ -314,7 +314,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_degrees, "x", mshadow_op::degrees)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_degrees" });
 
 // radians
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_radians, "x", mshadow_op::radians)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_radians, "x", mshadow_op::radians)
 .describe(R"code(Converts each element of the input array from degrees to radians.
 .. math::
    radians([0, 90, 180, 270, 360]) = [0, \pi/2, \pi, 3\pi/2, 2\pi]

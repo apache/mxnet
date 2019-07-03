@@ -32,7 +32,7 @@ from . import _internal as _npi
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
-           'abs', 'exp', 'arctan', 'sign', 'log', 'degrees']
+           'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean']
 
 
 def _num_outputs(sym):
@@ -534,7 +534,7 @@ class _Symbol(Symbol):
         The arguments are the same as for :py:func:`mean`, with
         this array as data.
         """
-        return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+        return _npi.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
@@ -1022,27 +1022,115 @@ def power(x1, x2, out=None):
 
 
 @set_module('mxnet.symbol.numpy')
-def stack(arrays, axis=0, out=None):
-    """Join a sequence of arrays along a new axis.
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
 
-    The axis parameter specifies the index of the new axis in the dimensions of the result.
-    For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last
-    dimension.
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
 
     Parameters
     ----------
-    arrays : sequence of array_like
-        Each array must have the same shape.
-    axis : int, optional
-        The axis in the result array along which the input arrays are stacked.
-    out : ndarray, optional
-        If provided, the destination to place the result. The shape must be correct,
-        matching that of what stack would have returned if no out argument were specified.
+    a : `_Symbol`
+        _Symbol containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of _Symbol, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
 
     Returns
     -------
-    stacked : ndarray
-        The stacked array has one more dimension than the input arrays."""
+    m : _Symbol, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only _Symbol is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def stack(arrays, axis=0, out=None):
+    """
+    Join a sequence of arrays along a new axis.
+
+    The axis parameter specifies the index of the new axis in the dimensions of the result.
+    For example, if `axis=0` it will be the first dimension and if `axis=-1` it will be the last dimension.
+
+    Parameters
+    ----------
+    arrays : sequence of _Symbols
+        Each array must have the same shape.
+    axis : int, optional
+        The axis in the result array along which the input arrays are stacked.
+    out : _Symbol, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    out : _Symbol
+        The stacked array has one more dimension than the input arrays.
+
+    Notes
+    -----
+    This function differs from the original `numpy.stack
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.stack.html>`_ in
+    the following ways:
+
+    - only sequence of _Symbol is accepted as valid input
+
+    Examples
+    --------
+    >>> arrays = [np.random.uniform(size=(3, 4)) for _ in range(10)]
+    >>> np.stack(arrays, axis=0).shape
+    (10, 3, 4)
+    >>> np.stack(arrays, axis=1).shape
+    (3, 10, 4)
+    >>> np.stack(arrays, axis=2).shape
+    (3, 4, 10)
+    >>> a = np.array([1, 2, 3])
+    >>> b = np.array([2, 3, 4])
+    >>> np.stack((a, b))
+    array([[1., 2., 3.],
+           [2., 3., 4.]])
+    >>> np.stack((a, b), axis=-1)
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
+    """
     def get_list(arrays):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
             raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
@@ -1261,13 +1349,14 @@ def expand_dims(a, axis):
     return _npi.expand_dims(a, axis)
 
 
+# pylint: disable=line-too-long
 @set_module('mxnet.symbol.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
 
     Parameters
     ----------
-    ary : ndarray
+    ary : _Symbol
         Array to be divided into sub-arrays.
     indices_or_sections : int or 1-D array
         If `indices_or_sections` is an integer, N, the array will be divided
@@ -1282,21 +1371,37 @@ def split(ary, indices_or_sections, axis=0):
           - ary[2:3]
           - ary[3:]
 
-        If an index exceeds the dimension of the array along `axis`,
-        an empty sub-array is returned correspondingly.
+        Index `must be within` the dimension of the array along `axis`.
     axis : int, optional
         The axis along which to split, default is 0.
 
     Returns
     -------
-    sub-arrays : list of ndarrays
+    sub-arrays : list of _Symbols
         A list of sub-arrays.
 
     Raises
     ------
     ValueError
         If `indices_or_sections` is given as an integer, but
-        a split does not result in equal division."""
+        a split does not result in equal division.
+
+    Notes
+    -----
+    This function differs from the original `numpy.split
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.split.html>`_ in
+    the following ways:
+
+    - Index exceeding the dimension the dimension of the array is currently not supported.
+
+    Examples
+    --------
+    >>> x = np.arange(9.0)
+    >>> np.split(x, 3)
+    [array([0., 1., 2.]), array([3., 4., 5.]), array([6., 7., 8.])]
+    >>> np.split(x, (3, 5, 6))
+    [array([0., 1., 2.]), array([3., 4.]), array([5.]), array([6., 7.])]
+    """
     indices = []
     sections = 0
     if isinstance(indices_or_sections, int):
@@ -1307,6 +1412,7 @@ def split(ary, indices_or_sections, axis=0):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.split(ary, indices, axis, False, sections)
     return ret
+# pylint: enable=line-too-long
 
 
 @set_module('mxnet.symbol.numpy')
@@ -1769,6 +1875,109 @@ def degrees(x, out=None, **kwargs):
 
     """
     return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
+
+
+def rint(x, out=None, **kwargs):
+    """
+    Round elements of the array to the nearest integer.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.rint
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
+    the following way(s):
+
+    - only _Symbol or scalar is accpted as valid input, tuple of _Symbol is not supported
+     - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    """
+    return _unary_func_helper(x, _npi.rint, _np.rint, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def log2(x, out=None, **kwargs):
+    """
+    Base-2 logarithm of x.
+
+    Parameters
+    ----------
+    x : _Symbol
+        Input values.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : _Symbol
+        The logarithm base two of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.log2
+    <https://www.google.com/search?q=numpy+log2>`_ in
+    the following way(s):
+
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    """
+    return _unary_func_helper(x, _npi.log2, _np.log2, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def radians(x, out=None, **kwargs):
+    """
+    Convert angles from degrees to radians.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array in degrees.
+    out : _Symbol or None
+       Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The corresponding radian values. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.radians
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
+    the following way(s):
+
+    - only _Symbol or scalar is accpted as valid input, tuple of _Symbol is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    Examples
+    --------
+    >>> deg = np.arange(12.) * 30.
+    >>> np.radians(deg)
+    array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
+           3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
+           dtype=float32)
+
+    """
+    return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)
