@@ -1175,11 +1175,11 @@ def test_np_logspace():
         (0, 10, -1),
         (0, 1, 2.5),
     ]
-    base_configs = [0, 1, 10, 200]
+    base_configs = [0, 1, 5, 7, 10, 13, 200]
     dtypes = ['int32', 'float16', 'float32', 'float64', None]
     for config in configs:
         for dtype in dtypes:
-            for endpoint in [ True]:
+            for endpoint in [False, True]:
                 for base in base_configs:
                     if isinstance(config, tuple):
                         mx_ret = np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
