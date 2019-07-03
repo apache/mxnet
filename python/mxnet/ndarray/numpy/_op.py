@@ -18,13 +18,13 @@
 """Namespace for numpy operators used in Gluon dispatched by F=ndarray."""
 
 from __future__ import absolute_import
+import collections
 import numpy as _np
 from ...base import numeric_types
 from ...util import _sanity_check_params, set_module
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
-import collections
 
 try:
     abc = collections.abc
