@@ -36,14 +36,14 @@ inline bool NumpyDiagflatOpShape(const nnvm::NodeAttrs &attrs,
 
   auto &in_attr = (*in_attrs)[0];
 
-  // calc the diagnal length
+  // calc the diagonal length
   // should work for scalar
   dim_t diag_len = 1;
   for (auto &d:in_attr) {
     diag_len *= d;
   }
 
-  // adjust the output diagnal length with k
+  // adjust the output diagonal length with k
   const NumpyDiagflatParam &param = nnvm::get<NumpyDiagflatParam>(attrs.parsed);
   diag_len += abs(param.k);
 
