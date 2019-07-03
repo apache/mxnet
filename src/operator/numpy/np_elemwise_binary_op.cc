@@ -34,57 +34,45 @@ namespace mxnet {
 namespace op {
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(ldexp)
-.describe(R"code(ldexp(x1, x2)
+.describe(R"code(
+    ldexp(x1, x2, out=None)
 
-Returns x1 * 2**x2, element-wise.
+    Returns x1 * 2**x2, element-wise.
 
-The mantissas `x1` and twos exponents `x2` are used to construct
-floating point numbers ``x1 * 2**x2``.
+    The mantissas `x1` and twos exponents `x2` are used to construct
+    floating point numbers ``x1 * 2**x2``.
 
-Parameters
-----------
-x1 : array_like
-    Array of multipliers.
-x2 : array_like, int
-    Array of twos exponents.
-out : ndarray, None, or tuple of ndarray and None, optional
-    A location into which the result is stored. If provided, it must have
-    a shape that the inputs broadcast to. If not provided or `None`,
-    a freshly-allocated array is returned. A tuple (possible only as a
-    keyword argument) must have length equal to the number of outputs.
-where : array_like, optional
-    Values of True indicate to calculate the ufunc at that position, values
-    of False indicate to leave the value in the output alone.
-**kwargs
-    For other keyword-only arguments, see the
-    :ref:`ufunc docs <ufuncs.kwargs>`.
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Array of multipliers.
+    x2 : ndarray or scalar, int
+        Array of twos exponents.
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not, a freshly-allocated array is returned.
 
-Returns
--------
-y : ndarray or scalar
-    The result of ``x1 * 2**x2``.
-    This is a scalar if both `x1` and `x2` are scalars.
+    Returns
+    -------
+    y : ndarray or scalar
+        The result of ``x1 * 2**x2``.
+        This is a scalar if both `x1` and `x2` are scalars.
 
-See Also
---------
-frexp : Return (y1, y2) from ``x = y1 * 2**y2``, inverse to `ldexp`.
+    Notes
+    -----
+    Complex dtypes are not supported, they will raise a TypeError.
 
-Notes
------
-Complex dtypes are not supported, they will raise a TypeError.
+    `ldexp` is useful as the inverse of `frexp`, if used by itself it is
+    more clear to simply use the expression ``x1 * 2**x2``.
 
-`ldexp` is useful as the inverse of `frexp`, if used by itself it is
-more clear to simply use the expression ``x1 * 2**x2``.
+    Examples
+    --------
+    >>> np.ldexp(5, np.arange(4))
+    array([  5.,  10.,  20.,  40.])
 
-Examples
---------
->>> np.ldexp(5, np.arange(4))
-array([  5.,  10.,  20.,  40.])
-
->>> x = np.arange(6)
->>> np.ldexp(*np.frexp(x))
-array([ 0.,  1.,  2.,  3.,  4.,  5.])
-
+    >>> x = np.arange(6)
+    >>> np.ldexp(*np.frexp(x))
+    array([ 0.,  1.,  2.,  3.,  4.,  5.])
 )code" ADD_FILELINE)
 .add_alias("_npi_ldexp")  
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::ldexp>)

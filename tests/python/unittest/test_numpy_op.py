@@ -29,6 +29,67 @@ import random
 
 
 @with_seed()
+def test_np_ldexp():
+    @npx.use_np_shape
+    class TestLdexp(HybridBlock):
+        def __init__(self):
+            super(TestLdexp, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.ldexp(x1, x2)
+
+    def dldx(x1, x2): 
+        return [_np.power(2.0, x2), _np.ldexp(x1, x2) * np.log(2.0)]
+
+    shapes = [
+        ((1), (4)), 
+        ((3, 1), (3, 1)),
+        ((3, 1, 2), (3, 1, 2)),
+        ((1, ),(1, )),
+        ((3, 0), (2)),
+        ((3), (0, 2)),
+        ((1), ()),
+        ((), (1)),
+        ((3, 0), (3, 0)),  # zero-size shape
+        ((0, 1), (0, 1)),  # zero-size shape
+        ((2, 0, 2), (2, 0, 2)),  # zero-size shape
+        ((1, ), (3, )),  # broadcast
+        ((2, 3), (2, 1)),  # broadcast
+        ((1, 3), (2, 3)),  # broadcast
+        ((1, 3), (2, 0, 3)),  # broadcast to zero-dim shape
+        ((1, 0, 1), (3, 0, 1)), # broadcast of zero-dim shape
+        ((), ()),  # zero-dim shape
+        ] 
+
+    for hybridize in [True, False]:
+        for shape1, shape2 in shapes:
+            for dtype in [_np.float32, _np.float64]:
+                test_ldexp = TestLdexp()
+                if hybridize:
+                    test_ldexp.hybridize()
+                x1 = rand_ndarray(shape = shape1, dtype = dtype).as_np_ndarray() 
+                x1.attach_grad()
+                x2 = rand_ndarray(shape = shape2, dtype = _np.int).as_np_ndarray() 
+                x2.attach_grad()
+
+                np_out = _np.ldexp(x1, x2)
+                with mx.autograd.record():
+                    mx_out = test_ldexp(x1, x2)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
+
+                mx_out.backward()
+                np_backward = dldx(x1, x2)
+                assert_almost_equal(x1.grad.asnumpy(), np_backward[0], atol=1e-3, rtol=1e-5)
+                assert_almost_equal(x2.grad.asnumpy(), np_backward[1], atol=1e-3, rtol=1e-5)
+
+                # Test imperative once again
+                mx_out = np.ldexp(x1, x2)
+                np_out = _np.ldexp(x1, x2)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
 @npx.use_np_shape
 def test_np_sum():
     class TestSum(HybridBlock):
