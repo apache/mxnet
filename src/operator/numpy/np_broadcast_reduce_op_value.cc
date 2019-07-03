@@ -102,7 +102,7 @@ inline bool NumpyMeanType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1 && in_attrs->at(0) != -1;
 }
 
-NNVM_REGISTER_OP(_np_mean)
+NNVM_REGISTER_OP(_npi_mean)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)

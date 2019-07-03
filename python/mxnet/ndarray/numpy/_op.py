@@ -18,6 +18,7 @@
 
 """Namespace for numpy operators used in Gluon dispatched by F=ndarray."""
 
+# pylint: disable=too-many-lines
 from __future__ import absolute_import
 import numpy as _np
 from ...base import numeric_types
@@ -30,7 +31,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
-           'degrees']
+           'degrees', 'log2', 'rint', 'radians', 'mean']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -180,6 +181,68 @@ def minimum(x1, x2, out=None):
 
 
 @set_module('mxnet.ndarray.numpy')
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        ndarray containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : ndarray, optional
+        Alternate output array in which to place the result. The default is None; if provided,
+        it must have the same shape and type as the expected output
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of ndarray, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : ndarray, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only ndarray is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
 def stack(arrays, axis=0, out=None):
     """Join a sequence of arrays along a new axis.
 
@@ -188,7 +251,7 @@ def stack(arrays, axis=0, out=None):
 
     Parameters
     ----------
-    arrays : sequence of array_like
+    arrays : sequence of ndarrays
         Each array must have the same shape.
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
@@ -198,8 +261,36 @@ def stack(arrays, axis=0, out=None):
 
     Returns
     -------
-    stacked : ndarray
-        The stacked array has one more dimension than the input arrays."""
+    out : ndarray
+        The stacked array has one more dimension than the input arrays.
+
+    Notes
+    -----
+    This function differs from the original `numpy.stack
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.stack.html>`_ in
+    the following ways:
+
+    - only sequence of ndarray is accepted as valid input
+
+    Examples
+    --------
+    >>> arrays = [np.random.uniform(size=(3, 4)) for _ in range(10)]
+    >>> np.stack(arrays, axis=0).shape
+    (10, 3, 4)
+    >>> np.stack(arrays, axis=1).shape
+    (3, 10, 4)
+    >>> np.stack(arrays, axis=2).shape
+    (3, 4, 10)
+    >>> a = np.array([1, 2, 3])
+    >>> b = np.array([2, 3, 4])
+    >>> np.stack((a, b))
+    array([[1., 2., 3.],
+           [2., 3., 4.]])
+    >>> np.stack((a, b), axis=-1)
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
+    """
     def get_list(arrays):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
             raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
@@ -607,6 +698,7 @@ def expand_dims(a, axis):
     return _npi.expand_dims(a, axis)
 
 
+# pylint: disable=line-too-long
 @set_module('mxnet.ndarray.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -628,8 +720,7 @@ def split(ary, indices_or_sections, axis=0):
           - ary[2:3]
           - ary[3:]
 
-        If an index exceeds the dimension of the array along `axis`,
-        an empty sub-array is returned correspondingly.
+        Index `must be within` the dimension of the array along `axis`.
     axis : int, optional
         The axis along which to split, default is 0.
 
@@ -643,6 +734,22 @@ def split(ary, indices_or_sections, axis=0):
     ValueError
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division.
+
+    Notes
+    -----
+    This function differs from the original `numpy.split
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.split.html>`_ in
+    the following ways:
+
+    - Index exceeding the dimension the dimension of the array is currently not supported.
+
+    Examples
+    --------
+    >>> x = np.arange(9.0)
+    >>> np.split(x, 3)
+    [array([0., 1., 2.]), array([3., 4., 5.]), array([6., 7., 8.])]
+    >>> np.split(x, (3, 5, 6))
+    [array([0., 1., 2.]), array([3., 4.]), array([5.]), array([6., 7.])]
     """
     indices = []
     axis_size = ary.shape[axis]
@@ -660,6 +767,7 @@ def split(ary, indices_or_sections, axis=0):
     if not isinstance(ret, list):
         raise NotImplementedError('single output from split is not supported yet...')
     return ret
+# pylint: enable=line-too-long
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1267,3 +1375,122 @@ def degrees(x, out=None, **kwargs):
 
     """
     return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def rint(x, out=None, **kwargs):
+    """
+    Round elements of the array to the nearest integer.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.rint
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
+    the following way(s):
+
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.rint(a)
+    array([-2., -2., -0.,  0.,  1.,  2.,  2.])
+    """
+    return _unary_func_helper(x, _npi.rint, _np.rint, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def log2(x, out=None, **kwargs):
+    """
+    Base-2 logarithm of x.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input values.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray
+        The logarithm base two of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.log2
+    <https://www.google.com/search?q=numpy+log2>`_ in
+    the following way(s):
+
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 2**4])
+    >>> np.log2(x)
+    array([-inf,   0.,   1.,   4.])
+
+    """
+    return _unary_func_helper(x, _npi.log2, _np.log2, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def radians(x, out=None, **kwargs):
+    """
+    Convert angles from degrees to radians.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array in degrees.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray
+        The corresponding radian values. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.radians
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
+    the following way(s):
+
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    Examples
+    --------
+    >>> deg = np.arange(12.) * 30.
+    >>> np.radians(deg)
+    array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
+           3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
+           dtype=float32)
+
+    """
+    return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
