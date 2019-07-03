@@ -17,7 +17,7 @@
 
 # Gluon Performance Tips & Tricks
 
-Compared to traditional machine learning methods, the field of deep-learning has increased model accuracy across a wide range of tasks, but it has also increased the amount of computation required for model training and inference. Specialised hardware chips, such as GPUs and FPGAs, can speed up the execution of networks, but it can sometimes be hard to write code that uses the hardware to its full potential. We will be looking at a few simple tips and trick in this tutorial that you can use to speed up training and ultimately save on training costs.
+Compared to traditional machine learning methods, the field of deep-learning has increased model accuracy across a wide range of tasks, but it has also increased the amount of computation required for model training and inference. Specialised hardware chips, such as GPUs and FPGAs, can speed up the execution of networks, but it can sometimes be hard to write code that uses the hardware to its full potential. We will be looking at a few simple tips and trick in this tutorial that you can use to speed up training and ultimately save on training costs. You'll find most of these tips and tricks useful for inference too.
 
 We'll start by writing some code to train an image classification network for the CIFAR-10 dataset, and then benchmark the throughput of the network in terms of samples processed per second. After some performance analysis, we'll identify the bottlenecks (i.e. the components limiting throughput) and improve the training speed step-by-step. We'll bring together all the tips and tricks at the end and evaluate our performance gains.
 
@@ -30,7 +30,7 @@ import mxnet as mx
 import numpy as np
 ```
 
-An Amazon EC2 p3.2xlarge instance was used to benchmark the code in this tutorial. You are likely to get different results and find different bottlenecks on other hardware, but these tips and tricks should still help improve training speed for bottleneck components. A GPU is recommended for this example.
+An Amazon EC2 p3.2xlarge instance was used to benchmark the code in this tutorial. You are likely to get different results and find different bottlenecks on other hardware, but these tips and tricks should still help improve training speed for bottleneck components. A GPU is recommended for this tutorial.
 
 
 ```python
@@ -52,7 +52,7 @@ print('{} samples'.format(len(dataset)))
     50000 samples
 
 
-So we can learn how to identify training bottlenecks, let's intentionally introduce a short `sleep` into the data loading pipeline. We transform each 32x32 CIFAR-10 image to 224x224 so we can use it with the ResNet-50 network designed for ImageNet. [CIFAR-10 specific ResNet networks](https://gluon-cv.mxnet.io/api/model_zoo.html#gluoncv.model_zoo.get_cifar_resnet) exist but we use the more standard ImageNet variants in this example.
+So we can learn how to identify training bottlenecks, let's intentionally introduce a bottleneck by adding a short `sleep` into the data loading pipeline. We transform each 32x32 CIFAR-10 image to 224x224 so we can use it with the ResNet-50 network designed for ImageNet. [CIFAR-10 specific ResNet networks](https://gluon-cv.mxnet.io/api/model_zoo.html#gluoncv.model_zoo.get_cifar_resnet) exist but we use the more standard ImageNet variants in this example.
 
 
 ```python
