@@ -19,6 +19,7 @@
 
 """Doc placeholder for numpy ops with prefix _np."""
 
+
 def _np_reshape(a, newshape, order='C'):
     """
     reshape(a, newshape, order='C')

@@ -34,6 +34,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 
            'absolute', 'cbrt', 'arccos']
 
+
 @set_module('mxnet.symbol.numpy')
 def absolute(x, out=None, **kwargs):
     r"""

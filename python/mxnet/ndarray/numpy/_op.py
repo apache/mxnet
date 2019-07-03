@@ -31,6 +31,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'absolute', 'cbrt', 
            'arccos']
 
+
 @set_module('mxnet.ndarray.numpy')
 def absolute(x, out=None, **kwargs):
     r"""

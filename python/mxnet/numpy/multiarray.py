@@ -48,6 +48,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
            'sinh', 'cosh', 'log10', 'sqrt', 'absolute', 'cbrt', 'arccos']
 
+
 @set_module('mxnet.numpy')
 def absolute(x, out=None, **kwargs):
     """
