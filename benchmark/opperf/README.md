@@ -24,10 +24,11 @@ With this utility, for each MXNet operator you can get the following details:
 **Timing**
 1. Forward execution time
 2. Backward execution time
-3. Time spent for memory management
 
 **Memory**
-1. Total memory allocated
+1. Average and Max memory allocated
+
+NOTE: This is the `pool memory`. It does not reflect the exact memory requested by the operator.
 
 # Motivation
 

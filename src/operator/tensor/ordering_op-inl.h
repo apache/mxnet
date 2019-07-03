@@ -88,11 +88,7 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
     .add_enum("float16", mshadow::kFloat16)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
-#if MXNET_USE_INT64_TENSOR_SIZE == 1
-    .set_default(mshadow::kInt64)
-#else
-    .set_default(mshadow::kInt32)
-#endif
+    .set_default(mshadow::kFloat32)
     .describe("DType of the output indices when ret_typ is \"indices\" or \"both\". "
               "An error will be raised if the selected data type cannot precisely represent the "
               "indices.");
@@ -129,11 +125,7 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
     .add_enum("float16", mshadow::kFloat16)
     .add_enum("float32", mshadow::kFloat32)
     .add_enum("float64", mshadow::kFloat64)
-#if USE_INT64_TENSOR_SIZE == 1
-    .set_default(mshadow::kInt64)
-#else
-    .set_default(mshadow::kInt32)
-#endif
+    .set_default(mshadow::kFloat32)
     .describe("DType of the output indices. It is only valid when ret_typ is \"indices\" or"
               " \"both\". An error will be raised if the selected data type cannot precisely "
               "represent the indices.");
@@ -748,8 +740,17 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
   //  out_attr[0] -> stores value
   //  out_attr[1] -> stores indices
   if (out_size > 1) {
-    CHECK(type_assign(&(*out_attrs)[1], param.dtype))
-        << "Failed to set the type of ret_indices.";
+    if (param.ret_typ == topk_enum::kReturnValue) {
+#if MXNET_USE_INT64_TENSOR_SIZE == 1
+      CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt64))
+#else
+      CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32))
+#endif
+          << "Failed to set the type of ret_indices.";
+    } else {
+      CHECK(type_assign(&(*out_attrs)[1], param.dtype))
+          << "Failed to set the type of ret_indices.";
+    }
   }
   if (param.ret_typ == topk_enum::kReturnIndices) {
     CHECK(type_assign(&(*out_attrs)[0], param.dtype))
