@@ -134,6 +134,8 @@ COMMANDS = OrderedDict([
     ),
     ('[Docker] Website and docs build outputs to "docs/_build/html/"',
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh deploy_docs"),
+    ('[Docker] Julia docs build outputs markdown to "julia/docs/build/"',
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh deploy_jl_docs"),
     ('[Docker] sanity_check. Check for linting and code formatting and licenses.',
     [
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check",
