@@ -1538,9 +1538,12 @@ def radians(x, out=None, **kwargs):
 def reciprocal(x, out=None, **kwargs):
     r"""
     reciprocal(x, out=None)
-     Return the reciprocal of the argument, element-wise.
+
+    Return the reciprocal of the argument, element-wise.
+
     Calculates ``1/x``.
-     Parameters
+
+    Parameters
     ----------
     x : ndarray or scalar
         The values whose reciprocals are required.
@@ -1548,29 +1551,36 @@ def reciprocal(x, out=None, **kwargs):
         A location into which the result is stored.
         If provided, it must have the same shape as the input.
         If not provided or None, a freshly-allocated array is returned.
-     Returns
+
+    Returns
     -------
     y : ndarray or scalar
         Output array is same shape and type as x. This is a scalar if x is a scalar.
-     Examples
+
+    Examples
     --------
     >>> np.reciprocal(2.)
     0.5
     >>> x = np.array([1, 2., 3.33])
     >>> np.reciprocal(x)
     array([1.       , 0.5      , 0.3003003])
-     Notes
+
+    Notes
     -----
      .. note::
         This function is not designed to work with integers.
+
     For integer arguments with absolute value larger than 1 the result is
     always zero because of the way Python handles integer division.  For
     integer zero the result is an overflow.
-     The output `ndarray` has the same `ctx` as the input `ndarray`.
-     This function differs from the original `numpy.reciprocal
+
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+
+    This function differs from the original `numpy.reciprocal
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.reciprocal.html>`_ in
     the following aspects:
-     - Only support ndarray and scalar now.
+
+    - Only support ndarray and scalar now.
     - `where` argument is not supported.
     """
     return _unary_func_helper(x, _npi.reciprocal, _np.reciprocal, out=out, **kwargs)
@@ -1580,8 +1590,10 @@ def reciprocal(x, out=None, **kwargs):
 def square(x, out=None, **kwargs):
     r"""
     square(x, out=None)
-     Return the element-wise square of the input.
-     Parameters
+
+    Return the element-wise square of the input.
+
+    Parameters
     ----------
     x : ndarray or scalar
         The values whose squares are required.
@@ -1589,24 +1601,29 @@ def square(x, out=None, **kwargs):
         A location into which the result is stored.
         If provided, it must have the same shape as the input.
         If not provided or None, a freshly-allocated array is returned.
-     Returns
+
+    Returns
     -------
     y : ndarray or scalar
         Output array is same shape and type as x. This is a scalar if x is a scalar.
-     Examples
+
+    Examples
     --------
     >>> np.square(2.)
     4.0
     >>> x = np.array([1, 2., -1])
     >>> np.square(x)
     array([1., 4., 1.])
-     Notes
+
+    Notes
     -----
-     The output `ndarray` has the same `ctx` as the input `ndarray`.
-     This function differs from the original `numpy.square
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+
+    This function differs from the original `numpy.square
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.square.html>`_ in
     the following aspects:
-     - Only support ndarray and scalar now.
+
+    - Only support ndarray and scalar now.
     - `where` argument is not supported.
     - Complex input is not supported.
     """
@@ -1617,8 +1634,10 @@ def square(x, out=None, **kwargs):
 def arcsin(x, out=None, **kwargs):
     r"""
     arcsin(x, out=None)
-     Inverse sine, element-wise.
-     Parameters
+
+    Inverse sine, element-wise.
+
+    Parameters
     ----------
     x : ndarray or scalar
         `y`-coordinate on the unit circle.
@@ -1626,13 +1645,15 @@ def arcsin(x, out=None, **kwargs):
         A location into which the result is stored.
         If provided, it must have the same shape as the input.
         If not provided or None, a freshly-allocated array is returned.
-     Returns
+
+    Returns
     -------
     angle : ndarray or scalar
         Output array is same shape and type as x. This is a scalar if x is a scalar.
         The inverse sine of each element in `x`, in radians and in the
         closed interval ``[-pi/2, pi/2]``.
-     Examples
+
+    Examples
     --------
     >>> np.arcsin(1)     # pi/2
     1.5707963267948966
@@ -1640,23 +1661,30 @@ def arcsin(x, out=None, **kwargs):
     -1.5707963267948966
     >>> np.arcsin(0)
     0.0
-     Notes
+
+    Notes
     -----
-     `arcsin` is a multivalued function: for each `x` there are infinitely
+    `arcsin` is a multivalued function: for each `x` there are infinitely
     many numbers `z` such that :math:`sin(z) = x`.  The convention is to
     return the angle `z` whose real part lies in [-pi/2, pi/2].
-     For real-valued input data types, *arcsin* always returns real output.
+
+    For real-valued input data types, *arcsin* always returns real output.
     For each value that cannot be expressed as a real number or infinity,
     it yields ``nan`` and sets the `invalid` floating point error flag.
-     The inverse sine is also known as `asin` or sin^{-1}.
-     The output `ndarray` has the same `ctx` as the input `ndarray`.
-     This function differs from the original `numpy.arcsin
+
+    The inverse sine is also known as `asin` or sin^{-1}.
+
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+
+    This function differs from the original `numpy.arcsin
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
     the following aspects:
-     - Only support ndarray or scalar now.
+
+    - Only support ndarray or scalar now.
     - `where` argument is not supported.
     - Complex input is not supported.
-     References
+
+    References
     ----------
     Abramowitz, M. and Stegun, I. A., *Handbook of Mathematical Functions*,
     10th printing, New York: Dover, 1964, pp. 79ff.
