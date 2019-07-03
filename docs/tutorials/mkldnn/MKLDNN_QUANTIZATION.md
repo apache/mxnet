@@ -24,7 +24,7 @@ If you are not familiar with Apache/MXNet quantizaiton flow, please reference [q
 
 ## Installation and Prerequisites
 
-Installing MXNet with MKLDNN backend is an easy process. You can follow [How to build and install MXNet with MKL-DNN backend](https://mxnet.incubator.apache.org/tutorials/mkldnn/MKLDNN_README.html) to build and install MXNet from source. Also, you can install the release or nightly version via PyPi and pip directly by running:
+Installing MXNet with MKLDNN backend is an easy and essential process. You can follow [How to build and install MXNet with MKL-DNN backend](https://mxnet.incubator.apache.org/tutorials/mkldnn/MKLDNN_README.html) to build and install MXNet from source. Also, you can install the release or nightly version via PyPi and pip directly by running:
 
 ```
 # release version
@@ -33,13 +33,13 @@ pip install mxnet-mkl
 pip install mxnet-mkl --pre
 ```
 
-## Image Classification Quantization Demo
+## Image Classification Demo
 
 A quantization script [imagenet_gen_qsym_mkldnn.py](https://github.com/apache/incubator-mxnet/blob/master/example/quantization/imagenet_gen_qsym_mkldnn.py) has been designed to launch quantization for image-classification models. This script is  integrated with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html), so that all pre-trained models can be downloaded from Gluon-CV and then converted for quantization. For details, you can refer [Model Quantization with Calibration Examples](https://github.com/apache/incubator-mxnet/blob/master/example/quantization/README.md).
 
 ## Integrate Quantization Flow to Your Project
 
-It's important to note that the quantization flow works with the symbolic MXNet API. If you're using Gluon, you can first refer [Saving and Loading Gluon Models](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/save_load_params.html) to hybridize your computation graph and export it as a symbol before running quantization. The picture shows the quantization flow.
+Quantization flow works for both symbolic and Gluon models. If you're using Gluon, you can first refer [Saving and Loading Gluon Models](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/save_load_params.html) to hybridize your computation graph and export it as a symbol before running quantization.
 
 In general, the quantization flow includes 4 steps. The user can get the acceptable accuracy from step 1 to 3 with minimum effort. Most of thing in this stage is out-of-box and the data scientists and researchers only need to focus on how to represent data and layers in their model. After a quantized model is generated, you may want to deploy it online and the performance will be the next key point. Thus, step 4, calibration, can improve the performance a lot by reducing lots of runtime calculation.
 
@@ -47,7 +47,7 @@ In general, the quantization flow includes 4 steps. The user can get the accepta
 
 Now, we are going to take Gluon ResNet18 as an example to show how each step work.
 
-### Model Initialization
+### Initialize Model
 
 ```python
 import logging
@@ -72,7 +72,7 @@ First, we download resnet18-v1 model from gluon modelzoo and export it as a symb
 
 ![float32 model](fp32_raw.png)
 
-### Model Fusion
+#### Model Fusion
 
 ```python
 sym = sym.get_backend_symbol('MKLDNN_QUANTIZE')
@@ -85,14 +85,7 @@ It's important to add this line to enable graph fusion before quantization to ge
 
 ### Quantize Model
 
-Applying quantization by calling `quantiza_graph` api. Below are some descriptions for quantization apis and their params.
-
-| param              | type            | description|
-|--------------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| excluded_sym_names | list of strings | A list of strings representing the names of the symbols that users want to excluding from being quantized.|
-| calib_mode         | str             | If calib_mode='none', no calibration will be used and the thresholds for requantization after the corresponding layers will be calculated at runtime by calling min  and max operators. The quantized models generated in this mode are normally 10-20% slower than those with  calibrations during inference.<br>If calib_mode='naive', the min and max values of the layer outputs from a calibration dataset will be directly taken as the thresholds for quantization.<br>If calib_mode='entropy', the thresholds for quantization will be derived such that the KL divergence between the distributions of FP32 layer outputs and  quantized layer outputs is minimized based upon the calibration dataset. |
-| calib_layer        | function        | Given a layer's output name in string, return True or False for deciding whether to calibrate this layer.<br>If yes, the statistics of the layer's output will be collected; otherwise, no information of the layer's output will be collected.<br>If not provided, all the layers' outputs that need requantization will be collected.|
-| quantized_dtype    | str             | The quantized destination type for input data. Currently support 'int8', 'uint8' and 'auto'.<br>'auto' means automatically select output type according to calibration result.|
+A python interface `quantiza_graph` is provided for the user. Thus, it is very flexible for the data scientist to construct the expected models based on different requirements in a real deployment.
 
 ```python
 # quantize configs
@@ -115,13 +108,22 @@ mx.viz.plot_network(qsym)
 mx.model.save_checkpoint('quantized-resnet18_v1', 0, qsym, qarg_params, aux_params)
 ```
 
-Below is a quantized residual block without calibration. We can see `_contrib_requantize` operators are inserted ater `Convolution` without calibration information.
+By applying `quantize_graph` to the symbolic model, a new quantized model can be generated, named `qsym` along with its parameters. We can see `_contrib_requantize` operators are inserted after `Convolution` to conver the INT32 output to FP32. 
 
 ![none calibrated model](none_calib.png)
 
-### Evaluate/Tune INT8 Accuracy
+Below table gives some descriptions.
 
-Now, you get a pair of quantized symbol and params file, you can load them for inference. If you want to use gluon for int8 inference. You can load them as a SymbolBlock:
+| param              | type            | description|
+|--------------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| excluded_sym_names | list of strings | A list of strings representing the names of the symbols that users want to excluding from being quantized.|
+| calib_mode         | str             | If calib_mode='none', no calibration will be used and the thresholds for requantization after the corresponding layers will be calculated at runtime by calling min  and max operators. The quantized models generated in this mode are normally 10-20% slower than those with  calibrations during inference.<br>If calib_mode='naive', the min and max values of the layer outputs from a calibration dataset will be directly taken as the thresholds for quantization.<br>If calib_mode='entropy', the thresholds for quantization will be derived such that the KL divergence between the distributions of FP32 layer outputs and  quantized layer outputs is minimized based upon the calibration dataset. |
+| calib_layer        | function        | Given a layer's output name in string, return True or False for deciding whether to calibrate this layer.<br>If yes, the statistics of the layer's output will be collected; otherwise, no information of the layer's output will be collected.<br>If not provided, all the layers' outputs that need requantization will be collected.|
+| quantized_dtype    | str             | The quantized destination type for input data. Currently support 'int8', 'uint8' and 'auto'.<br>'auto' means automatically select output type according to calibration result.|
+
+### Evaluate & Tune
+
+Now, you get a pair of quantized symbol and params file for inference. For Gluon inference, only difference is to load model and params by a SymbolBlock as below example:
 
 ```python
 quantized_net = mx.gluon.SymbolBlock.imports('quantized-resnet18_v1-symbol.json', 'data', 'quantized-resnet18_v1-0000.params')
@@ -131,11 +133,11 @@ data = mx.nd.ones((batch_size,3,224,224))
 quantized_net(data)
 ```
 
-You can compare the int8 accuracy with float32. If the gap is big, you may need to exclude more layers and quantize the model again.
+Now, you can get the accuracy from a quantized network. Furthermore, you can try to select different layers or OPs to be quantized by `excluded_sym_names` parameter and figure out an acceptable accuracy.
 
-### Calibrate Model (optional)
+### Calibrate Model (optional for performance)
 
-The quantized model generated in previous steps can be very slow during inference since it will calculate min and max at runtime. We recommend using offline calibration for better performance by setting `calib_mode` to `naive` or `entropy` and then calling `set_monitor_callback` api to collect layer information with a subset of the validation datasets before int8 inference.
+The quantized model generated in previous steps can be very slow during inference since it will calculate min and max at runtime. We recommend using offline calibration for better performance by setting `calib_mode` to `naive` or `entropy`. And then calling `set_monitor_callback` api to collect layer information with a subset of the validation datasets before int8 inference.
 
 ```python
 # quantization configs
@@ -184,7 +186,9 @@ if logger is not None:
     logger.info("Collected statistics from %d batches with batch_size=%d"
                 % (num_batches, batch_size))
 ```
+
 After that, layer information will be filled into the `collector` returned by `quantize_graph` api. Then, you need to write the layer information into int8 model by calling `calib_graph` api.
+
 
 ```python
 # write scaling factor into quantized symbol
