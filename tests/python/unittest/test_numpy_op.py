@@ -1162,6 +1162,69 @@ def test_np_broadcast_arrays():
     pass
 
 
+@with_seed()
+@npx.use_np_shape
+def test_np_logspace():
+    configs = [
+        (0.0, 1.0, 20),
+        (-2, 4, 30),
+        (5.234324, 8.98324, 324),
+        (2, 10, 100)
+    ]
+    exception_configs = [
+        (0, 10, -1),
+        (0, 1, 2.5),
+    ]
+    base_configs = [0, 1, 10, 200]
+    dtypes = ['int32', 'float16', 'float32', 'float64', None]
+    for config in configs:
+        for dtype in dtypes:
+            for endpoint in [ True]:
+                for base in base_configs:
+                    if isinstance(config, tuple):
+                        mx_ret = np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        np_ret = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                    else:
+                        mx_ret = np.logspace(config, endpoint=endpoint, base=base, dtype=dtype)
+                        np_ret = _np.logspace(config, endpoint=endpoint, base=base, dtype=dtype)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
+    # check for exception input
+    for config in exception_configs:
+        assertRaises(MXNetError, np.logspace, *config)
+
+    @npx.use_np
+    class TestLogspace(HybridBlock):
+        def __init__(self, start, stop, num=50, endpoint=None, base=50.0, dtype=None, axis=0):
+            super(TestLogspace, self).__init__()
+            self._start = start
+            self._stop = stop
+            self._num = num
+            self._endpoint = endpoint
+            self._base = base
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.logspace(self._start, self._stop, self._num, \
+                                         self._endpoint, self._base, self._dtype)
+
+    for dtype in dtypes:
+        x = np.zeros(shape=(), dtype=dtype)
+        for config in configs:
+            for hybridize in [False, True]:
+                for endpoint in [False, True]:
+                    for base in base_configs:
+                        if isinstance(config, tuple):
+                            net = TestLogspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                            np_out = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        else:
+                            net = TestLogspace(config, endpoint=endpoint, base=base, dtype=dtype)
+                            np_out = _np.logspace(config, endpoint=endpoint, base=base, dtype=dtype)
+                        if hybridize:
+                            net.hybridize()
+                    mx_out = net(x)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -43,5 +43,8 @@ NNVM_REGISTER_OP(_np_ones_like)
 NNVM_REGISTER_OP(_npi_arange)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_logspace)
+.set_attr<FCompute>("FCompute<gpu>", LogspaceCompute<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

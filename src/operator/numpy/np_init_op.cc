@@ -28,6 +28,8 @@
 namespace mxnet {
 namespace op {
 
+DMLC_REGISTER_PARAMETER(LogspaceParam);
+
 inline bool NumpyRangeShape(const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector* in_shapes,
                             mxnet::ShapeVector* out_shapes) {
@@ -133,6 +135,16 @@ NNVM_REGISTER_OP(_npi_arange)
 .set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu>)
 .add_arguments(RangeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_logspace)
+    .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
+    .set_num_inputs(0)
+    .set_num_outputs(1)
+    .set_attr_parser(ParamParser<LogspaceParam>)
+    .set_attr<mxnet::FInferShape>("FInferShape", LogspaceShape)
+    .set_attr<nnvm::FInferType>("FInferType", InitType<LogspaceParam>)
+    .set_attr<FCompute>("FCompute<cpu>", LogspaceCompute<cpu>)
+    .add_arguments(RangeParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
