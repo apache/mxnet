@@ -35,7 +35,6 @@ inline bool NumpyDiagflatOpShape(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(out_attrs->size(), 1U); // should have only one output
 
   auto &in_attr = (*in_attrs)[0];
-  auto &out_attr = (*out_attrs)[0];
 
   // calc the diagnal length
   // should work for scalar
@@ -46,7 +45,7 @@ inline bool NumpyDiagflatOpShape(const nnvm::NodeAttrs &attrs,
 
   // adjust the output diagnal length with k
   const NumpyDiagflatParam &param = nnvm::get<NumpyDiagflatParam>(attrs.parsed);
-  diag_len += param.k;
+  diag_len += abs(param.k);
 
   mxnet::TShape tshape({diag_len, diag_len});
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
