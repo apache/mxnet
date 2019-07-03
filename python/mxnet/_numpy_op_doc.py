@@ -366,3 +366,98 @@ def  _np_copy(a, out=None):
     array([0.])
     """
     pass
+
+
+def _np_bitwise_and():
+    """
+    Compute the bit-wise AND of two arrays element-wise.
+
+    Computes the bit-wise AND of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``&``.
+
+    Parameters
+    ----------
+    x1, x2 : ndarray or boolean
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    where : array_like, optional
+        Values of True indicate to calculate the ufunc at that position, values
+        of False indicate to leave the value in the output alone.
+    **kwargs
+        For other keyword-only arguments, see the
+        :ref:`ufunc docs <ufuncs.kwargs>`.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    See Also
+    --------
+    bitwise_or
+    bitwise_xor
+
+    Notes
+    -------
+    This function differs from the original `numpy.copy
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.copy.html>`_ in
+    the following aspects:
+    - Input type does not support Python native iterables(list, tuple, ...).
+
+
+    Examples
+    --------
+    The number 13 is represented by ``00001101``.  Likewise, 17 is
+    represented by ``00010001``.  The bit-wise AND of 13 and 17 is
+    therefore ``000000001``, or 1:
+
+    >>> x1 = np.array(13)
+    >>> x2 = np.array(17)
+    >>> np.bitwise_and(x1, x2)
+    array(1.)
+
+    >>> x1 = np.array([True, False, False])
+    >>> x2 = np.array([True, True, False])
+    >>> np.bitwise_and(x1, x2)
+    array([1., 0., 0.])
+
+    Only support ints as input dtype.
+
+    >>> x1 = np.array(13.0)
+    >>> x2 = np.array(17.0)
+    >>> np.bitwise_and(x1, x2)
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+    TypeError: ufunc 'bitwise_and' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''
+
+    Boolean type as input:
+
+    >>> np.bitwise_and(True, False)
+    False
+
+
+
+
+
+    >>> np.bitwise_and(14, 13)
+    12
+    >>> np.binary_repr(12)
+    '1100'
+    >>> np.bitwise_and([14,3], 13)
+    array([12,  1])
+
+    >>> np.bitwise_and([11,7], [4,25])
+    array([0, 1])
+    >>> np.bitwise_and(np.array([2,5,255]), np.array([3,14,16]))
+    array([ 2,  4, 16])
+    >>> np.bitwise_and([True, True], [False, True])
+    array([False,  True])
+
+    """
+    pass
