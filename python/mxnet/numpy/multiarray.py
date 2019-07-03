@@ -48,7 +48,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort', 'hstack', 'tensordot']
+           'argsort', 'hstack', 'tensordot', 'invert']
 
 
 @set_module('mxnet.numpy')
@@ -2766,7 +2766,6 @@ def rint(x, out=None, **kwargs):
     out : ndarray or None
         A location into which the result is stored.
         If provided, it must have the same shape and type as the input.
-        If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------
@@ -2791,6 +2790,48 @@ def rint(x, out=None, **kwargs):
     """
     return _mx_nd_np.rint(x, out=out, **kwargs)
 
+def invert(x, out=None, **kwargs):
+    """
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python operator ~.
+    For signed integer inputs, the two’s complement is returned.
+    In a two’s-complement system negative numbers are represented
+    by the two’s complement of the absolute value.
+    This is the most common method of representing signed integers on computers [1].
+    A N-bit two’s-complement system can represent every integer in the range -2^{N-1} to +2^{N-1}-1.
+
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Bitwisely inverted elements of the original array.
+
+    Examples
+    --------
+    >>> np.invert(np.array([13], dtype=np.uint8))
+    array([242], dtype=uint8)
+
+    Notes
+    -----
+    This function differs from the original `numpy.invert
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.invert.html>`_ in
+    the following way(s):
+
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    """
+    return _mx_nd_np.invert(x, out=out, **kwargs)
 
 @set_module('mxnet.numpy')
 def log2(x, out=None, **kwargs):
@@ -2905,16 +2946,6 @@ def radians(x, out=None, **kwargs):
     y : ndarray
         The corresponding radian values. This is a scalar if x is a scalar.
 
-    Notes
-    -----
-    This function differs from the original `numpy.radians
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
-    the following way(s):
-
-    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
-    - broadcasting to `out` of different shape is currently not supported
-    - when input is plain python numerics, the result will not be stored in the `out` param
-
     Examples
     --------
     >>> deg = np.arange(12.) * 30.
@@ -2922,6 +2953,12 @@ def radians(x, out=None, **kwargs):
     array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
            3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
            dtype=float32)
+
+    Notes
+    -----
+    This function differs from the original `numpy.radians
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
+        Result. This is a scalar if x is a scalar.
 
     """
     return _mx_nd_np.radians(x, out=out, **kwargs)

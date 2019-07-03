@@ -61,6 +61,8 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_square, mshadow_op::square);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sqrt, mshadow_op::square_root);
 
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_invert, mshadow_op::invert);
+
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_np_cbrt, mshadow_op::cube_root);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_exp, mshadow_op::exp);
