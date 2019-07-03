@@ -47,7 +47,7 @@ In general, the quantization flow includes 4 steps. The user can get the accepta
 
 Now, we are going to take Gluon ResNet18 as an example to show how each step work.
 
-### Model Initialization
+### Initialize Model
 
 ```python
 import logging
@@ -72,7 +72,7 @@ First, we download resnet18-v1 model from gluon modelzoo and export it as a symb
 
 <center><img src="fp32_raw.svg" alt="float32 model" width="500"/></center>
 
-### Model Fusion
+#### Model Fusion
 
 ```python
 sym = sym.get_backend_symbol('MKLDNN_QUANTIZE')
@@ -85,14 +85,7 @@ It's important to add this line to enable graph fusion before quantization to ge
 
 ### Quantize Model
 
-Applying quantization by calling `quantiza_graph` api. Below are some descriptions for quantization apis and their params.
-
-| param              | type            | description|
-|--------------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| excluded_sym_names | list of strings | A list of strings representing the names of the symbols that users want to excluding from being quantized.|
-| calib_mode         | str             | If calib_mode='none', no calibration will be used and the thresholds for requantization after the corresponding layers will be calculated at runtime by calling min  and max operators. The quantized models generated in this mode are normally 10-20% slower than those with  calibrations during inference.<br>If calib_mode='naive', the min and max values of the layer outputs from a calibration dataset will be directly taken as the thresholds for quantization.<br>If calib_mode='entropy', the thresholds for quantization will be derived such that the KL divergence between the distributions of FP32 layer outputs and  quantized layer outputs is minimized based upon the calibration dataset. |
-| calib_layer        | function        | Given a layer's output name in string, return True or False for deciding whether to calibrate this layer.<br>If yes, the statistics of the layer's output will be collected; otherwise, no information of the layer's output will be collected.<br>If not provided, all the layers' outputs that need requantization will be collected.|
-| quantized_dtype    | str             | The quantized destination type for input data. Currently support 'int8', 'uint8' and 'auto'.<br>'auto' means automatically select output type according to calibration result.|
+A python interface `quantiza_graph` is provided for the user. Thus, it is very flexible for the data scientist to construct the expected models based on different requirements in a real deployment.
 
 ```python
 # quantize configs
@@ -115,9 +108,18 @@ mx.viz.plot_network(qsym)
 mx.model.save_checkpoint('quantized-resnet18_v1', 0, qsym, qarg_params, aux_params)
 ```
 
-Below is a quantized residual block without calibration. We can see `_contrib_requantize` operators are inserted ater `Convolution` without calibration information.
+By applying `quantize_graph` to the symbolic model, a new quantized model can be generated, named `qsym` along with its parameters. We can see `_contrib_requantize` operators are inserted after `Convolution` to conver the INT32 output to FP32. 
 
 <center><img src="none_calib.svg" alt="none calibrated model" width="500"/></center>
+
+Below table gives some descriptions.
+
+| param              | type            | description|
+|--------------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| excluded_sym_names | list of strings | A list of strings representing the names of the symbols that users want to excluding from being quantized.|
+| calib_mode         | str             | If calib_mode='none', no calibration will be used and the thresholds for requantization after the corresponding layers will be calculated at runtime by calling min  and max operators. The quantized models generated in this mode are normally 10-20% slower than those with  calibrations during inference.<br>If calib_mode='naive', the min and max values of the layer outputs from a calibration dataset will be directly taken as the thresholds for quantization.<br>If calib_mode='entropy', the thresholds for quantization will be derived such that the KL divergence between the distributions of FP32 layer outputs and  quantized layer outputs is minimized based upon the calibration dataset. |
+| calib_layer        | function        | Given a layer's output name in string, return True or False for deciding whether to calibrate this layer.<br>If yes, the statistics of the layer's output will be collected; otherwise, no information of the layer's output will be collected.<br>If not provided, all the layers' outputs that need requantization will be collected.|
+| quantized_dtype    | str             | The quantized destination type for input data. Currently support 'int8', 'uint8' and 'auto'.<br>'auto' means automatically select output type according to calibration result.|
 
 ### Evaluate/Tune INT8 Accuracy
 
