@@ -150,6 +150,10 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_power"});
 
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_lcm)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::lcm>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_maximum)
 .describe(R"code()code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>);
@@ -197,6 +201,23 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_maximum_scalar)
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_minimum_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_minimum_scalar"});
+
+NNVM_REGISTER_OP(_npi_lcm_scalar)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser([](NodeAttrs* attrs) {
+    attrs->parsed = std::stod(attrs->dict["scalar"]);
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "source input")
+.add_argument("scalar", "int", "scalar input")
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::lcm>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet

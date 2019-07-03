@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot', 'lcm']
 
 
 def _num_outputs(sym):
@@ -1130,6 +1130,53 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     array(0.55)
     """
     return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def lcm(x1, x2, out=None):
+    """
+    Returns the lowest common multiple of ``|x1|`` and ``|x2|``
+
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalar values
+        The arrays for computing lowest common multiple. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which may be the shape of
+        one or the other).
+
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol
+        The lowest common multiple of the absolute value of the inputs
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    Examples
+    --------
+    >>> np.lcm(12, 20)
+    60
+    >>> np.lcm(np.arange(6, dtype=int), 20)
+    array([ 0, 20, 20, 60, 20, 20], dtype=int64)
+    """
+    if isinstance(x1, numeric_types):
+        if isinstance(x2, numeric_types):
+            return _np.lcm(x1, x2, out=out)
+        else:
+            if x2.dtype in (_np.int8, _np.int32, _np.int64):
+                return _npi.lcm_scalar(x2, x1, out=out)
+            else:
+                raise TypeError('dtype {} not supported'.format(str(x2.dtype)))
+    elif isinstance(x2, numeric_types):
+        if x1.dtype in (_np.int8, _np.int32, _np.int64):
+            return _npi.lcm_scalar(x1, x2, out=out)
+        else:
+            raise TypeError('dtype {} not supported'.format(str(x1.dtype)))
+    elif isinstance(x2, Symbol):
+        return _npi.lcm(x1, x2, out=out)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x2))))
 
 
 @set_module('mxnet.symbol.numpy')

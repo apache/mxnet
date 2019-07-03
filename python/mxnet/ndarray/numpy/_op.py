@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort', 'hstack', 'tensordot']
+           'argsort', 'hstack', 'tensordot', 'lcm']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -777,6 +777,60 @@ def power(x1, x2, out=None):
         This is a scalar if both x1 and x2 are scalars.
     """
     return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def lcm(x1, x2, out=None):
+    """
+    Returns the lowest common multiple of ``|x1|`` and ``|x2|``
+
+    Parameters
+    ----------
+    x1, x2 : ndarrays or scalar values
+        The arrays for computing lowest common multiple. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which may be the shape of
+        one or the other).
+
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The lowest common multiple of the absolute value of the inputs
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    See Also
+    --------
+    gcd : The greatest common divisor
+
+    Examples
+    --------
+    >>> np.lcm(12, 20)
+    60
+    >>> np.lcm(np.arange(6, dtype=int), 20)
+    array([ 0, 20, 20, 60, 20, 20], dtype=int64)
+    """
+    from ...numpy import ndarray
+    if isinstance(x1, numeric_types):
+        if isinstance(x2, numeric_types):
+            return _np.lcm(x1, x2, out=out)
+        else:
+            if x2.dtype in (_np.int8, _np.int32, _np.int64):
+                return _npi.lcm_scalar(x2, x1, out=out)
+            else:
+                raise TypeError('dtype {} not supported'.format(str(x2.dtype)))
+    elif isinstance(x2, numeric_types):
+        if x1.dtype in (_np.int8, _np.int32, _np.int64):
+            return _npi.lcm_scalar(x1, x2, out=out)
+        else:
+            raise TypeError('dtype {} not supported'.format(str(x1.dtype)))
+    elif isinstance(x2, ndarray):
+        return _npi.lcm(x1, x2, out=out)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x2))))
 
 
 @set_module('mxnet.ndarray.numpy')

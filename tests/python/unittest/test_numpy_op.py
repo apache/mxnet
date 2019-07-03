@@ -58,7 +58,7 @@ def test_np_tensordot():
                 b_axes_summed = b_axes_summed,
 
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         a_axes_remained = []
         for i in range(a.ndim):
@@ -254,7 +254,7 @@ def test_np_dot():
         ((3, 4, 5), (5, )),  # Case 4
         ((3, 4, 5), (5, 2)), # Case 5
         ((5,), (5, 2)),
-        ((3, 5, 4), (5, 4, 3)),  
+        ((3, 5, 4), (5, 4, 3)),
         ((3, 4), (5, 4, 3)),
         ((4,), (5, 4, 3))
     ]
@@ -1007,15 +1007,15 @@ def test_np_argsort():
             return F.np.argsort(a, self._axis)
 
     shapes = [
-        (), 
-        (1,), 
+        (),
+        (1,),
         (5,4),
         (5,0,4),
         (5,0,0),
         (0,0,5),
         (0,0,0),
         (5,3,4)
-    ] 
+    ]
     for hybridize in [True, False]:
         for shape in shapes:
             for ax in list(range(len(shape))) + [-1, None]:
@@ -1131,7 +1131,7 @@ def test_np_hstack():
         if len(shape) == 0:
             l = random.randint(0,3)
             if l == 0:
-                return shape 
+                return shape
             else:
                 return (l,)
         shape_lst = list(shape)
@@ -1382,6 +1382,51 @@ def test_np_tile():
                 net.hybridize()
             ret_mx = net(data_mx)
             assert same(ret_mx.asnumpy(), ret_np)
+
+
+@with_seed()
+@npx.use_np_shape
+def test_np_lcm():
+    shapes = [
+        ((3, 1), (3,)),
+        ((3, 1), (3, 5)),
+        ((1, 4), (3, 1)),
+        ((), ()),
+        ((4, 0), ()),
+        ((3, 4, 5), ()),
+        ((), (3, 4, 5)),
+        ((3, 4, 5), (3, 1, 5)),
+        ((5, 1), (5, 2))
+    ]
+
+    @npx.use_np_shape
+    class TestLcm(HybridBlock):
+        def __init__(self, ):
+            super(TestLcm, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.lcm(x1, x2)
+
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_lcm = TestLcm()
+            if hybridize:
+                test_lcm.hybridize()
+
+            x1 = rand_ndarray(shape[0]).astype(_np.int32).as_np_ndarray()
+            x2 = rand_ndarray(shape[1]).astype(_np.int32).as_np_ndarray()
+
+            np_out = _np.lcm(x1.asnumpy(), x2.asnumpy())
+            with mx.autograd.record():
+                mx_out = test_lcm(x1, x2)
+
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            # Test imperative once again
+            mx_out = np.lcm(x1, x2)
+            np_out = _np.lcm(x1.asnumpy(), x2.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
