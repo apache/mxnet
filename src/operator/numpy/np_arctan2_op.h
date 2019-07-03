@@ -8,29 +8,9 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../tensor/init_op.h"
-#include "../tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet{
 namespace op{
-
-
-inline bool Arctan2OpType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int>* in_attrs,
-                          std::vector<int>* out_attrs){
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, in_attrs->at(1));
-  TYPE_ASSIGN_CHECK(*in_attrs, 1, in_attrs->at(0));
-  //check if it is float16, float32 or float64
-  if(in_attrs->at(0) >=0 && in_attrs->at(0) <= 2){
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  }else{
-    //assign double to it
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, 1);
-  }
-  return out_attrs->at(0) != -1;
-}
 
 template<int req>
 struct arctan2_forward {

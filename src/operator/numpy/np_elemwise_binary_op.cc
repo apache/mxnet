@@ -1,27 +1,31 @@
 #include "./np_arctan2_op.h"
+#include <mxnet/base.h>
+#include "../mshadow_op.h"
+#include "../operator_common.h"
+#include "../tensor/elemwise_binary_op.h"
+#include "../tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
+inline bool Arctan2OpType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs){
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, in_attrs->at(1));
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, in_attrs->at(0));
+  //check if it is float16, float32 or float64
+  if(in_attrs->at(0) >=0 && in_attrs->at(0) <= 2){
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  }else{
+    //assign double to it
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, 1);
+  }
+  return out_attrs->at(0) != -1;
+}
+
 NNVM_REGISTER_OP(_np_arctan2)
-.describe(R"code(This operators implements the arctan2 function:
-.. math::
-
-    f(x1, x2) = arctan(x1/x2)
-
-where :math:`x1` and `x2` are two input tensor and all oprations
-in the function are element-wise.
-
-Example:
-
-  .. code-block:: python
-     :emphasize-lines: 
-     x1 = [1, -1]
-     x2 = [1, 1]
-     y = arctan2(x1, x2)
-     y = [0.7853982， -0.7853982]
-
-
-)code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
