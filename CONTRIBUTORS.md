@@ -244,6 +244,7 @@ List of Contributors
 * [Shoubhik Bhattacharya](https://github.com/shoubhik)
 * [Rohit Srivastava](https://github.com/access2rohit)
 * [Caner Turkmen](https://github.com/canerturkmen)
+* [Disi A](https://github.com/adis300)
 
 Label Bot
 ---------
