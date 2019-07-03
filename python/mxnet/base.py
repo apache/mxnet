@@ -740,8 +740,8 @@ ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 try:
-    libtvmop = libinfo.find_lib_path("libtvmop")
-    check_call(_LIB.MXLoadTVMOp(c_str(libtvmop[0])))
+    _LIB_TVM_OP = libinfo.find_lib_path("libtvmop")
+    check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
 except:
     pass
 
