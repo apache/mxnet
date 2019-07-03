@@ -2331,6 +2331,40 @@ def test_math():
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
 
+@with_seed()
+@use_np
+def test_np_around():
+    class TestAround(HybridBlock):
+        def __init__(self, decimals):
+            super(TestAround, self).__init__()
+            # necessary initializations
+            self.decimals = decimals
+
+        def hybrid_forward(self, F, x):
+            return F.np.around(x, self.decimals)
+
+    shapes = [(), (1,), (1, 1), (1, 2, 3), (1, 0), (3, 0, 2)] # test_shapes
+    types = ['int32', 'int64', 'float32', 'double']
+    for hybridize in [True, False]:
+        for oneType in types:
+            rtol=1e-3
+            atol=1e-5
+            for shape in shapes:
+                for d in range(-10, 11):
+                    test_around = TestAround(d)
+                    if hybridize:
+                        test_around.hybridize()
+                    x = rand_ndarray(shape, dtype=oneType, ctx=npx.gpu(0)).as_np_ndarray()
+                    np_out = np.around(x.asnumpy(), d)
+                    mx_out = test_around(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    mx_out = mx.np.around(x, d)
+                    np_out = np.around(x.asnumpy(), d)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

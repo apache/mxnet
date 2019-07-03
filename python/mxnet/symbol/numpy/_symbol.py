@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot', 'around']
 
 
 def _num_outputs(sym):
@@ -2065,7 +2065,7 @@ def degrees(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
 
-
+@set_module('mxnet.symbol.numpy')
 def rint(x, out=None, **kwargs):
     """
     Round elements of the array to the nearest integer.
@@ -2357,5 +2357,47 @@ def tensordot(a, b, axes=2):
 
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
 
+
+@set_module('mxnet.symbol.numpy')    
+def around(x, decimals=0, out=None, **kwargs):
+    r"""
+    around(x, decimals=0, out=None)
+
+    Evenly round to the given number of decimals.
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input data.
+    decimals : int, optional
+        Number of decimal places to round to (default: 0).  If
+        decimals is negative, it specifies the number of positions to
+        the left of the decimal point.
+    out : _Symbol, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    rounded_array : _Symbol or scalar
+        An array of the same type as `x`, containing the rounded values.
+        A reference to the result is returned.
+
+    Notes
+    -----
+    For values exactly halfway between rounded decimal values, NumPy
+    rounds to the nearest even value. Thus 1.5 and 2.5 round to 2.0,
+    -0.5 and 0.5 round to 0.0, etc. 
+
+    This function differs from the original numpy.prod in the following aspects:
+
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot support complex-valued number.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
 
 _set_np_symbol_class(_Symbol)
