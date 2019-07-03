@@ -61,6 +61,11 @@ struct numpy_diagflat {
                                   int k) {
     using namespace mxnet_op;
     using namespace mshadow;
+
+    if (diag_len == 0) {
+      return;
+    }
+
     div_t divmod;
     if (k >= 0) {
       divmod = div(i - k, diag_len + 1);
