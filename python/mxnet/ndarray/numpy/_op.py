@@ -34,7 +34,7 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'hanning', 'hamming', 'blackman', 'flip']
+           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2896,3 +2896,60 @@ def flip(m, axis=None, out=None):
         return _npi.flip(m, axis, out=out)
     else:
         raise TypeError('type {} not supported'.format(str(type(m))))
+
+
+@set_module('mxnet.ndarray.numpy')
+def around(x, decimals=0, out=None, **kwargs):
+    r"""
+    around(x, decimals=0, out=None)
+
+    Evenly round to the given number of decimals.
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input data.
+    decimals : int, optional
+        Number of decimal places to round to (default: 0).  If
+        decimals is negative, it specifies the number of positions to
+        the left of the decimal point.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    rounded_array : ndarray or scalar
+        An array of the same type as `x`, containing the rounded values.
+        A reference to the result is returned.
+
+    Notes
+    -----
+    For values exactly halfway between rounded decimal values, NumPy
+    rounds to the nearest even value. Thus 1.5 and 2.5 round to 2.0,
+    -0.5 and 0.5 round to 0.0, etc.
+
+    This function differs from the original numpy.prod in the following aspects:
+
+        - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
+        - Cannot support complex-valued number.
+
+    Examples
+    --------
+    >>> np.around([0.37, 1.64])
+    array([ 0.,  2.])
+    >>> np.around([0.37, 1.64], decimals=1)
+    array([ 0.4,  1.6])
+    >>> np.around([.5, 1.5, 2.5, 3.5, 4.5]) # rounds to nearest even value
+    array([ 0.,  2.,  2.,  4.,  4.])
+    >>> np.around([1, 2, 3, 11], decimals=1) # ndarray of ints is returned
+    array([ 1,  2,  3, 11])
+    >>> np.around([1, 2, 3, 11], decimals=-1)
+    array([ 0,  0,  0, 10])
+    """
+    from ...numpy import ndarray
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, ndarray):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
