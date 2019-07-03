@@ -121,9 +121,9 @@ Below table gives some descriptions.
 | calib_layer        | function        | Given a layer's output name in string, return True or False for deciding whether to calibrate this layer.<br>If yes, the statistics of the layer's output will be collected; otherwise, no information of the layer's output will be collected.<br>If not provided, all the layers' outputs that need requantization will be collected.|
 | quantized_dtype    | str             | The quantized destination type for input data. Currently support 'int8', 'uint8' and 'auto'.<br>'auto' means automatically select output type according to calibration result.|
 
-### Evaluate/Tune INT8 Accuracy
+### Evaluate & Tune
 
-Now, you get a pair of quantized symbol and params file, you can load them for inference. If you want to use gluon for int8 inference. You can load them as a SymbolBlock:
+Now, you get a pair of quantized symbol and params file for inference. For Gluon inference, only difference is to load model and params by a SymbolBlock as below example:
 
 ```python
 quantized_net = mx.gluon.SymbolBlock.imports('quantized-resnet18_v1-symbol.json', 'data', 'quantized-resnet18_v1-0000.params')
@@ -133,11 +133,11 @@ data = mx.nd.ones((batch_size,3,224,224))
 quantized_net(data)
 ```
 
-You can compare the int8 accuracy with float32. If the gap is big, you may need to exclude more layers and quantize the model again.
+Now, you can get the accuracy from a quantized network. Furthermore, you can try to select different layers or OPs to be quantized by `excluded_sym_names` parameter and figure out an acceptable accuracy.
 
-### Calibrate Model (optional)
+### Calibrate Model (optional for performance)
 
-The quantized model generated in previous steps can be very slow during inference since it will calculate min and max at runtime. We recommend using offline calibration for better performance by setting `calib_mode` to `naive` or `entropy` and then calling `set_monitor_callback` api to collect layer information with a subset of the validation datasets before int8 inference.
+The quantized model generated in previous steps can be very slow during inference since it will calculate min and max at runtime. We recommend using offline calibration for better performance by setting `calib_mode` to `naive` or `entropy`. And then calling `set_monitor_callback` api to collect layer information with a subset of the validation datasets before int8 inference.
 
 ```python
 # quantization configs
@@ -186,7 +186,9 @@ if logger is not None:
     logger.info("Collected statistics from %d batches with batch_size=%d"
                 % (num_batches, batch_size))
 ```
+
 After that, layer information will be filled into the `collector` returned by `quantize_graph` api. Then, you need to write the layer information into int8 model by calling `calib_graph` api.
+
 
 ```python
 # write scaling factor into quantized symbol
