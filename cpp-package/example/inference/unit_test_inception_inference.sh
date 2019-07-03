@@ -19,6 +19,7 @@
 
 # Downloading the data and model
 mkdir -p model
+
 python - <<EOF
 import mxnet as mx
 import gluoncv
