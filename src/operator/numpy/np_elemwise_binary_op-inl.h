@@ -24,8 +24,8 @@
  * \brief Function definition of greatest common divisor 
  */
 
-#ifndef MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
-#define MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
+#ifndef MXNET_OPERATOR_NUMPY_NP_BINARY_OP_INL_H_
+#define MXNET_OPERATOR_NUMPY_NP_BINARY_OP_INL_H_
 
 #include <vector>
 #include <utility>
@@ -110,4 +110,4 @@ void GcdOpForward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_NP_GCD_OP_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_BINARY_OP_INL_H_

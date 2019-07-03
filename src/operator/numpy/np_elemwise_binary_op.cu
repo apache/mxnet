@@ -22,7 +22,7 @@
  * \file np_elemwise_binary_gcd_op.cu.cu
  * \brief GPU Implementation of greatest common divisor.
  */
-#include "np_elemwise_binary_gcd_op-inl.h"
+#include "np_elemwise_binary_op-inl.h"
 
 namespace mxnet {
 namespace op {

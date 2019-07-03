@@ -23,7 +23,7 @@
  * \brief CPU Implementation of greatest common divisor.
  */
 
-#include "np_elemwise_binary_gcd_op-inl.h"
+#include "np_elemwise_binary_op-inl.h"
 #include <string>
 #include <utility>
 
