@@ -19,7 +19,7 @@
 
 MXNet supports the Ubuntu Arch64 based operating system so you can run MXNet on NVIDIA Jetson Devices, such as the [TX2](http://www.nvidia.com/object/embedded-systems-dev-kits-modules.html) or [Nano](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit).
 
-These instructions will walk through how to build MXNet and install the corresponding language bindings. Python is the default binding, but you may also try out one of the many language bindings MXNet has to offer. These instructions also cover how to setup MXNet's Java Inference API.
+These instructions will walk through how to build MXNet and install MXNet's Python language binding. 
 
 For the purposes of this install guide we will assume that CUDA is already installed on your Jetson device. The disk image provided by NVIDIA's getting started guides will have the Jetson toolkit preinstalled, and this also includes CUDA. You should double check what versions are installed and which version you plan to use.
 
@@ -60,22 +60,6 @@ sudo pip install \
 ```
 
 If you plan to cross-compile you will need to install these dependencies on that computer as well.
-
-<!--
-### Java API
-
-To use the Java inference API you only need the following dependencies:
-
-```
-sudo apt install \
-                        maven \
-                        openjdk-8-java
-```
-
-You may try to build the Java API .jar file yourself. If so, you will need these dependencies on that computer as well.
-
-**Note:** The `mvn install` option for building the Java API .jar after compiling the MXNet binary files is only available on MXNet >= v1.5.0.
--->
 
 ### Configure CUDA
 
@@ -131,48 +115,6 @@ install the dependencies in the prerequisites section, then run the pip wheel.
 ```bash
 sudo pip install mxnet-1.4.0-cp36-cp36m-linux_aarch64.whl
 ```
-
-<!--
-## Install MXNet for Java
-
-The MXNet Java API for Jetson devices is still experimental. For best results try with the master branch.
-
-### Use a pre-built jar
-
-The package for Jetson is not currently on Maven, but you can download it from S3 instead.
-The following jar was cross-compiled for Jetson using MXNet v1.4.1.
-* https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.1/mxnet-full_2.11-INTERNAL.jar
-
-Place the file on your Jetson where your project can find it.
-
-### Build your own jar
-
-You can build a jar from any pre-compiled MXNet binary.
-Follow the build from source instructions first. Once you have build the `libmxnet.so` file you are ready to build your jar files.
-
-```bash
-cd $MXNET_HOME/scala-package
-mvn package
-```
-
-This will generate a file named similar to `src/lib/mxnet-full_2.11-INTERNAL.jar`.
-
-### Use the MXNet-Java jar in your project
-
-MXNet-Java can be easily included in your Maven managed project.
-The following is an example entry for your project's `.pom` file.
-
-```
-<dependency>
-  <groupId>org.apache.mxnet</groupId>
-  <artifactId>mxnet-full_2.11-INTERNAL</artifactId>
-  <version>1.4.1</version>
-  <systemPath>${basedir}/src/lib/mxnet-full_2.11-INTERNAL.jar</systemPath>
-</dependency>
-```
-
-Refer to the [Java setup](https://mxnet.incubator.apache.org/versions/master/install/java_setup.html) page for further information.
--->
 
 ## Use a Pre-compiled MXNet Binary
 
