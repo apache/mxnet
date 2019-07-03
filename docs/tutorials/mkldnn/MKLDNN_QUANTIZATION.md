@@ -70,7 +70,7 @@ mx.viz.plot_network(sym)
 ```
 First, we download resnet18-v1 model from gluon modelzoo and export it as a symbol. You can visualize float32 model. Below is a raw residual block.
 
-<img src="fp32_raw.svg" alt="float32 model" width="500"/>
+![float32 model](fp32_raw.svg)
 
 ### Model Fusion
 
@@ -81,7 +81,7 @@ mx.viz.plot_network(sym)
 ```
 It's important to add this line to enable graph fusion before quantization to get better performance. Below is a fused residual block. Batchnorm, Activation and elemwise_add are fused into Convolution.
 
-<img src="fp32_fusion.svg" alt="float32 fused model" width="500"/>
+![float32 fused model](fp32_fusion.svg)
 
 ### Quantize Model
 
@@ -117,7 +117,7 @@ mx.model.save_checkpoint('quantized-resnet18_v1', 0, qsym, qarg_params, aux_para
 
 Below is a quantized residual block without calibration. We can see `_contrib_requantize` operators are inserted ater `Convolution` without calibration information.
 
-<img src="none_calib.svg" alt="none calibrated model" width="500"/>
+![none calibrated model](none_calib.svg)
 
 ### Evaluate/Tune INT8 Accuracy
 
@@ -197,7 +197,7 @@ mx.viz.plot_network(cqsym)
 
 Below is a quantized residual block with naive calibration. We can see `min_calib_range` and `max_calib_range` are wrote into `_contrib_requantize` operators.
 
-<img src="naive_calib.svg" alt="naive calibrated model" width="500"/>
+![naive calibrated model](naive_calib.svg)
 
 When you get a quantized model with calibration, keep sure to call fusion api again since this can fuse some `requantize` or `dequantize` operators for further performance improvement.
 
@@ -212,7 +212,7 @@ mx.model.save_checkpoint('quantized-resnet18_v1', 0, cqsym, cqarg_params, aux_pa
 
 Below is a post-quantized residual block. We can see `_contrib_requantize` operators are fused into `Convolution` operators.
 
-<img src="post_quantize.svg" alt="post-quantized model" width="500"/>
+![post-quantized model](post_quantize.svg)
 
 BTW, You can also modify the `min_calib_range` and `max_calib_range` in the JSON file directly.
 
