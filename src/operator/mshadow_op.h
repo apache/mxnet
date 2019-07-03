@@ -364,6 +364,10 @@ MXNET_BINARY_MATH_OP(ldexp_grad, math::pow(2.0f, b));
 
 MXNET_BINARY_MATH_OP(ldexp_rgrad, math::id(a) * math::pow(2.0f, b) * math::log(2.0f));
 
+MXNET_BINARY_MATH_OP(rldexp, math::id(b) * math::pow(2.0f, a)); // swap a and b if a is scalar.
+
+MXNET_BINARY_MATH_OP(rldexp_grad, math::id(b) * math::pow(2.0f, a) * math::log(2.0f));
+
 /*! \brief used for generate element of round */
 MXNET_SIMPLE_UNARY_MATH_OP(round);
 

@@ -39,7 +39,7 @@ NNVM_REGISTER_OP(ldexp_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::ldexp>);
 
 NNVM_REGISTER_OP(rldexp_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::ldexp>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rldexp>);
 
 }  // namespace op
 }  // namespace mxnet

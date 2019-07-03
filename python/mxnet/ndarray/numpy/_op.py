@@ -73,10 +73,6 @@ def ldexp(x1, x2, out=None):
     --------
     >>> np.ldexp(5, np.arange(4))
     array([  5.,  10.,  20.,  40.])
-
-    >>> x = np.arange(6)
-    >>> np.ldexp(*np.frexp(x))
-    array([ 0.,  1.,  2.,  3.,  4.,  5.])
     """
     return _ufunc_helper(x1, x2, _npi.ldexp, _np.ldexp, _npi.ldexp_scalar, _npi.rldexp_scalar, out)
 

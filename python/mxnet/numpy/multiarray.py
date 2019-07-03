@@ -88,10 +88,6 @@ def ldexp(x1, x2, out=None):
     --------
     >>> np.ldexp(5, np.arange(4))
     array([  5.,  10.,  20.,  40.])
-
-    >>> x = np.arange(6)
-    >>> np.ldexp(*np.frexp(x))
-    array([ 0.,  1.,  2.,  3.,  4.,  5.])
     """
     return _mx_nd_np.ldexp(x1, x2, out)
 

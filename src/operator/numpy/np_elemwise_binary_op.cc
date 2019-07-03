@@ -28,10 +28,42 @@
 #include "../mshadow_op.h"
 #include "../operator_common.h"
 #include "../tensor/elemwise_binary_op.h"
-#include "np_elemwise_broadcast_op.cc"
+#include "../tensor/elemwise_binary_broadcast_op.h"
+#include "../tensor/elemwise_binary_scalar_op.h"
 
 namespace mxnet {
 namespace op {
+    
+bool NumpyBinaryScalarTypeInfer(const nnvm::NodeAttrs& attrs,
+                           std::vector<int>* in_attrs,
+                           std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int itype = in_attrs->at(0);
+  if (itype == -1) return false;
+  auto is_float = [](const int dtype) {
+    return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
+  };
+  CHECK(is_float(itype)) << "numpy binary scalar op currently only supports float dtype";
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, itype);
+  return true;
+}
+
+#define MXNET_OPERATOR_REGISTER_FOR_NP_BINARY_SCALAR(name)              \
+  NNVM_REGISTER_OP(name)                                            \
+  .set_num_inputs(1)                                                \
+  .set_num_outputs(1)                                               \
+  .set_attr_parser([](NodeAttrs* attrs) {                           \
+      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
+    })                                                              \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarTypeInfer)  \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
+    [](const NodeAttrs& attrs){                                     \
+      return std::vector<std::pair<int, int> >{{0, 0}};             \
+    })                                                              \
+  .add_argument("data", "NDArray-or-Symbol", "source input")        \
+  .add_argument("scalar", "float", "scalar input")
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(ldexp)
 .describe(R"code(
@@ -69,23 +101,19 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(ldexp)
     --------
     >>> np.ldexp(5, np.arange(4))
     array([  5.,  10.,  20.,  40.])
-
-    >>> x = np.arange(6)
-    >>> np.ldexp(*np.frexp(x))
-    array([ 0.,  1.,  2.,  3.,  4.,  5.])
 )code" ADD_FILELINE)
 .add_alias("_npi_ldexp")  
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::ldexp>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_ldexp"});
 
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(ldexp_scalar)
+MXNET_OPERATOR_REGISTER_FOR_NP_BINARY_SCALAR(ldexp_scalar)
 .add_alias("_npi_ldexp_scalar")  
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::ldexp>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_ldexp_scalar"});
 
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(rldexp_scalar)
+MXNET_OPERATOR_REGISTER_FOR_NP_BINARY_SCALAR(rldexp_scalar)
 .add_alias("_npi_rldexp_scalar") 
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::ldexp>)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rldexp>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rldexp_scalar"});
 
 NNVM_REGISTER_OP(_backward_ldexp)
@@ -111,7 +139,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_ldexp_scalar)
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rldexp_scalar)
 .add_argument("scalar", "float", "scalar value")
 .set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::ldexp_rgrad>);
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rldexp_grad>);
 
 }  // namespace op
 }  // namespace mxnet

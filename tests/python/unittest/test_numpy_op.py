@@ -41,8 +41,7 @@ def test_np_ldexp():
     def dldx(x1, x2): 
         return [_np.power(2.0, x2), _np.ldexp(x1, x2) * np.log(2.0)]
 
-    shapes = [
-        ((1), (4)), 
+    shapes = [ 
         ((3, 1), (3, 1)),
         ((3, 1, 2), (3, 1, 2)),
         ((1, ),(1, )),
@@ -64,6 +63,7 @@ def test_np_ldexp():
     for hybridize in [True, False]:
         for shape1, shape2 in shapes:
             for dtype in [_np.float32, _np.float64]:
+                print(shape1) #TODO
                 test_ldexp = TestLdexp()
                 if hybridize:
                     test_ldexp.hybridize()
