@@ -105,7 +105,7 @@ Select API:&nbsp;
     * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
     * [Automatic Mixed Precision in Gluon](/tutorials/amp/amp_tutorial.html)
     * [How to build and install MXNet with MKL-DNN backend](/tutorials/mkldnn/MKLDNN_README.html)
-    * [How to quantize custom models with MKL-DNN backend](/tutorials/mkldnn/MKLDNN_QUANTIZATION.html)<span style="color:red"> (new!) </span>
+    * [How to quantize custom models with MKL-DNN backend](/tutorials/mkldnn/mkldnn_quantization.html)<span style="color:red"> (new!) </span>
 * API Guides
     * Core APIs
         * NDArray
