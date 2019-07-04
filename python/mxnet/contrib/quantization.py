@@ -437,10 +437,10 @@ class _DataIterWrapper(DataIter):
         else:
             data_example = [data_example]
         # suppose there must be one label in data_example
-        num_data = len(data_example) - 1
+        num_data = len(data_example)
         assert num_data > 0
         self.provide_data = [DataDesc(name='data', shape=(data_example[0].shape))]
-        self.provide_data += [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[1:num_data])]
+        self.provide_data += [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[1:])]
         self.batch_size = data_example[0].shape[0]
         self.reset()
 
@@ -813,7 +813,15 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     data_nd = []
     for shape in data_shapes:
         data_nd.append(mx.nd.zeros(shape.shape))
-    network(*data_nd)
+    while True:
+        try:
+            network(*data_nd)
+        except:
+            del data_nd[-1]
+            del calib_data.provide_data[-1]
+            continue
+        else:
+            break
 
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdirname:
