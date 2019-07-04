@@ -51,6 +51,9 @@ const float PI = 3.14159265358979323846;
 const float SELU_ALPHA = 1.6732632423543772848170429916717;
 const float SELU_LAMBDA = 1.0507009873554804934193349852946;
 const float SQRT_2 = 1.4142135623730950488016887242096;
+const float LN_2 = 0.6931471805599453094172321214581;
+
+
 using std::isnan;
 #endif
 using std::enable_if;
@@ -218,6 +221,12 @@ template<>
 MSHADOW_XINLINE double log2_grad::Map<double>(double a) {
   return 1.44269504088896340737 / a;
 }
+
+MXNET_BINARY_MATH_OP(logaddexp2, math::log2(math::pow(2, a) + math::pow(2, b)));
+
+MXNET_BINARY_MATH_OP(logaddexp2_grad_left, LN_2 * math::pow(2, a) / (pow(2, a) + pow(2, b)));
+
+MXNET_BINARY_MATH_OP(logaddexp2_grad_right, LN_2 * math::pow(2, b) / (pow(2, a) + pow(2, b)));
 
 MXNET_SIMPLE_UNARY_MATH_OP(sin);
 

@@ -362,6 +362,9 @@ IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::smooth_l1_gradient);  // NO
 IMPLEMENT_BLANK_WORKLOAD_FWD(mxnet::op::mxnet_op::set_to_int<0>);  // NOLINT()
 IMPLEMENT_BLANK_WORKLOAD_FWD(mxnet::op::mxnet_op::set_to_int<1>);  // NOLINT()
 IMPLEMENT_BLANK_WORKLOAD_FWD(mxnet::op::PopulateFullIdxRspKernel);  // NOLINT()
+IMPLEMENT_BLANK_WORKLOAD_FWD(mxnet::op::mshadow_op::logaddexp2);
+IMPLEMENT_BLANK_WORKLOAD_BWD(mxnet::op::mshadow_op::logaddexp2_grad_left);
+IMPLEMENT_BLANK_WORKLOAD_BWD(mxnet::op::mshadow_op::logaddexp2_grad_right);
 /*!
  * \brief Tuner objects, *not* automatically generated
  */
