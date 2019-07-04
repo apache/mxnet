@@ -531,6 +531,111 @@ def test_np_prod():
 
 @with_seed()
 @use_np
+def test_np_logaddexp2():
+    class TestLogaddexp2(HybridBlock):
+        def __init__(self):
+            super(TestLogaddexp2, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.logaddexp2(x1, x2)
+
+    LN_2 = 0.6931471805599453094172321214581
+    shapes = [
+        ((3, 1), (3, 1)),
+        ((3, 1, 2), (3, 1, 2)),
+        ((1, ),(1, )),
+        ((3, 0), (3, 0)),  # zero-size shape
+        ((0, 1), (0, 1)),  # zero-size shape
+        ((0, 3), (0, 3)),
+        ((2, 0, 2), (2, 0, 2)),  # zero-size shape
+        ((1, ), (3, )),  # broadcast
+        ((2, 3), (2, 1)),  # broadcast
+        ((1, 3), (2, 3)),  # broadcast
+        ((1, 3), (2, 0, 3)),  # broadcast to zero-size shape
+        ((1, 0, 1), (3, 0, 1)), # broadcast of zero-size shape
+        ((), ()),  # zero-dim shape
+    ]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            x1_shape, x2_shape = shape
+            for dt in ['float32', 'float64']:
+                test_logaddexp2 = TestLogaddexp2()
+                if hybridize:
+                    test_logaddexp2.hybridize()
+
+                x1 = rand_ndarray(x1_shape).as_np_ndarray()
+                x1.attach_grad()
+                x2 = rand_ndarray(x2_shape).as_np_ndarray()
+                x2.attach_grad()
+
+                np_out = _np.logaddexp2(x1.asnumpy(), x2.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_logaddexp2(x1, x2)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                mx_out.backward()
+                # Code to get reference backward value
+                np_backward1 = LN_2 * (2 ** x1.asnumpy()) / (2 ** x1.asnumpy() + 2 ** x2.asnumpy())
+                np_backward2 = LN_2 * (2 ** x2.asnumpy()) / (2 ** x1.asnumpy() + 2 ** x2.asnumpy())
+                if len(x1_shape) == len(x2_shape):
+                    for n_dim in range(len(x1_shape)):
+                        if (x1_shape[n_dim] > x2_shape[n_dim]):
+                                np_backward2 = np_backward2.sum(axis=n_dim, keepdims=True)
+                        elif (x1_shape[n_dim] < x2_shape[n_dim]):
+                                np_backward1 = np_backward1.sum(axis=n_dim, keepdims=True)
+                assert_almost_equal(x1.grad.asnumpy(), np_backward1, rtol=1e-3, atol=1e-5)
+                assert_almost_equal(x2.grad.asnumpy(), np_backward2, rtol=1e-3, atol=1e-5)
+                mx_out = np.logaddexp2(x1, x2)
+                np_out = _np.logaddexp2(x1.asnumpy(), x2.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                # Test x1 ndarray, x2 scalar calculation
+                x1 = rand_ndarray(x1_shape).as_np_ndarray()
+                x2 = 2
+                x1.attach_grad()
+                np_out = _np.logaddexp2(x1.asnumpy(), x2)
+                with mx.autograd.record():
+                    # mx_out = test_logaddexp2(x1, x2)
+                    mx_out = np.logaddexp2(x1, x2)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                mx_out.backward()
+                # Code to get reference backward value
+                np_backward_x1 = LN_2 * (2 ** x1.asnumpy()) / (2 ** x1.asnumpy() + 2 ** x2)
+
+                assert_almost_equal(x1.grad.asnumpy(), np_backward_x1, rtol=1e-3, atol=1e-5)
+                # Test imperative once again
+                mx_out = np.logaddexp2(x1, x2)
+                np_out = _np.logaddexp2(x1.asnumpy(), x2)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                # Test x1 scalar, x2 ndarray calculation
+                x1 = 2
+                x2 = rand_ndarray(x2_shape).as_np_ndarray()
+                x2.attach_grad()
+                np_out = _np.logaddexp2(x1, x2.asnumpy())
+                with mx.autograd.record():
+                    # HybridBlock test does not support lhs scalar, rhs ndarray.
+                    mx_out = np.logaddexp2(x1, x2)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                mx_out.backward()
+                # Code to get reference backward value
+                np_backward_x2 = LN_2 * (2 ** x2.asnumpy()) / (2 ** x1 + 2 ** x2.asnumpy())
+                assert_almost_equal(x2.grad.asnumpy(), np_backward_x2, rtol=1e-3, atol=1e-5)
+
+        # Test scalar calculation
+        for i in range(10):
+            x1 = random.randrange(-100, 100)
+            x2 = random.randrange(-100, 100)
+            mx_out = np.logaddexp2(x1, x2)
+            np_out = _np.logaddexp2(x1, x2)
+            assert_almost_equal(_np.array(mx_out), _np.array(np_out))
+
+
+@with_seed()
+@use_np
 def test_np_flatten():
     class TestFlatten(HybridBlock):
         def hybrid_forward(self, F, x):

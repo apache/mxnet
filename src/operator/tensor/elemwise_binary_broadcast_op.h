@@ -578,6 +578,9 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
   const TBlob lgrad = outputs[0].reshape(new_lshape);
   const TBlob rgrad = outputs[1].reshape(new_rshape);
   const TBlob ograd = inputs[0].reshape(new_oshape);
+  if (inputs[0].shape_.Size() == 0) {
+    return;
+  }
   const TBlob lhs = inputs[1].reshape(new_lshape);
   const TBlob rhs = inputs[2].reshape(new_rshape);
   size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(

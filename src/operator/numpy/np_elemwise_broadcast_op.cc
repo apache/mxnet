@@ -25,6 +25,7 @@
 
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
+#include "../tensor/elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -150,6 +151,25 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_power"});
 
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_logaddexp2)
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::logaddexp2>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_logaddexp2"});
+
+NNVM_REGISTER_OP(_backward_logaddexp2)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 1}};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryBroadcastBackwardUseIn<cpu, mshadow_op::logaddexp2_grad_left, mshadow_op::logaddexp2_grad_right>);  // NOLINT()
+
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::plus>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"});
@@ -181,6 +201,15 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_power_scalar)
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rpower_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rpower>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_rpower_scalar"});
+
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_logaddexp2_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::logaddexp2>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_logaddexp2_scalar"});
+
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_backward_logaddexp2_scalar)
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr<FCompute>("FCompute<cpu>",
+                    BinaryScalarOp::Backward<cpu, mshadow_op::logaddexp2_grad_left>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -34,7 +34,8 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'pow
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
-           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack']
+           'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 
+           'logaddexp2']
 
 
 def _num_outputs(sym):
@@ -861,6 +862,9 @@ class _Symbol(Symbol):
 
     def broadcast_like(self, *args, **kwargs):
         raise AttributeError('_Symbol object has no attribute broadcast_like')
+
+    def logaddexp2(self, *args, **kwargs):
+        raise AttributeError('_Symbol object has no attribute logaddexp2')
 
 
 @set_module('mxnet.symbol.numpy')
@@ -2326,6 +2330,47 @@ def stack(arrays, axis=0, out=None):
 
     arrays = get_list(arrays)
     return _npi.stack(*arrays, axis=axis, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def logaddexp2(x1, x2, out=None):
+    """
+    logaddexp2(x1, x2, out=None)
+
+    Logarithm of the sum of exponentiations of the inputs in base-2.
+
+    Calculates ``log2(2**x1 + 2**x2)``. This function is useful in machine
+    learning when the calculated probabilities of events may be so small as
+    to exceed the range of normal floating point numbers.  In such cases
+    the base-2 logarithm of the calculated probability can be used instead.
+    This function allows adding probabilities stored in such a fashion.
+
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalar
+        Input values.
+    out : _Symbol or None, optional
+    result : _Symbol
+        Base-2 logarithm of ``2**x1 + 2**x2``.
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    See Also
+    --------
+    logaddexp: Logarithm of the sum of exponentiations of the inputs.
+
+    Notes
+    -----
+    This function differs from the original `numpy.logaddexp2
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.logaddexp2.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` _Symbol's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` _Symbol's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    """
+    return _ufunc_helper(x1, x2, _npi.logaddexp2, _np.logaddexp2, _npi.logaddexp2_scalar,
+                         _npi.logaddexp2_scalar, out)
 
 
 _set_np_symbol_class(_Symbol)
