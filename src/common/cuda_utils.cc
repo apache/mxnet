@@ -41,9 +41,9 @@ namespace cuda {
 #define MXNET_CI_OLDEST_CUDA_VERSION 10000
 #endif
 
-
-// Start-up check that the version of cuda compiled-against matches the linked-against version.
-bool CudaVersionChecks() {
+// Dynamic init here will emit a warning if runtime and compile-time cuda lib versions mismatch.
+// Also if the user has recompiled their source to a version no longer tested by upstream CI.
+bool cuda_version_check_performed = []() {
   // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
   if (dmlc::GetEnv("MXNET_CUDA_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
     int linkedAgainstCudaVersion = 0;
@@ -59,11 +59,7 @@ bool CudaVersionChecks() {
                    << "Set MXNET_CUDA_VERSION_CHECKING=0 to quiet this warning.";
   }
   return true;
-}
-
-// Dynamic initialization here will emit a warning if runtime and compile-time versions mismatch.
-// Also if the user has recompiled their source to a version no longer tested by upstream CI.
-bool cuda_version_ok = CudaVersionChecks();
+}();
 
 }  // namespace cuda
 }  // namespace common
@@ -86,9 +82,9 @@ namespace cudnn {
 #define MXNET_CI_OLDEST_CUDNN_VERSION 7600
 #endif
 
-// Start-up check that the version of cudnn compiled-against matches the linked-against version.
+// Dynamic init here will emit a warning if runtime and compile-time cudnn lib versions mismatch.
 // Also if the user has recompiled their source to a version no longer tested by upstream CI.
-bool CuDNNVersionChecks() {
+bool cudnn_version_check_performed = []() {
   // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
   if (dmlc::GetEnv("MXNET_CUDNN_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
     size_t linkedAgainstCudnnVersion = cudnnGetVersion();
@@ -103,11 +99,7 @@ bool CuDNNVersionChecks() {
                    << "Set MXNET_CUDNN_VERSION_CHECKING=0 to quiet this warning.";
   }
   return true;
-}
-
-// Dynamic initialization here will emit a warning if runtime and compile-time versions mismatch.
-// Also if the user has recompiled their source to a version no longer tested by upstream CI.
-bool cudnn_version_ok = CuDNNVersionChecks();
+}();
 
 }  // namespace cudnn
 }  // namespace common
