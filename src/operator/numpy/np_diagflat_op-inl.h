@@ -103,7 +103,7 @@ void NumpyDiagflatOpForward(const nnvm::NodeAttrs &attrs,
   const TBlob &out_data = outputs[0];
   // get the diagonal  length
   const mxnet::TShape &out_shape = outputs[0].shape_;
-  CHECK_EQ(out_shape.Size(), 2);
+  CHECK_EQ(out_shape.ndim(), 2);
   auto &diag_len = *out_shape.data();
   // get k
   const NumpyDiagflatParam &param = nnvm::get<NumpyDiagflatParam>(attrs.parsed);
