@@ -20,7 +20,7 @@
 #include <iostream>
 #include "./imperative_utils.h"
 #include "./cached_op.h"
-#include "nnvm/graph_dump.h"
+#include "../nnvm/graph_dump.h"
 
 namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
