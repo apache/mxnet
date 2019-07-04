@@ -1168,6 +1168,7 @@ def test_np_logspace():
     configs = [
         (0.0, 1.0, 20),
         (-2, 4, 30),
+
         (5.234324, 8.98324, 324),
         (2, 10, 100)
     ]
@@ -1175,7 +1176,7 @@ def test_np_logspace():
         (0, 10, -1),
         (0, 1, 2.5),
     ]
-    base_configs = [0, 1, 5, 7, 10, 13, 200]
+    base_configs = [1, 5, 7, 10, 200]
     dtypes = ['int32', 'float16', 'float32', 'float64', None]
     for config in configs:
         for dtype in dtypes:
