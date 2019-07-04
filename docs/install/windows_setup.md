@@ -494,7 +494,7 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 	Pkg.add("MXNet")
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](/api/julia/site/).
 
 
 ## Installing the MXNet Package for Scala
