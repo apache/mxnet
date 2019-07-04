@@ -172,7 +172,6 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
   std::vector<ResourceRequest> request;
   if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN_RNN
-    STATIC_ASSERT_CUDNN_VERSION_GE(7000);
     request.emplace_back(ResourceRequest::kTempSpace);
 
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
