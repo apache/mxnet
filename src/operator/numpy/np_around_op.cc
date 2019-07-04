@@ -20,7 +20,7 @@ NNVM_REGISTER_OP(_npi_around)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_argument("x", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(AroundParam::__FIELDS__());
 
 }// namespace op
