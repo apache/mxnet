@@ -50,6 +50,7 @@ _JAVA_DOCS = parser.getboolean(_DOC_SET, 'java_docs')
 _CLOJURE_DOCS = parser.getboolean(_DOC_SET, 'clojure_docs')
 _DOXYGEN_DOCS = parser.getboolean(_DOC_SET,  'doxygen_docs')
 _R_DOCS = parser.getboolean(_DOC_SET, 'r_docs')
+_JULIA_DOCS = parser.getboolean(_DOC_SET, 'julia_docs')
 _ARTIFACTS = parser.getboolean(_DOC_SET, 'artifacts')
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
@@ -94,6 +95,12 @@ def build_mxnet(app):
     else:
         _run_cmd("cd %s/.. && make -j$(nproc) USE_MKLDNN=0 USE_CPP_PACKAGE=1 " %
                 app.builder.srcdir)
+
+def build_julia_docs(app):
+    """build Julia docs"""
+    dest_path = app.builder.outdir + '/api/julia/'
+    _run_cmd('cd %s/.. && make -C julia/docs' % app.builder.srcdir)
+    _run_cmd('cp -a julia/docs/site/* ' + dest_path)
 
 def build_r_docs(app):
     """build r pdf"""
@@ -476,6 +483,9 @@ def setup(app):
     if _CLOJURE_DOCS:
         print("Building Clojure Docs!")
         app.connect("builder-inited", build_clojure_docs)
+    if _JULIA_DOCS:
+        print("Building Julia Docs!")
+        app.connect("builder-inited", build_julia_docs)
     if _R_DOCS:
         print("Building R Docs!")
         app.connect("builder-inited", build_r_docs)
