@@ -8667,11 +8667,9 @@ def test_get_operator_arguments():
     operator_arguments = get_operator_arguments('Activation')
     ok_(isinstance(operator_arguments, OperatorArguments))
     ok_(operator_arguments.names == ['data', 'act_type'])
-    print(operator_arguments.types)
     ok_(operator_arguments.types
         == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"])
     ok_(operator_arguments.narg == 2)
-
 
 
 if __name__ == '__main__':
