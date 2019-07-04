@@ -75,7 +75,10 @@ def _np_ones_like(a):
 
 
 def _np_zeros_like(a):
-    """Return an array of zeros with the same shape and type as a given array.
+    r"""
+    zeros_like(a)
+
+    Return an array of zeros with the same shape and type as a given array.
 
     Parameters
     ----------
@@ -87,6 +90,39 @@ def _np_zeros_like(a):
     -------
     out : ndarray
         Array of zeros with the same shape and type as `a`.
+
+
+    See Also
+    --------
+    ones_like : Return an array of ones with shape and type of input.
+    zeros : Return a new array setting values to zero.
+
+    Examples
+    --------
+    >>> x = np.arange(6)
+    >>> x = x.reshape((2, 3))
+    >>> x
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+    >>> np.zeros_like(x)
+    array([[0., 0., 0.],
+           [0., 0., 0.]])
+    >>> y = np.arange(3)
+    >>> y
+    array([0., 1., 2.])
+    >>> np.zeros_like(y)
+    array([0., 0., 0.])
+
+    Notes
+    -----
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+
+    This function differs from the original `numpy.zeros_like
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.zeros_like.html>`_ in
+    the following aspects:
+
+    - The parameter `dtype` and `subok` are not supported now.
+    - Only 'C' order is supported.
     """
     pass
 
@@ -150,12 +186,12 @@ def _np_cumsum(a, axis=None, dtype=None, out=None):
            [4., 5., 6.]])
     >>> np.cumsum(a)
     array([ 1.,  3.,  6., 10., 15., 21.])
-    >>> np.cumsum(a, dtype=float)     
+    >>> np.cumsum(a, dtype=float)
     array([ 1.,  3.,  6., 10., 15., 21.], dtype=float64)
-    >>> np.cumsum(a,axis=0)      
+    >>> np.cumsum(a,axis=0)
     array([[1., 2., 3.],
            [5., 7., 9.]])
-    >>> np.cumsum(a,axis=1)      
+    >>> np.cumsum(a,axis=1)
     array([[ 1.,  3.,  6.],
            [ 4.,  9., 15.]])
     """
@@ -166,20 +202,20 @@ def _np_dot(a, b, out=None):
     """dot(a, b, out=None)
 
     Dot product of two arrays. Specifically,
-    
+
     - If both `a` and `b` are 1-D arrays, it is inner product of vectors
-    
+
     - If both `a` and `b` are 2-D arrays, it is matrix multiplication,
-    
+
     - If either `a` or `b` is 0-D (scalar), it is equivalent to :func:`multiply`
       and using ``np.multiply(a, b)`` or ``a * b`` is preferred.
-    
+
     - If `a` is an N-D array and `b` is a 1-D array, it is a sum product over
       the last axis of `a` and `b`.
-    
+
     - If `a` is an N-D array and `b` is a 2-D array, it is a
       sum product over the last axis of `a` and the second-to-last axis of `b`::
-    
+
         dot(a, b)[i,j,k] = sum(a[i,j,:] * b[:,k])
 
     Parameters
@@ -188,7 +224,7 @@ def _np_dot(a, b, out=None):
         First argument.
     b : ndarray
         Second argument.
-    
+
     out : ndarray, optional
         Output argument. It must have the same shape and type as the expected output.
 
