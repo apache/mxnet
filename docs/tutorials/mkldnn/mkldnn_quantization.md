@@ -20,7 +20,7 @@
 
 This document is to introduce how to quantize the customer models from FP32 to INT8 with Apache/MXNet toolkit and APIs under Intel CPU.
 
-If you are not familiar with Apache/MXNet quantizaiton flow, please reference [quantization blog](https://medium.com/apache-mxnet/model-quantization-for-production-level-neural-network-inference-f54462ebba05) first, and the perforamnce data is shown in [Apache/MXNet C++ interface](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) and [GluonCV](https://gluon-cv.mxnet.io/build/examples_deployment/int8_inference.html). 
+If you are not familiar with Apache/MXNet quantization flow, please reference [quantization blog](https://medium.com/apache-mxnet/model-quantization-for-production-level-neural-network-inference-f54462ebba05) first, and the performance data is shown in [Apache/MXNet C++ interface](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) and [GluonCV](https://gluon-cv.mxnet.io/build/examples_deployment/int8_inference.html). 
 
 ## Installation and Prerequisites
 
@@ -85,7 +85,7 @@ It's important to add this line to enable graph fusion before quantization to ge
 
 ### Quantize Model
 
-A python interface `quantiza_graph` is provided for the user. Thus, it is very flexible for the data scientist to construct the expected models based on different requirements in a real deployment.
+A python interface `quantize_graph` is provided for the user. Thus, it is very flexible for the data scientist to construct the expected models based on different requirements in a real deployment.
 
 ```python
 # quantize configs
@@ -108,7 +108,7 @@ mx.viz.plot_network(qsym)
 mx.model.save_checkpoint('quantized-resnet18_v1', 0, qsym, qarg_params, aux_params)
 ```
 
-By applying `quantize_graph` to the symbolic model, a new quantized model can be generated, named `qsym` along with its parameters. We can see `_contrib_requantize` operators are inserted after `Convolution` to conver the INT32 output to FP32. 
+By applying `quantize_graph` to the symbolic model, a new quantized model can be generated, named `qsym` along with its parameters. We can see `_contrib_requantize` operators are inserted after `Convolution` to convert the INT32 output to FP32. 
 
 ![none calibrated model](none_calib.png)
 
@@ -199,11 +199,11 @@ cqsym, cqarg_params, aux_params = calib_graph(qsym=cqsym, arg_params=arg_params,
 mx.viz.plot_network(cqsym)
 ```
 
-Below is a quantized residual block with naive calibration. We can see `min_calib_range` and `max_calib_range` are wrote into `_contrib_requantize` operators.
+Below is a quantized residual block with naive calibration. We can see `min_calib_range` and `max_calib_range` are written into `_contrib_requantize` operators.
 
 ![naive calibrated model](naive_calib.png)
 
-When you get a quantized model with calibration, keep sure to call fusion api again since this can fuse some `requantize` or `dequantize` operators for further performance improvement.
+When you get a quantized model with calibration, keeping sure to call fusion api again since this can fuse some `requantize` or `dequantize` operators for further performance improvement.
 
 ```python
 # perform post-quantization fusion
