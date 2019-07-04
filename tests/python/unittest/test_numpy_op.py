@@ -31,6 +31,55 @@ import random
 
 @with_seed()
 @npx.use_np_shape
+def test_np_diagflat():
+    @npx.use_np_shape
+    class TestDiagflat(HybridBlock):
+        def __init__(self):
+            super(TestDiagflat, self).__init__()
+
+        def hybrid_forward(self, F, a, k):
+            return F.np.diagflat(a, k)
+
+    for hybridize in [True, False]:
+        for dtype in ['int32', 'float16', 'float32', 'float64']:
+            for shape_x in [(1,),  # single element
+                            (3, 3),  # square
+                            (),  # scalar
+                            (3, 0, 2),  # zero-dim
+                            (3, 4, 5),
+                            ]:
+                for k in range(-5, 6):
+                    if dtype == 'float16':
+                        rtol = atol = 1e-2
+                    else:
+                        rtol = atol = 1e-5
+
+                    test_diagflat = TestDiagflat()
+                    if hybridize:
+                        test_diagflat.hybridize()
+
+                    x = rand_ndarray(shape_x, dtype=dtype).as_np_ndarray()
+                    x.attach_grad()
+
+                    np_out = _np.diagflat(x.asnumpy(), k)
+                    with mx.autograd.record():
+                        mx_out = test_diagflat(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol,
+                                        atol=atol)
+                    # mx_out.backward()
+
+                    # Test imperative once again
+                    mx_out = np.diagflat(x, k)
+                    np_out = _np.diagflat(x.asnumpy(), k)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol,
+                                        atol=atol)
+
+
+
+
+@with_seed()
+@npx.use_np_shape
 def test_np_sum():
     class TestSum(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
