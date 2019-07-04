@@ -95,7 +95,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
 
 // reciprocal
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_reciprocal, "x", mshadow_op::reciprocal)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_reciprocal, "x", mshadow_op::reciprocal)
 .describe(R"code(Return the reciprocal of the argument, element-wise.
 Example::
     reciprocal([-2, 1, 3, 1.6, 0.2]) = [-0.5, 1.0, 0.33333334, 0.625, 5.0]
@@ -167,7 +167,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // square
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_square, "x", mshadow_op::square)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_square, "x", mshadow_op::square)
 .describe(R"code(Return the element-wise square of the input.
 Example::
    square([2, 3, 4]) = [4, 9, 16]
@@ -279,7 +279,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_tan, "x", mshadow_op::tan)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tan" });
 
 // arcsin
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arcsin, "x", mshadow_op::arcsin)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arcsin, "x", mshadow_op::arcsin)
 .describe(R"code(Returns element-wise inverse sine of the input array.
 .. math::
    arcsin([-1, -.707, 0, .707, 1]) = [-\pi/2, -\pi/4, 0, \pi/4, \pi/2]
