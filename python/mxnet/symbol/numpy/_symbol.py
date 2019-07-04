@@ -32,7 +32,8 @@ from . import _internal as _npi
 __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arange', 'argmax',
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
-           'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean']
+           'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
+           'reciprocal', 'square', 'arcsin']
 
 
 def _num_outputs(sym):
@@ -1449,17 +1450,18 @@ def tile(A, reps):
 
 
 @set_module('mxnet.symbol.numpy')
-def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, **kwargs): # pylint: disable=too-many-arguments
-    """Return evenly spaced numbers over a specified interval.
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None): # pylint: disable=too-many-arguments
+    r"""
+    Return evenly spaced numbers over a specified interval.
 
     Returns num evenly spaced samples, calculated over the interval [start, stop].
     The endpoint of the interval can optionally be excluded.
 
     Parameters
     ----------
-    start : array_like
+    start : real number
         The starting value of the sequence.
-    stop : array_like
+    stop : real number
         The end value of the sequence, unless endpoint is set to False. In
         that case, the sequence consists of all but the last of num + 1
         evenly spaced samples, so that stop is excluded. Note that the step
@@ -1469,18 +1471,19 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     endpoint : bool, optional
         If True, stop is the last sample. Otherwise, it is not included.
         Default is True.
-    retstep: bool, optional
+    retstep : bool, optional
         If True, return (samples, step), where step is the spacing between samples.
-    dtype: dtype, optional
+    dtype : dtype, optional
         The type of the output array. If dtype is not given, infer the data
         type from the other input arguments.
     axis : int, optional
         The axis in the result to store the samples. Relevant only if start or
         stop are array-like. By default (0), the samples will be along a new
         axis inserted at the beginning. Use -1 to get an axis at the end.
+
     Returns
     -------
-    samples : ndarray
+    samples : _Symbol
         There are num equally spaced samples in the closed interval
         `[start, stop]` or the half-open interval `[start, stop)`
         (depending on whether endpoint is True or False).
@@ -1488,17 +1491,29 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
         Only returned if retstep is True
         Size of spacing between samples.
 
+
+    See Also
+    --------
+    arange : Similar to `linspace`, but uses a step size (instead of the
+             number of samples).
+
     Notes
     -----
-    This function currently does not support ``start`` and ``stop`` as ndarrays and
-    axis could only be 0 now.
+
+    This function differs from the original `numpy.linspace
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html>`_ in
+    the following aspects:
+
+    - `start` and `stop` do not support list, numpy ndarray and mxnet ndarray
+    - axis could only be 0
+    - There could be an additional `ctx` argument to specify the device, e.g. the i-th
+      GPU.
     """
     if isinstance(start, (list, _np.ndarray)) or \
         isinstance(stop, (list, _np.ndarray)):
         raise NotImplementedError('start and stop only support int')
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
-    ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()
     if retstep:
@@ -1978,6 +1993,131 @@ def radians(x, out=None, **kwargs):
 
     """
     return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def reciprocal(x, out=None, **kwargs):
+    r"""
+    reciprocal(x, out=None)
+
+    Return the reciprocal of the argument, element-wise.
+
+    Calculates ``1/x``.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        The values whose reciprocals are required.
+    out : _Symbol, or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    .. note::
+        This function is not designed to work with integers.
+
+    For integer arguments with absolute value larger than 1 the result is
+    always zero because of the way Python handles integer division.  For
+    integer zero the result is an overflow.
+
+    The output `symbol` has the same `ctx` as the input `symbol`.
+
+    This function differs from the original `numpy.reciprocal
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.reciprocal.html>`_ in
+    the following aspects:
+
+    - Only support _Symbol and scalar now.
+    - `where` argument is not supported.
+    """
+    return _unary_func_helper(x, _npi.reciprocal, _np.reciprocal, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def square(x, out=None, **kwargs):
+    r"""
+    square(x, out=None)
+
+    Return the element-wise square of the input.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        The values whose reciprocals are required.
+    out : _Symbol, or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    y : _Symbol or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    The output `symbol` has the same `ctx` as the input `symbol`.
+
+    This function differs from the original `numpy.square
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.square.html>`_ in
+    the following aspects:
+
+    - Only support _Symbol and scalar now.
+    - `where` argument is not supported.
+    """
+    return _unary_func_helper(x, _npi.square, _np.square, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def arcsin(x, out=None, **kwargs):
+    r"""
+    arcsin(x, out=None)
+
+    Inverse sine, element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        The values whose reciprocals are required.
+    out : _Symbol, or None, optional
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    angle : _Symbol or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    `arcsin` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that :math:`sin(z) = x`.  The convention is to
+    return the angle `z` whose real part lies in [-pi/2, pi/2].
+
+    For real-valued input data types, *arcsin* always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+
+    The inverse sine is also known as `asin` or sin^{-1}.
+
+    The output `symbol` has the same `ctx` as the input `symbol`.
+
+    This function differs from the original `numpy.arcsin
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+    the following aspects:
+
+    - Only support _Symbol or scalar now.
+    - `where` argument is not supported.
+    - Complex input is not supported.
+
+    References
+    ----------
+    Abramowitz, M. and Stegun, I. A., *Handbook of Mathematical Functions*,
+    10th printing, New York: Dover, 1964, pp. 79ff.
+    http://www.math.sfu.ca/~cbm/aands/
+    """
+    return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
 
 
 _set_np_symbol_class(_Symbol)
