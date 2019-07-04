@@ -66,6 +66,9 @@ struct numpy_diagflat {
       return;
     }
 
+    // recover the original diagonal len
+    auto orig_diag_len = diag_len - abs(k);
+
     div_t divmod;
     if (k >= 0) {
       divmod = div(i - k, diag_len + 1);
@@ -73,7 +76,8 @@ struct numpy_diagflat {
       divmod = div(i - k * diag_len, diag_len + 1);
     }
     DType to_write;
-    if (divmod.rem == 0) {
+    // if the coord lies on the shifted diagonal and actually lies in the matrix
+    if (divmod.rem == 0 && divmod.rem < orig_diag_len) {
       auto in_idx = divmod.quot;
       to_write = (*in_data)[in_idx];
     } else {
