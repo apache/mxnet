@@ -15,10 +15,19 @@ namespace op {
 
 struct AroundParam : public dmlc::Parameter<AroundParam> {
   int decimals;
-  DMLC_DECLARE_PARAMETER(QuadraticParam) {
+  DMLC_DECLARE_PARAMETER(AroundParam) {
     DMLC_DECLARE_FIELD(decimals)
       .set_default(0)
       .describe("Number of decimal places to round to.");
+  }
+};
+
+template<int req>
+struct around_forwardint{
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+                                  const int decimals) {
+    KERNEL_ASSIGN(out_data[i], req, in_data[i]);
   }
 };
 
@@ -29,28 +38,43 @@ struct around_forward {
                                   const int decimals) {
     int d = 0;
     double temp = in_data[i];
+    double roundtemp;
     while(d != decimals){
         if(decimals > 0){
-            d++;
-            temp *= 10;
+          d++;
+          temp *= 10;
         }
         else{
-            d--;
-            temp /= 10;
+          d--;
+          temp /= 10;
+          if(temp < 0.5 && temp > -0.5){
+            break;
+          }
         }
     }
-    temp = round(temp);
+    roundtemp = round(temp);
+    // If temp is x.5 and roundtemp is odd number, decrease or increase roundtemp by 1.
+    // For example, in numpy, around(0.5) should be 0 but in c, round(0.5) is 1.
+    if(roundtemp - temp == 0.5 && ((int)roundtemp) % 2 != 0){
+      roundtemp -= 1;
+    }
+    else if (temp - roundtemp == 0.5 && ((int)roundtemp) % 2 != 0){
+      roundtemp += 1;
+    }
     while(d != 0){
-        if(decimals > 0){
-            d--;
-            temp /= 10;
-        }
-        else{
-            d++;
-            temp *= 10;
-        }
+      if(roundtemp == 0){
+        break;
+      }
+      if(decimals > 0){
+          d--;
+          roundtemp /= 10;
+      }
+      else{
+          d++;
+          roundtemp *= 10;
+      }
     }
-    KERNEL_ASSIGN(out_data[i], req, (DType)temp);
+    KERNEL_ASSIGN(out_data[i], req, (DType)roundtemp);
   }
 };
 
@@ -68,13 +92,27 @@ void AroundOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& out_data = outputs[0];
   const AroundParam& param = nnvm::get<AroundParam>(attrs.parsed);
   using namespace mxnet_op;
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<around_forward<req_type>, xpu>::Launch(
-          s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
-          param.decimals);
+  // if the type is uint8, int8, int32 or int64 and decimals is greater than 0 
+  // we simply return the number back.
+  if(in_data.type_flag_ >= 3 && in_data.type_flag_ <= 6 && param.decimals > 0){
+    MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<around_forwardint<req_type>, xpu>::Launch(
+            s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
+            param.decimals);
+      });
     });
-  });
+  }
+  else{
+    MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<around_forward<req_type>, xpu>::Launch(
+            s, out_data.Size(), out_data.dptr<DType>(), in_data.dptr<DType>(),
+            param.decimals);
+      });
+    });
+  }
+  
 }
 
 }// namespace mxnet
