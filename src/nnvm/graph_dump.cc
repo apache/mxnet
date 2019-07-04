@@ -27,7 +27,7 @@
 #include "./graph_dump.h"
 #include <vector>
 #include <string>
-#include "common/directed_graph.h"
+#include "../common/directed_graph.h"
 #include "dmlc/json.h"
 #include "nnvm/graph.h"
 

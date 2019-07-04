@@ -31,9 +31,6 @@
 #include <functional>
 #include <iterator>
 
-#define SELF_t \
-    static auto helper() -> typename std::remove_reference<decltype(*this)>::type; \
-    typedef decltype(helper())
 
 namespace common {
 namespace graph {
@@ -47,7 +44,7 @@ class DirectedGraph {
   const EdgeAttrs_ default_edge = EdgeAttrs_();
 
  public:
-  SELF_t DirectedGraph_t;
+  typedef DirectedGraph<Node_, EdgeAttrs_, NodeKey_t_, EdgeKey_t_> DirectedGraph_t;
   typedef Node_ Node;
   typedef NodeKey_t_ NodeKey_t;
   typedef EdgeKey_t_ EdgeKey_t;
