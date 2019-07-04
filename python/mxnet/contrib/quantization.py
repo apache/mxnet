@@ -38,7 +38,7 @@ from ..ndarray import load as nd_load
 from ..ndarray import save as nd_save
 from ..ndarray import zeros as zeros
 from ..ndarray import NDArray
-from ..io import DataIter
+from ..io import DataIter, DataDesc, DataBatch
 from ..context import cpu, Context
 from ..module import Module
 
@@ -423,6 +423,42 @@ def _load_params(params, logger=logging):
         raise ValueError('Unsupported params provided. Must be either a path to the param file or'
                          ' a pair of dictionaries representing arg_params and aux_params')
 
+class _DataIterWrapper(DataIter):
+    """DataIter wrapper for general iterator, e.g., gluon dataloader"""
+    def __init__(self, calib_data):
+        self._data = calib_data
+        try:
+            calib_iter = iter(calib_data)
+        except TypeError as e:
+            raise TypeError('calib_data is not a valid iterator. {}'.format(str(e)))
+        data_example = next(calib_iter)
+        if isinstance(data_example, (list, tuple)):
+            data_example = list(data_example)
+        else:
+            data_example = [data_example]
+        # suppose there must be one label in data_example
+        num_data = len(data_example) - 1
+        assert num_data > 0
+        self.provide_data = [DataDesc(name='data', shape=(data_example[0].shape))]
+        self.provide_data += [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[1:num_data])]
+        self.batch_size = data_example[0].shape[0]
+        self.reset()
+
+    def reset(self):
+        self._iter = iter(self._data)
+
+    def next(self):
+        return DataBatch(data=next(self._iter))
+
+def _as_data_iter(calib_data):
+    """Convert normal iterator to mx.io.DataIter while parsing the data_shapes"""
+    if isinstance(calib_data, DataIter):
+        # already validated DataIter, just return
+        return calib_data, calib_data.provide_data
+
+    calib_data = _DataIterWrapper(calib_data)
+    return calib_data, calib_data.provide_data
+
 def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
@@ -703,64 +739,8 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 
     return qsym, qarg_params, aux_params
 
-def static_net_forward(sym, arg_params, aux_params, collector,
-                       calib_data, data_shapes, ctx=cpu(), logger=logging):
-    """Symbolic forward a symbol converted from gluon HybridBlock to use monitor API.
-
-    Parameters
-    ----------
-    sym : str or Symbol
-        Defines the structure of a neural network for FP32 data types.
-    arg_params : dict
-        Dictionary of name to `NDArray`.
-    aux_params : dict
-        Dictionary of name to `NDArray`.
-    collector : function
-        Layer collector for naive or entropy calibration.
-    calib_data : list
-        A list containing several batches of input data for calibration.
-    data_shapes : list
-        A list containing shapes of input data for symbolic bind.
-    logger : Object
-        A logging object for printing information during the process of quantization.
-
-    Returns
-    -------
-    collector : function
-        Layer collector containing statistical information of each layer.
-    data_names : tuple
-        A tuple containing data names for gluon SymbolBlock import.
-    -------
-    """
-    num_batches = len(calib_data)
-    num_inputs = len(data_shapes)
-    data_names = ()
-    data_shapes_ = []
-    if num_inputs == 1:
-        data_names = ('data',)
-        data_shapes_ = [(data_names[0], data_shapes[0])]
-    elif num_inputs > 1:
-        for i in range(num_inputs):
-            data_names = data_names + ('data' + str(i),)
-            data_shapes_.append((data_names[i], data_shapes[i]))
-    else:
-        raise ValueError('symbol must have at least one inputs.')
-    mod = Module(symbol=sym, context=ctx,
-                 data_names=data_names, label_names=None)
-    mod.bind(for_training=False, data_shapes=data_shapes_)
-    mod.set_params(arg_params, aux_params,
-                   allow_missing=False, force_init=True)
-    mod._exec_group.execs[0].set_monitor_callback(
-        collector.collect, monitor_all=True)
-    for batch in calib_data:
-        mod.forward(data_batch=batch, is_train=False)
-    if logger is not None:
-        logger.info("Collected statistics from %d batches"
-                    % num_batches)
-    return collector, data_names
-
 def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_layers_match=None, calib_data=None,
-                 data_shapes=None, calib_mode='none', ctx=cpu(), logger=logging):
+                 data_shapes=None, calib_mode='none', num_calib_examples=None, ctx=cpu(), logger=logging):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -783,10 +763,10 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     exclude_layers_match : list of strings
         A list of strings wildcard matching the names of the symbols that users want to excluding
         from being quantized.
-    calib_data : list
-        A list containing several batches of input data for calibration.
+    calib_data : mx.io.DataIter or gluon.DataLoader
+        A iterable data loading object.
     data_shapes : list
-        A list containing shapes of input data for symbolic bind.
+        List of data_shape, required if calib_data is not provided
     calib_mode : str
         If calib_mode='none', no calibration will be used and the thresholds for
         requantization after the corresponding layers will be calculated at runtime by
@@ -802,6 +782,9 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
         calibrate this layer. If yes, the statistics of the layer's output will be collected;
         otherwise, no information of the layer's output will be collected. If not provided,
         all the layers' outputs that need requantization will be collected.
+    num_calib_examples : int or None
+        The maximum number of examples that user would like to use for calibration. If not provided,
+        the whole calibration dataset will be used.
     ctx : Context
         Defines the device that users want to run forward propagation on the calibration
         dataset for collecting layer output statistics. Currently, only supports single context.
@@ -818,9 +801,18 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
     logger.info('Export HybridBlock')
     network.hybridize()
     import mxnet as mx
+    if calib_data is not None:
+        if isinstance(calib_data, DataIter):
+            dshapes = calib_data.provide_data
+        else:
+            calib_data, dshapes = _as_data_iter(calib_data)
+    if not data_shapes:
+        data_shapes = dshapes
+    if not data_shapes:
+        raise ValueError('data_shapes required')
     data_nd = []
     for shape in data_shapes:
-        data_nd.append(mx.nd.zeros(shape))
+        data_nd.append(mx.nd.zeros(shape.shape))
     network(*data_nd)
 
     import tempfile
@@ -854,10 +846,14 @@ def quantize_net(network, quantized_dtype='auto', exclude_layers=None, exclude_l
             raise ValueError(
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy']:
-            collector, data_names = static_net_forward(
-                sym=symnet, arg_params=args, aux_params=auxs, collector=collector,
-                calib_data=calib_data, data_shapes=data_shapes, ctx=cpu(),
-                logger=logger)
+            data_names = [pair[0] for pair in calib_data.provide_data]
+            mod = Module(symbol=symnet, context=ctx,
+                         data_names=data_names, label_names=None)
+            mod.bind(for_training=False, data_shapes=data_shapes)
+            mod.set_params(args, auxs, allow_missing=False, force_init=True)
+            num_examples = _collect_layer_statistics(mod, calib_data, collector, num_calib_examples, logger)
+            logger.info('Collected layer output values from FP32 model using %d examples'
+                        % num_examples)
             qsym, qarg_params, aux_params = calib_graph(
                 qsym=qsym, arg_params=args, aux_params=auxs, collector=collector,
                 calib_mode=calib_mode, quantized_dtype=quantized_dtype, logger=logger)
