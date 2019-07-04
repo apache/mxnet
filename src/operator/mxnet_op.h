@@ -159,6 +159,42 @@ inline int get_num_threads<cpu>(const int N) {
     LOG(FATAL) << "ndim=" << NDim << "too large "; \
   }
 
+#define MXNET_NDIM_SWITCH_EX(NDim, ndim, ...)      \
+  if (NDim == 0) {                                 \
+  } else if (NDim == 1) {                          \
+    const int ndim = 1;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 2) {                          \
+    const int ndim = 2;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 3) {                          \
+    const int ndim = 3;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 4) {                          \
+    const int ndim = 4;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 5) {                          \
+    const int ndim = 5;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 6) {                          \
+    const int ndim = 6;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 7) {                          \
+    const int ndim = 7;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 8) {                          \
+    const int ndim = 8;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 9) {                          \
+    const int ndim = 9;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 10) {                         \
+    const int ndim = 10;                           \
+    {__VA_ARGS__}                                  \
+  }  else {                                        \
+    LOG(FATAL) << "ndim=" << NDim << "too large "; \
+  }
+
 #define MXNET_NO_INT8_TYPE_SWITCH(type, DType, ...)        \
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \
