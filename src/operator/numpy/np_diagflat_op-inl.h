@@ -77,7 +77,7 @@ struct numpy_diagflat {
     }
     DType to_write;
     // if the coord lies on the shifted diagonal and actually lies in the matrix
-    if (divmod.rem == 0 && divmod.quot < orig_diag_len) {
+    if (divmod.rem == 0 && divmod.quot >= 0 && divmod.quot < orig_diag_len) {
       auto in_idx = divmod.quot;
       to_write = in_data[in_idx];
     } else {
