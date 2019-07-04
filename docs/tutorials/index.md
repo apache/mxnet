@@ -113,9 +113,9 @@ Select API:&nbsp;
             * [Difference between reshape and transpose](/tutorials/basic/reshape_transpose.html)
             * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
+                * [Introduction to Sparse NDArray](/tutorials/sparse/train_gluon.html)
                 * [Sparse Gradient Updates (RowSparseNDArray)](/tutorials/sparse/row_sparse.html)
                 * [Compressed Sparse Row Storage Format (CSRNDArray)](/tutorials/sparse/csr.html)
-                * [Linear Regression with Sparse Symbols](/tutorials/sparse/train.html)
         * Symbol
             * [Symbol API](/tutorials/basic/symbol.html) (Caution: written before Gluon existed)
         * KVStore

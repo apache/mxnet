@@ -193,6 +193,9 @@ def test_sparse_csr():
 def test_sparse_train():
     assert _test_tutorial_nb('sparse/train')
 
+def test_sparse_train_gluon():
+    assert _test_tutorial_nb('sparse/train_gluon')
+
 def test_speech_recognition_ctc():
     assert _test_tutorial_nb('speech_recognition/ctc')
 
