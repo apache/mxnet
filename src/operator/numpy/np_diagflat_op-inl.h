@@ -125,11 +125,31 @@ struct numpy_diagflat_backward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i,
                                   DType *in_grad,
-                                  const DType *out_grad) {
+                                  const DType *out_grad,
+                                  dim_t diag_len,
+                                  int k) {
     using namespace mxnet_op;
     using namespace mshadow;
 
-    KERNEL_ASSIGN(in_grad[i], req, 1);
+    if (diag_len == 0) {
+      return;
+    }
+
+    // recover the original diagonal len
+    auto orig_diag_len = diag_len - abs(k);
+
+    div_t divmod;
+    if (k >= 0) {
+      divmod = div(i - k, diag_len + 1);
+    } else {
+      divmod = div(i + k * diag_len, diag_len + 1);
+    }
+    DType to_write;
+    // if the coord lies on the shifted diagonal and actually lies in the matrix
+    if (divmod.rem == 0 && divmod.quot >= 0 && divmod.quot < orig_diag_len) {
+      auto in_idx = divmod.quot;
+      KERNEL_ASSIGN(in_grad[in_idx], req, out_grad[i]);
+    }
   };
 };
 
@@ -148,14 +168,22 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs &attrs,
   const TBlob &out_grad = inputs[0];
   const TBlob &in_grad = outputs[0];
 
+  const mxnet::TShape &out_shape = inputs[0].shape_;
+  CHECK_EQ(out_shape.ndim(), 2);
+  auto &diag_len = *out_shape.data();
+
+  const NumpyDiagflatParam &param = nnvm::get<NumpyDiagflatParam>(attrs.parsed);
+
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<numpy_diagflat_backward<req_type>, xpu>::Launch(s,
-                                                               in_grad.Size(),
+                                                               out_grad.Size(),
                                                                in_grad.dptr<
                                                                    DType>(),
                                                                out_grad.dptr<
-                                                                   DType>());
+                                                                   DType>(),
+                                                               diag_len,
+                                                               param.k);
     });
   });
 }
