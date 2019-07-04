@@ -120,7 +120,19 @@ void NumpyDiagflatOpForward(const nnvm::NodeAttrs &attrs,
   });
 }
 
-// todo: change
+template<int req>
+struct numpy_diagflat_backward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  DType *in_grad,
+                                  const DType *out_grad) {
+    using namespace mxnet_op;
+    using namespace mshadow;
+
+    KERNEL_ASSIGN(in_grad[i], req, 1);
+  };
+};
+
 template<typename xpu>
 void NumpyDiagflatOpBackward(const nnvm::NodeAttrs &attrs,
                              const OpContext &ctx,
@@ -129,27 +141,21 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs &attrs,
                              const std::vector<TBlob> &outputs) {
   using namespace mxnet_op;
   using namespace mshadow;
-  CHECK_EQ(inputs.size(), 1U);  // only one input
-  CHECK_EQ(outputs.size(), 1U); // only one output
+  CHECK_EQ(inputs.size(), 1U);  // only use out grad
+  CHECK_EQ(outputs.size(), 1U); // only use input grad
   CHECK_EQ(req.size(), 1U); // only one req
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob &in_data = inputs[0];
-  const TBlob &out_data = outputs[0];
-  // get the diagonal  length
-  const mxnet::TShape &out_shape = outputs[0].shape_;
-  CHECK_EQ(out_shape.Size(), 2);
-  auto &diag_len = *out_shape.data();
-  // get k
-  const NumpyDiagflatParam &param = nnvm::get<NumpyDiagflatParam>(attrs.parsed);
+  const TBlob &out_grad = inputs[0];
+  const TBlob &in_grad = outputs[0];
 
-  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<numpy_diagflat<req_type>, xpu>::Launch(s,
-                                                      out_data.Size(),
-                                                      out_data.dptr<DType>(),
-                                                      in_data.dptr<DType>(),
-                                                      diag_len,
-                                                      param.k);
+        Kernel<numpy_diagflat_backward<req_type>, xpu>::Launch(s,
+                                                               in_grad.Size(),
+                                                               in_grad.dptr<
+                                                                   DType>(),
+                                                               out_grad.dptr<
+                                                                   DType>());
     });
   });
 }

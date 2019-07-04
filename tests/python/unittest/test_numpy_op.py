@@ -68,9 +68,12 @@ def test_np_diagflat():
                     assert mx_out.shape == np_out.shape
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol,
                                         atol=atol)
-                    # mx_out.backward()
+                    # test grad
+                    mx_out.backward()
+                    assert_almost_equal(x.grad.asnumpy(), _np.ones(x.shape),
+                                        rtol=1e-3, atol=1e-5)
 
-                    # Test imperative once again
+                    # test imperative once again
                     mx_out = np.diagflat(x, k)
                     np_out = _np.diagflat(x.asnumpy(), k)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol,
