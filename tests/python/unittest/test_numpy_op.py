@@ -34,11 +34,12 @@ import random
 def test_np_diagflat():
     @npx.use_np_shape
     class TestDiagflat(HybridBlock):
-        def __init__(self):
+        def __init__(self, k):
             super(TestDiagflat, self).__init__()
+            self.k = k
 
-        def hybrid_forward(self, F, a, k):
-            return F.np.diagflat(a, k)
+        def hybrid_forward(self, F, a):
+            return F.np.diagflat(a, self.k)
 
     for hybridize in [True, False]:
         for dtype in ['int32', 'float16', 'float32', 'float64']:
@@ -54,7 +55,7 @@ def test_np_diagflat():
                     else:
                         rtol = atol = 1e-5
 
-                    test_diagflat = TestDiagflat()
+                    test_diagflat = TestDiagflat(k)
                     if hybridize:
                         test_diagflat.hybridize()
 
