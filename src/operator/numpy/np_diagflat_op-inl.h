@@ -71,9 +71,10 @@ struct numpy_diagflat {
 
     div_t divmod;
     if (k >= 0) {
-      divmod = div(i - k, diag_len + 1);
+      divmod = div(static_cast<int>(i - k), static_cast<int>(diag_len + 1));
     } else {
-      divmod = div(i + k * diag_len, diag_len + 1);
+      divmod = div(static_cast<int>(i + k * diag_len),
+                   static_cast<int>(diag_len + 1));
     }
     DType to_write;
     // if the coord lies on the shifted diagonal and actually lies in the matrix
@@ -140,9 +141,10 @@ struct numpy_diagflat_backward {
 
     div_t divmod;
     if (k >= 0) {
-      divmod = div(i - k, diag_len + 1);
+      divmod = div(static_cast<int>(i - k), static_cast<int>(diag_len + 1));
     } else {
-      divmod = div(i + k * diag_len, diag_len + 1);
+      divmod = div(static_cast<int>(i + k * diag_len),
+                   static_cast<int>(diag_len + 1));
     }
     // if the coord lies on the shifted diagonal and actually lies in the matrix
     if (divmod.rem == 0 && divmod.quot >= 0 && divmod.quot < orig_diag_len) {
