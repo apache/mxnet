@@ -2224,9 +2224,9 @@ def arcsin(x, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
-def around(x, out=None, **kwargs):
+def around(x, decimals=0, out=None, **kwargs):
     r"""
-    around(x, out=None)
+    around(x, decimals=0, out=None)
 
     Evenly round to the given number of decimals.
     Parameters

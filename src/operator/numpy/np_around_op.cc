@@ -21,7 +21,7 @@ NNVM_REGISTER_OP(_npi_around)
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .add_argument("x", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(AroundParam::__FIELDS__());
-
+.add_arguments(AroundParam::__FIELDS__())
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 }// namespace op
 }// namespace mxnet

@@ -37,8 +37,8 @@ struct around_forward {
   MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
                                   const int decimals) {
     int d = 0;
-    double temp = in_data[i];
-    double roundtemp;
+    DType temp = in_data[i];
+    DType roundtemp;
     while(d != decimals){
         if(decimals > 0){
           d++;
@@ -74,7 +74,7 @@ struct around_forward {
           roundtemp *= 10;
       }
     }
-    KERNEL_ASSIGN(out_data[i], req, (DType)roundtemp);
+    KERNEL_ASSIGN(out_data[i], req, roundtemp);
   }
 };
 
