@@ -176,14 +176,13 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs &attrs,
 
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        Kernel<numpy_diagflat_backward<req_type>, xpu>::Launch(s,
-                                                               out_grad.Size(),
-                                                               in_grad.dptr<
-                                                                   DType>(),
-                                                               out_grad.dptr<
-                                                                   DType>(),
-                                                               diag_len,
-                                                               param.k);
+        Kernel<numpy_diagflat_backward<req_type>, xpu>::Launch(
+            s,
+            out_grad.Size(),
+            in_grad.dptr<DType>(),
+            out_grad.dptr<DType>(),
+            diag_len,
+            param.k);
     });
   });
 }
