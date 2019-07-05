@@ -1752,7 +1752,7 @@ def arcsin(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
 
-    
+
 @set_module('mxnet.ndarray.numpy')
 def around(x, decimals=0, out=None, **kwargs):
     r"""

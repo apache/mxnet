@@ -1298,12 +1298,14 @@ def test_np_around():
         def hybrid_forward(self, F, x):
             return F.np.around(x, self.decimals)
     
-    shapes = [(), (1,), (1, 1), (1, 2, 3), (1, 0), (3, 0, 6)] # test_shapes, remember to include zero-dim shape and zero-size shapes
+    shapes = [(), (1,), (1, 1), (1, 2, 3), (1, 0), (3, 0, 2)] # test_shapes, remember to include zero-dim shape and zero-size shapes
     types = ['int32', 'int64', 'float32', 'double']
     for hybridize in [True, False]:
-        for shape in shapes:
-            for oneType in types:
-                for d in range(-20, 21):
+        for oneType in types:
+            rtol=1e-3
+            atol=1e-5
+            for shape in shapes:
+                for d in range(-10, 11):
                     test_around = TestAround(d)
                     if hybridize:
                         test_around.hybridize()
@@ -1313,12 +1315,12 @@ def test_np_around():
                     mx_out = test_around(x)
                     #print("mx_out = ", mx_out, " np_out = ", np_out, "\n")
                     assert mx_out.shape == np_out.shape
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
                     
                     # Test imperative once again
                     mx_out = np.around(x, d)
                     np_out = _np.around(x.asnumpy(), d)
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)    
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)    
                 
 
 

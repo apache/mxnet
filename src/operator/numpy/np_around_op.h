@@ -43,22 +43,17 @@ struct around_forward {
         if(decimals > 0){
           d++;
           temp *= 10;
-        }
-        else{
+        } else{
           d--;
           temp /= 10;
-          if(temp < 0.5 && temp > -0.5){
-            break;
-          }
         }
     }
-    roundtemp = round(temp);
+    roundtemp = (DType)round((double)temp);
     // If temp is x.5 and roundtemp is odd number, decrease or increase roundtemp by 1.
     // For example, in numpy, around(0.5) should be 0 but in c, round(0.5) is 1.
     if(roundtemp - temp == 0.5 && ((int)roundtemp) % 2 != 0){
       roundtemp -= 1;
-    }
-    else if (temp - roundtemp == 0.5 && ((int)roundtemp) % 2 != 0){
+    } else if (temp - roundtemp == 0.5 && ((int)roundtemp) % 2 != 0){
       roundtemp += 1;
     }
     while(d != 0){
@@ -68,8 +63,7 @@ struct around_forward {
       if(decimals > 0){
           d--;
           roundtemp /= 10;
-      }
-      else{
+      } else{
           d++;
           roundtemp *= 10;
       }
@@ -102,8 +96,7 @@ void AroundOpForward(const nnvm::NodeAttrs& attrs,
             param.decimals);
       });
     });
-  }
-  else{
+  } else{
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<around_forward<req_type>, xpu>::Launch(
