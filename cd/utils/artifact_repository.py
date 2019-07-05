@@ -232,6 +232,10 @@ def get_libmxnet_features(libmxnet_path: str) -> Optional[Dict[str, bool]]:
         def name(self):
             return self._name.decode()
 
+    # we are not using the mxnet python bindings here because we cannot assume
+    # they are present and in the python path, or that they would point to the
+    # specified libmxnet.so. Therefore, we load the libmxnet.so library independently
+    # to extract its features
     try:
         libmxnet = ctypes.CDLL(libmxnet_path, ctypes.RTLD_LOCAL)
     except Exception as e:
