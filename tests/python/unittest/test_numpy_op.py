@@ -30,8 +30,8 @@ import random
 import collections
 
 @with_seed()
+@npx.use_np_shape
 def test_np_tensordot():
-    @npx.use_np_shape
     class TestTensordot(HybridBlock):
         def __init__(self, axes):
             super(TestTensordot, self).__init__()

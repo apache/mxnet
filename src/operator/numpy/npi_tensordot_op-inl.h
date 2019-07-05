@@ -173,17 +173,6 @@ inline void matrixDot(const OpContext& ctx,
   });
 }
 
-/** 
- * Recovers 0 size shapes.
-*/
-inline void recover0Size(TShape* shape) {
-  for (auto& i: *shape) {
-    if (i == -1) {
-      i = 0;
-    }
-  }
-}
-
 /**
  * forward function
  */

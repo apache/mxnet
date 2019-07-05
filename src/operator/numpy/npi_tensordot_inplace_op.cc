@@ -33,8 +33,6 @@ inline bool TensordotInplaceOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  recover0Size(&in_attrs->at(0));
-  recover0Size(&in_attrs->at(1));
   const mxnet::TShape& a_shape = in_attrs->at(0);
   const mxnet::TShape& b_shape = in_attrs->at(1);
 
