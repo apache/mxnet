@@ -102,7 +102,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
                                                      dtype=dtype,
                                                      ctx=ctx,
                                                      inputs=[{"data": conv_data,
-                                                              "weight": (64, 3, 3,),
+                                                              "weight": (64, 3, 3),
                                                               "bias": (64,),
                                                               "kernel": (3,),
                                                               "stride": (1,),
@@ -135,3 +135,50 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=2
     # Prepare combined results
     mx_conv_op_results = merge_map_list(conv1d_benchmark_res + conv2d_benchmark_res)
     return mx_conv_op_results
+
+
+def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=10, runs=50):
+    # Conv1DTranspose Benchmarks
+    conv1d_transpose_benchmark_res = []
+    for conv_data in [(32, 3, 256), (32, 3, 64)]:
+        conv1d_transpose_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Deconvolution")],
+                                                               run_backward=True,
+                                                               dtype=dtype,
+                                                               ctx=ctx,
+                                                               inputs=[{"data": conv_data,
+                                                                        "weight": (3, 64, 3),
+                                                                        "bias": (64,),
+                                                                        "kernel": (3,),
+                                                                        "stride": (1,),
+                                                                        "dilate": (1,),
+                                                                        "pad": (0,),
+                                                                        "adj": (0,),
+                                                                        "num_filter": 64,
+                                                                        "no_bias": False,
+                                                                        "layout": 'NCW'}
+                                                                       ],
+                                                               warmup=warmup,
+                                                               runs=runs)
+    # Conv2DTranspose Benchmarks
+    conv2d_transpose_benchmark_res = []
+    for conv_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
+        conv2d_transpose_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Deconvolution")],
+                                                               run_backward=True,
+                                                               dtype=dtype,
+                                                               ctx=ctx,
+                                                               inputs=[{"data": conv_data,
+                                                                        "weight": (3, 64, 3, 3),
+                                                                        "bias": (64,),
+                                                                        "kernel": (3, 3),
+                                                                        "stride": (1, 1),
+                                                                        "dilate": (1, 1),
+                                                                        "pad": (0, 0),
+                                                                        "num_filter": 64,
+                                                                        "no_bias": False,
+                                                                        "layout": 'NCHW'}
+                                                                       ],
+                                                               warmup=warmup,
+                                                               runs=runs)
+    # Prepare combined results
+    mx_transpose_conv_op_results = merge_map_list(conv1d_transpose_benchmark_res + conv2d_transpose_benchmark_res)
+    return mx_transpose_conv_op_results

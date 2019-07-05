@@ -67,7 +67,6 @@
 46. linalg_extractdiag
 47. sgd_mom_update
 48. SequenceLast
-49. Deconvolution
 50. flip
 51. SequenceReverse
 52. swapaxes
