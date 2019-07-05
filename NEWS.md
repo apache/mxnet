@@ -804,7 +804,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * fix Makefile (#14424)
 * [v1.4.x] Update MKL-DNN to fix the OSX build issue (#14141) (#14182)
 * add preprocessed data and pretrained model info; minor format/spelling fixes (#14170)
-* Fixes libjpeg-turbo dependecy under Ubuntu 16.04 (#14127)
+* Fixes libjpeg-turbo dependency under Ubuntu 16.04 (#14127)
 * Fix website error pages (#13963)
 * fix Makefile for rpkg (#13590)
 * fix c complier to clang (#13778)
