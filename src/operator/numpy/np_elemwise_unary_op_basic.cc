@@ -95,7 +95,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
 
 // reciprocal
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_reciprocal, "x", mshadow_op::reciprocal)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_reciprocal, "x", mshadow_op::reciprocal)
 .describe(R"code(Return the reciprocal of the argument, element-wise.
 Example::
     reciprocal([-2, 1, 3, 1.6, 0.2]) = [-0.5, 1.0, 0.33333334, 0.625, 5.0]
@@ -104,7 +104,7 @@ Example::
 
 // abs
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_absolute, "x", mshadow_op::abs)
-.add_alias("_np_abs")
+.add_alias("_npi_abs")
 .describe(R"code(Returns element-wise absolute value of the input.
 Example::
    absolute([-2, 0, 3]) = [2, 0, 3]
@@ -112,7 +112,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
 
 // sign
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_sign, "x", mshadow_op::sign)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sign, "x", mshadow_op::sign)
 .describe(R"code(Returns an element-wise indication of the sign of a number.
 The sign function returns -1 if x < 0, 0 if x==0, 1 if x > 0.
 Example::
@@ -121,7 +121,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
 
 // rint
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_rint, "x", mshadow_op::rint)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_rint, "x", mshadow_op::rint)
 .describe(R"code(Round elements of the array to the nearest integer.
 Example::
    rint([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0]) = [-2., -2., -0.,  0.,  2.,  2.,  2.]
@@ -167,7 +167,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // square
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_square, "x", mshadow_op::square)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_square, "x", mshadow_op::square)
 .describe(R"code(Return the element-wise square of the input.
 Example::
    square([2, 3, 4]) = [4, 9, 16]
@@ -191,7 +191,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_cbrt"});
 
 // exp
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_exp, "x", mshadow_op::exp)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_exp, "x", mshadow_op::exp)
 .describe(R"code(Calculate the exponential of all elements in the input array.
 Example::
    exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
@@ -199,7 +199,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
 
 // log
-NNVM_REGISTER_OP(_np_log)
+NNVM_REGISTER_OP(_npi_log)
 .describe(R"code(Returns element-wise Natural logarithmic value of the input.
 The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 )code" ADD_FILELINE)
@@ -227,7 +227,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_log10, "x", mshadow_op::log10)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log10"});
 
 // log2
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_log2, "x", mshadow_op::log2)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_log2, "x", mshadow_op::log2)
 .describe(R"code(Returns element-wise Base-2 logarithmic value of the input.
 ``2**log2(x) = x``
 )code" ADD_FILELINE)
@@ -279,7 +279,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_tan, "x", mshadow_op::tan)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tan" });
 
 // arcsin
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arcsin, "x", mshadow_op::arcsin)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arcsin, "x", mshadow_op::arcsin)
 .describe(R"code(Returns element-wise inverse sine of the input array.
 .. math::
    arcsin([-1, -.707, 0, .707, 1]) = [-\pi/2, -\pi/4, 0, \pi/4, \pi/2]
@@ -298,7 +298,7 @@ The storage type of ``arccos`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccos" });
 
 // arctan
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arctan, "x", mshadow_op::arctan)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arctan, "x", mshadow_op::arctan)
 .describe(R"code(Returns element-wise inverse tangent of the input array.
 .. math::
    arctan([-1, 0, 1]) = [-\pi/4, 0, \pi/4]
@@ -306,7 +306,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_arctan, "x", mshadow_op::arctan)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctan" });
 
 // degrees
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_degrees, "x", mshadow_op::degrees)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_degrees, "x", mshadow_op::degrees)
 .describe(R"code(Converts each element of the input array from radians to degrees.
 .. math::
    degrees([0, \pi/2, \pi, 3\pi/2, 2\pi]) = [0, 90, 180, 270, 360]
@@ -314,7 +314,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_degrees, "x", mshadow_op::degrees)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_degrees" });
 
 // radians
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_radians, "x", mshadow_op::radians)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_radians, "x", mshadow_op::radians)
 .describe(R"code(Converts each element of the input array from degrees to radians.
 .. math::
    radians([0, 90, 180, 270, 360]) = [0, \pi/2, \pi, 3\pi/2, 2\pi]

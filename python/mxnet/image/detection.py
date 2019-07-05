@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=unused-import
+# pylint: disable=unused-import, too-many-lines
 """Read images and perform augmentations for object detection."""
 
 from __future__ import absolute_import, print_function
@@ -34,6 +34,8 @@ from .. import io
 from .image import RandomOrderAug, ColorJitterAug, LightingAug, ColorNormalizeAug
 from .image import ResizeAug, ForceResizeAug, CastAug, HueJitterAug, RandomGrayAug
 from .image import fixed_crop, ImageIter, Augmenter
+from ..util import is_np_array
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
 class DetAugmenter(object):
@@ -762,6 +764,7 @@ class ImageDetIter(ImageIter):
         """Override the helper function for batchifying data"""
         i = start
         batch_size = self.batch_size
+        array_fn = _mx_np.array if is_np_array() else nd.array
         try:
             while i < batch_size:
                 label, s = self.next_sample()
@@ -778,7 +781,7 @@ class ImageDetIter(ImageIter):
                     assert i < batch_size, 'Batch size must be multiples of augmenter output length'
                     batch_data[i] = self.postprocess_data(datum)
                     num_object = label.shape[0]
-                    batch_label[i][0:num_object] = nd.array(label)
+                    batch_label[i][0:num_object] = array_fn(label)
                     if num_object < batch_label[i].shape[0]:
                         batch_label[i][num_object:] = -1
                     i += 1
@@ -801,8 +804,14 @@ class ImageDetIter(ImageIter):
             batch_label = self._cache_label
             i = self._cache_idx
         else:
-            batch_data = nd.zeros((batch_size, c, h, w))
-            batch_label = nd.empty(self.provide_label[0][1])
+            if is_np_array():
+                zeros_fn = _mx_np.zeros
+                empty_fn = _mx_np.empty
+            else:
+                zeros_fn = nd.zeros
+                empty_fn = nd.empty
+            batch_data = zeros_fn((batch_size, c, h, w))
+            batch_label = empty_fn(self.provide_label[0][1])
             batch_label[:] = -1
             i = self._batchify(batch_data, batch_label)
         # calculate the padding

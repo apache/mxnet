@@ -18,6 +18,7 @@
 """Module for the ops not belonging to the official numpy package."""
 
 from . import _op
+from . import image
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 
