@@ -26,6 +26,8 @@
 
 #include <mxnet/base.h>
 #include "../mshadow_op.h"
+#include "../operator_common.h"
+#include "../tensor/elemwise_binary_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
 
