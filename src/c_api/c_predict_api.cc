@@ -237,7 +237,9 @@ int _CreatePartialOut(const char* symbol_json_str,
       << "The shape information of is not enough to get the shapes";
     CHECK(infer_type_complete)
         << "The type information is not enough, please provide input arg_types "
-           "with provided_arg_dtype_names and provided_arg_dtypes";
+           "with provided_arg_dtype_names and provided_arg_dtypes."
+           "If using amalgamation python frontend you can use type_dict in Predictor API"
+           "to provide this information";
     CopyAttr(g.indexed_graph(),
              g.GetAttr<mxnet::ShapeVector>("shape"),
              &arg_shapes, &out_shapes, &aux_shapes);
