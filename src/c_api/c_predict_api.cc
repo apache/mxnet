@@ -220,6 +220,9 @@ int _CreatePartialOut(const char* symbol_json_str,
         in_types.push_back(arg_types[key]);
       } else if (aux_types.count(key) != 0) {
         in_types.push_back(aux_types[key]);
+      } else {
+        // if key not in arg_types or aux_types set to FP32
+        in_types.push_back(0);
       }
     }
     nnvm::Graph g; g.outputs = sym.outputs;
@@ -544,7 +547,8 @@ int MXPredGetOutputType(PredictorHandle handle,
   MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
   API_BEGIN();
   CHECK_LT(out_index, p->out_arrays.size())
-    << "Index exceed number of outputs";
+      << "Index exceed number of outputs, provided out_index should be less than "
+      << p->out_arrays.size();
 
   const int s = p->out_dtypes[out_index];
   CHECK_GE(s, 0);
@@ -648,6 +652,22 @@ int MXNDListGet(NDListHandle handle,
   nnvm::ShapeTypeCast(s.begin(), s.end(), p->shapes_buffer.data());
   *out_shape = p->shapes_buffer.data();
   *out_ndim = p->shapes[index].ndim();
+  API_END();
+}
+
+int MXPredSetMonitorCallback(PredictorHandle handle,
+                             PredMonitorCallback callback,
+                             void* callback_handle,
+                             bool monitor_all) {
+  MXAPIPredictor* p = static_cast<MXAPIPredictor*>(handle);
+  API_BEGIN();
+  PredMonitorCallback callback_temp = callback;
+  void* callback_handle_temp = callback_handle;
+  std::function<void(const char*, void*)> clbk
+  = [callback_temp, callback_handle_temp](const char* name, void* handle) {
+    callback_temp(name, handle, callback_handle_temp);
+  };
+  p->exec->SetMonitorCallback(clbk, monitor_all);
   API_END();
 }
 

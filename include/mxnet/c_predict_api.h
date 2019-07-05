@@ -49,6 +49,12 @@ typedef float mx_float;
 typedef void *PredictorHandle;
 /*! \brief handle to NDArray list */
 typedef void *NDListHandle;
+/*! \brief handle to NDArray */
+typedef void *NDArrayHandle;
+/*! \brief callback used for add monitoring to nodes in the graph */
+typedef void (*PredMonitorCallback)(const char*,
+                                    NDArrayHandle,
+                                    void*);
 
 /*!
  * \brief Get the last error happeneed.
@@ -319,6 +325,15 @@ MXNET_DLL int MXNDListGet(NDListHandle handle,
                           const mx_float** out_data,
                           const mx_uint** out_shape,
                           mx_uint* out_ndim);
+
+/*!
+ * \brief set a call back to notify the completion of operation and allow for
+ * additional monitoring
+ */
+MXNET_DLL int MXPredSetMonitorCallback(PredictorHandle handle,
+                                       PredMonitorCallback callback,
+                                       void* callback_handle,
+                                       bool monitor_all);
 /*!
  * \brief Free a MXAPINDList
  * \param handle The handle of the MXAPINDList.

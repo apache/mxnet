@@ -149,6 +149,14 @@ def _check_call(ret):
     if ret != 0:
         raise RuntimeError(py_str(_LIB.MXGetLastError()))
 
+
+def _monitor_callback_wrapper(callback):
+    """A wrapper for the user-defined handle."""
+    def callback_handle(name, array, _):
+        """ ctypes function """
+        callback(name, array)
+    return callback_handle
+
 _LIB = _load_lib()
 # type definitions
 mx_uint = ctypes.c_uint
@@ -330,6 +338,14 @@ class Predictor(object):
             data.ctypes.data_as(mx_float_p),
             mx_uint(data.size)))
         return data
+
+    def set_monitor_callback(self, callback, monitor_all=False):
+        cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p)
+        self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
+        _check_call(_LIB.MXPredSetMonitorCallback(self.handle,
+                                                  self._monitor_callback,
+                                                  None,
+                                                  ctypes.c_int(monitor_all)))
 
 
 def load_ndarray_file(nd_bytes):
