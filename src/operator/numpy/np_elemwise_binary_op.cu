@@ -41,5 +41,15 @@ NNVM_REGISTER_OP(ldexp_scalar)
 NNVM_REGISTER_OP(rldexp_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rldexp>);
 
+NNVM_REGISTER_OP(_backward_ldexp)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::ldexp_grad,
+                                                              mshadow_op::ldexp_rgrad>);
+
+NNVM_REGISTER_OP(_backward_ldexp_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::ldexp_grad>);
+
+NNVM_REGISTER_OP(_backward_rldexp_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::rldexp_grad>);
+
 }  // namespace op
 }  // namespace mxnet
