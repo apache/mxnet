@@ -39,6 +39,13 @@
 namespace mxnet {
 namespace op {
 
+MSHADOW_XINLINE div_t my_div(int x, int y) {
+  div_t result;
+  result.quot = x / y;
+  result.rem = x % y;
+  return result;
+}
+
 struct NumpyDiagflatParam : public dmlc::Parameter<NumpyDiagflatParam> {
   int k;
   DMLC_DECLARE_PARAMETER(NumpyDiagflatParam) {
@@ -71,9 +78,9 @@ struct numpy_diagflat {
 
     div_t divmod;
     if (k >= 0) {
-      divmod = div(static_cast<int>(i - k), static_cast<int>(diag_len + 1));
+      divmod = my_div(static_cast<int>(i - k), static_cast<int>(diag_len + 1));
     } else {
-      divmod = div(static_cast<int>(i + k * diag_len),
+      divmod = my_div(static_cast<int>(i + k * diag_len),
                    static_cast<int>(diag_len + 1));
     }
     DType to_write;
@@ -141,9 +148,9 @@ struct numpy_diagflat_backward {
 
     div_t divmod;
     if (k >= 0) {
-      divmod = div(static_cast<int>(i - k), static_cast<int>(diag_len + 1));
+      divmod = my_div(static_cast<int>(i - k), static_cast<int>(diag_len + 1));
     } else {
-      divmod = div(static_cast<int>(i + k * diag_len),
+      divmod = my_div(static_cast<int>(i + k * diag_len),
                    static_cast<int>(diag_len + 1));
     }
     // if the coord lies on the shifted diagonal and actually lies in the matrix
