@@ -28,6 +28,7 @@ from common import assertRaises, with_seed
 import random
 
 
+@with_seed()
 @npx.use_np_shape
 def test_np_ldexp():
     class TestLdexp(HybridBlock):
