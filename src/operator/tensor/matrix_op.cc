@@ -111,12 +111,13 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
+  const ReshapeParam& param = nnvm::get<ReshapeParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape())) {
+  if (SupportMKLDNNReshape(param, inputs[0])) {
     MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
@@ -233,7 +234,8 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape())) {
+  auto data_ndim = inputs[0].shape().ndim();
+  if (data_ndim <= 4 && inputs[0].dtype() == mshadow::kFloat32) {
     MKLDNNFlattenForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   } else {

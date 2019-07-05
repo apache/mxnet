@@ -34,18 +34,6 @@
 namespace mxnet {
 namespace op {
 
-inline bool SupportMKLDNNReshape(const ReshapeParam &param,
-                                 const NDArray &data) {
-  auto data_ndim = data.shape().ndim();
-
-  if (data_ndim > 4 ||
-      data.dtype() != mshadow::kFloat32 ||
-      param.shape.ndim() > 4)
-    return false;
-
-  return true;
-}
-
 class MKLDNNReshapeFwd {
  protected:
   std::shared_ptr<mkldnn::memory> data_;
