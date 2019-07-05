@@ -93,6 +93,7 @@ MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(ldexp)
     Notes
     -----
     Complex dtypes are not supported, they will raise a TypeError.
+    Different from numpy, we allow x2 to be float besides int. 
 
     `ldexp` is useful as the inverse of `frexp`, if used by itself it is
     more clear to simply use the expression ``x1 * 2**x2``.
