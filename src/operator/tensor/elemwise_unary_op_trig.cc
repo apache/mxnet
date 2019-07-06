@@ -49,7 +49,7 @@ The storage type of ``sin`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshadow_op::sin_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-      // ograds[0]: d^2L/dx^2
+      // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseUseIn)
       // f(x) = sin(x)
@@ -92,7 +92,7 @@ The storage type of ``cos`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_op::cos_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-      // ograds[0]: d^2L/dx^2
+      // ograds[0]: head_grad_grads (dL/dx_grad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseUseIn)
       // f(x) = cos(x)

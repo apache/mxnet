@@ -286,7 +286,6 @@ inline void LogMemoryPlan(const nnvm::Graph& g) {
   const auto &idx = g.indexed_graph();
   const auto& vshape = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& vtype = g.GetAttr<nnvm::DTypeVector>("dtype");
-  const auto& vstorage = g.GetAttr<nnvm::StorageVector>("storage_id");
   // find node range
   uint32_t node_start = 0, node_end = idx.num_nodes();
   if (g.attrs.count("node_range")) {
@@ -304,13 +303,13 @@ inline void LogMemoryPlan(const nnvm::Graph& g) {
         auto eid = idx.entry_id(e);
         size_t kilo_bytes = vshape[eid].Size() * mshadow::mshadow_sizeof(vtype[eid]) / 1024;
         LOG(INFO) << "\t\tinput " << eid << ": " << vshape[eid] << " ("
-                  << kilo_bytes << " KB) -> " << storage_str(vstorage[eid]);
+                  << kilo_bytes << " KB)";
       }
       for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
         uint32_t eid = idx.entry_id(nid, index);
         size_t kilo_bytes = vshape[eid].Size() * mshadow::mshadow_sizeof(vtype[eid]) / 1024;
         LOG(INFO) << "\t\toutput " << eid << ": " << vshape[eid] << " ("
-                  << kilo_bytes << " KB) -> " << storage_str(vstorage[eid]);
+                  << kilo_bytes << " KB)";
       }
     }
   }

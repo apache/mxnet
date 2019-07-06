@@ -27,10 +27,11 @@ import itertools
 from distutils.version import LooseVersion
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
 from common import run_in_spawned_process
-from nose.tools import assert_raises
+from nose.tools import assert_raises, ok_
 import unittest
 import os
 
@@ -4041,11 +4042,33 @@ def test_init():
         exe.forward()
         assert_almost_equal(exe.outputs[0].asnumpy(), np.array([0,1,2,3,4]))
 
+    def test_arange_like():
+        shape_list = [(10,), (10, 20), (10, 20, 30), (10, 20, 30, 40)]
+        axis_list = [0, -1]
+        for sh in shape_list:
+            for axis in axis_list:
+                val = np.random.rand(*sh)
+                data = mx.nd.array(val)
+                nd_out = mx.nd.contrib.arange_like(data, start=0, axis=axis)
+                np_out = np.arange(start=0, stop=sh[axis])
+                assert_almost_equal(nd_out.asnumpy(), np_out)
+
+    def test_arange_like_without_axis():
+        shape_list = [(10,), (10, 20), (10, 20, 30), (10, 20, 30, 40)]
+        for sh in shape_list:
+            val = np.random.rand(*sh)
+            data = mx.nd.array(val)
+            nd_out = mx.nd.contrib.arange_like(data, start=0)
+            np_out = np.arange(start=0, stop=val.size)
+            assert_almost_equal(nd_out.asnumpy(), np_out.reshape(sh))
+
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
     test_arange()
     test_arange_inferstop()
+    test_arange_like()
+    test_arange_like_without_axis()
 
 
 @with_seed()
@@ -8653,6 +8676,22 @@ def test_add_n():
         rslt += data[i]
     add_n_rslt = mx.nd.add_n(*data, out=data[0])
     assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
+
+
+def test_get_all_registered_operators():
+    ops = get_all_registered_operators()
+    ok_(isinstance(ops, list))
+    ok_(len(ops) > 0)
+    ok_('Activation' in ops)
+
+
+def test_get_operator_arguments():
+    operator_arguments = get_operator_arguments('Activation')
+    ok_(isinstance(operator_arguments, OperatorArguments))
+    ok_(operator_arguments.names == ['data', 'act_type'])
+    ok_(operator_arguments.types
+        == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"])
+    ok_(operator_arguments.narg == 2)
 
 
 if __name__ == '__main__':
