@@ -17,6 +17,7 @@
 
 
 import math
+import random
 from mxnet import nd, autograd
 from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd
 from common import with_seed
@@ -121,6 +122,46 @@ def test_sigmoid():
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, sigmoid, grad_grad_op)
+
+
+@with_seed()
+def test_sqrt():
+    def sqrt(x):
+        return nd.sqrt(x)
+
+    def grad_grad_op(x):
+        return -1/(4 * sqrt(x**3))
+
+    sigma = random.randint(25, 100)
+    mu = random.randint(500, 1000)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        array = sigma * array + mu
+        # Only positive numbers
+        assert((array > 0).all())
+        check_second_order_unary(array, sqrt, grad_grad_op)
+
+
+@with_seed()
+def test_cbrt():
+    def cbrt(x):
+        return nd.cbrt(x)
+
+    def grad_grad_op(x):
+        return -2/(9 * cbrt(x**5))
+
+    sigma = random.randint(25, 100)
+    mu = random.randint(500, 1000)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        array = sigma * array + mu
+        # Only positive numbers
+        assert((array > 0).all())
+        check_second_order_unary(array, cbrt, grad_grad_op)
 
 
 def check_second_order_unary(x, op, grad_grad_op):
