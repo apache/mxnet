@@ -34,13 +34,14 @@ from benchmark.opperf.nd_operations.binary_operators import run_mx_binary_broadc
 from benchmark.opperf.nd_operations.gemm_operators import run_gemm_operators_benchmarks
 from benchmark.opperf.nd_operations.random_sampling_operators import run_mx_random_sampling_operators_benchmarks
 from benchmark.opperf.nd_operations.reduction_operators import run_mx_reduction_operators_benchmarks
+from benchmark.opperf.nd_operations.sorting_searching_operators import run_sorting_searching_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_activation_operators import run_activation_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operators_benchmarks, \
     run_convolution_operators_benchmarks, run_transpose_convolution_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
-from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark,\
+from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark, \
     get_current_runtime_features
 
 
@@ -73,6 +74,9 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
 
     # Run all Reduction operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_reduction_operators_benchmarks(ctx=ctx, dtype=dtype))
+
+    # Run all Sorting and Searching operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_sorting_searching_operators_benchmarks(ctx=ctx, dtype=dtype))
 
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
 
@@ -150,4 +154,3 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-
