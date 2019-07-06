@@ -1019,10 +1019,9 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_cbrt,
       // ograds[0] : head_grads
       // f'(x) = 1/(3*x^2/3)
       // f''(x) = f'(x) * -2/(3*x) = -2/(9 * x^5/3)
-      const std::unordered_map<std::string, std::string> pow_args = {{"scalar", "3.0"}};
       const std::unordered_map<std::string, std::string> three = {{"scalar", "3.0"}};
       const std::unordered_map<std::string, std::string> two = {{"scalar", "2.0"}};
-      auto x = MakeNode("_power_scalar", n->attrs.name + "_x", {n->inputs[1]}, &pow_args, &n);
+      auto x = MakeNode("_power_scalar", n->attrs.name + "_x", {n->inputs[1]}, &three, &n);
       auto three_x = MakeNode("_mul_scalar", n->attrs.name + "_three_x",
                                     {nnvm::NodeEntry{x}}, &three, &n);
       auto r_three_x = MakeNode("reciprocal", n->attrs.name + "_reciprocal_three_x",
