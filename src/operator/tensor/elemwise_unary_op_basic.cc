@@ -956,7 +956,42 @@ The storage type of ``rsqrt`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rsqrt"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(
-  _backward_rsqrt, unary_bwd<mshadow_op::reciprocal_square_root_grad>);
+  _backward_rsqrt, unary_bwd<mshadow_op::reciprocal_square_root_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // NodeEntry{n} : y_grad * f'(x)
+      // n->inputs[0] : y_grad
+      // n->inputs[1] : x
+      // ograds[0] : head_grads
+      // f(x) = 1/(x^1/2)
+      // f'(x) = -1/(2*x^3/2)
+      // f''(x) = f'(x) * -3/(2*x) = 3/(4 * x^5/2)
+      const std::unordered_map<std::string, std::string> three = {{"scalar", "3.0"}};
+      const std::unordered_map<std::string, std::string> two = {{"scalar", "2.0"}};
+      auto x = n->inputs[1];
+      auto dldy_mul_dydx = nnvm::NodeEntry{n};
+      auto two_x = MakeNode("_mul_scalar", n->attrs.name + "_two_x",
+                                    {nnvm::NodeEntry{x}}, &two, &n);
+      auto r_two_x = MakeNode("reciprocal", n->attrs.name + "_reciprocal_two_x",
+                                    {nnvm::NodeEntry{two_x}}, nullptr, &n);
+      auto neg_r_two_x = MakeNode("negative", n->attrs.name + "_neg_reciprocal_two_x",
+                                    {nnvm::NodeEntry{r_two_x}}, nullptr, &n);
+      auto three_by_two_neg_r_x = MakeNode("_mul_scalar",
+                                           n->attrs.name + "_three_by_two_neg_reciprocal_x",
+                                           {nnvm::NodeEntry{neg_r_two_x}}, &three, &n);
+      auto grad_grad_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_x",
+                                  {nnvm::NodeEntry{three_by_two_neg_r_x}, dldy_mul_dydx},
+                                  nullptr, &n);
+      auto dydx = MakeNode("elemwise_div", n->attrs.name + "_grad_div",
+                           {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+      return ret;
+  });
 
 // cbrt
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(cbrt, cpu, mshadow_op::cube_root)
@@ -1036,7 +1071,42 @@ Example::
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
 .set_attr<FCompute>("FCompute<cpu>",
                     ElemwiseBinaryOp::Compute<cpu,
-                      unary_bwd<mshadow_op::reciprocal_cube_root_grad>>);
+                      unary_bwd<mshadow_op::reciprocal_cube_root_grad>>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // NodeEntry{n} : y_grad * f'(x)
+      // n->inputs[0] : y_grad
+      // n->inputs[1] : x
+      // ograds[0] : head_grads
+      // f(x) = 1/(x^1/3)
+      // f'(x) = -1/(3*x^4/3)
+      // f''(x) = f'(x) * -4/(3*x) = 4/(9 * x^7/3)
+      const std::unordered_map<std::string, std::string> three = {{"scalar", "3.0"}};
+      const std::unordered_map<std::string, std::string> four = {{"scalar", "4.0"}};
+      auto x = n->inputs[1];
+      auto dldy_mul_dydx = nnvm::NodeEntry{n};
+      auto three_x = MakeNode("_mul_scalar", n->attrs.name + "_three_x",
+                                    {nnvm::NodeEntry{x}}, &three, &n);
+      auto r_three_x = MakeNode("reciprocal", n->attrs.name + "_reciprocal_three_x",
+                                    {nnvm::NodeEntry{three_x}}, nullptr, &n);
+      auto neg_r_three_x = MakeNode("negative", n->attrs.name + "_neg_reciprocal_three_x",
+                                    {nnvm::NodeEntry{r_three_x}}, nullptr, &n);
+      auto four_by_three_neg_r_x = MakeNode("_mul_scalar",
+                                            n->attrs.name + "_four_by_three_neg_reciprocal_x",
+                                            {nnvm::NodeEntry{neg_r_three_x}}, &four, &n);
+      auto grad_grad_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_x",
+                                  {nnvm::NodeEntry{four_by_three_neg_r_x}, dldy_mul_dydx},
+                                  nullptr, &n);
+      auto dydx = MakeNode("elemwise_div", n->attrs.name + "_grad_div",
+                           {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+      return ret;
+  });
 
 // exp
 #if MSHADOW_USE_MKL == 1
