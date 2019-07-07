@@ -154,6 +154,8 @@ run_training_iteration(*next(itr))
 mx.nd.waitall()
 # Ask the profiler to stop recording
 profiler.set_state('stop')
+# Dump all results to log file before download
+profiler.dump()
 ```
 
 Between running and stopping the profiler, you can also pause and resume the profiler using `profiler.pause()` and `profiler.resume()` respectively to profile only parts of the code you want to profile.
