@@ -150,6 +150,41 @@ def test_sigmoid():
         check_second_order_unary(array, sigmoid, grad_grad_op)
 
 
+@with_seed()
+def test_elemwise_mul():
+    def elemwise_mul(x, y):
+        return nd.elemwise_mul(x, y)
+
+    def grad_grad_op(x, y):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array_x, array_y = random_arrays(shape, shape)
+        inputs = (array_x, array_y)
+        grad_grad_ops = (grad_grad_op, grad_grad_op)
+        check_second_order_binary(inputs, elemwise_mul, grad_grad_ops)
+
+
+@with_seed()
+def test_elemwise_div():
+    def elemwise_div(x, y):
+        return nd.elemwise_div(x, y)
+
+    def grad_grad_op_x(x, y):
+        return nd.zeros_like(x)
+
+    def grad_grad_op_y(x, y):
+        return (x * 2)/(y**3)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array_x, array_y = random_arrays(shape, shape)
+        inputs = (array_x, array_y)
+        grad_grad_ops = (grad_grad_op_x, grad_grad_op_y)
+        check_second_order_binary(inputs, elemwise_div, grad_grad_ops)
+
+
 def check_second_order_unary(x, op, grad_grad_op):
     x = nd.array(x)
     grad_grad_x = grad_grad_op(x)
@@ -172,6 +207,42 @@ def check_second_order_unary(x, op, grad_grad_op):
 
     # Validate the gradients.
     assert_almost_equal(expected_grad_grad, x.grad.asnumpy())
+
+
+def check_second_order_binary(inputs, binary_op, grad_grad_ops):
+    assert (len(inputs) == len(grad_grad_ops))
+
+    x, y = map(nd.array, inputs)
+    grad_grad_x, grad_grad_y = [gg_op(x, y) for gg_op in grad_grad_ops]
+    x.attach_grad()
+    y.attach_grad()
+
+    # Manual head_grads.
+    z_grad = nd.random.normal(shape=x.shape)
+    head_grad_grads = nd.random.normal(shape=x.shape)
+
+    # Perform compute.
+    with autograd.record():
+        z = binary_op(x, y)
+        x_grad, y_grad = autograd.grad(heads=z, variables=[x, y],
+                                       head_grads=z_grad,
+                                       create_graph=True, retain_graph=True)
+
+    x_grad.backward(head_grad_grads, retain_graph=True)
+
+    # The line below follower by above
+    # line leads to (y.grad == zeros_like(y))
+    # y_grad.backward(head_grad_grads)
+
+    # Compute expected values.
+    expected_grad_grad_x = grad_grad_x.asnumpy() * head_grad_grads.asnumpy() *\
+        z_grad.asnumpy()
+    expected_grad_grad_y = grad_grad_y.asnumpy() * head_grad_grads.asnumpy() *\
+        z_grad.asnumpy()
+
+    # Validate the gradients.
+    assert_almost_equal(expected_grad_grad_x, x.grad.asnumpy())
+    assert_almost_equal(expected_grad_grad_y, y.grad.asnumpy())
 
 
 if __name__ == '__main__':
