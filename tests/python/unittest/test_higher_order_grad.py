@@ -107,6 +107,33 @@ def test_log10():
 
 
 @with_seed()
+def test_reciprocal():
+    def reciprocal(x):
+        return nd.reciprocal(x)
+
+    def grad_grad_op(x):
+        return 2 / x**3
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, reciprocal, grad_grad_op)
+
+
+@with_seed()
+def test_abs():
+    def abs(x):
+        return nd.abs(x)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, abs, grad_grad_op)
+
+
 def test_sigmoid():
     def sigmoid(x):
         return nd.sigmoid(x)
