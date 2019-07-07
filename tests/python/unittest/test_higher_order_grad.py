@@ -127,11 +127,27 @@ def test_cosh():
 
     def grad_grad_op(x):
         return cosh(x)
-
+    
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, cosh, grad_grad_op)
+
+
+def test_sigmoid():
+    def sigmoid(x):
+        return nd.sigmoid(x)
+
+    def grad_op(x):
+        return sigmoid(x) * (1 - sigmoid(x))
+
+    def grad_grad_op(x):
+        return grad_op(x) * (1 - 2 * sigmoid(x))
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, sigmoid, grad_grad_op)
 
 
 def check_second_order_unary(x, op, grad_grad_op):
