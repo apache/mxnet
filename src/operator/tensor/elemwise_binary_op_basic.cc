@@ -251,7 +251,31 @@ NNVM_REGISTER_OP(_backward_mul)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
   cpu, mshadow_op::right, mshadow_op::left>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
-  cpu, mshadow_op::right, mshadow_op::left>);
+  cpu, mshadow_op::right, mshadow_op::left>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // z = x * y
+    // NodeEntry{n, 0, 0} : z_grad * y
+    // NodeEntry{n, 1, 0} : z_grad * x
+    // n->inputs[0] : z_grad
+    // n->inputs[1] : x
+    // n->inputs[1] : y
+    // ograds[0] : head_grads
+    // f(x, y) = x * y
+    // dx = z_grad * y, dy = z_grad * x
+    // d2x = 0, d2y = 0, dz_grad = dx + dy = y + x
+    auto dz_grad = MakeNode("elemwise_add", n->attrs.name + "_y_add_x",
+                            {n->inputs[2], n->inputs[1]}, nullptr, &n);
+
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                              {ograds[0], nnvm::NodeEntry{dz_grad}}, nullptr, &n));
+    ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_grad_x",
+                              {n->inputs[1]}, nullptr, &n));
+    ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_grad_y",
+                              {n->inputs[2]}, nullptr, &n));
+    return ret;
+});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(elemwise_div, op::mshadow_op::div)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_div)
@@ -274,7 +298,43 @@ NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
   cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
-  cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>);
+  cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // z = x / y
+    // NodeEntry{n, 0, 0} : z_grad * (1/y)
+    // NodeEntry{n, 1, 0} : z_grad * (-x/y^2)
+    // n->inputs[0] : z_grad
+    // n->inputs[1] : x
+    // n->inputs[1] : y
+    // ograds[0] : head_grads
+    // f(x, y) = x / y
+    // dx = z_grad * (1/y), dy = z_grad * (-x/y^2)
+    // d2x = 0, d2y = dy * (-2/x) = (2x/y^3), dz_grad = (dx + dy) / (z_grad)
+    auto dx = nnvm::NodeEntry{n, 0, 0};
+    auto dy = nnvm::NodeEntry{n, 1, 0};
+    auto dx_add_dy = MakeNode("elemwise_add", n->attrs.name + "_x_add_y",
+                              {dx, dy}, nullptr, &n);
+    auto dz_grad = MakeNode("elemwise_div", n->attrs.name + "_x_add_y",
+                                         {nnvm::NodeEntry{dx_add_dy}, n->inputs[0]}, nullptr, &n);
+
+    const std::unordered_map<std::string, std::string> two = {{"scalar", "-2.0"}};
+    auto y = n->inputs[2];
+    auto r_y = MakeNode("reciprocal", n->attrs.name + "_r_y", {y}, nullptr, &n);
+    auto neg_two_r_y = MakeNode("_mul_scalar", n->attrs.name + "_neg_two_r_y",
+                            {nnvm::NodeEntry{r_y}}, &two, &n);
+    auto d2y = MakeNode("elemwise_mul", n->attrs.name + "_d2y",
+                            {nnvm::NodeEntry{neg_two_r_y}, dy}, &two, &n);
+
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                              {ograds[0], nnvm::NodeEntry{dz_grad}}, nullptr, &n));
+    ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_grad_x",
+                              {n->inputs[1]}, nullptr, &n));
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_y",
+                              {ograds[0], nnvm::NodeEntry{d2y}}, nullptr, &n));
+    return ret;
+  });
 
 MXNET_OPERATOR_REGISTER_BINARY(_mod)
 .add_alias("_Mod")
