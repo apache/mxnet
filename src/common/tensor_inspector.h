@@ -127,14 +127,13 @@ class TensorInspector {
    * \brief output the tensor in a structed format 
    * \tparam DType the data type
    * \tparam StreamType the type of the stream object
-   * \param ctx the run context of the tensor
    * \param os stream object to output to
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE, typename StreamType>
-  inline void to_string_helper(const RunContext& ctx, StreamType& os) { 
+  inline void to_string_helper(StreamType& os) { 
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).to_string_helper<DType>(ctx, os);
+      TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).to_string_helper<DType>(os);
       return;
     }
 #endif // MXNET_USE_CUDA
@@ -167,15 +166,14 @@ class TensorInspector {
    * \brief output the tensor in a structed format 
    * \tparam DType the data type
    * \tparam StreamType the type of the stream object
-   * \param ctx the run context of the tensor
    * \param os stream object to output to
    * \param dptr the data pointer
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE, typename StreamType>
-  inline void to_string_helper(const RunContext& ctx, StreamType& os, const DType* dptr) {
+  inline void to_string_helper(StreamType& os, const DType* dptr) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).to_string_helper<DType>(ctx, os, dptr);
+      TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).to_string_helper<DType>(os, dptr);
       return;
     }
 #endif // MXNET_USE_CUDA
@@ -187,22 +185,21 @@ class TensorInspector {
    * \brief output a part of the tensor in a structed format 
    * \tparam DType the data type
    * \tparam StreamType the type of the stream object
-   * \param ctx the run context of the tensor
    * \param os stream object to output to
    * \param sub_shape the sub-shape of the desired part of the tensor
    * \param offset the position of the first value of the desired part of the tensor
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE, typename StreamType>
-  inline void to_string_helper(const RunContext& ctx, StreamType& os, const std::vector<int>& sub_shape, size_t offset) {
+  inline void to_string_helper(StreamType& os, const std::vector<int>& sub_shape, size_t offset) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).to_string_helper<DType>(ctx, os, sub_shape, offset);
+      TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).to_string_helper<DType>(os, sub_shape, offset);
       return;
     }
 #endif // MXNET_USE_CUDA
     DType* dptr = tb_.dptr<DType>() + offset;
     if (sub_shape.size() == 0) {
-      to_string_helper<DType>(ctx, os, dptr);
+      to_string_helper<DType>(os, dptr);
       return;
     }
     int dimension = sub_shape.size();
@@ -286,14 +283,13 @@ class TensorInspector {
   /*!
    * \brief interactive print the tensor value
    * \tparam DType the data type
-   * \param ctx the run context of the tensor
    * \param tag the name given to this call
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE>
-  inline void interactive_print_helper(const RunContext& ctx, std::string tag) {
+  inline void interactive_print_helper(std::string tag) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).interactive_print_helper<DType>(ctx, tag);
+      TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).interactive_print_helper<DType>(tag);
       return;
     }
 #endif // MXNET_USE_CUDA
@@ -313,7 +309,7 @@ class TensorInspector {
       if (str == "b") {
         break;
       } else if (str == "e") {
-        to_string_helper<DType>(ctx, std::cout);
+        to_string_helper<DType>(std::cout);
         continue;
       } else if (str == "s") {
         InspectorManager::get()->interactive_print_skip_all_ = true;
@@ -324,7 +320,7 @@ class TensorInspector {
         std::vector<int> sub_shape;
         size_t offset;
         print_locator(pos, sub_shape, offset);
-        to_string_helper<DType>(ctx, std::cout, sub_shape, offset);
+        to_string_helper<DType>(std::cout, sub_shape, offset);
       } else {
         std::cout << "invalid input" << std::endl;
       }
@@ -350,17 +346,17 @@ class TensorInspector {
    * \brief check/validate the values within the tensor, return the coordinates
    * where the lambda evaluates to true
    * \tparam DType the data type
-   * \param ctx the run context of the tensor
    * \param checker the lambda function to check each value of within the tensor
    * \param interactive wherether to allow the user to interactively check the coordinates
    * \param tag the name given to this call
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE>
-  inline std::vector<std::vector<int>> check_value_helper(const RunContext& ctx,
-      const std::function<bool(DType)>& checker, bool interactive, std::string tag) {
+  inline std::vector<std::vector<int>>
+      check_value_helper(const std::function<bool(DType)>& checker,
+      bool interactive, std::string tag) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      return TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).check_value_helper<DType>(ctx,
+      return TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).check_value_helper<DType>(
           checker, interactive, tag);
     }
 #endif // MXNET_USE_CUDA
@@ -455,7 +451,8 @@ class TensorInspector {
    */
   template<typename Device, int dimension,
       typename DType MSHADOW_DEFAULT_DTYPE>
-  TensorInspector(const Tensor<Device, dimension, DType>& ts) : tb_(ts) {}
+  TensorInspector(const Tensor<Device, dimension, DType>& ts, const RunContext& ctx):
+      tb_(ts), ctx_(ctx) {}
 
   /*!
    * \brief Construct from TBlob object
@@ -464,7 +461,8 @@ class TensorInspector {
    * \tparam DType the data type
    * \param ts the source tensor obeject
    */
-  TensorInspector(const TBlob& tb) : tb_(tb) {}
+  TensorInspector(const TBlob& tb, const RunContext& ctx):
+      tb_(tb), ctx_(ctx) {}
 
   /*!
    * \brief Construct from NDArray object. Currently this only works with kDefaultStorage
@@ -473,36 +471,34 @@ class TensorInspector {
    * \tparam DType the data type
    * \param ts the source tensor obeject
    */
-  TensorInspector(const NDArray& arr) : tb_(arr.data()){}
+  TensorInspector(const NDArray& arr, const RunContext& ctx):
+      tb_(arr.data()), ctx_(ctx) {}
 
   /*!
    * \brief print the tensor to std::cout
-   * \param ctx the run context of the tensor
    */
-  inline void print_string(const RunContext& ctx) {
-    std::cout << to_string(ctx) << std::endl;
+  inline void print_string() {
+    std::cout << to_string() << std::endl;
   }
 
   /*!
    * \brief return a string which contains the values and other info of the tensor
-   * \param ctx the run context of the tensor
    */
-  inline std::string to_string(const RunContext& ctx) {
+  inline std::string to_string() {
     std::stringstream ss;
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
-      to_string_helper<DType>(ctx, ss);
+      to_string_helper<DType>(ss);
     });
     return ss.str();
   }
 
   /*!
    * \brief interactive print the tensor value
-   * \param ctx the run context of the tensor
    * \param tag the name given to this call
    */
-  inline void interactive_print(const RunContext& ctx, std::string tag = "") {
+  inline void interactive_print(std::string tag = "") {
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
-      interactive_print_helper<DType>(ctx, tag);
+      interactive_print_helper<DType>(tag);
     });
   }
 
@@ -510,16 +506,15 @@ class TensorInspector {
    * \brief check/validate the values within the tensor, return the coordinates
    * where the lambda evaluates to true
    * \tparam ValueChecker the type of the lambda
-   * \param ctx the run context of the tensor
    * \param checker the lambda function to check each value of within the tensor
    * \param interactive wherether to allow the user to interactively check the coordinates
    * \param tag the name given to this call
    */
   template<typename ValueChecker>
-  std::vector<std::vector<int>> check_value(const RunContext& ctx, const ValueChecker& checker,
-      bool interactive = false, std::string tag = "") {
+  std::vector<std::vector<int>> check_value(const ValueChecker& checker, bool interactive = false,
+      std::string tag = "") {
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
-      return check_value_helper<DType>(ctx, checker, interactive, tag);
+      return check_value_helper<DType>(checker, interactive, tag);
     });
     return std::vector<std::vector<int>>();
   }
@@ -527,15 +522,14 @@ class TensorInspector {
   /*!
    * \brief check/validate the values within the tensor, return the coordinates
    * where the lambda evaluates to true
-   * \param ctx the run context of the tensor
    * \param ct the type of the checker
    * \param interactive wherether to allow the user to interactively check the coordinates
    * \param tag the name given to this call
    */
-  std::vector<std::vector<int>> check_value(const RunContext& ctx, CheckerType ct,
-      bool interactive = false, std::string tag = "") {
+  std::vector<std::vector<int>> check_value(CheckerType ct, bool interactive = false,
+      std::string tag = "") {
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
-      return check_value_helper<DType>(ctx, build_checker<DType>(ct), interactive, tag);
+      return check_value_helper<DType>(build_checker<DType>(ct), interactive, tag);
     });
     return std::vector<std::vector<int>>();
   }
@@ -543,6 +537,8 @@ class TensorInspector {
  private:
   /* !\brief the tensor blob */
   const TBlob tb_;
+  /* !\brief the run context of the tensor */
+  const RunContext& ctx_;
 };
 
 
