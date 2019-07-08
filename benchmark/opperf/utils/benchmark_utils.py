@@ -55,14 +55,14 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kw
 
     # Run Benchmarks
     op_benchmark_result = {op.__name__: []}
-    logging.info(f"Begin Benchmark - {op.__name__}")
+    logging.info("Begin Benchmark - {name}".format(name=op.__name__))
     for idx, kwargs in enumerate(kwargs_list):
         _, profiler_output = benchmark_helper_func(op, runs, **kwargs)
 
         # Add inputs used for profiling this operator into result
         profiler_output["inputs"] = inputs[idx]
         op_benchmark_result[op.__name__].append(profiler_output)
-    logging.info(f"Complete Benchmark - {op.__name__}")
+    logging.info("Complete Benchmark - {name}".format(name=op.__name__))
     return op_benchmark_result
 
 
