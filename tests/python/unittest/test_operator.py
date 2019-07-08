@@ -8514,8 +8514,8 @@ def test_slice_sum():
     shape2 = (5, 16, 4)
     for dtype in [np.float32, np.float16]:
         for ctx in [mx.cpu(), mx.gpu()]:
-            x = mx.nd.array(np.random.normal(size=shape1).astype(dtype), ctx=ctx)
-            y = mx.nd.array(np.random.normal(size=shape2).astype(dtype), ctx=ctx)
+            x = mx.nd.array(np.random.normal(size=shape1), dtype=dtype, ctx=ctx)
+            y = mx.nd.array(np.random.normal(size=shape2), dtype=dtype, ctx=ctx)
 
             X = mx.symbol.Variable('X')
             Y = mx.symbol.Variable('Y')

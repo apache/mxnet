@@ -24,7 +24,7 @@ namespace op {
 
 
 NNVM_REGISTER_OP(slice_sum)
-.set_attr<FCompute>("FCompute<gpu>", SliceSumOpForwardEx<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", SliceSumOpForward<gpu>);
 
 }
 }
