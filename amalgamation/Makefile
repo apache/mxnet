@@ -115,7 +115,7 @@ ifneq ($(ANDROID), 1)
         android:
 else
         CFLAGS+= -O3
-        LDFLAGS+= -Wl,--no-warn-mismatch -lm_hard
+        LDFLAGS+= -Wl,--no-warn-mismatch
         android: jni_libmxnet_predict.so
 endif
 
