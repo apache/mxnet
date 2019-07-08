@@ -231,7 +231,8 @@ const std::vector<std::string> variable_io_ops = {
   "add_n",
   "_backward_Activation",
   "amp_multicast",
-  "_backward_amp_multicast"
+  "_backward_amp_multicast",
+  "_backward_cast"
 };
 
 const char function_definitions[] = R"code(

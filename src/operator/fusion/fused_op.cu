@@ -317,6 +317,17 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           continue;
         }
 
+        if (op_name == "_backward_cast") {
+          CHECK_EQ(outputs[i], 1);
+          const std::vector<int>& types = this->symbol_.GetAttr<nnvm::DTypeVector>("dtype");
+          const int output_type = types[g.entry_id(i, 0)];
+          const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          code += "const auto " + var_name + " = cast<" + mshadowTypeToString(output_type) +
+                  ">(" + arg + ");\n";
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
         LOG(FATAL) << "Unrecognized op " + op_name;
       }
     } else {
