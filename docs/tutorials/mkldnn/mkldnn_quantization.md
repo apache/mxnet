@@ -43,7 +43,7 @@ Quantization flow works for both symbolic and Gluon models. If you're using Gluo
 
 In general, the quantization flow includes 4 steps. The user can get the acceptable accuracy from step 1 to 3 with minimum effort. Most of thing in this stage is out-of-box and the data scientists and researchers only need to focus on how to represent data and layers in their model. After a quantized model is generated, you may want to deploy it online and the performance will be the next key point. Thus, step 4, calibration, can improve the performance a lot by reducing lots of runtime calculation.
 
-![quantization flow](quantization.png)
+![quantization flow](https://github.com/dmlc/web-data/raw/master/mxnet/tutorials/mkldnn/quantization/quantization.png)
 
 Now, we are going to take Gluon ResNet18 as an example to show how each step work.
 
@@ -70,7 +70,7 @@ mx.viz.plot_network(sym)
 ```
 First, we download resnet18-v1 model from gluon modelzoo and export it as a symbol. You can visualize float32 model. Below is a raw residual block.
 
-![float32 model](fp32_raw.png)
+![float32 model](https://github.com/dmlc/web-data/raw/master/mxnet/tutorials/mkldnn/quantization/fp32_raw.png)
 
 #### Model Fusion
 
@@ -81,7 +81,7 @@ mx.viz.plot_network(sym)
 ```
 It's important to add this line to enable graph fusion before quantization to get better performance. Below is a fused residual block. Batchnorm, Activation and elemwise_add are fused into Convolution.
 
-![float32 fused model](fp32_fusion.png)
+![float32 fused model](https://github.com/dmlc/web-data/raw/master/mxnet/tutorials/mkldnn/quantization/fp32_fusion.png)
 
 ### Quantize Model
 
@@ -110,7 +110,7 @@ mx.model.save_checkpoint('quantized-resnet18_v1', 0, qsym, qarg_params, aux_para
 
 By applying `quantize_graph` to the symbolic model, a new quantized model can be generated, named `qsym` along with its parameters. We can see `_contrib_requantize` operators are inserted after `Convolution` to convert the INT32 output to FP32. 
 
-![none calibrated model](none_calib.png)
+![none calibrated model](https://github.com/dmlc/web-data/raw/master/mxnet/tutorials/mkldnn/quantization/none_calib.png)
 
 Below table gives some descriptions.
 
@@ -201,7 +201,7 @@ mx.viz.plot_network(cqsym)
 
 Below is a quantized residual block with naive calibration. We can see `min_calib_range` and `max_calib_range` are written into `_contrib_requantize` operators.
 
-![naive calibrated model](naive_calib.png)
+![naive calibrated model](https://github.com/dmlc/web-data/raw/master/mxnet/tutorials/mkldnn/quantization/naive_calib.png)
 
 When you get a quantized model with calibration, keeping sure to call fusion api again since this can fuse some `requantize` or `dequantize` operators for further performance improvement.
 
@@ -216,7 +216,7 @@ mx.model.save_checkpoint('quantized-resnet18_v1', 0, cqsym, cqarg_params, aux_pa
 
 Below is a post-quantized residual block. We can see `_contrib_requantize` operators are fused into `Convolution` operators.
 
-![post-quantized model](post_quantize.png)
+![post-quantized model](https://github.com/dmlc/web-data/raw/master/mxnet/tutorials/mkldnn/quantization/post_quantize.png)
 
 BTW, You can also modify the `min_calib_range` and `max_calib_range` in the JSON file directly.
 
