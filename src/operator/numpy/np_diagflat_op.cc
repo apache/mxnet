@@ -31,15 +31,15 @@ namespace op {
 inline bool NumpyDiagflatOpShape(const nnvm::NodeAttrs &attrs,
                                  mxnet::ShapeVector *in_attrs,
                                  mxnet::ShapeVector *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);  // should have only one input
-  CHECK_EQ(out_attrs->size(), 1U); // should have only one output
+  CHECK_EQ(in_attrs->size(), 1U);   // should have only one input
+  CHECK_EQ(out_attrs->size(), 1U);  // should have only one output
 
   auto &in_attr = (*in_attrs)[0];
 
   // calc the diagonal length
   // should work for scalar
   dim_t diag_len = 1;
-  for (auto &d:in_attr) {
+  for (auto &d : in_attr) {
     diag_len *= d;
   }
 

@@ -104,12 +104,12 @@ void NumpyDiagflatOpForward(const nnvm::NodeAttrs &attrs,
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);  // only one input
-  CHECK_EQ(outputs.size(), 1U); // only one output
-  CHECK_EQ(req.size(), 1U); // only one req
+  CHECK_EQ(outputs.size(), 1U);  // only one output
+  CHECK_EQ(req.size(), 1U);  // only one req
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob &in_data = inputs[0];
   const TBlob &out_data = outputs[0];
-  // get the diagonal  length
+  // get the diagonal length
   const mxnet::TShape &out_shape = outputs[0].shape_;
   CHECK_EQ(out_shape.ndim(), 2);
   auto &diag_len = *out_shape.data();
@@ -170,8 +170,8 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs &attrs,
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 1U);  // only use out grad
-  CHECK_EQ(outputs.size(), 1U); // only use input grad
-  CHECK_EQ(req.size(), 1U); // only one req
+  CHECK_EQ(outputs.size(), 1U);  // only use input grad
+  CHECK_EQ(req.size(), 1U);  // only one req
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob &out_grad = inputs[0];
   const TBlob &in_grad = outputs[0];
