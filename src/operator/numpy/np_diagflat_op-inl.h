@@ -92,7 +92,7 @@ struct numpy_diagflat {
       to_write = 0;
     }
     KERNEL_ASSIGN(out_data[i], req, to_write);
-  };
+  }
 };
 
 template<typename xpu>
@@ -158,7 +158,7 @@ struct numpy_diagflat_backward {
       auto in_idx = divmod.quot;
       KERNEL_ASSIGN(in_grad[in_idx], req, out_grad[i]);
     }
-  };
+  }
 };
 
 template<typename xpu>
