@@ -176,6 +176,7 @@ struct DeconvolutionParam;
 struct SoftmaxParam;
 struct SoftmaxOutputParam;
 struct TransposeParam;
+struct ReshapeParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
 bool SupportQuantizedMKLDNNAct(const ActivationParam &param);
@@ -184,6 +185,7 @@ bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input)
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray &input, const NDArray &output);
 bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray &data);
+bool SupportMKLDNNReshape(const ReshapeParam &param, const NDArray &data);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
