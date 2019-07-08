@@ -63,25 +63,6 @@ if sys.version_info[0] == 3:
 
         Parameters
         ----------
-        strings : list of strings
-            Python strings.
-
-        Returns
-        -------
-        (ctypes.c_char_p * len(strings))
-            A const char ** pointer that can be passed to C API.
-        """
-        arr = (ctypes.c_char_p * len(strings))()
-        arr[:] = strings
-        return arr
-else:
-    py_str = lambda x: x
-
-    def c_str_array(strings):
-        """Create ctypes const char ** from a list of Python strings.
-
-        Parameters
-        ----------
         strings : list of string
             Python strings.
 
@@ -93,6 +74,28 @@ else:
         arr = (ctypes.c_char_p * len(strings))()
         arr[:] = [s.encode('utf-8') for s in strings]
         return arr
+
+
+else:
+    py_str = lambda x: x
+
+    def c_str_array(strings):
+        """Create ctypes const char ** from a list of Python strings.
+
+        Parameters
+        ----------
+        strings : list of strings
+            Python strings.
+
+        Returns
+        -------
+        (ctypes.c_char_p * len(strings))
+            A const char ** pointer that can be passed to C API.
+        """
+        arr = (ctypes.c_char_p * len(strings))()
+        arr[:] = strings
+        return arr
+
 
 def c_str(string):
     """"Convert a python string to C string."""
