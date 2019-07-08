@@ -7,10 +7,10 @@
 
 namespace mxnet {
 namespace op {
-NNVM_REGISTER_OP(_np_arctan2)
-.set_attr<FCompute>("FCompute<gpu>", Arctan2OpForward<gpu>);
-NNVM_REGISTER_OP(_backward_np_arctan2)
-.set_attr<FCompute>("FCompute<gpu>", Arctan2OpBackward<gpu>);
+NNVM_REGISTER_OP(_npi_arctan2)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu,Arctan2OpForward>);
+NNVM_REGISTER_OP(_backward_npi_arctan2)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu,Arctan2OpBackward>);
 
 }
 }

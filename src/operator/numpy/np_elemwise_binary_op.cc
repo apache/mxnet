@@ -25,7 +25,7 @@ inline bool Arctan2OpType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1;
 }
 
-NNVM_REGISTER_OP(_np_arctan2)
+NNVM_REGISTER_OP(_npi_arctan2)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -34,8 +34,8 @@ NNVM_REGISTER_OP(_np_arctan2)
   })
 .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
 .set_attr<nnvm::FInferType>("FInferType", Arctan2OpType)
-.set_attr<FCompute>("FCompute<cpu>", Arctan2OpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_np_arctan2"})
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, Arctan2OpForward>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_arctan2"})
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -43,11 +43,11 @@ NNVM_REGISTER_OP(_np_arctan2)
 .add_argument("x1", "NDArray-or-Symbol", "The input array")
 .add_argument("x2", "NDArray-or-Symbol", "The input array");
 
-NNVM_REGISTER_OP(_backward_np_arctan2)
+NNVM_REGISTER_OP(_backward_npi_arctan2)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", Arctan2OpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu,Arctan2OpBackward>);
 
 }
 }
