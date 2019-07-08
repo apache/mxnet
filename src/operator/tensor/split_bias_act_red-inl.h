@@ -223,6 +223,7 @@ void SplitBiasActRedImpl(const nnvm::NodeAttrs& attrs,
         in2_strides[ndim-2] = in2_data.shape_[ndim-1];
       }
 
+      int in2_offset = in1_data.shape_[axis];
       if (out_data.type_flag_ == mshadow::kFloat16) {
         CHECK_EQ (num_elements % 2, 0);
         CHECK_EQ (in1_data.shape_[ndim-1] % 2, 0);
@@ -232,13 +233,16 @@ void SplitBiasActRedImpl(const nnvm::NodeAttrs& attrs,
           in1_strides[ndim-2] /= 2;
           in2_strides[ndim-2] /= 2;
         }
+        if (axis == ndim - 1) {
+          in2_offset /= 2;
+        }
       } 
 
       for (int j = ndim-3; j >= 0; j--) {
         in1_strides[j] = in1_strides[j+1] * in1_data.shape_[j+1];
         in2_strides[j] = in2_strides[j+1] * in2_data.shape_[j+1];
       }
-      int in2_offset = in1_data.shape_[axis]*in2_strides[axis];
+      in2_offset *= in2_strides[axis];
       
       TYPE_SWITCH_FLOAT_HALF2(out_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, req_type, {

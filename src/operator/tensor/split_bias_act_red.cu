@@ -23,7 +23,7 @@ namespace mxnet {
 namespace op {
 
 
-NNVM_REGISTER_OP(_split_bias_act_red)
+NNVM_REGISTER_OP(split_bias_act_red)
 .set_attr<FCompute>("FCompute<gpu>", SplitBiasActRedForward<gpu>);
 
 }
