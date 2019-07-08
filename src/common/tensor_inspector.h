@@ -132,6 +132,12 @@ class TensorInspector {
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE, typename StreamType>
   inline void to_string_helper(const RunContext& ctx, StreamType& os) { 
+#if MXNET_USE_CUDA
+    if (tb_.dev_mask() == gpu::kDevMask) {
+      TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).to_string_helper<DType>(ctx, os);
+      return;
+    }
+#endif // MXNET_USE_CUDA
     int dimension = tb_.ndim();
     std::vector<unsigned int> multiples;
     int multiple = 1;
@@ -167,6 +173,12 @@ class TensorInspector {
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE, typename StreamType>
   inline void to_string_helper(const RunContext& ctx, StreamType& os, const DType* dptr) {
+#if MXNET_USE_CUDA
+    if (tb_.dev_mask() == gpu::kDevMask) {
+      TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).to_string_helper<DType>(ctx, os, dptr);
+      return;
+    }
+#endif // MXNET_USE_CUDA
     os << *dptr << std::endl;
     os << "<" << typeid(*dptr).name() << ">" << std::endl;
   }
@@ -182,6 +194,12 @@ class TensorInspector {
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE, typename StreamType>
   inline void to_string_helper(const RunContext& ctx, StreamType& os, const std::vector<int>& sub_shape, size_t offset) {
+#if MXNET_USE_CUDA
+    if (tb_.dev_mask() == gpu::kDevMask) {
+      TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).to_string_helper<DType>(ctx, os, sub_shape, offset);
+      return;
+    }
+#endif // MXNET_USE_CUDA
     DType* dptr = tb_.dptr<DType>() + offset;
     if (sub_shape.size() == 0) {
       to_string_helper<DType>(ctx, os, dptr);
@@ -273,6 +291,12 @@ class TensorInspector {
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE>
   inline void interactive_print_helper(const RunContext& ctx, std::string tag) {
+#if MXNET_USE_CUDA
+    if (tb_.dev_mask() == gpu::kDevMask) {
+      TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).interactive_print_helper<DType>(ctx, tag);
+      return;
+    }
+#endif // MXNET_USE_CUDA
     std::lock_guard<std::mutex> lock(InspectorManager::get()->mutex_);
     InspectorManager::get()->interactive_print_tag_counter_[tag] += 1;
     while (!InspectorManager::get()->interactive_print_skip_all_) {
@@ -334,6 +358,12 @@ class TensorInspector {
   template<typename DType MSHADOW_DEFAULT_DTYPE>
   inline std::vector<std::vector<int>> check_value_helper(const RunContext& ctx,
       const std::function<bool(DType)>& checker, bool interactive, std::string tag) {
+#if MXNET_USE_CUDA
+    if (tb_.dev_mask() == gpu::kDevMask) {
+      return TensorInspector(test::CAccessAsCPU(ctx, tb_, false)()).check_value_helper<DType>(ctx,
+          checker, interactive, tag);
+    }
+#endif // MXNET_USE_CUDA
     std::vector<std::vector<int>> ret;
     int count = 0;
     std::stringstream ss;
