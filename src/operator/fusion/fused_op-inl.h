@@ -99,7 +99,6 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
   {"tan"                               , {{"tan(%)", "_0"}}},
   {"arcsin"                            , {{"arcsin(%)", "_0"}}},
   {"arccos"                            , {{"arccos(%)", "_0"}}},
-  {"arccos"                            , {{"arccos(%)", "_0"}}},
   {"arctan"                            , {{"arctan(%)", "_0"}}},
   {"sinh"                              , {{"sinh(%)", "_0"}}},
   {"cosh"                              , {{"cosh(%)", "_0"}}},
@@ -896,8 +895,8 @@ inline DType backward_erfinv(const DType val, const DType grad) {
   return 0.5f * sqrt(pi) * exp(val * val) * grad;
 }
 
-template <typename DType>
-inline DType smooth_l1(const DType val, const DType scalar) {
+template <typename DType1, typename DType2>
+inline DType1 smooth_l1(const DType1 val, const DType2 scalar) {
   const auto bsq = scalar * scalar;
   const auto ibsq = 1.0f / bsq;
   if (val > ibsq) {
@@ -909,8 +908,8 @@ inline DType smooth_l1(const DType val, const DType scalar) {
   }
 }
 
-template <typename DType>
-inline DType backward_smooth_l1(const DType val, const DType scalar, const DType grad) {
+template <typename DType, typename DType2>
+inline DType backward_smooth_l1(const DType val, const DType2 scalar, const DType grad) {
   auto bsq = scalar * scalar;
   auto ibsq = 1.0f / bsq;
   if (val > ibsq) {
