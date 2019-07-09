@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'tril']
 
 
 def _num_outputs(sym):
@@ -1550,6 +1550,14 @@ def tile(A, reps):
         The tiled output array.
     """
     return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
+
+
+@set_module('mxnet.symbol.numpy')
+def tril(m, k=0):
+    r"""
+
+    """
+    return _npi.tril(m, k=0)
 
 
 @set_module('mxnet.symbol.numpy')

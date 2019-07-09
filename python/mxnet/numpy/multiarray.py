@@ -48,7 +48,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort']
+           'argsort', 'tril']
 
 
 # This function is copied from ndarray.py since pylint
@@ -2054,6 +2054,14 @@ def split(ary, indices_or_sections, axis=0):
     """
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
 # pylint: enable=line-too-long
+
+
+@set_module('mxnet.numpy')
+def tril(m, k=0):
+    r"""
+
+    """
+    return _mx_nd_np.tril(m, k=0)
 
 
 @set_module('mxnet.numpy')
