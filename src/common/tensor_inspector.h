@@ -321,8 +321,9 @@ class TensorInspector {
             InspectorManager::get()->interactive_print_tag_counter_[tag] <<  std::endl;
       }
       tensor_info_to_string(&std::cout);
-      std::cout << "Please specify the position, seperated by \",\"" << std::endl
-          << "\"e\" for the entire tensor, \"d\" to dump value to file, \"b\" to break, \"s\" to skip all: ";
+      std::cout << "Please specify the position, seperated by \",\"" << std::endl;
+      std::cout << "\"e\" for the entire tensor, \"d\" to dump value to file," <<
+          " \"b\" to break, \"s\" to skip all: ";
       std::string str;
       std::cin >> str;
       if (str == "b") {
