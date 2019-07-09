@@ -118,15 +118,6 @@ void TensordotInplaceOpForward( const nnvm::NodeAttrs& attrs,
   getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
     b_axes, a_shape, b_shape);
 
-  // get output shape
-  std::vector<int> out_dim;
-  for (int i = 0; i < a_axes_remained.ndim(); i++) {
-    out_dim.push_back(a_shape[a_axes_remained[i]]);
-  }
-  for (int i = 0; i < b_axes_remained.ndim(); i++) {
-    out_dim.push_back(b_shape[b_axes_remained[i]]);
-  }
-
   int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
   getMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
     b_axes_remained, b_axes_summed, a_shape, b_shape);
