@@ -65,7 +65,10 @@ def zeros(shape, dtype=_np.float32, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 def ones(shape, dtype=None, **kwargs):
-    """Return a new array of given shape and type, filled with ones.
+    """
+    ones(shape, dtype=None, ctx=None)
+
+    Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
 
@@ -95,7 +98,7 @@ def ones(shape, dtype=None, **kwargs):
     >>> np.ones((2, 1))
     array([[ 1.],
            [ 1.]])
-    >>> s = (2,2)
+    >>> s = (2, 2)
     >>> np.ones(s)
     array([[ 1.,  1.],
            [ 1.,  1.]])
