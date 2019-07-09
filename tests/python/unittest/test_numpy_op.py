@@ -955,6 +955,67 @@ def test_np_tile():
 
 @with_seed()
 @use_np
+def test_np_tril():
+    # numpy tril does not support scalar array (zero-dim)
+    config = [
+        ((4, 2), 3),
+        ((4, 2), 9),
+        ((4, 2), 0),
+        ((4, 2), -1),
+        ((4, 5, 6), 0),
+        ((4, 5, 6), 5),
+        ((4, 5, 6), 2),
+        ((4, 5, 6), -2),
+        ((4, 5, 6), -5),
+        ((4, 0), 0),
+        ((4, 0), 2),
+        ((4, 0), 4),
+        ((4, 0), -3),
+        ((4, 0, 5), 0),
+        ((4, 0, 5), 1),
+        ((4, 0, 5), 5),
+        ((4, 0, 5), -3),
+        ((3, ), 0),
+        ((3, ), 2),
+        ((3, ), 5)
+    ]
+
+    class TestTril(HybridBlock):
+        def __init__(self, k):
+            super(TestTril, self).__init__()
+            self._k = k
+
+        def hybrid_forward(self, F, x):
+            return F.np.tril(x, k=self._k)
+
+    for prefix in [1, -1]:
+        for shape, k in config:
+            data_np = _np.random.uniform(size=shape)
+            data_mx = np.array(data_np, dtype=data_np.dtype)
+            data_mx.attach_grad()
+            ret_np = _np.tril(data_np, k*prefix)
+            with mx.autograd.record():
+                ret_mx = np.tril(data_mx, k*prefix)
+            assert same(ret_mx.asnumpy(), ret_np)
+            ret_mx.backward()
+            if len(shape) == 2:
+                grad_np = _np.tri(*shape, k=k*prefix)
+                assert same(data_mx.grad.asnumpy(), grad_np)
+            if len(shape) == 1:
+                grad_np = _np.tri(*shape, k=k*prefix)
+                grad_np = grad_np.sum(axis=0, keepdims=False)
+                assert same(data_mx.grad.asnumpy(), grad_np)
+
+            net = TestTril(k*prefix)
+            for hybrid in [False, True]:
+                if hybrid:
+                    net.hybridize()
+                ret_mx = net(data_mx)
+                assert same(ret_mx.asnumpy(), ret_np)
+
+
+@with_seed()
+@use_np
 def test_np_unary_funcs():
     def check_unary_func(func, ref_grad, shape, low, high):
         class TestUnary(HybridBlock):

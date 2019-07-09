@@ -37,7 +37,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
-           'unique', 'lcm']
+           'unique', 'lcm', 'tril']
 
 
 def _num_outputs(sym):
@@ -1257,6 +1257,33 @@ def expand_dims(a, axis):
         the input array.
     """
     return _npi.expand_dims(a, axis)
+
+
+@set_module('mxnet.symbol.numpy')
+def tril(m, k=0):
+    r"""
+    Lower triangle of an array.
+
+    Return a copy of an array with elements above the `k`-th diagonal zeroed.
+
+    Parameters
+    ----------
+    m : _Symbol, shape (M, N)
+        Input array.
+    k : int, optional
+        Diagonal above which to zero elements.  `k = 0` (the default) is the
+        main diagonal, `k < 0` is below it and `k > 0` is above.
+
+    Returns
+    -------
+    tril : _Symbol, shape (M, N)
+        Lower triangle of `m`, of same shape and data-type as `m`.
+
+    See Also
+    --------
+    triu : same thing, only for the upper triangle
+    """
+    return _npi.tril(m, k)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
