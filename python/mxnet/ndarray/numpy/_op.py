@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort']
+           'argsort', 'logaddexp2']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1751,3 +1751,67 @@ def arcsin(x, out=None, **kwargs):
     http://www.math.sfu.ca/~cbm/aands/
     """
     return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def logaddexp2(x1, x2, out=None):
+    """
+    logaddexp2(x1, x2, out=None)
+
+    Logarithm of the sum of exponentiations of the inputs in base-2.
+
+    Calculates ``log2(2**x1 + 2**x2)``. This function is useful in machine
+    learning when the calculated probabilities of events may be so small as
+    to exceed the range of normal floating point numbers.  In such cases
+    the base-2 logarithm of the calculated probability can be used instead.
+    This function allows adding probabilities stored in such a fashion.
+
+    Parameters
+    ----------
+    x1, x2 : ndarray or scalar
+        Input values.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        the same shape and dtype as the expected output. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    result : ndarray
+        Base-2 logarithm of ``2**x1 + 2**x2``.
+        This is a scalar if both `x1` and `x2` are scalars.
+
+    See Also
+    --------
+    logaddexp: Logarithm of the sum of exponentiations of the inputs.
+
+    Notes
+    -----
+    This function differs from the original `numpy.logaddexp2
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.logaddexp2.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...). Only ndarray is supported.
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> prob1 = np.log2(1e-50)
+    >>> prob2 = np.log2(2.5e-50)
+    >>> prob12 = np.logaddexp2(prob1, prob2)
+    >>> prob1, prob2, prob12
+    (-166.09640474436813, -164.77447664948076, -164.28904982231052)
+    >>> 2 ** prob12
+    3.4999999999999914e-50
+
+    Supports calculation between scalar and ndarray.
+
+    >>> a = np.log2(1e-50)
+    >>> b = np.array([np.log2(2.5e-50), np.log2(1.5e-50)])
+    >>> a, b, np.logaddexp2(a, b)
+    (-166.09640474436813, array([-164.77448, -165.51144]), array([-164.28905, -164.77448]))
+
+    """
+    return _ufunc_helper(x1, x2, _npi.logaddexp2, _np.logaddexp2, _npi.logaddexp2_scalar, _npi.logaddexp2_scalar, out)
