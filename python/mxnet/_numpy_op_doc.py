@@ -445,3 +445,52 @@ def _np_transpose(a, axes=None):
     (2, 1, 3)
     """
     pass
+
+
+def _np_trace(a, offset=0, axis1=0, axis2=1, out=None):
+	    """trace(a, offset=0, axis1=0, axis2=1, out=None)
+
+	    Return the sum along diagonals of the array.
+
+	    If `a` is 2-D, the sum along its diagonal with the given offset
+	    is returned, i.e., the sum of elements ``a[i,i+offset]`` for all i.
+
+	    If `a` has more than two dimensions, then the axes specified by axis1 and
+	    axis2 are used to determine the 2-D sub-arrays whose traces are returned.
+	    The shape of the resulting array is the same as that of `a` with `axis1`
+	    and `axis2` removed.
+
+	    Parameters
+	    ----------
+	    a : ndarray
+	        Input array, from which the diagonals are taken.
+	    offset : int, optional
+	        Offset of the diagonal from the main diagonal. Can be both positive
+	        and negative. Defaults to 0.
+	    axis1, axis2 : int, optional
+	        Axes to be used as the first and second axis of the 2-D sub-arrays
+	        from which the diagonals should be taken. Defaults are the first two
+	        axes of `a`.
+	    out : ndarray, optional
+	        Array into which the output is placed. It must be of the right shape
+	        and right type to hold the output.
+
+	    Returns
+	    -------
+	    sum_along_diagonals : ndarray
+	        If `a` is 2-D, the sum along the diagonal is returned.  If `a` has
+	        larger dimensions, then an array of sums along diagonals is returned.
+
+	    Examples
+	    --------
+	    >>> a = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+	    >>> np.trace(a)
+	    array(3.)
+	    >>> a = np.arange(8).reshape((2, 2, 2))
+	    >>> np.trace(a)
+	    array([6., 8.])
+	    >>> a = np.arange(24).reshape((2, 2, 2, 3))
+	    >>> np.trace(a).shape
+	    (2, 3)
+	    """
+	    pass
