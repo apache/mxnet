@@ -17,7 +17,7 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// This file contains the steps that will be used in the 
+// This file contains the steps that will be used in the
 // Jenkins pipelines
 
 utils = load('ci/Jenkinsfile_utils.groovy')
@@ -1381,21 +1381,8 @@ def docs_website() {
             if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
                 sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
             } else {
-                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}" 
+                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
             }
-          }
-        }
-      }
-    }]
-}
-
-def docs_julia() {
-    return ['Julia docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/julia-docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'deploy_jl_docs', false)
           }
         }
       }
