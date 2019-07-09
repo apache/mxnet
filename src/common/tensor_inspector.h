@@ -31,6 +31,7 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <fstream>
 #include "../../3rdparty/mshadow/mshadow/base.h"
 #include "../../tests/cpp/include/test_util.h"
 
@@ -61,6 +62,8 @@ struct InspectorManager {
   std::unordered_map<std::string, int> interactive_print_tag_counter_;
   /* !\brief visit count for check value tags */
   std::unordered_map<std::string, int> check_value_tag_counter_;
+  /* !\brief visit count for dump value tags */
+  std::unordered_map<std::string, int> dump_value_tag_counter_;
 };
 
 /*!
@@ -344,6 +347,101 @@ class TensorInspector {
   }
 
   /*!
+   * \brief build the lambda function, aka the checker, given its type
+   * \tparam DType the data type
+   * \param ct the type of the checker
+   */
+  template<typename DType MSHADOW_DEFAULT_DTYPE>
+  inline std::function<bool(DType)> build_checker(CheckerType ct) {
+    switch (ct) {
+      case NegativeChecker:
+        return [] (DType x) {
+              return x < 0;
+            };
+      case PositiveChecker:
+        return [] (DType x) {
+              return x > 0;
+            };
+      case ZeroChecker:
+        return [] (DType x) {
+              return x == 0;
+            };
+      case NaNChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x != x;
+              };
+        } else {
+          LOG(WARNING) << "NaNChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case InfChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x == (DType)1.0 / (DType)0.0 || x == -(DType)1.0 / (DType)0.0;
+              };
+        } else {
+          LOG(WARNING) << "InfChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case PositiveInfChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x == (DType)1.0 / (DType)0.0;
+              };
+        } else {
+          LOG(WARNING) << "PositiveInfChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case NegativeInfChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x == -(DType)1.0 / (DType)0.0;
+              };
+        } else {
+          LOG(WARNING) << "NegativeInfChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case FiniteChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x != (DType)1.0 / (DType)0.0 && x != -(DType)1.0 / (DType)0.0;
+              };
+        } else {
+          LOG(WARNING) << "FiniteChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case NormalChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x != (DType)1.0 / (DType)0.0 && x != -(DType)1.0 / (DType)0.0 &&
+                    x == x;
+              };
+        } else {
+          LOG(WARNING) << "NormalChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      default:
+        return [] (DType x) {
+              return false;
+            };
+    }
+    return [] (DType x) {return false;};
+  }
+
+  /*!
    * \brief calculate the coordinate of a value in the tensor, given its index
    * \param idx the index of the value in the tensor
    */
@@ -422,104 +520,74 @@ class TensorInspector {
   }
 
   /*!
-   * \brief build the lambda function, aka the checker, given its type
+   * \brief infer the python type, given the c++ type
+   * \tparam ti the type info 
+   */
+  inline char infer_type(const std::type_info& ti) {
+    if(ti == typeid(float)) return 'f';
+    else if(ti == typeid(double)) return 'f';
+    else if(ti == typeid(mshadow::half::half_t) ) return 'f';
+    else if(ti == typeid(uint8_t)) return 'u';
+    else if(ti == typeid(int32_t)) return 'i';
+    else if(ti == typeid(int64_t)) return 'i';
+    else return '?';
+  }
+
+  /*!
+   * \brief check if the host machine is big or small endian
+   */
+  inline char endian_test() {
+    int x = 1;
+    return (((char*)&x)[0]) ? '<' : '>';
+  }
+
+  /*!
+   * \brief dump the value of the tensor to a file with name "tag_[visit count].npy" in npy format
    * \tparam DType the data type
-   * \param ct the type of the checker
+   * \param tag the name given to this call
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE>
-  inline std::function<bool(DType)> build_checker(CheckerType ct) {
-    switch (ct) {
-      case NegativeChecker:
-        return [] (DType x) {
-              return x < 0;
-            };
-      case PositiveChecker:
-        return [] (DType x) {
-              return x > 0;
-            };
-      case ZeroChecker:
-        return [] (DType x) {
-              return x == 0;
-            };
-      case NaNChecker:
-        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
-            std::is_same<DType, long double>::value ||
-            std::is_same<DType, mshadow::half::half_t>::value) {
-          return [] (DType x) {
-                return x != x;
-              };
-        } else {
-          LOG(WARNING) << "NaNChecker only applies to float types. " <<
-              "Lambda will always return false.";
-        }
-        break;
-      case InfChecker:
-        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
-            std::is_same<DType, long double>::value ||
-            std::is_same<DType, mshadow::half::half_t>::value) {
-          return [] (DType x) {
-                return x == (DType)1.0 / (DType)0.0 || x == -(DType)1.0 / (DType)0.0;
-              };
-        } else {
-          LOG(WARNING) << "InfChecker only applies to float types. " <<
-              "Lambda will always return false.";
-        }
-        break;
-      case PositiveInfChecker:
-        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
-            std::is_same<DType, long double>::value ||
-            std::is_same<DType, mshadow::half::half_t>::value) {
-          return [] (DType x) {
-                return x == (DType)1.0 / (DType)0.0;
-              };
-        } else {
-          LOG(WARNING) << "PositiveInfChecker only applies to float types. " <<
-              "Lambda will always return false.";
-        }
-        break;
-      case NegativeInfChecker:
-        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
-            std::is_same<DType, long double>::value ||
-            std::is_same<DType, mshadow::half::half_t>::value) {
-          return [] (DType x) {
-                return x == -(DType)1.0 / (DType)0.0;
-              };
-        } else {
-          LOG(WARNING) << "NegativeInfChecker only applies to float types. " <<
-              "Lambda will always return false.";
-        }
-        break;
-      case FiniteChecker:
-        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
-            std::is_same<DType, long double>::value ||
-            std::is_same<DType, mshadow::half::half_t>::value) {
-          return [] (DType x) {
-                return x != (DType)1.0 / (DType)0.0 && x != -(DType)1.0 / (DType)0.0;
-              };
-        } else {
-          LOG(WARNING) << "FiniteChecker only applies to float types. " <<
-              "Lambda will always return false.";
-        }
-        break;
-      case NormalChecker:
-        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
-            std::is_same<DType, long double>::value ||
-            std::is_same<DType, mshadow::half::half_t>::value) {
-          return [] (DType x) {
-                return x != (DType)1.0 / (DType)0.0 && x != -(DType)1.0 / (DType)0.0 &&
-                    x == x;
-              };
-        } else {
-          LOG(WARNING) << "NormalChecker only applies to float types. " <<
-              "Lambda will always return false.";
-        }
-        break;
-      default:
-        return [] (DType x) {
-              return false;
-            };
+  inline void dump_value_helper(const std::string& tag) {
+#if MXNET_USE_CUDA
+    if (tb_.dev_mask() == gpu::kDevMask) {
+      TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)(), ctx_)
+          .dump_value_helper<DType>(tag);
+      return;
     }
-    return [] (DType x) {return false;};
+#endif  // MXNET_USE_CUDA
+    std::string dict;
+    dict += "{'descr':'";
+    dict += endian_test();
+    dict += infer_type(typeid(DType));
+    dict += std::to_string(sizeof(DType));
+    dict += "','fortran_order':False,'shape':(";
+    dict += std::to_string(tb_.shape_[0]);
+    for (int i = 1; i < tb_.ndim(); i++) {
+      dict += ',';
+      dict += std::to_string(tb_.shape_[i]);
+    }
+    if (tb_.ndim() == 1) {
+       dict += ",";
+    }
+    dict += ")} ";
+    int padding_size = 64 - ((10 + dict.size()) % 64);
+    dict += std::string(padding_size, ' ');
+    dict[dict.size()-1] = '\n';
+    std::string header;
+    header += (char)0x93;
+    header += "NUMPY";
+    header += (char)0x01;
+    header += (char)0x00;
+    header += (char)((uint16_t)dict.size() & 0x00ff);
+    header += (char)(((uint16_t)dict.size() >> 8) & 0x00ff);
+    header += dict;
+    InspectorManager::get()->dump_value_tag_counter_[tag] += 1;
+    int visit = InspectorManager::get()->dump_value_tag_counter_[tag];
+    std::ofstream file (tag + "_" + std::to_string(visit) + ".npy",
+        std::ios::out | std::ios::binary);
+    file.write(header.c_str(), header.size());
+    file.write((char*)tb_.dptr<DType>(), sizeof(DType) * tb_.shape_.Size());
+    file.close();
   }
 
   /* !\brief the tensor blob */
@@ -594,8 +662,8 @@ class TensorInspector {
    * \param tag the name given to this call
    */
   template<typename ValueChecker>
-  inline std::vector<std::vector<int>> check_value(const ValueChecker& checker, bool interactive = false,
-      std::string tag = "") {
+  inline std::vector<std::vector<int>> check_value(const ValueChecker& checker,
+      bool interactive = false, std::string tag = "") {
     std::vector<std::vector<int>> ret;
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
       check_value_helper<DType>(&ret, checker, ret, interactive, tag);
@@ -618,6 +686,17 @@ class TensorInspector {
     });
     return ret;
   }
+
+  /*!
+   * \brief dump the value of the tensor to a file with name "tag_[visit count].npy" in npy format
+   * \param tag the name given to this call
+   */
+  inline void dump_value(std::string tag) {
+    MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
+      dump_value_helper<DType>(tag);
+    });
+  }
+
 };
 
 }  // namespace mxnet
