@@ -70,7 +70,14 @@ enum CheckerType {
   NegativeChecker,  // check if is negative
   PositiveChecker,  // check if is positive
   ZeroChecker,  // check if is zero
-  NanChecker  // check if is Nan, will always return false if DType is not a float type
+  NaNChecker,  // check if is NaN, will always return false if DType is not a float type
+  InfChecker,  // check if is infinity, will always return false if DType is not a float type
+  PositiveInfChecker,  // check if is positive infinity,
+                       // will always return false if DType is not a float type
+  NegativeInfChecker,  // check if is nagative infinity,
+                       // will always return false if DType is not a float type
+  FiniteChecker,  // check if is finite, will always return false if DType is not a float type
+  NormalChecker,  // check if is neither infinity nor NaN
 };
 
 /**
@@ -235,7 +242,7 @@ class TensorInspector {
   }
 
   /*!
-   * \brief helper functino to calculate the sub_shape and offset for the desired part of the tensor,
+   * \brief helper function to calculate the sub_shape and offset for the desired part of the tensor,
    * given its coordinates in the original tensor
    * \param pos the coordinates of the desired part of the tensor
    * \param sub_shape the sub-shape of the desired part of the tensor; calculated here
@@ -364,8 +371,8 @@ class TensorInspector {
       bool interactive, std::string tag) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      return TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).check_value_helper<DType>(
-          checker, interactive, tag);
+      return TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)())
+          .check_value_helper<DType>(checker, interactive, tag);
     }
 #endif  // MXNET_USE_CUDA
     std::vector<std::vector<int>> ret;
@@ -435,14 +442,76 @@ class TensorInspector {
         return [] (DType x) {
               return x == 0;
             };
-      case NanChecker:
+      case NaNChecker:
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
-            std::is_same<DType, long double>::value) {
+            std::is_same<DType, long double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
           return [] (DType x) {
                 return x != x;
               };
         } else {
-          LOG(WARNING) << "NanChecker only applies to float types. " <<
+          LOG(WARNING) << "NaNChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case InfChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, long double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x == (DType)1.0 / (DType)0.0 || x == -(DType)1.0 / (DType)0.0;
+              };
+        } else {
+          LOG(WARNING) << "InfChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case PositiveInfChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, long double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x == (DType)1.0 / (DType)0.0;
+              };
+        } else {
+          LOG(WARNING) << "PositiveInfChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case NegativeInfChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, long double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x == -(DType)1.0 / (DType)0.0;
+              };
+        } else {
+          LOG(WARNING) << "NegativeInfChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case FiniteChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, long double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x != (DType)1.0 / (DType)0.0 && x != -(DType)1.0 / (DType)0.0;
+              };
+        } else {
+          LOG(WARNING) << "FiniteChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case NormalChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, long double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x != (DType)1.0 / (DType)0.0 && x != -(DType)1.0 / (DType)0.0 &&
+                    x == x;
+              };
+        } else {
+          LOG(WARNING) << "NormalChecker only applies to float types. " <<
               "Lambda will always return false.";
         }
         break;
@@ -465,7 +534,8 @@ class TensorInspector {
    * \tparam Device the device the tensor resides in
    * \tparam dimension the dimension of the tensor
    * \tparam DType the data type
-   * \param ts the source tensor obeject
+   * \param ts the source tensor object
+   * \param ctx the run context of the tensor
    */
   template<typename Device, int dimension,
       typename DType MSHADOW_DEFAULT_DTYPE>
@@ -474,20 +544,16 @@ class TensorInspector {
 
   /*!
    * \brief Construct from TBlob object
-   * \tparam Device the device the tensor resides in
-   * \tparam dimension the dimension of the tensor
-   * \tparam DType the data type
-   * \param ts the source tensor obeject
+   * \param tb the source tblob object
+   * \param ctx the run context of the tensor
    */
   TensorInspector(const TBlob& tb, const RunContext& ctx):
       tb_(tb), ctx_(ctx) {}
 
   /*!
    * \brief Construct from NDArray object. Currently this only works with kDefaultStorage
-   * \tparam Device the device the tensor resides in
-   * \tparam dimension the dimension of the tensor
-   * \tparam DType the data type
-   * \param ts the source tensor obeject
+   * \param arr the source ndarray object
+   * \param ctx the run context of the tensor
    */
   TensorInspector(const NDArray& arr, const RunContext& ctx):
       tb_(arr.data()), ctx_(ctx) {}
@@ -552,7 +618,6 @@ class TensorInspector {
     return std::vector<std::vector<int>>();
   }
 };
-
 
 }  // namespace mxnet
 
