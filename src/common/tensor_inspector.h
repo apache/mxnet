@@ -530,7 +530,7 @@ class TensorInspector {
     else if (ti == typeid(uint8_t)) return 'u';
     else if (ti == typeid(int32_t)) return 'i';
     else if (ti == typeid(int64_t)) return 'i';
-    else 
+    else
       return '?';
   }
 
