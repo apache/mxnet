@@ -368,10 +368,32 @@ endif
 
 # Guard against displaying nvcc info messages to users not using CUDA.
 ifeq ($(USE_CUDA), 1)
+	# Get AR version, compare with expected ar version and find bigger and smaller version of the two
+	AR_VERSION := $(shell ar --version | egrep -o "([0-9]{1,}\.)+[0-9]{1,}")
+	EXPECTED_AR_VERSION := $(shell echo "2.27")
+	LARGE_VERSION := $(shell printf '%s\n' "$(AR_VERSION)" "$(EXPECTED_AR_VERSION)" | sort -V | tail -n 1)
+	SMALL_VERSION := $(shell printf '%s\n' "$(AR_VERSION)" "$(EXPECTED_AR_VERSION)" | sort -V | head -n 1)
+
 	# If NVCC is not at the location specified, use CUDA_PATH instead.
 	ifeq ("$(wildcard $(NVCC))","")
 		ifneq ($(USE_CUDA_PATH), NONE)
 			NVCC=$(USE_CUDA_PATH)/bin/nvcc
+
+# if larger version is the expected one and larger != smaller
+# this means ar version is less than expected version and user needs to be warned
+ifeq ($(LARGE_VERSION), $(EXPECTED_AR_VERSION))
+ifneq ($(LARGE_VERSION), $(SMALL_VERSION))
+define n
+
+
+endef
+
+$(warning WARNING: Archive utility: ar version being used is less than 2.27.0. $n \
+		   Note that with USE_CUDA=1 flag and USE_CUDNN=1 this is known to cause problems. $n \
+		   For more info see: https://github.com/apache/incubator-mxnet/issues/15084)
+$(shell sleep 5)
+endif
+endif
 $(info INFO: nvcc was not found on your path)
 $(info INFO: Using $(NVCC) as nvcc path)
 		else
@@ -594,7 +616,7 @@ lint: cpplint rcpplint jnilint pylint
 
 cpplint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
-	--exclude_path src/operator/contrib/ctc_include
+	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py

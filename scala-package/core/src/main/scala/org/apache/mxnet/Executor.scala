@@ -159,7 +159,14 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   private def getOutputs: Array[NDArray] = {
     val ndHandles = ArrayBuffer[NDArrayHandle]()
     checkCall(_LIB.mxExecutorOutputs(handle, ndHandles))
-    ndHandles.toArray.map(new NDArray(_, addToCollector = false))
+    ndHandles.toArray.map(ele => {
+        val nd = new NDArray(ele, addToCollector = false)
+        if (nd.isSparse) {
+          nd.asInstanceOf[SparseNDArray]
+        }
+        nd
+      }
+    )
   }
 
   /**

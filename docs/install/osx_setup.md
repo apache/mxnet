@@ -17,7 +17,7 @@
 
 # Installing MXNet from source on OS X (Mac)
 
-**NOTE:** For prebuild MXNet with Python installation, please refer to the [new install guide](http://mxnet.io/install/index.html).
+**NOTE:** For pre-built MXNet with Python, please refer to the [new install guide](index.md).
 
 Installing MXNet is a two-step process:
 
@@ -81,7 +81,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install graphviz
 	brew install openblas
 	brew tap homebrew/core
-	brew install opencv
+	brew install opencv@3
 
 	# If building with MKLDNN
 	brew install llvm
@@ -89,13 +89,13 @@ Install the dependencies, required for MXNet, with the following commands:
 	# Get pip
 	easy_install pip
 	# For visualization of network graphs
-	pip install graphviz
+	pip install graphviz==0.8.4
 	# Jupyter notebook
 	pip install jupyter
 ```
 
 ### Build MXNet Shared Library
-After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```. You can clone the repository as described in the following code block, or you may try the <a href="download.html">download links</a> for your desired MXNet version.
+After you have installed the dependencies, pull the MXNet source code from Git and build MXNet to produce an MXNet library called ```libmxnet.so```. You can clone the repository as described in the following code block, or you may try the [download links](download.md) for your desired MXNet version.
 
 The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
 
@@ -264,6 +264,6 @@ After you build the shared library, run the following command from the MXNet sou
 
 ## Next Steps
 
-* [Tutorials](http://mxnet.io/tutorials/index.html)
-* [How To](http://mxnet.io/faq/index.html)
-* [Architecture](http://mxnet.io/architecture/index.html)
+* [Tutorials](../tutorials/index.md)
+* [How To](../faq/index.md)
+* [Architecture](../architecture/index.md)
