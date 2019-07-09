@@ -2102,7 +2102,6 @@ def radians(x, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
-<<<<<<<
 def reciprocal(x, out=None, **kwargs):
     r"""
     reciprocal(x, out=None)
