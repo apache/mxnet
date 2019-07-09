@@ -47,7 +47,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
-           'degrees']
+           'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin']
 
 
 # This function is copied from ndarray.py since pylint
@@ -927,7 +927,7 @@ class ndarray(NDArray):
 
     def mean(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Returns the average of the array elements along given axis."""
-        return _mx_np_op.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+        return _npi.mean(self, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
 
     # TODO(junwu): Use mxnet std op instead of onp.std
     def std(self, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=arguments-differ
@@ -1447,6 +1447,68 @@ def minimum(x1, x2, out=None):
 
 
 @set_module('mxnet.numpy')
+def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
+    """
+    mean(a, axis=None, dtype=None, out=None, keepdims=None)
+
+    Compute the arithmetic mean along the specified axis.
+    Returns the average of the array elements.
+    The average is taken over the flattened array by default, otherwise over the specified axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        ndarray containing numbers whose mean is desired.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which the means are computed. The default is to compute the mean of the flattened array.
+        If this is a tuple of ints, a mean is performed over multiple axes,
+        instead of a single axis or all the axes as before.
+    dtype : data-type, optional
+        Type to use in computing the mean. For integer inputs, the default is float32;
+        for floating point inputs, it is the same as the input dtype.
+    out : ndarray, optional
+        Alternate output array in which to place the result. The default is None; if provided,
+        it must have the same shape and type as the expected output.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result
+        as dimensions with size one. With this option, the result will broadcast correctly
+        against the input array.
+        If the default value is passed, then keepdims will not be passed through to the mean
+        method of sub-classes of ndarray, however any non-default value will be. If the sub-class
+        method does not implement keepdims any exceptions will be raised.
+
+    Returns
+    -------
+    m : ndarray, see dtype parameter above
+        If out=None, returns a new array containing the mean values,
+        otherwise a reference to the output array is returned.
+
+    Notes
+    -----
+    This function differs from the original `numpy.mean
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.mean.html>`_ in
+    the following way(s):
+
+    - only ndarray is accepted as valid input, python iterables or scalar is not supported
+    - default data type for integer input is float32
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> np.mean(a)
+    array(2.5)
+    >>> a = np.zeros((2, 512*512), dtype=np.float32)
+    >>> a[0,:] = 1.0
+    >>> a[1,:] = 0.1
+    >>> np.mean(a)
+    array(0.55)
+    >>> np.mean(a, dtype=np.float64)
+    array(0.55)
+    """
+    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.numpy')
 def stack(arrays, axis=0, out=None):
     """Join a sequence of arrays along a new axis.
 
@@ -1455,18 +1517,46 @@ def stack(arrays, axis=0, out=None):
 
     Parameters
     ----------
-    arrays : sequence of array_like
+    arrays : sequence of ndarrays
         Each array must have the same shape.
     axis : int, optional
         The axis in the result array along which the input arrays are stacked.
     out : ndarray, optional
-        If provided, the destination to place the result. The shape must be correct,
-        matching that of what stack would have returned if no out argument were specified.
+        If provided, the destination to place the result. The shape and type must be the
+        same with that of what stack would have returned if no out argument were specified.
 
     Returns
     -------
-    stacked : ndarray
-        The stacked array has one more dimension than the input arrays."""
+    out : ndarray
+        The stacked array has one more dimension than the input arrays.
+
+    Notes
+    -----
+    This function differs from the original `numpy.stack
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.stack.html>`_ in
+    the following way(s):
+
+    - only sequence of ndarray is accepted as valid input
+
+    Examples
+    --------
+    >>> arrays = [np.random.uniform(size=(3, 4)) for _ in range(10)]
+    >>> np.stack(arrays, axis=0).shape
+    (10, 3, 4)
+    >>> np.stack(arrays, axis=1).shape
+    (3, 10, 4)
+    >>> np.stack(arrays, axis=2).shape
+    (3, 4, 10)
+    >>> a = np.array([1, 2, 3])
+    >>> b = np.array([2, 3, 4])
+    >>> np.stack((a, b))
+    array([[1., 2., 3.],
+           [2., 3., 4.]])
+    >>> np.stack((a, b), axis=-1)
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
+    """
     return _mx_nd_np.stack(arrays, axis=axis, out=out)
 
 
@@ -1845,6 +1935,7 @@ def expand_dims(a, axis):
     return _npi.expand_dims(a, axis)
 
 
+# pylint: disable=line-too-long
 @set_module('mxnet.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -1866,8 +1957,7 @@ def split(ary, indices_or_sections, axis=0):
           - ary[2:3]
           - ary[3:]
 
-        If an index exceeds the dimension of the array along `axis`,
-        an empty sub-array is returned correspondingly.
+        Index `must be within` the dimension of the array along `axis`.
     axis : int, optional
         The axis along which to split, default is 0.
 
@@ -1880,22 +1970,41 @@ def split(ary, indices_or_sections, axis=0):
     ------
     ValueError
         If `indices_or_sections` is given as an integer, but
-        a split does not result in equal division."""
+        a split does not result in equal division.
+
+    Notes
+    -----
+    This function differs from the original `numpy.split
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.split.html>`_ in
+    the following ways:
+
+    - Index exceeding the dimension the dimension of the array is currently not supported.
+
+    Examples
+    --------
+    >>> x = np.arange(9.0)
+    >>> np.split(x, 3)
+    [array([0., 1., 2.]), array([3., 4., 5.]), array([6., 7., 8.])]
+    >>> np.split(x, (3, 5, 6))
+    [array([0., 1., 2.]), array([3., 4.]), array([5.]), array([6., 7.])]
+    """
     return _mx_nd_np.split(ary, indices_or_sections, axis=axis)
+# pylint: enable=line-too-long
 
 
 @set_module('mxnet.numpy')
-def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, **kwargs):
-    """Return evenly spaced numbers over a specified interval.
+def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
+    r"""
+    Return evenly spaced numbers over a specified interval.
 
     Returns num evenly spaced samples, calculated over the interval [start, stop].
     The endpoint of the interval can optionally be excluded.
 
     Parameters
     ----------
-    start : array_like
+    start : real number
         The starting value of the sequence.
-    stop : array_like
+    stop : real number
         The end value of the sequence, unless endpoint is set to False. In
         that case, the sequence consists of all but the last of num + 1
         evenly spaced samples, so that stop is excluded. Note that the step
@@ -1905,15 +2014,16 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     endpoint : bool, optional
         If True, stop is the last sample. Otherwise, it is not included.
         Default is True.
-    retstep: bool, optional
+    retstep : bool, optional
         If True, return (samples, step), where step is the spacing between samples.
-    dtype: dtype, optional
+    dtype : dtype, optional
         The type of the output array. If dtype is not given, infer the data
         type from the other input arguments.
     axis : int, optional
         The axis in the result to store the samples. Relevant only if start or
         stop are array-like. By default (0), the samples will be along a new
         axis inserted at the beginning. Use -1 to get an axis at the end.
+
     Returns
     -------
     samples : ndarray
@@ -1923,8 +2033,50 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     step : float, optional
         Only returned if retstep is True
         Size of spacing between samples.
+
+
+    See Also
+    --------
+    arange : Similar to `linspace`, but uses a step size (instead of the
+             number of samples).
+
+    Examples
+    --------
+    >>> np.linspace(2.0, 3.0, num=5)
+    array([2.  , 2.25, 2.5 , 2.75, 3.  ])
+    >>> np.linspace(2.0, 3.0, num=5, endpoint=False)
+    array([2. , 2.2, 2.4, 2.6, 2.8])
+    >>> np.linspace(2.0, 3.0, num=5, retstep=True)
+    (array([2.  , 2.25, 2.5 , 2.75, 3.  ]), 0.25)
+
+    Graphical illustration:
+
+    >>> import matplotlib.pyplot as plt
+    >>> N = 8
+    >>> y = np.zeros(N)
+    >>> x1 = np.linspace(0, 10, N, endpoint=True)
+    >>> x2 = np.linspace(0, 10, N, endpoint=False)
+    >>> plt.plot(x1.asnumpy(), y.asnumpy(), 'o')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.plot(x2.asnumpy(), (y + 0.5).asnumpy(), 'o')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.ylim([-0.5, 1])
+    (-0.5, 1)
+    >>> plt.show()
+
+    Notes
+    -----
+
+    This function differs from the original `numpy.linspace
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linspace.html>`_ in
+    the following aspects:
+
+    - `start` and `stop` do not support list, numpy ndarray and mxnet ndarray
+    - axis could only be 0
+    - There could be an additional `ctx` argument to specify the device, e.g. the i-th
+      GPU.
     """
-    return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, **kwargs)
+    return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, ctx)
 
 
 @set_module('mxnet.numpy')
@@ -2087,7 +2239,6 @@ def sqrt(x, out=None, **kwargs):
     This function only supports input type of float.
     """
     return _mx_nd_np.sqrt(x, out=out, **kwargs)
-
 
 
 @set_module('mxnet.numpy')
@@ -2271,6 +2422,7 @@ def arctan(x, out=None, **kwargs):
     """
     return _mx_nd_np.arctan(x, out=out, **kwargs)
 
+
 @set_module('mxnet.numpy')
 def sign(x, out=None):
     """
@@ -2328,7 +2480,7 @@ def sign(x, out=None):
     return _mx_nd_np.sign(x, out=out)
 
 
-@set_module('mxnet.symbol.numpy')
+@set_module('mxnet.numpy')
 def log(x, out=None, **kwargs):
     """
     log(x, out=None)
@@ -2375,6 +2527,7 @@ def log(x, out=None, **kwargs):
     >>> np.log(a)
     array([  0.,   1.,   2., -inf], dtype=float64)
 
+
     Due to internal calculation mechanism, using default float32 dtype may cause some special behavior:
 
     >>> a = np.array([1, np.exp(1), np.exp(2), 0])
@@ -2390,7 +2543,85 @@ def log(x, out=None, **kwargs):
     return _mx_nd_np.log(x, out=out, **kwargs)
 
 
-@set_module('mxnet.symbol.numpy')
+@set_module('mxnet.numpy')
+def rint(x, out=None, **kwargs):
+    """
+    Round elements of the array to the nearest integer.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.rint
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.rint.html>`_ in
+    the following way(s):
+
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.rint(a)
+    array([-2., -2., -0.,  0.,  1.,  2.,  2.])
+    """
+    return _mx_nd_np.rint(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def log2(x, out=None, **kwargs):
+    """
+    Base-2 logarithm of x.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input values.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray
+        The logarithm base two of `x`, element-wise.
+        This is a scalar if `x` is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.log2
+    <https://www.google.com/search?q=numpy+log2>`_ in
+    the following way(s):
+
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 2**4])
+    >>> np.log2(x)
+    array([-inf,   0.,   1.,   4.])
+
+    """
+    return _mx_nd_np.log2(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
 def degrees(x, out=None, **kwargs):
     """
     degrees(x, out=None)
@@ -2442,3 +2673,203 @@ def degrees(x, out=None, **kwargs):
 
     """
     return _mx_nd_np.degrees(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def radians(x, out=None, **kwargs):
+    """
+    Convert angles from degrees to radians.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array in degrees.
+    out : ndarray or None
+        A location into which the result is stored.
+        If provided, it must have the same shape and type as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray
+        The corresponding radian values. This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    This function differs from the original `numpy.radians
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
+    the following way(s):
+
+    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - broadcasting to `out` of different shape is currently not supported
+    - when input is plain python numerics, the result will not be stored in the `out` param
+
+    Examples
+    --------
+    >>> deg = np.arange(12.) * 30.
+    >>> np.radians(deg)
+    array([0.       , 0.5235988, 1.0471976, 1.5707964, 2.0943952, 2.6179938,
+           3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
+           dtype=float32)
+
+    """
+    return _mx_nd_np.radians(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def reciprocal(x, out=None, **kwargs):
+    r"""
+    reciprocal(x, out=None)
+
+    Return the reciprocal of the argument, element-wise.
+
+    Calculates ``1/x``.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        The values whose reciprocals are required.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Examples
+    --------
+    >>> np.reciprocal(2.)
+    0.5
+    >>> x = np.array([1, 2., 3.33])
+    >>> np.reciprocal(x)
+    array([1.       , 0.5      , 0.3003003])
+
+    Notes
+    -----
+    .. note::
+        This function is not designed to work with integers.
+
+    For integer arguments with absolute value larger than 1 the result is
+    always zero because of the way Python handles integer division.  For
+    integer zero the result is an overflow.
+
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+
+    This function differs from the original `numpy.reciprocal
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.reciprocal.html>`_ in
+    the following aspects:
+
+    - Only support ndarray and scalar now.
+    - `where` argument is not supported.
+    """
+    return _mx_nd_np.reciprocal(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def square(x, out=None, **kwargs):
+    r"""
+    square(x, out=None)
+
+    Return the element-wise square of the input.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        The values whose squares are required.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+
+    Examples
+    --------
+    >>> np.square(2.)
+    4.0
+    >>> x = np.array([1, 2., -1])
+    >>> np.square(x)
+    array([1., 4., 1.])
+
+    Notes
+    -----
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+
+    This function differs from the original `numpy.square
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.square.html>`_ in
+    the following aspects:
+
+    - Only support ndarray and scalar now.
+    - `where` argument is not supported.
+    - Complex input is not supported.
+    """
+    return _mx_nd_np.square(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def arcsin(x, out=None, **kwargs):
+    r"""
+    arcsin(x, out=None)
+
+    Inverse sine, element-wise.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        `y`-coordinate on the unit circle.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape as the input.
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    angle : ndarray or scalar
+        Output array is same shape and type as x. This is a scalar if x is a scalar.
+        The inverse sine of each element in `x`, in radians and in the
+        closed interval ``[-pi/2, pi/2]``.
+
+    Examples
+    --------
+    >>> np.arcsin(1)     # pi/2
+    1.5707963267948966
+    >>> np.arcsin(-1)    # -pi/2
+    -1.5707963267948966
+    >>> np.arcsin(0)
+    0.0
+
+    Notes
+    -----
+    `arcsin` is a multivalued function: for each `x` there are infinitely
+    many numbers `z` such that :math:`sin(z) = x`.  The convention is to
+    return the angle `z` whose real part lies in [-pi/2, pi/2].
+
+    For real-valued input data types, *arcsin* always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+
+    The inverse sine is also known as `asin` or sin^{-1}.
+
+    The output `ndarray` has the same `ctx` as the input `ndarray`.
+
+    This function differs from the original `numpy.arcsin
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.arcsin.html>`_ in
+    the following aspects:
+
+    - Only support ndarray or scalar now.
+    - `where` argument is not supported.
+    - Complex input is not supported.
+
+    References
+    ----------
+    Abramowitz, M. and Stegun, I. A., *Handbook of Mathematical Functions*,
+    10th printing, New York: Dover, 1964, pp. 79ff.
+    http://www.math.sfu.ca/~cbm/aands/
+    """
+    return _mx_nd_np.arcsin(x, out=out, **kwargs)
