@@ -18,11 +18,11 @@
  */
 
 /*!
- * \file npi_tensordot_inplace_op-inl.h
- * \brief Implementation of numpy-compatible tensordot_inplace
+ * \file np_tensordot_int_axes_op-inl.h
+ * \brief Implementation of numpy-compatible tensordot_int_axes
  */
 
-#include "npi_tensordot_op-inl.h"
+#include "np_tensordot_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -30,9 +30,9 @@ namespace op {
 using namespace mxnet;
 using namespace mshadow;
 
-struct TensordotInplaceParam : public dmlc::Parameter<TensordotInplaceParam> {
+struct TensordotIntAxesParam : public dmlc::Parameter<TensordotIntAxesParam> {
   int axes; 
-  DMLC_DECLARE_PARAMETER(TensordotInplaceParam) {
+  DMLC_DECLARE_PARAMETER(TensordotIntAxesParam) {
     DMLC_DECLARE_FIELD(axes);
   }
 };
@@ -40,32 +40,34 @@ struct TensordotInplaceParam : public dmlc::Parameter<TensordotInplaceParam> {
 /**
  * gets summed axes of a and b from parameter axes.
  */
-inline void getSummedAxes(mxnet::Tuple<int>& a_axes_summed, 
-                          mxnet::Tuple<int>& b_axes_summed,
-                          const int& axes,
-                          const mxnet::TShape& a_shape) {
-    std::vector<int> a_axes_summed_vector;
-    for (int i = 0; i < axes; i++) {
-      a_axes_summed_vector.push_back(a_shape.ndim() - axes + i);
-    }
-    a_axes_summed = mxnet::Tuple<int>(a_axes_summed_vector);
-    
-    std::vector<int> b_axes_summed_vector;
-    for (int i = 0; i < axes; i++) {
-      b_axes_summed_vector.push_back(i);
-    }
-    b_axes_summed = mxnet::Tuple<int>(b_axes_summed_vector);
+inline void GetSummedAxes(
+    mxnet::Tuple<int>& a_axes_summed, 
+    mxnet::Tuple<int>& b_axes_summed,
+    const int& axes,
+    const mxnet::TShape& a_shape) {
+  std::vector<int> a_axes_summed_vector;
+  for (int i = 0; i < axes; i++) {
+    a_axes_summed_vector.push_back(a_shape.ndim() - axes + i);
   }
+  a_axes_summed = mxnet::Tuple<int>(a_axes_summed_vector);
+  
+  std::vector<int> b_axes_summed_vector;
+  for (int i = 0; i < axes; i++) {
+    b_axes_summed_vector.push_back(i);
+  }
+  b_axes_summed = mxnet::Tuple<int>(b_axes_summed_vector);
+}
 
 /**
  * forward function
  */
-template<typename xpu>  // cpu and gpu                                                
-void TensordotInplaceOpForward( const nnvm::NodeAttrs& attrs,                     
-                                const OpContext& ctx,                                
-                                const std::vector<TBlob>& inputs,                 
-                                const std::vector<OpReqType>& req, 
-                                const std::vector<TBlob>& outputs) {                   
+template<typename xpu>                                                  
+void TensordotIntAxesOpForward(
+    const nnvm::NodeAttrs& attrs,                     
+    const OpContext& ctx,                                
+    const std::vector<TBlob>& inputs,                 
+    const std::vector<OpReqType>& req, 
+    const std::vector<TBlob>& outputs) {                   
 
   CHECK_EQ(inputs.size(), 2U);                                                 
   CHECK_EQ(outputs.size(), 1U);                                               
@@ -83,10 +85,6 @@ void TensordotInplaceOpForward( const nnvm::NodeAttrs& attrs,
     return;  // zero-size output, no need to launch kernel
   }
 
-  if ((a.shape_.ndim() < 1) || (b.shape_.ndim() < 1)) {
-    return;
-  }
-
   const mxnet::TShape& a_shape = a.shape_;
   const mxnet::TShape& b_shape = b.shape_;
 
@@ -98,28 +96,23 @@ void TensordotInplaceOpForward( const nnvm::NodeAttrs& attrs,
   CHECK(out.type_flag_ == kFloat32 || out.type_flag_ == kFloat64 ||
       (out.type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
       << "Tensordot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";    
-    
-                                                              
-  const TensordotInplaceParam& param = nnvm::get<TensordotInplaceParam>(attrs.parsed);  
+
+  const TensordotIntAxesParam& param = nnvm::get<TensordotIntAxesParam>(attrs.parsed);  
   const int& axes = param.axes;    
 
   Tuple<int> a_axes_summed;
   Tuple<int> b_axes_summed;  
-  getSummedAxes(a_axes_summed, b_axes_summed, axes, a_shape);
-
-  if (a_axes_summed.ndim() != b_axes_summed.ndim()) {
-    return;
-  }
+  GetSummedAxes(a_axes_summed, b_axes_summed, axes, a_shape);
 
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
   Tuple<int> a_axes;
   Tuple<int> b_axes;
-  getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
+  GetReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
     b_axes, a_shape, b_shape);
 
   int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
-  getMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
+  GetMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
     b_axes_remained, b_axes_summed, a_shape, b_shape);
 
   MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {                           
@@ -132,7 +125,7 @@ void TensordotInplaceOpForward( const nnvm::NodeAttrs& attrs,
       return;
     }  
 
-    matrixDot<xpu>(ctx, a, b, out, req[0], ad1, ad2, bd1, bd2);                         
+    MatrixDot<xpu>(ctx, a, b, out, req[0], ad1, ad2, bd1, bd2);                         
   });                                                                                                                                               
 }     
 
@@ -140,11 +133,12 @@ void TensordotInplaceOpForward( const nnvm::NodeAttrs& attrs,
  * backward function.
  */
 template<typename xpu>                                                       
-void TensordotInplaceOpBackward(const nnvm::NodeAttrs& attrs,                       
-                                const OpContext& ctx,                               
-                                const std::vector<TBlob>& inputs,                   
-                                const std::vector<OpReqType>& req,                  
-                                const std::vector<TBlob>& outputs) { 
+void TensordotIntAxesOpBackward(
+    const nnvm::NodeAttrs& attrs,                       
+    const OpContext& ctx,                               
+    const std::vector<TBlob>& inputs,                   
+    const std::vector<OpReqType>& req,                  
+    const std::vector<TBlob>& outputs) { 
 
   CHECK_EQ(inputs.size(), 3U);                                              
   CHECK_EQ(outputs.size(), 2U);                                             
@@ -159,27 +153,27 @@ void TensordotInplaceOpBackward(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& a_shape = a.shape_;
   const mxnet::TShape& b_shape = b.shape_;
 
-  const TensordotInplaceParam& param = nnvm::get<TensordotInplaceParam>(attrs.parsed);  
+  const TensordotIntAxesParam& param = nnvm::get<TensordotIntAxesParam>(attrs.parsed);  
   const int& axes = param.axes;    
 
   Tuple<int> a_axes_summed;
   Tuple<int> b_axes_summed;  
-  getSummedAxes(a_axes_summed, b_axes_summed, axes, a_shape);
+  GetSummedAxes(a_axes_summed, b_axes_summed, axes, a_shape);
 
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
   Tuple<int> a_axes;
   Tuple<int> b_axes;
-  getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
+  GetReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
     b_axes, a_shape, b_shape);
 
   int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
-  getMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
+  GetMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
     b_axes_remained, b_axes_summed, a_shape, b_shape);
 
   MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {                          
-    matrixDot<xpu>(ctx, a, out_grad, grad_b, req[1], ad1, ad2, ad1, bd2, true, false);
-    matrixDot<xpu>(ctx, out_grad, b, grad_a, req[0], ad1, bd2, bd1, bd2, false, true);  
+    MatrixDot<xpu>(ctx, a, out_grad, grad_b, req[1], ad1, ad2, ad1, bd2, true, false);
+    MatrixDot<xpu>(ctx, out_grad, b, grad_a, req[0], ad1, bd2, bd1, bd2, false, true);  
   });                                                                                                                                              
 }   
 }  // namespace op

@@ -139,6 +139,12 @@ def test_np_tensordot():
                 mx_out = np.tensordot(a, b, axes)
                 np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                
+                # test numeric gradient
+                a_sym = mx.sym.Variable("a").as_np_ndarray()
+                b_sym = mx.sym.Variable("b").as_np_ndarray()
+                mx_sym = mx.sym.np.tensordot(a_sym, b_sym, axes).as_nd_ndarray()
+                check_numeric_gradient(mx_sym, {"a": a, "b": b}, rtol=1e-3, atol=1e-4)
 
     # test zero size input
     zero_shapes = [

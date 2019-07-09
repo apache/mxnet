@@ -18,11 +18,11 @@
  */
 
 /*!
- * \file npi_tensordot_op.cc
+ * \file np_tensordot_op.cc
  * \brief CPU Implementation of numpy-compatible tensordot
  */
 
-#include "npi_tensordot_op-inl.h"
+#include "np_tensordot_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -37,6 +37,10 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& b_shape = in_attrs->at(1);
 
   if (!ndim_is_known(a_shape) || !ndim_is_known(b_shape)) {
+    return false;
+  }
+
+  if ((inputs[0].shape_.ndim() < 1) || (inputs[1].shape_.ndim() < 1)) {
     return false;
   }
 

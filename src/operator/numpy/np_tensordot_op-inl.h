@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file npi_tensordot_op-inl.h
+ * \file np_tensordot_op-inl.h
  * \brief CPU Implementation of numpy-compatible tensordot
  */
 
@@ -42,16 +42,17 @@ struct TensordotParam : public dmlc::Parameter<TensordotParam> {
 /**
  * Gets matrix dimensions of a and b after transpose and reshape. 
  */
-inline void getMatrixDimensions(int& ad1, 
-                                int& ad2, 
-                                int& bd1, 
-                                int& bd2, 
-                                const mxnet::Tuple<int>& a_axes_remained, 
-                                const mxnet::Tuple<int>& a_axes_summed, 
-                                const mxnet::Tuple<int>& b_axes_remained, 
-                                const mxnet::Tuple<int>& b_axes_summed, 
-                                const mxnet::TShape& a_shape, 
-                                const mxnet::TShape& b_shape) {
+inline void GetMatrixDimensions(
+    int& ad1, 
+    int& ad2, 
+    int& bd1, 
+    int& bd2, 
+    const mxnet::Tuple<int>& a_axes_remained, 
+    const mxnet::Tuple<int>& a_axes_summed, 
+    const mxnet::Tuple<int>& b_axes_remained, 
+    const mxnet::Tuple<int>& b_axes_summed, 
+    const mxnet::TShape& a_shape, 
+    const mxnet::TShape& b_shape) {
   ad1 = 1;
   ad2 = 1;
   bd1 = 1;
@@ -74,14 +75,15 @@ inline void getMatrixDimensions(int& ad1,
 /**
  * gets new axes of a and b after transpose and reshape.
  */
-inline void getReorderedAxes(const mxnet::Tuple<int>& a_axes_summed, 
-                             mxnet::Tuple<int>& a_axes_remained, 
-                             mxnet::Tuple<int>& a_axes, 
-                             const mxnet::Tuple<int>& b_axes_summed,
-                             mxnet::Tuple<int>& b_axes_remained, 
-                             mxnet::Tuple<int>& b_axes, 
-                             const mxnet::TShape& a_shape, 
-                             const mxnet::TShape& b_shape) {
+inline void GetReorderedAxes(
+    const mxnet::Tuple<int>& a_axes_summed, 
+    mxnet::Tuple<int>& a_axes_remained, 
+    mxnet::Tuple<int>& a_axes, 
+    const mxnet::Tuple<int>& b_axes_summed,
+    mxnet::Tuple<int>& b_axes_remained, 
+    mxnet::Tuple<int>& b_axes, 
+    const mxnet::TShape& a_shape, 
+    const mxnet::TShape& b_shape) {
   std::vector<int> a_axes_remained_vector;
   for (int i = 0; i < a_shape.ndim(); i++) {
     a_axes_remained_vector.push_back(i);
@@ -121,29 +123,30 @@ inline void getReorderedAxes(const mxnet::Tuple<int>& a_axes_summed,
 /**
  * gets shapes of a and b after transpose and reshape.
  */
-inline mxnet::TShape getReorderedShape(const mxnet::TShape& shape, const mxnet::Tuple<int>& axes) {
-  mxnet::TShape newShape(shape);
+inline mxnet::TShape GetReorderedShape(const mxnet::TShape& shape, const mxnet::Tuple<int>& axes) {
+  mxnet::TShape new_shape(shape);
   for (int i = 0; i < axes.ndim(); i++) {
-    newShape[i] = shape[axes[i]];
+    new_shape[i] = shape[axes[i]];
   }
-  return newShape;
+  return new_shape;
 }
 
 /**
  * gets matrix dot.
  */
 template<typename xpu>
-inline void matrixDot(const OpContext& ctx,
-                      const TBlob& a,
-                      const TBlob& b,
-                      const TBlob& out,
-                      const OpReqType req,
-                      const int ad1,
-                      const int ad2,
-                      const int bd1,
-                      const int bd2,
-                      const bool aT = false,
-                      const bool bT = false) {
+inline void MatrixDot(
+    const OpContext& ctx,
+    const TBlob& a,
+    const TBlob& b,
+    const TBlob& out,
+    const OpReqType req,
+    const int ad1,
+    const int ad2,
+    const int bd1,
+    const int bd2,
+    const bool aT = false,
+    const bool bT = false) {
   using namespace mshadow;
   using namespace mshadow_op;
   
@@ -199,10 +202,6 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs,
     return;  // zero-size output, no need to launch kernel
   }
 
-  if ((a.shape_.ndim() < 1) || (b.shape_.ndim() < 1)) {
-    return;
-  }
-
   const mxnet::TShape& a_shape = a.shape_;
   const mxnet::TShape& b_shape = b.shape_;
 
@@ -220,23 +219,19 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs,
   const Tuple<int>& a_axes_summed = param.a_axes_summed;
   const Tuple<int>& b_axes_summed = param.b_axes_summed;  
 
-  if (a_axes_summed.ndim() != b_axes_summed.ndim()) {
-    return;
-  }
-
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
   Tuple<int> a_axes;
   Tuple<int> b_axes;
-  getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
+  GetReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
     b_axes, a_shape, b_shape);
 
   int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
-  getMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
+  GetMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
     b_axes_remained, b_axes_summed, a_shape, b_shape);
 
-  mxnet::TShape a_temp_shape = getReorderedShape(a_shape, a_axes);
-  mxnet::TShape b_temp_shape = getReorderedShape(b_shape, b_axes);
+  mxnet::TShape a_temp_shape = GetReorderedShape(a_shape, a_axes);
+  mxnet::TShape b_temp_shape = GetReorderedShape(b_shape, b_axes);
 
   MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {                           
     if (a_shape.Size() == 0U || b_shape.Size() == 0U) { // 0-size input
@@ -258,14 +253,14 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs,
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, a_res, mxnet::TShape(a_axes.begin(), a_axes.end()));     
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res, mxnet::TShape(b_axes.begin(), b_axes.end())); 
 
-    matrixDot<xpu>(ctx, a_res, b_res, out, req[0], ad1, ad2, bd1, bd2);                         
+    MatrixDot<xpu>(ctx, a_res, b_res, out, req[0], ad1, ad2, bd1, bd2);                         
   });                                                                                                                                               
 }     
 
 /**
  * gets shapes for inverse transpose.
  */
-inline mxnet::TShape getReverseShape(const mxnet::Tuple<int>& shape) {
+inline mxnet::TShape GetReverseShape(const mxnet::Tuple<int>& shape) {
   mxnet::TShape shape2(shape.begin(), shape.end());
   for (int i = 0; i < shape.ndim(); i++) {
     shape2[shape[i]] = i;
@@ -277,11 +272,12 @@ inline mxnet::TShape getReverseShape(const mxnet::Tuple<int>& shape) {
  * backward function.
  */
 template<typename xpu>                                                       
-void TensordotOpBackward(const nnvm::NodeAttrs& attrs,                       
-                         const OpContext& ctx,                               
-                         const std::vector<TBlob>& inputs,                   
-                         const std::vector<OpReqType>& req,                  
-                         const std::vector<TBlob>& outputs) { 
+void TensordotOpBackward(
+    const nnvm::NodeAttrs& attrs,                       
+    const OpContext& ctx,                               
+    const std::vector<TBlob>& inputs,                   
+    const std::vector<OpReqType>& req,                  
+    const std::vector<TBlob>& outputs) { 
   CHECK_EQ(inputs.size(), 3U);                                              
   CHECK_EQ(outputs.size(), 2U);                                             
   CHECK_EQ(req.size(), 2U);   
@@ -304,11 +300,11 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
   Tuple<int> b_axes_remained;
   Tuple<int> a_axes;
   Tuple<int> b_axes;
-  getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
+  GetReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
     b_axes, a_shape, b_shape);
 
   int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
-  getMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
+  GetMatrixDimensions(ad1, ad2, bd1, bd2, a_axes_remained, a_axes_summed, 
     b_axes_remained, b_axes_summed, a_shape, b_shape);
 
   std::vector<int> a_T_axes;
@@ -318,8 +314,8 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < a_axes_remained.ndim(); i++) {
     a_T_axes.push_back(a_axes_remained[i]);
   }
-  mxnet::TShape a_temp_shape(getReorderedShape(a_shape, a_axes));
-  mxnet::TShape a_T_temp_shape(getReorderedShape(a_shape, a_T_axes));
+  mxnet::TShape a_temp_shape(GetReorderedShape(a_shape, a_axes));
+  mxnet::TShape a_T_temp_shape(GetReorderedShape(a_shape, a_T_axes));
 
   std::vector<int> b_T_axes;
   for (int i = 0; i < b_axes_remained.ndim(); i++) {
@@ -328,8 +324,8 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < b_axes_summed.ndim(); i++) {
     b_T_axes.push_back(b_axes_summed[i]);
   }
-  mxnet::TShape b_temp_shape(getReorderedShape(b_shape, b_axes));
-  mxnet::TShape b_T_temp_shape(getReorderedShape(b_shape, b_T_axes));
+  mxnet::TShape b_temp_shape(GetReorderedShape(b_shape, b_axes));
+  mxnet::TShape b_T_temp_shape(GetReorderedShape(b_shape, b_T_axes));
 
   MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {                          
     Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
@@ -347,11 +343,11 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, a_res2, mxnet::TShape(a_T_axes.begin(), a_T_axes.end()));
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res2, mxnet::TShape(b_T_axes.begin(), b_T_axes.end())); 
 
-    matrixDot<xpu>(ctx, a_res2, out_grad, b_res, req[1], ad2, ad1, ad1, bd2);
-    matrixDot<xpu>(ctx, out_grad, b_res2, a_res, req[0], ad1, bd2, bd2, bd1);  
+    MatrixDot<xpu>(ctx, a_res2, out_grad, b_res, req[1], ad2, ad1, ad1, bd2);
+    MatrixDot<xpu>(ctx, out_grad, b_res2, a_res, req[0], ad1, bd2, bd2, bd1);  
 
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a_res, grad_a, getReverseShape(a_axes)); 
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b_res, grad_b, getReverseShape(b_axes)); 
+    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a_res, grad_a, GetReverseShape(a_axes)); 
+    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b_res, grad_b, GetReverseShape(b_axes)); 
   });                                                                                                                                              
 }   
 }  // namespace op

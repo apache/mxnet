@@ -5,7 +5,8 @@
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the 
+ * icense at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -18,18 +19,19 @@
  */
 
 /*!
- * \file npi_tensordot_inplace_op.cc
+ * \file np_tensordot_int_axes_op.cc
  * \brief CPU Implementation of numpy-compatible tensordot
  */
 
-#include "npi_tensordot_inplace_op-inl.h"
+#include "np_tensordot_int_axes_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-inline bool TensordotInplaceOpShape(const nnvm::NodeAttrs& attrs,
-                          mxnet::ShapeVector *in_attrs,
-                          mxnet::ShapeVector *out_attrs) {
+inline bool TensordotIntAxesOpShape(
+    const nnvm::NodeAttrs& attrs,
+    mxnet::ShapeVector *in_attrs,
+    mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -40,7 +42,11 @@ inline bool TensordotInplaceOpShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  const TensordotInplaceParam& param = nnvm::get<TensordotInplaceParam>(attrs.parsed);  
+  if ((inputs[0].shape_.ndim() < 1) || (inputs[1].shape_.ndim() < 1)) {
+    return false;
+  }
+
+  const TensordotIntAxesParam& param = nnvm::get<TensordotIntAxesParam>(attrs.parsed);  
   const int& axes = param.axes;    
 
   Tuple<int> a_axes_summed;
@@ -86,33 +92,33 @@ inline bool TensordotInplaceOpShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs); 
 }
 
-DMLC_REGISTER_PARAMETER(TensordotInplaceParam);                                           
+DMLC_REGISTER_PARAMETER(TensordotIntAxesParam);                                           
 
-NNVM_REGISTER_OP(tensordot_inplace)
-.add_alias("_npi_tensordot_inplace")                                                        
-.describe(R"code(This operators implements the numpy-compatible inplace tensordot function                 
+NNVM_REGISTER_OP(tensordot_int_axes)
+.add_alias("_npi_tensordot_int_axes")                                                        
+.describe(R"code(This operators implements the numpy-compatible int-axes tensordot function                 
 )code" ADD_FILELINE) // description. 
-.set_attr_parser(mxnet::op::ParamParser<TensordotInplaceParam>)  
+.set_attr_parser(mxnet::op::ParamParser<TensordotIntAxesParam>)  
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "b"};
   })
-.set_attr<mxnet::FInferShape>("FInferShape", TensordotInplaceOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TensordotIntAxesOpShape)
 .set_attr<nnvm::FInferType>("FInferType", mxnet::op::ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", TensordotInplaceOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseIn{"_backward_tensordot_inplace"})
+.set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseIn{"_backward_tensordot_int_axes"})
 .add_argument("a", "NDArray-or-Symbol", "First input")
 .add_argument("b", "NDArray-or-Symbol", "Second input")
-.add_arguments(TensordotInplaceParam::__FIELDS__()); // abc  
+.add_arguments(TensordotIntAxesParam::__FIELDS__()); // abc  
 
-NNVM_REGISTER_OP(_backward_tensordot_inplace)
-.set_attr_parser(mxnet::op::ParamParser<TensordotInplaceParam>) 
+NNVM_REGISTER_OP(_backward_tensordot_int_axes)
+.set_attr_parser(mxnet::op::ParamParser<TensordotIntAxesParam>) 
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -120,7 +126,7 @@ NNVM_REGISTER_OP(_backward_tensordot_inplace)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", TensordotInplaceOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

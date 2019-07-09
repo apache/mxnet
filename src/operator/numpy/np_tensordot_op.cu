@@ -18,11 +18,11 @@
  */
 
 /*!
- * \file npi_tensordot_inplace.cu
+ * \file np_tensordot_inplace.cu
  * \brief GPU Implementation of numpy-compatible tensordot
  */
 
-#include "npi_tensordot_op-inl.h"
+#include "np_tensordot_op-inl.h"
 namespace mxnet {
 namespace op {
 

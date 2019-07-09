@@ -102,7 +102,7 @@ def tensordot(a, b, axes = 2):
 
         return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
     else:
-        return _npi.tensordot_inplace(a, b, axes)
+        return _npi.tensordot_int_axes(a, b, axes)
 
 
 @set_module('mxnet.symbol.numpy')
