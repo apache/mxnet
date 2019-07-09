@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file tensor_inspector.h
- * \brief utility to inspector tensor objects
+ * \brief utility to inspect tensor objects
  * \author Zhaoqi Zhu
  */
 
@@ -467,7 +467,7 @@ class TensorInspector {
    */
   template<typename DType MSHADOW_DEFAULT_DTYPE>
   inline void check_value_helper(std::vector<std::vector<int>>* ret,
-      const std::function<bool(DType)>& checker,bool interactive, std::string tag) {
+      const std::function<bool(DType)>& checker, bool interactive, std::string tag) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
       return TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)(), ctx_)
@@ -524,13 +524,14 @@ class TensorInspector {
    * \tparam ti the type info 
    */
   inline char infer_type(const std::type_info& ti) {
-    if(ti == typeid(float)) return 'f';
-    else if(ti == typeid(double)) return 'f';
-    else if(ti == typeid(mshadow::half::half_t) ) return 'f';
-    else if(ti == typeid(uint8_t)) return 'u';
-    else if(ti == typeid(int32_t)) return 'i';
-    else if(ti == typeid(int64_t)) return 'i';
-    else return '?';
+    if (ti == typeid(float)) return 'f';
+    else if (ti == typeid(double)) return 'f';
+    else if (ti == typeid(mshadow::half::half_t) ) return 'f';
+    else if (ti == typeid(uint8_t)) return 'u';
+    else if (ti == typeid(int32_t)) return 'i';
+    else if (ti == typeid(int64_t)) return 'i';
+    else 
+      return '?';
   }
 
   /*!
@@ -538,7 +539,7 @@ class TensorInspector {
    */
   inline char endian_test() {
     int x = 1;
-    return (((char*)&x)[0]) ? '<' : '>';
+    return (reinterpret_cast<char*>(&x)[0]) ? '<' : '>';
   }
 
   /*!
@@ -574,19 +575,19 @@ class TensorInspector {
     dict += std::string(padding_size, ' ');
     dict[dict.size()-1] = '\n';
     std::string header;
-    header += (char)0x93;
+    header += static_cast<char>(0x93);
     header += "NUMPY";
-    header += (char)0x01;
-    header += (char)0x00;
-    header += (char)((uint16_t)dict.size() & 0x00ff);
-    header += (char)(((uint16_t)dict.size() >> 8) & 0x00ff);
+    header += static_cast<char>(0x01);
+    header += static_cast<char>(0x00);
+    header += static_cast<char>((uint16_t)dict.size() & 0x00ff);
+    header += static_cast<char>(((uint16_t)dict.size() >> 8) & 0x00ff);
     header += dict;
     InspectorManager::get()->dump_value_tag_counter_[tag] += 1;
     int visit = InspectorManager::get()->dump_value_tag_counter_[tag];
-    std::ofstream file (tag + "_" + std::to_string(visit) + ".npy",
+    std::ofstream file(tag + "_" + std::to_string(visit) + ".npy",
         std::ios::out | std::ios::binary);
     file.write(header.c_str(), header.size());
-    file.write((char*)tb_.dptr<DType>(), sizeof(DType) * tb_.shape_.Size());
+    file.write(reinterpret_cast<char*>(tb_.dptr<DType>()), sizeof(DType) * tb_.shape_.Size());
     file.close();
   }
 
@@ -696,7 +697,6 @@ class TensorInspector {
       dump_value_helper<DType>(tag);
     });
   }
-
 };
 
 }  // namespace mxnet
