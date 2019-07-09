@@ -27,8 +27,7 @@ from ....base import _as_list
 class VariationalDropoutCell(ModifierCell):
     """
     Applies Variational Dropout on base cell.
-    (https://arxiv.org/pdf/1512.05287.pdf, \
-     https://www.stat.berkeley.edu/~tsmoon/files/Conference/asru2015.pdf).
+    https://arxiv.org/pdf/1512.05287.pdf
 
     Variational dropout uses the same dropout mask across time-steps. It can be applied to RNN
     inputs, outputs, and states. The masks for them are not shared.

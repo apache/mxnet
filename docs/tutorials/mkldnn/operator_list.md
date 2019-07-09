@@ -44,6 +44,8 @@ To help users understanding MKL-DNN backend better, the following table summariz
 | **elemwise_add**   | 1D-4D input                | Y                        | Y              | Y              |
 | **Concat**         | 1D-4D input                | Y                        | Y              | Y              |
 | **slice**          | 1D-4D input                | N                        | Y              | N              |
+| **Reshape**        | 1D-4D input                | N                        | Y              | N              |
+| **Flatten**        | 1D-4D input                | N                        | Y              | N              |
 | **Quantization**   | 1D-4D input                | N                        | N              | Y              |
 | **Dequantization** | 1D-4D input                | N                        | N              | Y              |
 | **Requantization** | 1D-4D input                | N                        | N              | Y              |

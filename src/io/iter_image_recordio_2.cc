@@ -134,19 +134,25 @@ inline void ImageRecordIOParser2<DType>::Init(
   record_param_.InitAllowUnknown(kwargs);
   batch_param_.InitAllowUnknown(kwargs);
   normalize_param_.InitAllowUnknown(kwargs);
+  PrefetcherParam prefetch_param;
+  prefetch_param.InitAllowUnknown(kwargs);
   n_parsed_ = 0;
   overflow = false;
   rnd_.seed(kRandMagic + record_param_.seed);
   int maxthread, threadget;
-  #pragma omp parallel
-  {
-    // be conservative, set number of real cores
-    maxthread = std::max(omp_get_num_procs(), 1);
-  }
-  param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
-  #pragma omp parallel num_threads(param_.preprocess_threads)
-  {
-    threadget = omp_get_num_threads();
+  if (prefetch_param.ctx == PrefetcherParam::CtxType::kCPU) {
+    threadget = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  } else {
+    #pragma omp parallel
+    {
+      // be conservative, set number of real cores
+      maxthread = std::max(omp_get_num_procs() / 2, 1);
+    }
+    param_.preprocess_threads = std::min(maxthread, param_.preprocess_threads);
+    #pragma omp parallel num_threads(param_.preprocess_threads)
+    {
+      threadget = omp_get_num_threads();
+    }
   }
   param_.preprocess_threads = threadget;
 
@@ -822,7 +828,8 @@ class ImageRecordIter2Wrapper : public IIterator<DataBatch> {
       dtype = prefetch_param.dtype.value();
     }
     if (prefetch_param.ctx == PrefetcherParam::CtxType::kCPU) {
-      LOG(INFO) << "Create ImageRecordIter2 optimized for CPU backend.";
+      LOG(INFO) << "Create ImageRecordIter2 optimized for CPU backend."
+                << "Use omp threads instead of preprocess_threads.";
       switch (dtype) {
         case mshadow::kFloat32:
           record_iter_ = new ImageRecordIter2CPU<float>();

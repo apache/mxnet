@@ -163,8 +163,8 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(saturation).set_default(0.0f)
         .describe("Add a random value in ``[-saturation, saturation]`` to "
                   "the saturation of image.");
-        DMLC_DECLARE_FIELD(pca_noise).set_default(0.0f)
-                .describe("Add PCA based noise to the image.");
+    DMLC_DECLARE_FIELD(pca_noise).set_default(0.0f)
+        .describe("Add PCA based noise to the image.");
     DMLC_DECLARE_FIELD(random_h).set_default(0)
         .describe("Add a random value in ``[-random_h, random_h]`` to "
                   "the H channel in HSL color space.");
@@ -268,7 +268,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
         new_height = param_.resize;
         new_width = param_.resize*src.cols/src.rows;
       }
-      CHECK((param_.inter_method >= 1 && param_.inter_method <= 4) ||
+      CHECK((param_.inter_method >= 0 && param_.inter_method <= 4) ||
        (param_.inter_method >= 9 && param_.inter_method <= 10))
         << "invalid inter_method: valid value 0,1,2,3,9,10";
       int interpolation_method = GetInterMethod(param_.inter_method,

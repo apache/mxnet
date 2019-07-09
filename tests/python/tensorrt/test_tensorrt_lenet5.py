@@ -46,7 +46,7 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
     # Get this value from all_test_labels
     # Also get classes from the dataset
     num_ex = 10000
-    all_preds = np.zeros([num_ex, 10])
+    all_preds = np.zeros([num_ex, 10], dtype=np.float32)
     test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
 
     example_ct = 0

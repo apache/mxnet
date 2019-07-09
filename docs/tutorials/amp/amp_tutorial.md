@@ -31,12 +31,14 @@ For demonstration purposes we will use synthetic data loader.
 
 
 ```python
+import os
 import logging
 import warnings
 import time
 import mxnet as mx
 import mxnet.gluon as gluon
 from mxnet import autograd
+from mxnet.test_utils import download_model
 import gluoncv as gcv
 from gluoncv.model_zoo import get_model
 
@@ -248,6 +250,46 @@ for epoch in range(1):
 
 
 We got 60% speed increase from 3 additional lines of code!
+
+## Inference with AMP
+
+To do inference with mixed precision for a trained model in FP32, you can use the conversion APIs: `amp.convert_model` for symbolic model and `amp.convert_hybrid_block` for gluon models. The conversion APIs will take the FP32 model as input and will return a mixed precision model, which can be used to run inference. Below, we demonstrate for a gluon model and a symbolic model: 1. Conversion from FP32 model to mixed precision model 2. Run inference on the mixed precision model.
+
+```python
+with mx.Context(mx.gpu(0)):
+    # Below is an example of converting a gluon hybrid block to a mixed precision block
+    model = get_model("resnet50_v1")
+    model.collect_params().initialize(ctx=mx.current_context())
+    model.hybridize()
+    model(mx.nd.zeros((1, 3, 224, 224)))
+    converted_model = amp.convert_hybrid_block(model)
+
+    # Run dummy inference with the converted gluon model
+    result = converted_model.forward(mx.nd.random.uniform(shape=(1, 3, 224, 224),
+                                                          dtype=np.float32))
+
+    # Below is an example of converting a symbolic model to a mixed precision model
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    model_path = os.path.join(dir_path, 'model')
+    if not os.path.isdir(model_path):
+        os.mkdir(model_path)
+    prefix, epoch = mx.test_utils.download_model("imagenet1k-resnet-18", dst_dir=model_path)
+    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+    result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
+                                                                         arg_params,
+                                                                         aux_params)
+
+    # Run dummy inference with the converted symbolic model
+    mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.current_context())
+    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
+    mod.set_params(result_arg_params, result_aux_params)
+    mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
+                                label=[mx.nd.ones((1,))]))
+    mod.get_outputs()[0].wait_to_read()
+    print("Conversion and Inference completed successfully")
+```
+
+
 
 ## Current limitations of AMP
 

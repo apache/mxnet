@@ -409,7 +409,7 @@ def _thread_worker_fn(samples, batchify_fn, dataset):
 class _MultiWorkerIter(object):
     """Internal multi-worker iterator for DataLoader."""
     def __init__(self, worker_pool, batchify_fn, batch_sampler, pin_memory=False,
-                 pin_device_id=0, worker_fn=_worker_fn, prefetch=0, dataset=None):
+                 pin_device_id=0, worker_fn=_worker_fn, prefetch=0, dataset=None, data_loader=None):
         self._worker_pool = worker_pool
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
@@ -421,6 +421,7 @@ class _MultiWorkerIter(object):
         self._pin_memory = pin_memory
         self._pin_device_id = pin_device_id
         self._dataset = dataset
+        self._data_loader = data_loader
         # pre-fetch
         for _ in range(prefetch):
             self._push_next()
@@ -582,7 +583,8 @@ class DataLoader(object):
                                 pin_memory=self._pin_memory, pin_device_id=self._pin_device_id,
                                 worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
                                 prefetch=self._prefetch,
-                                dataset=self._dataset if self._thread_pool else None)
+                                dataset=self._dataset if self._thread_pool else None,
+                                data_loader=self)
 
     def __len__(self):
         return len(self._batch_sampler)

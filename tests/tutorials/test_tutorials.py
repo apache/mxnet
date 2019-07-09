@@ -82,6 +82,9 @@ def test_gluon_customop():
 def test_gluon_custom_layer():
     assert _test_tutorial_nb('gluon/custom_layer')
 
+def test_gluon_transforms():
+    assert _test_tutorial_nb('gluon/transforms')
+
 def test_gluon_data_augmentation():
     assert _test_tutorial_nb('gluon/data_augmentation')
 
@@ -103,11 +106,17 @@ def test_gluon_autograd():
 def test_gluon_gluon():
     assert _test_tutorial_nb('gluon/gluon')
 
+def test_gluon_multi_gpu():
+    assert _test_tutorial_nb('gluon/multi_gpu')
+
 def test_gluon_save_load_params():
     assert _test_tutorial_nb('gluon/save_load_params')
 
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
+
+def test_gluon_performance():
+    assert _test_tutorial_nb('gluon/performance')
     
 def test_gluon_pretrained_models():
     assert _test_tutorial_nb('gluon/pretrained_models')    
@@ -183,6 +192,9 @@ def test_sparse_csr():
 
 def test_sparse_train():
     assert _test_tutorial_nb('sparse/train')
+
+def test_sparse_train_gluon():
+    assert _test_tutorial_nb('sparse/train_gluon')
 
 def test_speech_recognition_ctc():
     assert _test_tutorial_nb('speech_recognition/ctc')

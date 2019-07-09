@@ -138,11 +138,19 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 
 NNVM_REGISTER_OP(Concat)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
+  const ConcatParam& param = nnvm::get<ConcatParam>(attrs.parsed);
   nnvm::NodePtr node = nnvm::Node::Create();
-  node->attrs.op = Op::Get("_contrib_quantized_concat");
-  node->attrs.name = "quantized_" + attrs.name;
+  if (param.dim > 0) {
+    node->attrs.op = Op::Get("_contrib_quantized_concat");
+    node->attrs.name = "quantized_" + attrs.name;
+  } else {
+    LOG(INFO) << "Currently, quantized concat only supports dim>0, exclude "
+              << attrs.name << " which dim is " << param.dim;
+    node->attrs.op = nullptr;
+    node->attrs.name = attrs.name;
+  }
   node->attrs.dict = attrs.dict;
-  if (node->op()->attr_parser != nullptr) {
+  if (node->op() != nullptr && node->op()->attr_parser != nullptr) {
     node->op()->attr_parser(&(node->attrs));
   }
   return node;
