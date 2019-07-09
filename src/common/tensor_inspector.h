@@ -22,7 +22,7 @@
  * \file tensor_inspector.h
  * \brief utility to inspector tensor objects
  * \author Zhaoqi Zhu
-*/
+ */
 
 #ifndef MXNET_COMMON_TENSOR_INSPECTOR_H_
 #define MXNET_COMMON_TENSOR_INSPECTOR_H_
@@ -69,6 +69,7 @@ struct InspectorManager {
 enum CheckerType {
   NegativeChecker,  // check if is negative
   PositiveChecker,  // check if is positive
+  ZeroChecker,  // check if is zero
   NanChecker  // check if is Nan, will always return false if DType is not a float type
 };
 
@@ -90,6 +91,7 @@ enum CheckerType {
  * are stored as a TBlob object tb_.
  */
 class TensorInspector {
+ private:
   /*!
    * \brief generate the tensor info, including data type and shape 
    * \tparam DType the data type
@@ -427,7 +429,11 @@ class TensorInspector {
             };
       case PositiveChecker:
         return [] (DType x) {
-              return x < 0;
+              return x > 0;
+            };
+      case ZeroChecker:
+        return [] (DType x) {
+              return x == 0;
             };
       case NanChecker:
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
@@ -447,6 +453,11 @@ class TensorInspector {
     }
     return [] (DType x) {return false;};
   }
+
+  /* !\brief the tensor blob */
+  const TBlob tb_;
+  /* !\brief the run context of the tensor */
+  const RunContext& ctx_;
 
  public:
    /*!
@@ -540,12 +551,6 @@ class TensorInspector {
     });
     return std::vector<std::vector<int>>();
   }
-
- private:
-  /* !\brief the tensor blob */
-  const TBlob tb_;
-  /* !\brief the run context of the tensor */
-  const RunContext& ctx_;
 };
 
 
