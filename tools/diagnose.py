@@ -97,6 +97,11 @@ def check_pip():
     except ImportError:
         print('No corresponding pip install for current python.')
 
+def get_build_features_str():
+    import mxnet.runtime
+    features = mxnet.runtime.Features()
+    return '\n'.join(map(str, list(features.values())))
+
 def check_mxnet():
     print('----------MXNet Info-----------')
     try:
@@ -105,13 +110,20 @@ def check_mxnet():
         mx_dir = os.path.dirname(mxnet.__file__)
         print('Directory    :', mx_dir)
         commit_hash = os.path.join(mx_dir, 'COMMIT_HASH')
-        with open(commit_hash, 'r') as f:
-            ch = f.read().strip()
-            print('Commit Hash   :', ch)
+        if os.path.exists(commit_hash):
+            with open(commit_hash, 'r') as f:
+                ch = f.read().strip()
+                print('Commit Hash   :', ch)
+        else:
+            print('Commit hash file "{}" not found. Not installed from pre-built package or built from source.'.format(commit_hash))
+        print('Library      :', mxnet.libinfo.find_lib_path())
+        try:
+            print('Build features:')
+            print(get_build_features_str())
+        except Exception:
+            print('No runtime build feature info available')
     except ImportError:
         print('No MXNet installed.')
-    except IOError:
-        print('Hashtag not found. Not installed from pre-built package.')
     except Exception as e:
         import traceback
         if not isinstance(e, IOError):
