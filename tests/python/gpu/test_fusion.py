@@ -16,6 +16,7 @@
 # under the License.
 
 import os
+import random
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import *
@@ -29,8 +30,8 @@ def check_fused_symbol(sym, **kwargs):
     shapes = {inp : kwargs[inp].shape for inp in inputs}
     test_sym = mx.sym.Group([mx.sym.identity(s) for s in sym])
     rtol = {'float16' : 1e-2,
-            'float32' : 5e-7,
-            'float64' : 5e-7,
+            'float32' : 1e-6,
+            'float64' : 1e-6,
             }
     atol = {'float16' : 1e-3,
             'float32' : 1e-7,
@@ -56,7 +57,6 @@ def check_fused_symbol(sym, **kwargs):
                     continue
                 assert orig is not None
                 assert fused is not None
-                print(orig, fused)
                 np.testing.assert_allclose(orig.asnumpy(), fused.asnumpy(), rtol=rtol[dtype], atol=atol[dtype])
 
 def check_unary_ops():
@@ -166,7 +166,30 @@ def check_binary_ops():
     check_fused_symbol(mx.sym.hypot(a,b), a=arr1, b=arr2)
     check_fused_symbol(mx.sym.hypot(a,3), a=arr1)
 
+def check_other_ops():
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = mx.sym.Variable('c')
+    shape = rand_shape_2d()
+    shape = (5,) + shape
+    arr1 = mx.random.uniform(shape=shape)
+    arr2 = mx.random.uniform(shape=shape)
+    arr3 = mx.random.uniform(shape=shape)
+
+    check_fused_symbol(mx.sym.add_n(a,b,c), a=arr1, b=arr2, c=arr3)
+
+    check_fused_symbol(mx.sym.slice_axis(a, axis=0, begin=1, end=4), a=arr1)
+
+    begin = (random.randint(0, shape[0]-2),
+             random.randint(0, shape[1]-2),
+             random.randint(0, shape[2]-2))
+    end = (random.randint(begin[0]+1, shape[0]-1),
+           random.randint(begin[1]+1, shape[1]-1),
+           random.randint(begin[2]+1, shape[2]-1))
+    check_fused_symbol(mx.sym.slice(a, begin=begin, end=end), a=arr1)
+
 @with_seed()
 def test_fusion():
     check_unary_ops()
     check_binary_ops()
+    check_other_ops()
