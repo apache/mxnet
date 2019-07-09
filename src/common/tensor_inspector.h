@@ -175,7 +175,8 @@ class TensorInspector {
   inline void to_string_helper(StreamType* os, const DType* dptr) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      explicit TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).to_string_helper<DType>(os, dptr);
+      explicit TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)())
+          .to_string_helper<DType>(os, dptr);
       return;
     }
 #endif  // MXNET_USE_CUDA
@@ -195,8 +196,8 @@ class TensorInspector {
   inline void to_string_helper(StreamType* os, const std::vector<int>& sub_shape, size_t offset) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      explicit TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).to_string_helper<DType>(os,
-          sub_shape, offset);
+      explicit TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)())
+          .to_string_helper<DType>(os, sub_shape, offset);
       return;
     }
 #endif  // MXNET_USE_CUDA
@@ -263,25 +264,25 @@ class TensorInspector {
    * \param pos the coordinates of the desired part of the tensor, calculated here
    * \param str the string that represents the coordinate
    */
-  inline bool parse_position(std::vector<int>& pos, const std::string& str) {
+  inline bool parse_position(std::vector<int>* pos, const std::string& str) {
     int dimension = tb_.ndim();
     std::stringstream ss(str);
     int i;
     while (ss >> i) {
-      pos.push_back(i);
+      pos->push_back(i);
       if (ss.peek() == ',') {
         ss.ignore();
       }
     }
-    if (pos.size() > dimension) {
+    if (pos->size() > dimension) {
       return false;
     }
-    for (unsigned i = 0; i < pos.size(); i++) {
-      if (pos[i] > (tb_.shape_[i]-1)) {
+    for (unsigned i = 0; i < pos->size(); i++) {
+      if ((*pos)[i] > (tb_.shape_[i]-1)) {
         return false;
       }
     }
-    return !pos.empty();
+    return !pos->empty();
   }
 
   /*!
@@ -293,7 +294,8 @@ class TensorInspector {
   inline void interactive_print_helper(std::string tag) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
-      explicit TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)()).interactive_print_helper<DType>(tag);
+      explicit TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)())
+          .interactive_print_helper<DType>(tag);
       return;
     }
 #endif  // MXNET_USE_CUDA
@@ -320,7 +322,7 @@ class TensorInspector {
         break;
       }
       std::vector<int> pos;
-      if (parse_position(pos, str)) {
+      if (parse_position(&pos, str)) {
         std::vector<int> sub_shape;
         size_t offset;
         print_locator(pos, &sub_shape, &offset);
