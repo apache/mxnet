@@ -34,7 +34,8 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad']
+           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
+           'tril']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -625,6 +626,42 @@ def expand_dims(a, axis):
         the input array.
     """
     return _npi.expand_dims(a, axis)
+
+
+@set_module('mxnet.ndarray.numpy')
+def tril(m, k=0):
+    r"""
+    Lower triangle of an array.
+
+    Return a copy of an array with elements above the `k`-th diagonal zeroed.
+
+    Parameters
+    ----------
+    m : ndarray, shape (M, N)
+        Input array.
+    k : int, optional
+        Diagonal above which to zero elements.  `k = 0` (the default) is the
+        main diagonal, `k < 0` is below it and `k > 0` is above.
+
+    Returns
+    -------
+    tril : ndarray, shape (M, N)
+        Lower triangle of `m`, of same shape and data-type as `m`.
+
+    See Also
+    --------
+    triu : same thing, only for the upper triangle
+
+    Examples
+    --------
+    >>> a = np.array([[1,2,3],[4,5,6],[7,8,9],[10,11,12]])
+    >>> np.tril(a, -1)
+    array([[ 0.,  0.,  0.],
+           [ 4.,  0.,  0.],
+           [ 7.,  8.,  0.],
+           [10., 11., 12.]])
+    """
+    return _npi.tril(m, k)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
