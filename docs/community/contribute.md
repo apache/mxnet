@@ -74,7 +74,6 @@ Please join either or both of the MXNet mailing lists:
 
 To join the MXNet slack channel send request to the contributor mailing list.
  * <a href="mailto:dev@mxnet.apache.org?subject=Requesting%20slack%20access">email</a> <i class="far fa-envelope"></i>
- * [archive](https://the-asf.slackarchive.io/mxnet) <i class="fas fa-external-link-alt"></i>
 
 
 ### Social Media

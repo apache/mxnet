@@ -321,7 +321,7 @@ def conv_act(no_bias, data_shape, alg):
   if alg == "relu6":
     relu = mx.symbol.clip(data=conv, name='relu6', a_min=0, a_max=6)
   else:
-    relu = mx.symbol.Activation(data=conv, name='relu', act_type=alg)
+    relu = mx.symbol.Activation(data=conv, name=alg, act_type=alg)
   return relu, attr
 
 # conv + act + sum fusion case
@@ -333,7 +333,7 @@ def conv_act_sum(no_bias, data_shape, alg):
   if alg == "relu6":
     relu = mx.symbol.clip(data=conv, name='relu6', a_min=0, a_max=6)
   else:
-    relu = mx.symbol.Activation(data=conv, name='relu', act_type=alg)
+    relu = mx.symbol.Activation(data=conv, name=alg, act_type=alg)
   conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
   sum = relu + conv1
@@ -373,7 +373,7 @@ def conv_bn_act(no_bias, data_shape, alg):
   if alg == "relu6":
     relu = mx.symbol.clip(data=bn1, name='relu6', a_min=0, a_max=6)
   else:
-    relu = mx.symbol.Activation(data=bn1, name='relu', act_type=alg)
+    relu = mx.symbol.Activation(data=bn1, name=alg, act_type=alg)
   return relu, attr
 
 # conv + bn + add + act fusion case
@@ -389,7 +389,7 @@ def conv_bn_sum_act(no_bias, data_shape, alg):
   if alg == "relu6":
     relu = mx.symbol.clip(data=sum1, name='relu6', a_min=0, a_max=6)
   else:
-    relu = mx.symbol.Activation(data=sum1, name='relu', act_type=alg)
+    relu = mx.symbol.Activation(data=sum1, name=alg, act_type=alg)
   return relu, attr
 
 # single concat case
@@ -659,9 +659,9 @@ def test_pos_single_conv():
 @with_seed()
 def test_pos_conv_act():
   act_list = {"relu": True,
-              "sigmoid": False,
-              "tanh": False,
-              "softrelu": False,
+              "sigmoid": True,
+              "tanh": True,
+              "softrelu": True,
               "relu6": True}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
@@ -697,9 +697,9 @@ def test_pos_conv_add2():
 @with_seed()
 def test_pos_conv_bn_act():
   act_list = {"relu": True,
-              "sigmoid": False,
-              "tanh": False,
-              "softrelu": False,
+              "sigmoid": True,
+              "tanh": True,
+              "softrelu": True,
               "relu6": True}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
@@ -711,9 +711,9 @@ def test_pos_conv_bn_act():
 @with_seed()
 def test_pos_conv_bn_sum_act():
   act_list = {"relu": True,
-              "sigmoid": False,
-              "tanh": False,
-              "softrelu": False,
+              "sigmoid": True,
+              "tanh": True,
+              "softrelu": True,
               "relu6": False}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
@@ -726,6 +726,9 @@ def test_pos_conv_bn_sum_act():
 def test_pos_single_concat():
   for data_shape in DATA_SHAPE:
     for out_type in ('int8', 'auto'):
+      net = single_concat(data_shape, 2, -1)
+      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
+      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
       net = single_concat(data_shape, 2, 1)
       check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
       check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)

@@ -43,7 +43,7 @@ brew install maven
 Please run the following lines:
 
 ```bash
-sudo apt-get install openjdk-8-java maven
+sudo apt-get install openjdk-8-jdk maven
 ```
 
 **Step 2.** Run the demo MXNet-Java project.
@@ -99,8 +99,8 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 
 | OS | Step 1 | Step 2 |
 |---|---|---|
-|macOS | [Shared Library for macOS](osx_setup.md#build-the-shared-library) | [Scala Package for macOS](osx_setup.md#install-the-mxnet-package-for-scala) |
-| Ubuntu | [Shared Library for Ubuntu](ubuntu_setup.md#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](ubuntu_setup.md#install-the-mxnet-package-for-scala) |
+|macOS | [Shared Library for macOS](osx_setup.html#build-the-shared-library) | [Scala Package for macOS](osx_setup.html#install-the-mxnet-package-for-scala) |
+| Ubuntu | [Shared Library for Ubuntu](ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](ubuntu_setup.html#install-the-mxnet-package-for-scala) |
 | Windows | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub"> | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Call for Contribution</a> |
 
 

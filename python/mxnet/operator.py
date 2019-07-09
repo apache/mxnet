@@ -22,13 +22,15 @@ from __future__ import absolute_import
 
 import traceback
 import warnings
+import collections
 
 from array import array
 from threading import Lock
+import ctypes
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
-from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf, mx_int
+from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf, mx_int, OpHandle
 from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
@@ -1099,3 +1101,60 @@ def register(reg_name):
     return do_register
 
 register("custom_op")(CustomOpProp)
+
+
+def get_all_registered_operators():
+    """Get all registered MXNet operator names.
+
+    Returns
+    -------
+    operator_names : list of string
+    """
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
+                                     ctypes.byref(plist)))
+
+    mx_registered_operator_names = [py_str(plist[i]) for i in range(size.value)]
+    return mx_registered_operator_names
+
+OperatorArguments = collections.namedtuple('OperatorArguments', ['narg', 'names', 'types'])
+
+def get_operator_arguments(op_name):
+    """Given operator name, fetch operator arguments - number of arguments,
+    argument names, argument types.
+
+    Parameters
+    ----------
+    op_name: str
+        Handle for the operator
+
+    Returns
+    -------
+    operator_arguments : OperatorArguments, namedtuple with number of arguments, names and types
+    """
+    op_handle = OpHandle()
+    check_call(_LIB.NNGetOpHandle(c_str(op_name), ctypes.byref(op_handle)))
+    real_name = ctypes.c_char_p()
+    desc = ctypes.c_char_p()
+    num_args = mx_uint()
+    arg_names = ctypes.POINTER(ctypes.c_char_p)()
+    arg_types = ctypes.POINTER(ctypes.c_char_p)()
+    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+    key_var_num_args = ctypes.c_char_p()
+    ret_type = ctypes.c_char_p()
+
+    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
+        op_handle, ctypes.byref(real_name), ctypes.byref(desc),
+        ctypes.byref(num_args),
+        ctypes.byref(arg_names),
+        ctypes.byref(arg_types),
+        ctypes.byref(arg_descs),
+        ctypes.byref(key_var_num_args),
+        ctypes.byref(ret_type)))
+
+    narg = int(num_args.value)
+    arg_names = [py_str(arg_names[i]) for i in range(narg)]
+    arg_types = [py_str(arg_types[i]) for i in range(narg)]
+    return OperatorArguments(narg, arg_names, arg_types)

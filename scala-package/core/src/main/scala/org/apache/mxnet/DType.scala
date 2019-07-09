@@ -24,26 +24,17 @@ object DType extends Enumeration {
   val Float16 = Value(2, "float16")
   val UInt8 = Value(3, "uint8")
   val Int32 = Value(4, "int32")
+  val Int8 = Value(5, "int8")
+  val Int64 = Value(6, "int64")
   val Unknown = Value(-1, "unknown")
   private[mxnet] def numOfBytes(dtype: DType): Int = {
     dtype match {
-      case DType.UInt8 => 1
+      case DType.UInt8 | DType.Int8 => 1
       case DType.Int32 => 4
       case DType.Float16 => 2
       case DType.Float32 => 4
-      case DType.Float64 => 8
+      case DType.Float64 | DType.Int64 => 8
       case DType.Unknown => 0
-    }
-  }
-  private[mxnet] def getType(dtypeStr: String): DType = {
-    dtypeStr match {
-      case "UInt8" => DType.UInt8
-      case "Int32" => DType.Int32
-      case "Float16" => DType.Float16
-      case "Float32" => DType.Float32
-      case "Float64" => DType.Float64
-      case _ => throw new IllegalArgumentException(
-        s"DType: $dtypeStr not found! please set it in DType.scala")
     }
   }
 }
