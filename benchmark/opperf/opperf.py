@@ -141,7 +141,7 @@ def main():
     # 4. Generate list of MXNet operators not covered in benchmarks
     ops_not_covered = get_operators_with_no_benchmark(final_benchmark_results.keys())
     for idx, op in enumerate(ops_not_covered):
-        print("{idx}. {op}".format(idx, op))
+        print("{idx}. {op}".format(idx=idx, op=op))
 
     return 0
 
