@@ -322,7 +322,7 @@ class TensorInspector {
       }
       tensor_info_to_string(&std::cout);
       std::cout << "Please specify the position, seperated by \",\"" << std::endl
-          << "\"e\" for the entire tensor, \"b\" to break, \"s\" to skip all: ";
+          << "\"e\" for the entire tensor, \"d\" to dump value to file, \"b\" to break, \"s\" to skip all: ";
       std::string str;
       std::cin >> str;
       if (str == "b") {
@@ -333,6 +333,18 @@ class TensorInspector {
       } else if (str == "s") {
         InspectorManager::get()->interactive_print_skip_all_ = true;
         break;
+      } else if (str == "d") {
+        while (true) {
+          std::cout << "Please enter a tag: ";
+          std::cin >> str;
+          if (str.find(' ') != std::string::npos) {
+            std::cout << "Invalid input. ";
+            continue;
+          }
+          dump_value_helper(str);
+          break;
+        }
+        continue;
       }
       std::vector<int> pos;
       if (parse_position(&pos, str)) {
@@ -504,8 +516,8 @@ class TensorInspector {
           std::cout << "Tag: " << tag << "  Visit: " <<
               InspectorManager::get()->check_value_tag_counter_[tag] <<  std::endl;
         }
-        std::cout << count << " value(s) found. \"p\" to print the coordinates," <<
-            " \"b\" to break, \"s\" to skip all: ";
+        std::cout << count << " value(s) found." << std::endl;
+        std::cout << "\"p\" to print the coordinates, \"b\" to break, \"s\" to skip all: ";
         std::string str;
         std::cin >> str;
         if (str == "b") {
