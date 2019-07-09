@@ -58,7 +58,7 @@ def test_np_tensordot():
                 b_axes_summed = b_axes_summed,
 
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         a_axes_remained = []
         for i in range(a.ndim):
@@ -254,7 +254,7 @@ def test_np_dot():
         ((3, 4, 5), (5, )),  # Case 4
         ((3, 4, 5), (5, 2)), # Case 5
         ((5,), (5, 2)),
-        ((3, 5, 4), (5, 4, 3)),  
+        ((3, 5, 4), (5, 4, 3)),
         ((3, 4), (5, 4, 3)),
         ((4,), (5, 4, 3))
     ]
@@ -1007,15 +1007,15 @@ def test_np_argsort():
             return F.np.argsort(a, self._axis)
 
     shapes = [
-        (), 
-        (1,), 
+        (),
+        (1,),
         (5,4),
         (5,0,4),
         (5,0,0),
         (0,0,5),
         (0,0,0),
         (5,3,4)
-    ] 
+    ]
     for hybridize in [True, False]:
         for shape in shapes:
             for ax in list(range(len(shape))) + [-1, None]:
@@ -1131,7 +1131,7 @@ def test_np_hstack():
         if len(shape) == 0:
             l = random.randint(0,3)
             if l == 0:
-                return shape 
+                return shape
             else:
                 return (l,)
         shape_lst = list(shape)
@@ -1382,6 +1382,65 @@ def test_np_tile():
                 net.hybridize()
             ret_mx = net(data_mx)
             assert same(ret_mx.asnumpy(), ret_np)
+
+
+@with_seed()
+@use_np
+def test_np_tril():
+    config = [
+        ((4, 2), 3),
+        ((4, 2), 9),
+        ((4, 2), 0),
+        ((4, 2), 2),
+        ((4, 5, 6), 0),
+        ((4, 5, 6), 5),
+        ((4, 5, 6), 2),
+        ((4, 5, 6), 20),
+        ((7, 8, 10, 9), 0),
+        ((7, 8, 10, 9), 5),
+        ((7, 8, 10, 9), 9),
+        ((7, 8, 10, 9), 13),
+        ((4, 0), 0),
+        ((4, 0), 2),
+        ((4, 0), 4),
+        ((4, 0), 7),
+        ((3, ), 0),
+        ((3, ), 2),
+        ((3, ), 5)
+    ]
+
+    class TestTril(HybridBlock):
+        def __init__(self, k):
+            super(TestTril, self).__init__()
+            self._k = k
+
+        def hybrid_forward(self, F, x):
+            return F.np.tril(x, k=self._k)
+
+    for prefix in [1, -1]:
+        for shape, k in config:
+            data_np = _np.random.uniform(size=shape)
+            data_mx = np.array(data_np, dtype=data_np.dtype)
+            data_mx.attach_grad()
+            ret_np = _np.tril(data_np, k*prefix)
+            with mx.autograd.record():
+                ret_mx = np.tril(data_mx, k*prefix)
+            assert same(ret_mx.asnumpy(), ret_np)
+            ret_mx.backward()
+            if len(shape) == 2:
+                grad_np = _np.tri(*shape, k=k*prefix)
+                assert same(data_mx.grad.asnumpy(), grad_np)
+            if len(shape) == 1:
+                grad_np = _np.tri(*shape, k=k*prefix)
+                grad_np = grad_np.sum(axis=0, keepdims=False)
+                assert same(data_mx.grad.asnumpy(), grad_np)
+
+            net = TestTril(k*prefix)
+            for hybrid in [False, True]:
+                if hybrid:
+                    net.hybridize()
+                ret_mx = net(data_mx)
+                assert same(ret_mx.asnumpy(), ret_np)
 
 
 @with_seed()
