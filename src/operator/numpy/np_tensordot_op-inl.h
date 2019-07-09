@@ -132,7 +132,8 @@ inline mxnet::TShape GetReorderedShape(const mxnet::TShape& shape, const mxnet::
 }
 
 /**
- * gets matrix dot.
+ * gets matrix dot. Reshapes tensor a as ad1-by-ad2 matrix, tensor b as bd1-by-bd2 matrix, then 
+ * calculates matrix dot a * b and stores in tensor out.
  */
 template<typename xpu>
 inline void MatrixDot(

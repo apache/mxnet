@@ -40,7 +40,7 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  if ((inputs[0].shape_.ndim() < 1) || (inputs[1].shape_.ndim() < 1)) {
+  if ((a_shape.ndim() < 1) || (b_shape.ndim() < 1)) {
     return false;
   }
 
@@ -52,7 +52,7 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   Tuple<int> b_axes_remained;
   Tuple<int> a_axes;
   Tuple<int> b_axes;
-  getReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
+  GetReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
     b_axes, a_shape, b_shape);
 
   CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
