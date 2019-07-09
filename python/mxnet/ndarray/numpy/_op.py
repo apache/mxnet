@@ -1092,9 +1092,4 @@ def arctan2(x1, x2, out=None, **kwargs):
     >>> np.arctan2(x, y)
     array([ 1.5707964, -1.5707964])
     """
-    if isinstance(x1, numeric_types):
-        return _np.arctan2(x1, x2, **kwargs)
-    elif isinstance(x1, _Symbol):
-        return _npi.arctan2(x1, x2, out=out, **kwargs)
-    else:
-        raise TypeError('type {} not supported'.format(str(type(x1))))
+    return _ufunc_helper(x1, x2, _npi.arctan2, _np.arctan2, _npi.arctan2_scalar, _npi.rarctan2_scalar, out)

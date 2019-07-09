@@ -120,6 +120,8 @@ MXNET_BINARY_MATH_FUNC(hypot)
 
 MXNET_BINARY_MATH_FUNC(pow)
 
+MXNET_BINARY_MATH_FUNC(atan2)
+
 template<typename DType> MSHADOW_XINLINE
 float id(DType a) {
   return static_cast<float>(a);

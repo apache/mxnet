@@ -48,6 +48,13 @@ NNVM_REGISTER_OP(_npi_maximum)
 NNVM_REGISTER_OP(_npi_minimum)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::minimum>);
 
+NNVM_REGISTER_OP(_npi_arctan2)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::arctan2>);
+
+NNVM_REGISTER_OP(_backward_npi_arctan2)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu,mshadow_op::arctan2_grad,
+                                                                  mshadow_op::arctan2_rgrad>);
+
 NNVM_REGISTER_OP(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::plus>);
 
@@ -77,6 +84,18 @@ NNVM_REGISTER_OP(_npi_maximum_scalar)
 
 NNVM_REGISTER_OP(_npi_minimum_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::minimum>);
+
+NNVM_REGISTER_OP(_npi_arctan2_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::arctan2>);
+
+NNVM_REGISTER_OP(_backward_npi_arctan2_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::arctan2_grad>);
+
+NNVM_REGISTER_OP(_npi_rarctan2_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rarctan2>);
+
+NNVM_REGISTER_OP(_backward_npi_rarctan2_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rarctan2_grad>);
 
 }  // namespace op
 }  // namespace mxnet

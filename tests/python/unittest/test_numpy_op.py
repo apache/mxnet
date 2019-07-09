@@ -1172,46 +1172,73 @@ def test_np_arctan2():
         def hybrid_forward(self, F, x1, x2):
             return F.np.arctan2(x1, x2)
 
-    shapes = [(), (1,), (1, 1), (1, 2, 3), (1, 0), (3, 0, 6)]
-    #types = ['int32', 'int64', 'float16', 'float32', 'double']
-    types = ['float16', 'float32', 'double']
-    #types = ['float16']
+    def dimReduce(src, des):
+        srcShape = src.shape
+        desShape = des.shape
+        if len(desShape) == 0:
+            return src.sum()
+        redu = []
+        for i, j in zip(range(len(srcShape)-1, -1, -1), range(len(desShape)-1, -1, -1)):
+            if srcShape[i] != desShape[j] and desShape[j] == 1:
+                redu.append(i)
+            if j == 0:
+                for k in range(0, i):
+                    redu.append(k)
+                break
+        if len(redu) > 0:
+            src = _np.reshape(src.sum(axis=tuple(redu)), desShape)
+        return src
+
+    types = ['float64', 'float32', 'float16']
     for hybridize in [True, False]:
-        for shape in shapes:
+        for shape1, shape2 in [[(1,), (1,)],  # single elements
+	                                 [(4, 5), (4, 5)],  # normal case
+	                                 [(3, 2), (3, 2)],  # tall matrices
+	                                 [(), ()],  # scalar only
+	                                 [(3, 0, 2), (3, 0, 2)],  # zero-dim
+	                                 [(3, 4, 5), (4, 1)],  # trailing dim broadcasting
+	                                 [(3, 4, 5), ()],  # scalar broadcasting
+                                     [(), (1, 2, 3)],  # scalar broadcasting
+	                                 [(4, 3), (4, 1)],  # single broadcasting
+	                                 [(3, 4, 5), (3, 1, 5)]  # single broadcasting in the middle
+	                                 ]:
             for oneType in types:
+                if oneType == 'float16':
+                    rtol=1e-2
+                    atol = 1e-2
+                else:
+                    rtol=1e-3
+                    atol = 1e-5
                 test_arctan2 = TestArctan2()
                 if hybridize:
                     test_arctan2.hybridize()
-                x1 = rand_ndarray(shape).astype(oneType).as_np_ndarray()
-                #print "x1's type is: ", x1.dtype
-                x2 = rand_ndarray(shape).astype(oneType).as_np_ndarray()
-                #print "x2's type is: ", x2.dtype
+                x1 = rand_ndarray(shape1, dtype=oneType).as_np_ndarray()
+                x2 = rand_ndarray(shape2, dtype=oneType).as_np_ndarray()
+                x11 = x1.asnumpy()
+                #print("x11 is ", x11, " shape1 is ", shape1)
+                x21 = x2.asnumpy()
+                #print("x21 is", x21, " shape2 is ", shape2)
                 x1.attach_grad()
                 x2.attach_grad()
                 np_out = _np.arctan2(x1.asnumpy(), x2.asnumpy())
                 with mx.autograd.record():
                     mx_out = test_arctan2(x1, x2)
                 assert mx_out.shape == np_out.shape
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
                 mx_out.backward()
-                x11 = x1.asnumpy()
-                #print "x11 is ", x11
-                #print "x11's type is: ", x11.dtype, "x11's class is: ", x11.__class__
-                x21 = x2.asnumpy()
-                #print "x21 is", x21
-                if _np.all(x11) == 0 and _np.all(x21) == 0:
-                    continue
-                #print "x21's type is: ", x21.dtype, "x21's class is: ", x21.__class__
                 np_backward_1 = x21 / (x11 * x11 + x21 * x21)
                 np_backward_2 = -1 * x11 / (x11 * x11 + x21 * x21)
-                #print "\n", np_backward_1, x1.grad.asnumpy(), "\n"
-                #print np_backward_2, x2.grad.asnumpy(), "\n\n"
+                np_backward_1 = dimReduce(np_backward_1, x11)
+                np_backward_2 = dimReduce(np_backward_2, x21)
+                #print("\n np_backward_1 = \n", np_backward_1, "\n x1 = ",x1.grad.asnumpy(), "\n")
+                #print("\n np_backward_2 = \n", np_backward_2, "\n x2 = ", x2.grad.asnumpy(), "\n")
                 #print "x1.grad.asnumpy().dtype is : ", x1.grad.asnumpy().dtype, " np_backward_1.dtype is: ", np_backward_1.dtype
-                assert_almost_equal(x1.grad.asnumpy(), np_backward_1, rtol=1e-3, atol=1e-5)
-                assert_almost_equal(x2.grad.asnumpy(), np_backward_2, rtol=1e-3, atol=1e-5)
+                assert_almost_equal(x1.grad.asnumpy(), np_backward_1, rtol=rtol, atol=atol)
+                assert_almost_equal(x2.grad.asnumpy(), np_backward_2, rtol=rtol, atol=atol)
+
                 mx_out = np.arctan2(x1, x2)
                 np_out = _np.arctan2(x1.asnumpy(), x2.asnumpy())
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 if __name__ == '__main__':
     import nose

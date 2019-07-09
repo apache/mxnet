@@ -247,6 +247,16 @@ MXNET_UNARY_MATH_OP(arctan, math::atan(a));
 
 MXNET_UNARY_MATH_OP(arctan_grad, 1.0f / (math::sqr(a) + 1.0f));
 
+MXNET_BINARY_MATH_OP(arctan2, math::atan2(a, b));
+
+MXNET_BINARY_MATH_OP(arctan2_grad, math::id(b) / (math::id(a * a + b * b)));
+
+MXNET_BINARY_MATH_OP(arctan2_rgrad, -math::id(a) / (math::id(a * a + b * b)));
+
+MXNET_BINARY_MATH_OP(rarctan2, math::atan2(b, a));
+
+MXNET_BINARY_MATH_OP(rarctan2_grad, math::id(a) / (math::id(a * a + b * b)));
+
 MXNET_SIMPLE_BINARY_MATH_OP(hypot);
 
 MXNET_BINARY_MATH_OP(hypot_grad_left, math::id(a) / math::hypot(a, b));
