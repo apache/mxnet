@@ -123,8 +123,7 @@ You can set the BLAS library explicitly by setting the BLAS variable to:
 
 See the [cmake/ChooseBLAS.cmake](https://github.com/apache/incubator-mxnet/blob/master/cmake/ChooseBlas.cmake) file for the options.
 
-Intel's MKL (Math Kernel Library) is one of the most powerful math libraries
-https://software.intel.com/en-us/mkl
+[Intel's MKL (Math Kernel Library)](https://software.intel.com/en-us/mkl) is one of the most powerful math libraries
 
 It has following flavors:
 
@@ -144,6 +143,8 @@ shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn or the [MKL-DNN
 Since the full MKL library is almost always faster than any other BLAS library it's turned on by default,
 however it needs to be downloaded and installed manually before doing `cmake` configuration.
 Register and download on the [Intel performance libraries website](https://software.intel.com/en-us/performance-libraries).
+You can also install MKL through [YUM](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-yum-repo)
+or [APT](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo) Repository.
 
 Note: MKL is supported only for desktop builds and the framework itself supports the following
 hardware:
