@@ -37,7 +37,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
 
 @set_module('mxnet.ndarray.numpy')
 def tensordot(a, b, axes = 2):
-    """
+    r"""
     tensordot(a, b, axes=2)
 
     Compute tensor dot product along specified axes for arrays >= 1-D.

@@ -102,7 +102,7 @@ def test_np_tensordot():
 
     # test non zero size input
     tensor_shapes = [ 
-        ((3, 5), (5, 4), 1),
+        ((3, 5), (5, 4), 1),  # (a_shape, b_shape, axes)
         ((3,), (3,), 1),       
         ((3, 4, 5, 6, 7), (5, 6, 7, 1, 2), 3),
         ((3, 5, 4, 6, 7), (7, 6, 5, 1, 2), [[1, 3, 4], [2, 1, 0]]),

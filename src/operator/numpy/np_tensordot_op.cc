@@ -22,12 +22,13 @@
  * \brief CPU Implementation of numpy-compatible tensordot
  */
 
+#include <string>
 #include "np_tensordot_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
+bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector *in_attrs,
                              mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
@@ -44,7 +45,7 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
+  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);
   const Tuple<int>& a_axes_summed = param.a_axes_summed;
   const Tuple<int>& b_axes_summed = param.b_axes_summed;
 
@@ -52,8 +53,8 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   Tuple<int> b_axes_remained;
   Tuple<int> a_axes;
   Tuple<int> b_axes;
-  GetReorderedAxes(a_axes_summed, a_axes_remained, a_axes, b_axes_summed, b_axes_remained, 
-    b_axes, a_shape, b_shape);
+  GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
+    &b_axes, a_shape, b_shape);
 
   CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
 
@@ -84,13 +85,13 @@ inline bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
   }
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, tem_shape2);
 
-  return shape_is_known(*in_attrs) && shape_is_known(*out_attrs); 
+  return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
 
-DMLC_REGISTER_PARAMETER(TensordotParam);                                           
+DMLC_REGISTER_PARAMETER(TensordotParam);
 
 NNVM_REGISTER_OP(tensordot)
-.add_alias("_npi_tensordot")                                                        
+.add_alias("_npi_tensordot")
 .describe(R"code(tensordot(a, b, axes=2)
 
     Compute tensor dot product along specified axes for arrays >= 1-D.
@@ -149,9 +150,9 @@ NNVM_REGISTER_OP(tensordot)
            [ 4532.,  4874.],
            [ 4664.,  5018.],
            [ 4796.,  5162.],
-           [ 4928.,  5306.]])                 
-)code" ADD_FILELINE) // description. 
-.set_attr_parser(mxnet::op::ParamParser<TensordotParam>)  
+           [ 4928.,  5306.]])
+)code" ADD_FILELINE)
+.set_attr_parser(mxnet::op::ParamParser<TensordotParam>)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -168,10 +169,10 @@ NNVM_REGISTER_OP(tensordot)
 .set_attr<nnvm::FGradient>("FGradient", mxnet::op::ElemwiseGradUseIn{"_backward_tensordot"})
 .add_argument("a", "NDArray-or-Symbol", "First input")
 .add_argument("b", "NDArray-or-Symbol", "Second input")
-.add_arguments(TensordotParam::__FIELDS__()); // abc  
+.add_arguments(TensordotParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_tensordot)
-.set_attr_parser(mxnet::op::ParamParser<TensordotParam>) 
+.set_attr_parser(mxnet::op::ParamParser<TensordotParam>)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)

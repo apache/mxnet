@@ -41,7 +41,7 @@ def _num_outputs(sym):
 
 @set_module('mxnet.symbol.numpy')
 def tensordot(a, b, axes = 2):
-    """
+    r"""
     tensordot(a, b, axes=2)
 
     Compute tensor dot product along specified axes for arrays >= 1-D.
