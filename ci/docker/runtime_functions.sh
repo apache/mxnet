@@ -961,13 +961,6 @@ unittest_ubuntu_python3_quantization_gpu() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
-unittest_ubuntu_cpu_scala() {
-    set -ex
-    scala_prepare
-    cd scala-package
-    mvn -B integration-test
-}
-
 unittest_centos7_cpu_scala() {
     set -ex
     cd /work/mxnet
@@ -1165,12 +1158,19 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
 }
 
+integrationtest_ubuntu_cpu_scala() {
+    set -ex
+    scala_prepare
+    cd scala-package
+    mvn -B verify -DskipTests=false
+}
+
 integrationtest_ubuntu_gpu_scala() {
     set -ex
     scala_prepare
     cd scala-package
     export SCALA_TEST_ON_GPU=1
-    mvn -B integration-test -DskipTests=false
+    mvn -B verify -DskipTests=false
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
