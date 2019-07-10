@@ -17,6 +17,7 @@
 
 package AI::MXNet::Monitor;
 use Mouse;
+use AI::MXNet::NS;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Base;
 
