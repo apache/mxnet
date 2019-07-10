@@ -780,6 +780,47 @@ def test_np_argmax():
 
 @with_seed()
 @npx.use_np_shape
+def test_np_argsort():
+    @npx.use_np_shape
+    class TestArgsort(HybridBlock):
+        def __init__(self, axis=-1):
+            super(TestArgsort, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.argsort(a, self._axis)
+
+    shapes = [
+        (), 
+        (1,), 
+        (5,4),
+        (5,0,4),
+        (5,0,0),
+        (0,0,5),
+        (0,0,0),
+        (5,3,4)
+    ] 
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for ax in list(range(len(shape))) + [-1, None]:
+                test_argsort = TestArgsort(ax)
+                if hybridize:
+                    test_argsort.hybridize()
+
+                x = np.random.uniform(size=shape)
+                np_out = _np.argsort(x.asnumpy(), axis=ax)
+                mx_out = test_argsort(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                # Test imperative once again
+                mx_out = np.argsort(x, axis=ax)
+                np_out = _np.argsort(x.asnumpy(), axis=ax)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@npx.use_np_shape
 def test_np_linalg_norm():
     @npx.use_np
     class TestLinalgNorm(HybridBlock):
@@ -1160,6 +1201,88 @@ def test_np_meshgrid():
 def test_np_broadcast_arrays():
     # TODO(junwu): Add test
     pass
+
+
+@with_seed()
+@npx.use_np
+def test_np_trace():
+    class TestTrace(HybridBlock):
+        def __init__(self, axis1, axis2, offset):
+            super(TestTrace, self).__init__()
+            self._axis1 = axis1
+            self._axis2 = axis2
+            self._offset = offset
+          
+        def hybrid_forward(self, F, data):
+            return F.np.trace(data, axis1=self._axis1, axis2=self._axis2, offset=self._offset)
+    
+    def g(data, axis1, axis2, offset):
+        idx = _np.indices(data.shape)
+        ret = _np.zeros_like(data)
+        ret[idx[axis1] + offset == idx[axis2]] = 1.0
+        return ret
+
+    shapes = [
+        (3, 3),
+        (3, 4),
+        (0, 0),
+        (3, 3, 3),
+        (0, 0, 0),
+        (2, 2, 4, 3),
+        (2, 2, 4, 3),
+        (2, 0, 3, 0),
+        (2, 0, 2, 3)
+    ]
+    offsets = range(-5, 5)
+    dtypes = ['int32', 'float16', 'float32', 'float64']
+    for hybridize in [True, False]:
+        for shape in shapes:
+            ndim = len(shape)
+            for axis1 in range(-ndim, ndim):
+                for axis2 in range(-ndim, ndim):
+                    if (axis1 + ndim) % ndim != (axis2 + ndim) % ndim:
+                        for offset in offsets:
+                            for dtype in dtypes:
+                                if dtype == 'float16':
+                                    rtol = atol = 1e-2
+                                else:
+                                    rtol = atol = 1e-5
+                                test_trace = TestTrace(axis1, axis2, offset)
+                                if hybridize:
+                                    test_trace.hybridize()
+                                data_np = _np.random.uniform(-10.0, 10.0, shape)
+                                data = mx.nd.array(data_np, dtype=dtype)
+                                data_np = data.asnumpy()
+                                data.attach_grad()
+                                expected_np = _np.trace(data_np, axis1=axis1, axis2=axis2, offset=offset)
+                                with mx.autograd.record():
+                                    out_mx = test_trace(data.as_np_ndarray())
+                                assert out_mx.shape == expected_np.shape
+                                assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
+                                out_mx.backward()
+                                backward_expected = g(data_np, axis1=axis1, axis2=axis2, offset=offset)
+                                assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+                                # Test imperative once again
+                                data = mx.nd.array(data_np, dtype=dtype)
+                                out_mx = np.trace(data.as_np_ndarray(), axis1=axis1, axis2=axis2, offset=offset)
+                                assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+    # bad params
+    params = [
+        ([], 0, 1, 0),
+        ([2], 0, 1, 0),
+        ([3, 2, 2], 1, 1, 1),
+        ([3, 2, 2], 0, -4, 1)
+    ]
+    for shape, axis1, axis2, offset in params:
+        data_np = _np.random.uniform(-1.0, 1.0, shape)
+        data_mx = mx.nd.array(data_np)
+        try:
+            output = np.trace(data_mx.as_np_ndarray(), axis1=axis1, axis2=axis2, offset=offset)
+        except mx.base.MXNetError:
+            continue
+        assert False
 
 
 if __name__ == '__main__':
