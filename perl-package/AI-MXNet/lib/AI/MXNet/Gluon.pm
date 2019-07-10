@@ -41,7 +41,7 @@ sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo'
     AI::MXNet::Gluon supports both imperative and symbolic programming,
     making it easy to train complex models imperatively in Perl.
 
-    Based on the the Gluon API specification,
+    Based on the Gluon API specification,
     the Gluon API in Apache MXNet provides a clear, concise, and simple API for deep learning.
     It makes it easy to prototype, build, and train deep learning models without sacrificing training speed.
 

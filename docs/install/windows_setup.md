@@ -183,7 +183,7 @@ cd C:\incubator-mxnet\build
 cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
 ```
 * Make sure you set the environment variables correctly (OpenBLAS_HOME, OpenCV_DIR) and change the version of the Visual studio 2017 to v14.11 before enter above command.
-6. After the CMake successfully completed, compile the the MXNet source code by using following command:
+6. After the CMake successfully completed, compile the MXNet source code by using following command:
 ```
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
