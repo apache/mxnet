@@ -170,7 +170,7 @@ NNVM_REGISTER_OP(tensordot_int_axes)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", 
+.set_attr<nnvm::FGradient>("FGradient",
     mxnet::op::ElemwiseGradUseIn{"_backward_tensordot_int_axes"})
 .add_argument("a", "NDArray-or-Symbol", "First input")
 .add_argument("b", "NDArray-or-Symbol", "Second input")

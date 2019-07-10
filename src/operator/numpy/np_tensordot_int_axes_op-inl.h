@@ -116,7 +116,7 @@ void TensordotIntAxesImpl(
         out_data = static_cast<DType>(0);
       }
       return;
-    }  
+    }
 
     MatrixDot<xpu>(ctx, a, b, out, req[0], ad1, ad2, bd1, bd2);
   });
