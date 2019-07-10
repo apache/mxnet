@@ -780,6 +780,47 @@ def test_np_argmax():
 
 @with_seed()
 @npx.use_np_shape
+def test_np_argsort():
+    @npx.use_np_shape
+    class TestArgsort(HybridBlock):
+        def __init__(self, axis=-1):
+            super(TestArgsort, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.argsort(a, self._axis)
+
+    shapes = [
+        (), 
+        (1,), 
+        (5,4),
+        (5,0,4),
+        (5,0,0),
+        (0,0,5),
+        (0,0,0),
+        (5,3,4)
+    ] 
+    for hybridize in [True, False]:
+        for shape in shapes:
+            for ax in list(range(len(shape))) + [-1, None]:
+                test_argsort = TestArgsort(ax)
+                if hybridize:
+                    test_argsort.hybridize()
+
+                x = np.random.uniform(size=shape)
+                np_out = _np.argsort(x.asnumpy(), axis=ax)
+                mx_out = test_argsort(x)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                # Test imperative once again
+                mx_out = np.argsort(x, axis=ax)
+                np_out = _np.argsort(x.asnumpy(), axis=ax)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@npx.use_np_shape
 def test_np_linalg_norm():
     @npx.use_np
     class TestLinalgNorm(HybridBlock):
