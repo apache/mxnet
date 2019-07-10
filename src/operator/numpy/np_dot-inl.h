@@ -30,6 +30,7 @@
 #include "../tensor/dot-inl.h"
 #include "../tensor/elemwise_binary_op.h"
 #include "../tensor/broadcast_reduce_op.h"
+#include "np_tensordot_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -140,17 +141,15 @@ inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
         Kernel<scalar_mul_kernel<Req>, xpu>::Launch(
           s, out.Size(), out.dptr<DType>(), tensor, scalar);
       });
-    } else if (a_shape.ndim() == 1 || b_shape.ndim() == 1) {
+    } else if (b_shape.ndim() == 1) {
       // Case 4: a is N-D array and b is 1-D array, sum product over the last axis
       MMImpl<xpu>(ctx, a, b, out, req[0]);
     } else {
       // Case 5: a is N-D array and b is M-D array, sum product over the last axis
       //         of a and the 2nd-to-last axis of b
-      // TODO(haojin2): To be implemented...
-      if (b_shape.ndim() != 2) {
-        LOG(FATAL) << "Only support case 5 when b.ndim = 2";
-      }
-      MMImpl<xpu>(ctx, a, b, out, req[0]);
+      const Tuple<int> a_axes_summed({a_shape.ndim() - 1});
+      const Tuple<int> b_axes_summed({b_shape.ndim() - 2});  
+      TensordotImpl<xpu>(a_axes_summed, b_axes_summed, ctx, a, b, out, req);    
     }
   });
 }
@@ -244,27 +243,11 @@ inline void NumpyDotBackward(const nnvm::NodeAttrs& attrs,
     } else {
       // Case 5: a is N-D array and b is M-D array, sum product over the last axis
       //         of a and the 2nd-to-last axis of b
-      // TODO(haojin2): To be implemented...
-      if (b_shape.ndim() != 2) {
-        LOG(FATAL) << "Only support case 5 when b.ndim = 2";
-      } else {  // a is N-D, b is 2D
-        index_t na = a_shape[a_shape.ndim() - 1];
-        index_t ma = a_shape.Size() / na;
-        index_t nograd = ograd.shape_[ograd.shape_.ndim() - 1];
-        index_t mograd = ograd.shape_.Size() / nograd;
-
-        Tensor<xpu, 2, DType> a_2d =
-            a.get_with_shape<xpu, 2, DType>(Shape2(ma, na), s);
-        Tensor<xpu, 2, DType> grad_a_2d =
-            grad_a.get_with_shape<xpu, 2, DType>(Shape2(ma, na), s);
-        Tensor<xpu, 2, DType> b_2d = b.FlatTo2D<xpu, DType>(s);
-        Tensor<xpu, 2, DType> grad_b_2d = grad_b.FlatTo2D<xpu, DType>(s);
-        Tensor<xpu, 2, DType> ograd_2d =
-            ograd.get_with_shape<xpu, 2, DType>(Shape2(mograd, nograd), s);
-
-        MMImpl<xpu>(ctx, TBlob(a_2d), TBlob(ograd_2d), TBlob(grad_b_2d), req[1], true, false);
-        MMImpl<xpu>(ctx, TBlob(ograd_2d), TBlob(b_2d), TBlob(grad_a_2d), req[0], false, true);
-      }
+      
+      const Tuple<int> a_axes_summed({a_shape.ndim() - 1});
+      const Tuple<int> b_axes_summed({b_shape.ndim() - 2});  
+      TensordotDerivativeImpl<xpu>(a_axes_summed, b_axes_summed, ctx, ograd, a, b, grad_a, 
+          grad_b, req);
     }
   });
 }

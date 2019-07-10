@@ -68,16 +68,16 @@ def tensordot(a, b, axes = 2):
 
     Parameters
     ----------
-    a, b : array_like, len(shape) >= 1
+    a, b : ndarray, len(shape) >= 1
         Tensors to "dot".
 
-    axes : int or (2,) array_like
+    axes : int or (2,) ndarray
         * integer_like
         If an int N, sum over the last N axes of `a` and the first N axes
         of `b` in order. The sizes of the corresponding axes must match.
-        * (2,) array_like
+        * (2,) ndarray
         Or, a list of axes to be summed over, first sequence applying to `a`,
-        second to `b`. Both elements array_like must be of the same length.
+        second to `b`. Both elements ndarray must be of the same length.
 
     See Also
     --------
@@ -108,10 +108,10 @@ def tensordot(a, b, axes = 2):
     (5, 2)
     >>> c
     array([[ 4400.,  4730.],
-        [ 4532.,  4874.],
-        [ 4664.,  5018.],
-        [ 4796.,  5162.],
-        [ 4928.,  5306.]])
+           [ 4532.,  4874.],
+           [ 4664.,  5018.],
+           [ 4796.,  5162.],
+           [ 4928.,  5306.]])
     """
     import collections
 

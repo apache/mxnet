@@ -178,26 +178,21 @@ inline void MatrixDot(
 }
 
 /**
- * forward function
+ * Calculates tensordot.
  */
-template<typename xpu>  // cpu and gpu                                                
-void TensordotOpForward(const nnvm::NodeAttrs& attrs,                     
-                        const OpContext& ctx,                                
-                        const std::vector<TBlob>& inputs,                 
-                        const std::vector<OpReqType>& req, 
-                        const std::vector<TBlob>& outputs) {                   
-
-  CHECK_EQ(inputs.size(), 2U);                                                 
-  CHECK_EQ(outputs.size(), 1U);                                               
-  CHECK_EQ(req.size(), 1U);         
+template<typename xpu>                                                 
+void TensordotImpl(
+    const Tuple<int>& a_axes_summed,
+    const Tuple<int>& b_axes_summed,                     
+    const OpContext& ctx,                                
+    const TBlob& a,
+    const TBlob& b,
+    const TBlob& out,                 
+    const std::vector<OpReqType>& req) {                           
   
   if (req[0] == kNullOp) {
     return;
   }
-
-  const TBlob& a = inputs[0];
-  const TBlob& b = inputs[1];
-  const TBlob& out = outputs[0];
  
   if (out.shape_.Size() == 0U) {
     return;  // zero-size output, no need to launch kernel
@@ -214,11 +209,6 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs,
   CHECK(out.type_flag_ == kFloat32 || out.type_flag_ == kFloat64 ||
       (out.type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
       << "Tensordot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";    
-    
-                                                              
-  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
-  const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& b_axes_summed = param.b_axes_summed;  
 
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
@@ -256,6 +246,32 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs,
 
     MatrixDot<xpu>(ctx, a_res, b_res, out, req[0], ad1, ad2, bd1, bd2);                         
   });                                                                                                                                               
+}
+
+/**
+ * forward function
+ */
+template<typename xpu>                                                 
+void TensordotOpForward(
+    const nnvm::NodeAttrs& attrs,                     
+    const OpContext& ctx,                                
+    const std::vector<TBlob>& inputs,                 
+    const std::vector<OpReqType>& req, 
+    const std::vector<TBlob>& outputs) {                   
+
+  CHECK_EQ(inputs.size(), 2U);                                                 
+  CHECK_EQ(outputs.size(), 1U);                                               
+  CHECK_EQ(req.size(), 1U);         
+
+  const TBlob& a = inputs[0];
+  const TBlob& b = inputs[1];
+  const TBlob& out = outputs[0];
+                                               
+  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
+  const Tuple<int>& a_axes_summed = param.a_axes_summed;
+  const Tuple<int>& b_axes_summed = param.b_axes_summed; 
+
+  TensordotImpl<xpu>(a_axes_summed, b_axes_summed, ctx, a, b, out, req);                                                                                                               
 }     
 
 /**
@@ -270,32 +286,24 @@ inline mxnet::TShape GetReverseShape(const mxnet::Tuple<int>& shape) {
 }
 
 /**
- * backward function.
+ * calculates tensordot derivative.
  */
 template<typename xpu>                                                       
-void TensordotOpBackward(
-    const nnvm::NodeAttrs& attrs,                       
+void TensordotDerivativeImpl(
+    const Tuple<int>& a_axes_summed,
+    const Tuple<int>& b_axes_summed,                       
     const OpContext& ctx,                               
-    const std::vector<TBlob>& inputs,                   
-    const std::vector<OpReqType>& req,                  
-    const std::vector<TBlob>& outputs) { 
-  CHECK_EQ(inputs.size(), 3U);                                              
-  CHECK_EQ(outputs.size(), 2U);                                             
-  CHECK_EQ(req.size(), 2U);   
+    const TBlob& out_grad,
+    const TBlob& a,
+    const TBlob& b,
+    const TBlob& grad_a,
+    const TBlob& grad_b,                   
+    const std::vector<OpReqType>& req) { 
 
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();                           
-  const TBlob& out_grad = inputs[0];                                         
-  const TBlob& a = inputs[1];     
-  const TBlob& b = inputs[2];                                      
-  const TBlob& grad_a = outputs[0];
-  const TBlob& grad_b = outputs[1];    
-  
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>(); 
+
   const mxnet::TShape& a_shape = a.shape_;
   const mxnet::TShape& b_shape = b.shape_;
-
-  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
-  const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& b_axes_summed = param.b_axes_summed;  
 
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
@@ -349,7 +357,35 @@ void TensordotOpBackward(
 
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a_res, grad_a, GetReverseShape(a_axes)); 
     mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b_res, grad_b, GetReverseShape(b_axes)); 
-  });                                                                                                                                              
+  });
+}
+
+/**
+ * backward function.
+ */
+template<typename xpu>                                                       
+void TensordotOpBackward(
+    const nnvm::NodeAttrs& attrs,                       
+    const OpContext& ctx,                               
+    const std::vector<TBlob>& inputs,                   
+    const std::vector<OpReqType>& req,                  
+    const std::vector<TBlob>& outputs) { 
+  CHECK_EQ(inputs.size(), 3U);                                              
+  CHECK_EQ(outputs.size(), 2U);                                             
+  CHECK_EQ(req.size(), 2U);   
+                          
+  const TBlob& out_grad = inputs[0];                                         
+  const TBlob& a = inputs[1];     
+  const TBlob& b = inputs[2];                                      
+  const TBlob& grad_a = outputs[0];
+  const TBlob& grad_b = outputs[1];    
+
+  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);      
+  const Tuple<int>& a_axes_summed = param.a_axes_summed;
+  const Tuple<int>& b_axes_summed = param.b_axes_summed;  
+
+  TensordotDerivativeImpl<xpu>(a_axes_summed, b_axes_summed, ctx, out_grad, a, b, grad_a, 
+      grad_b, req);                                                                                                                                              
 }   
 }  // namespace op
 }  // namespace mxnet
