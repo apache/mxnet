@@ -23,6 +23,8 @@
  * \brief CPU Implementation of numpy-compatible tensordot
  */
 
+#include <string>
+
 #include "np_tensordot_int_axes_op-inl.h"
 
 namespace mxnet {
