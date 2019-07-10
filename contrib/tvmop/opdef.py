@@ -22,6 +22,31 @@ from itertools import product
 __OP_DEF__ = []
 
 class OpDef:
+    """Specify the properties of an operator and
+    construct the value combination of the arguments
+    e.g., ldtype=["float32", "int32"], rdtype=["float16", "int16"],
+    then the argument combination is
+    [
+        {"ldtype": "float32", "rdtype": "float16"},
+        {"ldtype": "float32", "rdtype": "int16"},
+        {"ldtype": "int32", "rdtype": "float16"},
+        {"ldtype": "int32", "rdtype": "int16"},
+    ]
+
+    Parameters
+    ----------
+    func : function
+         The function to define the operator (in tvm compute and schedule).
+         It will get the argument combination extracted by this class.
+    name : str
+         function name.
+    target : str
+         {"cpu", "gpu", "cuda"}
+    auto_broadcast : bool
+         auto_broadcast=True allows one to implement broadcast computation
+         without considering whether dimension size equals to one.
+         TVM maps buffer[i][j][k] -> buffer[i][0][k] if dimension i's shape equals 1.
+    """
     def __init__(self, func, name, target, auto_broadcast, **kwargs):
         # construct the value combination of the arguments
         # e.g., ldtype=["float32", "int32"], rdtype=["float16", "int16"]
@@ -60,6 +85,19 @@ class OpDef:
 
 
 def defop(name, target=None, auto_broadcast=False, **kwargs):
+    """Decorator to define a tvm operator.
+
+    Parameters
+    ----------
+    name : str
+        function name
+    target : bool
+        {"cpu", "gpu", "cuda"}
+    auto_broadcast : bool
+        auto_broadcast=True allows one to implement broadcast computation
+        without considering whether dimension size equals to one.
+        TVM maps buffer[i][j][k] -> buffer[i][0][k] if dimension i's shape equals 1.
+    """
     assert name is not None and len(name) > 0
     target = "cpu" if target is None else target
     def _defop(func):
