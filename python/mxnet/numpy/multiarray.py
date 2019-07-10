@@ -1681,6 +1681,7 @@ def argsort(a, axis=-1, kind='quicksort', order=None):
     Returns the indices that would sort an input array along the given axis.
     This function performs sorting along the given axis and returns an array
     of indices having same shape as an input array that index data in sorted order.
+
     Parameters
     ----------
     a : ndarray
@@ -1693,6 +1694,7 @@ def argsort(a, axis=-1, kind='quicksort', order=None):
         Currently not supported.
     order: None
         Currently not supported.
+
     Returns
     -------
     output : ndarray
@@ -1700,6 +1702,7 @@ def argsort(a, axis=-1, kind='quicksort', order=None):
         If a is one-dimensional, a[index_array] yields a sorted a.
         More generally, np.take_along_axis(a, index_array, axis=a) always yields the sorted a,
         irrespective of dimensionality.
+
     Examples
     --------
     >>> x = np.array([3, 1, 2])
@@ -1715,12 +1718,14 @@ def argsort(a, axis=-1, kind='quicksort', order=None):
     >>> np.argsort(x, axis=1)  # sorts along last axis (across)
     array([[0., 1.],
            [0., 1.]])
+
     Notes
     -----
     This function differs from the original `numpy.argsort
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argsort.html>`_ in
     the following way(s):
-    - kind and order is currently not supported
+
+    - kind and order are currently not supported
     """
     if kind != 'quicksort':
         raise AttributeError('mxnet.numpy.argsort does not support other sorting methods')

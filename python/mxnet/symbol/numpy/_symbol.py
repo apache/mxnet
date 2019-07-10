@@ -384,6 +384,7 @@ class _Symbol(Symbol):
         Returns the indices that would sort an input array along the given axis.
         This function performs sorting along the given axis and returns an array
         of indices having same shape as an input array that index data in sorted order.
+
         Parameters
         ----------
         a : _Symbol
@@ -396,6 +397,7 @@ class _Symbol(Symbol):
             Currently not supported.
         order: None
             Currently not supported.
+
         Returns
         -------
         output : ndarray
@@ -403,6 +405,7 @@ class _Symbol(Symbol):
         If a is one-dimensional, a[index_array] yields a sorted a.
         More generally, np.take_along_axis(a, index_array, axis=a) always yields the sorted a,
         irrespective of dimensionality.
+
         Examples
         --------
         >>> x = np.array([3, 1, 2])
@@ -418,13 +421,14 @@ class _Symbol(Symbol):
         >>> np.argsort(x, axis=1)  # sorts along last axis (across)
         array([[0., 1.],
             [0., 1.]])
+
         Notes
         -----
         This function differs from the original `numpy.mean
         <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argsort.html>`_ in
         the following way(s):
 
-        - kind and order is currently not supported
+        - kind and order are currently not supported
         """
         if kind != 'quicksort':
             raise AttributeError('mxnet.numpy.argsort does not support other sorting methods')
