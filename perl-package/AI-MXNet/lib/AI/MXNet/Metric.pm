@@ -18,6 +18,7 @@
 package AI::MXNet::Metric;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Function::Parameters;
 use Scalar::Util qw/blessed/;
 use JSON::PP;

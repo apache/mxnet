@@ -18,6 +18,7 @@
 package AI::MXNet::CudaModule;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -194,6 +195,8 @@ method get_kernel(Str $name, Str $signature)
     );
     return AI::MXNet::CudaKernel->new($handle, $name, \@is_ndarray, \@dtypes);
 }
+
+__PACKAGE__->AI::MXNet::NS::register('AI::MXNet');
 
 package AI::MXNet::CudaKernel;
 use Mouse;

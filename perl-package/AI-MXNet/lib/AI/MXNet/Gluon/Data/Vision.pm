@@ -15,6 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
+package AI::MXNet::Gluon::Data::Vision;
+use AI::MXNet::NS;
+
 package AI::MXNet::Gluon::Data::Vision::DownloadedDataSet;
 use strict;
 use warnings;
