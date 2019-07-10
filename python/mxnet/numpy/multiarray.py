@@ -51,7 +51,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'argsort', 'hstack', 'tensordot']
 
 @set_module('mxnet.numpy')
-def tensordot(a, b, axes = 2):
+def tensordot(a, b, axes=2):
     r"""
     tensordot(a, b, axes=2)
 
@@ -120,12 +120,12 @@ def tensordot(a, b, axes = 2):
             raise ValueError('Axes must consist of two arrays.')
         a_axes_summed, b_axes_summed = axes
         if _np.isscalar(a_axes_summed):
-            a_axes_summed = a_axes_summed,
+            a_axes_summed = (a_axes_summed,)
         if _np.isscalar(b_axes_summed):
-            b_axes_summed = b_axes_summed,
-        
+            b_axes_summed = (b_axes_summed,)
+
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
     else:
