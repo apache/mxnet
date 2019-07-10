@@ -116,7 +116,7 @@ class FusedOp {
   std::vector<FusedOpEntry> outputs_;
 
   std::string code_;
-  nnvm::Graph symbol_;
+  nnvm::Graph subgraph_;
 
   std::vector<std::vector<mxnet::TShape>> aux_in_shapes;
   std::vector<std::vector<mxnet::TShape>> aux_out_shapes;

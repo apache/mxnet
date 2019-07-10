@@ -313,7 +313,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, MXNet will try fusing some of the operations (pointwise operations only for now).
   - It works in Symbolic execution as well as in Gluon models hybridized with ```static_alloc=True``` option.
-  - Only applies to MXNet that has been compiled with CUDA (```pip install mxnet-cuXX``` or built from source with ```USE_CUDA=1```)
+  - Only applies to MXNet that has been compiled with CUDA (```pip install mxnet-cuXX``` or built from source with ```USE_CUDA=1```) and running on GPU.
 
 * MXNET_FUSION_VERBOSE
   - Values: 0(false) or 1(true) ```(default=0)```

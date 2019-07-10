@@ -50,8 +50,8 @@ void FusedOpParamParser(nnvm::NodeAttrs* attrs) {
 FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
   this->inputs_ = std::vector<FusedOpEntry>(config.num_inputs);
   this->outputs_ = std::vector<FusedOpEntry>(config.num_outputs);
-  this->symbol_ = nnvm::Graph();
-  this->symbol_.outputs = attrs->subgraphs[0]->outputs;
+  this->subgraph_ = nnvm::Graph();
+  this->subgraph_.outputs = attrs->subgraphs[0]->outputs;
   this->initialized_ = false;
   this->cc_major_ = -1;
   this->cc_minor_ = -1;
@@ -60,18 +60,18 @@ FusedOp::FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config) {
 bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
                          std::vector<mxnet::TShape> *in_attrs,
                          std::vector<mxnet::TShape> *out_attrs) {
-  this->symbol_.attrs.erase("shape");
-  this->symbol_.attrs.erase("shape_inputs");
+  this->subgraph_.attrs.erase("shape");
+  this->subgraph_.attrs.erase("shape_inputs");
   std::vector<mxnet::TShape> input_shapes(*in_attrs);
-  this->symbol_ = mxnet::exec::InferShape(std::move(this->symbol_),
+  this->subgraph_ = mxnet::exec::InferShape(std::move(this->subgraph_),
                                           std::move(input_shapes),
                                           "__shape__");
 
-  const auto& g = this->symbol_.indexed_graph();
+  const auto& g = this->subgraph_.indexed_graph();
   const auto& input_nids = g.input_nodes();
 
   std::vector<mxnet::TShape> out_shapes;
-  const std::vector<mxnet::TShape> shapes = this->symbol_.GetAttr<mxnet::ShapeVector>("shape");
+  const std::vector<mxnet::TShape> shapes = this->subgraph_.GetAttr<mxnet::ShapeVector>("shape");
   for (auto& e : g.outputs()) {
     out_shapes.push_back(shapes[g.entry_id(e)]);
   }
@@ -99,18 +99,18 @@ bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
 bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
                         std::vector<int> *in_attrs,
                         std::vector<int> *out_attrs) {
-  this->symbol_.attrs.erase("dtype");
-  this->symbol_.attrs.erase("dtype_inputs");
+  this->subgraph_.attrs.erase("dtype");
+  this->subgraph_.attrs.erase("dtype_inputs");
   std::vector<int> input_types(*in_attrs);
-  this->symbol_ = mxnet::exec::InferType(std::move(this->symbol_),
+  this->subgraph_ = mxnet::exec::InferType(std::move(this->subgraph_),
                                          std::move(input_types),
                                          "__dtype__");
 
-  const auto& g = this->symbol_.indexed_graph();
+  const auto& g = this->subgraph_.indexed_graph();
   const auto& input_nids = g.input_nodes();
 
   std::vector<int> out_types;
-  const std::vector<int> types = this->symbol_.GetAttr<nnvm::DTypeVector>("dtype");
+  const std::vector<int> types = this->subgraph_.GetAttr<nnvm::DTypeVector>("dtype");
   for (auto& e : g.outputs()) {
     out_types.push_back(types[g.entry_id(e)]);
   }
@@ -138,8 +138,8 @@ bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
 template <typename Attr>
 std::pair<std::vector<Attr>, std::vector<Attr>> FusedOp::GetAttrs(const std::string& attr_name,
                                                                   const uint32_t node_id) {
-  const auto& g = this->symbol_.indexed_graph();
-  const std::vector<Attr> attrs = this->symbol_.GetAttr<std::vector<Attr>>(attr_name);
+  const auto& g = this->subgraph_.indexed_graph();
+  const std::vector<Attr> attrs = this->subgraph_.GetAttr<std::vector<Attr>>(attr_name);
   const auto& node = g[node_id];
   std::vector<Attr> inputs, outputs;
   for (const auto& e : node.inputs) {

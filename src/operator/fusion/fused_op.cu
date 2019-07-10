@@ -141,7 +141,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
                            const std::vector<int> &out_ndims,
                            const int nvec,
                            const std::string &kernel_name) {
-  const auto& g = this->symbol_.indexed_graph();
+  const auto& g = this->subgraph_.indexed_graph();
   std::string code = "";
   int temp_name_counter = 0;
   using NodeEntry = nnvm::IndexedGraph::NodeEntry;
@@ -319,7 +319,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 
         if (op_name == "_backward_cast") {
           CHECK_EQ(outputs[i], 1);
-          const std::vector<int>& types = this->symbol_.GetAttr<nnvm::DTypeVector>("dtype");
+          const std::vector<int>& types = this->subgraph_.GetAttr<nnvm::DTypeVector>("dtype");
           const int output_type = types[g.entry_id(i, 0)];
           const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
           code += "const auto " + var_name + " = cast<" + mshadowTypeToString(output_type) +
@@ -374,7 +374,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   std::string kernel_params = "";
   std::string tensor_params = "";
   nnvm::Symbol sym;
-  sym.outputs = this->symbol_.outputs;
+  sym.outputs = this->subgraph_.outputs;
   const std::vector<std::string> input_names = sym.ListInputNames(nnvm::Symbol::kAll);
   size_t num_params = in_dtypes.size() + out_dtypes.size();
   size_t i = 0;

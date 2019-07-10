@@ -204,6 +204,10 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
   return new_graph;
 }
 
+/* \brief Add nodes as inputs to the subgraph. This is used for operations
+ *        which are only compatible when they are the first nodes in the
+ *        subgraph.
+ */
 template <typename IsCompatible>
 void AddInputsOnlyCompatible(const Graph &g,
                              std::vector<std::unordered_set<nnvm::Node*> >* subsets,

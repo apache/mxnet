@@ -180,12 +180,12 @@ def check_other_ops():
 
     check_fused_symbol(mx.sym.slice_axis(a, axis=0, begin=1, end=4), a=arr1)
 
-    begin = (random.randint(0, shape[0]-2),
-             random.randint(0, shape[1]-2),
-             random.randint(0, shape[2]-2))
-    end = (random.randint(begin[0]+1, shape[0]-1),
-           random.randint(begin[1]+1, shape[1]-1),
-           random.randint(begin[2]+1, shape[2]-1))
+    begin = (random.randint(0, shape[0]-1),
+             random.randint(0, shape[1]-1),
+             random.randint(0, shape[2]-1))
+    end = (random.randint(begin[0]+1, shape[0]),
+           random.randint(begin[1]+1, shape[1]),
+           random.randint(begin[2]+1, shape[2]))
     check_fused_symbol(mx.sym.slice(a, begin=begin, end=end), a=arr1)
 
 @with_seed()
@@ -193,3 +193,7 @@ def test_fusion():
     check_unary_ops()
     check_binary_ops()
     check_other_ops()
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
