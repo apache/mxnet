@@ -1918,8 +1918,9 @@ def test_convolution_independent_gradients():
     stride_xs = [1, 2]
     pad_xs = [0, 1]
     in_sizes = [7, 32]
-    for dim, num_base, kernel_x, stride_x, pad_x , in_size in \
-            itertools.product(dims, num_bases, kernel_xs, stride_xs, pad_xs, in_sizes):
+    no_biases = [True, False]
+    for dim, num_base, kernel_x, stride_x, pad_x , in_size, no_bias in \
+            itertools.product(dims, num_bases, kernel_xs, stride_xs, pad_xs, in_sizes, no_biases):
         # Prepare params shape
         kernel = (kernel_x,) * dim
         stride = (stride_x,) * dim
@@ -1931,21 +1932,21 @@ def test_convolution_independent_gradients():
         # Symbols definition
         x = mx.sym.Variable('x')
         w = mx.sym.Variable('w')
-        b = mx.sym.Variable('b')
+        b = mx.sym.Variable('b') if not no_bias else None
         conv = mx.sym.Convolution(x, w, b, num_filter=num_filter, 
-            kernel=kernel, stride=stride, pad=pad)
+            kernel=kernel, stride=stride, pad=pad, no_bias=no_bias)
         
         for req_kind in reqs:
             # Binding args for conv with possible dependent gradients
             base_args = {
                 'x': mx.nd.random.normal(shape=x_shape),
                 'w': mx.nd.random.normal(shape=w_shape),
-                'b': mx.nd.random.normal(shape=(num_filter, ))}
+                'b': mx.nd.random.normal(shape=(num_filter, )) if not no_bias else None}
             args1 = copy.deepcopy(base_args)
             grad1 = {
                 'x': mx.nd.zeros(shape=x_shape),
                 'w': mx.nd.zeros(shape=w_shape),
-                'b': mx.nd.zeros(shape=(num_filter, ))}
+                'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
 
             grad_req1 = [req_kind] * 3
             grad_req1 = dict(zip(var_names, grad_req1))
@@ -1961,9 +1962,9 @@ def test_convolution_independent_gradients():
                 grad2 = {
                     'x': mx.nd.zeros(shape=x_shape),
                     'w': mx.nd.zeros(shape=w_shape),
-                    'b': mx.nd.zeros(shape=(num_filter, ))}
+                    'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
                 grad_req2 = {"x": x_req, "w": w_req, "b": b_req}
-                exe2 = conv.bind(dev, args2, args_grad=grad2, grad_req=grad_req2)
+                exe2 = conv.bind(ctx, args2, args_grad=grad2, grad_req=grad_req2)
                     
                 exe2.forward(is_train=True)
                 np.testing.assert_allclose(exe1.outputs[0].asnumpy(),
@@ -1971,6 +1972,8 @@ def test_convolution_independent_gradients():
                 
                 exe2.backward(exe2.outputs[0])
                 for var_name in var_names:
+                    if var_name == "b" and no_bias:
+                        continue
                     if grad_req2[var_name] == "null":
                         exe2_var_grad = grad2[var_name].asnumpy()
                         np.testing.assert_allclose(exe2_var_grad,
