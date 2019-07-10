@@ -40,4 +40,4 @@ function install_julia() {
 }
 
 install_julia 0.7 0.7.0
-install_julia 1.0 1.0.3
+install_julia 1.0 1.0.4
