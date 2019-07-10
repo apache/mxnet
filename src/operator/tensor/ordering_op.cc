@@ -176,6 +176,7 @@ Examples::
   // flatten and then sort
   argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
 )code" ADD_FILELINE)
+.add_alias("_npi_argsort")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ArgSortParam>)
