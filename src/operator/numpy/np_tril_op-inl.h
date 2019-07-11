@@ -48,6 +48,66 @@ struct TrilParam : public dmlc::Parameter<TrilParam> {
   }
 };
 
+inline bool TrilOpShape(const nnvm::NodeAttrs& attrs,
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  const mxnet::TShape& ishape = (*in_attrs)[0];
+  mxnet::TShape oshape;
+
+  if (!mxnet::ndim_is_known(ishape)) {
+    return false;
+  }
+
+  if (ishape.ndim() == 1) {
+    auto s = ishape[0];
+    oshape = mxnet::TShape({s, s});
+  } else {
+    oshape = ishape;
+  }
+
+  if (shape_is_none(oshape)) {
+    LOG(FATAL) << "Diagonal does not exist.";
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+
+  return shape_is_known(out_attrs->at(0));
+}
+
+template<int req>
+struct tril1Dforward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* data,
+                                  mshadow::Shape<2> oshape, int k) {
+    using namespace mxnet_op;
+
+    auto j = unravel(i, oshape);
+    if (j[1] > (j[0] + k)) {
+      KERNEL_ASSIGN(out[i], req, static_cast<DType>(0));
+    } else {
+      KERNEL_ASSIGN(out[i], req, data[j[1]]);
+    }
+  }
+};
+
+template<int req>
+struct tril1Dbackward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* data,
+                                  mshadow::Shape<1> oshape, int k) {
+    using namespace mxnet_op;
+    auto m = oshape[0];
+    auto start = (i > k) ? (i - k) : 0;
+    DType res = 0;
+    for (auto y = start; y < m; y++) {
+      res += data[ravel(mshadow::Shape2(y, i), mshadow::Shape2(m, m))];
+    }
+    KERNEL_ASSIGN(out[i], req, res);
+  }
+};
+
 template<int req>
 struct tril2D {
   template<typename DType>
@@ -93,7 +153,7 @@ void TrilOpProcess(const TBlob& in_data,
   const mxnet::TShape& ishape = in_data.shape_;
   const mxnet::TShape& oshape = out_data.shape_;
 
-  if (ishape.ndim() == 2) {
+  if (ishape.ndim() == 2 && oshape.ndim() == 2) {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<tril2D<req_type>, xpu>::Launch(
@@ -110,7 +170,19 @@ void TrilOpProcess(const TBlob& in_data,
       });
     });
   } else {
-
+    MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        if (back) {
+          Kernel<tril1Dbackward<req_type>, xpu>::Launch(
+              s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
+              Shape1(oshape[0]), param.k);
+        } else {
+          Kernel<tril1Dforward<req_type>, xpu>::Launch(
+              s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
+              Shape2(oshape[0], oshape[1]), param.k);
+        }
+      });
+    });
   }
 }
 
@@ -152,7 +224,7 @@ void TrilOpBackward(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& ishape = inputs[0].shape_;
   const TrilParam& param = nnvm::get<TrilParam>(attrs.parsed);
 
-  TrilOpProcess<xpu, true>(in_data, out_data, in_data.Size(), param, s, req);
+  TrilOpProcess<xpu, true>(in_data, out_data, out_data.Size(), param, s, req);
 }
 
 }  // namespace op

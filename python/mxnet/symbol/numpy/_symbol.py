@@ -1555,9 +1555,28 @@ def tile(A, reps):
 @set_module('mxnet.symbol.numpy')
 def tril(m, k=0):
     r"""
+    Lower triangle of an array.
 
+    Return a copy of an array with elements above the `k`-th diagonal zeroed.
+
+    Parameters
+    ----------
+    m : _Symbol, shape (M, N)
+        Input array.
+    k : int, optional
+        Diagonal above which to zero elements.  `k = 0` (the default) is the
+        main diagonal, `k < 0` is below it and `k > 0` is above.
+
+    Returns
+    -------
+    tril : _Symbol, shape (M, N)
+        Lower triangle of `m`, of same shape and data-type as `m`.
+
+    See Also
+    --------
+    triu : same thing, only for the upper triangle
     """
-    return _npi.tril(m, k=0)
+    return _npi.tril(m, k)
 
 
 @set_module('mxnet.symbol.numpy')

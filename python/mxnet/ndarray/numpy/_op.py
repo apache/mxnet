@@ -902,9 +902,37 @@ def tile(A, reps):
 @set_module('mxnet.ndarray.numpy')
 def tril(m, k=0):
     r"""
+    Lower triangle of an array.
 
+    Return a copy of an array with elements above the `k`-th diagonal zeroed.
+
+    Parameters
+    ----------
+    m : ndarray, shape (M, N)
+        Input array.
+    k : int, optional
+        Diagonal above which to zero elements.  `k = 0` (the default) is the
+        main diagonal, `k < 0` is below it and `k > 0` is above.
+
+    Returns
+    -------
+    tril : ndarray, shape (M, N)
+        Lower triangle of `m`, of same shape and data-type as `m`.
+
+    See Also
+    --------
+    triu : same thing, only for the upper triangle
+
+    Examples
+    --------
+    >>> a = np.array([[1,2,3],[4,5,6],[7,8,9],[10,11,12]])
+    >>> np.tril(a, -1)
+    array([[ 0.,  0.,  0.],
+           [ 4.,  0.,  0.],
+           [ 7.,  8.,  0.],
+           [10., 11., 12.]])
     """
-    return _npi.tril(m, k=0)
+    return _npi.tril(m, k)
 
 
 @set_module('mxnet.ndarray.numpy')

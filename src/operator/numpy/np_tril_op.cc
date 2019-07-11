@@ -38,7 +38,7 @@ NNVM_REGISTER_OP(_npi_tril)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", TrilOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", TrilOpForward<cpu>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
