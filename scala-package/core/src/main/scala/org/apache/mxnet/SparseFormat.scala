@@ -17,24 +17,9 @@
 
 package org.apache.mxnet
 
-object DType extends Enumeration {
-  type DType = Value
-  val Float32 = Value(0, "float32")
-  val Float64 = Value(1, "float64")
-  val Float16 = Value(2, "float16")
-  val UInt8 = Value(3, "uint8")
-  val Int32 = Value(4, "int32")
-  val Int8 = Value(5, "int8")
-  val Int64 = Value(6, "int64")
-  val Unknown = Value(-1, "unknown")
-  private[mxnet] def numOfBytes(dtype: DType): Int = {
-    dtype match {
-      case DType.UInt8 | DType.Int8 => 1
-      case DType.Int32 => 4
-      case DType.Float16 => 2
-      case DType.Float32 => 4
-      case DType.Float64 | DType.Int64 => 8
-      case DType.Unknown => 0
-    }
-  }
+object SparseFormat extends Enumeration {
+  type SparseFormat = Value
+  val DEFAULT = Value(0, "default")
+  val ROW_SPARSE = Value(1, "row_sparse")
+  val CSR = Value(2, "csr")
 }

@@ -18,6 +18,7 @@
 use strict;
 use warnings;
 package AI::MXNet::Gluon::Trainer;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use IO::File;
@@ -553,5 +554,7 @@ method load_states(Str $fname)
         $self->_optimizer($self->_updaters->[0]->optimizer);
     }
 }
+
+__PACKAGE__->AI::MXNet::NS::register('AI::MXNet::Gluon');
 
 1;
