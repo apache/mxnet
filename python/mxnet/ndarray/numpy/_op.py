@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort']
+           'argsort', 'identity']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -48,7 +48,7 @@ def zeros(shape, dtype=_np.float32, **kwargs):
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
         An optional value type. Default is `numpy.float32`. Note that this
-        behavior is different from NumPy's `ones` function where `float64`
+        behavior is different from NumPy's `zeros` function where `float64`
         is the default value, because `float32` is considered as the default
         data type in deep learning.
     ctx : Context, optional
@@ -90,12 +90,50 @@ def ones(shape, dtype=None, **kwargs):
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
     """
-    _sanity_check_params('zeros', ['order'], kwargs)
+    _sanity_check_params('ones', ['order'], kwargs)
     ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def identity(n, dtype=None, **kwargs):
+    """
+    Return the identity array.
+
+    The identity array is a square array with ones on
+    the main diagonal.
+
+    Parameters
+    ----------
+    n : int
+        Number of rows (and columns) in `n` x `n` output.
+    dtype : data-type, optional
+        Data-type of the output.  Defaults to ``numpy.float32``.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : ndarray
+        `n` x `n` array with its main diagonal set to one,
+        and all other elements 0.
+
+    Examples
+    --------
+    >>> np.identity(3)
+    >>> np.identity(3)
+    array([[1., 0., 0.],
+           [0., 1., 0.],
+           [0., 0., 1.]])
+    """
+    ctx = kwargs.pop('ctx', current_context())
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype, **kwargs)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access

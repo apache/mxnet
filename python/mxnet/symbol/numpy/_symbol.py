@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'identity']
 
 
 def _num_outputs(sym):
@@ -972,12 +972,42 @@ def ones(shape, dtype=None, **kwargs):
     out : ndarray
         Array of zeros with the given shape, dtype, and ctx.
     """
-    _sanity_check_params('zeros', ['order'], kwargs)
+    _sanity_check_params('ones', ['order'], kwargs)
     ctx = kwargs.get('ctx', current_context())
     if ctx is None:
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def identity(n, dtype=None, **kwargs):
+    """
+    Return the identity array.
+
+    The identity array is a square array with ones on
+    the main diagonal.
+
+    Parameters
+    ----------
+    n : int
+        Number of rows (and columns) in `n` x `n` output.
+    dtype : data-type, optional
+        Data-type of the output.  Defaults to ``numpy.float32``.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol
+        `n` x `n` array with its main diagonal set to one,
+        and all other elements 0.
+    """
+    ctx = kwargs.pop('ctx', current_context())
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype, **kwargs)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
