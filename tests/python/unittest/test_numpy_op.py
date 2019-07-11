@@ -258,9 +258,9 @@ def test_np_dot():
 
     for shape_a, shape_b in shapes:
         np_a = _np.random.uniform(-1.0, 1.0, shape_a)
-        np_a[abs(np_a) < eps] = 2 * eps;
+        np_a[abs(np_a) < eps] = 2 * eps
         np_b = _np.random.uniform(-1.0, 1.0, shape_b)
-        np_b[abs(np_b) < eps] = 2 * eps;
+        np_b[abs(np_b) < eps] = 2 * eps
         a = mx.nd.array(np_a)
         b = mx.nd.array(np_b)
         np_res = _np.dot(np_a, np_b)
