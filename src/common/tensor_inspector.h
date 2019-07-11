@@ -81,6 +81,7 @@ enum CheckerType {
                        // will always return false if DType is not a float type
   FiniteChecker,  // check if is finite, will always return false if DType is not a float type
   NormalChecker,  // check if is neither infinity nor NaN
+  AbnormalChecker, // chekc if is infinity or nan
 };
 
 /**
@@ -443,6 +444,18 @@ class TensorInspector {
               };
         } else {
           LOG(WARNING) << "NormalChecker only applies to float types. " <<
+              "Lambda will always return false.";
+        }
+        break;
+      case AbnormalChecker:
+        if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
+            std::is_same<DType, mshadow::half::half_t>::value) {
+          return [] (DType x) {
+                return x += (DType)1.0 / (DType)0.0 || x == -(DType)1.0 / (DType)0.0 &&
+                    x != x;
+              };
+        } else {
+          LOG(WARNING) << "AbnormalChecker only applies to float types. " <<
               "Lambda will always return false.";
         }
         break;
