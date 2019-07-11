@@ -142,7 +142,7 @@ def test_ndarray_setitem():
     assert same(x.asnumpy(), x_np)
 
     # Scalar array, no assignment allowed
-    with mx.np_compat():
+    with mx.np_shape():
         x = mx.nd.zeros(())
         with assert_raises(IndexError):
             x[:] = 1
