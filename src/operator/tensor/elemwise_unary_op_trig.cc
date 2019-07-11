@@ -144,10 +144,14 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshad
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
-      // n->inputs[1] : f(x) = tan(x)
-      // ograds[0] : head_grads
+      // n->inputs[1] : y = f(x) = tan(x) (ElemwiseGradUseOut)
+      // ograds[0] : head_grads (dL/dy_grad)
       // f'(x) = sec^2(x)
       // f''(x) = 2 * f'(x) * f(x)
+      //
+      // Note: When building gradient graph, the backward node of n->inputs[1] will be
+      // added to the graph again, therefore f`(x) will be multiplied
+      // So we need to compute only -> 2 * f(x) * dL/dy_grad * y_grad
       const std::unordered_map<std::string, std::string> args = {{"scalar", "2.0"}};
       auto two_y = MakeNode("_mul_scalar", n->attrs.name + "_mul_two", {n->inputs[1]}, &args, &n);
       auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "_grad_mul",
@@ -155,8 +159,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshad
       auto dydx = MakeNode("elemwise_div", n->attrs.name + "_grad_div",
                            {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
 
-      // when building gradient graph, the backward node of n->inputs[1] will be
-      // added to the graph again, therefore f`(x) will be multiplied
       std::vector<nnvm::NodeEntry> ret;
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad",
                                 {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
@@ -319,10 +321,14 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<msha
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
-      // n->inputs[1] : f(x) = tanh(x)
-      // ograds[0] : head_grads
+      // n->inputs[1] : y = f(x) = tanh(x) (ElemwiseGradUseOut)
+      // ograds[0] : head_grads dL/dy_grad
       // f'(x) = sech^2(x)
       // f''(x) = -2 * f'(x) * f(x)
+      //
+      // Note: when building gradient graph, the backward node of n->inputs[1] will be
+      // added to the graph again, therefore f`(x) will be multiplied
+      // So we need to compute only -> -2 * f(x) * dL/dy_grad * y_grad
       const std::unordered_map<std::string, std::string> args = {{"scalar", "-2.0"}};
       auto neg_two_y = MakeNode("_mul_scalar", n->attrs.name + "_mul_neg_two",
                                 {n->inputs[1]}, &args, &n);
@@ -331,8 +337,6 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<msha
       auto dydx = MakeNode("elemwise_div", n->attrs.name + "_grad_div",
                            {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
 
-      // when building gradient graph, the backward node of n->inputs[1] will be
-      // added to the graph again, therefore f`(x) will be multiplied
       std::vector<nnvm::NodeEntry> ret;
       ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad",
                                 {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
