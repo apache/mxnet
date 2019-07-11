@@ -88,6 +88,7 @@ class Arg:
         'caffe-layer-parameter':'::caffe::LayerParameter',\
         'NDArray-or-Symbol[]':'const std::vector<Symbol>&',\
         'float':'mx_float',\
+        'float or None':'mx_float',\
         'real_t':'mx_float',\
         'int':'int',\
         'int (non-negative)': 'uint32_t',\
@@ -98,7 +99,11 @@ class Arg:
         'double or None':'dmlc::optional<double>',\
         'Shape or None':'dmlc::optional<Shape>',\
         'string':'const std::string&',\
-        'tuple of <float>':'nnvm::Tuple<mx_float>'}
+        '':'int64_t',\
+        'ptr':'void*',\
+        'tuple of <>':'nnvm::Tuple<int64_t>',\
+        'tuple of <float>':'nnvm::Tuple<mx_float>',\
+        'tuple of <double>':'nnvm::Tuple<double>'}
     name = ''
     type = ''
     description = ''
@@ -136,7 +141,7 @@ class Arg:
             elif self.defaultString[0] == '(':
                 self.defaultString = 'Shape' + self.defaultString
             elif self.defaultString[0] == '[':
-                self.defaultString = 'Shape(' + self.defaultString[1:-1] + ")"
+                self.defaultString = '{' + self.defaultString[1:-1] + "}"
             elif self.type == 'dmlc::optional<int>':
                 self.defaultString = self.type + '(' + self.defaultString + ')'
             elif self.type == 'dmlc::optional<bool>':
@@ -352,19 +357,21 @@ def ParseAllOps():
             byref(nArgs), byref(argNames), byref(argTypes), \
             byref(argDescs), byref(varArgName), byref(return_type))
 
-        if name.value.decode('utf-8').startswith('_'):     # get rid of functions like __init__
-            continue
+        decoded_name = name.value.decode('utf-8')
+        if decoded_name.startswith('_'):
+            if decoded_name.startswith('_backward'):
+                continue
 
         args = []
 
         for i in range(0, nArgs.value):
-            arg = Arg(name.value.decode('utf-8'),
+            arg = Arg(decoded_name,
                       argNames[i].decode('utf-8'),
                       argTypes[i].decode('utf-8'),
                       argDescs[i].decode('utf-8'))
             args.append(arg)
 
-        op = Op(name.value.decode('utf-8'), description.value.decode('utf-8'), args)
+        op = Op(decoded_name, description.value.decode('utf-8'), args)
 
         ret = ret + op.GetOpDefinitionString(True) + "\n"
         ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
@@ -392,7 +399,7 @@ if __name__ == "__main__":
     try:
         # generate file header
         patternStr = ("/*!\n"
-                      "*  Copyright (c) 2016 by Contributors\n"
+                      "*  Copyright (c) 2019 by Contributors\n"
                       "* \\file op.h\n"
                       "* \\brief definition of all the operators\n"
                       "* \\author Chuntao Hong, Xin Li\n"
