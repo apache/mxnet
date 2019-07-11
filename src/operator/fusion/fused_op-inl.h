@@ -224,6 +224,8 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
 const std::map<std::string, std::string> slice_ops = {
   {"slice_axis"   , ""},
   {"slice"   , ""},
+  {"slice_like"   , ""},
+  {"broadcast_like"   , ""},
 };
 
 const std::vector<std::string> variable_io_ops = {
@@ -364,7 +366,7 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
   for (int dim = ndim-1; dim >=0; dim--) {
     if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
     if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
-    if (end[dim] > shape[dim]) end[dim] = shape[dim];
+    if (end[dim] == INT_MAX) end[dim] = shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
       strides[dim-1] = strides[dim] * shape[dim];
@@ -378,7 +380,9 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
     #pragma unroll
     for (int dim = 0; dim < ndim; dim++) {
        int stride = ref_strides[dim];
-       idx[j] += (ref_idx / stride + begin[dim]) * strides[dim];
+       if (shape[dim] > 1) {
+         idx[j] += (ref_idx / stride + begin[dim]) * strides[dim];
+       }
        ref_idx = ref_idx % stride;
     }
     if (j > 0 && (idx[j] != (idx[j-1] + 1))) {
@@ -396,8 +400,6 @@ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>
   }
   return load_index<nvec>(input, idx[0], shape);
 }
-
-
 
 template <int nvec, typename DType, int ndim>
 inline void store_index(const VectorType<DType, nvec> value, int i,

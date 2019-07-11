@@ -148,6 +148,7 @@ class FusedOp {
   std::vector<std::vector<int>> aux_in_types;
   std::vector<std::vector<int>> aux_out_types;
   std::vector<OpReqType> saved_reqs_;
+  std::vector<int> extra_shape_args_;
 
   std::string ptx_;
   std::string kernel_name_;

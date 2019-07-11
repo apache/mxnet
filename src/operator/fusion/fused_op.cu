@@ -108,27 +108,32 @@ std::string ParseOpDescription(const std::vector<std::string>& op_desc,
   return fmt;
 }
 
+void AddShape(const mxnet::TShape& shape, 
+              std::vector<std::vector<int>>* shapes) {
+  // We need alignment to 8 bytes for size_t in the Shape struct
+  // so if ndim is odd, there will be 4B of padding
+  int ndim = shape.ndim();
+  const int offset = ndim % 2 == 0 ? 2 : 3;
+  shapes->push_back(std::vector<int>(ndim + offset));
+  std::vector<int>& tensor_shapes = shapes->back();
+  size_t total_size = 1;
+  for (int i = ndim-1; i >= 0; i--) {
+    tensor_shapes[i] = shape[i];
+    total_size *= shape[i];
+  }
+  size_t * shape_size_ptr = reinterpret_cast<size_t*>(&tensor_shapes[ndim + offset - 2]);
+  *shape_size_ptr = total_size;
+}
+
 void AddPointerAndShape(const TBlob& data,
                         std::vector<void*> *ptrs,
                         std::vector<std::vector<int>>* shapes,
                         mshadow::Stream<gpu> * s) {
   using namespace mshadow;
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
-    int ndim = data.ndim();
     Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
     ptrs->push_back(tensor.dptr_);
-    // We need alignment to 8 bytes for size_t in the Shape struct
-    // so if ndim is odd, there will be 4B of padding
-    const int offset = ndim % 2 == 0 ? 2 : 3;
-    shapes->push_back(std::vector<int>(ndim + offset));
-    std::vector<int>& tensor_shapes = shapes->back();
-    size_t total_size = 1;
-    for (int i = ndim-1; i >= 0; i--) {
-      tensor_shapes[i] = data.shape_[i];
-      total_size *= data.shape_[i];
-    }
-    size_t * shape_size_ptr = reinterpret_cast<size_t*>(&tensor_shapes[ndim + offset - 2]);
-    *shape_size_ptr = total_size;
+    AddShape(data.shape_, shapes);
   });
 }
 
@@ -201,20 +206,35 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             replaceString(&out, "None", def);
             return out;
           };
-          std::string begin = parse_tuple(source->attrs.dict.at("begin"), "0");
-          std::string end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
-          if (op_name == "slice_axis") {
-            std::string axis = source->attrs.dict.at("axis");
+          std::string begin;
+          std::string end;
+          if (op_name == "broadcast_like" || op_name == "slice_like") {
             std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
-            std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
             code += "Shape<ndim_" + var_name + "> "+ begin_var_name + ";\n";
-            code += "Shape<ndim_" + var_name + "> "+ end_var_name + ";\n";
             code += begin_var_name + ".set(0);\n";
-            code += end_var_name + ".set(INT_MAX);\n";
-            code += begin_var_name + "["+axis+"] = " + begin + ";\n";
-            code += end_var_name + "["+axis+"] = " + end + ";\n";
+            int like_id = node.inputs[1].node_id;
+            if (std::find(extra_shape_args_.begin(), extra_shape_args_.end(), like_id) == extra_shape_args_.end()) {
+                extra_shape_args_.push_back(like_id);
+            }
+            std::string end_var_name = "extra_" + std::to_string(like_id) + "_shape";
             begin = begin_var_name;
             end = end_var_name;
+          } else {
+            begin = parse_tuple(source->attrs.dict.at("begin"), "0");
+            end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
+            if (op_name == "slice_axis") {
+              std::string axis = source->attrs.dict.at("axis");
+              std::string begin_var_name = var_name + "_" + std::to_string(i) + "_begin";
+              std::string end_var_name = var_name + "_" + std::to_string(i) + "_end";
+              code += "Shape<ndim_" + var_name + "> "+ begin_var_name + ";\n";
+              code += "Shape<ndim_" + var_name + "> "+ end_var_name + ";\n";
+              code += begin_var_name + ".set(0);\n";
+              code += end_var_name + ".set(INT_MAX);\n";
+              code += begin_var_name + "["+axis+"] = " + begin + ";\n";
+              code += end_var_name + "["+axis+"] = " + end + ";\n";
+              begin = begin_var_name;
+              end = end_var_name;
+            }
           }
           code += "const auto " + vec_name + " = load_slice<nvec>(" +
                   var_name + ", " + var_name + "_shape," + begin +
@@ -380,6 +400,14 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   size_t num_params = in_dtypes.size() + out_dtypes.size();
   size_t i = 0;
   std::string aux_code = "static const int nvec = " + std::to_string(nvec) + ";\n";
+
+  const auto& shapes = this->symbol_.GetAttr<mxnet::ShapeVector>("shape");
+  for (const auto &shape_id: extra_shape_args_) {
+      std::string shape_name = "extra_" + std::to_string(shape_id) + "_shape";
+      int ndim = shapes[shape_id].ndim();
+      kernel_params += " const Shape<" + std::to_string(ndim) + "> " + shape_name;
+      kernel_params += ", ";
+  }
   for (const auto &type : in_dtypes) {
     std::string type_name = mshadowTypeToString(type);
     std::string dtype_var = "DType_" + input_names[i];
@@ -388,7 +416,8 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     aux_code = "static const int " + dim_var + " = " + \
                 std::to_string(in_ndims[i]) + ";\n" + aux_code;
     tensor_params += dtype_var + "* " +input_names[i];
-    kernel_params += " const Shape<" + dim_var + "> " + input_names[i]+"_shape";
+    //kernel_params += " const Shape<" + dim_var + "> " + input_names[i]+"_shape";
+    kernel_params += " const Shape<" + std::to_string(in_ndims[i]) + "> " + input_names[i]+"_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
@@ -404,7 +433,8 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
                 std::to_string(out_ndims[i - in_dtypes.size()]) + ";\n" + aux_code;
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
     tensor_params += dtype_var + "* " + out_name;
-    kernel_params += " const Shape<" + dim_var + "> " + out_name+"_shape";
+    //kernel_params += " const Shape<" + dim_var + "> " + out_name+"_shape";
+    kernel_params += " const Shape<" + std::to_string(out_ndims[i-in_dtypes.size()]) + "> " + out_name+"_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
@@ -412,6 +442,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     kernel_params += ", ";
   }
   kernel_params += tensor_params;
+
   code_ = std::string(fusion::fp16_support_string) + "\n" +
           fusion::type_support_string + "\n" +
           fusion::function_definitions + "\n" +
@@ -587,6 +618,11 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
 
   std::vector<void*> ptrs;
   std::vector<std::vector<int>> shapes;
+
+  const auto& node_shapes = this->symbol_.GetAttr<mxnet::ShapeVector>("shape");
+  for (const auto &shape_id: extra_shape_args_) {
+    AddShape(node_shapes[shape_id], &shapes);
+  }
   for (const auto &data : inputs) {
     AddPointerAndShape(data, &ptrs, &shapes, s);
   }
