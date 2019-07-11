@@ -451,7 +451,7 @@ class TensorInspector {
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
             std::is_same<DType, mshadow::half::half_t>::value) {
           return [] (DType x) {
-                return x += (DType)1.0 / (DType)0.0 || x == -(DType)1.0 / (DType)0.0 &&
+                return x == (DType)1.0 / (DType)0.0 || x == -(DType)1.0 / (DType)0.0 ||
                     x != x;
               };
         } else {
