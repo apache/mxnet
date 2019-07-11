@@ -46,12 +46,9 @@ namespace cuda {
 bool cuda_version_check_performed = []() {
   // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
   if (dmlc::GetEnv("MXNET_CUDA_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
-    int linkedAgainstCudaVersion = 0;
-    CUDA_CALL(cudaRuntimeGetVersion(&linkedAgainstCudaVersion));
-    if (linkedAgainstCudaVersion != CUDA_VERSION)
-      LOG(WARNING) << "cuda library mismatch: linked-against version " << linkedAgainstCudaVersion
-                   << " != compiled-against version " << CUDA_VERSION << "."
-                   << "Set MXNET_CUDA_VERSION_CHECKING=0 to quiet this warning.";
+    // Not currently performing a runtime check of linked-against vs. compiled-against
+    // cuda runtime library, as major.minor must match for libmxnet.so to even load, per:
+    // https://docs.nvidia.com/deploy/cuda-compatibility/#binary-compatibility
     if (CUDA_VERSION < MXNET_CI_OLDEST_CUDA_VERSION)
       LOG(WARNING) << "Upgrade advisory: this mxnet has been built against cuda library version "
                    << CUDA_VERSION << ", which is older than the oldest version tested by CI ("
