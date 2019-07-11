@@ -206,6 +206,18 @@ NNVM_REGISTER_OP(_FusedOp)
     const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
     return op->num_outputs();
   })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs) {
+    const FusedOpPtr& op = nnvm::get<FusedOpPtr>(attrs.parsed);
+    const auto num_inputs = op->num_inputs();
+    const auto num_outputs = op->num_outputs();
+    std::vector<std::pair<int, int> > ret;
+    for (auto i = 0u; i < num_inputs; ++i) {
+      for (auto j = 0u; j < num_outputs; ++j) {
+        ret.emplace_back(i,j);
+      }
+    }
+    return ret;
+    })
 .set_attr<exec::FProvideSubgraphShape>("FProvideSubgraphShape", FusedOpProvideShape)
 .set_attr<exec::FProvideSubgraphType>("FProvideSubgraphType", FusedOpProvideType)
 .set_attr<exec::FProvideSubgraphStorageType>("FProvideSubgraphStorageType",
