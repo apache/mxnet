@@ -52,9 +52,8 @@ NNVM_REGISTER_OP(_npi_logaddexp2)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::logaddexp2>);
 
 NNVM_REGISTER_OP(_backward_logaddexp2)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu,  \
-                                     mshadow_op::logaddexp2_grad_left,  \
-                                     mshadow_op::logaddexp2_grad_right>);
+.set_attr<FCompute>("FCompute<gpu>", 
+                    BinaryBroadcastBackwardUseIn<gpu, mshadow_op::logaddexp2_grad_left, mshadow_op::logaddexp2_grad_right>);  // NOLINT()
 
 NNVM_REGISTER_OP(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::plus>);
@@ -90,8 +89,8 @@ NNVM_REGISTER_OP(_npi_logaddexp2_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::logaddexp2>);
 
 NNVM_REGISTER_OP(_backward_logaddexp2_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu,  \
-                                     mshadow_op::logaddexp2_grad_left>);
+.set_attr<FCompute>("FCompute<gpu>", 
+                    BinaryScalarOp::Backward<gpu, mshadow_op::logaddexp2_grad_left>);
 
 }  // namespace op
 }  // namespace mxnet
