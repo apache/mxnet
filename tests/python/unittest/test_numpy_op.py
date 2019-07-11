@@ -1007,15 +1007,15 @@ def test_np_argsort():
             return F.np.argsort(a, self._axis)
 
     shapes = [
-        (), 
-        (1,), 
+        (),
+        (1,),
         (5,4),
         (5,0,4),
         (5,0,0),
         (0,0,5),
         (0,0,0),
         (5,3,4)
-    ] 
+    ]
     for hybridize in [True, False]:
         for shape in shapes:
             for ax in list(range(len(shape))) + [-1, None]:
@@ -1564,6 +1564,51 @@ def test_np_trace():
         except mx.base.MXNetError:
             continue
         assert False
+
+
+@with_seed()
+@use_np
+def test_np_moveaxis():
+    @use_np
+    class TestMoveaxis(HybridBlock):
+        def __init__(self, source=None, destination=None):
+            super(TestMoveaxis, self).__init__()
+            self._source = source
+            self._destination= destination
+
+        def hybrid_forward(self, F, x):
+            return F.np.moveaxis(x, source=self._source, destination=self._destination)
+
+    data = mx.sym.var('a').as_np_ndarray()
+    ret = data.transpose()
+    assert type(ret) == mx.sym.np._Symbol
+    dtypes = ['float32', 'int32', 'float64', 'float16', 'int64']
+    for hybridize in [False, True]:
+        for dtype in dtypes:
+            for ndim in [0,1,2, 3, 4, 5, 6]:
+                shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
+                np_data = _np.random.uniform(low=-100, high=100, size=shape).astype(dtype)
+                mx_data = np.array(np_data, dtype=dtype)
+                axis = [i for i in range(ndim)]
+                random.shuffle(axis)
+                for i in range(ndim):
+                    source = random.sample(axis, i)
+                    destination = random.sample(axis, i)
+                    # test imperative
+                    np_out = _np.moveaxis(np_data, source=source, destination=destination)
+                    mx_out = np.moveaxis(mx_data, source=source, destination= destination)
+                    assert np_out.dtype == mx_out.dtype
+                    assert same(mx_out.asnumpy(), np_out)
+                    # test gluon
+                    test_moveaxis = TestMoveaxis(source,destination)
+                    if hybridize:
+                        test_moveaxis.hybridize()
+                    mx_data.attach_grad()
+                    with mx.autograd.record():
+                        mx_out = test_moveaxis(mx_data)
+                    assert mx_out.shape == np_out.shape
+                    mx_out.backward()
+                    assert same(mx_data.grad.shape, mx_data.shape)
 
 
 if __name__ == '__main__':

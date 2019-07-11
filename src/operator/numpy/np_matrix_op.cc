@@ -30,6 +30,7 @@ namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyTransposeParam);
+DMLC_REGISTER_PARAMETER(NumpyMoveaxisParam);
 
 bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
                          mxnet::ShapeVector *in_attrs,
@@ -463,6 +464,99 @@ NNVM_REGISTER_OP(_np_squeeze)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
 .add_argument("a", "NDArray-or-Symbol[]", "data to squeeze")
 .add_arguments(SqueezeParam::__FIELDS__());
+
+
+bool NumpyMoveaxisShape(const nnvm::NodeAttrs& attrs,
+                        mxnet::ShapeVector *in_attrs,
+                        mxnet::ShapeVector *out_attrs) {
+  const NumpyMoveaxisParam& param = nnvm::get<NumpyMoveaxisParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  mxnet::TShape& shp = (*in_attrs)[0];
+  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
+  CHECK_EQ(param.source.ndim(), param.destination.ndim())
+        << "source and destination not equal.";
+  mxnet::TShape ret(shp.ndim(), -1);
+  mxnet::TShape axes(shp.ndim(), -1);
+  std::vector<bool> state_axes(shp.ndim(), false);
+  mxnet::TShape real_src(param.source.ndim(), -1);
+  mxnet::TShape real_des(param.destination.ndim(), -1);
+  for (int i = 0; i < param.source.ndim(); ++i) {
+    if (param.source[i] >= 0) {
+      CHECK_LT(static_cast<size_t>(param.source[i]), shp.ndim());
+      real_src[i] = param.source[i];
+    } else {
+      CHECK_LT(param.source[i] + shp.ndim(), shp.ndim());
+      real_src[i] = param.source[i] + shp.ndim();
+    }
+    if (param.destination[i] >= 0) {
+      CHECK_LT(static_cast<size_t>(param.destination[i]), shp.ndim());
+      real_des[i] = param.destination[i];
+    } else {
+      CHECK_LT(param.destination[i] + shp.ndim(), shp.ndim());
+      real_des[i] = param.destination[i] + shp.ndim();
+    }
+  }
+  if (shp.ndim() > 1) {
+    for (int i = 0; i < param.source.ndim() - 1; ++i) {
+      for (int j = i + 1; j < param.source.ndim(); ++j) {
+        CHECK_NE(real_src[i], real_src[j])
+          << "repeated axis in `source` argument";
+        CHECK_NE(real_des[i], real_des[j])
+          << "repeated axis in `destination` argument";
+      }
+    }
+  }
+  for (int i = 0; i < param.source.ndim(); ++i) {
+    axes[real_des[i]] = real_src[i];
+    state_axes[real_src[i]] = true;
+  }
+  for (int i = 0; i < axes.ndim(); ++i) {
+    if (axes[i] < 0) {
+      for (int j = 0; j < axes.ndim(); ++j) {
+        if (state_axes[j] == false) {
+          axes[i] = j;
+          state_axes[j] = true;
+          break;
+        }
+      }
+    }
+  }
+  for (int i = 0; i < shp.ndim(); ++i) {
+    CHECK(axes[i] < static_cast<int64_t>(shp.ndim()));
+    ret[i] = shp[axes[i]];
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
+  return shape_is_known(ret);
+}
+
+NNVM_REGISTER_OP(_np_moveaxis)
+.describe(R"code(Move axes of an array to new positions.
+Other axes remain in their original order.
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyMoveaxisParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyMoveaxisShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+       const NumpyMoveaxisParam& param = nnvm::get<NumpyMoveaxisParam>(n->attrs.parsed);
+          std::ostringstream os1;
+          os1 << param.source;
+          std::ostringstream os2;
+          os2 << param.destination;
+          return MakeNonlossGradNode("_np_moveaxis", n, ograds, {}, \
+          {{"source", os2.str()}, {"destination", os1.str()}});
+})
+.set_attr<FCompute>("FCompute<cpu>", NumpyMoveaxis<cpu>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+                                 [](const NodeAttrs& attrs) {
+                                   return std::vector<std::string>{"a"};
+                                 })
+.add_argument("a", "NDArray-or-Symbol", "Source input")
+.add_arguments(NumpyMoveaxisParam::__FIELDS__());
+
 
 }  // namespace op
 }  // namespace mxnet
