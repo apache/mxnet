@@ -31,11 +31,32 @@
 namespace mxnet {
 namespace op {
 
+inline bool BitwiseOrType(const nnvm::NodeAttrs &attrs,
+                          std::vector<int> *in_attrs,
+                          std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  // check two inputs have the same type
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, in_attrs->at(1));
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, in_attrs->at(0));
+
+  if (in_attrs->at(0) >= 0 && in_attrs->at(0) <= 2) {
+    // float types are not supported
+    return false;
+  } else {
+    // infer output type from input
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  }
+  return out_attrs->at(0) != -1;
+}
+
+
 NNVM_REGISTER_OP(_np_bitwise_or)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+    .set_attr<nnvm::FInferType>("FInferType", BitwiseOrType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
                                  [](const NodeAttrs &attrs) {
                                    return std::vector<std::string>{"x1",
