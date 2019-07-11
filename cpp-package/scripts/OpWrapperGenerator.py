@@ -91,6 +91,7 @@ class Arg:
         'float or None':'mx_float',\
         'real_t':'mx_float',\
         'int':'int',\
+        'long':'int64_t',\
         'int (non-negative)': 'uint32_t',\
         'long (non-negative)': 'uint64_t',\
         'int or None':'dmlc::optional<int>',\
@@ -99,9 +100,11 @@ class Arg:
         'double or None':'dmlc::optional<double>',\
         'Shape or None':'dmlc::optional<Shape>',\
         'string':'const std::string&',\
-        '':'int64_t',\
         'ptr':'void*',\
-        'tuple of <>':'nnvm::Tuple<int64_t>',\
+        'tuple of <int>':'nnvm::Tuple<int>',\
+        'tuple of <long>':'nnvm::Tuple<int64_t>',\
+        'tuple of <int (non-negative)>':'nnvm::Tuple<uint32_t>',\
+        'tuple of <long (non-negative)>':'nnvm::Tuple<uint64_t>',\
         'tuple of <float>':'nnvm::Tuple<mx_float>',\
         'tuple of <double>':'nnvm::Tuple<double>'}
     name = ''
@@ -139,9 +142,9 @@ class Arg:
                 else:
                     self.defaultString = "false"
             elif self.defaultString[0] == '(':
-                self.defaultString = 'Shape' + self.defaultString
+                self.defaultString = '{' + self.defaultString + '}'
             elif self.defaultString[0] == '[':
-                self.defaultString = '{' + self.defaultString[1:-1] + "}"
+                self.defaultString = '{' + self.defaultString[1:-1] + '}'
             elif self.type == 'dmlc::optional<int>':
                 self.defaultString = self.type + '(' + self.defaultString + ')'
             elif self.type == 'dmlc::optional<bool>':
