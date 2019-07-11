@@ -54,7 +54,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'add', 'subtrac
            'tensordot', 'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate',
            'stack', 'vstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices',
            'copysign', 'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'arctan2', 'hypot',
-           'rad2deg', 'deg2rad']
+           'rad2deg', 'deg2rad', 'identity']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -1754,7 +1754,7 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
         An optional value type (default is `numpy.float32`). Note that this
-        behavior is different from NumPy's `ones` function where `float64`
+        behavior is different from NumPy's `zeros` function where `float64`
         is the default value, because `float32` is considered as the default
         data type in deep learning.
     order : {'C'}, optional, default: 'C'
@@ -1773,7 +1773,7 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
 
 @set_module('mxnet.numpy')
 def ones(shape, dtype=_np.float32, order='C', ctx=None):
-    """Return a new array of given shape and type, filled with zeros.
+    """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
 
@@ -1795,7 +1795,7 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     Returns
     -------
     out : ndarray
-        Array of zeros with the given shape, dtype, and ctx.
+        Array of ones with the given shape, dtype, and ctx.
     """
     return _mx_nd_np.ones(shape, dtype, order, ctx)
 
@@ -1854,6 +1854,40 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
            [2, 2]], dtype=int32)
     """
     return _mx_nd_np.full(shape, fill_value, order=order, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.numpy')
+def identity(n, dtype=None, ctx=None):
+    """
+    Return the identity array.
+
+    The identity array is a square array with ones on
+    the main diagonal.
+
+    Parameters
+    ----------
+    n : int
+        Number of rows (and columns) in `n` x `n` output.
+    dtype : data-type, optional
+        Data-type of the output.  Defaults to ``numpy.float32``.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : ndarray
+        `n` x `n` array with its main diagonal set to one,
+        and all other elements 0.
+
+    Examples
+    --------
+    >>> np.identity(3)
+    >>> np.identity(3)
+    array([[1., 0., 0.],
+           [0., 1., 0.],
+           [0., 0., 1.]])
+    """
+    return _mx_nd_np.identity(n, dtype, ctx)
 
 
 @set_module('mxnet.numpy')

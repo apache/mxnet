@@ -34,7 +34,8 @@ __all__ = ['zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'divide', 'mo
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot',
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad']
+           'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
+           'identity']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -49,7 +50,7 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
         An optional value type. Default is `numpy.float32`. Note that this
-        behavior is different from NumPy's `ones` function where `float64`
+        behavior is different from NumPy's `zeros` function where `float64`
         is the default value, because `float32` is considered as the default
         data type in deep learning.
     order : {'C'}, optional, default: 'C'
@@ -95,7 +96,7 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     Returns
     -------
     out : ndarray
-        Array of zeros with the given shape, dtype, and ctx.
+        Array of ones with the given shape, dtype, and ctx.
     """
     if order != 'C':
         raise NotImplementedError
@@ -210,6 +211,47 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     if step == 0:
         raise ZeroDivisionError('step cannot be 0')
     return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.ndarray.numpy')
+def identity(n, dtype=None, ctx=None):
+    """
+    Return the identity array.
+
+    The identity array is a square array with ones on
+    the main diagonal.
+
+    Parameters
+    ----------
+    n : int
+        Number of rows (and columns) in `n` x `n` output.
+    dtype : data-type, optional
+        Data-type of the output.  Defaults to ``numpy.float32``.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : ndarray
+        `n` x `n` array with its main diagonal set to one,
+        and all other elements 0.
+
+    Examples
+    --------
+    >>> np.identity(3)
+    >>> np.identity(3)
+    array([[1., 0., 0.],
+           [0., 1., 0.],
+           [0., 0., 1.]])
+    """
+    if not isinstance(n, int):
+        raise TypeError("Input 'n' should be an integer")
+    if n < 0:
+        raise ValueError("Input 'n' cannot be negative")
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access

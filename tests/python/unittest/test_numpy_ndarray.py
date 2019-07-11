@@ -182,6 +182,51 @@ def test_np_ones():
 
 
 @with_seed()
+@use_np
+def test_identity():
+    class TestIdentity(HybridBlock):
+        def __init__(self, shape, dtype=None):
+            super(TestIdentity, self).__init__()
+            self._n = n
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x * F.np.identity(self._n, self._dtype)
+
+    class TestIdentityOutputType(HybridBlock):
+        def hybrid_forward(self, F, x):
+            return x, F.np.identity(0)
+
+    def check_identity_array_creation(shape, dtype):
+        np_out = _np.identity(n=n, dtype=dtype)
+        mx_out = np.identity(n=n, dtype=dtype)
+        assert same(mx_out.asnumpy(), np_out)
+        if dtype is None:
+            assert mx_out.dtype == _np.float32
+            assert np_out.dtype == _np.float64
+
+    ns = [0, 1, 2, 3, 5, 15, 30, 200]
+    dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
+    for n in ns:
+        for dtype in dtypes:
+            check_identity_array_creation(n, dtype)
+            x = mx.nd.array(_np.random.uniform(size=(n, n)), dtype=dtype).as_np_ndarray()
+            if dtype is None:
+                x = x.astype('float32')
+            for hybridize in [True, False]:
+                test_identity = TestIdentity(n, dtype)
+                test_identity_output_type = TestIdentityOutputType()
+                if hybridize:
+                    test_identity.hybridize()
+                    test_identity_output_type.hybridize()
+                y = test_identity(x)
+                assert type(y) == np.ndarray
+                assert same(x.asnumpy() * _np.identity(n, dtype), y.asnumpy())
+                y = test_identity_output_type(x)
+                assert type(y[1]) == np.ndarray
+
+
+@with_seed()
 def test_np_ndarray_binary_element_wise_ops():
     np_op_map = {
         '+': _np.add,
