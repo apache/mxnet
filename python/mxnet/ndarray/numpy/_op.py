@@ -35,6 +35,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
            'argsort', 'hstack', 'tensordot']
 
+
 @set_module('mxnet.ndarray.numpy')
 def tensordot(a, b, axes=2):
     r"""

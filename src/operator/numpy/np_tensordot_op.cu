@@ -35,5 +35,11 @@ NNVM_REGISTER_OP(tensordot)
 NNVM_REGISTER_OP(_backward_tensordot)
 .set_attr<FCompute>("FCompute<gpu>", TensordotOpBackward<gpu>);
 
+NNVM_REGISTER_OP(tensordot_int_axes)
+.set_attr<FCompute>("FCompute<gpu>", TensordotIntAxesOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_tensordot_int_axes)
+.set_attr<FCompute>("FCompute<gpu>", TensordotIntAxesOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

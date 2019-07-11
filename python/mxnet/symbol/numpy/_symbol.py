@@ -39,6 +39,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
 def _num_outputs(sym):
     return len(sym.as_nd_ndarray())
 
+
 @set_module('mxnet.symbol.numpy')
 def tensordot(a, b, axes=2):
     r"""

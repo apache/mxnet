@@ -30,7 +30,7 @@
 #include "../tensor/dot-inl.h"
 #include "../tensor/elemwise_binary_op.h"
 #include "../tensor/broadcast_reduce_op.h"
-#include "np_tensordot_int_axes_op-inl.h"
+#include "np_tensordot_op-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -95,7 +95,7 @@ inline void NumpyDotForward(const nnvm::NodeAttrs& attrs,
     } else if (b_shape.ndim() < 3) {
       // Case 1, 2, 4, 5: a is N-D array (N >= 1) and b is vector or matrix, sum product
       //        over the last axis of a and the first axis of b
-      TensordotIntAxesImpl<xpu>(1, ctx, a, b, out, req);
+      TensordotIntAxesImpl<xpu>(1, ctx, a, b, out, req[0]);
     } else {
       // Case 5.5: a is N-D array and b is M-D array (M > 2), sum product over the last axis
       //         of a and the 2nd-to-last axis of b

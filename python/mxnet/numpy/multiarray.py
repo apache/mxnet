@@ -50,6 +50,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
            'argsort', 'hstack', 'tensordot']
 
+
 @set_module('mxnet.numpy')
 def tensordot(a, b, axes=2):
     r"""
