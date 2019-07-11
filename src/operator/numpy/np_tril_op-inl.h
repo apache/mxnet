@@ -23,8 +23,8 @@
  * \brief Function definition of the tril (lower triangle of an array) op
  */
 
-#ifndef MXNET_OPERATOR_NUMPY_TRIL_OP_INL_H_
-#define MXNET_OPERATOR_NUMPY_TRIL_OP_INL_H_
+#ifndef MXNET_OPERATOR_NUMPY_NP_TRIL_OP_INL_H_
+#define MXNET_OPERATOR_NUMPY_NP_TRIL_OP_INL_H_
 
 #include <dmlc/parameter.h>
 #include <vector>
@@ -197,11 +197,9 @@ void TrilOpForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
-  // CHECK_EQ(req[0], kWriteTo);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  const mxnet::TShape& ishape = inputs[0].shape_;
   const TrilParam& param = nnvm::get<TrilParam>(attrs.parsed);
 
   TrilOpProcess<xpu, false>(in_data, out_data, out_data.Size(), param, s, req);
@@ -221,7 +219,6 @@ void TrilOpBackward(const nnvm::NodeAttrs& attrs,
 
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  const mxnet::TShape& ishape = inputs[0].shape_;
   const TrilParam& param = nnvm::get<TrilParam>(attrs.parsed);
 
   TrilOpProcess<xpu, true>(in_data, out_data, out_data.Size(), param, s, req);
@@ -230,4 +227,4 @@ void TrilOpBackward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_TRIL_OP_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_TRIL_OP_INL_H_
