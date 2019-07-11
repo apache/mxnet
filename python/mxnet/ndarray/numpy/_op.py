@@ -1762,7 +1762,7 @@ def around(x, decimals=0, out=None, **kwargs):
 
     Parameters
     ----------
-    x : ndarray
+    x : ndarray or scalar
         Input data.
     decimals : int, optional
         Number of decimal places to round to (default: 0).  If
@@ -1774,7 +1774,7 @@ def around(x, decimals=0, out=None, **kwargs):
 
     Returns
     -------
-    rounded_array : ndarray
+    rounded_array : ndarray or scalar
         An array of the same type as `x`, containing the rounded values.
         A reference to the result is returned.
 
