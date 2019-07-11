@@ -20,8 +20,9 @@
 /*!
  *  Copyright (c) 2019 by Contributors
  * \file np_init_op.h
- * \brief CPU Implementation of numpy init op
+ * \brief Function definition of numpy init op
  */
+
 #ifndef MXNET_OPERATOR_NUMPY_NP_INIT_OP_H_
 #define MXNET_OPERATOR_NUMPY_NP_INIT_OP_H_
 
@@ -105,6 +106,43 @@ void NumpyEyeFill(const nnvm::NodeAttrs& attrs,
   const NumpyEyeParam& param = nnvm::get<NumpyEyeParam>(attrs.parsed);
   const nnvm::dim_t num_cols = param.M.has_value() ? param.M.value() : param.N;
   EyeFillImpl<xpu>(outputs[0], ctx, req, num_cols, param.N, param.k);
+}
+
+template<int req>
+struct identity {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const int n) {
+    using namespace mxnet_op;
+
+    auto j = unravel(i, mshadow::Shape2(n, n));
+    if (j[0] == j[1]) {
+      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(1));
+    } else {
+      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(0));
+    }
+  }
+};
+
+template<typename xpu>
+void IdentityCompute(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const std::vector<TBlob>& inputs,
+                 const std::vector<OpReqType>& req,
+                 const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 0U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& out_data = outputs[0];
+  int n = out_data.shape_[0];
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<identity<req_type>, xpu>::Launch(
+          s, out_data.Size(), out_data.dptr<DType>(), n);
+    });
+  });
 }
 
 }  // namespace op
