@@ -88,6 +88,13 @@ def test_np_ldexp():
                 np_out = _np_ldexp(x1.asnumpy(), x2.asnumpy())
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-3)
 
+                # test numeric gradient
+                x1_sym = mx.sym.Variable("x1").as_np_ndarray()
+                x2_sym = mx.sym.Variable("x2").as_np_ndarray()
+                mx_sym = mx.sym.np.ldexp(x1_sym, x2_sym).as_nd_ndarray()
+                check_numeric_gradient(mx_sym, {"x1": x1.as_nd_ndarray(), "x2": x2.as_nd_ndarray()},
+                  rtol=1e-3, atol=1e-4, dtype = dtype)
+
 
 @with_seed()
 @npx.use_np_shape

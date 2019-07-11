@@ -34,23 +34,23 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(ldexp)
+NNVM_REGISTER_OP(_npi_ldexp)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::ldexp>);
 
-NNVM_REGISTER_OP(ldexp_scalar)
+NNVM_REGISTER_OP(_npi_ldexp_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::ldexp>);
 
-NNVM_REGISTER_OP(rldexp_scalar)
+NNVM_REGISTER_OP(_npi_rldexp_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rldexp>);
 
-NNVM_REGISTER_OP(_backward_ldexp)
+NNVM_REGISTER_OP(_backward_npi_ldexp)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::ldexp_grad,
                                                               mshadow_op::ldexp_rgrad>);
 
-NNVM_REGISTER_OP(_backward_ldexp_scalar)
+NNVM_REGISTER_OP(_backward_npi_ldexp_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::ldexp_grad>);
 
-NNVM_REGISTER_OP(_backward_rldexp_scalar)
+NNVM_REGISTER_OP(_backward_npi_rldexp_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::rldexp_grad>);
 
 }  // namespace op
