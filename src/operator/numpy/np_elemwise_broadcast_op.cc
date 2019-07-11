@@ -205,12 +205,12 @@ inline bool Arctan2OpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, in_attrs->at(1));
-  TYPE_ASSIGN_CHECK(*in_attrs, 1, in_attrs->at(0));
-  //check if it is float16, float32 or float64
-  if(in_attrs->at(0) >=0 && in_attrs->at(0) <= 2){
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  }else{
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(1));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
+  //check if it is float16, float32 or float64. If not, raise error
+  if(in_attrs->at(0) > 2){
     // do not support int now.
     std::ostringstream os;
     os << "Do not support `int` as input.\n";
