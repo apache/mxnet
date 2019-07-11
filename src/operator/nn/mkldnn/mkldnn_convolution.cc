@@ -671,7 +671,7 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
           *in_grad_weight.second, *in_grad_bias.second);
       MKLDNNStream::Get()->RegisterPrim(convBwdWeight.GetBwdWeights());
       CommitOutput(in_grad[conv::kBias], in_grad_bias);
-    } else {
+    } else if (req[conv::kWeight]) {
       convBwdWeight.SetWeightNewMem(*data_mem, *out_grad_mem,
           *in_grad_weight.second);
       MKLDNNStream::Get()->RegisterPrim(convBwdWeight.GetBwdWeights());
