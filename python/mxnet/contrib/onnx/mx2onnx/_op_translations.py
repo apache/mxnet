@@ -2059,10 +2059,14 @@ def convert_topk(node, **kwargs):
     axis = int(attrs.get('axis', '-1'))
     k = int(attrs.get('k', '1'))
     ret_type = attrs.get('ret_typ')
+    dtype = attrs.get('dtype')
     outputs = [name + '_output0']
 
     if ret_type and ret_type == 'both':
-        outputs.append(name + '_output1')
+        if dtype and dtype == 'int64':
+            outputs.append(name + '_output1')
+        else:
+            raise NotImplementedError("ONNX expects indices to be of type int64")
     else:
         raise NotImplementedError("ONNX expects both value and indices as output")
 
