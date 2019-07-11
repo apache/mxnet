@@ -38,7 +38,7 @@
 namespace mxnet {
 
 /*!
- * \brief This singleton struct mediates individual TensorInspector objects
+ * \brief this singleton struct mediates individual TensorInspector objects
  * so that we can control the global behavior from each of them
  */
 struct InspectorManager {
@@ -611,7 +611,7 @@ class TensorInspector {
 
  public:
    /*!
-   * \brief Construct from Tensor object
+   * \brief construct from Tensor object
    * \tparam Device the device the tensor resides in
    * \tparam dimension the dimension of the tensor
    * \tparam DType the data type
@@ -620,11 +620,11 @@ class TensorInspector {
    */
   template<typename Device, int dimension,
       typename DType MSHADOW_DEFAULT_DTYPE>
-  TensorInspector(const Tensor<Device, dimension, DType>& ts, const RunContext& ctx):
+  TensorInspector(const mshadow::Tensor<Device, dimension, DType>& ts, const RunContext& ctx):
       tb_(ts), ctx_(ctx) {}
 
   /*!
-   * \brief Construct from TBlob object
+   * \brief construct from TBlob object
    * \param tb the source tblob object
    * \param ctx the run context of the tensor
    */
@@ -632,7 +632,7 @@ class TensorInspector {
       tb_(tb), ctx_(ctx) {}
 
   /*!
-   * \brief Construct from NDArray object. Currently this only works with kDefaultStorage
+   * \brief construct from NDArray object. Currently this only works with kDefaultStorage
    * \param arr the source ndarray object
    * \param ctx the run context of the tensor
    */
@@ -658,7 +658,7 @@ class TensorInspector {
   }
 
   /*!
-   * \brief interactive print the tensor value
+   * \brief interactively print the tensor value
    * \param tag the name given to this call
    */
   inline void interactive_print(std::string tag = "") {
