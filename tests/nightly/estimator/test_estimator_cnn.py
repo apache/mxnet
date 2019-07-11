@@ -158,5 +158,4 @@ def test_estimator_gpu():
 
 if __name__ == '__main__':
     import nose
-
     nose.runmodule()
