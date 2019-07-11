@@ -62,7 +62,6 @@
 40. crop
 41. rmsprop_update
 43. RNN
-44. argmin
 45. SoftmaxOutput
 46. linalg_extractdiag
 47. sgd_mom_update
@@ -85,18 +84,15 @@
 65. tile
 66. space_to_depth
 67. gather_nd
-68. argsort
 69. SequenceMask
 70. reshape_like
 71. slice_axis
 72. stack
-73. topk
 74. khatri_rao
 75. multi_mp_sgd_update
 76. linalg_sumlogdiag
 77. broadcast_to
 78. IdentityAttachKLSparseReg
-79. sort
 80. SpatialTransformer
 81. Concat
 82. uniform
@@ -128,7 +124,6 @@
 110. split
 111. MAERegressionOutput
 112. Correlation
-113. argmax
 114. batch_take
 115. L2Normalization
 116. broadcast_axis

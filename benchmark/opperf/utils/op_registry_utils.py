@@ -16,10 +16,8 @@
 # under the License.
 
 """Utilities to interact with MXNet operator registry."""
-import ctypes
 from operator import itemgetter
 from mxnet import runtime
-from mxnet.base import _LIB, check_call, py_str, OpHandle, c_str, mx_uint
 import mxnet as mx
 
 from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
@@ -121,6 +119,10 @@ def prepare_op_inputs(arg_params):
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
         elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
+        elif "Shape" in arg_type and arg_name + "_shape" in DEFAULTS_INPUTS:
+            # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
+            # Ex: axis in sum is shape, axis in sort is int.
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_shape"]
 
     # Number of different inputs we want to use to test
     # the operator
@@ -238,6 +240,26 @@ def get_all_reduction_operators():
                 and op_name not in unique_ops:
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
+
+
+def get_all_sorting_searching_operators():
+    """Gets all Sorting and Searching operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    sort_search_ops = ['sort', 'argsort', 'argmax', 'argmin', 'topk']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Sort and search operators
+    sort_search_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in sort_search_ops and op_name not in unique_ops:
+            sort_search_mx_operators[op_name] = mx_operators[op_name]
+    return sort_search_mx_operators
 
 
 def get_operators_with_no_benchmark(operators_with_benchmark):

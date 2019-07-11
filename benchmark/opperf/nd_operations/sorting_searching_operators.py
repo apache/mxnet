@@ -16,10 +16,9 @@
 # under the License.
 
 import mxnet as mx
-from benchmark.opperf.rules.default_params import DEFAULT_DATA
-from benchmark.opperf.utils.benchmark_utils import run_performance_test
-from benchmark.opperf.utils.common_utils import merge_map_list
-from benchmark.opperf.rules.default_params import MX_OP_MODULE
+from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
+from benchmark.opperf.utils.op_registry_utils import get_all_sorting_searching_operators
+
 
 """ Performance benchmark tests for MXNet NDArray Sorting and Searching Operations
 1. sort
@@ -31,50 +30,27 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
 
 def run_sorting_searching_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
-    for data in DEFAULT_DATA:
-        # Sort
-        sort_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "sort")],
-                                                  run_backward=False,
-                                                  dtype=dtype,
-                                                  ctx=ctx,
-                                                  inputs=[{"data": data}],
-                                                  warmup=warmup,
-                                                  runs=runs)
-        # ArgSort
-        argsort_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "argsort")],
-                                                     run_backward=False,
-                                                     dtype=dtype,
-                                                     ctx=ctx,
-                                                     inputs=[{"data": data}],
-                                                     warmup=warmup,
-                                                     runs=runs)
+    """Runs benchmarks with the given context and precision (dtype)for all the sorting and searching
+        operators in MXNet.
 
-        # ArgMax
-        argmax_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "argmax")],
-                                                    run_backward=False,
-                                                    dtype=dtype,
-                                                    ctx=ctx,
-                                                    inputs=[{"data": data, "axis": 0}],
-                                                    warmup=warmup,
-                                                    runs=runs)
-        # ArgMin
-        argmin_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "argmin")],
-                                                    run_backward=False,
-                                                    dtype=dtype,
-                                                    ctx=ctx,
-                                                    inputs=[{"data": data, "axis": 0}],
-                                                    warmup=warmup,
-                                                    runs=runs)
+        Parameters
+        ----------
+        ctx: mx.ctx
+            Context to run benchmarks
+        dtype: str, default 'float32'
+            Precision to use for benchmarks
+        warmup: int, default 25
+            Number of times to run for warmup
+        runs: int, default 100
+            Number of runs to capture benchmark results
 
-        # TopK
-        topk_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "topk")],
-                                                  run_backward=False,
-                                                  dtype=dtype,
-                                                  ctx=ctx,
-                                                  inputs=[{"data": data, "k": 5, "axis": 0}],
-                                                  warmup=warmup,
-                                                  runs=runs)
-    # Prepare combined results
-    mx_sort_search_results = merge_map_list(
-        sort_benchmark_res + argsort_benchmark_res + argmax_benchmark_res + argmin_benchmark_res + topk_benchmark_res)
-    return mx_sort_search_results
+        Returns
+        -------
+        Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+        """
+    # Fetch all Random Sampling Operators
+    mx_sort_search_ops = get_all_sorting_searching_operators()
+    # Run benchmarks
+    mx_sort_search_op_results = run_op_benchmarks(mx_sort_search_ops, dtype, ctx, warmup, runs)
+    return mx_sort_search_op_results
