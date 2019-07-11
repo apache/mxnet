@@ -161,7 +161,35 @@ The storage type of ``arcsin`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsin" });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsin,
-                                                  unary_bwd<mshadow_op::arcsin_grad>);
+                                                  unary_bwd<mshadow_op::arcsin_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: head_grad_grads (dL/dy_grad)
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseGradUseIn)
+      // f(x) = arcsin(x)
+      // n: f'(x) = 1/(1-x^2)^1/2
+      // f''(x) = f'(x) * x/(1-x^2)
+      auto dydx = n->inputs[0];
+      auto x = n->inputs[1];
+      auto dydx_mul_grad_x = nnvm::NodeEntry{n};
+      auto grad_x = MakeNode("elemwise_div", n->attrs.name + "_grad_x",
+                             {dydx_mul_grad_x, dydx}, nullptr, &n);
+      auto grad_x_square = MakeNode("square", n->attrs.name + "_grad_x_square",
+                                    {nnvm::NodeEntry{grad_x}}, nullptr, &n);
+      auto grad_x_square_mul_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_x_square_mul_x",
+                                          {nnvm::NodeEntry{grad_x_square}, x}, nullptr, &n);
+      auto grad_grad_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_x",
+                                  {dydx_mul_grad_x, nnvm::NodeEntry{grad_x_square_mul_x}},
+                                  nullptr, &n);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{grad_x}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+      return ret;
+    });
 
 // arccos
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(arccos, cpu, mshadow_op::arccos)
@@ -180,7 +208,36 @@ The storage type of ``arccos`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccos" });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
-                                                  unary_bwd<mshadow_op::arccos_grad>);
+                                                  unary_bwd<mshadow_op::arccos_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: head_grad_grads (dL/dy_grad)
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseGradUseIn)
+      // f(x) = arccos(x)
+      // n: f'(x) = -1/(1-x^2)^1/2
+      // f''(x) = f'(x) * x/(1-x^2)
+      auto dydx = n->inputs[0];
+      auto x = n->inputs[1];
+      auto dydx_mul_grad_x = nnvm::NodeEntry{n};
+      auto grad_x = MakeNode("elemwise_div", n->attrs.name + "_grad_x",
+                             {dydx_mul_grad_x, dydx}, nullptr, &n);
+      auto grad_x_square = MakeNode("square", n->attrs.name + "_grad_x_square",
+                                    {nnvm::NodeEntry{grad_x}}, nullptr, &n);
+      auto grad_x_square_mul_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_x_square_mul_x",
+                                          {nnvm::NodeEntry{grad_x_square}, x}, nullptr, &n);
+      auto grad_grad_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_x",
+                                  {dydx_mul_grad_x, nnvm::NodeEntry{grad_x_square_mul_x}},
+                                  nullptr, &n);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{grad_x}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+      return ret;
+    });
+
 
 // arctan
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arctan, cpu, mshadow_op::arctan)
