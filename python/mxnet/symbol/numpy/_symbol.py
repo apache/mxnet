@@ -37,7 +37,7 @@ __all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'rem
            'linspace', 'expand_dims', 'tile', 'arange', 'split', 'concatenate', 'stack', 'vstack', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'std', 'var', 'indices', 'copysign',
            'ravel', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'hypot', 'rad2deg', 'deg2rad',
-           'unique', 'lcm', 'tril']
+           'unique', 'lcm', 'tril', 'identity']
 
 
 def _num_outputs(sym):
@@ -906,7 +906,7 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
 
 @set_module('mxnet.symbol.numpy')
 def ones(shape, dtype=_np.float32, order='C', ctx=None):
-    """Return a new array of given shape and type, filled with zeros.
+    """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
 
@@ -928,7 +928,7 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     Returns
     -------
     out : ndarray
-        Array of zeros with the given shape, dtype, and ctx.
+        Array of ones with the given shape, dtype, and ctx.
     """
     if order != 'C':
         raise NotImplementedError
@@ -991,6 +991,39 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def identity(n, dtype=None, ctx=None):
+    """
+    Return the identity array.
+
+    The identity array is a square array with ones on
+    the main diagonal.
+
+    Parameters
+    ----------
+    n : int
+        Number of rows (and columns) in `n` x `n` output.
+    dtype : data-type, optional
+        Data-type of the output.  Defaults to ``numpy.float32``.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : _Symbol
+        `n` x `n` array with its main diagonal set to one,
+        and all other elements 0.
+    """
+    if not isinstance(n, int):
+        raise TypeError("Input 'n' should be an integer")
+    if n < 0:
+        raise ValueError("Input 'n' cannot be negative")
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
