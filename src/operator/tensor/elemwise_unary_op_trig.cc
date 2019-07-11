@@ -170,6 +170,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsin,
       // f(x) = arcsin(x)
       // n: f'(x) = 1/(1-x^2)^1/2
       // f''(x) = f'(x) * x/(1-x^2)
+      // Note: x/(1-x^2) = x * f'(x)^2
       auto dydx = n->inputs[0];
       auto x = n->inputs[1];
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
@@ -217,6 +218,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
       // f(x) = arccos(x)
       // n: f'(x) = -1/(1-x^2)^1/2
       // f''(x) = f'(x) * x/(1-x^2)
+      // Note: x/(1-x^2) = x * f'(x)^2
       auto dydx = n->inputs[0];
       auto x = n->inputs[1];
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
