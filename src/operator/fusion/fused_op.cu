@@ -401,7 +401,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   size_t i = 0;
   std::string aux_code = "static const int nvec = " + std::to_string(nvec) + ";\n";
 
-  const auto& shapes = this->symbol_.GetAttr<mxnet::ShapeVector>("shape");
+  const auto& shapes = this->subgraph_.GetAttr<mxnet::ShapeVector>("shape");
   for (const auto &shape_id: extra_shape_args_) {
       std::string shape_name = "extra_" + std::to_string(shape_id) + "_shape";
       int ndim = shapes[shape_id].ndim();
@@ -412,12 +412,11 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     std::string type_name = mshadowTypeToString(type);
     std::string dtype_var = "DType_" + input_names[i];
     std::string dim_var = "ndim_" + input_names[i];
+    std::string dim_val = std::to_string(in_ndims[i]);
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
-    aux_code = "static const int " + dim_var + " = " + \
-                std::to_string(in_ndims[i]) + ";\n" + aux_code;
+    aux_code = "static const int " + dim_var + " = " + dim_val + ";\n" + aux_code;
     tensor_params += dtype_var + "* " +input_names[i];
-    //kernel_params += " const Shape<" + dim_var + "> " + input_names[i]+"_shape";
-    kernel_params += " const Shape<" + std::to_string(in_ndims[i]) + "> " + input_names[i]+"_shape";
+    kernel_params += " const Shape<" + dim_val + "> " + input_names[i]+"_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
@@ -429,12 +428,11 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
     std::string out_name = "output" + std::to_string(i - in_dtypes.size());
     std::string dtype_var = "DType_" + out_name;
     std::string dim_var = "ndim_" + out_name;
-    aux_code = "static const int " + dim_var + " = " + \
-                std::to_string(out_ndims[i - in_dtypes.size()]) + ";\n" + aux_code;
+    std::string dim_val = std::to_string(out_ndims[i - in_dtypes.size()]);
+    aux_code = "static const int " + dim_var + " = " + dim_val + ";\n" + aux_code;
     aux_code = "using " + dtype_var + " = " + type_name + ";\n" + aux_code;
     tensor_params += dtype_var + "* " + out_name;
-    //kernel_params += " const Shape<" + dim_var + "> " + out_name+"_shape";
-    kernel_params += " const Shape<" + std::to_string(out_ndims[i-in_dtypes.size()]) + "> " + out_name+"_shape";
+    kernel_params += " const Shape<" + dim_val + "> " + out_name+"_shape";
     ++i;
     if (i < num_params) {
       tensor_params += ", ";
@@ -619,7 +617,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<void*> ptrs;
   std::vector<std::vector<int>> shapes;
 
-  const auto& node_shapes = this->symbol_.GetAttr<mxnet::ShapeVector>("shape");
+  const auto& node_shapes = this->subgraph_.GetAttr<mxnet::ShapeVector>("shape");
   for (const auto &shape_id: extra_shape_args_) {
     AddShape(node_shapes[shape_id], &shapes);
   }
