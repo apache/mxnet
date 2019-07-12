@@ -114,7 +114,7 @@ class TensorInspector {
     int dimension = tb_.ndim();
     *os << "<" << typeid(tb_.dptr<DType>()[0]).name() << " Tensor ";
     *os << tb_.shape_[0];
-    for (int i = 1; i < dimension; i++) {
+    for (int i = 1; i < dimension; ++i) {
       *os << 'x' << tb_.shape_[i];
     }
     *os << ">" << std::endl;
@@ -132,7 +132,7 @@ class TensorInspector {
     int dimension = shape.size();
     *os << "<" << typeid(tb_.dptr<DType>()[0]).name() << " Tensor ";
     *os << shape[0];
-    for (int i = 1; i < dimension; i++) {
+    for (int i = 1; i < dimension; ++i) {
       *os << 'x' << shape[i];
     }
     *os << ">" << std::endl;
@@ -154,15 +154,15 @@ class TensorInspector {
     }
 #endif  // MXNET_USE_CUDA
     int dimension = tb_.ndim();
-    std::vector<unsigned int> multiples;
-    int multiple = 1;
-    for (int i = dimension-1; i >= 0; i--) {
+    std::vector<size_t> multiples;
+    size_t multiple = 1;
+    for (int i = dimension-1; i >= 0; --i) {
       multiple *= tb_.shape_[i];
       multiples.push_back(multiple);
     }
     *os << std::string(dimension, '[');
     *os << tb_.dptr<DType>()[0];
-    for (size_t i = 1; i < tb_.shape_.Size(); i++) {
+    for (size_t i = 1; i < tb_.shape_.Size(); ++i) {
       int n = 0;
       for (auto divisor : multiples) {
         n += (i % divisor == 0);
@@ -221,16 +221,16 @@ class TensorInspector {
       return;
     }
     int dimension = sub_shape.size();
-    std::vector<int> multiples;
+    std::vector<size_t> multiples;
     size_t multiple = 1;
-    for (int i = dimension-1; i >= 0; i--) {
+    for (int i = dimension-1; i >= 0; --i) {
       multiple *= sub_shape[i];
       multiples.push_back(multiple);
     }
     std::stringstream ss;
     *os << std::string(dimension, '[');
     *os << dptr[0];
-    for (size_t i = 1; i < multiple; i++) {
+    for (size_t i = 1; i < multiple; ++i) {
       int n = 0;
       for (auto divisor : multiples) {
         n += (i % divisor == 0);
@@ -258,14 +258,14 @@ class TensorInspector {
     int dimension = tb_.ndim();
     int sub_dim = dimension - pos.size();
     sub_shape->resize(sub_dim);
-    int multiple = 1;
-    for (int i = pos.size(), j = 0; i < dimension; i++, j++) {
+    size_t multiple = 1;
+    for (int i = pos.size(), j = 0; i < dimension; ++i, ++j) {
       (*sub_shape)[j] = tb_.shape_[i];
       multiple *= tb_.shape_[i];
     }
-    int sum = 0;
-    int m = 1;
-    for (int i = pos.size()-1; i >= 0; i--) {
+    size_t sum = 0;
+    size_t m = 1;
+    for (int i = pos.size()-1; i >= 0; --i) {
       sum += pos[i] * m;
       m *= tb_.shape_[i];
     }
@@ -291,7 +291,7 @@ class TensorInspector {
     if (pos->size() > dimension) {
       return false;
     }
-    for (unsigned i = 0; i < pos->size(); i++) {
+    for (unsigned i = 0; i < pos->size(); ++i) {
       if ((*pos)[i] > (tb_.shape_[i]-1)) {
         return false;
       }
@@ -474,7 +474,7 @@ class TensorInspector {
   inline std::vector<int> index_to_coordinates(size_t idx) {
     int dimension = tb_.ndim();
     std::vector<int> ret;
-    for (int i = dimension-1; i >= 0; i--) {
+    for (int i = dimension-1; i >= 0; --i) {
       ret.push_back(idx % tb_.shape_[i]);
       idx /= tb_.shape_[i];
     }
@@ -500,11 +500,11 @@ class TensorInspector {
           .check_value_helper<DType>(ret, checker, interactive, tag);
     }
 #endif  // MXNET_USE_CUDA
-    int count = 0;
+    size_t count = 0;
     std::stringstream ss;
     ss << "[";
     bool first_pass = true;
-    for (size_t i = 0; i < tb_.shape_.Size(); i++) {
+    for (size_t i = 0; i < tb_.shape_.Size(); ++i) {
       if (checker(tb_.dptr<DType>()[i])) {
         count += 1;
         if (!first_pass) {
@@ -513,7 +513,7 @@ class TensorInspector {
         first_pass = false;
         std::vector<int> coords = index_to_coordinates(i);
         ss << "(" << coords[0];
-        for (size_t i = 1; i < coords.size(); i++) {
+        for (unsigned int i = 1; i < coords.size(); ++i) {
           ss << ", " << coords[i];
         }
         ss << ")";
@@ -590,7 +590,7 @@ class TensorInspector {
     dict += std::to_string(sizeof(DType));
     dict += "','fortran_order':False,'shape':(";
     dict += std::to_string(tb_.shape_[0]);
-    for (int i = 1; i < tb_.ndim(); i++) {
+    for (int i = 1; i < tb_.ndim(); ++i) {
       dict += ',';
       dict += std::to_string(tb_.shape_[i]);
     }
