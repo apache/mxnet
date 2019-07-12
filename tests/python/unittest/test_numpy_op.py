@@ -972,6 +972,71 @@ def test_np_concat():
 
 @with_seed()
 @npx.use_np_shape
+def test_np_hstack():
+    class TestHStack(HybridBlock):
+        def __init__(self):
+            super(TestHStack, self).__init__()
+        
+        def hybrid_forward(self, F, a, *args):
+            return F.np.hstack([a] + list(args))
+
+    def get_new_shape(shape):
+        if len(shape) == 0:
+            l = random.randint(0,3)
+            if l == 0:
+                return shape 
+            else:
+                return (l,)
+        shape_lst = list(shape)
+        axis = 1 if len(shape) > 1 else 0
+        shape_lst[axis] = random.randint(0, 5)
+        return tuple(shape_lst)
+
+    shapes = [
+        (),
+        (1,),
+        (2,1),
+        (2,2,4),
+        (2,0,0),
+        (0,1,3),
+        (2,0,3),
+        (2,3,4,5)
+    ]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_hstack = TestHStack()
+            if hybridize:
+                test_hstack.hybridize()
+            # test symbolic forward
+            a = np.random.uniform(size=get_new_shape(shape))
+            a.attach_grad()
+            b = np.random.uniform(size=get_new_shape(shape))
+            b.attach_grad()
+            c = np.random.uniform(size=get_new_shape(shape))
+            c.attach_grad()
+            d = np.random.uniform(size=get_new_shape(shape))
+            d.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_hstack(a, b, c, d)
+            np_out = _np.hstack((a.asnumpy(), b.asnumpy(), c.asnumpy(), d.asnumpy()))
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            # test symbolic backward
+            mx_out.backward()
+            assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(b.grad.asnumpy(), _np.ones(b.shape), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(c.grad.asnumpy(), _np.ones(c.shape), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(d.grad.asnumpy(), _np.ones(d.shape), rtol=1e-3, atol=1e-5)
+
+            # test imperative
+            mx_out = np.hstack((a, b, c, d))
+            np_out = _np.hstack((a.asnumpy(),b.asnumpy(), c.asnumpy(), d.asnumpy()))
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@npx.use_np_shape
 def test_np_swapaxes():
     config = [((0, 1, 2), 0, 1),
               ((0, 1, 2), -1, -2),
