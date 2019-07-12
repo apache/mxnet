@@ -81,7 +81,7 @@ enum CheckerType {
                        // will always return false if DType is not a float type
   FiniteChecker,  // check if is finite, will always return false if DType is not a float type
   NormalChecker,  // check if is neither infinity nor NaN
-  AbnormalChecker, // chekc if is infinity or nan
+  AbnormalChecker,  // chekck if is infinity or nan
 };
 
 /**
@@ -484,7 +484,7 @@ class TensorInspector {
 
   /*!
    * \brief check/validate the values within the tensor, find the coordinates
-   * where the lambda evaluates to true
+   * where the value checker evaluates to true
    * \tparam DType the data type
    * \param ret a vector of coordinates which itself is a vector of int; calculated here
    * \param checker the lambda function to check each value of within the tensor
@@ -569,7 +569,8 @@ class TensorInspector {
   }
 
   /*!
-   * \brief dump the value of the tensor to a file with name "tag_[visit count].npy" in npy format
+   * \brief dump the value of the tensor to a file with name "[tag]_[visit count].npy" in npy format
+   * the dump file follows npy 1.0 stantand
    * \tparam DType the data type
    * \param tag the name given to this call
    */
@@ -615,6 +616,8 @@ class TensorInspector {
     file.write(header.c_str(), header.size());
     file.write(reinterpret_cast<char*>(tb_.dptr<DType>()), sizeof(DType) * tb_.shape_.Size());
     file.close();
+    std::cout << "Tensor dumped to file: " <<
+        tag + "_" + std::to_string(visit) + ".npy" << std::endl;
   }
 
   /* !\brief the tensor blob */
@@ -682,7 +685,7 @@ class TensorInspector {
 
   /*!
    * \brief check/validate the values within the tensor, return the coordinates
-   * where the lambda evaluates to true
+   * where the value checker evaluates to true
    * \tparam ValueChecker the type of the lambda
    * \param checker the lambda function to check each value of within the tensor
    * \param interactive wherether to allow the user to interactively check the coordinates
