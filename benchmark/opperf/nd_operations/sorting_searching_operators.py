@@ -31,24 +31,24 @@ from benchmark.opperf.utils.op_registry_utils import get_all_sorting_searching_o
 
 def run_sorting_searching_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the sorting and searching
-        operators in MXNet.
+    operators in MXNet.
 
-        Parameters
-        ----------
-        ctx: mx.ctx
-            Context to run benchmarks
-        dtype: str, default 'float32'
-            Precision to use for benchmarks
-        warmup: int, default 25
-            Number of times to run for warmup
-        runs: int, default 100
-            Number of runs to capture benchmark results
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    warmup: int, default 25
+        Number of times to run for warmup
+    runs: int, default 100
+        Number of runs to capture benchmark results
 
-        Returns
-        -------
-        Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
-        """
+    """
     # Fetch all Random Sampling Operators
     mx_sort_search_ops = get_all_sorting_searching_operators()
     # Run benchmarks
