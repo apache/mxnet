@@ -35,6 +35,7 @@ import os
 import logging
 import warnings
 import time
+import numpy as np
 import mxnet as mx
 import mxnet.gluon as gluon
 from mxnet import autograd
