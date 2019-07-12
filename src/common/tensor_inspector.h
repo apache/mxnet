@@ -110,7 +110,7 @@ class TensorInspector {
    * \param os stream object to output to
    */
   template<typename DType, typename StreamType>
-  inline void tensor_info_to_string(StreamType* os) {
+  void tensor_info_to_string(StreamType* os) {
     const int dimension = tb_.ndim();
     *os << "<" << typeid(tb_.dptr<DType>()[0]).name() << " Tensor ";
     *os << tb_.shape_[0];
@@ -128,7 +128,7 @@ class TensorInspector {
    * \param shape the shape of the tensor
    */
   template<typename DType, typename StreamType>
-  inline void tensor_info_to_string(StreamType* os, const std::vector<int>& shape) {
+  void tensor_info_to_string(StreamType* os, const std::vector<int>& shape) {
     const int dimension = shape.size();
     *os << "<" << typeid(tb_.dptr<DType>()[0]).name() << " Tensor ";
     *os << shape[0];
@@ -145,7 +145,7 @@ class TensorInspector {
    * \param os stream object to output to
    */
   template<typename DType, typename StreamType>
-  inline void to_string_helper(StreamType* os) {
+  void to_string_helper(StreamType* os) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
       TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)(), ctx_)
@@ -186,7 +186,7 @@ class TensorInspector {
    * \param dptr the data pointer
    */
   template<typename DType, typename StreamType>
-  inline void to_string_helper(StreamType* os, const DType* dptr) {
+  void to_string_helper(StreamType* os, const DType* dptr) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
       TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)(), ctx_)
@@ -207,7 +207,7 @@ class TensorInspector {
    * \param offset the position of the first value of the desired part of the tensor
    */
   template<typename DType, typename StreamType>
-  inline void to_string_helper(StreamType* os, const std::vector<int>& sub_shape, size_t offset) {
+  void to_string_helper(StreamType* os, const std::vector<int>& sub_shape, size_t offset) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
       TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)(), ctx_)
@@ -253,7 +253,7 @@ class TensorInspector {
    * \param sub_shape the sub-shape of the desired part of the tensor; calculated here
    * \param offset the position of the first value of the desired part of the tensor; calculated here
    */
-  inline void print_locator(const std::vector<int>& pos, std::vector<int>* sub_shape,
+  void print_locator(const std::vector<int>& pos, std::vector<int>* sub_shape,
       size_t* offset) {
     const int dimension = tb_.ndim();
     int sub_dim = dimension - pos.size();
@@ -278,7 +278,7 @@ class TensorInspector {
    * \param pos the coordinates of the desired part of the tensor, calculated here
    * \param str the string that represents the coordinate
    */
-  inline bool parse_position(std::vector<int>* pos, const std::string& str) {
+  bool parse_position(std::vector<int>* pos, const std::string& str) {
     const int dimension = tb_.ndim();
     std::stringstream ss(str);
     int i;
@@ -305,7 +305,7 @@ class TensorInspector {
    * \param tag the name given to this call
    */
   template<typename DType>
-  inline void interactive_print_helper(std::string tag) {
+  void interactive_print_helper(std::string tag) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
       TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)(), ctx_)
@@ -368,7 +368,7 @@ class TensorInspector {
    * \param ct the type of the checker
    */
   template<typename DType>
-  inline std::function<bool(DType)> get_checker(CheckerType ct) {
+  std::function<bool(DType)> get_checker(CheckerType ct) {
     switch (ct) {
       case NegativeChecker:
         return [] (DType x) {
@@ -473,7 +473,7 @@ class TensorInspector {
    * \brief calculate the coordinate of a value in the tensor, given its index
    * \param idx the index of the value in the tensor
    */
-  inline std::vector<int> index_to_coordinates(size_t idx) {
+  std::vector<int> index_to_coordinates(size_t idx) {
     const int dimension = tb_.ndim();
     std::vector<int> ret;
     for (int i = dimension-1; i >= 0; --i) {
@@ -494,7 +494,7 @@ class TensorInspector {
    * \param tag the name given to this call
    */
   template<typename DType>
-  inline void check_value_helper(std::vector<std::vector<int>>* ret,
+  void check_value_helper(std::vector<std::vector<int>>* ret,
       const std::function<bool(DType)>& checker, bool interactive, std::string tag) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
@@ -577,7 +577,7 @@ class TensorInspector {
    * \tparam DType the data type
    */
   template<typename DType>
-  inline std::string get_header() {
+  std::string get_header() {
     const int dimension = tb_.ndim();
     std::string dict;
     dict += "{'descr':'";
@@ -636,7 +636,7 @@ class TensorInspector {
    * \param tag the name given to this call
    */
   template<typename DType>
-  inline void dump_to_file_helper(const std::string& tag) {
+  void dump_to_file_helper(const std::string& tag) {
 #if MXNET_USE_CUDA
     if (tb_.dev_mask() == gpu::kDevMask) {
       TensorInspector(test::CAccessAsCPU(ctx_, tb_, false)(), ctx_)
@@ -688,14 +688,14 @@ class TensorInspector {
   /*!
    * \brief print the tensor to std::cout
    */
-  inline void print_string() {
+  void print_string() {
     std::cout << to_string() << std::endl;
   }
 
   /*!
    * \brief return a string which contains the values and other info of the tensor
    */
-  inline std::string to_string() {
+  std::string to_string() {
     std::stringstream ss;
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
       to_string_helper<DType>(&ss);
@@ -707,7 +707,7 @@ class TensorInspector {
    * \brief interactively print the tensor value
    * \param tag the name given to this call
    */
-  inline void interactive_print(std::string tag = "") {
+  void interactive_print(std::string tag = "") {
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
       interactive_print_helper<DType>(tag);
     });
@@ -722,7 +722,7 @@ class TensorInspector {
    * \param tag the name given to this call
    */
   template<typename ValueChecker>
-  inline std::vector<std::vector<int>> check_value(const ValueChecker& checker,
+  std::vector<std::vector<int>> check_value(const ValueChecker& checker,
       bool interactive = false, std::string tag = "") {
     std::vector<std::vector<int>> ret;
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
@@ -738,7 +738,7 @@ class TensorInspector {
    * \param interactive wherether to allow the user to interactively check the coordinates
    * \param tag the name given to this call
    */
-  inline std::vector<std::vector<int>> check_value(CheckerType ct, bool interactive = false,
+  std::vector<std::vector<int>> check_value(CheckerType ct, bool interactive = false,
       std::string tag = "") {
     std::vector<std::vector<int>> ret;
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
@@ -751,7 +751,7 @@ class TensorInspector {
    * \brief dump the value of the tensor to a file with name "tag_[visit count].npy" in npy format
    * \param tag the name given to this call
    */
-  inline void dump_to_file(std::string tag) {
+  void dump_to_file(std::string tag) {
     MSHADOW_TYPE_SWITCH(tb_.type_flag_, DType, {
       dump_to_file_helper<DType>(tag);
     });
