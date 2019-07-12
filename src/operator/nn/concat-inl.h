@@ -142,6 +142,28 @@ void ConcatCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
 }
 
 template<typename xpu>
+void HStackCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  ConcatParam param = nnvm::get<ConcatParam>(attrs.parsed);
+  param.dim = inputs[0].shape_.ndim() > 1 ? 1 : 0;
+  std::vector<TBlob> modified_inputs(inputs.size());
+  for (int i = 0; i < param.num_args; ++i) {
+    if (inputs[i].shape_.ndim() == 0) {
+      modified_inputs[i] = inputs[i].reshape(TShape(1, 1));
+    } else {
+      modified_inputs[i] = inputs[i];
+    }
+  }
+  MSHADOW_TYPE_SWITCH(inputs[concat_enum::kData0].type_flag_, DType, {
+    ConcatOp<xpu, DType> op;
+    op.Init(param);
+    op.Forward(ctx, modified_inputs, req, outputs);
+  });
+}
+
+template<typename xpu>
 void ConcatGradCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
@@ -151,6 +173,28 @@ void ConcatGradCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
     ConcatOp<xpu, DType> op;
     op.Init(param);
     op.Backward(ctx, inputs[concat_enum::kOut], req, outputs);
+  });
+}
+
+template<typename xpu>
+void HStackGradCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  ConcatParam param = nnvm::get<ConcatParam>(attrs.parsed);
+  param.dim = inputs[0].shape_.ndim() > 1 ? 1 : 0;
+  std::vector<TBlob> modified_outputs(outputs.size());
+  for (int i = 0; i < param.num_args; ++i) {
+    if (outputs[i].shape_.ndim() == 0) {
+      modified_outputs[i] = outputs[i].reshape(TShape(1, 1));
+    } else {
+      modified_outputs[i] = outputs[i];
+    }
+  }
+  MSHADOW_TYPE_SWITCH(inputs[concat_enum::kOut].type_flag_, DType, {
+    ConcatOp<xpu, DType> op;
+    op.Init(param);
+    op.Backward(ctx, inputs[concat_enum::kOut], req, modified_outputs);
   });
 }
 
