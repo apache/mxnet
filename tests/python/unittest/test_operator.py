@@ -1910,6 +1910,10 @@ def test_depthwise_convolution():
 
 @with_seed()
 def test_convolution_independent_gradients():
+    ctx = default_context()
+    if ctx.device_type == "gpu":
+        origin_val = os.getenv("MXNET_CUDNN_AUTOTUNE_DEFAULT", "inexistence")
+        os.environ["MXNET_CUDNN_AUTOTUNE_DEFAULT"] = "0"
     reqs = ["null", "write", "add"]
     var_names = ["x", "w", "b"]
     dims = [1, 2]
@@ -1951,7 +1955,6 @@ def test_convolution_independent_gradients():
             grad_req1 = [req_kind] * 3
             grad_req1 = dict(zip(var_names, grad_req1))
 
-            ctx = default_context()
             exe1 = conv.bind(ctx, args1, args_grad=grad1, grad_req=grad_req1)
             exe1.forward(is_train=True)
             exe1.backward(exe1.outputs[0])
@@ -1984,6 +1987,11 @@ def test_convolution_independent_gradients():
                         args2[var_name].asnumpy(), rtol=1e-3, atol=1e-3)
                     np.testing.assert_allclose(grad1[var_name].asnumpy(),
                         grad2[var_name].asnumpy(), rtol=1e-3, atol=1e-3)
+    if ctx.device_type == "gpu":
+        if origin_val == "inexistence":
+            os.unsetenv("MXNET_CUDNN_AUTOTUNE_DEFAULT")
+        else:
+            os.environ["MXNET_CUDNN_AUTOTUNE_DEFAULT"] = origin_val
 
 
 def gen_broadcast_data(idx):
