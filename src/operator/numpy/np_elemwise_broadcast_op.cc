@@ -175,7 +175,7 @@ NNVM_REGISTER_OP(_backward_logaddexp2)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", 
+.set_attr<FCompute>("FCompute<cpu>",
                     BinaryBroadcastBackwardUseIn<cpu, mshadow_op::logaddexp2_grad_left, mshadow_op::logaddexp2_grad_right>);  // NOLINT()
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_add_scalar)
