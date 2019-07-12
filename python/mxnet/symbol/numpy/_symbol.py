@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'arctan2']
 
 
 def _num_outputs(sym):
@@ -2222,5 +2222,73 @@ def arcsin(x, out=None, **kwargs):
     """
     return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
 
+
+@set_module('mxnet.symbol.numpy')
+def arctan2(x1, x2, out=None, **kwargs):
+    r"""
+    arctan2(x1, x2, out=None)
+
+    Element-wise arc tangent of ``x1/x2`` choosing the quadrant correctly.
+
+    The quadrant (i.e., branch) is chosen so that ``arctan2(x1, x2)`` is
+    the signed angle in radians between the ray ending at the origin and
+    passing through the point (1,0), and the ray ending at the origin and
+    passing through the point (`x2`, `x1`).  (Note the role reversal: the
+    "`y`-coordinate" is the first function parameter, the "`x`-coordinate"
+    is the second.)  By IEEE convention, this function is defined for
+    `x2` = +/-0 and for either or both of `x1` and `x2` = +/-inf (see
+    Notes for specific values).
+
+    This function is not defined for complex-valued arguments; for the
+    so-called argument of complex values, use `angle`.
+
+    Parameters
+    ----------
+    x1 : _Symbol or scalar
+        `y`-coordinates.
+    x2 : _Symbol or scalar
+        `x`-coordinates. `x2` must be broadcastable to match the shape of
+        `x1` or vice versa.
+    out : _Symbol or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. 
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Array of angles in radians, in the range ``[-pi, pi]``. This is a scalar if 
+        `x1` and `x2` are scalars.
+
+    Notes
+    -----
+    *arctan2* is identical to the `atan2` function of the underlying
+    C library.  The following special values are defined in the C
+    standard: [1]_
+
+    ====== ====== ================
+    `x1`   `x2`   `arctan2(x1,x2)`
+    ====== ====== ================
+    +/- 0  +0     +/- 0
+    +/- 0  -0     +/- pi
+        > 0   +/-inf +0 / +pi
+        < 0   +/-inf -0 / -pi
+    +/-inf +inf   +/- (pi/4)
+    +/-inf -inf   +/- (3*pi/4)
+    ====== ====== ================
+
+    Note that +0 and -0 are distinct floating point numbers, as are +inf
+    and -inf.
+
+    References
+    ----------
+    .. [1] ISO/IEC standard 9899:1999, "Programming language C."
+    """
+    if isinstance(x1, numeric_types):
+        return _np.arctan2(x1, x2, **kwargs)
+    elif isinstance(x1, _Symbol):
+        return _npi.arctan2(x1, x2, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x1))))
 
 _set_np_symbol_class(_Symbol)
