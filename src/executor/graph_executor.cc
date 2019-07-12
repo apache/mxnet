@@ -1706,7 +1706,7 @@ static nnvm::Symbol BuildSubgraph(
   auto arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
   auto aux_names = src.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
   for (size_t i = 0; i < arg_names.size(); ++i) {
-    auto name = arg_names[i];
+    const auto& name = arg_names[i];
     in_arg_ctx_map[name] = in_arg_ctxes->at(i);
     arg_grad_ctx_map[name] = arg_grad_ctxes->at(i);
     grad_req_type_map[name] = grad_req_types->at(i);
@@ -1745,15 +1745,15 @@ static nnvm::Symbol BuildSubgraph(
       StorageTypeVector arg_stypes(input_names.size(), kUndefinedStorage);
       for (size_t i = 0; i < input_names.size(); ++i) {
         const auto& input_name = input_names[i];
-        auto it1 = arg_shape_map.find(input_name);
+        const auto it1 = arg_shape_map.find(input_name);
         if (arg_shape_map.end() != it1) {
           arg_shapes[i] = it1->second;
         }
-        auto it2 = arg_dtype_map.find(input_name);
+        const auto it2 = arg_dtype_map.find(input_name);
         if (arg_dtype_map.end() != it2) {
           arg_dtypes[i] = it2->second;
         }
-        auto it3 = arg_stype_map.find(input_name);
+        const auto it3 = arg_stype_map.find(input_name);
         if (arg_stype_map.end() != it3) {
           arg_stypes[i] = it3->second;
         }
@@ -1768,13 +1768,13 @@ static nnvm::Symbol BuildSubgraph(
       grad_req_types->clear();
       auto new_arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
       auto new_aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
-      for (auto arg_name : new_arg_names) {
+      for (const auto& arg_name : new_arg_names) {
         CHECK(in_arg_ctx_map.count(arg_name));
         in_arg_ctxes->push_back(in_arg_ctx_map[arg_name]);
         arg_grad_ctxes->push_back(arg_grad_ctx_map[arg_name]);
         grad_req_types->push_back(grad_req_type_map[arg_name]);
       }
-      for (auto arg_name : new_aux_names) {
+      for (const auto& arg_name : new_aux_names) {
         CHECK(aux_state_ctx_map.count(arg_name));
         aux_state_ctxes->push_back(aux_state_ctx_map[arg_name]);
       }
@@ -1800,14 +1800,19 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const op::SubgraphBac
   const std::vector<std::string> arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
   const std::vector<std::string> aux_names = src.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
   for (size_t i = 0; i < arg_names.size(); ++i) {
-    auto name = arg_names[i];
-    in_args_map[name] = in_args->at(i);
-    arg_grad_store_map[name] = arg_grad_store->at(i);
-    grad_req_type_map[name] = grad_req_type->at(i);
+    in_args_map[arg_names[i]] = in_args->at(i);
   }
 
   for (size_t i = 0; i < aux_names.size(); ++i) {
     aux_states_map[aux_names[i]] = aux_states->at(i);
+  }
+
+  if (arg_grad_store->size()) {
+    for (size_t i = 0; i < arg_names.size(); ++i) {
+      const auto& name = arg_names[i];
+      arg_grad_store_map[name] = arg_grad_store->at(i);
+      grad_req_type_map[name] = grad_req_type->at(i);
+    }
   }
 
   bool need_grad = false;
@@ -1879,18 +1884,24 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const op::SubgraphBac
   CHECK_EQ(arg_names.size(), new_arg_names.size());
   CHECK_EQ(arg_names.size(), new_arg_names.size());
   in_args->clear();
-  arg_grad_store->clear();
-  grad_req_type->clear();
   aux_states->clear();
-  for (auto arg_name : new_arg_names) {
+  for (const auto& arg_name : new_arg_names) {
     CHECK(in_args_map.count(arg_name));
     in_args->push_back(in_args_map[arg_name]);
-    arg_grad_store->push_back(arg_grad_store_map[arg_name]);
-    grad_req_type->push_back(grad_req_type_map[arg_name]);
   }
-  for (auto arg_name : new_aux_names) {
+
+  for (const auto& arg_name : new_aux_names) {
     CHECK(aux_states_map.count(arg_name));
     aux_states->push_back(aux_states_map[arg_name]);
+  }
+
+  if (arg_grad_store->size()) {
+    arg_grad_store->clear();
+    grad_req_type->clear();
+    for (const auto& arg_name : new_arg_names) {
+      arg_grad_store->push_back(arg_grad_store_map[arg_name]);
+      grad_req_type->push_back(grad_req_type_map[arg_name]);
+    }
   }
   return ret;
 }
