@@ -28,10 +28,8 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
-#include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-#include "../tensor/init_op.h"
 
 namespace mxnet {
 namespace op {
