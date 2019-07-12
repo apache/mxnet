@@ -712,6 +712,16 @@ def test_np_multinomial():
         for size in sizes:
             freq = mx.np.random.multinomial(experiements, pvals, size=size).asnumpy()
             assert freq.size == 0
+    # test small experiment for github issue
+    # https://github.com/apache/incubator-mxnet/issues/15383
+    small_exp, total_exp = 20, 10000
+    for pvals in pvals_list:
+        x = np.random.multinomial(small_exp, pvals)
+        for i in range(total_exp // small_exp):
+            x = x + np.random.multinomial(20, pvals)
+    freq = (x.asnumpy() / _np.float32(total_exp)).reshape((-1, len(pvals)))
+    for i in range(freq.shape[0]):
+        mx.test_utils.assert_almost_equal(freq[i, :], pvals, rtol=0.20, atol=1e-1)
 
 
 if __name__ == '__main__':
