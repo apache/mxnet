@@ -242,6 +242,16 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 	- If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
 	- If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
 
+* MXNET_CUDA_VERSION_CHECKING
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows various runtime checks of the cuda library version and associated warning messages.
+  - If set to '1', permits these checks (e.g. compile vs. link mismatch, old version no longer CI-tested)
+
+* MXNET_CUDNN_VERSION_CHECKING
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows various runtime checks of the cuDNN library version and associated warning messages.
+  - If set to '1', permits these checks (e.g. compile vs. link mismatch, old version no longer CI-tested)
+
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
   - The repository url to be used for Gluon datasets and pre-trained models.
