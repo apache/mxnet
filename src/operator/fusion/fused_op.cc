@@ -213,7 +213,7 @@ NNVM_REGISTER_OP(_FusedOp)
     std::vector<std::pair<int, int> > ret;
     for (auto i = 0u; i < num_inputs; ++i) {
       for (auto j = 0u; j < num_outputs; ++j) {
-        ret.emplace_back(i,j);
+        ret.emplace_back(i, j);
       }
     }
     return ret;
