@@ -46,6 +46,17 @@ set -x
 # Set OPTS to any Sphinx build options, like -W for "warnings as errors"
 OPTS=
 
+# Setup environment for Julia docs
+export PATH="$1/bin:$PATH"
+export MXNET_HOME='/work/mxnet'
+export JULIA_DEPOT_PATH='/work/julia-depot'
+export INTEGRATION_TEST=1
+
+julia -e 'using InteractiveUtils; versioninfo()'
+export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
+
 # $1 is the list of branches/tags to build
 if [ -z "$1" ]
   then
