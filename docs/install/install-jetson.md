@@ -19,13 +19,12 @@
 
 MXNet supports the Ubuntu Arch64 based operating system so you can run MXNet on NVIDIA Jetson Devices, such as the [TX2](http://www.nvidia.com/object/embedded-systems-dev-kits-modules.html) or [Nano](https://developer.nvidia.com/embedded/learn/get-started-jetson-nano-devkit).
 
-These instructions will walk through how to build MXNet and install MXNet's Python language binding. 
+These instructions will walk through how to build MXNet and install MXNet's Python language binding.
 
 For the purposes of this install guide we will assume that CUDA is already installed on your Jetson device. The disk image provided by NVIDIA's getting started guides will have the Jetson toolkit preinstalled, and this also includes CUDA. You should double check what versions are installed and which version you plan to use.
 
-You have several options for installing MXNet:
-1. Use a Jetson MXNet pip wheel for Python development.
-2. Use precompiled Jetson MXNet binaries.
+After installing the prerequisites, you have several options for installing MXNet:
+1. Use a Jetson MXNet pip wheel for Python development and use a precompiled Jetson MXNet binary.
 3. Build MXNet from source
    * On a faster Linux computer using cross-compilation
    * On the Jetson itself (very slow and not recommended)
@@ -35,7 +34,7 @@ You have several options for installing MXNet:
 To build from source or to use the Python wheel, you must install the following dependencies on your Jetson.
 Cross-compiling will require dependencies installed on that machine as well.
 
-### Python API
+### Python Dependencies
 
 To use the Python API you need the following dependencies:
 
@@ -60,6 +59,33 @@ sudo pip install \
 ```
 
 If you plan to cross-compile you will need to install these dependencies on that computer as well.
+If you get an error about something being busy, you can restart the nano and this error will go away and you can continue installation of the prerequisites.
+
+### Download the source & setup some environment variables:
+
+These steps are optional, but some of the following instructions expect MXNet source files and the `MXNET_HOME` environment variable. Also CUDA commands will not work out of the box without updating your path.
+
+Clone the MXNet source code repository using the following `git` command in your home directory:
+
+```bash
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+```
+
+Setup your environment variables for MXNet and CUDA in your `.profile` file in your home directory.
+Add the following to the file.
+
+```bash
+export PATH=/usr/local/cuda/bin:$PATH
+export MXNET_HOME=$HOME/mxnet/
+export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH
+```
+
+You can then apply this change immediately with the following:
+```bash
+source .profile
+```
+
+**Note:** Change the `~/.profile` steps according to how you prefer to use your shell. Otherwise, your environment variables will be gone after you logout.
 
 ### Configure CUDA
 
@@ -79,30 +105,8 @@ sudo ln -s /usr/local/cuda-10.0 /usr/local/cuda
 **Note:** When cross-compiling, change the CUDA version on the host computer you're using to match the version you're running on your Jetson device.
 **Note:** CUDA 10.1 is recommended but doesn't ship with the Nano's SD card image. You may want to go through CUDA upgrade steps first.
 
-### Download the source & setup some environment variables:
 
-These steps are optional, but some of the following instructions expect MXNet source files and the `MXNET_HOME` environment variable.
-
-Clone the MXNet source code repository using the following `git` command in your home directory:
-
-```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet
-```
-
-Setup your environment variables for MXNet.
-
-```bash
-cd ..
-export MXNET_HOME=$(pwd)
-echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.rc
-source ~/.rc
-```
-
-**Note:** Change the `~/.rc` steps according to how you prefer to use your shell. Otherwise, your environment variables will be gone after you logout.
-
-
-## Install MXNet for Python
+## Option 1. Install MXNet for Python
 
 To use a prepared Python wheel, download it to your Jetson, and run it.
 * [MXNet 1.4.0 - Python 3](https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.0/mxnet-1.4.0-cp36-cp36m-linux_aarch64.whl)
@@ -113,12 +117,10 @@ It should download the required dependencies, but if you have issues,
 install the dependencies in the prerequisites section, then run the pip wheel.
 
 ```bash
-sudo pip install mxnet-1.4.0-cp36-cp36m-linux_aarch64.whl
+sudo pip install mxnet-1.4.0-cp27-cp27mu-linux_aarch64.whl
 ```
 
-## Use a Pre-compiled MXNet Binary
-
-If you want to just use a pre-compiled binary you can download it from S3:
+Now use a pre-compiled binary you can download it from S3 which is a patch v1.4.1:
 * https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.1/libmxnet.so
 
 Place this file in `$MXNET_HOME/lib`.
@@ -128,12 +130,13 @@ To use this with the MXNet Python binding, you must match the source directory's
 ```bash
 cd $MXNET_HOME
 git checkout v1.4.x
-git submodule update --init
+git submodule update --init --recursive
 cd python
 sudo pip install -e .
 ```
 
-## Build MXNet from Source
+
+## Option 2. Build MXNet from Source
 
 Installing MXNet from source is a two-step process:
 
