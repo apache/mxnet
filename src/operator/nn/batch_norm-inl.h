@@ -57,7 +57,7 @@ enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
 constexpr int DEFAULT_AXIS = 1;
 }  // namespace batchnorm
 
-/*! \brief Parameters for BatchNoram operator */
+/*! \brief Parameters for BatchNorm operator */
 struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   double eps;
   float momentum;
@@ -167,7 +167,7 @@ void BatchNormBackwardImpl(mshadow::Stream<gpu> *stream,
  * \param out_data array of output data, pointer is used to indicate that this is holder
  *        the space of TBlob in out_data must be pre-allocated with InferShape
  * \param aux_states Auxiliary states of operator. Normally operator doesn't
- *        need, epecial case like Batch Norm requires.
+ *        need, special case like Batch Norm requires.
  * \sa OpReqType, OpContext
  */
 template <typename xpu, typename DType, typename AccReal>
