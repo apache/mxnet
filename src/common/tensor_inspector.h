@@ -626,7 +626,7 @@ class TensorInspector {
       std::cout << "Tensor dumped to file: " << filename << std::endl;
     } catch (std::ofstream::failure e) {
       std::cerr << "Exception opening/writing/closing file " << filename << std::endl;
-    }    
+    }
   }
 
   /*!
