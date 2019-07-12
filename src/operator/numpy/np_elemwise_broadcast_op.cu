@@ -42,6 +42,13 @@ NNVM_REGISTER_OP(_npi_mod)
 NNVM_REGISTER_OP(_npi_power)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::power>);
 
+NNVM_REGISTER_OP(_npi_arctan2)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::arctan2>);
+
+NNVM_REGISTER_OP(_backward_npi_arctan2)
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::arctan2_grad,
+                                                                  mshadow_op::arctan2_rgrad>);
+
 NNVM_REGISTER_OP(_npi_maximum)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::maximum>);
 
@@ -71,6 +78,18 @@ NNVM_REGISTER_OP(_npi_power_scalar)
 
 NNVM_REGISTER_OP(_npi_rpower_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rpower>);
+
+NNVM_REGISTER_OP(_npi_arctan2_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::arctan2>);
+
+NNVM_REGISTER_OP(_backward_npi_arctan2_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::arctan2_grad>);
+
+NNVM_REGISTER_OP(_npi_rarctan2_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rarctan2>);
+
+NNVM_REGISTER_OP(_backward_npi_rarctan2_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rarctan2_grad>);
 
 NNVM_REGISTER_OP(_npi_maximum_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::maximum>);

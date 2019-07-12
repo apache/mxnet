@@ -2331,6 +2331,82 @@ def test_math():
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
 
+
+@with_seed()
+@use_np
+def test_np_arctan2():
+    class TestArctan2(HybridBlock):
+        def __init__(self):
+            super(TestArctan2, self).__init__()
+
+        def hybrid_forward(self, F, x1, x2):
+            return F.np.arctan2(x1, x2)
+
+    #Reduce dimension of src to dimention of des.
+    def dimReduce(src, des):
+        srcShape = src.shape
+        desShape = des.shape
+        if len(desShape) == 0:
+            return src.sum()
+        redu = []
+        for i, j in zip(range(len(srcShape)-1, -1, -1), range(len(desShape)-1, -1, -1)):
+            if srcShape[i] != desShape[j] and desShape[j] == 1:
+                redu.append(i)
+            if j == 0:
+                for k in range(0, i):
+                    redu.append(k)
+                break
+        if len(redu) > 0:
+            src = np.reshape(src.sum(axis=tuple(redu)), desShape)
+        return src
+
+    types = ['float64', 'float32', 'float16']
+    for hybridize in [True, False]:
+        for shape1, shape2 in [[(1,), (1,)],  # single elements
+                               [(4, 5), (4, 5)],  # normal case
+                               [(3, 2), (3, 2)],  # tall matrices
+                               [(), ()],  # scalar only
+                               [(3, 0, 2), (3, 0, 2)],  # zero-dim
+                               [(3, 4, 5), (4, 1)],  # trailing dim broadcasting
+                               [(3, 4, 5), ()],  # scalar broadcasting
+                               [(), (1, 2, 3)],  # scalar broadcasting
+                               [(4, 3), (4, 1)],  # single broadcasting
+                               [(3, 4, 5), (3, 1, 5)]  # single broadcasting in the middle
+                               ]:
+            for oneType in types:
+                if oneType == 'float16':
+                    rtol=1e-2
+                    atol = 1e-2
+                else:
+                    rtol=1e-3
+                    atol = 1e-5
+                test_arctan2 = TestArctan2()
+                if hybridize:
+                    test_arctan2.hybridize()
+                x1 = rand_ndarray(shape1, dtype=oneType).as_np_ndarray()
+                x2 = rand_ndarray(shape2, dtype=oneType).as_np_ndarray()
+                x11 = x1.asnumpy()
+                x21 = x2.asnumpy()
+                x1.attach_grad()
+                x2.attach_grad()
+                np_out = np.arctan2(x1.asnumpy(), x2.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_arctan2(x1, x2)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                mx_out.backward()
+                np_backward_1 = x21 / (x11 * x11 + x21 * x21)
+                np_backward_2 = -1 * x11 / (x11 * x11 + x21 * x21)
+                np_backward_1 = dimReduce(np_backward_1, x11)
+                np_backward_2 = dimReduce(np_backward_2, x21)
+                assert_almost_equal(x1.grad.asnumpy(), np_backward_1, rtol=rtol, atol=atol)
+                assert_almost_equal(x2.grad.asnumpy(), np_backward_2, rtol=rtol, atol=atol)
+
+                mx_out = mx.np.arctan2(x1, x2)
+                np_out = np.arctan2(x1.asnumpy(), x2.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
