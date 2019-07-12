@@ -1227,8 +1227,8 @@ def test_rsqrt_cos_sin():
 
 @with_seed()
 def test_maximum_minimum():
-    data1 = mx.symbol.Variable('data')
-    data2 = mx.symbol.Variable('data')
+    data1 = mx.symbol.Variable('data1')
+    data2 = mx.symbol.Variable('data2')
     shape = (3, 4)
     data_tmp1 = np.random.rand(3,4)
     data_tmp2 = np.random.rand(3,4)
@@ -1241,7 +1241,7 @@ def test_maximum_minimum():
     arr_grad1 = mx.nd.empty(shape)
     arr_grad2 = mx.nd.empty(shape)
 
-    test =  mx.sym.maximum(data1,data2) + mx.sym.minimum(data1,data2);
+    test =  mx.sym.maximum(data1,data2) + mx.sym.minimum(data1,data2)
     exe_test = test.bind(default_context(), args=[arr_data1,arr_data2], args_grad=[arr_grad1,arr_grad2])
     exe_test.forward(is_train=True)
     out = exe_test.outputs[0].asnumpy()
@@ -3787,8 +3787,8 @@ def mathematical_core_binary(name,
                              data1_init=2.,
                              data2_init=3.,
                              grad_init=2.):
-    data1 = mx.symbol.Variable('data')
-    data2 = mx.symbol.Variable('data')
+    data1 = mx.symbol.Variable('data1')
+    data2 = mx.symbol.Variable('data2')
     shape = (3, 4)
     data_tmp1 = np.random.rand(3, 4)
     data_tmp2 = np.random.rand(3, 4)
@@ -7789,7 +7789,8 @@ def test_op_output_names_monitor():
             pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
-
+    # Disable subgraph in case subgraph will replace symbol
+    os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
     data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
     conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
     check_name(conv_sym, ['conv_output'])
@@ -7822,6 +7823,7 @@ def test_op_output_names_monitor():
     us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
                             name='pooling')
     check_name(us_sym, ['pooling_output'])
+    del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 def test_op_all_names_monitor():
     def check_name(op_sym, expected_names):
@@ -7840,6 +7842,8 @@ def test_op_all_names_monitor():
             pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
+    # Disable subgraph in case subgraph will replace symbol
+    os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
 
     data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
     conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
@@ -7873,6 +7877,7 @@ def test_op_all_names_monitor():
     us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
                             name='pooling')
     check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
+    del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 @with_seed()
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
