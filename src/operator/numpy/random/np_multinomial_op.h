@@ -105,7 +105,7 @@ struct multinomial_kernel {
                                   const int num_exp,
                                   const int prob_length,
                                   DType* pvals,
-                                  float* uniform,
+                                  double* uniform,
                                   int64_t* out) {
     for (int j = 0; j < num_exp; ++j) {
       DType loc = static_cast<DType>(uniform[i * num_exp + j]);
@@ -145,20 +145,20 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
   int num_output = outputs[0].Size() / prob_length;
   int num_exp = param.n;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
-  Tensor<xpu, 1, float> uniform =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(num_output * param.n), s);
-  prnd->SampleUniform(&uniform, 0, 1);
+  Random<xpu, double> *prnd = ctx.requested[0].get_random<xpu, double>(s);
+  size_t temp_space_ = (param.pvals.has_value())
+                      ? num_output * param.n + prob_length : num_output * param.n;
+  Tensor<xpu, 1, double> temp_tensor =
+      ctx.requested[1].get_space_typed<xpu, 1, double>(Shape1(temp_space_), s);
 
+  prnd->SampleUniform(&temp_tensor, 0, 1);
   // set zero for the outputs
   Kernel<set_zero, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<int64_t>());
-
   if (param.pvals.has_value()) {
     // create a tensor to copy the param.pvals tuple to avoid
     // error: calling a __host__ function from a __host__ __device__ function is not allowed
-    Tensor<xpu, 1, double> pvals =
-      ctx.requested[1].get_space_typed<xpu, 1, double>(Shape1(prob_length), s);
-    double* pvals_ = pvals.dptr_;
+    // reuse the uniform temp space to create pval tensor
+    double* pvals_ = temp_tensor.dptr_ + num_output * param.n;
     // check if sum of input(pvals) > 1.0
     double sum = 0.0;
     for (int i = 0; i < prob_length; ++i) {
@@ -169,7 +169,7 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
           << "sum(pvals[:-1]) > 1.0";
     }
     Kernel<multinomial_kernel, xpu>::Launch(
-      s, num_output, num_exp, prob_length, pvals_, uniform.dptr_, outputs[0].dptr<int64_t>());
+      s, num_output, num_exp, prob_length, pvals_, temp_tensor.dptr_, outputs[0].dptr<int64_t>());
   } else {
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       // check if sum of input(pvals) > 1.0
@@ -182,7 +182,7 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
       }
       Kernel<multinomial_kernel, xpu>::Launch(
         s, num_output, num_exp, prob_length,
-        inputs[0].dptr<DType>(), uniform.dptr_, outputs[0].dptr<int64_t>());
+        inputs[0].dptr<DType>(), temp_tensor.dptr_, outputs[0].dptr<int64_t>());
     });
   }
 }
