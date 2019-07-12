@@ -566,7 +566,7 @@ def split(ary, indices_or_sections, axis=0):
     ----------
     ary : ndarray
         Array to be divided into sub-arrays.
-    indices_or_sections : int or 1-D array
+    indices_or_sections : int or 1 - D Python tuple, list or set.
         If `indices_or_sections` is an integer, N, the array will be divided
         into N equal arrays along `axis`.  If such a split is not possible,
         an error is raised.
@@ -656,7 +656,7 @@ def vsplit(ary, indices_or_sections):
     the following aspects:
 
     - Currently parameter ``indices_or_sections`` does not support ndarray, but supports scalar,
-    tuple
+    tuple and list.
     - In ``indices_or_sections``, if an index exceeds the dimension of the array along axis 0,
     an error will be thrown.
 
