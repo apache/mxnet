@@ -101,7 +101,20 @@ def download_imdb(data_dir='/tmp/data'):
     '''
     Download and extract the IMDB dataset
     '''
-    url = ('http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz')
+    # Large Movie Review Dataset from http://ai.stanford.edu/~amaas/data/sentiment/
+    # Note this dataset is copyright to Andrew Maas and Stanford AI Lab
+    # @InProceedings{maas-EtAl:2011:ACL-HLT2011,
+    #   author    = {Maas, Andrew L.  and  Daly, Raymond E.  and  Pham, Peter T.  and  Huang, Dan  and  Ng, Andrew Y.  and  Potts, Christopher},
+    #   title     = {Learning Word Vectors for Sentiment Analysis},
+    #   booktitle = {Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics: Human Language Technologies},
+    #   month     = {June},
+    #   year      = {2011},
+    #   address   = {Portland, Oregon, USA},
+    #   publisher = {Association for Computational Linguistics},
+    #   pages     = {142--150},
+    #   url       = {http://www.aclweb.org/anthology/P11-1015}
+    # }
+    url = ('https://aws-ml-platform-datasets.s3.amazonaws.com/imdb/aclImdb_v1.tar.gz')
     sha1 = '01ada507287d82875905620988597833ad4e0903'
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)

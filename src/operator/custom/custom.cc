@@ -238,14 +238,14 @@ std::vector<nnvm::NodeEntry> Gradient(
 
   std::vector<nnvm::NodeEntry> ret;
   for (size_t i = 0; i < params.num_args; ++i) {
-    ret.emplace_back(nnvm::NodeEntry{g, static_cast<uint32_t>(i), 0});
+    ret.emplace_back(g, static_cast<uint32_t>(i), 0);
   }
   if (params.num_auxs) {
     nnvm::NodePtr ng = nnvm::Node::Create();
     ng->attrs.op = nnvm::Op::Get("_NoGradient");
     ng->attrs.name = "NoGradient";
     for (size_t i = 0; i < params.num_auxs; ++i) {
-      ret.emplace_back(nnvm::NodeEntry{ng, 0, 0});
+      ret.emplace_back(ng, 0, 0);
     }
   }
 
@@ -345,7 +345,7 @@ void ForwardEx(const OpStatePtr& state, const OpContext& ctx,
             static_cast<int>(ctx.is_train),
             params.info->contexts[kCustomOpForward]));
       },
-      ctx, false, ctx.is_train, cpys, tags, output_tags, outputs);
+      ctx, false, ctx.is_train, cpys, tags, output_tags, outputs, params.op_type);
 }
 
 void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
@@ -415,7 +415,7 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
         ptrs.size(), const_cast<void**>(ptrs.data()), const_cast<int*>(tags.data()),
         reinterpret_cast<const int*>(req.data()), static_cast<int>(ctx.is_train),
         params.info->contexts[kCustomOpBackward]));
-    }, ctx, false, ctx.is_train, cpys, tags, output_tags, outputs);
+    }, ctx, false, ctx.is_train, cpys, tags, output_tags, outputs, "_backward_" + params.op_type);
 }
 
 // infer storage backward function for custom op which assigns kDefaultStorage for

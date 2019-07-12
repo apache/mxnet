@@ -86,14 +86,15 @@ core_logic: {
         }
       }
     },*/
-    'Test Large Tensor Size: GPU': {
+    // https://github.com/apache/incubator-mxnet/issues/14981
+    /*'Test Large Tensor Size: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/large_tensor-gpu') {
             utils.unpack_and_init('gpu_int64', mx_cmake_lib)
             utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_tensor', true)
         }
       }
-    },
+    },*/
     'StraightDope: Python2 Single-GPU': {
       node(NODE_LINUX_GPU_P3) {
         ws('workspace/straight_dope-single_gpu') {
@@ -127,7 +128,7 @@ core_logic: {
       }
     },
     'Tutorial: Python2': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/tutorial-test-python2') {
           utils.unpack_and_init('gpu', mx_lib)
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python2_gpu', true, '1500m')
@@ -135,7 +136,7 @@ core_logic: {
       }
     },
     'Tutorial: Python3': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/tutorial-test-python3') {
           utils.unpack_and_init('gpu', mx_lib)
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python3_gpu', true, '1500m')

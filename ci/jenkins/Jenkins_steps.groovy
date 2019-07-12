@@ -17,25 +17,27 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// This file contains the steps that will be used in the 
+// This file contains the steps that will be used in the
 // Jenkins pipelines
 
 utils = load('ci/Jenkinsfile_utils.groovy')
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_lib_cython = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 
 // Python wheels
 mx_pip = 'build/*.whl'
 
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_cmake_lib_cython = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 mx_tensorrt_lib = 'build/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
-mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*'
+mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*, python/mxnet/_cy2/*.so, python/mxnet/_cy3/*.so'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/*'
 
 // Python unittest for CPU
@@ -43,6 +45,12 @@ mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/*'
 def python2_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu', false)
+  }
+}
+
+def python2_ut_cython(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu_cython', false)
   }
 }
 
@@ -89,6 +97,12 @@ def python3_gpu_ut_nocudnn(docker_container_name) {
   }
 }
 
+def python3_gpu_ut_cython(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_cython', true)
+  }
+}
+
 //------------------------------------------------------------------------------------------
 
 def compile_unix_cpu_openblas() {
@@ -98,7 +112,7 @@ def compile_unix_cpu_openblas() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_lib, true)
+            utils.pack_lib('cpu', mx_lib_cython, true)
           }
         }
       }
@@ -252,7 +266,7 @@ def compile_unix_cmake_gpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_gpu_cu100', 'build_ubuntu_gpu_cmake', false)
-            utils.pack_lib('cmake_gpu', mx_cmake_lib, true)
+            utils.pack_lib('cmake_gpu', mx_cmake_lib_cython, true)
           }
         }
       }
@@ -629,8 +643,8 @@ def test_unix_python2_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python2-cpu') {
           try {
-            utils.unpack_and_init('cpu', mx_lib, true)
-            python2_ut('ubuntu_cpu')
+            utils.unpack_and_init('cpu', mx_lib_cython, true)
+            python2_ut_cython('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
@@ -731,8 +745,8 @@ def test_unix_python3_gpu() {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-gpu') {
           try {
-            utils.unpack_and_init('gpu', mx_lib, true)
-            python3_gpu_ut('ubuntu_gpu_cu100')
+            utils.unpack_and_init('gpu', mx_lib_cython, true)
+            python3_gpu_ut_cython('ubuntu_gpu_cu100')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
@@ -927,7 +941,7 @@ def test_unix_scala_cpu() {
         ws('workspace/ut-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_scala', false)
             utils.publish_test_coverage()
           }
         }
@@ -941,7 +955,7 @@ def test_unix_scala_mkldnn_cpu(){
         ws('workspace/ut-scala-mkldnn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_scala', false)
             utils.publish_test_coverage()
           }
         }
@@ -1367,21 +1381,8 @@ def docs_website() {
             if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
                 sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
             } else {
-                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}" 
+                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
             }
-          }
-        }
-      }
-    }]
-}
-
-def docs_julia() {
-    return ['Julia docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/julia-docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'deploy_jl_docs', false)
           }
         }
       }

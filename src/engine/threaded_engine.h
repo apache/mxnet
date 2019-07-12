@@ -43,6 +43,7 @@
 #include "../profiler/profiler.h"
 #include "./openmp.h"
 #include "../common/object_pool.h"
+#include "../profiler/custom_op_profiler.h"
 
 namespace mxnet {
 namespace engine {

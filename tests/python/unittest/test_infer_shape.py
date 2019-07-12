@@ -154,7 +154,7 @@ def test_shape_completely_unknown():
     assert arg_shapes[0] == ()
     assert out_shapes[0] == ()
 
-    with mx.np_compat():
+    with mx.np_shape():
         data = mx.sym.var("data")
         ret = mx.sym.sin(data)
         arg_shapes, out_shapes, _ = ret.infer_shape_partial()
@@ -169,7 +169,7 @@ def test_dot_partial_shape():
     # batch size(first dim) of lhs unknown
     _, result_shape, _ = z.infer_shape_partial(x=(0, 3, 4), y=(4, 5))
     assert result_shape == [(0, 3, 5)]
-    with mx.np_compat(True):
+    with mx.np_shape(True):
         _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(4, 5))
         assert result_shape == [(-1, 3, 5)]
 
@@ -184,7 +184,7 @@ def test_batch_dot_partial_shape():
     # rhs second dim unknown
     _, result_shape, _ = z.infer_shape_partial(x=(0, 3, 4), y=(0, 0, 5))
     assert result_shape == [()]
-    with mx.np_compat(True):
+    with mx.np_shape(True):
         _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(-1, 4, 5))
         assert result_shape == [(-1, 3, 5)]
         _, result_shape, _ =  z.infer_shape_partial(x=(-1, 3, 4), y=(-1, -1, 5))
@@ -198,7 +198,7 @@ def test_embedding_partial_shape():
     y = mx.sym.Embedding(data=x, weight=w, input_dim=100, output_dim=10)
     _, result_shape, _ = y.infer_shape_partial(x=(0, 5), w=(100, 10))
     assert result_shape  == [(0, 5, 10)]
-    with mx.np_compat(True):
+    with mx.np_shape(True):
         _, result_shape, _ = y.infer_shape_partial(x=(-1, 5), w=(100, 10))
         assert result_shape == [(-1, 5, 10)]
 
@@ -213,7 +213,7 @@ def test_transpose_partial_shape():
     _, result, _ = y.infer_shape_partial(x=(0, 3, 224, 224))
     assert result == [(0, 224, 224, 3)]
 
-    with mx.np_compat(True):
+    with mx.np_shape(True):
         _, result, _ = y.infer_shape_partial(x=(-1, 3, 224, 224))
         assert result == [(-1, 224, 224, 3)]
 
@@ -225,7 +225,7 @@ def test_pick_partial_shape():
     # batch size unknown
     _, result, _ =  y.infer_shape_partial(x=(0, 3, 3), index=(0, 3,))
     assert result == [(0, 3)]
-    with mx.np_compat(True):
+    with mx.np_shape(True):
         _, result, _ =  y.infer_shape_partial(x=(-1, 3, 3), index=(-1, 3,))
         assert result == [(-1, 3)]
 
@@ -240,7 +240,7 @@ def test_where_partial_shape():
     assert result == [()]
     _, result, _ = where_op.infer_shape_partial(cond=(0,), x=(2, 2), y =(2, 2))
     assert result == [()]
-    with mx.np_compat(True):
+    with mx.np_shape(True):
         _, result, _ =  where_op.infer_shape_partial(cond=(-1, 2), x=(-1, 2), y =(-1, 2))
         assert result == [None]
         _, result, _ = where_op.infer_shape_partial(cond=(-1,), x=(2, 2), y=(2, 2))

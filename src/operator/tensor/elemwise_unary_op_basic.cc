@@ -85,8 +85,26 @@ The storage type of ``relu`` output depends upon the input storage type:
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_relu"});
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu,
-                                               unary_bwd<mshadow_op::relu_grad>);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu, unary_bwd<mshadow_op::relu_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      std::vector<nnvm::NodeEntry> ret;
+      // ograds[0]: dL/dxgrad
+      // inputs[0]: dL/dy
+      // inputs[1]: y
+      // f(x) -> relu(x)
+      // f'(x) = 1 if x > 0 else 0
+      // f''(x) = 0
+      auto dydx = MakeNode("_greater", n->attrs.name + "_dydx",
+          {n->inputs[1], nnvm::NodeEntry{
+            MakeNode("zeros_like", n->attrs.name + "tmp", {n->inputs[1]}, nullptr, &n)
+          }}, nullptr, &n);
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry(dydx)}, nullptr, &n));
+      ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_grad_in",
+                                {n->inputs[1]}, nullptr, &n));
+      return ret;
+    });
 
 // sigmoid
 MXNET_OPERATOR_REGISTER_UNARY(sigmoid)
@@ -103,7 +121,35 @@ The storage type of ``sigmoid`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
-                                               unary_bwd<mshadow_op::sigmoid_grad>);
+                                               unary_bwd<mshadow_op::sigmoid_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // n->inputs[0] : y_grad
+      // n->inputs[1] : f(x) = sigmoid(x)
+      // ograds[0] : head_grads
+      // f''(x) = f'(x) * (1 - 2*f(x))
+      // NodeEntry{n} : y_grad * f'(x)
+      auto ones = MakeNode("ones_like", n->attrs.name + "_grad_ones", {n->inputs[1]}, nullptr, &n);
+      const std::unordered_map<std::string, std::string> args = {{"scalar", "2.0"}};
+      auto two_y = MakeNode("_mul_scalar", n->attrs.name + "_mul_two", {n->inputs[1]}, &args, &n);
+      auto one_minus_two_y = MakeNode("elemwise_sub", n->attrs.name + "_grad_sub",
+                                    {nnvm::NodeEntry{ones}, nnvm::NodeEntry{two_y}}, nullptr, &n);
+      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "_grad_mul",
+                                    {n->inputs[0], nnvm::NodeEntry{one_minus_two_y}}, nullptr, &n);
+      auto dydx = MakeNode("elemwise_div", n->attrs.name + "_grad_div",
+                           {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
+
+      // when building gradient graph, the backward node of n->inputs[1] will be
+      // added to the graph again, therefore f`(x) will be multiplied
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
+      return ret;
+    });
+
+
 
 DMLC_REGISTER_PARAMETER(HardSigmoidParam);
 MXNET_OPERATOR_REGISTER_UNARY(hard_sigmoid)
@@ -325,10 +371,9 @@ The storage type of ``make_loss`` output depends upon the input storage type:
   })
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    auto p = MakeNode("ones_like", n->attrs.name + "_backward",
-                      &(n->inputs), nullptr, &n);
     std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(MakeNode("ones_like", n->attrs.name + "_backward",
+                     &(n->inputs), nullptr, &n));
     return ret;
   });
 
@@ -356,11 +401,10 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
-      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+      std::vector<nnvm::NodeEntry> lhs = MakeGradNode("_backward_copy", n, ograds,
                               std::unordered_map<std::string, std::string>());
-      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
-                         {n->inputs[1]}, nullptr, &n);
-      lhs.emplace_back(ng, 0, 0);
+      lhs.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n));
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
@@ -495,11 +539,10 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
-      auto lhs = MakeGradNode("_backward_copy", n, ograds,
+      std::vector<nnvm::NodeEntry> lhs = MakeGradNode("_backward_copy", n, ograds,
                               std::unordered_map<std::string, std::string>());
-      auto ng = MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
-                         {n->inputs[1]}, nullptr, &n);
-      lhs.emplace_back(ng, 0, 0);
+      lhs.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                         {n->inputs[1]}, nullptr, &n));
       return lhs;
     })
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
@@ -674,7 +717,38 @@ Example::
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_reciprocal)
 .set_attr<FCompute>("FCompute<cpu>",
-  ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::reciprocal_grad> >);
+  ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::reciprocal_grad> >)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy
+    // inputs[1]: x
+    // f(x) = y = 1/x
+    // f'(x) = -1/x^2
+    // f''(x) = 2/x^3 = -2 * (f'(x) * f(x))
+
+    const std::unordered_map<std::string, std::string> args = {{"scalar", "-2.0"}};
+
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
+                         {dydx_mul_dldy, n->inputs[0]}, nullptr, &n);
+    auto fx = MakeNode("reciprocal", n->attrs.name + "_fx",
+                       {n->inputs[1]}, nullptr, &n);
+
+    auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
+                               {dydx_mul_dldy, nnvm::NodeEntry{fx}}, nullptr, &n);
+
+    auto d2ydx2 = MakeNode("_mul_scalar", n->attrs.name + "_d2ydx2",
+                           {nnvm::NodeEntry{d2ydx2_mid}}, &args, &n);
+
+    std::vector<nnvm::NodeEntry> ret;
+
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                             {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
+                             {ograds[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n));
+    return ret;
+});
 
 // abs
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(abs, cpu, mshadow_op::abs)
@@ -693,7 +767,26 @@ The storage type of ``abs`` output depends upon the input storage type:
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_abs"});
 
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_abs, unary_bwd<mshadow_op::sign>);
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_abs, unary_bwd<mshadow_op::sign>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: dL/dxgrad
+      // inputs[0]: dL/dy
+      // inputs[1]: x
+      // f(x) -> abs(x)
+      // f'(x) = 1 if x > 0 else -1
+      // f''(x) = 0
+      auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
+                           {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry(dydx)}, nullptr, &n));
+      ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_grad_grad_in",
+                                {n->inputs[1]}, nullptr, &n));
+      return ret;
+    });
+
 
 // sign
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sign, cpu, mshadow_op::sign)
@@ -829,6 +922,26 @@ The storage type of ``fix`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // square
+#if MSHADOW_USE_MKL == 1
+MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(square, cpu, mshadow_op::square, mkl_func::square)
+.describe(R"code(Returns element-wise squared value of the input.
+
+.. math::
+   square(x) = x^2
+
+Example::
+
+   square([2, 3, 4]) = [4, 9, 16]
+
+The storage type of ``square`` output depends upon the input storage type:
+
+   - square(default) = default
+   - square(row_sparse) = row_sparse
+   - square(csr) = csr
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
+#else
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(square, cpu, mshadow_op::square)
 .describe(R"code(Returns element-wise squared value of the input.
 
@@ -847,6 +960,7 @@ The storage type of ``square`` output depends upon the input storage type:
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
+#endif
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_square,
                                                unary_bwd<mshadow_op::square_grad>);
@@ -926,8 +1040,13 @@ Example::
    erf([0, -1., 10.]) = [0., -0.8427, 1.]
 
 )code" ADD_FILELINE)
+#if MSHADOW_USE_MKL == 1
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::MKL_Compute<mshadow_op::erf, mkl_func::erf>)
+#else
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erf>)
+#endif    // MSHADOW_USE_MKL == 1
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erf"});
+
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
 .set_attr<FCompute>("FCompute<cpu>",
@@ -970,6 +1089,23 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
                       unary_bwd<mshadow_op::reciprocal_cube_root_grad>>);
 
 // exp
+#if MSHADOW_USE_MKL == 1
+MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(exp, cpu, mshadow_op::exp, mkl_func::exp)
+MXNET_ADD_SPARSE_OP_ALIAS(exp)
+.describe(R"code(Returns element-wise exponential value of the input.
+
+.. math::
+   exp(x) = e^x \approx 2.718^x
+
+Example::
+
+   exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
+
+The storage type of ``exp`` output is always dense
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
+#else
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(exp, cpu, mshadow_op::exp)
 MXNET_ADD_SPARSE_OP_ALIAS(exp)
 .describe(R"code(Returns element-wise exponential value of the input.
@@ -985,6 +1121,7 @@ The storage type of ``exp`` output is always dense
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
+#endif
 
 // log
 MXNET_OPERATOR_REGISTER_UNARY(log)
@@ -996,7 +1133,11 @@ The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 The storage type of ``log`` output is always dense
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::LogCompute<cpu, mshadow_op::log>)
+#if MSHADOW_USE_MKL == 1
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::MKL_Compute<mshadow_op::log, mkl_func::log>)
+#else
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::log>)
+#endif    // MSHADOW_USE_MKL == 1
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
 // log10
@@ -1024,13 +1165,89 @@ The storage type of ``log2`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log2"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
-                                                  unary_bwd<mshadow_op::log_grad>);
+                                                  unary_bwd<mshadow_op::log_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy
+    // inputs[1]: x
+    // f(x) = y = log(x)
+    // f'(x) = 1/x
+    // f''(x) = -1 * (f'(x) * f'(x))
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto dlogx = MakeNode("reciprocal", n->attrs.name + "_dlogx",
+                            {n->inputs[1]}, nullptr, &n);
+    auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
+                            {dydx_mul_dldy, nnvm::NodeEntry{dlogx}}, nullptr, &n);
+    auto d2ydx2 = MakeNode("negative", n->attrs.name + "_d2ydx2",
+                        {nnvm::NodeEntry{d2ydx2_mid}}, nullptr, &n);
+
+    std::vector<nnvm::NodeEntry> ret;
+
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                             {ograds[0], nnvm::NodeEntry{dlogx}}, nullptr, &n));
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
+                             {ograds[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n));
+    return ret;
+  });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
-                                                  unary_bwd<mshadow_op::log10_grad>);
+                                                  unary_bwd<mshadow_op::log10_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy
+    // inputs[1]: x
+    // f(x) = y = log10(x)
+    // f'(x) = 1 / (log(10) * x)
+    // f''(x) = -1 * (f'(x) * 1/x)
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
+                            {n->inputs[0]}, nullptr, &n);
+    auto dlogx = MakeNode("reciprocal", n->attrs.name + "_dlogx",
+                            {n->inputs[1]}, nullptr, &n);
+    auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
+                            {dydx_mul_dldy, nnvm::NodeEntry{dlogx}}, nullptr, &n);
+    auto d2ydx2 = MakeNode("negative", n->attrs.name + "_d2ydx2",
+                        {nnvm::NodeEntry{d2ydx2_mid}}, nullptr, &n);
+
+    std::vector<nnvm::NodeEntry> ret;
+
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                             {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
+                             {ograds[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n));
+    return ret;
+  });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
-                                                  unary_bwd<mshadow_op::log2_grad>);
+                                                  unary_bwd<mshadow_op::log2_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy
+    // inputs[1]: x
+    // f(x) = y = log2(x)
+    // f'(x) = 1 / (log(2) * x)
+    // f''(x) = -1 * (f'(x) * 1/x)
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
+                            {n->inputs[0]}, nullptr, &n);
+    auto dlogx = MakeNode("reciprocal", n->attrs.name + "_dlogx",
+                            {n->inputs[1]}, nullptr, &n);
+    auto d2ydx2_mid = MakeNode("elemwise_mul", n->attrs.name + "_d2ydx2_mid",
+                            {dydx_mul_dldy, nnvm::NodeEntry{dlogx}}, nullptr, &n);
+    auto d2ydx2 = MakeNode("negative", n->attrs.name + "_d2ydx2",
+                        {nnvm::NodeEntry{d2ydx2_mid}}, nullptr, &n);
+
+    std::vector<nnvm::NodeEntry> ret;
+
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                             {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+    ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_inp",
+                             {ograds[0], nnvm::NodeEntry{d2ydx2}}, nullptr, &n));
+    return ret;
+  });
 
 // log1p
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(log1p, cpu, mshadow_op::log1p)

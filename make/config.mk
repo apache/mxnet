@@ -224,6 +224,9 @@ USE_CPP_PACKAGE = 0
 # Note: the size of each dimension is still bounded by INT32_MAX
 USE_INT64_TENSOR_SIZE = 0
 
+# Python executable. Needed for cython target
+PYTHON = python
+
 #----------------------------
 # plugins
 #----------------------------

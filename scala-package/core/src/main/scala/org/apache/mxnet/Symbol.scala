@@ -293,7 +293,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
       val (argShapes, _, _) = inferShapeImpl(partial = true, keys, indPtr, values)
       val argNames = listArguments()
       val unknown = (argNames zip argShapes).map { case (name, shape) =>
-        val shapeIsNone = if (NumpyScope.isNumpyCompatible) {
+        val shapeIsNone = if (NumpyScope.isNumpyShape) {
           shape == null || shape.toVector.contains(-1)
         } else {
           shape == null || shape.toVector.contains(0)

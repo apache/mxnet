@@ -262,10 +262,11 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
-      // We also need to modify the layout on the original weight array. The
-      // data conversion happens after the weight array is used.
+      // We also need to modify the layout on the original weight array.
+      // Don't switch below sequence because naive engine will executes
+      // pushAsync synchronously.
       const_cast<NDArray&>(weight).MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
+      weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
     } else {
       weight_mem = weight.GetMKLDNNData();
       CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
@@ -296,10 +297,11 @@ static void MKLDNNDeconvFwdBiasPostProcess(const DeconvolutionParam& param,
     typedef float DType;
     Stream<cpu> *s = ctx.get_stream<cpu>();
     Tensor<cpu, 1, DType> b = bias.data().get<cpu, 1, DType>(s);
-    // If the output data is stored in a special MKLDNN format, data()
-    // automatically converts its format to the default format.
+    // The output data is stored in a special MKLDNN format,
+    // converts its format to the default format.
     // Unfortunately, MKLDNN doesn't support broadcast.
-    Tensor<cpu, 4, DType> out_cpu = out_data[deconv::kOut].data().get<cpu, 4, DType>(s);
+    auto out_data_def = out_data[deconv::kOut].Reorder2Default();
+    Tensor<cpu, 4, DType> out_cpu = out_data_def.data().get<cpu, 4, DType>(s);
     out_cpu += mshadow::expr::broadcast<1>(b, out_cpu.shape_);
   }
 }

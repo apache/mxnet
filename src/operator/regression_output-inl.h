@@ -272,7 +272,7 @@ struct RegressionOpGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(n->inputs[reg_enum::kLabel]);
-    heads.emplace_back(nnvm::NodeEntry{n, reg_enum::kOut, 0});
+    heads.emplace_back(n, reg_enum::kOut, 0);
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };

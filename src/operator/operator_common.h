@@ -397,7 +397,7 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
                     &inputs, &dict, &n);
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+    ret.emplace_back(p, i, 0);
   }
   return ret;
 }
@@ -414,8 +414,7 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
     } else {
       os << n->attrs.name << "_in" << i << "_backward";
     }
-    auto p = MakeNode("zeros_like", os.str(), {n->inputs[i]}, nullptr, &n);
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(MakeNode("zeros_like", os.str(), {n->inputs[i]}, nullptr, &n));
   }
   return ret;
 }
@@ -425,10 +424,13 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
 inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
   static const auto zero_op = nnvm::Op::Get("_zeros");
   static const auto zero_like_op = nnvm::Op::Get("zeros_like");
-  if (!ograds.size()) return false;
+  if (ograds.empty())
+    return false;
   for (const auto& grad : ograds) {
-    if (!grad.node) return false;
-    if (grad.node->op() != zero_op && grad.node->op() != zero_like_op ) return false;
+    if (!grad.node)
+      return false;
+    if (grad.node->op() != zero_op && grad.node->op() != zero_like_op )
+      return false;
   }
   return true;
 }
@@ -440,14 +442,15 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
     const std::unordered_map<std::string, std::string>& dict) {
-  if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+  if (CheckGradAllZero(ograds))
+    return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
   p->inputs.insert(p->inputs.end(), ograds.begin(), ograds.end());
   p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+    ret.emplace_back(p, i, 0);
   }
   return ret;
 }

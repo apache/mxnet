@@ -128,6 +128,9 @@ struct ProfileStat {
   /*! \brief operation categories (comma-delimited) */
   profile_stat_string categories_;
 
+  /*! \brief whether to add this stat to AggregateStats */
+  bool enable_aggregate_ = true;
+
   /* !\brief Process id */
   size_t process_id_ = current_process_id();
 
@@ -788,6 +791,13 @@ struct ProfileTask : public ProfileDuration {
   }
 
   /*!
+   * \brief Set the domain
+   */
+  void setDomain(ProfileDomain* domain) {
+    domain_ = domain;
+  }
+
+  /*!
    * \brief Start the profiling scope
    */
   void start() override {
@@ -806,6 +816,13 @@ struct ProfileTask : public ProfileDuration {
   }
 
   ProfileObjectType type() const override { return kTask; }
+
+  /*!
+   * \brief Whether to add stat to AggregateStats
+   */
+  void enableAggregateStats(bool enabled = true) {
+    enable_aggregate_ = enabled;
+  }
 
  protected:
   /*!
@@ -831,6 +848,7 @@ struct ProfileTask : public ProfileDuration {
   inline void SendStat() {
     Profiler::Get()->AddNewProfileStat<ProfileTaskStat>([this](ProfileTaskStat *stat) {
       stat->categories_.set(domain_->name());
+      stat->enable_aggregate_ = enable_aggregate_;
     }, name_.c_str(), start_time_, ProfileStat::NowInMicrosec());
   }
   /*! \brief Task name */
@@ -843,6 +861,8 @@ struct ProfileTask : public ProfileDuration {
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneTask> vtune_task_);
   /*! \brief NVTX duration object */
   NVTX_ONLY_CODE(std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_);
+  /*! \brief whether to add this stat to AggregateStats */
+  bool enable_aggregate_ = true;
 
  protected:
   /*! \brief Task's start tick */
@@ -1098,6 +1118,8 @@ struct ProfileMarker {
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneInstantMarker> vtune_instant_marker_);
 };
 
+static ProfileDomain custom_op_domain("Custom Operator");
+
 /*!
  * \brief Operator profiler object. Logs as both an independent event and a task in
  * the operator domain
@@ -1149,8 +1171,16 @@ struct ProfileOperator : public ProfileEvent {
     : ProfileEvent(name)
       , as_task_(name, &domain_)
       , name_(name)
-      , attributes_(attributes) {
-    SetCategories(domain_.name());
+      , attributes_(attributes)
+      , profiling_(!IsDeprecatedOperator(name)) {
+    if (IsSubOperatorOfCustom(name)) {
+      as_task_.setDomain(&custom_op_domain);
+      SetCategories(custom_op_domain.name());
+    } else {
+      SetCategories(domain_.name());
+    }
+    // make as_task_ not to add stat to AggregateStats; otherwise we will add twice
+    as_task_.enableAggregateStats(false);
   }
   /*!
    * \brief Start the profiling scope
@@ -1160,15 +1190,19 @@ struct ProfileOperator : public ProfileEvent {
   void start(mxnet::Context::DeviceType dev_type, uint32_t dev_id) {
     dev_type_ = dev_type;
     dev_id_ = dev_id;
-    ProfileEvent::start();
-    as_task_.start();
+    if (profiling_) {
+      ProfileEvent::start();
+      as_task_.start();
+    }
   }
   /*!
    * \brief Stop the profiling scope
    */
   void stop() override {
-    as_task_.stop();
-    ProfileEvent::stop();
+    if (profiling_) {
+      as_task_.stop();
+      ProfileEvent::stop();
+    }
   }
 
   /*!
@@ -1193,7 +1227,11 @@ struct ProfileOperator : public ProfileEvent {
       if (attributes) {
         name_.append(attributes->to_string().c_str());
       }
-      categories_.set("operator");
+      if (IsSubOperatorOfCustom(name)) {
+        categories_.set(custom_op_domain.name());
+      } else {
+        categories_.set("operator");
+      }
       items_[kStart].timestamp_ = start_time;
       items_[kStop].timestamp_ = stop_time;
     }
@@ -1213,6 +1251,20 @@ struct ProfileOperator : public ProfileEvent {
       start_time_, ProfileStat::NowInMicrosec(),
       attributes_.get());
   }
+  /*!
+   * \brief Check if this operator is no longer profiled
+   * Notice that this operator may still be used for e.g synchronization
+   */
+  inline static bool IsDeprecatedOperator(const char* name) {
+    return strcmp(name, "CustomOperatorWait") == 0 ||
+           strcmp(name, "Custom") == 0 || strcmp(name, "_backward_Custom") == 0;
+  }
+  /*!
+   * \brief Check if this operator a sub-operator of a custom operator
+   */
+  inline static bool IsSubOperatorOfCustom(const char* name) {
+    return strstr(name, "::");
+  }
   /*! \brief Also log the operator as a task in the operator domain */
   ProfileTask as_task_;
   /* !\brief Operator name */
@@ -1225,6 +1277,8 @@ struct ProfileOperator : public ProfileEvent {
   static ProfileDomain domain_;
   /*! \brief Optional operator attributes */
   std::unique_ptr<Attributes> attributes_;
+  /*! \brief Whether to profile or not */
+  const bool profiling_;
 };
 
 /*

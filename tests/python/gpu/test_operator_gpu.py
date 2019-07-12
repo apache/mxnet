@@ -1130,6 +1130,20 @@ def test_pooling_full_2d():
 
 
 @with_seed()
+def test_flatten_slice_after_conv():
+    ctx_list = []
+
+    data = mx.sym.Variable('conv_data')
+    conv = mx.symbol.Convolution(data=data, name='conv', num_filter=16, kernel=(3,3), stride=(1,1))
+    flatten = mx.symbol.flatten(data=conv)
+    slice_sym = mx.symbol.slice(data=flatten, begin=0, end=1)
+
+    ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}},
+                {'ctx': mx.cpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}}]
+    check_consistency(slice_sym, ctx_list)
+
+
+@with_seed()
 def test_global_pooling():
     def test_1d_pooling(pool_type, p_value=2):
         data = (2, 3, 20)
@@ -1633,6 +1647,24 @@ def test_deformable_psroipooling_with_type():
                  'deformable_psroipool_trans': (2, 4, 3, 3),
                  'type_dict': {'deformable_psroipool_data': np.float16, 'deformable_psroipool_rois': np.float16,
                                'deformable_psroipool_trans': np.float16}},
+                {'ctx': mx.cpu(0),
+                 'deformable_psroipool_data': (1, 18, 14, 14),
+                 'deformable_psroipool_rois': (2, 5),
+                 'deformable_psroipool_trans': (2, 4, 3, 3),
+                 'type_dict': {'deformable_psroipool_data': np.float64, 'deformable_psroipool_rois': np.float64,
+                               'deformable_psroipool_trans': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'deformable_psroipool_data': (1, 18, 14, 14),
+                 'deformable_psroipool_rois': (2, 5),
+                 'deformable_psroipool_trans': (2, 4, 3, 3),
+                 'type_dict': {'deformable_psroipool_data': np.float32, 'deformable_psroipool_rois': np.float32,
+                               'deformable_psroipool_trans': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'deformable_psroipool_data': (1, 18, 14, 14),
+                 'deformable_psroipool_rois': (2, 5),
+                 'deformable_psroipool_trans': (2, 4, 3, 3),
+                 'type_dict': {'deformable_psroipool_data': np.float16, 'deformable_psroipool_rois': np.float16,
+                               'deformable_psroipool_trans': np.float16}},
                 ]
 
     check_consistency(sym, ctx_list, scale=0.1, tol=tol,
@@ -1656,10 +1688,14 @@ def test_deformable_convolution_with_type():
                  'deformable_conv_data': (2, 2, 10, 10),
                  'deformable_conv_offset': (2, 18, 8, 8),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 10, 10),
-                #  'deformable_conv_offset': (2, 18, 8, 8),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_conv_offset': np.float16}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 10, 10),
+                 'deformable_conv_offset': (2, 18, 8, 8),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 10, 10),
+                 'deformable_conv_offset': (2, 18, 8, 8),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
 
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
@@ -1676,14 +1712,22 @@ def test_deformable_convolution_options():
     tol = {np.dtype(np.float32): 1e-1,
            np.dtype(np.float64): 1e-3}
     # 2D convolution
+    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
 
     # Pad > 0
-    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 7, 7),
                  'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
                 {'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 7, 7),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 7, 7),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 7, 7),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
@@ -1692,12 +1736,19 @@ def test_deformable_convolution_options():
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Stride > 1
-    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
                 {'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
@@ -1706,12 +1757,19 @@ def test_deformable_convolution_options():
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Dilate > 1
-    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
                 {'ctx': mx.gpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 18, 3, 3),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
@@ -1720,7 +1778,6 @@ def test_deformable_convolution_options():
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
 
     # Deformable group > 1
-    # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 36, 5, 5),
@@ -1729,13 +1786,18 @@ def test_deformable_convolution_options():
                  'deformable_conv_data': (2, 2, 7, 7),
                  'deformable_conv_offset': (2, 36, 5, 5),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
-                # {'ctx': mx.gpu(0),
-                #  'deformable_conv_data': (2, 2, 7, 7),
-                #  'deformable_conv_offset': (2, 36, 5, 5),
-                #  'type_dict': {'deformable_conv_data': np.float16, 'deformable_offset': np.float16}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 36, 5, 5),
+                 'type_dict': {'deformable_conv_data': np.float64, 'deformable_conv_offset': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'deformable_conv_data': (2, 2, 7, 7),
+                 'deformable_conv_offset': (2, 36, 5, 5),
+                 'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2,
-                                               name='deformable_conv')
+    sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
+    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -1964,14 +2026,14 @@ def test_multi_proposal_op():
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
     os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.np_compat(active=True):
+    with mx.np_shape(active=True):
         a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
         b = mx.nd.array([],ctx=mx.gpu(0))
         c = (a / b).asnumpy()
 
 def kernel_error_check_symbolic():
     os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.np_compat(active=True):
+    with mx.np_shape(active=True):
         a = mx.sym.Variable('a')
         b = mx.sym.Variable('b')
         c = a / b
@@ -2200,6 +2262,54 @@ def test_bulking():
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0
+
+def math_log(shape, dtype, check_value):
+    np_x = np.random.rand(*tuple(shape))
+    x = mx.nd.array(np_x, dtype=dtype)
+    y = mx.nd.log(data=x)
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        y_ = mx.nd.log(data=x_)
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def math_erf(shape, dtype, check_value):
+    np_x = np.random.rand(*tuple(shape))
+    x = mx.nd.array(np_x, dtype=dtype)
+    y = mx.nd.erf(data=x)
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        y_ = mx.nd.erf(data=x_)
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def math_square(shape, dtype, check_value):
+    np_x = np.random.rand(*tuple(shape))
+    x = mx.nd.array(np_x, dtype=dtype)
+    y = mx.nd.square(data=x)
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        y_ = mx.nd.square(data=x_)
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def run_math(op, shape, dtype="float32", check_value=True):
+    run_num = 10
+    for i in range(run_num):
+        if op == 'log':
+            math_log(shape=shape, dtype=dtype, check_value=check_value)
+        elif op == 'erf':
+            math_erf(shape=shape, dtype=dtype, check_value=check_value)
+        elif op == 'square':
+            math_square(shape=shape, dtype=dtype, check_value=check_value)
+
+@with_seed()
+def test_math():
+    ops = ['log', 'erf', 'square']
+    check_value= True
+    shape_lst = [[1000], [100,1000], [10,100,100], [10,100,100,100]] 
+    dtypes = ["float32", "float64"]
+    for shape in shape_lst:
+        for dtype in dtypes:
+            for op in ops:
+                run_math(op, shape, dtype, check_value=check_value)
 
 if __name__ == '__main__':
     import nose

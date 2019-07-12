@@ -21,14 +21,14 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class NumpyScopeSuite extends FunSuite with BeforeAndAfterAll {
   test("compatible") {
-    NumpyScope.enableNumpyCompatible.withScope {
-      assert(NumpyScope.isNumpyCompatible === true)
+    NumpyScope.enableNumpyShape.withScope {
+      assert(NumpyScope.isNumpyShape === true)
     }
   }
 
   test("incompatible") {
-    NumpyScope.disableNumpyCompatible.withScope {
-      assert(NumpyScope.isNumpyCompatible === false)
+    NumpyScope.disableNumpyShape.withScope {
+      assert(NumpyScope.isNumpyShape === false)
     }
   }
 }

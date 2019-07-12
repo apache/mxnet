@@ -26,7 +26,8 @@ import warnings
 import re
 from collections import OrderedDict
 
-from ..base import mx_real_t
+
+from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer
 from ..symbol import Symbol
 from ..ndarray import NDArray
@@ -354,7 +355,7 @@ class Block(object):
                               'save_parameters may resolve this error.'%e.message)
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
-                        ignore_extra=False):
+                        ignore_extra=False, cast_dtype=False, dtype_source='current'):
         """Load parameters from file previously saved by `save_parameters`.
 
         Parameters
@@ -368,7 +369,13 @@ class Block(object):
         ignore_extra : bool, default False
             Whether to silently ignore parameters from the file that are not
             present in this Block.
-
+        cast_dtype : bool, default False
+            Cast the data type of the NDArray loaded from the checkpoint to the dtype
+            provided by the Parameter if any.
+        dtype_source : str, default 'current'
+            must be in {'current', 'saved'}
+            Only valid if cast_dtype=True, specify the source of the dtype for casting
+            the parameters
         References
         ----------
         `Saving and Loading Gluon Models \
@@ -383,7 +390,8 @@ class Block(object):
             # legacy loading
             del loaded
             self.collect_params().load(
-                filename, ctx, allow_missing, ignore_extra, self.prefix)
+                filename, ctx, allow_missing, ignore_extra, self.prefix,
+                cast_dtype=cast_dtype, dtype_source=dtype_source)
             return
 
         if not allow_missing:
@@ -399,7 +407,7 @@ class Block(object):
                     "which contains parameters %s. Set ignore_extra=True to ignore. "%(
                         name, filename, _brief_print_list(self._params.keys())))
             if name in params:
-                params[name]._load_init(loaded[name], ctx)
+                params[name]._load_init(loaded[name], ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
 
     def load_params(self, filename, ctx=None, allow_missing=False,
                     ignore_extra=False):
@@ -1018,10 +1026,15 @@ class SymbolBlock(HybridBlock):
         sym = symbol.load(symbol_file)
         if isinstance(input_names, str):
             input_names = [input_names]
-        inputs = [symbol.var(i) for i in input_names]
+        if param_file is None:
+            # Get a valid type inference by using fp32
+            inputs = [symbol.var(i, dtype=mx_real_t) for i in input_names]
+        else:
+            # Do not specify type, rely on saved params type instead
+            inputs = [symbol.var(i) for i in input_names]
         ret = SymbolBlock(sym, inputs)
         if param_file is not None:
-            ret.collect_params().load(param_file, ctx=ctx)
+            ret.collect_params().load(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
         return ret
 
     def __repr__(self):
@@ -1153,7 +1166,11 @@ def _infer_param_types(in_params, out_params, arg_params, aux_params, default_dt
     # Try to infer types of other parameters.
     if can_infer_input_type:
         params = {k:v for k, v in zip(input_sym_names, input_sym_arg_types)}
-        arg_types, _, aux_types = out_params.infer_type(**params)
+        try:
+            arg_types, _, aux_types = out_params.infer_type(**params)
+        except MXNetError:
+            # Cannot infer type with current input
+            arg_types, aux_types = None, None
 
     if arg_types is None or len(arg_types) != len(arg_params):
         arg_types = []

@@ -51,11 +51,12 @@ download () {
     (($? != 0)) && exit 1 || return 0
 }
 
+# MNIST dataset from: http://yann.lecun.com/exdb/mnist/
 FILES=(
-    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz"
-    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz"
-    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz"
-    "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz"
+    "http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz"
+    "http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz"
+    "http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz"
+    "http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz"
     "http://data.mxnet.io/data/mnist_train.csv.gz")
 
 for FILE in ${FILES[@]}; do

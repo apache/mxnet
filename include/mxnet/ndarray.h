@@ -82,7 +82,8 @@ class MKLDNNMemory;
 class NDArray {
  public:
   /*! \brief default constructor */
-  NDArray() {
+  NDArray()
+    : entry_(nullptr) {
   }
   /*!
    * \brief constructs a new dynamic NDArray
@@ -94,8 +95,10 @@ class NDArray {
   NDArray(const mxnet::TShape &shape, Context ctx,
           bool delay_alloc = false, int dtype = mshadow::default_type_flag)
       : ptr_(std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype)),
-        shape_(shape), dtype_(dtype), storage_type_(kDefaultStorage),
-        entry_({nullptr, 0, 0}) {
+        shape_(shape),
+        dtype_(dtype),
+        storage_type_(kDefaultStorage),
+        entry_(nullptr) {
   }
   /*! \brief constructor for NDArray with storage type
    */
@@ -109,11 +112,12 @@ class NDArray {
    * \param ctx context of NDArray
    * \param dtype data type of this ndarray
    */
-  explicit NDArray(Context ctx, int dtype = mshadow::default_type_flag) {
-    ptr_ = std::make_shared<Chunk>(mxnet::TShape(mshadow::Shape1(0)), ctx, true, dtype);
-    dtype_ = dtype;
-    storage_type_ = kDefaultStorage;
-    entry_ = {nullptr, 0, 0};
+  explicit NDArray(Context ctx, int dtype = mshadow::default_type_flag)
+      : ptr_(std::make_shared<Chunk>(mxnet::TShape(mshadow::Shape1(0)), ctx, true, dtype)),
+        shape_(),
+        dtype_(dtype),
+        storage_type_(kDefaultStorage),
+        entry_(nullptr) {
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
@@ -123,9 +127,11 @@ class NDArray {
    * \param dev_id the device id this tensor sits at
    */
   NDArray(const TBlob &data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(data, dev_id)), shape_(data.shape_),
-        dtype_(data.type_flag_), storage_type_(kDefaultStorage),
-        entry_({nullptr, 0, 0}) {
+      : ptr_(std::make_shared<Chunk>(data, dev_id)),
+        shape_(data.shape_),
+        dtype_(data.type_flag_),
+        storage_type_(kDefaultStorage),
+        entry_(nullptr) {
   }
 
   /*!
@@ -137,20 +143,22 @@ class NDArray {
    * \param deleter the function pointer of custom deleter
    */
   NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter)
-      : ptr_(new Chunk(data, dev_id),
-        [deleter](Chunk *p) {
-          deleter();    // call custom deleter
-          delete p;     // delete Chunk object
+      : ptr_(new Chunk(data, dev_id), [deleter](Chunk *p) {
+            deleter();    // call custom deleter
+            delete p;     // delete Chunk object
         }),
         shape_(data.shape_),
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
-        entry_({nullptr, 0, 0}) {
+        entry_(nullptr) {
   }
 
   /*! \brief create ndarray from shared memory */
   NDArray(int shared_pid, int shared_id, const mxnet::TShape& shape, int dtype)
-      : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)), shape_(shape),
-        dtype_(dtype), storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
+      : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)),
+        shape_(shape),
+        dtype_(dtype),
+        storage_type_(kDefaultStorage),
+        entry_(nullptr) {
   }
 
   /*!
@@ -165,8 +173,11 @@ class NDArray {
    */
   NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape,
           const TBlob &data, const std::vector<TBlob> &aux_data, int dev_id)
-      : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)), shape_(shape),
-        dtype_(data.type_flag_), storage_type_(stype), entry_({nullptr, 0, 0}) {
+      : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id)),
+        shape_(shape),
+        dtype_(data.type_flag_),
+        storage_type_(stype),
+        entry_(nullptr) {
   }
   /*!
    * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
@@ -642,7 +653,7 @@ class NDArray {
    */
   NDArray Detach() const {
     NDArray ret(*this);
-    ret.entry_ = nnvm::NodeEntry{nullptr, 0, 0};
+    ret.entry_ = nnvm::NodeEntry(nullptr);
     return ret;
   }
 

@@ -34,7 +34,7 @@ import numpy as _numpy
 
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
-from ..base import mx_uint, py_str, string_types, integer_types, mx_int, is_np_compat
+from ..base import mx_uint, py_str, string_types, integer_types, mx_int
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
@@ -45,6 +45,7 @@ from ..executor import Executor
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
+from ..util import is_np_shape
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
@@ -1078,7 +1079,7 @@ class Symbol(SymbolBase):
                 arg_names = self.list_arguments()
                 unknowns = []
                 for name, shape in zip(arg_names, arg_shapes):
-                    if is_np_compat():
+                    if is_np_shape():
                         shape_is_none = not shape or -1 in shape
                     else:
                         shape_is_none = not shape or 0 in shape

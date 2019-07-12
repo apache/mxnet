@@ -411,11 +411,12 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
-      weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(),
-                              param.conv_param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
       weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_primitive_desc());
+      weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(),
+                              param.conv_param.num_group);
+
     } else {
       weight_mem = weight.GetMKLDNNData();
       CHECK(weight_mem->get_primitive_desc() == fwd->fwd_pd.weights_primitive_desc());

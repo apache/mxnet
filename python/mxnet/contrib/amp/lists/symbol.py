@@ -95,6 +95,7 @@ FP16_FP32_FUNCS = [
     '_contrib_gradientmultiplier',
     '_contrib_group_adagrad_update',
     '_contrib_ifft',
+    '_contrib_index_array',
     '_contrib_index_copy',
     '_contrib_quadratic',
     '_contrib_quantize',
@@ -339,7 +340,6 @@ FP16_FP32_FUNCS = [
     'take',
     'tanh',
     'tile',
-    'topk',
     'transpose',
     'trunc',
     'uniform',
@@ -462,6 +462,7 @@ FP32_FUNCS = [
     '_sparse_norm',
     '_sparse_rsqrt',
     'argsort',
+    'topk',
 
     # Neural network
     'SoftmaxOutput',

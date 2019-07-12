@@ -37,7 +37,7 @@
   <properties>
     <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
     <ARTIFACT_ID>mxnet-full_2.11-${platform}-${flavor}</ARTIFACT_ID>
-    <revision>1.5.0-SNAPSHOT</revision>
+    <revision>${base.revision}-SNAPSHOT</revision>
     <repositoryId>apache.snapshots.https</repositoryId>
     <deploy_asc_types/>
     <deploy_asc_classifers/>
@@ -56,13 +56,13 @@
     <profile>
       <id>staging</id>
       <properties>
-        <revision>1.5.0</revision>
+        <revision>${base.revision}</revision>
         <repositoryId>apache.releases.https</repositoryId>
-        <repo_url>https://repository.apache.org/content/repositories/staging</repo_url>
-        <deploy_asc_types>jar.asc,asc,asc</deploy_asc_types>
-        <deploy_asc_classifers>,sources.jar,javadoc.jar</deploy_asc_classifers>
+        <repo_url>https://repository.apache.org/service/local/staging/deploy/maven2</repo_url>
+        <deploy_asc_types>jar.asc,asc,asc,pom.asc</deploy_asc_types>
+        <deploy_asc_classifers>,sources.jar,javadoc.jar,</deploy_asc_classifers>
         <deploy_asc_files>
-          ../assembly/target/mxnet-full_2.11-INTERNAL.jar.asc,../assembly/target/mxnet-full_2.11-INTERNAL-src.jar.asc,../assembly/target/mxnet-full_2.11-INTERNAL-bundle.jar.asc
+          ../assembly/target/mxnet-full_2.11-INTERNAL.jar.asc,../assembly/target/mxnet-full_2.11-INTERNAL-src.jar.asc,../assembly/target/mxnet-full_2.11-INTERNAL-bundle.jar.asc,../externalPom/target/deploy.xml.asc
         </deploy_asc_files>
       </properties>
     </profile>
@@ -86,42 +86,6 @@
       </plugin>
 
       <plugin>
-        <groupId>com.google.code.maven-replacer-plugin</groupId>
-        <artifactId>replacer</artifactId>
-        <version>1.5.3</version>
-        <executions>
-          <execution>
-            <phase>deploy</phase>
-            <goals>
-              <goal>replace</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <file>${basedir}/src/main/deploy/deploy.xml</file>
-          <outputFile>${project.build.directory}/deploy.xml</outputFile>
-          <replacements>
-            <replacement>
-              <token>DESCRIPTION</token>
-              <value>${project.description}</value>
-            </replacement>
-            <replacement>
-              <token>ARTIFACT_ID</token>
-              <value>${ARTIFACT_ID}</value>
-            </replacement>
-            <replacement>
-              <token>PROJECT_VERSION</token>
-              <value>${project.version}</value>
-            </replacement>
-            <replacement>
-              <token>SCALA_VERSION</token>
-              <value>${scala.version}</value>
-            </replacement>
-          </replacements>
-        </configuration>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
         <executions>
@@ -140,7 +104,7 @@
               <artifactId>${ARTIFACT_ID}</artifactId>
               <version>${project.version}</version>
               <packaging>jar</packaging>
-              <pomFile>${project.build.directory}/deploy.xml</pomFile>
+              <pomFile>${rootdir}/externalPom/target/deploy.xml</pomFile>
               <file>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL.jar</file>
               <sources>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL-src.jar</sources>
               <javadoc>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL-bundle.jar</javadoc>

@@ -75,6 +75,7 @@ In the rest of this document, we list routines provided by the `ndarray.contrib`
     isinf
     isfinite
     isnan
+    index_array
     index_copy
     getnnz
     edge_id

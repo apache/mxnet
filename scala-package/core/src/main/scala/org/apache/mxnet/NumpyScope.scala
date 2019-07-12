@@ -25,24 +25,24 @@ import org.apache.mxnet.Base._
   * is introduced first to support zero-dim and zero-size tensors as in NumPy.
   */
 object NumpyScope {
-  def setNumpyCompatible(isNpComp: Boolean): Boolean = {
+  def setNumpyShape(isNpComp: Boolean): Boolean = {
     val prev = new RefInt()
-    checkCall(_LIB.mxSetIsNumpyCompatible(if (isNpComp) 1 else 0, prev))
+    checkCall(_LIB.mxSetIsNumpyShape(if (isNpComp) 1 else 0, prev))
     if (prev.value != 0) true else false
   }
 
-  def isNumpyCompatible: Boolean = {
+  def isNumpyShape: Boolean = {
     val curr = new RefInt
-    checkCall(_LIB.mxIsNumpyCompatible(curr))
+    checkCall(_LIB.mxIsNumpyShape(curr))
     if (curr.value != 0) true else false
   }
 
-  def enableNumpyCompatible: NumpyScope = {
+  def enableNumpyShape: NumpyScope = {
     new NumpyScope(true)
   }
 
 
-  def disableNumpyCompatible: NumpyScope = {
+  def disableNumpyShape: NumpyScope = {
     new NumpyScope(false)
   }
 }
@@ -51,12 +51,12 @@ class NumpyScope(var isCompatible: Boolean) {
   private var prev: Boolean = false
 
   def withScope[T](body: => T): T = {
-    prev = NumpyScope.setNumpyCompatible(isCompatible)
+    prev = NumpyScope.setNumpyShape(isCompatible)
     try {
       body
     } finally {
       if (prev != isCompatible) {
-        NumpyScope.setNumpyCompatible(prev)
+        NumpyScope.setNumpyShape(prev)
       }
     }
   }

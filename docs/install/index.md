@@ -26,11 +26,10 @@
    c_plus_plus.md
    centos_setup.md
    download.md
+   install-jetson.md
    java_setup.md
    osx_setup.md
-   raspbian_setup.md
    scala_setup.md
-   tx2_setup.md
    ubuntu_setup.md
    validate_mxnet.md
    windows_setup.md
@@ -767,7 +766,10 @@ To ensure MXNet R package runs with the version of OpenBLAS installed, create a 
 ln -sf /usr/local/opt/openblas/lib/libopenblas.dylib /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
 ```
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
+Note: packages for 3.6.x are not yet available.
+
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/macosx/). The latest is [v3.5.3](https://cran.r-project.org/bin/macosx/R-3.5.3.pkg).
+
 You can [build MXNet-R from source](osx_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -1127,7 +1129,9 @@ To build from source, refer to the <a href="windows_setup.html">MXNet Windows in
 <div class="cpu">
 </br>
 
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/windows/).
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
+
 You can [build MXNet-R from source](windows_setup.html#install-mxnet-package-for-r), or you can use a pre-built binary:
 
 ```r
@@ -1408,7 +1412,16 @@ then running:
   free -m # to verify the swapfile size has been increased
 ```
 
-**Step 2** Install MXNet Python Bindings
+**Step 2** Build cython modules (optional)
+
+```bash
+$ pip install Cython
+$ make cython # You can set the python executable with `PYTHON` flag, e.g., make cython PYTHON=python3
+```
+*MXNet* tries to use the cython modules unless the environment variable `MXNET_ENABLE_CYTHON` is set to `0`. If loading the cython modules fails, the default behavior is falling back to ctypes without any warning. To raise an exception at the failure, set the environment variable `MXNET_ENFORCE_CYTHON` to `1`. See [here](/faq/env_var.html) for more details.
+
+
+**Step 3** Install MXNet Python Bindings
 
 To install Python bindings run the following commands in the MXNet directory:
 
@@ -1435,88 +1448,9 @@ You are now ready to run MXNet on your Raspberry Pi device. You can get started 
 
 <div class="nvidia-jetson">
 
-# Nvidia Jetson TX family
+# NVIDIA Jetson Devices
 
-MXNet supports the Ubuntu Arch64 based operating system so you can run MXNet on NVIDIA Jetson Devices.
-
-These instructions will walk through how to build MXNet for the Pascal based [NVIDIA Jetson TX2](http://www.nvidia.com/object/embedded-systems-dev-kits-modules.html) and install the corresponding python language bindings.
-
-For the purposes of this install guide we will assume that CUDA is already installed on your Jetson device.
-
-**Install MXNet**
-
-Installing MXNet is a two-step process:
-
-1. Build the shared library from the MXNet C++ source code.
-2. Install the supported language-specific packages for MXNet.
-
-**Step 1** Build the Shared Library
-
-You need the following additional dependencies:
-
-- Git (to pull code from GitHub)
-
-- libatlas (for linear algebraic operations)
-
-- libopencv (for computer vision operations)
-
-- python pip (to load relevant python packages for our language bindings)
-
-Install these dependencies using the following commands in any directory:
-
-```
-    sudo apt-get update
-    sudo apt-get -y install git build-essential libatlas-base-dev libopencv-dev graphviz python-pip
-    sudo pip install pip --upgrade
-    sudo pip install setuptools numpy --upgrade
-    sudo pip install graphviz jupyter
-```
-
-Clone the MXNet source code repository using the following `git` command in your home directory:
-```
-    git clone https://github.com/apache/incubator-mxnet.git --recursive
-    cd incubator-mxnet
-```
-
-Edit the Makefile to install the MXNet with CUDA bindings to leverage the GPU on the Jetson:
-```
-    cp make/crosscompile.jetson.mk config.mk
-```
-
-Edit the Mshadow Makefile to ensure MXNet builds with Pascal's hardware level low precision acceleration by editing 3rdparty/mshadow/make/mshadow.mk and adding the following after line 122:
-```
-MSHADOW_CFLAGS += -DMSHADOW_USE_PASCAL=1
-```
-
-Now you can build the complete MXNet library with the following command:
-```
-    make -j $(nproc)
-```
-
-Executing this command creates a file called `libmxnet.so` in the mxnet/lib directory.
-
-**Step 2** Install MXNet Python Bindings
-
-To install Python bindings run the following commands in the MXNet directory:
-
-```
-    cd python
-    pip install --upgrade pip
-    pip install -e .
-```
-
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
-
-Add the mxnet folder to the path:
-
-```
-    cd ..
-    export MXNET_HOME=$(pwd)
-    echo "export PYTHONPATH=$MXNET_HOME/python:$PYTHONPATH" >> ~/.rc
-    source ~/.rc
-```
-
-You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
+To install MXNet on a Jetson TX or Nano, please refer to the [Jetson installation guide](install-jetson.html).
 
 </div> <!-- End of jetson -->
 </div> <!-- End of devices -->

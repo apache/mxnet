@@ -47,10 +47,11 @@ mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" 
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
 mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." ON)
-mxnet_option(USE_TENSORRT         "Enable infeference optimization with TensorRT." OFF)
+mxnet_option(USE_TENSORRT         "Enable inference optimization with TensorRT." OFF)
 mxnet_option(USE_ASAN             "Enable Clang/GCC ASAN sanitizers." OFF)
 mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric output" OFF)
 mxnet_option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
+mxnet_option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
 message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
@@ -836,3 +837,12 @@ endif()
 set(LINT_DIRS "include src plugin cpp-package tests")
 set(EXCLUDE_PATH "src/operator/contrib/ctc_include")
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake/lint.cmake)
+
+if(BUILD_CYTHON_MODULES)
+  include(cmake/BuildCythonModules.cmake)
+  add_cython_modules(2) # Build cython module for python2 if python2 is found
+  add_cython_modules(3) # Build cython module for python3 if python3 is found
+  if((NOT ${PYTHON2_FOUND}) AND (NOT ${PYTHON3_FOUND}))
+    message(FATAL_ERROR "No python interpreter found to build cython modules")
+  endif()
+endif()

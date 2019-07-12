@@ -415,7 +415,7 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
     CHECK(p.second) << "Duplicate shapes are provided for argument "
       << provided_arg_shape_names[i] << " in simple_bind";
   }
-  if (!Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_shape()) {
     for (auto &kv : arg_shape_map) {
       common::ConvertToNumpyShape(&kv.second);
     }
@@ -749,7 +749,7 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
     CHECK(p.second) << "Duplicate shapes are provided for argument "
       << provided_arg_shape_names[i] << " in simple_bind";
   }
-  if (!Imperative::Get()->is_np_comp()) {
+  if (!Imperative::Get()->is_np_shape()) {
     for (auto &kv : arg_shape_map) {
       common::ConvertToNumpyShape(&kv.second);
     }

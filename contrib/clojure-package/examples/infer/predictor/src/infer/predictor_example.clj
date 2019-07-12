@@ -99,3 +99,9 @@
       (:help options) (println summary)
       (some? errors) (println (join "\n" errors))
       :else (run-predictor options))))
+
+(comment
+  (run-predictor {:model-path-prefix "models/resnet-18/resnet-18"
+                  :input-image "images/kitten.jpg"})
+
+  )

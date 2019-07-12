@@ -111,12 +111,13 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
+  const ReshapeParam& param = nnvm::get<ReshapeParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape())) {
+  if (SupportMKLDNNReshape(param, inputs[0])) {
     MKLDNNReshapeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
@@ -233,12 +234,9 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 #if MXNET_USE_MKLDNN == 1
-  if (inputs[0].IsMKLDNNData()) {
-    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
-    // If the output is a special MKLDNN layout and the number of dimensions
-    // is larger than 2, we should use the default layout.
-    if (outputs[0].IsMKLDNNData() && inputs[0].shape().ndim() > 2)
-      const_cast<NDArray &>(outputs[0]).Reorder2Default();
+  auto data_ndim = inputs[0].shape().ndim();
+  if (data_ndim <= 4 && inputs[0].dtype() == mshadow::kFloat32) {
+    MKLDNNFlattenForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   } else {
     // This happens if inputs are supposed to be in MKLDNN format
@@ -252,10 +250,10 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
-                                   const int dev_mask,
-                                   DispatchMode* dispatch_mode,
-                                   std::vector<int> *in_attrs,
-                                   std::vector<int> *out_attrs) {
+                                      const int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int> *in_attrs,
+                                      std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,

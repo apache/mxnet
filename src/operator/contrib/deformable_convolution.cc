@@ -62,7 +62,7 @@ The deformable convolution operation is described in https://arxiv.org/abs/1703.
 For 2-D deformable convolution, the shapes are
 
 - **data**: *(batch_size, channel, height, width)*
-- **offset**: *(batch_size, num_deformable_group * kernel[0] * kernel[1], height, width)*
+- **offset**: *(batch_size, num_deformable_group * kernel[0] * kernel[1] * 2, height, width)*
 - **weight**: *(num_filter, channel, kernel[0], kernel[1])*
 - **bias**: *(num_filter,)*
 - **out**: *(batch_size, num_filter, out_height, out_width)*.
@@ -89,9 +89,9 @@ the *g* results.
 
 If ``num_deformable_group`` is larger than 1, denoted by *dg*, then split the
 input ``offset`` evenly into *dg* parts along the channel axis, and also evenly
-split ``out`` evenly into *dg* parts along the channel axis. Next compute the
-deformable convolution, apply the *i*-th part of the offset part on the *i*-th
-out.
+split ``data`` into *dg* parts along the channel axis. Next compute the
+deformable convolution, apply the *i*-th part of the offset on the *i*-th part
+of the data.
 
 
 Both ``weight`` and ``bias`` are learnable parameters.

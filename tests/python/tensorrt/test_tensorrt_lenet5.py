@@ -46,7 +46,7 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
     # Get this value from all_test_labels
     # Also get classes from the dataset
     num_ex = 10000
-    all_preds = np.zeros([num_ex, 10])
+    all_preds = np.zeros([num_ex, 10], dtype=np.float32)
     test_iter = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
 
     example_ct = 0
@@ -95,9 +95,11 @@ def test_tensorrt_inference():
     print("MXNet accuracy: %f" % mx_pct)
     print("MXNet-TensorRT accuracy: %f" % trt_pct)
 
-    assert abs(mx_pct - trt_pct) < 1e-2, \
-        """Diff. between MXNet & TensorRT accuracy too high:
-           MXNet = %f, TensorRT = %f""" % (mx_pct, trt_pct)
+    absolute_accuracy_diff = abs(mx_pct - trt_pct)
+    epsilon = 1.01e-2
+    assert absolute_accuracy_diff < epsilon, \
+        """Absolute diff. between MXNet & TensorRT accuracy (%f) exceeds threshold (%f):
+           MXNet = %f, TensorRT = %f""" % (absolute_accuracy_diff, epsilon, mx_pct, trt_pct)
 
 
 if __name__ == '__main__':

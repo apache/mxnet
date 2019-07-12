@@ -859,8 +859,8 @@ Examples::
                          {n->inputs[1]}, nullptr, &n);
 
     std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
-    ret.emplace_back(nnvm::NodeEntry{zero, 0, 0});
+    ret.emplace_back(p);
+    ret.emplace_back(zero);
     return ret;
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -933,8 +933,8 @@ Examples::
     auto zero = MakeNode("zeros_like", n->attrs.name + "_backward_indices",
                          {n->inputs[1]}, nullptr, &n);
     std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
-    ret.emplace_back(nnvm::NodeEntry{zero, 0, 0});
+    ret.emplace_back(p);
+    ret.emplace_back(zero);
     return ret;
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -996,8 +996,8 @@ Examples::
     auto zero = MakeNode("zeros_like", n->attrs.name + "_backward_indices",
                          {n->inputs[1]}, nullptr, &n);
     std::vector<nnvm::NodeEntry> ret;
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
-    ret.emplace_back(nnvm::NodeEntry{zero, 0, 0});
+    ret.emplace_back(p);
+    ret.emplace_back(zero);
     return ret;
   })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)

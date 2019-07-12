@@ -51,7 +51,7 @@ batch_size   = 64
 z_dim        = 100
 n_continuous = 2
 n_categories = 10
-ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
 ```
 
 Some functions to load and normalize images.
@@ -339,9 +339,11 @@ with SummaryWriter(logdir='./logs/') as sw:
                 fake_image = generator(g_input)
 
                 sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.asscalar()/count}, global_step=counter)
-                sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.asscalar()/count}, global_step=counter)
+                sw.add_scalar(tag='Loss_G', value={'test':g_error_epoch.asscalar()/count}, global_step=counter)
                 sw.add_image(tag='data_image', image=((fake_image[0]+ 1.0) * 127.5).astype(np.uint8)  , global_step=counter)
                 sw.flush()
+            
+            counter += 1
         
         discriminator.save_parameters("infogan_d_latest.params")
         generator.save_parameters("infogan_g_latest.params")

@@ -98,13 +98,13 @@ class Imperative {
       return old;
   }
   /*! brief whether numpy compatibility is on. */
-  bool is_np_comp() const {
-    return is_np_comp_;
+  bool is_np_shape() const {
+    return is_np_shape_;
   }
   /*! brief turn on or turn off numpy compatibility switch. */
-  bool set_is_np_comp(bool is_np_comp) {
-    bool old = is_np_comp_;
-    is_np_comp_ = is_np_comp;
+  bool set_is_np_shape(bool is_np_shape) {
+    bool old = is_np_shape_;
+    is_np_shape_ = is_np_shape;
     return old;
   }
   /*! \brief to record operator, return corresponding node. */
@@ -177,13 +177,13 @@ class Imperative {
   static thread_local bool is_recording_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
-  static thread_local bool is_np_comp_;
+  static thread_local bool is_np_shape_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
-  static MX_THREAD_LOCAL bool is_np_comp_;
+  static MX_THREAD_LOCAL bool is_np_shape_;
 #endif
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};

@@ -29,6 +29,7 @@ import errno
 import logging
 import bz2
 import zipfile
+import json
 from contextlib import contextmanager
 import numpy as np
 import numpy.testing as npt
@@ -417,6 +418,12 @@ def rand_shape_3d(dim0=10, dim1=10, dim2=10):
 
 def rand_shape_nd(num_dim, dim=10):
     return tuple(rnd.randint(1, dim+1, size=num_dim))
+
+
+def rand_coord_2d(x_low, x_high, y_low, y_high):
+    x = np.random.randint(x_low, x_high, dtype=np.int64)
+    y = np.random.randint(y_low, y_high, dtype=np.int64)
+    return x, y
 
 
 def np_reduce(dat, axis, keepdims, numpy_reduce_func):
@@ -1127,7 +1134,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
-    assert dtype in (np.float16, np.float32, np.float64)
+    assert dtype == 'asnumpy' or dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -1140,7 +1147,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in expected.items()}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
-        nd = mx.nd.array(v, ctx=ctx, dtype=dtype)
+        nd = mx.nd.array(v, ctx=ctx, dtype=expected[k].dtype if dtype == "asnumpy" else dtype)
         if grad_stypes is not None and k in grad_stypes:
             stype = grad_stypes[k]
             if stype is not None and stype != 'default':
@@ -1164,7 +1171,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         outg = list()
         for arr in out_grads:
             if isinstance(arr, np.ndarray):
-                outg.append(mx.nd.array(arr, ctx=ctx, dtype=dtype))
+                outg.append(mx.nd.array(arr, ctx=ctx, dtype=arr.dtype if dtype == "asnumpy" else dtype))
             else:
                 outg.append(arr)
         out_grads = outg
@@ -1172,7 +1179,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         outg = dict()
         for k, v in out_grads.items():
             if isinstance(v, np.ndarray):
-                outg[k] = mx.nd.array(v, ctx=ctx, dtype=dtype)
+                outg[k] = mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype)
             else:
                 outg[k] = v
         out_grads = outg
@@ -1514,6 +1521,72 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
                       .format(retries, 's' if retries > 1 else ''))
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
+
+def download_model(model_name, dst_dir='./', meta_info=None):
+    """Download a model from data.mxnet.io
+
+    Parameters
+    ----------
+    model_name : str
+        Model name to download
+    dst_dir : str
+        Destination Directory to download the model
+    meta_info : dict of dict
+        Mapping from model_name to dict of the following structure:
+        {'symbol': url, 'params': url}
+
+    Returns
+    -------
+    Two element tuple containing model_name and epoch for the params saved
+    """
+    _base_model_url = 'http://data.mxnet.io/models/'
+    _default_model_info = {
+        'imagenet1k-inception-bn': {'symbol':_base_model_url+'imagenet/inception-bn/Inception-BN-symbol.json',
+                                    'params':_base_model_url+'imagenet/inception-bn/Inception-BN-0126.params'},
+        'imagenet1k-resnet-18': {'symbol':_base_model_url+'imagenet/resnet/18-layers/resnet-18-symbol.json',
+                                 'params':_base_model_url+'imagenet/resnet/18-layers/resnet-18-0000.params'},
+        'imagenet1k-resnet-34': {'symbol':_base_model_url+'imagenet/resnet/34-layers/resnet-34-symbol.json',
+                                 'params':_base_model_url+'imagenet/resnet/34-layers/resnet-34-0000.params'},
+        'imagenet1k-resnet-50': {'symbol':_base_model_url+'imagenet/resnet/50-layers/resnet-50-symbol.json',
+                                 'params':_base_model_url+'imagenet/resnet/50-layers/resnet-50-0000.params'},
+        'imagenet1k-resnet-101': {'symbol':_base_model_url+'imagenet/resnet/101-layers/resnet-101-symbol.json',
+                                  'params':_base_model_url+'imagenet/resnet/101-layers/resnet-101-0000.params'},
+        'imagenet1k-resnet-152': {'symbol':_base_model_url+'imagenet/resnet/152-layers/resnet-152-symbol.json',
+                                  'params':_base_model_url+'imagenet/resnet/152-layers/resnet-152-0000.params'},
+        'imagenet1k-resnext-50': {'symbol':_base_model_url+'imagenet/resnext/50-layers/resnext-50-symbol.json',
+                                  'params':_base_model_url+'imagenet/resnext/50-layers/resnext-50-0000.params'},
+        'imagenet1k-resnext-101': {'symbol':_base_model_url+'imagenet/resnext/101-layers/resnext-101-symbol.json',
+                                   'params':_base_model_url+'imagenet/resnext/101-layers/resnext-101-0000.params'},
+        'imagenet1k-resnext-101-64x4d':
+            {'symbol':_base_model_url+'imagenet/resnext/101-layers/resnext-101-64x4d-symbol.json',
+             'params':_base_model_url+'imagenet/resnext/101-layers/resnext-101-64x4d-0000.params'},
+        'imagenet11k-resnet-152':
+            {'symbol':_base_model_url+'imagenet-11k/resnet-152/resnet-152-symbol.json',
+             'params':_base_model_url+'imagenet-11k/resnet-152/resnet-152-0000.params'},
+        'imagenet11k-place365ch-resnet-152':
+            {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-152-symbol.json',
+             'params':_base_model_url+'imagenet-11k-place365-ch/resnet-152-0000.params'},
+        'imagenet11k-place365ch-resnet-50':
+            {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-50-symbol.json',
+             'params':_base_model_url+'imagenet-11k-place365-ch/resnet-50-0000.params'},
+    }
+
+
+    if meta_info is None:
+        meta_info = _default_model_info
+    meta_info = dict(meta_info)
+    if model_name not in meta_info:
+        return (None, 0)
+    if not os.path.isdir(dst_dir):
+        os.mkdir(dst_dir)
+    meta = dict(meta_info[model_name])
+    assert 'symbol' in meta, "missing symbol url"
+    model_name = os.path.join(dst_dir, model_name)
+    mx.test_utils.download(meta['symbol'], model_name+'-symbol.json')
+    assert 'params' in meta, "mssing parameter file url"
+    mx.test_utils.download(meta['params'], model_name+'-0000.params')
+    return (model_name, 0)
+
 
 def get_mnist():
     """Download and load the MNIST dataset
@@ -2066,6 +2139,22 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if compare_states:
         compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
+
+
+def same_symbol_structure(sym1, sym2):
+    """Compare two symbols to check if they have the same computation graph structure.
+    Returns true if operator corresponding to a particular node id is same in both
+    symbols for all nodes
+    """
+    conf = json.loads(sym1.tojson())
+    nodes = conf["nodes"]
+    conf2 = json.loads(sym2.tojson())
+    nodes2 = conf2["nodes"]
+    for node1, node2 in zip(nodes, nodes2):
+        if node1["op"] != node2["op"]:
+            return False
+    return True
+
 
 class EnvManager(object):
     """Environment variable setter and unsetter via with idiom"""

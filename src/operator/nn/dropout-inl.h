@@ -494,24 +494,6 @@ class DropoutOp {
 #endif  // MXNET_USE_CUDNN_DROPOUT
 };  // class DropoutOp
 
-static OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
-                                     const Context ctx,
-                                     const mxnet::ShapeVector &in_shapes,
-                                     const std::vector<int> &in_types) {
-  const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
-  OpStatePtr state;
-  MSHADOW_REAL_TYPE_SWITCH(in_types[dropout::kData], DType, {
-    if (ctx.dev_type == kGPU) {
-      state = OpStatePtr::Create<DropoutOp<gpu, DType>>(param, ctx);
-    } else {
-      state = OpStatePtr::Create<DropoutOp<cpu, DType>>(param, ctx);
-    }
-    return state;
-  });
-  LOG(FATAL) << "should never reach here";
-  return OpStatePtr();  // should never reach here
-}
-
 template<typename xpu>
 void DropoutCompute(const OpStatePtr& state,
                     const OpContext& ctx,
