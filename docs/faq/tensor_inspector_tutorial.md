@@ -139,7 +139,7 @@ You can simply pass in a value from `CheckerType` where you would have passed in
 Sometimes, you might want to dump the tensor to a file in binary mode. Then, you might want to use a python script to further analyze the tensor value.  Or, you might do that simply because a binary dumps has better precision and is faster to load than if you copy-paste the output from `print_string()` and load it as a `JASON` string. Either way, you can use this API:
 
 ```c++
-void dump_value(std::string tag);
+void dump_to_file(std::string tag);
 ```
 
 This API will creat a file with name  "{tag}_{visit_count}.npy", where tag is the name that we give to the call, and visit is the visit count, should the operated be called more than once.
