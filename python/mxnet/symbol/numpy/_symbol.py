@@ -1204,12 +1204,12 @@ def hstack(arrays):
 
     Parameters
     ----------
-    tup : sequence of ndarrays
+    tup : _Symbol
         The arrays must have the same shape along all but the second axis, except 1-D arrays which can be any length.
 
     Returns
     -------
-    stacked : ndarray
+    stacked : _Symbol
         The array formed by stacking the given arrays.
 
     Examples
