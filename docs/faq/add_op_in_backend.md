@@ -674,6 +674,3 @@ We welcome your contributions to MXNet.
 [quadratic_op.cu](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cu),
 and
 [test_operator.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_operator.py#L6514).
-
-# Additional Debug Tool
-- [Use TensorInspector to help debug](tensor_inspector_tutorial.md)

@@ -1,5 +1,3 @@
-# Use TensorInspector to Help Debug Operators
-
 ## Introduction
 
 When developing new operators, developers need to deal with tensor objects extensively. This new utility, Tensor Inspector, mainly aims to help developers debug by providing unified interfaces to print, check, and dump the tensor value. To developers' convenience, This utility works for all the three data types: Tensors, TBlobs, and NDArrays. Also, it supports both CPU and GPU tensors.
