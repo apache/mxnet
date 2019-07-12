@@ -44,6 +44,10 @@ namespace op {
  */
 template <typename CuDNNAlgoType>
 class CuDNNAlgo {
+  // Compile guard needed to get past non-nvcc compilation of cudnn_algoreg.cc.
+#ifdef STATIC_ASSERT_CUDNN_VERSION_GE
+  STATIC_ASSERT_CUDNN_VERSION_GE(7000);
+#endif
  public:
   CuDNNAlgo() :
       algo_number_(static_cast<CuDNNAlgoType>(0)),
@@ -54,11 +58,9 @@ class CuDNNAlgo {
   }
   CuDNNAlgoType AlgoNumber() const { return algo_number_; }
   bool IsTensorCoreAlgo() const { return is_tensor_core_algo_; }
-  #if CUDNN_MAJOR >= 7
   cudnnMathType_t MathType() {
     return IsTensorCoreAlgo() ? CUDNN_TENSOR_OP_MATH : CUDNN_DEFAULT_MATH;
   }
-  #endif
  private:
   CuDNNAlgoType algo_number_;
   bool is_tensor_core_algo_;
