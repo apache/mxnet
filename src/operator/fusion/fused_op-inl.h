@@ -263,12 +263,10 @@ inline DType1 store(const DType2 input, DType1* ref) {
   return input;
 }
 
-template<>
-inline half store(const float input, half* ref) {
+template <typename DType>
+inline half store(const DType input, half* ref) {
   return __float2half(input);
 }
-
-
 
 template <int size>
 struct VectorConfig {
