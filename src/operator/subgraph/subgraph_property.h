@@ -389,7 +389,7 @@ class SubgraphBackend {
     return prop_ptr_.back();
   }
 
-  const std::string& GetName() const { return name_; };
+  const std::string& GetName() const { return name_; }
 
   const std::vector<SubgraphPropertyPtr>& GetSubgraphProperties() const { return prop_ptr_; }
 
@@ -417,6 +417,7 @@ class SubgraphBackendEntry {
 
 class SubgraphBackendRegistry {
   typedef SubgraphPropertyPtr (*SubgraphPropertyCreateFn)(void);
+
  public:
   static SubgraphBackendRegistry* Get() {
     static SubgraphBackendRegistry inst;
@@ -437,9 +438,11 @@ class SubgraphBackendRegistry {
     return SubgraphBackendEntry(backend_map_[name]);
   }
 
-  SubgraphPropertyEntry __REGISTER_PROPERTY__(const std::string& name, SubgraphPropertyCreateFn fn) {
+  SubgraphPropertyEntry __REGISTER_PROPERTY__(const std::string& name,
+                                              SubgraphPropertyCreateFn fn) {
     auto it = backend_map_.find(name);
-    CHECK(it != backend_map_.end()) << "Subgraph backend " << name << " is not found in SubgraphBackendRegistry";
+    CHECK(it != backend_map_.end())
+        << "Subgraph backend " << name << " is not found in SubgraphBackendRegistry";
     auto prop = it->second->RegisterSubgraphProperty(fn());
     return SubgraphPropertyEntry(prop);
   }
