@@ -26,9 +26,6 @@
 namespace mxnet {
 namespace op {
 
-using namespace mxnet;
-using namespace op;
-
 NNVM_REGISTER_OP(_npi_tensordot)
 .set_attr<FCompute>("FCompute<gpu>", TensordotOpForward<gpu>);
 

@@ -144,7 +144,7 @@ def test_np_tensordot():
                 a_sym = mx.sym.Variable("a").as_np_ndarray()
                 b_sym = mx.sym.Variable("b").as_np_ndarray()
                 mx_sym = mx.sym.np.tensordot(a_sym, b_sym, axes).as_nd_ndarray()
-                check_numeric_gradient(mx_sym, {"a": a.as_nd_ndarray(), "b": b.as_nd_ndarray()},
+                check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
                   rtol=1e-2, atol=1e-2, dtype = dtype)
 
     # test zero size input
