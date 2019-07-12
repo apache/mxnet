@@ -186,7 +186,6 @@ void TensordotImpl(const Tuple<int>& a_axes_summed,
                    const TBlob& b,
                    const TBlob& out,
                    const std::vector<OpReqType>& req) {
-
   if (req[0] == kNullOp) {
     return;
   }
@@ -256,7 +255,6 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -296,7 +294,6 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
                            const TBlob& grad_a,
                            const TBlob& grad_b,
                            const std::vector<OpReqType>& req) {
-
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   const mxnet::TShape& a_shape = a.shape_;
@@ -423,7 +420,6 @@ void TensordotIntAxesImpl(const int axes,
                           const TBlob& b,
                           const TBlob& out,
                           const OpReqType req) {
-
   if (req == kNullOp) {
     return;
   }
@@ -482,7 +478,6 @@ void TensordotIntAxesOpForward(const nnvm::NodeAttrs& attrs,
                                const std::vector<TBlob>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<TBlob>& outputs) {
-
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -539,7 +534,6 @@ void TensordotIntAxesOpBackward(const nnvm::NodeAttrs& attrs,
                                 const std::vector<TBlob>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<TBlob>& outputs) {
-
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req.size(), 2U);
