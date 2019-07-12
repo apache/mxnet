@@ -104,14 +104,14 @@ bool DStackShape(const nnvm::NodeAttrs& attrs,
 
   for (int i = 0; i < param_.num_args; ++i) {
     CHECK(shape_assign(&(*in_shape)[i], dshape))
-        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
+      << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
   }
 
   if (!has_unknown_dim_size) {
     dshape[axis] = size;
   }
   CHECK(shape_assign(&(*out_shape)[0], dshape))
-      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
+    << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
 
   return shape_is_known(dshape);
 }

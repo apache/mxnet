@@ -153,11 +153,11 @@ void DStackCompute(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
     if (inputs[i].shape_.ndim() == 0) {
       modified_inputs[i] = inputs[i].reshape(TShape(3, 1));
     } else if (inputs[i].shape_.ndim() == 1) {
-      TShape t  = TShape(3, 1);
+      TShape t = TShape(3, 1);
       t[1] = inputs[i].shape_[0];
       modified_inputs[i] = inputs[i].reshape(t);
     } else if (inputs[i].shape_.ndim() == 2) {
-      TShape t  = TShape(3, 1);
+      TShape t = TShape(3, 1);
       t[0] = inputs[i].shape_[0];
       t[1] = inputs[i].shape_[1];
       modified_inputs[i] = inputs[i].reshape(t);
