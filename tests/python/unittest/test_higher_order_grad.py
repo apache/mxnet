@@ -17,6 +17,7 @@
 
 
 import math
+import random
 from mxnet import nd, autograd
 from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd
 from common import with_seed
@@ -48,6 +49,40 @@ def test_cos():
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, cos, grad_grad_op)
+
+
+@with_seed()
+def test_arcsinh():
+    def arcsinh(x):
+        return nd.arcsinh(x)
+
+    def grad_grad_op(x):
+        return x/nd.sqrt((nd.square(x)+1)**3)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, arcsinh, grad_grad_op)
+
+
+@with_seed()
+def test_arccosh():
+    def arccosh(x):
+        return nd.arccosh(x)
+
+    def grad_grad_op(x):
+        return x/(nd.sqrt(x-1) * nd.sqrt(x+1) * (x+1) * (x-1))
+
+    sigma = random.randint(25, 100)
+    mu = random.randint(500, 1000)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        array = array * sigma + mu
+        # Domain of arccosh 1 to infinity.
+        assert((array > 1).all())
+        check_second_order_unary(array, arccosh, grad_grad_op)
 
 
 @with_seed()
