@@ -17,6 +17,7 @@
 
 
 import math
+import random
 from mxnet import nd, autograd
 from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd
 from common import with_seed
@@ -48,6 +49,37 @@ def test_cos():
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, cos, grad_grad_op)
+
+
+@with_seed()
+def test_arctan():
+    def arctan(x):
+        return nd.arctan(x)
+
+    def grad_grad_op(x):
+        return (-2 * x)/((1 + x**2)**2)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        # Domain of arctan is all real numbers.
+        # Scale std_dev
+        array *= random.randint(500, 10000)
+        check_second_order_unary(array, arctan, grad_grad_op)
+
+
+@with_seed()
+def test_arctanh():
+    def arctanh(x):
+        return nd.arctanh(x)
+
+    def grad_grad_op(x):
+        return (2 * x)/((1 - x**2)**2)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, arctanh, grad_grad_op)
 
 
 @with_seed()
