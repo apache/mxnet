@@ -413,4 +413,3 @@ extern volatile bool disable_mkl;
 #endif
 
 #endif  // MXNET_OPERATOR_NN_BATCH_NORM_INL_H_
-
