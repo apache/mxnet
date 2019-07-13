@@ -20,9 +20,10 @@ import numpy as np
 import mxnet as mx
 import random
 from random import randint
+from mxnet.contrib.amp import amp
 
 
-def test_bucket_module():
+def train_model(context=mx.cpu()):
     import logging
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
@@ -80,7 +81,7 @@ def test_bucket_module():
 
         return loss, ('data',), ('softmax_label',)
 
-    contexts = mx.cpu(0)
+    contexts = context
 
     model = mx.mod.BucketingModule(
         sym_gen=sym_gen,
@@ -101,9 +102,14 @@ def test_bucket_module():
         num_epoch=num_epochs,
         batch_end_callback=mx.callback.Speedometer(batch_size, 50))
     logging.info('Finished fit...')
+    return model
+
+
+def test_bucket_module():
     # This test forecasts random sequence of words to check bucketing.
     # We cannot guarantee the accuracy of such an impossible task, and comments out the following line.
     # assert model.score(data_val, mx.metric.MSE())[0][1] < 350, "High mean square error."
+    model = train_model()
 
 
 if __name__ == "__main__":

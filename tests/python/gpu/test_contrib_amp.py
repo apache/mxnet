@@ -19,6 +19,7 @@ import os
 import sys
 import mxnet as mx
 import numpy as np
+from random import randint
 import warnings
 import collections
 import ctypes
@@ -31,6 +32,8 @@ from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import with_seed, teardown
+sys.path.insert(0, os.path.join(curr_path, '../train'))
+from test_bucketing import train_model
 
 def test_amp_coverage():
     conditional = [item[0] for item in amp.lists.symbol.CONDITIONAL_FP32_FUNCS]
@@ -300,10 +303,42 @@ def test_amp_conversion():
         params = converted_model.collect_params()
         assert params["stage2_unit1_conv2_weight"].dtype == np.float16
 
+
+    def check_amp_convert_bucketing_module():
+        model = train_model(context=mx.current_context())
+        result_model = amp.convert_bucketing_module(model)
+        val_sent = []
+        batch_size = 128
+        invalid_label = -1
+        num_sentence = 1000
+        buckets = [5, 10, 20, 30, 40]
+        len_vocab = 50
+
+        for _ in range(num_sentence):
+            len_sentence = randint(6, max(buckets)-1) # leave out the two last buckets empty
+            val_sentence = []
+            for _ in range(len_sentence):
+                val_sentence.append(randint(1, len_vocab))
+            val_sent.append(val_sentence)
+
+        data_val =  mx.rnn.BucketSentenceIter(val_sent, batch_size, buckets=buckets,
+                                     invalid_label=invalid_label)
+        result_model.bind(data_val.provide_data, data_val.provide_label, for_training=False)
+        result_model.score(data_val, mx.metric.Perplexity(invalid_label),
+                           batch_end_callback=mx.callback.Speedometer(batch_size, 1))
+
+        # AMP conversion with cast_optional_params set to true
+        result_model = amp.convert_bucketing_module(model, cast_optional_params=True)
+        result_model.bind(data_val.provide_data, data_val.provide_label, for_training=False)
+        result_model.score(data_val, mx.metric.Perplexity(invalid_label),
+                           batch_end_callback=mx.callback.Speedometer(batch_size, 1))
+
+
     with mx.Context(mx.gpu(0)):
         check_amp_convert_symbol()
         check_amp_convert_model()
         check_amp_convert_hybrid_block()
+        check_amp_convert_bucketing_module()
 
 
 @with_seed()
