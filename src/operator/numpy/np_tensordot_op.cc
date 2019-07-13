@@ -202,7 +202,7 @@ NNVM_REGISTER_OP(_npi_tensordot_int_axes)
   })
 .set_attr<FCompute>("FCompute<cpu>", TensordotIntAxesOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-    mxnet::op::ElemwiseGradUseIn{"_backward_npi_tensordot_int_axes"})
+  mxnet::op::ElemwiseGradUseIn{"_backward_npi_tensordot_int_axes"})
 .add_argument("a", "NDArray-or-Symbol", "First input")
 .add_argument("b", "NDArray-or-Symbol", "Second input")
 .add_arguments(TensordotIntAxesParam::__FIELDS__());
