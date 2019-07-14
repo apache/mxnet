@@ -107,6 +107,98 @@ void NumpyEyeFill(const nnvm::NodeAttrs& attrs,
   EyeFillImpl<xpu>(outputs[0], ctx, req, num_cols, param.N, param.k);
 }
 
+
+struct IndicesOpParam : public dmlc::Parameter<IndicesOpParam> {
+  mxnet::TShape dimensions;
+  std::string ctx;
+  int dtype;
+  DMLC_DECLARE_PARAMETER(IndicesOpParam) {
+    DMLC_DECLARE_FIELD(dimensions)
+        .describe("The shape of the grid.");
+    DMLC_DECLARE_FIELD(ctx)
+        .set_default("")
+        .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+                  "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kInt32)
+            MXNET_ADD_ALL_TYPES
+        .describe("Target data type.");
+
+  }
+};
+
+inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
+                              mxnet::ShapeVector* in_shapes,
+                              mxnet::ShapeVector* out_shapes) {
+  const IndicesOpParam& param = nnvm::get<IndicesOpParam>(attrs.parsed);
+  CHECK_EQ(in_shapes->size(), 0U);
+  CHECK_EQ(out_shapes->size(), 1U);
+  CHECK_GE(param.dimensions.ndim(), 0) << "_npi_indices dimensions the number of dim must not be less than  0";
+  mxnet::TShape param_dim = param.dimensions;
+  if (!shape_is_known(param_dim)) return false;
+  for (int i = 0; i < param_dim.ndim(); ++i) {
+    CHECK_GE(param_dim[i], 0) << "_npi_indices dimensions must be non-negative";
+  }
+  const int indim = param.dimensions.ndim();
+  mxnet::TShape ret(indim + 1, -1);
+  ret[0] = indim;
+  for (int i = 1; i < indim + 1; ++i) {
+    ret[i] = param.dimensions[i-1];
+  }
+  SHAPE_ASSIGN_CHECK(*out_shapes, 0, ret);
+  return shape_is_known(out_shapes->at(0));
+}
+
+template<int req>
+struct indices_fwd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out,
+                                  const nnvm::dim_t value,
+                                  const nnvm::dim_t N,
+                                  const nnvm::dim_t dim_i,
+                                  const nnvm::dim_t j,
+                                  const nnvm::dim_t k,
+                                  const nnvm::dim_t t
+  ) {
+    KERNEL_ASSIGN(out[dim_i*N+N/(t*value)*j+i+k*N/t], req, static_cast<DType>(j));
+  }
+};
+
+template<typename xpu>
+void IndicesCompute(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  CHECK_EQ(inputs.size(), 0U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  const IndicesOpParam& param = nnvm::get<IndicesOpParam>(attrs.parsed);
+  const TBlob& out_data = outputs[0];
+  dim_t indim = param.dimensions.ndim();
+  dim_t t = 1;
+  dim_t N = out_data.Size()/indim;
+  dim_t value = 0;
+  if (out_data.Size() == 0) return;
+  using namespace mxnet_op;
+  if (req[0] != kNullOp) {
+    MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+          for (int i = 0; i < indim; ++i) {
+            value = param.dimensions[i];
+            for (int k = 0; k < t; ++k) {
+              for (int j = 0; j < param.dimensions[i]; ++j) {
+                Kernel<indices_fwd<req_type>, xpu>::Launch(s, N/(param.dimensions[i] * t), out_data.dptr<DType>(),
+                                                           value, N, i, j, k, t);
+              }
+            }
+            t = t * param.dimensions[i];
+          }
+      });
+    });
+  }
+}
+
 }  // namespace op
 }  // namespace mxnet
 

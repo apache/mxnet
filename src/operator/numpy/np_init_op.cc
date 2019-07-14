@@ -28,6 +28,7 @@ namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyEyeParam);
+DMLC_REGISTER_PARAMETER(IndicesOpParam);
 
 NNVM_REGISTER_OP(_npi_zeros)
 .describe("Return a new array of given shape, type, and context, filled with zeros.")
@@ -127,6 +128,16 @@ NNVM_REGISTER_OP(_npi_eye)
 .set_attr<nnvm::FInferType>("FInferType", InitType<NumpyEyeParam>)
 .set_attr<FCompute>("FCompute<cpu>", NumpyEyeFill<cpu>)
 .add_arguments(NumpyEyeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_indices)
+.describe("Return an array representing the indices of a grid.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<IndicesOpParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyIndicesShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<IndicesOpParam>)
+.set_attr<FCompute>("FCompute<cpu>", IndicesCompute<cpu>)
+.add_arguments(InitOpParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

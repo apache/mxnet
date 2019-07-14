@@ -1419,6 +1419,47 @@ def test_np_trace():
         assert False
 
 
+@with_seed()
+@npx.use_np_shape
+def test_np_indices():
+    dtypes = ['int8', 'int32', 'int64', 'float16', 'float32', 'float64']
+    shapes = [
+        (),
+        (0,),
+        (1,),
+        (2,3,4),
+        (2,0,4),
+        (1,1,1,1),
+        (1,0,0,1),
+        (4,),
+        (2,3,4,5,6,7,8)
+              ]
+    @npx.use_np
+    class TestIndices(HybridBlock):
+        def __init__(self, dimensions=None, dtype=None):
+            super(TestIndices, self).__init__()
+            self._dimensions = dimensions
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.indices(self._dimensions, self._dtype)
+
+    for dtype in dtypes:
+        for shape in shapes:
+            x = np.zeros(shape=shape, dtype=dtype)
+            for hybridize in [False, True]:
+                    net = TestIndices(dimensions=shape, dtype=dtype)
+                    np_out = _np.indices(dimensions=shape, dtype=dtype)
+                    if hybridize:
+                        net.hybridize()
+                    mx_out = net(x)
+                    same(mx_out.asnumpy(), np_out)
+
+                    # Test imperative once again
+                    mx_out = np.indices(dimensions=shape, dtype=dtype)
+                    same(mx_out.asnumpy(), np_out)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
