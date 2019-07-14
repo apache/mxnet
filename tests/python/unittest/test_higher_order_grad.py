@@ -83,6 +83,20 @@ def test_arctanh():
 
 
 @with_seed()
+def test_radians():
+    def radians(x):
+        return nd.radians(x)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, radians, grad_grad_op)
+
+
+@with_seed()
 def test_relu():
     def relu(x):
         return nd.relu(x)
