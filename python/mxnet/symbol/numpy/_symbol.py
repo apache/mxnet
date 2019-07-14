@@ -2360,7 +2360,7 @@ def tensordot(a, b, axes=2):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
-def indices(dimensions, dtype=_np.int32, **kwargs):
+def indices(dimensions, dtype=_np.int32, ctx=None):
     """Return an array representing the indices of a grid.
 
     Compute an array where the subarrays contain index values 0,1,...

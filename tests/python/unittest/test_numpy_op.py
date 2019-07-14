@@ -27,6 +27,7 @@ from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndar
 from mxnet.test_utils import check_numeric_gradient, use_np
 from common import assertRaises, with_seed
 import random
+import platform
 import collections
 
 
@@ -58,7 +59,7 @@ def test_np_tensordot():
                 b_axes_summed = b_axes_summed,
 
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         a_axes_remained = []
         for i in range(a.ndim):
@@ -254,7 +255,7 @@ def test_np_dot():
         ((3, 4, 5), (5, )),  # Case 4
         ((3, 4, 5), (5, 2)), # Case 5
         ((5,), (5, 2)),
-        ((3, 5, 4), (5, 4, 3)),  
+        ((3, 5, 4), (5, 4, 3)),
         ((3, 4), (5, 4, 3)),
         ((4,), (5, 4, 3))
     ]
@@ -1564,6 +1565,53 @@ def test_np_trace():
         except mx.base.MXNetError:
             continue
         assert False
+
+
+@with_seed()
+@use_np
+def test_np_indices():
+    dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
+    shapes = [
+        (),
+        (0,),
+        (1,),
+        (2,3,4),
+        (2,0,4),
+        (1,1,1,1),
+        (1,0,0,1),
+        (4,),
+        (2,3,4,5,6,7,8)
+    ]
+    if platform.system() == 'Windows':
+        shapes = shapes[1:]  #beacuse in numpy windows version, indces not support dimensions is empty tuple.
+    for dtype in dtypes:
+        for shape in shapes:
+            np_out = _np.indices(dimensions=shape, dtype=dtype)
+            mx_out = np.indices(dimensions=shape, dtype=dtype)
+            same(mx_out.asnumpy(), np_out)
+            assert mx_out.shape == np_out.shape
+
+    @use_np
+    class TestIndices(HybridBlock):
+        def __init__(self, dimensions=None, dtype=None):
+            super(TestIndices, self).__init__()
+            self._dimensions = dimensions
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.indices(dimensions=self._dimensions, dtype=self._dtype)
+
+    for dtype in dtypes:
+        for shape in shapes:
+            x = np.zeros(shape=(), dtype=dtype)
+            for hybridize in [False, True]:
+                    net = TestIndices(dimensions=shape, dtype=dtype)
+                    np_out = _np.indices(dimensions=shape, dtype=dtype)
+                    if hybridize:
+                        net.hybridize()
+                    mx_out = net(x)
+                    same(mx_out.asnumpy(), np_out)
+                    assert mx_out.shape == np_out.shape
 
 
 if __name__ == '__main__':
