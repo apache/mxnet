@@ -273,7 +273,8 @@ The storage type of ``radians`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_radians" });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_radians,
-                                                  unary_bwd<mshadow_op::radians_grad>);
+                                                  unary_bwd<mshadow_op::radians_grad>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // sinh
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sinh, cpu, mshadow_op::sinh)
