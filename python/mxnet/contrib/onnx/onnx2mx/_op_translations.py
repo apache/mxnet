@@ -24,7 +24,7 @@ from .... import symbol
 # Method definitions for the callable objects mapped in the import_helper module
 
 def identity(attrs, inputs, proto_obj):
-    """Returns the identity function of the the input."""
+    """Returns the identity function of the input."""
     return 'identity', attrs, inputs
 
 def random_uniform(attrs, inputs, proto_obj):

@@ -1403,10 +1403,8 @@ nightly_estimator() {
     set -ex
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
-    python test_estimator_cnn.py --type gpu
-    python test_sentiment_rnn.py --type gpu
-    python test_estimator_cnn.py --type cpu
-    python test_sentiment_rnn.py --type cpu
+    nosetests test_estimator_cnn.py
+    nosetests test_sentiment_rnn.py
 }
 
 # Deploy

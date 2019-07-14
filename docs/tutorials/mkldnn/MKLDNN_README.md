@@ -135,7 +135,7 @@ command:
 >"C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl\bin\mklvars.bat" intel64
 >cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_PROFILER=1 -DUSE_BLAS=mkl -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_NAME=All -DUSE_MKLDNN=1 -DCMAKE_BUILD_TYPE=Release -DMKL_ROOT="C:\Program Files (x86)\IntelSWTools\compilers_and_libraries\windows\mkl" 
 ```
-4. After the CMake successfully completed, in Visual Studio, open the solution file ```.sln``` and compile it, or compile the the MXNet source code by using following command:
+4. After the CMake successfully completed, in Visual Studio, open the solution file ```.sln``` and compile it, or compile the MXNet source code by using following command:
 ```r
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
