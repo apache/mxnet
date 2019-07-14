@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot', 'logspace']
 
 
 def _num_outputs(sym):
@@ -2356,6 +2356,89 @@ def tensordot(a, b, axes=2):
         raise ValueError('Axes length mismatch')
 
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
+
+
+@set_module('mxnet.symbol.numpy')
+def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, ctx=None): # pylint: disable=too-many-arguments
+    r"""Return numbers spaced evenly on a log scale.
+
+    In linear space, the sequence starts at ``base ** start``
+    (`base` to the power of `start`) and ends with ``base ** stop``
+    (see `endpoint` below).
+
+        Non-scalar `start` and `stop` are now supported.
+
+    Parameters
+    ----------
+    start : scalar
+        ``base ** start`` is the starting value of the sequence.
+    stop : scalar
+        ``base ** stop`` is the final value of the sequence, unless `endpoint`
+        is False.  In that case, ``num + 1`` values are spaced over the
+        interval in log-space, of which all but the last (a sequence of
+        length `num`) are returned.
+    num : scalar, optional
+        Number of samples to generate.  Default is 50.
+    endpoint : boolean, optional
+        If true, `stop` is the last sample. Otherwise, it is not included.
+        Default is True.
+    base : scalar, optional
+        The base of the log space. The step size between the elements in
+        ``ln(samples) / ln(base)`` (or ``log_base(samples)``) is uniform.
+        Default is 10.0.
+    dtype : dtype
+        The type of the output array.  If `dtype` is not given, infer the data
+        type from the other input arguments.
+    axis : scalar, optional
+        The axis in the result to store the samples.  Relevant only if start
+        or stop are array-like.  By default (0), the samples will be along a
+        new axis inserted at the beginning. Now, axis only support axis = 0.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    samples : _Symbol
+        `num` samples, equally spaced on a log scale.
+
+    See Also
+    --------
+    arange : Similar to linspace, with the step size specified instead of the
+             number of samples. Note that, when used with a float endpoint, the
+             endpoint may or may not be included.
+    linspace : Similar to logspace, but with the samples uniformly distributed
+               in linear space, instead of log space.
+
+    Notes
+    -----
+    Logspace is equivalent to the code
+
+    >>> y = np.linspace(start, stop, num=num, endpoint=endpoint)
+    ...
+    >>> power(base, y).astype(dtype)
+    ...
+
+    Examples
+    --------
+    >>> np.logspace(2.0, 3.0, num=4)
+    array([ 100.     ,  215.44347,  464.15887, 1000.     ])
+    >>> np.logspace(2.0, 3.0, num=4, endpoint=False)
+    array([100.     , 177.82794, 316.22775, 562.3413 ])
+    >>> np.logspace(2.0, 3.0, num=4, base=2.0)
+    array([4.       , 5.0396843, 6.349604 , 8.       ])
+    >>> np.logspace(2.0, 3.0, num=4, base=2.0, dtype=np.int32)
+    array([4, 5, 6, 8], dtype=int32)
+    >>> np.logspace(2.0, 3.0, num=4, ctx=npx.gpu(0))
+    array([ 100.     ,  215.44347,  464.15887, 1000.     ], ctx=gpu(0))
+    """
+    if isinstance(start, (list, _np.ndarray)) or \
+       isinstance(stop, (list, _np.ndarray)):
+        raise NotImplementedError('start and stop only support int')
+    if axis != 0:
+        raise NotImplementedError("the function only support axis 0")
+    if ctx is None:
+        ctx = current_context()
+    return _npi.logspace(start=start, stop=stop, num=num, endpoint=endpoint, base=base, ctx=ctx, dtype=dtype)
 
 
 _set_np_symbol_class(_Symbol)

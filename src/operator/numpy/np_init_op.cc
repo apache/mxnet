@@ -28,6 +28,7 @@ namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyEyeParam);
+DMLC_REGISTER_PARAMETER(LogspaceParam);
 
 NNVM_REGISTER_OP(_npi_zeros)
 .describe("Return a new array of given shape, type, and context, filled with zeros.")
@@ -117,6 +118,16 @@ NNVM_REGISTER_OP(_npi_arange)
 .set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
 .add_arguments(RangeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_logspace)
+.describe("Return numbers spaced evenly on a log scale.")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LogspaceParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LogspaceShape)
+.set_attr<nnvm::FInferType>("FInferType", InitType<LogspaceParam>)
+.set_attr<FCompute>("FCompute<cpu>", LogspaceCompute<cpu>)
+.add_arguments(LogspaceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_eye)
 .describe("Return a 2-D array with ones on the diagonal and zeros elsewhere.")

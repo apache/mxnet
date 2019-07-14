@@ -58,7 +58,7 @@ def test_np_tensordot():
                 b_axes_summed = b_axes_summed,
 
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         a_axes_remained = []
         for i in range(a.ndim):
@@ -254,7 +254,7 @@ def test_np_dot():
         ((3, 4, 5), (5, )),  # Case 4
         ((3, 4, 5), (5, 2)), # Case 5
         ((5,), (5, 2)),
-        ((3, 5, 4), (5, 4, 3)),  
+        ((3, 5, 4), (5, 4, 3)),
         ((3, 4), (5, 4, 3)),
         ((4,), (5, 4, 3))
     ]
@@ -1007,15 +1007,15 @@ def test_np_argsort():
             return F.np.argsort(a, self._axis)
 
     shapes = [
-        (), 
-        (1,), 
+        (),
+        (1,),
         (5,4),
         (5,0,4),
         (5,0,0),
         (0,0,5),
         (0,0,0),
         (5,3,4)
-    ] 
+    ]
     for hybridize in [True, False]:
         for shape in shapes:
             for ax in list(range(len(shape))) + [-1, None]:
@@ -1131,7 +1131,7 @@ def test_np_hstack():
         if len(shape) == 0:
             l = random.randint(0,3)
             if l == 0:
-                return shape 
+                return shape
             else:
                 return (l,)
         shape_lst = list(shape)
@@ -1564,6 +1564,70 @@ def test_np_trace():
         except mx.base.MXNetError:
             continue
         assert False
+
+
+@with_seed()
+@use_np
+def test_np_logspace():
+    configs = [
+        (0.0, 1.0, 20),
+        (2, 8, 0),
+        (22, 11, 1),
+        (2.22, 9.99, 11),
+        (4.99999, 12.11111111, 111)
+    ]
+    exception_configs = [
+        (0, 10, -1),
+        (0, 1, 2.5),
+    ]
+    base_configs = [0, 1, 5, 8, 10, 33]
+    dtypes = ['float32', 'float64', None]
+    for config in configs:
+        for dtype in dtypes:
+            for endpoint in [False, True]:
+                for base in base_configs:
+                    if isinstance(config, tuple):
+                        mx_ret = np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        np_ret = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                    else:
+                        mx_ret = np.logspace(config, endpoint=endpoint, base=base, dtype=dtype)
+                        np_ret = _np.logspace(config, endpoint=endpoint, base=base, dtype=dtype)
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
+    # check for exception input
+    for config in exception_configs:
+        assertRaises(MXNetError, np.logspace, *config)
+
+    @use_np
+    class TestLogspace(HybridBlock):
+        def __init__(self, start, stop, num=50, endpoint=None, base=50.0, dtype=None, axis=0):
+            super(TestLogspace, self).__init__()
+            self._start = start
+            self._stop = stop
+            self._num = num
+            self._endpoint = endpoint
+            self._base = base
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.logspace(self._start, self._stop, self._num,
+                                     self._endpoint, self._base, self._dtype)
+
+    for dtype in dtypes:
+        x = np.zeros(shape=(), dtype=dtype)
+        for config in configs:
+            for hybridize in [False, True]:
+                for endpoint in [False, True]:
+                    for base in base_configs:
+                        if isinstance(config, tuple):
+                            net = TestLogspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                            np_out = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
+                        else:
+                            net = TestLogspace(config, endpoint=endpoint, base=base, dtype=dtype)
+                            np_out = _np.logspace(config, endpoint=endpoint, base=base, dtype=dtype)
+                        if hybridize:
+                            net.hybridize()
+                    mx_out = net(x)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
 
 
 if __name__ == '__main__':
