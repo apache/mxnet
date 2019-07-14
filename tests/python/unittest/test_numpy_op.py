@@ -1446,7 +1446,7 @@ def test_np_indices():
 
     for dtype in dtypes:
         for shape in shapes:
-            x = np.zeros(shape=shape, dtype=dtype)
+            x = np.zeros(shape=(), dtype=dtype)
             for hybridize in [False, True]:
                     net = TestIndices(dimensions=shape, dtype=dtype)
                     np_out = _np.indices(dimensions=shape, dtype=dtype)

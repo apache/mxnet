@@ -2313,7 +2313,7 @@ def indices(dimensions, dtype=_np.int32, **kwargs):
 
     Returns
     -------
-    grid : ndarray
+    grid : _Symbol
         The array of grid indices,
         ``grid.shape = (len(dimensions),) + tuple(dimensions)``.
 
