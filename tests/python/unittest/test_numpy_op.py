@@ -1441,7 +1441,7 @@ def test_np_indices():
             self._dimensions = dimensions
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x):
+        def hybrid_forward(self, F, x, *args, **kwargs):
             return x + F.np.indices(self._dimensions, self._dtype)
 
     for dtype in dtypes:
@@ -1454,11 +1454,12 @@ def test_np_indices():
                         net.hybridize()
                     mx_out = net(x)
                     same(mx_out.asnumpy(), np_out)
+                    assert mx_out.shape == np_out.shape
 
                     # Test imperative once again
                     mx_out = np.indices(dimensions=shape, dtype=dtype)
                     same(mx_out.asnumpy(), np_out)
-
+                    assert mx_out.shape == np_out.shape
 
 if __name__ == '__main__':
     import nose
