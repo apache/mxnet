@@ -38,7 +38,6 @@
 #include "libinfo.h"
 #include "tuple.h"
 #include "library.h"
-#include "mxnet_acc.h"
 
 /*!
  * \brief define compatible keywords in g++
@@ -569,7 +568,7 @@ inline int Context::LoadAcc(const std::string& path, char *name) {
   char accname[100];
   getAccName(accname);
   std::string name_str(accname);
-  snprintf(name, name_str.size(), "%s", name_str.c_str());
+  snprintf(name, name_str.size()+1, "%s", name_str.c_str());
 
   // create entry for accelerator
   int id = Context::kAccBase + Context::acc_map.size();
