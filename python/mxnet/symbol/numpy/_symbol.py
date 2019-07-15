@@ -61,7 +61,7 @@ def tensordot(a, b, axes=2):
     a, b : _Symbol
         Tensors to "dot".
 
-    axes : int or (2,) array_like
+    axes : int or (2,) ndarray
         * integer_like
         If an int N, sum over the last N axes of `a` and the first N axes
         of `b` in order. The sizes of the corresponding axes must match.
@@ -87,9 +87,9 @@ def tensordot(a, b, axes=2):
     first in both sequences, the second axis second, and so forth.
 
     """
-    import collections
-
-    if isinstance(axes, collections.abc.Sequence):
+    if _np.isscalar(axes):
+        return _npi.tensordot_int_axes(a, b, axes)
+    else:
         if len(axes) != 2:
             raise ValueError('Axes must consist of two arrays.')
         a_axes_summed, b_axes_summed = axes
@@ -102,8 +102,6 @@ def tensordot(a, b, axes=2):
             raise ValueError('Axes length mismatch')
 
         return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
-    else:
-        return _npi.tensordot_int_axes(a, b, axes)
 
 
 @set_module('mxnet.symbol.numpy')

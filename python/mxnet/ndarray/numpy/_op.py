@@ -99,9 +99,9 @@ def tensordot(a, b, axes=2):
            [ 4796.,  5162.],
            [ 4928.,  5306.]])
     """
-    import collections
-
-    if isinstance(axes, collections.abc.Sequence):
+    if _np.isscalar(axes):
+        return _npi.tensordot_int_axes(a, b, axes)
+    else:
         if len(axes) != 2:
             raise ValueError('Axes must consist of two arrays.')
         a_axes_summed, b_axes_summed = axes
@@ -114,8 +114,6 @@ def tensordot(a, b, axes=2):
             raise ValueError('Axes length mismatch')
 
         return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
-    else:
-        return _npi.tensordot_int_axes(a, b, axes)
 
 
 @set_module('mxnet.ndarray.numpy')
