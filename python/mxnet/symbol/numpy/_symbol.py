@@ -2295,7 +2295,7 @@ def arcsin(x, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
-def indices(dimensions, dtype=_np.int32, **kwargs):
+def indices(dimensions, dtype=_np.int32, ctx=None):
     """Return an array representing the indices of a grid.
 
     Compute an array where the subarrays contain index values 0,1,...
@@ -2357,7 +2357,9 @@ def indices(dimensions, dtype=_np.int32, **kwargs):
     extract the required elements directly with ``x[:2, :3]``.
     """
     if isinstance(dimensions, (tuple, list)):
-        return _npi.indices(dimensions=dimensions, dtype=dtype)
+        if ctx is None:
+            ctx = current_context()
+        return _npi.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
     else:
         raise ValueError("The dimensions must be sequence of ints")
 

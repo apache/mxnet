@@ -3006,7 +3006,7 @@ def arcsin(x, out=None, **kwargs):
     return _mx_nd_np.arcsin(x, out=out, **kwargs)
 
 @set_module('mxnet.numpy')
-def indices(dimensions, dtype=_np.int32, **kwargs):
+def indices(dimensions, dtype=_np.int32, ctx=None):
     """Return an array representing the indices of a grid.
 
     Compute an array where the subarrays contain index values 0,1,...
@@ -3067,4 +3067,4 @@ def indices(dimensions, dtype=_np.int32, **kwargs):
     Note that it would be more straightforward in the above example to
     extract the required elements directly with ``x[:2, :3]``.
     """
-    return _mx_nd_np.indices(dimensions, dtype, **kwargs)
+    return _mx_nd_np.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
