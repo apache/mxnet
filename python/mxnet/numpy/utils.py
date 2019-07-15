@@ -33,3 +33,4 @@ int8 = onp.int8
 int64 = onp.int64
 
 pi = onp.pi
+newaxis = None

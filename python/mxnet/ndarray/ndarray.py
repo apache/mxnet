@@ -47,7 +47,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "logical_xor", "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal",
            "onehot_encode", "power", "subtract", "true_divide", "waitall", "_new_empty_handle",
            "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
-           "from_numpy"]
+           "from_numpy", "_indexing_key_expand_implicit_axes", "_get_indexing_dispatch_code", "_int_to_slice"]  # TODO: can I add function here?
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -464,7 +464,7 @@ fixed-size items.
                [ 6.,  0.,  4.]], dtype=float32)
         """
         # Kohr
-        key = _indexing_key_expand_implicit_axes(key, self.shape)  # TODO: function where?
+        key = _indexing_key_expand_implicit_axes(key, self.shape)
         slc_key = tuple(idx for idx in key if idx is not None)
 
         if len(slc_key) < self.ndim:
@@ -478,7 +478,6 @@ fixed-size items.
                 'too many indices ({}) for array with {} dimensions'
                 ''.format(len(slc_key), self.ndim)
             )
-            Kohr
         indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
         if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
             self._set_nd_basic_indexing(slc_key, value)
@@ -624,6 +623,7 @@ fixed-size items.
         if len(key) == 0:
             raise ValueError('indexing key cannot be an empty tuple')
 
+        indexing_dispatch_code = _get_indexing_dispatch_code(key)
         if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
             return self._get_nd_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
@@ -659,6 +659,7 @@ fixed-size items.
     @staticmethod
     def _basic_indexing_key_to_begin_end_step(idcs, shape, keep_none=True):
         """Map a tuple of ``slice`` and ``None`` (ignored) to begin, end, step tuples."""
+        # TODO(xinyi): unnecessary code? In basic indexing idcs has already been processed. 
         idcs = [idx for idx in idcs if idx is not None]
         idcs = [idx if isinstance(idx, py_slice) else _int_to_slice(idx)
                 for idx in idcs]
@@ -718,9 +719,10 @@ fixed-size items.
         assert len(slc_key) == len(shape)
         subset = False
         for idx, n in zip(reversed(slc_key), reversed(shape)):
+            # n: the length in the dimension
             start, stop, step = idx.indices(n)
             if step > 0:
-                num = int(np.ceil(max(stop - start, 0) / step))
+                num = int(np.ceil(max(stop - start, 0) / step))  # num to be returned
             else:
                 num = int(np.ceil(min(stop - start, 0) / step))
 
@@ -865,6 +867,7 @@ fixed-size items.
 
         # Make sure we don't accidentally have advanced indexing or
         # unsupported entries.
+        # TODO(xinyi): unnecessary code?
         for idx in slc_key:
             if not isinstance(idx, py_slice):
                 raise RuntimeError(
@@ -917,7 +920,6 @@ fixed-size items.
         if final_shape == []:
             # Override for single element indexing
             final_shape = [1]
-
         return sliced.reshape(final_shape)
 
     @staticmethod
