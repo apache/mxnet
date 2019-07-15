@@ -80,8 +80,6 @@ def test_np_diagflat():
                                         atol=atol)
 
 
-
-
 @with_seed()
 @npx.use_np_shape
 def test_np_sum():
