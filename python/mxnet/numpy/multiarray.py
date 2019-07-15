@@ -45,9 +45,10 @@ from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
-           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'sin', 'cos',
+           'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
-           'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin']
+           'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
+           'argsort', 'hstack']
 
 
 # This function is copied from ndarray.py since pylint
@@ -779,13 +780,17 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute topk')
 
-    def argsort(self, *args, **kwargs):
+    def argsort(self, axis=-1, kind='quicksort', order=None):   # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`argsort`.
 
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise NotImplementedError
+        if kind != 'quicksort':
+            raise AttributeError('mxnet.numpy.argsort does not support other sorting methods')
+        if order is not None:
+            raise AttributeError('mxnet.numpy.argsort does not support sorting with fields ordering')
+        return _npi.argsort(self, axis)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -1561,6 +1566,46 @@ def stack(arrays, axis=0, out=None):
 
 
 @set_module('mxnet.numpy')
+def hstack(arrays):
+    """
+    Stack arrays in sequence horizontally (column wise).
+    This is equivalent to concatenation along the second axis,
+    except for 1-D arrays where it concatenates along the first axis.
+    Rebuilds arrays divided by hsplit.
+    This function makes most sense for arrays with up to 3 dimensions.
+    For instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions concatenate,
+    stack and block provide more general stacking and concatenation operations.
+
+    Parameters
+    ----------
+    tup : sequence of ndarrays
+        The arrays must have the same shape along all but the second axis, except 1-D arrays which can be any length.
+
+    Returns
+    -------
+    stacked : ndarray
+        The array formed by stacking the given arrays.
+
+    Examples
+    --------
+    >>> from mxnet import np,npx
+    >>> a = np.array((1,2,3))
+    >>> b = np.array((2,3,4))
+    >>> np.hstack((a,b))
+    array([1., 2., 3., 2., 3., 4.])
+
+    >>> a = np.array([[1],[2],[3]])
+    >>> b = np.array([[2],[3],[4]])
+    >>> np.hstack((a,b))
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
+    """
+    return _npi.hstack(*arrays)
+
+
+@set_module('mxnet.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
     """Return evenly spaced values within a given interval.
 
@@ -1668,6 +1713,65 @@ def argmax(a, axis=None, out=None):
     array([2., 2.])
     """
     return _mx_nd_np.argmax(a, axis, out)
+
+
+@set_module('mxnet.numpy')
+def argsort(a, axis=-1, kind='quicksort', order=None):
+    """
+    Returns the indices that would sort an input array along the given axis.
+    This function performs sorting along the given axis and returns an array
+    of indices having same shape as an input array that index data in sorted order.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array
+    axis : int, optional
+        The axis along which to sort teh input tensor.
+        If not given, the last, dimension -1 will be used by default.
+        If None, the flattened array is used.
+    kind: {'quicksort'}
+        Currently not supported.
+    order: None
+        Currently not supported.
+
+    Returns
+    -------
+    output : ndarray
+        Array of indices that sort a along the specified axis.
+        If a is one-dimensional, a[index_array] yields a sorted a.
+        More generally, np.take_along_axis(a, index_array, axis=a) always yields the sorted a,
+        irrespective of dimensionality.
+
+    Examples
+    --------
+    >>> x = np.array([3, 1, 2])
+    >>> np.argsort(x)
+    array([1., 2., 0.])
+    >>> x = np.array([[0, 3], [2, 2]])
+    >>> x
+    array([[0., 3.],
+           [2., 2.]])
+    >>> np.argsort(x, axis=0)  # sorts along first axis (down)
+    array([[0., 1.],
+           [1., 0.]])
+    >>> np.argsort(x, axis=1)  # sorts along last axis (across)
+    array([[0., 1.],
+           [0., 1.]])
+
+    Notes
+    -----
+    This function differs from the original `numpy.argsort
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.argsort.html>`_ in
+    the following way(s):
+
+    - kind and order are currently not supported
+    """
+    if kind != 'quicksort':
+        raise AttributeError('mxnet.numpy.argsort does not support other sorting methods')
+    if order is not None:
+        raise AttributeError('mxnet.numpy.argsort does not support sorting with fields ordering')
+    return _npi.argsort(a, axis)
 
 
 @set_module('mxnet.numpy')
@@ -2077,6 +2181,33 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
       GPU.
     """
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, ctx)
+
+
+@set_module('mxnet.numpy')
+def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
+    """
+    Return a 2-D array with ones on the diagonal and zeros elsewhere.
+
+    Parameters
+    ----------
+    N : int
+        Number of rows in the output.
+    M : int, optional
+        Number of columns in the output. If None, defaults to N.
+    k : int, optional
+        Index of the diagonal: 0 (the default) refers to the main diagonal,
+        a positive value refers to an upper diagonal,
+        and a negative value to a lower diagonal.
+    dtype : data-type, optional
+        Data-type of the returned array.
+
+    Returns
+    -------
+    I : ndarray of shape (N,M)
+        An array where all elements are equal to zero,
+        except for the k-th diagonal, whose values are equal to one.
+    """
+    return _mx_nd_np.eye(N, M, k, dtype, **kwargs)
 
 
 @set_module('mxnet.numpy')

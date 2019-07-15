@@ -43,6 +43,12 @@ NNVM_REGISTER_OP(_npi_concatenate)
 NNVM_REGISTER_OP(_backward_np_concat)
 .set_attr<FCompute>("FCompute<gpu>", ConcatGradCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_hstack)
+.set_attr<FCompute>("FCompute<gpu>", HStackCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_hstack)
+.set_attr<FCompute>("FCompute<gpu>", HStackGradCompute<gpu>);
+
 NNVM_REGISTER_OP(_np_squeeze)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
