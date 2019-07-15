@@ -137,7 +137,7 @@ NNVM_REGISTER_OP(_npi_indices)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyIndicesShape)
 .set_attr<nnvm::FInferType>("FInferType", InitType<IndicesOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", IndicesCompute<cpu>)
-.add_arguments(InitOpParam::__FIELDS__());
+.add_arguments(IndicesOpParam::__FIELDS__());
 
 }  // namespace op
-}  // namespace mxnet
+}  // namespace mxnett

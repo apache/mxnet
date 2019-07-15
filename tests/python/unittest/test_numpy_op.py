@@ -1434,6 +1434,14 @@ def test_np_indices():
         (4,),
         (2,3,4,5,6,7,8)
               ]
+
+    for dtype in dtypes:
+        for shape in shapes:
+            np_out = _np.indices(dimensions=shape, dtype=dtype)
+            mx_out = np.indices(dimensions=shape, dtype=dtype)
+            same(mx_out.asnumpy(), np_out)
+            assert mx_out.shape == np_out.shape
+
     @npx.use_np
     class TestIndices(HybridBlock):
         def __init__(self, dimensions=None, dtype=None):
@@ -1441,8 +1449,8 @@ def test_np_indices():
             self._dimensions = dimensions
             self._dtype = dtype
 
-        def hybrid_forward(self, F, x, *args, **kwargs):
-            return x + F.np.indices(self._dimensions, self._dtype)
+        def hybrid_forward(self, F, x):
+            return x + F.np.indices(dimensions=self._dimensions, dtype=self._dtype)
 
     for dtype in dtypes:
         for shape in shapes:
@@ -1456,10 +1464,6 @@ def test_np_indices():
                     same(mx_out.asnumpy(), np_out)
                     assert mx_out.shape == np_out.shape
 
-                    # Test imperative once again
-                    mx_out = np.indices(dimensions=shape, dtype=dtype)
-                    same(mx_out.asnumpy(), np_out)
-                    assert mx_out.shape == np_out.shape
 
 if __name__ == '__main__':
     import nose
