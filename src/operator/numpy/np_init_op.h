@@ -114,15 +114,14 @@ struct IndicesOpParam : public dmlc::Parameter<IndicesOpParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(IndicesOpParam) {
     DMLC_DECLARE_FIELD(dimensions)
-        .describe("The shape of the grid.");
+    .describe("The shape of the grid.");
     DMLC_DECLARE_FIELD(ctx)
-        .set_default("")
-        .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-                  "Only used for imperative calls.");
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kInt32)
-            MXNET_ADD_ALL_TYPES
-        .describe("Target data type.");
-
+      MXNET_ADD_ALL_TYPES
+      .describe("Target data type.");
   }
 };
 
@@ -132,7 +131,8 @@ inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
   const IndicesOpParam& param = nnvm::get<IndicesOpParam>(attrs.parsed);
   CHECK_EQ(in_shapes->size(), 0U);
   CHECK_EQ(out_shapes->size(), 1U);
-  CHECK_GE(param.dimensions.ndim(), 0) << "_npi_indices dimensions the number of dim must not be less than  0";
+  CHECK_GE(param.dimensions.ndim(), 0)
+    << "_npi_indices dimensions the number of dim must not be less than  0";
   mxnet::TShape param_dim = param.dimensions;
   if (!shape_is_known(param_dim)) return false;
   for (int i = 0; i < param_dim.ndim(); ++i) {
@@ -187,8 +187,8 @@ void IndicesCompute(const nnvm::NodeAttrs& attrs,
             value = param.dimensions[i];
             for (int k = 0; k < t; ++k) {
               for (int j = 0; j < param.dimensions[i]; ++j) {
-                Kernel<indices_fwd<req_type>, xpu>::Launch(s, N/(param.dimensions[i] * t), out_data.dptr<DType>(),
-                                                           value, N, i, j, k, t);
+                Kernel<indices_fwd<req_type>, xpu>::Launch(s, N/(param.dimensions[i] * t),
+                    out_data.dptr<DType>(), value, N, i, j, k, t);
               }
             }
             t = t * param.dimensions[i];

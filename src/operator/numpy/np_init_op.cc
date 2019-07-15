@@ -140,4 +140,4 @@ NNVM_REGISTER_OP(_npi_indices)
 .add_arguments(IndicesOpParam::__FIELDS__());
 
 }  // namespace op
-}  // namespace mxnett
+}  // namespace mxnet
