@@ -1007,15 +1007,15 @@ def test_np_argsort():
             return F.np.argsort(a, self._axis)
 
     shapes = [
-        (), 
-        (1,), 
+        (),
+        (1,),
         (5,4),
         (5,0,4),
         (5,0,0),
         (0,0,5),
         (0,0,0),
         (5,3,4)
-    ] 
+    ]
     for hybridize in [True, False]:
         for shape in shapes:
             for ax in list(range(len(shape))) + [-1, None]:
@@ -1564,6 +1564,68 @@ def test_np_trace():
         except mx.base.MXNetError:
             continue
         assert False
+
+
+@with_seed()
+@use_np
+def test_np_bitwise_xor():
+    class TestBitwiseXor(HybridBlock):
+        def __init__(self):
+            super(TestBitwiseXor, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.bitwise_xor(a, b)
+
+    shapes = [
+        [(2,), ()],
+        [(2,), (2,)],
+        [(2, 3), (2, 3)],
+        [(), ()],
+        [(5, 0, 2), (1,)],
+        [(2, 4), (4,)],
+        [(2, 0, 3), (2, 0, 3)],
+        [(2, 0, 3), (3,)],
+        [(2, 0, 3), ()],
+        [(2, 3, 4), ((2, 3, 4))],
+        [(2, 3, 4), ()],
+        [(2, 3, 4), (3, 4)],
+        [(2, 3, 4), (4,)],
+        [(2, 3, 4), (2, 1, 4)],
+        [(2, 1, 4), (3, 1)],
+        [(2, 1, 5), (1,)],
+        [(3, 2, 7), (3, 1, 1)],
+        [(3, 1, 3), (2, 3)]
+    ]
+
+    for hybridize in [True, False]:
+        for shape in shapes:
+            # More for-loops for iterating through all other arguments
+            # 1 extra for-loop for iterating through data types
+            test_bitwise_xor = TestBitwiseXor()
+            if hybridize:
+                test_bitwise_xor.hybridize()
+            x_1 = rand_ndarray(shape[0], dtype="int64").as_np_ndarray()
+            x_2 = rand_ndarray(shape[1], dtype="int64").as_np_ndarray()
+            x_1.attach_grad()
+            x_2.attach_grad()
+            np_out = _np.bitwise_xor(x_1.asnumpy(), x_2.asnumpy())
+
+            with mx.autograd.record():
+                mx_out = test_bitwise_xor(x_1, x_2)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+
+            x1_np_backward = _np.zeros(shape[0])
+            x2_np_backward = _np.zeros(shape[1])
+            assert_almost_equal(x_1.grad.asnumpy(), x1_np_backward, atol=1e-3,
+                                rtol=1e-5)
+            assert_almost_equal(x_2.grad.asnumpy(), x2_np_backward, atol=1e-3,
+                                rtol=1e-5)
+            # Test imperative once again
+            mx_out = np.bitwise_xor(x_1, x_2)
+            np_out = _np.bitwise_xor(x_1.asnumpy(), x_2.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':
