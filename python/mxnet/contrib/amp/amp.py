@@ -716,7 +716,12 @@ def convert_bucketing_module(bucketing_mod, target_dtype="float16", target_dtype
         sym_dict[key], result_arg_params, result_aux_params = convert_model(val._symbol,
                                                                             arg_params,
                                                                             aux_params,
-                                                                            cast_optional_params=True)
+                                                                            target_dtype=target_dtype,
+                                                                            target_dtype_ops=target_dtype_ops,
+                                                                            fp32_ops=fp32_ops,
+                                                                            conditional_fp32_ops=conditional_fp32_ops,
+                                                                            excluded_sym_names=excluded_sym_names,
+                                                                            cast_optional_params=cast_optional_params)
     result_mod = BucketingModule.load_dict(sym_dict,
                                            sym_gen=bucketing_mod._sym_gen,
                                            arg_params=result_arg_params,

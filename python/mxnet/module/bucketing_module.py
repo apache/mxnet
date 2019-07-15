@@ -24,6 +24,7 @@ mini-batch of data.
 
 import logging
 import warnings
+import numpy as np
 
 from .. import context as ctx
 
@@ -33,6 +34,7 @@ from .. import symbol as sym
 
 from .base_module import BaseModule, _check_input_names
 from .module import Module
+from ..model import load_params
 from ..name import NameManager
 
 class BucketingModule(BaseModule):
@@ -575,12 +577,12 @@ class BucketingModule(BaseModule):
         assert len(self._buckets) > 0, "Empty BucketingModule cannot be saved"
         param_name = "%s-%04d.params" % (prefix, epoch)
         self.save_params(param_name)
-        for buckey_key, module in self._buckets.items():
-            symbol, data_names, label_names = self._sym_gen(bucket_key)
+        for bucket_key in self._buckets:
+            symbol, _, _ = self._sym_gen(bucket_key)
             symbol.save("%s-%s-symbol.json" % (prefix, epoch))
         if save_optimizer_states:
             state_name = "%s-%04d.states" % (prefix, epoch)
-            module.save_optimizer_states(state_name)
+            self._curr_module.save_optimizer_states(state_name)
         nd.save("%s.buckets" % (prefix), nd.array(self._buckets.keys(), dtype=np.int32))
 
     @staticmethod
@@ -698,9 +700,9 @@ class BucketingModule(BaseModule):
             "default_bucket_key needs to be provided for BucketingModule.load_dict"
 
         bucketing_mod = BucketingModule(sym_gen, default_bucket_key, **kwargs)
-        for bucket_key, sym in sym_dict.items():
+        for bucket_key, loaded_sym in sym_dict.items():
             _, data_names, label_names = sym_gen(default_bucket_key)
-            bucketing_mod._buckets[bucket_key] = Module(sym, data_names, label_names, **kwargs)
+            bucketing_mod._buckets[bucket_key] = Module(loaded_sym, data_names, label_names, **kwargs)
             if bucket_key == default_bucket_key:
                 bucketing_mod._curr_module = bucketing_mod._buckets[bucket_key]
         bucketing_mod._curr_module._arg_params = arg_params
