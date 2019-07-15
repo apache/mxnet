@@ -7789,41 +7789,46 @@ def test_op_output_names_monitor():
             pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
-    # Disable subgraph in case subgraph will replace symbol
-    os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
-    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-    check_name(conv_sym, ['conv_output'])
+    is_windows = sys.platform.startswith('win')
+    if (is_windows):
+        # Windows doesn't support set environment variable on the fly, so disable it for now
+        pass
+    else:
+        # Disable subgraph in case subgraph will replace symbol
+        os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
+        data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+        conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+        check_name(conv_sym, ['conv_output'])
 
-    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
-    check_name(deconv_sym, ['deconv_output'])
+        deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+        check_name(deconv_sym, ['deconv_output'])
 
-    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
-    check_name(fc_sym, ['fc_output'])
+        fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+        check_name(fc_sym, ['fc_output'])
 
-    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
-    check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
+        lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+        check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
 
-    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
-    check_name(act_sym, ['act_output'])
+        act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+        check_name(act_sym, ['act_output'])
 
-    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
-    check_name(cc_sym, ['concat_output'])
+        cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+        check_name(cc_sym, ['concat_output'])
 
-    sm_sym = mx.sym.softmax(data, name='softmax')
-    check_name(sm_sym, ['softmax_output'])
+        sm_sym = mx.sym.softmax(data, name='softmax')
+        check_name(sm_sym, ['softmax_output'])
 
-    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
-    check_name(sa_sym, ['softmax_output'])
+        sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+        check_name(sa_sym, ['softmax_output'])
 
-    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
-                               name='upsampling')
-    check_name(us_sym, ['upsampling_output'])
+        us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                                name='upsampling')
+        check_name(us_sym, ['upsampling_output'])
 
-    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
-                            name='pooling')
-    check_name(us_sym, ['pooling_output'])
-    del os.environ['MXNET_SUBGRAPH_BACKEND']
+        us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                                name='pooling')
+        check_name(us_sym, ['pooling_output'])
+        del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 def test_op_all_names_monitor():
     def check_name(op_sym, expected_names):
@@ -7842,42 +7847,47 @@ def test_op_all_names_monitor():
             pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
-    # Disable subgraph in case subgraph will replace symbol
-    os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
+    is_windows = sys.platform.startswith('win')
+    if (is_windows):
+        # Windows doesn't support set environment variable on the fly, so disable it for now
+        pass
+    else:
+        # Disable subgraph in case subgraph will replace symbol
+        os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
 
-    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-    check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
+        data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+        conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+        check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
 
-    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
-    check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
+        deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+        check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
 
-    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
-    check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
+        fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+        check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
 
-    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
-    check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
+        lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+        check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
 
-    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
-    check_name(act_sym, ['data', 'act_input0', 'act_output'])
+        act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+        check_name(act_sym, ['data', 'act_input0', 'act_output'])
 
-    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
-    check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
+        cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+        check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
 
-    sm_sym = mx.sym.softmax(data, name='softmax')
-    check_name(sm_sym, ['data', 'softmax_input0', 'softmax_output'])
+        sm_sym = mx.sym.softmax(data, name='softmax')
+        check_name(sm_sym, ['data', 'softmax_input0', 'softmax_output'])
 
-    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
-    check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
+        sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+        check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
 
-    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
-                               name='upsampling')
-    check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
+        us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                                name='upsampling')
+        check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
 
-    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
-                            name='pooling')
-    check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
-    del os.environ['MXNET_SUBGRAPH_BACKEND']
+        us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                                name='pooling')
+        check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
+        del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 @with_seed()
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
