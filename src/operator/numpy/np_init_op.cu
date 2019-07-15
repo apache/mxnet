@@ -24,7 +24,6 @@
  */
 
 #include "./np_init_op.h"
-#include "np_init_op-inl.h"
 
 namespace mxnet {
 namespace op {
