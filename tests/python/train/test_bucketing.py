@@ -23,6 +23,28 @@ from random import randint
 from mxnet.contrib.amp import amp
 
 
+def prepare_bucketing_data(buckets, len_vocab, batch_size, invalid_label, num_sentence):
+    train_sent = []
+    val_sent = []
+
+    for _ in range(num_sentence):
+        len_sentence = randint(6, max(buckets)-1) # leave out the two last buckets empty
+        train_sentence = []
+        val_sentence = []
+        for _ in range(len_sentence):
+            train_sentence.append(randint(1, len_vocab))
+            val_sentence.append(randint(1, len_vocab))
+        train_sent.append(train_sentence)
+        val_sent.append(val_sentence)
+
+    data_train = mx.rnn.BucketSentenceIter(train_sent, batch_size, buckets=buckets,
+                                   invalid_label=invalid_label)
+    data_val =  mx.rnn.BucketSentenceIter(val_sent, batch_size, buckets=buckets,
+                                 invalid_label=invalid_label)
+
+    return (data_train, data_val)
+
+
 def train_model(context=mx.cpu()):
     import logging
     head = '%(asctime)-15s %(message)s'
@@ -42,23 +64,7 @@ def train_model(context=mx.cpu()):
     invalid_label = -1
     num_sentence = 1000
 
-    train_sent = []
-    val_sent = []
-
-    for _ in range(num_sentence):
-        len_sentence = randint(6, max(buckets)-1) # leave out the two last buckets empty
-        train_sentence = []
-        val_sentence = []
-        for _ in range(len_sentence):
-            train_sentence.append(randint(1, len_vocab))
-            val_sentence.append(randint(1, len_vocab))
-        train_sent.append(train_sentence)
-        val_sent.append(val_sentence)
-
-    data_train = mx.rnn.BucketSentenceIter(train_sent, batch_size, buckets=buckets,
-                                   invalid_label=invalid_label)
-    data_val =  mx.rnn.BucketSentenceIter(val_sent, batch_size, buckets=buckets,
-                                 invalid_label=invalid_label)
+    data_train, data_val = prepare_bucketing_data(buckets, len_vocab, batch_size, invalid_label, num_sentence)
 
     stack = mx.rnn.SequentialRNNCell()
     for i in range(num_layers):

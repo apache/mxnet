@@ -560,7 +560,7 @@ class BucketingModule(BaseModule):
         for mod in self._buckets.values():
             mod.install_monitor(mon)
 
-    def save_checkpoint(self, prefix, epoch, save_optimizer_states=False):
+    def save_checkpoint(self, prefix, epoch, remove_amp_cast=False):
         """Saves current progress to checkpoint for all buckets in BucketingModule
         Use `mx.callback.module_checkpoint` as `epoch_end_callback` to save during training.
 
@@ -570,8 +570,6 @@ class BucketingModule(BaseModule):
             The file prefix to checkpoint to.
         epoch : int
             The current epoch number.
-        save_optimizer_states : bool
-            Whether to save optimizer states to continue training.
         """
 
         assert len(self._buckets) > 0, "Empty BucketingModule cannot be saved"
@@ -579,11 +577,8 @@ class BucketingModule(BaseModule):
         self.save_params(param_name)
         for bucket_key in self._buckets:
             symbol, _, _ = self._sym_gen(bucket_key)
-            symbol.save("%s-%s-symbol.json" % (prefix, epoch))
-        if save_optimizer_states:
-            state_name = "%s-%04d.states" % (prefix, epoch)
-            self._curr_module.save_optimizer_states(state_name)
-        nd.save("%s.buckets" % (prefix), nd.array(self._buckets.keys(), dtype=np.int32))
+            symbol.save("%s-%s-symbol.json" % (prefix, bucket_key), remove_amp_cast=remove_amp_cast)
+        nd.save("%s.buckets" % (prefix), nd.array(list(self._buckets.keys()), dtype=np.int32))
 
     @staticmethod
     def load(prefix, epoch, load_optimizer_states=False, sym_gen=None, default_bucket_key=None, **kwargs):
@@ -598,9 +593,6 @@ class BucketingModule(BaseModule):
             epoch number.
         epoch : int
             epoch to load.
-        load_optimizer_states : bool
-            whether to load optimizer states. Checkpoint needs
-            to have been made with save_optimizer_states=True.
         sym_gen : function
             A function when called with a bucket key, returns a triple
             ``(symbol, data_names, label_names)``.
@@ -643,8 +635,6 @@ class BucketingModule(BaseModule):
         bucketing_mod._curr_module._aux_params = aux_params
         bucketing_mod._curr_module.params_initialized = True
         bucketing_mod.params_initialized = True
-        if load_optimizer_states:
-            bucketing_mod._preload_opt_states = '%s-%04d.states'%(prefix, epoch)
         return bucketing_mod
 
     @staticmethod
