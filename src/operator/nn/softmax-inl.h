@@ -332,7 +332,7 @@ __device__ inline T warp_reduce(T value, OP redfun) {
 
 template <typename OP>
 __device__ inline mshadow::half::half_t warp_reduce(mshadow::half::half_t value, OP redfun) {
-  float v = float(value);
+  float v = static_cast<float>(value);
   v = redfun(v, __shfl_down_sync(0xffffffff, v, 16));
   v = redfun(v, __shfl_down_sync(0xffffffff, v, 8));
   v = redfun(v, __shfl_down_sync(0xffffffff, v, 4));
@@ -387,7 +387,8 @@ __global__ void softmax_compute_kernel2(const DType *in, OType *out, const index
     __syncthreads();
   }
   if (my_id < warp_size) {
-    AType my_value = warp_reduce(scratch[threadIdx.x], [](AType x, AType y) { return ::max(x, y); });
+    AType my_value = warp_reduce(scratch[threadIdx.x],
+                                 [](AType x, AType y) { return ::max(x, y); });
     scratch[threadIdx.x] = my_value;
   }
   __syncthreads();
@@ -410,7 +411,8 @@ __global__ void softmax_compute_kernel2(const DType *in, OType *out, const index
     __syncthreads();
   }
   if (my_id < warp_size) {
-    AType my_value = warp_reduce(scratch[threadIdx.x], [](AType x, AType y) { return x + y;});
+    AType my_value = warp_reduce(scratch[threadIdx.x],
+                                 [](AType x, AType y) { return x + y;});
     scratch[threadIdx.x] = my_value;
   }
   __syncthreads();
