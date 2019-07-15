@@ -1911,8 +1911,9 @@ def test_depthwise_convolution():
 @with_seed()
 def test_convolution_independent_gradients():
     ctx = default_context()
-    if ctx.device_type == "gpu":
-        return
+    # set a low bar for autotuned cudnn conv
+    atol = 1.0e-1 if ctx.device_type == "gpu" else 1.0e-3
+    rtol = 1.0e-2 if ctx.device_type == "gpu" else 1.0e-3
     reqs = ["null", "write", "add"]
     var_names = ["x", "w", "b"]
     dims = [1, 2]
@@ -1970,7 +1971,7 @@ def test_convolution_independent_gradients():
                     
                 exe2.forward(is_train=True)
                 np.testing.assert_allclose(exe1.outputs[0].asnumpy(),
-                    exe2.outputs[0].asnumpy(), rtol=1e-3, atol=1e-3)
+                    exe2.outputs[0].asnumpy(), rtol=rtol, atol=atol)
                 
                 exe2.backward(exe2.outputs[0])
                 for var_name in var_names:
@@ -1979,13 +1980,13 @@ def test_convolution_independent_gradients():
                     if grad_req2[var_name] == "null":
                         exe2_var_grad = grad2[var_name].asnumpy()
                         np.testing.assert_allclose(exe2_var_grad,
-                            np.zeros_like(exe2_var_grad), rtol=1e-3, atol=1e-3)
+                            np.zeros_like(exe2_var_grad), rtol=rtol, atol=atol)
                     if grad_req2[var_name] != grad_req1[var_name]:
                         continue
                     np.testing.assert_allclose(args1[var_name].asnumpy(),
-                        args2[var_name].asnumpy(), rtol=1e-3, atol=1e-3)
+                        args2[var_name].asnumpy(), rtol=rtol, atol=atol)
                     np.testing.assert_allclose(grad1[var_name].asnumpy(),
-                        grad2[var_name].asnumpy(), rtol=1e-3, atol=1e-3)
+                        grad2[var_name].asnumpy(), rtol=rtol, atol=atol)
 
 
 def gen_broadcast_data(idx):
