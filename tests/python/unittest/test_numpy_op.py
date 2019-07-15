@@ -485,6 +485,7 @@ def test_np_unary_funcs():
             ref_grad, low, high = func_data
             check_unary_func(func, ref_grad, shape, low, high)
 
+            
 @with_seed()
 @npx.use_np_shape
 def test_np_dsplit():
@@ -502,8 +503,6 @@ def test_np_dsplit():
             ((2, 5, 10, 3), 5),
             [(2, 3, 4), 2],
             [(2, 0, 6, 0), 3]  # zero dims
-            # [(2, 0, 6, 0), (2, 3)]  # zero dims
-            # [(0, 3, 5), (1, 3)],  # first dim being zero
         ]:
             test_dsplit = TestDSplit(i_or_s)
             if hybridize:
