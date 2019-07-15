@@ -27,8 +27,18 @@
 
 #include <dlfcn.h>
 #include <iostream>
+#include "dmlc/io.h"
 
 void* load_lib(const char* path);
-void get_func(void* handle, void** func, char* name);
+void get_sym(void* handle, void** func, char* name);
+
+template<typename T>
+T get_func(void *lib, char *func_name) {
+  T func;
+  get_sym(lib, reinterpret_cast<void**>(&func), func_name);
+  if (!func)
+    LOG(FATAL) << "Unable to get function '" << func_name << "' from library";
+  return func;
+}
 
 #endif  // MXNET_LIBRARY_H_

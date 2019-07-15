@@ -170,6 +170,16 @@ Context._default_ctx.value = Context('cpu', 0)
 
 
 def load_acc(path):
+    """Loads accelerator library and returns corresponding context.
+
+    Parameters
+    ----------
+    path : Path to accelerator library .so file
+
+    Returns
+    -------
+    context : Context
+    """
     #check if path exists
     if not os.path.exists(path):
         print('load_acc path "%s" does NOT exist' % path)
@@ -184,13 +194,13 @@ def load_acc(path):
     dev_id = ctypes.c_int()
     name = ctypes.create_string_buffer(100)
 
-    check_call(_LIB.MXLoadAccLib(chararr,ctypes.byref(dev_id),name))
+    check_call(_LIB.MXLoadAccLib(chararr, ctypes.byref(dev_id), name))
 
     dev_id = dev_id.value
     name = name.value
     Context.devtype2str[dev_id] = name
     Context.devstr2type[name] = dev_id
-    Context.acc_map[dev_id] = (name,path)
+    Context.acc_map[dev_id] = (name, path)
 
     return Context(name, 0)
 

@@ -19,29 +19,15 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file library.cc
- * \brief Dynamically loading accelerator library
- * and accessing its functions
+ * \file my_accel.cc
+ * \brief Sample library functions
  */
 
-#include "../../include/mxnet/library.h"
+#include "mxnet_acc.h"
+#include <string>
+#include <cstring>
 
-void* load_lib(const char* path) {
-  void *handle;
-  handle = dlopen(path, RTLD_LAZY);
-
-  if (!handle) {
-    std::cerr << "Error loading accelerator library: '" << path
-              << "'\n" << dlerror() << std::endl;
-    return 0;
-  }
-  return handle;
-}
-
-void get_sym(void* handle, void** func, char* name) {
-  *func = dlsym(handle, name);
-  if (!(*func)) {
-    std::cerr << "Error getting function '" << name
-              << "' from accelerator library\n" << dlerror() << std::endl;
-  }
+void getAccName(char* s) {
+  std::string name = "myacc";
+  strcpy(s,name.c_str());
 }

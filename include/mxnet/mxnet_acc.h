@@ -28,6 +28,9 @@
 #include <cstdlib>
 #include "../dlpack/dlpack.h"
 
+#define GETACCNAME_STR "getAccName"
+typedef void (*getAccName_t)(char*);
+
 extern "C" {
     /*
     Function: getAccName

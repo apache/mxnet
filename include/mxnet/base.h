@@ -38,6 +38,7 @@
 #include "libinfo.h"
 #include "tuple.h"
 #include "library.h"
+#include "mxnet_acc.h"
 
 /*!
  * \brief define compatible keywords in g++
@@ -559,10 +560,7 @@ inline int Context::LoadAcc(const std::string& path, char *name) {
     LOG(FATAL) << "Unable to load library";
 
   // get name function from library
-  void (*getAccName)(char*);
-  get_func(lib, reinterpret_cast<void**>(&getAccName), const_cast<char*>("getAccName"));
-  if (!getAccName)
-    LOG(FATAL) << "Unable to get accelerator name from library";
+  getAccName_t getAccName = get_func<getAccName_t>(lib, const_cast<char*>(GETACCNAME_STR));
 
   // call name function
   char accname[100];
