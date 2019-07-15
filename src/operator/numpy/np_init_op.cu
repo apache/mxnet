@@ -24,9 +24,16 @@
  */
 
 #include "./np_init_op.h"
+#include "np_init_op-inl.h"
 
 namespace mxnet {
 namespace op {
+
+NNVM_REGISTER_OP(_np_diagflat)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_diagflat)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_npi_zeros)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 0>);

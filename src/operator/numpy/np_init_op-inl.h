@@ -18,12 +18,12 @@
  */
 
 /*!
- * \file np_diagflat_op-inl.h
- * \brief Function definition of matrix numpy-compatible diagflat operator
+ * \file np_init_op-inl.h
+ * \brief Function definition of numpy init op
  */
 
-#ifndef MXNET_OPERATOR_NUMPY_NP_DIAGFLAT_OP_INL_H_
-#define MXNET_OPERATOR_NUMPY_NP_DIAGFLAT_OP_INL_H_
+#ifndef MXNET_OPERATOR_NUMPY_NP_INIT_OP_INL_H_
+#define MXNET_OPERATOR_NUMPY_NP_INIT_OP_INL_H_
 
 #include <dmlc/parameter.h>
 #include <mxnet/operator_util.h>
@@ -198,4 +198,4 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_NP_DIAGFLAT_OP_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_INIT_OP_INL_H_

@@ -23,11 +23,77 @@
  * \brief CPU Implementation of numpy init op
  */
 #include "./np_init_op.h"
+#include "np_init_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyEyeParam);
+inline bool NumpyDiagflatOpShape(const nnvm::NodeAttrs &attrs,
+                                 mxnet::ShapeVector *in_attrs,
+                                 mxnet::ShapeVector *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);   // should have only one input
+  CHECK_EQ(out_attrs->size(), 1U);  // should have only one output
+
+  auto &in_attr = (*in_attrs)[0];
+
+  // calc the diagonal length
+  // should work for scalar
+  dim_t diag_len = 1;
+  for (auto &d : in_attr) {
+    diag_len *= d;
+  }
+
+  // adjust the output diagonal length with k
+  const NumpyDiagflatParam &param = nnvm::get<NumpyDiagflatParam>(attrs.parsed);
+  diag_len += abs(param.k);
+
+  mxnet::TShape tshape({diag_len, diag_len});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, tshape);
+  return true;
+}
+
+DMLC_REGISTER_PARAMETER(NumpyDiagflatParam);
+
+NNVM_REGISTER_OP(_np_diagflat)
+    .set_attr_parser(ParamParser<NumpyDiagflatParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs &attrs) {
+                                       return std::vector<std::string>{"data"};
+                                     })
+    .set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagflatOpShape)
+    .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyDiagflatOpForward<cpu>)
+    .set_attr<nnvm::FGradient>("FGradient",
+                               ElemwiseGradUseNone{"_backward_np_diagflat"})
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(NumpyDiagflatParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_np_diagflat)
+    .set_attr_parser(ParamParser<NumpyDiagflatParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+    .set_attr<FCompute>("FCompute<cpu>", NumpyDiagflatOpBackward<cpu>);
+
+inline bool NumpyRangeShape(const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector* in_shapes,
+                            mxnet::ShapeVector* out_shapes) {
+  const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
+  CHECK_EQ(in_shapes->size(), 0U);
+  CHECK_EQ(out_shapes->size(), 1U);
+  CHECK_NE(param.step, 0) << "_npi_arange does not support step=0";
+  CHECK_EQ(param.repeat, 1) << "_npi_arange only supports repeat=1, received " << param.repeat;
+  CHECK(param.stop.has_value()) << "_npi_arange requires stop to have a value";
+  double out_size = std::ceil((param.stop.value() - param.start) / param.step);
+  if (out_size < 0) {
+    out_size = 0;
+  }
+  SHAPE_ASSIGN_CHECK(*out_shapes, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
+  return true;
+}
 
 NNVM_REGISTER_OP(_npi_zeros)
 .describe("Return a new array of given shape, type, and context, filled with zeros.")
