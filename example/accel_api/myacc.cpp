@@ -1,4 +1,4 @@
-#include "mxnet/mxnet_acc.h"
+#include "mxnet_acc.h"
 #include <string>
 #include <cstring>
 
