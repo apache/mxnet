@@ -41,11 +41,14 @@ def test_np_tensordot():
         def hybrid_forward(self, F, a, b):
             return F.np.tensordot(a, b, self._axes)
 
-    def tensordot_backward(a, b, axes = 2):
+    def tensordot_backward(a, b, axes=2):
         if (a.ndim < 1) or (b.ndim < 1):
             raise ValueError('An input is zero-dim')
 
-        if isinstance(axes, collections.abc.Sequence):
+        if _np.isscalar(axes):
+            a_axes_summed = [i + a.ndim - axes for i in range(axes)]
+            b_axes_summed = [i for i in range(axes)]
+        else:
             if len(axes) != 2:
                 raise ValueError('Axes must consist of two arrays.')
             a_axes_summed, b_axes_summed = axes
@@ -53,9 +56,6 @@ def test_np_tensordot():
                 a_axes_summed = a_axes_summed,
             if _np.isscalar(b_axes_summed):
                 b_axes_summed = b_axes_summed,
-        else:
-            a_axes_summed = [i + a.ndim - axes for i in range(axes)]
-            b_axes_summed = [i for i in range(axes)]
 
         if len(a_axes_summed) != len(b_axes_summed):
             raise ValueError('Axes length mismatch') 
