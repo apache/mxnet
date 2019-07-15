@@ -2039,67 +2039,6 @@ def expand_dims(a, axis):
     return _npi.expand_dims(a, axis)
 
 
-@set_module('mxnet.numpy')
-def indices(dimensions, dtype=_np.int32, ctx=None):
-    """Return an array representing the indices of a grid.
-
-    Compute an array where the subarrays contain index values 0,1,...
-    varying only along the corresponding axis.
-
-    Parameters
-    ----------
-    dimensions : sequence of ints
-        The shape of the grid.
-    dtype : dtype, optional
-        Data type of the result.
-    ctx : Context, optional
-    An optional device context (default is the current default context).
-
-
-    Returns
-    -------
-    grid : ndarray
-        The array of grid indices,
-        ``grid.shape = (len(dimensions),) + tuple(dimensions)``.
-
-    Notes
-    -----
-    The output shape is obtained by prepending the number of dimensions
-    in front of the tuple of dimensions, i.e. if `dimensions` is a tuple
-    ``(r0, ..., rN-1)`` of length ``N``, the output shape is
-    ``(N,r0,...,rN-1)``.
-
-    The subarrays ``grid[k]`` contains the N-D array of indices along the
-    ``k-th`` axis. Explicitly::
-
-        grid[k,i0,i1,...,iN-1] = ik
-
-    Examples
-    --------
-    >>> grid = np.indices((2, 3))
-    >>> grid.shape
-    (2, 2, 3)
-    >>> grid[0]        # row indices
-    array([[0, 0, 0],
-           [1, 1, 1]])
-    >>> grid[1]        # column indices
-    array([[0, 0, 0],
-           [1, 1, 1]], dtype=int32)
-
-    The indices can be used as an index into an array.
-
-    >>> x = np.arange(20).reshape(5, 4)
-    >>> row, col = np.indices((2, 3))
-    >>> x[row, col]
-    array([[0., 1., 2.],
-           [4., 5., 6.]])
-
-    Note that it would be more straightforward in the above example to
-    extract the required elements directly with ``x[:2, :3]``.
-    """
-    return _mx_nd_np.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
-
-
 # pylint: disable=line-too-long
 @set_module('mxnet.numpy')
 def split(ary, indices_or_sections, axis=0):
@@ -3065,3 +3004,63 @@ def arcsin(x, out=None, **kwargs):
     http://www.math.sfu.ca/~cbm/aands/
     """
     return _mx_nd_np.arcsin(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def indices(dimensions, dtype=_np.int32, ctx=None):
+    """Return an array representing the indices of a grid.
+
+    Compute an array where the subarrays contain index values 0,1,...
+    varying only along the corresponding axis.
+
+    Parameters
+    ----------
+    dimensions : sequence of ints
+        The shape of the grid.
+    dtype : dtype, optional
+        Data type of the result.
+    ctx : Context, optional
+    An optional device context (default is the current default context).
+
+    Returns
+    -------
+    grid : ndarray
+        The array of grid indices,
+        ``grid.shape = (len(dimensions),) + tuple(dimensions)``.
+
+    Notes
+    -----
+    The output shape is obtained by prepending the number of dimensions
+    in front of the tuple of dimensions, i.e. if `dimensions` is a tuple
+    ``(r0, ..., rN-1)`` of length ``N``, the output shape is
+    ``(N,r0,...,rN-1)``.
+
+    The subarrays ``grid[k]`` contains the N-D array of indices along the
+    ``k-th`` axis. Explicitly::
+
+        grid[k,i0,i1,...,iN-1] = ik
+
+    Examples
+    --------
+    >>> grid = np.indices((2, 3))
+    >>> grid.shape
+    (2, 2, 3)
+    >>> grid[0]        # row indices
+    array([[0, 0, 0],
+           [1, 1, 1]])
+    >>> grid[1]        # column indices
+    array([[0, 0, 0],
+           [1, 1, 1]], dtype=int32)
+
+    The indices can be used as an index into an array.
+
+    >>> x = np.arange(20).reshape(5, 4)
+    >>> row, col = np.indices((2, 3))
+    >>> x[row, col]
+    array([[0., 1., 2.],
+           [4., 5., 6.]])
+
+    Note that it would be more straightforward in the above example to
+    extract the required elements directly with ``x[:2, :3]``.
+    """
+    return _mx_nd_np.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
