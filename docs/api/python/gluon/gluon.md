@@ -28,7 +28,7 @@
 
 The Gluon package is a high-level interface for MXNet designed to be easy to use, while keeping most of the flexibility of a low level API. Gluon supports both imperative and symbolic programming, making it easy to train complex models imperatively in Python and then deploy with a symbolic graph in C++ and Scala.
 
-Based on the the [Gluon API specification](https://github.com/gluon-api/gluon-api), the Gluon API in Apache MXNet provides a clear, concise, and simple API for deep learning. It makes it easy to prototype, build, and train deep learning models without sacrificing training speed.
+Based on the [Gluon API specification](https://github.com/gluon-api/gluon-api), the Gluon API in Apache MXNet provides a clear, concise, and simple API for deep learning. It makes it easy to prototype, build, and train deep learning models without sacrificing training speed.
 
 **Advantages**
 
