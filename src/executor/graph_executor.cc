@@ -1924,24 +1924,66 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                std::unordered_map<std::string, NDArray>* shared_buffer,
                                Executor* shared_exec) {
   auto exec = new exec::GraphExecutor();
-  static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
-  std::vector<Context> tmp_in_arg_ctxes = in_arg_ctxes;
-  std::vector<Context> tmp_arg_grad_ctxes = arg_grad_ctxes;
-  std::vector<Context> tmp_aux_state_ctxes = aux_state_ctxes;
-  std::vector<OpReqType> tmp_grad_req_types = grad_req_types;
   if (!exec->subgraph_property().empty()) {
+    static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
     const auto& backend_name = exec->subgraph_property();
     const auto& backend = op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
     if (exec::SubgraphBackendCheck(backend, default_ctx, verbose)) {
       LOG(INFO) << "Subgraph backend " << backend_name << " is activated.";
+      std::vector<Context> tmp_in_arg_ctxes = in_arg_ctxes;
+      std::vector<Context> tmp_arg_grad_ctxes = arg_grad_ctxes;
+      std::vector<Context> tmp_aux_state_ctxes = aux_state_ctxes;
+      std::vector<OpReqType> tmp_grad_req_types = grad_req_types;
+      std::vector<NDArray> tmp_in_args;
+      std::vector<NDArray> tmp_arg_grads;
+      std::vector<NDArray> tmp_aux_states;
+      const std::vector<std::string> arg_names = symbol.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+      const std::vector<std::string> aux_names = symbol.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
       symbol = exec::BuildSubgraph(symbol, backend, arg_shape_map, arg_dtype_map, arg_stype_map,
                                    default_ctx, group2ctx, &tmp_in_arg_ctxes, &tmp_arg_grad_ctxes,
                                    &tmp_grad_req_types, &tmp_aux_state_ctxes, verbose);
+      exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
+                 tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map,
+                 tmp_grad_req_types, shared_arg_names, &tmp_in_args, &tmp_arg_grads,
+                 &tmp_aux_states, shared_buffer, shared_exec);
+      const std::vector<std::string> new_arg_names =
+          symbol.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+      const std::vector<std::string> new_aux_names =
+          symbol.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      std::unordered_map<std::string, size_t> new_arg_names_idx_map;
+      std::unordered_map<std::string, size_t> new_aux_names_idx_map;
+      for (size_t i = 0; i != new_arg_names.size(); ++i) {
+        new_arg_names_idx_map[new_arg_names[i]] = i;
+      }
+      for (size_t i = 0; i != new_aux_names.size(); ++i) {
+        new_aux_names_idx_map[new_aux_names[i]] = i;
+      }
+
+      in_args->reserve(arg_names.size());
+      arg_grads->reserve(arg_names.size());
+      for (size_t i = 0; i != arg_names.size(); ++i) {
+        const auto& arg_name = arg_names[i];
+        const auto& it = new_arg_names_idx_map.find(arg_name);
+        CHECK(it != new_arg_names_idx_map.end())
+            << "Subgraph doesn't support remove any input node for now.";
+        in_args->emplace_back(std::move(tmp_in_args[it->second]));
+        arg_grads->emplace_back(std::move(tmp_arg_grads[it->second]));
+      }
+
+      aux_states->reserve(aux_names.size());
+      for (size_t i = 0; i != aux_names.size(); ++i) {
+        const auto& aux_name = aux_names[i];
+        const auto& it = new_aux_names_idx_map.find(aux_name);
+        CHECK(it != new_aux_names_idx_map.end())
+            << "Subgraph doesn't support remove any input node for now.";
+        aux_states->emplace_back(std::move(tmp_aux_states[it->second]));
+      }
     }
+  } else {
+    exec->Init(symbol, default_ctx, group2ctx, in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
+               arg_shape_map, arg_dtype_map, arg_stype_map, grad_req_types, shared_arg_names,
+               in_args, arg_grads, aux_states, shared_buffer, shared_exec);
   }
-  exec->Init(symbol, default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
-             tmp_aux_state_ctxes, arg_shape_map, arg_dtype_map, arg_stype_map, tmp_grad_req_types,
-             shared_arg_names, in_args, arg_grads, aux_states, shared_buffer, shared_exec);
   return exec;
 }
 
