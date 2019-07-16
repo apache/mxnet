@@ -3460,11 +3460,6 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32,
     out_nd = exe.forward()[0]
     out = npy_layer_norm(data, gamma, beta, axis, eps)
     assert_almost_equal(out, out_nd, forward_check_eps, forward_check_eps)
-    for req in ['write', 'add']:
-        check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
-                               grad_nodes={'data': req, 'gamma': req, 'beta': req},
-                               numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
-    assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps, forward_check_eps)
 
     if finite_grad_check:
         for req in ['write', 'add']:
