@@ -116,31 +116,6 @@ struct AddTakeGradRspDeterministicKernel {
   }
 };
 
-/*! \brief name the struct Take instead of take
- * to avoid conflict with the take function in mshadow
- */
-template<bool clip = true>
-struct TakeGPU {
-  // assume that idx have been flattened to a 1-D tensor (N,)
-  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
-  // M is the number of columns of in_data and out_data
-  // K is the number of rows of in_data
-  // i is the index of out_data
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const IType* idx, const int64_t M, const int64_t K) {
-    int64_t j = static_cast<int64_t>(idx[i/M]);
-    if (clip) {
-      if (j <= 0) j = 0;
-      else if (j >= K) j = K - 1;
-    } else {
-      j = j % K;
-      j += (j < 0) ? K : 0;
-    }
-    out_data[i] = in_data[j * M + i % M];
-  }
-};
-
 /*
  * \brief returns true if all indices are between [min, max]
  * \param s the stream

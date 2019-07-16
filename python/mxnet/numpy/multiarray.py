@@ -48,7 +48,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort', 'hstack', 'tensordot']
+           'argsort', 'hstack', 'tensordot', 'take']
 
 
 @set_module('mxnet.numpy')
@@ -1880,6 +1880,86 @@ def concatenate(seq, axis=0, out=None):
 
 
 @set_module('mxnet.numpy')
+def take(a, indices, axis=None, mode='clip', out=None):
+    r"""
+    Take elements from an array along an axis.
+
+    When axis is not None, this function does the same thing as "fancy"
+    indexing (indexing arrays using arrays); however, it can be easier to use
+    if you need elements along a given axis. A call such as
+    ``np.take(arr, indices, axis=3)`` is equivalent to
+    ``arr[:,:,:,indices,...]``.
+
+    Explained without fancy indexing, this is equivalent to the following use
+    of `ndindex`, which sets each of ``ii``, ``jj``, and ``kk`` to a tuple of
+    indices::
+
+        Ni, Nk = a.shape[:axis], a.shape[axis+1:]
+        Nj = indices.shape
+        for ii in ndindex(Ni):
+            for jj in ndindex(Nj):
+                for kk in ndindex(Nk):
+                    out[ii + jj + kk] = a[ii + (indices[jj],) + kk]
+
+    Parameters
+    ----------
+    a : ndarray
+        The source array.
+    indices : ndarray
+        The indices of the values to extract. Also allow scalars for indices.
+    axis : int, optional
+        The axis over which to select values. By default, the flattened
+        input array is used.
+    out : ndarray, optional
+        If provided, the result will be placed in this array. It should
+        be of the appropriate shape and dtype.
+    mode : {'clip', 'wrap'}, optional
+        Specifies how out-of-bounds indices will behave.
+
+        * 'clip' -- clip to the range (default)
+        * 'wrap' -- wrap around
+
+        'clip' mode means that all indices that are too large are replaced
+        by the index that addresses the last element along that axis. Note
+        that this disables indexing with negative numbers.
+
+    Returns
+    -------
+    out : ndarray
+        The returned array has the same type as `a`.
+
+    Notes
+    -----
+
+    This function differs from the original `numpy.take
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.take.html>`_ in
+    the following way(s):
+
+    - Only ndarray is accepted as valid input
+    - 'raise' mode is not supported.
+
+    Examples
+    --------
+    >>> a = [4, 3, 5, 7, 6, 8]
+    >>> indices = [0, 1, 4]
+    >>> np.take(a, indices)
+    array([4, 3, 6])
+
+    In this example if `a` is an ndarray, "fancy" indexing can be used.
+
+    >>> a = np.array(a)
+    >>> a[indices]
+    array([4, 3, 6])
+
+    If `indices` is not one dimensional, the output also has these dimensions.
+
+    >>> np.take(a, [[0, 1], [2, 3]])
+    array([[4, 3],
+        [5, 7]])
+    """
+    return _mx_nd_np.take(a, indices, axis, mode, out)
+
+@set_module('mxnet.numpy')
 def add(x1, x2, out=None):
     """Add arguments element-wise.
 
@@ -2911,7 +2991,7 @@ def radians(x, out=None, **kwargs):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.radians.html>`_ in
     the following way(s):
 
-    - only ndarray or scalar is accpted as valid input, tuple of ndarray is not supported
+    - only ndarray or scalar is accepted as valid input, tuple of ndarray is not supported
     - broadcasting to `out` of different shape is currently not supported
     - when input is plain python numerics, the result will not be stored in the `out` param
 

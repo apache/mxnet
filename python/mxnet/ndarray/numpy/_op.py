@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort', 'hstack', 'tensordot']
+           'argsort', 'hstack', 'tensordot', 'take']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -589,6 +589,9 @@ def concatenate(seq, axis=0, out=None):
     """
     return _npi.concatenate(*seq, dim=axis, out=out)
 
+
+def take(a, indices, axis=None, mode='raise', out=None):
+    return _npi.take(a, indices, axis, mode, out)
 
 @set_module('mxnet.ndarray.numpy')
 def hstack(arrays):
