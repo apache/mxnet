@@ -39,6 +39,8 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     By default, filter out all Contrib operators that starts with '_contrib' and internal operators that
     starts with '_'.
 
+    Note - All deprecated operators are filtered out as well.
+
     Parameters
     ----------
     operator_names: List[str]
@@ -54,6 +56,9 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     """
     mx_operators = {}
     operators_with_backward = []
+
+    # Filter out deprecated operators
+    filters += ("normal","uniform")
 
     if merge_op_forward_backward:
         filters += ("_backward",)
