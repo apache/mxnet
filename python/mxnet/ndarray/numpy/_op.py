@@ -44,7 +44,7 @@ def tensordot(a, b, axes=2):
     Compute tensor dot product along specified axes for arrays >= 1-D.
 
     Given two tensors (arrays of dimension greater than or equal to one),
-    `a` and `b`, and an array_like object containing two array_like
+    `a` and `b`, and an ndarray object containing two ndarray
     objects, ``(a_axes, b_axes)``, sum the products of `a`'s and `b`'s
     elements (components) over the axes specified by ``a_axes`` and
     ``b_axes``. The third argument can be a single non-negative
