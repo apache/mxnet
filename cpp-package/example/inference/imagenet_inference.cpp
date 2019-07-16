@@ -82,6 +82,7 @@ class Predictor {
               const std::string& model_params_file,
               const Shape& input_shape,
               bool use_gpu,
+              bool enable_tensorrt,
               const std::string& dataset,
               const int data_nthreads,
               const std::string& data_layer_type,
@@ -98,6 +99,13 @@ class Predictor {
     bool AdvanceDataIter(int skipped_batches);
     void LoadModel(const std::string& model_json_file);
     void LoadParameters(const std::string& model_parameters_file);
+    void SplitParamMap(const std::map<std::string, NDArray> &paramMap,
+        std::map<std::string, NDArray> *argParamInTargetContext,
+        std::map<std::string, NDArray> *auxParamInTargetContext,
+        Context targetContext);
+    void ConvertParamMapToTargetContext(const std::map<std::string, NDArray> &paramMap,
+        std::map<std::string, NDArray> *paramMapInTargetContext,
+        Context targetContext);
     void InitParameters();
 
     inline bool FileExists(const std::string &name) {
@@ -115,6 +123,7 @@ class Predictor {
 
     MXDataIter *val_iter_;
     bool use_gpu_;
+    bool enable_tensorrt_;
     std::string dataset_;
     int data_nthreads_;
     std::string data_layer_type_;
@@ -134,14 +143,15 @@ class Predictor {
  *                 the input shape is required to be in format Shape(1, number_of_channels, height, width)
  *                 The input image will be resized to (height x width) size before running the inference.
  * 4. use_gpu: determine if run inference on GPU
- * 5. dataset: data file (.rec) to be used for inference
- * 6. data_nthreads: number of threads for data loading
- * 7. data_layer_type: data type for data layer
- * 8. rgb_mean: mean value to be subtracted on R/G/B channel
- * 9. rgb_std: standard deviation on R/G/B channel
- * 10. shuffle_chunk_seed: shuffling chunk seed
- * 11. seed: shuffling seed
- * 12. benchmark: use dummy data for inference
+ * 5. enable_tensorrt: determine if enable TensorRT
+ * 6. dataset: data file (.rec) to be used for inference
+ * 7. data_nthreads: number of threads for data loading
+ * 8. data_layer_type: data type for data layer
+ * 9. rgb_mean: mean value to be subtracted on R/G/B channel
+ * 10. rgb_std: standard deviation on R/G/B channel
+ * 11. shuffle_chunk_seed: shuffling chunk seed
+ * 12. seed: shuffling seed
+ * 13. benchmark: use dummy data for inference
  *
  * The constructor will:
  *  1. Create ImageRecordIter based on the given dataset file.
@@ -152,6 +162,7 @@ Predictor::Predictor(const std::string& model_json_file,
                      const std::string& model_params_file,
                      const Shape& input_shape,
                      bool use_gpu,
+                     bool enable_tensorrt,
                      const std::string& dataset,
                      const int data_nthreads,
                      const std::string& data_layer_type,
@@ -161,6 +172,7 @@ Predictor::Predictor(const std::string& model_json_file,
                      int seed, bool benchmark)
     : input_shape_(input_shape),
       use_gpu_(use_gpu),
+      enable_tensorrt_(enable_tensorrt),
       dataset_(dataset),
       data_nthreads_(data_nthreads),
       data_layer_type_(data_layer_type),
@@ -182,12 +194,12 @@ Predictor::Predictor(const std::string& model_json_file,
   // Load the model
   LoadModel(model_json_file);
   // Initilize the parameters
-  // benchmark=false, load parameters from file
-  // benchmark=true, randomly initialize parameters
-  if (!benchmark_) {
-    LoadParameters(model_params_file);
-  } else {
+  // benchmark=true && model_params_file.empty(), randomly initialize parameters
+  // else, load parameters
+  if (benchmark_ && model_params_file.empty()) {
     InitParameters();
+  } else {
+    LoadParameters(model_params_file);
   }
 
   int dtype = GetDataLayerType();
@@ -289,8 +301,10 @@ void Predictor::LoadModel(const std::string& model_json_file) {
   }
   LG << "Loading the model from " << model_json_file << std::endl;
   net_ = Symbol::Load(model_json_file);
+  if (enable_tensorrt_) {
+    net_ = net_.GetBackendSymbol("TensorRT");
+  }
 }
-
 
 /*
  * The following function loads the model parameters.
@@ -303,18 +317,48 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
   LG << "Loading the model parameters from " << model_parameters_file << std::endl;
   std::map<std::string, NDArray> parameters;
   NDArray::Load(model_parameters_file, 0, &parameters);
-  for (const auto &k : parameters) {
-    if (k.first.substr(0, 4) == "aux:") {
-      auto name = k.first.substr(4, k.first.size() - 4);
-      aux_map_[name] = k.second.Copy(global_ctx_);
-    }
-    if (k.first.substr(0, 4) == "arg:") {
-      auto name = k.first.substr(4, k.first.size() - 4);
-      args_map_[name] = k.second.Copy(global_ctx_);
-    }
+  if (enable_tensorrt_) {
+    std::map<std::string, NDArray> intermediate_args_map;
+    std::map<std::string, NDArray> intermediate_aux_map;
+    SplitParamMap(parameters, &intermediate_args_map, &intermediate_aux_map, Context::cpu());
+    contrib::InitTensorRTParams(net_, &intermediate_args_map, &intermediate_aux_map);
+    ConvertParamMapToTargetContext(intermediate_args_map, &args_map_, global_ctx_);
+    ConvertParamMapToTargetContext(intermediate_aux_map, &aux_map_, global_ctx_);
+  } else {
+    SplitParamMap(parameters, &args_map_, &aux_map_, global_ctx_);
   }
   /*WaitAll is need when we copy data between GPU and the main memory*/
   NDArray::WaitAll();
+}
+
+/*
+ * The following function split loaded param map into arg parm
+ *   and aux param with target context
+ */
+void Predictor::SplitParamMap(const std::map<std::string, NDArray> &paramMap,
+    std::map<std::string, NDArray> *argParamInTargetContext,
+    std::map<std::string, NDArray> *auxParamInTargetContext,
+    Context targetContext) {
+  for (const auto& pair : paramMap) {
+    std::string type = pair.first.substr(0, 4);
+    std::string name = pair.first.substr(4);
+    if (type == "arg:") {
+      (*argParamInTargetContext)[name] = pair.second.Copy(targetContext);
+    } else if (type == "aux:") {
+      (*auxParamInTargetContext)[name] = pair.second.Copy(targetContext);
+    }
+  }
+}
+
+/*
+ * The following function copy the param map into the target context
+ */
+void Predictor::ConvertParamMapToTargetContext(const std::map<std::string, NDArray> &paramMap,
+    std::map<std::string, NDArray> *paramMapInTargetContext,
+    Context targetContext) {
+  for (const auto& pair : paramMap) {
+    (*paramMapInTargetContext)[pair.first] = pair.second.Copy(targetContext);
+  }
 }
 
 /*
@@ -517,6 +561,8 @@ void printUsage() {
               << "--data_layer_type <default: \"float32\" "
               << "choices: [\"float32\",\"int8\",\"uint8\"]>" << std::endl
               << "--gpu  <whether to run inference on GPU, default: false>" << std::endl
+              << "--enableTRT  <whether to run inference with TensorRT, "
+              << "default: false>" << std::endl
               << "--benchmark <whether to use dummy data to run inference, default: false>"
               << std::endl;
 }
@@ -528,6 +574,7 @@ int main(int argc, char** argv) {
   std::string input_rgb_mean("0 0 0");
   std::string input_rgb_std("1 1 1");
   bool use_gpu = false;
+  bool enable_tensorrt = false;
   bool benchmark = false;
   int batch_size = 64;
   int num_skipped_batches = 0;
@@ -575,6 +622,9 @@ int main(int argc, char** argv) {
       data_layer_type = (index < argc ? argv[index]:data_layer_type);
     } else if (strcmp("--gpu", argv[index]) == 0) {
       use_gpu = true;
+    } else if (strcmp("--enableTRT", argv[index]) == 0) {
+      use_gpu = true;
+      enable_tensorrt = true;
     } else if (strcmp("--benchmark", argv[index]) == 0) {
       benchmark = true;
     } else if (strcmp("--help", argv[index]) == 0) {
@@ -584,7 +634,9 @@ int main(int argc, char** argv) {
     index++;
   }
 
-  if (model_file_json.empty() || (!benchmark && model_file_params.empty())) {
+  if (model_file_json.empty()
+      || (!benchmark && model_file_params.empty())
+      || (enable_tensorrt && model_file_params.empty())) {
     LG << "ERROR: Model details such as symbol, param files are not specified";
     printUsage();
     return 1;
@@ -597,8 +649,8 @@ int main(int argc, char** argv) {
   std::vector<float> rgb_std = createVectorFromString<float>(input_rgb_std);
 
   // Initialize the predictor object
-  Predictor predict(model_file_json, model_file_params, input_data_shape, use_gpu, dataset,
-                    data_nthreads, data_layer_type, rgb_mean, rgb_std, shuffle_chunk_seed,
+  Predictor predict(model_file_json, model_file_params, input_data_shape, use_gpu, enable_tensorrt,
+                    dataset, data_nthreads, data_layer_type, rgb_mean, rgb_std, shuffle_chunk_seed,
                     seed, benchmark);
 
   if (benchmark) {

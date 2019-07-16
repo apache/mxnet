@@ -121,6 +121,50 @@ def test_log1p():
         check_second_order_unary(array, nd.log1p, grad_grad_op)
 
 
+@with_seed()
+def test_reciprocal():
+    def reciprocal(x):
+        return nd.reciprocal(x)
+
+    def grad_grad_op(x):
+        return 2 / x**3
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, reciprocal, grad_grad_op)
+
+
+@with_seed()
+def test_abs():
+    def abs(x):
+        return nd.abs(x)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, abs, grad_grad_op)
+
+
+def test_sigmoid():
+    def sigmoid(x):
+        return nd.sigmoid(x)
+
+    def grad_op(x):
+        return sigmoid(x) * (1 - sigmoid(x))
+
+    def grad_grad_op(x):
+        return grad_op(x) * (1 - 2 * sigmoid(x))
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, sigmoid, grad_grad_op)
+
+
 def check_second_order_unary(x, op, grad_grad_op):
     x = nd.array(x)
     grad_grad_x = grad_grad_op(x)

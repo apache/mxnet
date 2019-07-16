@@ -159,15 +159,18 @@ class NaiveEngine final : public Engine {
         NaiveEngine::OnComplete, nullptr);
     this->req_completed_ = false;
     profiler::Profiler *profiler = profiler::Profiler::Get();
-    NaiveOpr *opr = nullptr;
+    auto opr_deleter = [this](NaiveOpr* p) {
+      this->DeleteOperator(p);
+    };
+    std::unique_ptr<NaiveOpr, decltype(opr_deleter)> opr(nullptr, opr_deleter);
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
     // GenerateDisplayName() will return a pointer to the correct name of the operator
     const char* display_name = profiling ?
                                profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) :
                                opr_name;
     if (profiling) {
-      opr = NewOperator(exec_fun, const_vars, mutable_vars,
-                        prop, display_name)->Cast<NaiveOpr>();
+      opr.reset(NewOperator(exec_fun, const_vars, mutable_vars,
+                        prop, display_name)->Cast<NaiveOpr>());
       opr->profiling = profiling;
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
       if (profiler->AggregateEnabled()) {

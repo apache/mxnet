@@ -58,7 +58,7 @@ EOF
     else
         echo "NOTE: cython is used."
         return 0
-    fi 
+    fi
 }
 
 build_ccache_wrappers() {
@@ -952,13 +952,6 @@ unittest_ubuntu_python3_quantization_gpu() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
-unittest_ubuntu_cpu_scala() {
-    set -ex
-    scala_prepare
-    cd scala-package
-    mvn -B integration-test
-}
-
 unittest_centos7_cpu_scala() {
     set -ex
     cd /work/mxnet
@@ -1156,12 +1149,19 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
 }
 
+integrationtest_ubuntu_cpu_scala() {
+    set -ex
+    scala_prepare
+    cd scala-package
+    mvn -B verify -DskipTests=false
+}
+
 integrationtest_ubuntu_gpu_scala() {
     set -ex
     scala_prepare
     cd scala-package
     export SCALA_TEST_ON_GPU=1
-    mvn -B integration-test -DskipTests=false
+    mvn -B verify -DskipTests=false
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
@@ -1210,6 +1210,16 @@ test_ubuntu_cpu_python3() {
 build_docs() {
     set -ex
     pushd .
+
+    # Setup environment for Julia docs
+    export PATH="/work/julia10/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+
+    julia -e 'using InteractiveUtils; versioninfo()'
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
     cd /work/mxnet/docs/build_version_doc
     # Parameters are set in the Jenkins pipeline: restricted-website-build
     # $1: the list of branches/tags to build
@@ -1403,10 +1413,8 @@ nightly_estimator() {
     set -ex
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
-    python test_estimator_cnn.py --type gpu
-    python test_sentiment_rnn.py --type gpu
-    python test_estimator_cnn.py --type cpu
-    python test_sentiment_rnn.py --type cpu
+    nosetests test_estimator_cnn.py
+    nosetests test_sentiment_rnn.py
 }
 
 # Deploy
@@ -1415,15 +1423,7 @@ deploy_docs() {
     set -ex
     pushd .
 
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make docs SPHINXOPTS=-W USE_MKLDNN=0
-
-    popd
-}
-
-deploy_jl_docs() {
-    set -ex
+    # Setup for Julia docs
     export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
@@ -1433,11 +1433,13 @@ deploy_jl_docs() {
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    # End Julia setup
 
-    make -C julia/docs
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make docs SPHINXOPTS=-W USE_MKLDNN=0
 
-    # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
-    # ...
+    popd
 }
 
 build_static_scala_mkl() {
