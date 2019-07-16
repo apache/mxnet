@@ -27,6 +27,7 @@ from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndar
 from mxnet.test_utils import check_numeric_gradient
 from common import assertRaises, with_seed
 import random
+import platform
 
 
 @with_seed()
@@ -1434,34 +1435,36 @@ def test_np_indices():
         (4,),
         (2,3,4,5,6,7,8)
     ]
+    if platform.system() == 'Windows':
+        shapes = shapes[1:]  #beacuse in numpy windows version, indces not support dimensions is empty tuple.
     for dtype in dtypes:
         for shape in shapes:
             np_out = _np.indices(dimensions=shape, dtype=dtype)
-            # mx_out = np.indices(dimensions=shape, dtype=dtype)
-            # same(mx_out.asnumpy(), np_out)
-            # assert mx_out.shape == np_out.shape
+            mx_out = np.indices(dimensions=shape, dtype=dtype)
+            same(mx_out.asnumpy(), np_out)
+            assert mx_out.shape == np_out.shape
 
-    # @npx.use_np
-    # class TestIndices(HybridBlock):
-    #     def __init__(self, dimensions=None, dtype=None):
-    #         super(TestIndices, self).__init__()
-    #         self._dimensions = dimensions
-    #         self._dtype = dtype
-    #
-    #     def hybrid_forward(self, F, x):
-    #         return x + F.np.indices(dimensions=self._dimensions, dtype=self._dtype)
-    #
-    # for dtype in dtypes:
-    #     for shape in shapes:
-    #         x = np.zeros(shape=(), dtype=dtype)
-    #         for hybridize in [False, True]:
-    #                 net = TestIndices(dimensions=shape, dtype=dtype)
-    #                 np_out = _np.indices(dimensions=shape, dtype=dtype)
-    #                 if hybridize:
-    #                     net.hybridize()
-    #                 mx_out = net(x)
-    #                 same(mx_out.asnumpy(), np_out)
-    #                 assert mx_out.shape == np_out.shape
+    @npx.use_np
+    class TestIndices(HybridBlock):
+        def __init__(self, dimensions=None, dtype=None):
+            super(TestIndices, self).__init__()
+            self._dimensions = dimensions
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.indices(dimensions=self._dimensions, dtype=self._dtype)
+
+    for dtype in dtypes:
+        for shape in shapes:
+            x = np.zeros(shape=(), dtype=dtype)
+            for hybridize in [False, True]:
+                    net = TestIndices(dimensions=shape, dtype=dtype)
+                    np_out = _np.indices(dimensions=shape, dtype=dtype)
+                    if hybridize:
+                        net.hybridize()
+                    mx_out = net(x)
+                    same(mx_out.asnumpy(), np_out)
+                    assert mx_out.shape == np_out.shape
 
 
 if __name__ == '__main__':
