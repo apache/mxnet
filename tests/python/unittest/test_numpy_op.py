@@ -1422,7 +1422,7 @@ def test_np_trace():
 @with_seed()
 @npx.use_np_shape
 def test_np_indices():
-    dtypes = ['int8', 'int32', 'int64', 'float16', 'float32', 'float64']
+    dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     shapes = [
         (),
         (0,),
