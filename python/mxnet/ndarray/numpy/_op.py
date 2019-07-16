@@ -799,7 +799,7 @@ def expand_dims(a, axis):
     return _npi.expand_dims(a, axis)
 
 
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -868,7 +868,7 @@ def split(ary, indices_or_sections, axis=0):
     if not isinstance(ret, list):
         raise NotImplementedError('single output from split is not supported yet...')
     return ret
-# pylint: enable=line-too-long
+# pylint: enable=line-too-long, redefined-outer-name
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1824,6 +1824,7 @@ def arcsin(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
 def indices(dimensions, dtype=_np.int32, ctx=None):
     """Return an array representing the indices of a grid.
@@ -1887,3 +1888,4 @@ def indices(dimensions, dtype=_np.int32, ctx=None):
         return _npi.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
     else:
         raise ValueError("The dimensions must be sequence of ints")
+# pylint: enable=redefined-outer-name

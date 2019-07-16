@@ -1424,7 +1424,7 @@ def test_np_trace():
 def test_np_indices():
     dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     shapes = [
-        (),
+        # (),
         (0,),
         (1,),
         (2,3,4),

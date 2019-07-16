@@ -1493,7 +1493,7 @@ def expand_dims(a, axis):
     return _npi.expand_dims(a, axis)
 
 
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long, redefined-outer-name
 @set_module('mxnet.symbol.numpy')
 def split(ary, indices_or_sections, axis=0):
     """Split an array into multiple sub-arrays.
@@ -1556,7 +1556,7 @@ def split(ary, indices_or_sections, axis=0):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.split(ary, indices, axis, False, sections)
     return ret
-# pylint: enable=line-too-long
+# pylint: enable=line-too-long, redefined-outer-name
 
 
 @set_module('mxnet.symbol.numpy')
@@ -2294,6 +2294,7 @@ def arcsin(x, out=None, **kwargs):
     return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
 def indices(dimensions, dtype=_np.int32, ctx=None):
     """Return an array representing the indices of a grid.
@@ -2357,6 +2358,7 @@ def indices(dimensions, dtype=_np.int32, ctx=None):
         return _npi.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
     else:
         raise ValueError("The dimensions must be sequence of ints")
+# pylint: enable=redefined-outer-name
 
 
 _set_np_symbol_class(_Symbol)
