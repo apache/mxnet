@@ -162,7 +162,7 @@ class TensorInspector {
     }
     *os << std::string(dimension, '[');
     *os << tb_.dptr<DType>()[0];
-    for (index_t i = 1; i < tb_.shape_.Size(); ++i) {
+    for (index_t i = 1; static_cast<size_t>(i) < tb_.shape_.Size(); ++i) {
       int n = 0;
       for (auto divisor : multiples) {
         n += (i % divisor == 0);
@@ -256,7 +256,7 @@ class TensorInspector {
   void print_locator(const std::vector<index_t>& pos, std::vector<index_t>* sub_shape,
     index_t* offset) {
     const int dimension = tb_.ndim();
-    int sub_dim = dimension - pos.size();
+    const int sub_dim = dimension - pos.size();
     sub_shape->resize(sub_dim);
     index_t multiple = 1;
     for (int i = pos.size(), j = 0; i < dimension; ++i, ++j) {
@@ -288,7 +288,7 @@ class TensorInspector {
         ss.ignore();
       }
     }
-    if (pos->size() > dimension) {
+    if (pos->size() > static_cast<unsigned long>(dimension)) {
       return false;
     }
     for (unsigned i = 0; i < pos->size(); ++i) {
@@ -322,7 +322,8 @@ class TensorInspector {
             InspectorManager::get()->interactive_print_tag_counter_[tag] <<  std::endl;
       }
       tensor_info_to_string<DType>(&std::cout);
-      std::cout << "Please specify the position, seperated by \",\"" << std::endl;
+      std::cout << "To print a part of the tensor," <<
+	        " please specify a position, seperated by \",\"" << std::endl;
       std::cout << "\"e\" for the entire tensor, " <<
           "\"d\" to dump value to file, " <<
           "\"b\" to break, " <<
@@ -397,7 +398,7 @@ class TensorInspector {
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
             std::is_same<DType, mshadow::half::half_t>::value) {
           return [] (DType x) {
-                return x == (DType)1.0 / (DType)0.0 || x == -(DType)1.0 / (DType)0.0;
+                return x == (DType)1.0 / 0.0f || x == -(DType)1.0 / 0.0f;
               };
         } else {
           LOG(WARNING) << "InfChecker only applies to float types. " <<
@@ -408,7 +409,7 @@ class TensorInspector {
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
             std::is_same<DType, mshadow::half::half_t>::value) {
           return [] (DType x) {
-                return x == (DType)1.0 / (DType)0.0;
+                return x == (DType)1.0 /  0.0f;
               };
         } else {
           LOG(WARNING) << "PositiveInfChecker only applies to float types. " <<
@@ -419,7 +420,7 @@ class TensorInspector {
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
             std::is_same<DType, mshadow::half::half_t>::value) {
           return [] (DType x) {
-                return x == -(DType)1.0 / (DType)0.0;
+                return x == -(DType)1.0 /  0.0f;
               };
         } else {
           LOG(WARNING) << "NegativeInfChecker only applies to float types. " <<
@@ -430,7 +431,7 @@ class TensorInspector {
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
             std::is_same<DType, mshadow::half::half_t>::value) {
           return [] (DType x) {
-                return x != (DType)1.0 / (DType)0.0 && x != -(DType)1.0 / (DType)0.0;
+                return x != (DType)1.0 /  0.0f && x != -(DType)1.0 /  0.0f;
               };
         } else {
           LOG(WARNING) << "FiniteChecker only applies to float types. " <<
@@ -441,7 +442,7 @@ class TensorInspector {
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
             std::is_same<DType, mshadow::half::half_t>::value) {
           return [] (DType x) {
-                return x != (DType)1.0 / (DType)0.0 && x != -(DType)1.0 / (DType)0.0 &&
+                return x != (DType)1.0 /  0.0f && x != -(DType)1.0 /  0.0f &&
                     x == x;
               };
         } else {
@@ -453,7 +454,7 @@ class TensorInspector {
         if (std::is_same<DType, float>::value || std::is_same<DType, double>::value ||
             std::is_same<DType, mshadow::half::half_t>::value) {
           return [] (DType x) {
-                return x == (DType)1.0 / (DType)0.0 || x == -(DType)1.0 / (DType)0.0 ||
+                return x == (DType)1.0 /  0.0f || x == -(DType)1.0 /  0.0f ||
                     x != x;
               };
         } else {
@@ -506,7 +507,7 @@ class TensorInspector {
     std::stringstream ss;
     ss << "[";
     bool first_pass = true;
-    for (index_t i = 0; i < tb_.shape_.Size(); ++i) {
+    for (index_t i = 0; static_cast<size_t>(i) < tb_.shape_.Size(); ++i) {
       if (checker(tb_.dptr<DType>()[i])) {
         count += 1;
         if (!first_pass) {
@@ -674,7 +675,7 @@ class TensorInspector {
    */
   inline void validate_shape() {
     const int dimension = tb_.ndim();
-    CHECK(dimension > 0) << "Tensor Inspector does not support empty tensors " << 
+    CHECK(dimension > 0) << "Tensor Inspector does not support empty tensors " <<
         "or tensors of unknow shape.";
     for (int i = 0; i < dimension; ++i) {
       CHECK(tb_.shape_[i] != 0) << "Invalid tensor shape: shape_[" << i << "] is 0";
