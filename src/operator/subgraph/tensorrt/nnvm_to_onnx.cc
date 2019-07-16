@@ -385,6 +385,18 @@ void ConvertBatchNorm(NodeProto* node_proto, const NodeAttrs& attrs,
   // (default in ONNX3) implies running batchnorm on all spatial features so we need to explicitly
   // disable this for MXNet's BatchNorm.
   spatial->set_i(0);
+
+  // MXNet allows users to use a fixed gamma value during training.  MXNet internally will ignore
+  // any gamma value that may or may not be present if fixed gamma mode is enabled.  Onnx does not
+  // have this concept, so we'll use a gamma value of 1 as a replacement for an explicitly ignored
+  // gamma.
+  if (param.fix_gamma) {
+    AttributeProto* const scale = node_proto->add_attribute();
+    scale->set_name("scale");
+    for (int i = 0; i < attrs.op->num_inputs; ++i) {
+      scale->add_floats(1.0f);
+    }
+  }
 }
 
 void ConvertElementwiseAdd(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
