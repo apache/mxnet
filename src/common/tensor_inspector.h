@@ -112,7 +112,7 @@ class TensorInspector {
   template<typename DType, typename StreamType>
   void tensor_info_to_string(StreamType* os) {
     const int dimension = tb_.ndim();
-    *os << "<" << typeid(tb_.dptr<DType>()[0]).name() << " Tensor ";
+    *os << "<" << infer_type_string(typeid(DType)) << " Tensor ";
     *os << tb_.shape_[0];
     for (int i = 1; i < dimension; ++i) {
       *os << 'x' << tb_.shape_[i];
@@ -130,7 +130,7 @@ class TensorInspector {
   template<typename DType, typename StreamType>
   void tensor_info_to_string(StreamType* os, const std::vector<index_t>& shape) {
     const int dimension = shape.size();
-    *os << "<" << typeid(tb_.dptr<DType>()[0]).name() << " Tensor ";
+    *os << "<" << infer_type_string(typeid(DType)) << " Tensor ";
     *os << shape[0];
     for (int i = 1; i < dimension; ++i) {
       *os << 'x' << shape[i];
@@ -154,18 +154,18 @@ class TensorInspector {
     }
 #endif  // MXNET_USE_CUDA
     const int dimension = tb_.ndim();
-    std::vector<index_t> multiples;
+    std::vector<index_t> offsets;
     index_t multiple = 1;
     for (int i = dimension - 1; i >= 0; --i) {
       multiple *= tb_.shape_[i];
-      multiples.push_back(multiple);
+      offsets.push_back(multiple);
     }
     *os << std::string(dimension, '[');
     *os << tb_.dptr<DType>()[0];
-    for (index_t i = 1; static_cast<size_t>(i) < tb_.shape_.Size(); ++i) {
+    for (index_t i = 1; i < static_cast<index_t>(tb_.shape_.Size()); ++i) {
       int n = 0;
-      for (auto divisor : multiples) {
-        n += (i % divisor == 0);
+      for (auto off : offsets) {
+        n += (i % off == 0);
       }
       if (n) {
         *os << std::string(n, ']') << ", " <<  std::string(n, '[');
@@ -221,19 +221,19 @@ class TensorInspector {
       return;
     }
     const int dimension = sub_shape.size();
-    std::vector<index_t> multiples;
+    std::vector<index_t> offsets;
     index_t multiple = 1;
     for (int i = dimension - 1; i >= 0; --i) {
       multiple *= sub_shape[i];
-      multiples.push_back(multiple);
+      offsets.push_back(multiple);
     }
     std::stringstream ss;
     *os << std::string(dimension, '[');
     *os << dptr[0];
     for (index_t i = 1; i < multiple; ++i) {
       int n = 0;
-      for (auto divisor : multiples) {
-        n += (i % divisor == 0);
+      for (auto off : offsets) {
+        n += (i % off == 0);
       }
       if (n) {
         *os << std::string(n, ']') << ", " <<  std::string(n, '[');
@@ -254,7 +254,7 @@ class TensorInspector {
    * \param offset the position of the first value of the desired part of the tensor; calculated here
    */
   void print_locator(const std::vector<index_t>& pos, std::vector<index_t>* sub_shape,
-    index_t* offset) {
+      index_t* offset) {
     const int dimension = tb_.ndim();
     const int sub_dim = dimension - pos.size();
     sub_shape->resize(sub_dim);
@@ -280,7 +280,7 @@ class TensorInspector {
    */
   bool parse_position(std::vector<index_t>* pos, const std::string& str) {
     const int dimension = tb_.ndim();
-    std::stringstream ss(str);
+    std::istringstream ss(str);
     index_t n;
     while (ss >> n) {
       pos->push_back(n);
@@ -288,11 +288,11 @@ class TensorInspector {
         ss.ignore();
       }
     }
-    if (pos->size() > static_cast<unsigned long>(dimension)) {
+    if (pos->size() > static_cast<size_t>(dimension)) {
       return false;
     }
     for (unsigned i = 0; i < pos->size(); ++i) {
-      if ((*pos)[i] > (tb_.shape_[i] - 1)) {
+      if ((*pos)[i] > (tb_.shape_[i] - 1) || (*pos)[i] < 0) {
         return false;
       }
     }
@@ -322,8 +322,8 @@ class TensorInspector {
             InspectorManager::get()->interactive_print_tag_counter_[tag] <<  std::endl;
       }
       tensor_info_to_string<DType>(&std::cout);
-      std::cout << "To print a part of the tensor," <<
-	        " please specify a position, seperated by \",\"" << std::endl;
+      std::cout << "To print a part of the tensor, " <<
+          "please specify a position, seperated by \",\"" << std::endl;
       std::cout << "\"e\" for the entire tensor, " <<
           "\"d\" to dump value to file, " <<
           "\"b\" to break, " <<
@@ -343,7 +343,7 @@ class TensorInspector {
           std::cout << "Please enter a tag: ";
           std::cin >> str;
           if (str.find(' ') != std::string::npos) {
-            std::cout << "Invalid input. ";
+            std::cout << "Invalid tag name. No space allowed.";
             continue;
           }
           dump_to_file_helper<DType>(str);
@@ -358,7 +358,7 @@ class TensorInspector {
         print_locator(pos, &sub_shape, &offset);
         to_string_helper<DType>(&std::cout, sub_shape, offset);
       } else {
-        std::cout << "invalid input" << std::endl;
+        std::cout << "invalid command/indices" << std::endl;
       }
     }
   }
@@ -507,16 +507,16 @@ class TensorInspector {
     std::stringstream ss;
     ss << "[";
     bool first_pass = true;
-    for (index_t i = 0; static_cast<size_t>(i) < tb_.shape_.Size(); ++i) {
+    for (index_t i = 0; i <static_cast<index_t>(tb_.shape_.Size()); ++i) {
       if (checker(tb_.dptr<DType>()[i])) {
-        count += 1;
+        ++count;
         if (!first_pass) {
           ss  << ", ";
         }
         first_pass = false;
         std::vector<index_t> coords = index_to_coordinates(i);
         ss << "(" << coords[0];
-        for (unsigned int i = 1; i < coords.size(); ++i) {
+        for (size_t i = 1; i < coords.size(); ++i) {
           ss << ", " << coords[i];
         }
         ss << ")";
@@ -562,7 +562,7 @@ class TensorInspector {
           print_locator(pos, &sub_shape, &offset);
           to_string_helper<DType>(&std::cout, sub_shape, offset);
         } else {
-          std::cout << "invalid input" << std::endl;
+          std::cout << "invalid command/indices" << std::endl;
         }
       }
     }
@@ -581,6 +581,21 @@ class TensorInspector {
     else if (ti == typeid(int64_t)) return 'i';
     else
       return '?';
+  }
+
+  /*!
+   * \brief infer the python type, given the c++ type
+   * \tparam ti the type info 
+   */
+  inline std::string infer_type_string(const std::type_info& ti) {
+    if (ti == typeid(float)) return "float";
+    else if (ti == typeid(double)) return "double";
+    else if (ti == typeid(mshadow::half::half_t) ) return "mshasow::half::half_t";
+    else if (ti == typeid(uint8_t)) return "uint8_t";
+    else if (ti == typeid(int32_t)) return "int32_t";
+    else if (ti == typeid(int64_t)) return "int64_t";
+    else
+      return "unknown tyoe";
   }
 
   /*!
