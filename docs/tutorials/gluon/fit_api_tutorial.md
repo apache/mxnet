@@ -18,17 +18,17 @@
 
 # MXNet Gluon Fit API
 
-In this tutorial, we will see how to use the [Gluon Fit API](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design) which is the easiest way to train deep learning models using the [Gluon API](http://mxnet.incubator.apache.org/versions/master/gluon/index.html) in Apache MXNet. 
+In this tutorial, you will learn how to use the [Gluon Fit API](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design) which is the easiest way to train deep learning models using the [Gluon API](http://mxnet.incubator.apache.org/versions/master/gluon/index.html) in Apache MXNet. 
 
-With the Fit API, you can train a deep learning model with miminal amount of code. Just specify the network, loss function and the data you want to train on. You don't need to worry about the boiler plate code to loop through the dataset in batches(often called as 'training loop'). Advanced users can still do this for bespoke training loops, but most use cases will be covered by the Fit API.
+With the Fit API, you can train a deep learning model with a minimal amount of code. Just specify the network, loss function and the data you want to train on. You don't need to worry about the boiler plate code to loop through the dataset in batches (often called as 'training loop'). Advanced users can train with bespoke training loops, and many of these use cases will be covered by the Fit API.
 
-To demonstrate the Fit API, this tutorial will train an Image Classification model using the [ResNet-18](https://arxiv.org/abs/1512.03385) architecture for the neural network. The model will be trained using the [Fashion-MNIST dataset](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/). 
+To demonstrate the Fit API, you will train an image classification model using the [ResNet-18](https://arxiv.org/abs/1512.03385) neural network architecture. The model will be trained using the [Fashion-MNIST dataset](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/). 
 
 ## Prerequisites
 
 To complete this tutorial, you will need:
 
-- [MXNet](https://mxnet.incubator.apache.org/install/#overview) (The version of MXNet will be >= 1.5.0)
+- [MXNet](https://mxnet.incubator.apache.org/install/#overview) (The version of MXNet will be >= 1.5.0, you can use `pip install mxnet --pre` to get the latest pip package or build from source with master, refer to [MXNet installation](http://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Linux&language=Python&processor=CPU)
 - [Jupyter Notebook](https://jupyter.org/index.html) (For interactively running the provided .ipynb file)
 
 
@@ -43,15 +43,14 @@ from mxnet.gluon.contrib.estimator.event_handler import TrainBegin, TrainEnd, Ep
 
 gpu_count = mx.context.num_gpus()
 ctx = [mx.gpu(i) for i in range(gpu_count)] if gpu_count > 0 else mx.cpu()
-mx.random.seed(7) # Set a fixed seed
 ```
 
 ## Dataset
 
 [Fashion-MNIST](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/) dataset consists of fashion items divided into ten categories: t-shirt/top, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag and ankle boot. 
 
-- It has 60,000 gray scale images of size 28 * 28 for training.  
-- It has 10,000 gray scale images os size 28 * 28 for testing/validation. 
+- It has 60,000 grayscale images of size 28 * 28 for training.  
+- It has 10,000 grayscale images os size 28 * 28 for testing/validation. 
 
 We will use the ```gluon.data.vision``` package to directly import the Fashion-MNIST dataset and perform pre-processing on it.
 
@@ -93,7 +92,7 @@ val_data_loader = gluon.data.DataLoader(fashion_mnist_val, batch_size=batch_size
 
 ## Model and Optimizers
 
-Let's load the resnet-18 model architecture from [Gluon Model Zoo](http://mxnet.apache.org/api/python/gluon/model_zoo.html) and initialize it's parameters. The Gluon Model Zoo contains a repository of pre-trained models as well the model architecture definitions. We are using the model architecture from the model zoo in order to train it from scratch.
+Let's load the resnet-18 model architecture from [Gluon Model Zoo](http://mxnet.apache.org/api/python/gluon/model_zoo.html) and initialize its parameters. The Gluon Model Zoo contains a repository of pre-trained models as well the model architecture definitions. We are using the model architecture from the model zoo in order to train it from scratch.
 
 
 ```python
@@ -101,7 +100,8 @@ resnet_18_v1 = vision.resnet18_v1(pretrained=False, classes = 10)
 resnet_18_v1.initialize(init = mx.init.Xavier(), ctx=ctx)
 ```
 
-We will be using ```SoftmaxCrossEntropyLoss``` as the loss function since this is a multi-class classification problem. We will be using ```sgd``` (Stochastic Gradient Descent) as the optimizer. You can experiment with a different optimizer as well. 
+We will be using `SoftmaxCrossEntropyLoss` as the loss function since this is a multi-class classification problem. We will be using `sgd` (Stochastic Gradient Descent) as the optimizer. 
+You can experiment with a [different loss](http://mxnet.incubator.apache.org/versions/master/api/python/gluon/loss.html) or [optimizer](http://mxnet.incubator.apache.org/versions/master/api/python/optimization/optimization.html) as well. 
 
 
 ```python
@@ -120,7 +120,7 @@ trainer = gluon.Trainer(resnet_18_v1.collect_params(),
 
 ## Train using Fit API
 
-As stated earlier, Fit API greatly simplifies the boiler plate code and complexity for training using MXNet Gluon.
+As stated earlier, the Fit API greatly simplifies the boiler plate code and complexity for training using MXNet Gluon.
 
 In the basic usage example, with just 2 lines of code, we will set up our model for training.
 
@@ -153,24 +153,24 @@ est.fit(train_data=train_data_loader,
 
 ### Advanced Usage
 
-Fit API is also customizable with several `Event Handlers` which give a fine grained control over the steps in training and exposes callback methods that provide control over the stages involved in training. Available callback methods are: `train_begin`, `train_end`, `batch_begin`, `batch_end`, `epoch_begin` and `epoch_end`.
+The Fit API is also customizable with several `Event Handlers` which give a fine grained control over the steps in training and exposes callback methods that provide control over the stages involved in training. Available callback methods are: `train_begin`, `train_end`, `batch_begin`, `batch_end`, `epoch_begin` and `epoch_end`.
 
-One can use built-in event handlers such as `LoggingHandler`, `CheckpointHandler` or `EarlyStoppingHandler` to log and save the model at certain timesteps during training and stopping the training when the model's performance plateaus. 
-There are also some default utility handlers that will be added to your estimator by default. For example, `StoppingHandler` is used to control when the training ends based on number of epochs or number of batches trained. 
+You can use built-in event handlers such as `LoggingHandler`, `CheckpointHandler` or `EarlyStoppingHandler` to log and save the model at certain time-steps during training. You can also stop the training when the model's performance plateaus. 
+There are also some default utility handlers that will be added to your estimator by default. For example, `StoppingHandler` is used to control when the training ends, based on number of epochs or number of batches trained. 
 `MetricHandler` is used to calculate training metrics at end of each batch and epoch. 
-`ValidationHandler` is used to validate your model on test data at epoch end and  calculate validation metrics.
-One can create these utility handlers with different configurations and pass to estimator, it will override the default handler configuration.
-One can also create a custom handler by inheriting one or multiple of 
+`ValidationHandler` is used to validate your model on test data at each epoch's end and then calculate validation metrics.
+You can create these utility handlers with different configurations and pass to estimator. This will override the default handler configuration.
+You can create a custom handler by inheriting one or multiple 
 [base event handlers](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/estimator/event_handler.py#L32)
  including: `TrainBegin`, `TrainEnd`, `EpochBegin`, `EpochEnd`, `BatchBegin`, `BatchEnd`.
 
 
 ### Custom Event Handler
 
-Here we will showcase an example to create a custom event handler by inheriting from a few base handler class. 
-Our custom event handler is a simple one, that just record the loss values at the end of every epoch in our training phase.
+Here we will showcase an example custom event handler the inherits features from a few base handler classes. 
+Our custom event handler is a simple one: record the loss values at the end of every epoch in our training phase.
 
-Note : For each of the method, the Estimator object is passed along so you can access train metrics.
+Note: For each of the method, the `Estimator` object is passed along, so you can access training metrics.
 
 ```python
 class LossRecordHandler(TrainBegin, TrainEnd, EpochEnd):
@@ -244,7 +244,7 @@ est.fit(train_data=train_data_loader,
     Epoch 1, loss 0.5741 <!--notebook-skip-line-->
     Epoch 2, loss 0.3229 <!--notebook-skip-line-->
 
-You can load the saved model, by using ```load_parameters``` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](http://mxnet.incubator.apache.org/versions/master/tutorials/gluon/save_load_params.html#saving-model-parameters-to-file)
+You can load the saved model, by using the `load_parameters` API in Gluon. For more details refer to the [Loading model parameters from file tutorial](save_load_params.html#saving-model-parameters-to-file)
 
 
 ```python
@@ -254,12 +254,10 @@ resnet_18_v1.load_parameters('./my_model-best.params', ctx=ctx)
 
 ## Summary
 
-In this tutorial, we learnt how to use ```Gluon Fit APIs``` for training a deep learning model and also saw an option to customize it with the use of Event Handlers.
-For more references and advanced usage details can be found in the [documentation](http://mxnet.apache.org/api/python/gluon/gluon.html).
+- To learn more about deep learning with MXNeT, see [Dive Into Deep Learning](http://gluon.io)
 
 ## Next Steps 
 
-- To learn more about deep learning with MXNet Gluon, see [Deep Learning - The Straight Dope](https://gluon.mxnet.io)
 - For more hands on learning about deep learning, check out [Dive into Deep Learning](https://d2l.ai)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
