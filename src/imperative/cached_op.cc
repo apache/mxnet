@@ -126,6 +126,8 @@ CachedOp::CachedOp(
         fwd_graph_.outputs.push_back(nodeEntry);
       }
     }
+    fwd_graph_ = exec::EliminateCommonExpr(std::move(fwd_graph_));
+
     const auto& idx = fwd_graph_.indexed_graph();
     CHECK_GE(idx.input_nodes().size(), 1) << "CachedOp requires at least 1 input";
 

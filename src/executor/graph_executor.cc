@@ -318,6 +318,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
 
   nnvm::Graph g;
   g.outputs = symbol.outputs;
+  g = exec::EliminateCommonExpr(std::move(g));
   need_grad_ = false;
   for (OpReqType req : grad_req_types) {
     if (req != kNullOp) need_grad_ = true;

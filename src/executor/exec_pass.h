@@ -171,6 +171,15 @@ void AttachOpResources(const Graph& g,
 Graph DetectInplaceAddTo(Graph g);
 
 /*!
+ * \brief Eliminate common expressions in the graph.
+ *
+ * \param g input forward graph
+ *
+ * \return graph with common expressions eliminated
+ */
+Graph EliminateCommonExpr(Graph && g);
+
+/*!
  * \brief Infer shapes in the graph given the information.
  * \param graph The input graph.
  * \param shape_inputs The shapes of input symbols to the graph.
