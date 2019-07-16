@@ -28,28 +28,6 @@
 namespace mxnet {
 namespace op {
 
-template<bool clip = true>
-struct TakeCPU {
-  // assume that idx have been flattened to a 1-D tensor (N,)
-  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
-  // M is the number of columns of in_data and out_data
-  // K is the number of rows of in_data
-  // i is the index of out_data
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const IType* idx, const size_t M, const int64_t K) {
-    int64_t j = static_cast<int64_t>(idx[i]);
-    if (clip) {
-      if (j <= 0) j = 0;
-      else if (j >= K) j = K - 1;
-    } else {
-      j = j % K;
-      j += (j < 0) ? K : 0;
-    }
-    std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
-  }
-};
-
 /*
  * \brief returns true if all indices are between [min, max]
  * \param data_ptr the indices to check

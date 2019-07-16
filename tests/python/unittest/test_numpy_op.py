@@ -58,7 +58,7 @@ def test_np_tensordot():
                 b_axes_summed = b_axes_summed,
 
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         a_axes_remained = []
         for i in range(a.ndim):
@@ -254,7 +254,7 @@ def test_np_dot():
         ((3, 4, 5), (5, )),  # Case 4
         ((3, 4, 5), (5, 2)), # Case 5
         ((5,), (5, 2)),
-        ((3, 5, 4), (5, 4, 3)),  
+        ((3, 5, 4), (5, 4, 3)),
         ((3, 4), (5, 4, 3)),
         ((4,), (5, 4, 3))
     ]
@@ -1007,15 +1007,15 @@ def test_np_argsort():
             return F.np.argsort(a, self._axis)
 
     shapes = [
-        (), 
-        (1,), 
+        (),
+        (1,),
         (5,4),
         (5,0,4),
         (5,0,0),
         (0,0,5),
         (0,0,0),
         (5,3,4)
-    ] 
+    ]
     for hybridize in [True, False]:
         for shape in shapes:
             for ax in list(range(len(shape))) + [-1, None]:
@@ -1131,7 +1131,7 @@ def test_np_hstack():
         if len(shape) == 0:
             l = random.randint(0,3)
             if l == 0:
-                return shape 
+                return shape
             else:
                 return (l,)
         shape_lst = list(shape)
@@ -1180,6 +1180,112 @@ def test_np_hstack():
             mx_out = np.hstack((a, b, c, d))
             np_out = _np.hstack((a.asnumpy(),b.asnumpy(), c.asnumpy(), d.asnumpy()))
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_take():
+    configs = [
+        ((4, 4), (4, 0), None),
+        ((4, 4), (4, 0), 0),
+        ((4, 4), (4, 0), 1),
+        ((), (4, 0), None),
+        ((), (5, ), None),
+        ((), (4, 5), None),
+        ((), (), None),
+        ((3, 4), (), None),
+        ((3, 4), (), 0),
+        ((3, 4), (), 1),
+        ((3, 4, 5), (), 2),
+        ((3, 4, 5), (), -3),
+    ]
+
+    class TestTake(HybridBlock):
+        def __init__(self, axis, mode):
+            super(TestTake, self).__init__()
+            self._axis = axis
+            self._mode = mode
+
+        def hybrid_forward(self, F, a, indices):
+            return F.np.take(a, indices, axis=self._axis, mode=self._mode)
+
+    def grad_helper(grad_in, axis, idx, mode):
+        k = grad_in.shape[axis]
+        if mode == 'clip':
+            idx = 0 if idx < 0 else idx
+            idx = k - 1 if idx >= k else idx
+        else:
+            idx = idx % k
+        if axis == None:
+            grad_in[idx] += 1.0
+        elif axis == 0:
+            if axis == len(grad_in.shape) - 1:
+                grad_in[idx] += 1.0
+            else:
+                grad_in[idx, :] += 1.0
+        elif axis == 1:
+            if axis == len(grad_in.shape) - 1:
+                grad_in[:, idx] += 1.0
+            else:
+                grad_in[:, idx, :] += 1.0
+        elif axis == 2:
+            if axis == len(grad_in.shape) - 1:
+                grad_in[:, :, idx] += 1.0
+            else:
+                grad_in[:, :, idx, :] += 1.0
+        elif axis == 3:
+            if axis == len(grad_in.shape) - 1:
+                grad_in[:, :, :, idx] += 1.0
+            else:
+                grad_in[:, :, :, idx, :] += 1.0
+        elif axis == 4:
+            grad_in[:, :, :, :, idx] += 1.0
+        else:
+            raise ValueError("axis %d is not supported..." % axis)
+
+    def check_output_n_grad(data_shape, idx_shape, axis, mode):
+        data_real = _np.random.normal(size=data_shape).astype('float32')
+        idx_real = _np.random.randint(low=-100, high=100, size=idx_shape)
+        same(np.take(np.array(data_real), np.array(idx_real), axis=axis, mode=mode).asnumpy(),
+             _np.take(data_real, idx_real, axis=axis, mode=mode))
+
+        grad_in = _np.zeros(data_shape, dtype='float32')
+
+        test_take = TestTake(axis=axis, mode=mode)
+        if hybridize:
+            test_take.hybridize()
+        x = np.array(data_real)
+        x.attach_grad()
+        with mx.autograd.record():
+            mx_out = test_take(x, np.array(idx_real))
+        same(mx_out.asnumpy(), _np.take(data_real, idx_real, axis=axis, mode=mode))
+
+        if axis and axis < 0:
+            axis += len(data_shape)
+        try:
+            for i in _np.nditer(idx_real):
+                grad_helper(grad_in, axis, i, mode)
+        except:
+            pass
+
+        mx_out.backward()
+        same(x.grad.asnumpy(), grad_in)
+
+    for hybridize in [True, False]:
+        for mode in ['clip', 'wrap']:
+            for data_ndim in range(1, 5):
+                for idx_ndim in range(1, 4):
+                    for axis in range(-data_ndim, data_ndim):
+                        data_shape = ()
+                        for _ in range(data_ndim):
+                            data_shape += (_np.random.randint(low=1, high=5), )
+                        idx_shape = ()
+                        for _ in range(idx_ndim):
+                            idx_shape += (_np.random.randint(low=1, high=5), )
+                        check_output_n_grad(data_shape, idx_shape, axis, mode)
+
+            for config in configs:
+                check_output_n_grad(config[0], config[1], config[2], mode)
 
 
 @with_seed()
