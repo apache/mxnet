@@ -212,13 +212,10 @@ def get_all_random_sampling_operators():
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
-    # Deprecated random sampling operators
-    deprecate_ops = ['uniform', 'normal']
-
     # Filter for Random Sampling operators
     random_sampling_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-        if op_name.startswith(("random_", "sample_")) or op_name in deprecate_ops and op_name not in unique_ops:
+        if op_name.startswith(("random_", "sample_")) and op_name not in unique_ops:
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
 
