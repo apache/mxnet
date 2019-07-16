@@ -1210,6 +1210,16 @@ test_ubuntu_cpu_python3() {
 build_docs() {
     set -ex
     pushd .
+
+    # Setup environment for Julia docs
+    export PATH="/work/julia10/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+
+    julia -e 'using InteractiveUtils; versioninfo()'
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
     cd /work/mxnet/docs/build_version_doc
     # Parameters are set in the Jenkins pipeline: restricted-website-build
     # $1: the list of branches/tags to build
