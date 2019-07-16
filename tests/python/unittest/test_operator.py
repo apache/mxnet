@@ -3594,7 +3594,7 @@ def test_layer_norm():
                                                                 [1E-2, 1E-3, 1E-4],
                                                                 [1E-2, 1E-3, 1E-4]):
             if dtype != np.float16:
-                in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10), (64, 256)], [True, True, False]
+                in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]
             else:
                 in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10)], [True, True]  # large input + fp16 does not pass the forward check
             for in_shape, finite_grad_check in zip(in_shape_l, finite_grad_check_l):
