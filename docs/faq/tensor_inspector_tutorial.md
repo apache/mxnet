@@ -17,12 +17,12 @@
 
 ## Introduction
 
-When developing new operators, developers need to deal with tensor objects extensively. This new utility, Tensor Inspector, mainly aims to help developers debug by providing unified interfaces to print, check, and dump the tensor value. To developers' convenience, This utility works for all the three data types: Tensors, TBlobs, and NDArrays. Also, it supports both CPU and GPU tensors.
+When developing new operators, developers need to deal with tensor objects extensively. This new utility, Tensor Inspector, mainly aims to help developers debug by providing unified interfaces to print, check, and dump the tensor value. To developers' convenience, this utility works for all the three data types: Tensors, TBlobs, and NDArrays. Also, it supports both CPU and GPU tensors.
 
 
 ## Usage 
 
-This utility locates in `src/common/tensor_inspector.h`. To use it in any operator code, just include `tensor_inspector`, construct an `TensorInspector` object, and call the APIs on that object. You can run any script that uses the operator you just modified then.
+This utility is located in `src/common/tensor_inspector.h`. To use it in any operator code, just include `tensor_inspector`, construct an `TensorInspector` object, and call the APIs on that object. You can run any script that uses the operator you just modified then.
 
 The screenshot below shows a sample usage in `src/operator/nn/convolution-inl.h`.
 
@@ -35,7 +35,7 @@ The screenshot below shows a sample usage in `src/operator/nn/convolution-inl.h`
 
 You can create a `TensorInspector` object by passing in two things: 1) an object of type `Tensor`, `Tbob`, or `NDArray`, and 2) an `RunContext` object.
 
-Essentially, `TensorInspector` can be understood as a wrapper class around `TBlob`. Internally, the `Tensor`, `Tbob`, or `NDArray` object that you passed in will all be converted to a `TBlob` object. The `RunContext` object is used when the the tensor is a GPU tensor; in such case, we need to use the context information to copy the data from GPU memory to CPU/main memory.
+Essentially, `TensorInspector` can be understood as a wrapper class around `TBlob`. Internally, the `Tensor`, `Tbob`, or `NDArray` object that you passed in will be converted to a `TBlob` object. The `RunContext` object is used when the the tensor is a GPU tensor; in such a case, we need to use the context information to copy the data from GPU memory to CPU/main memory.
 
 Below are the three constructors:
 
@@ -80,7 +80,7 @@ This API will set a "break point" in your code, so that you will enter a loop th
 
 ![Screen Shot 2019-07-10 at 5 29 07 PM](https://user-images.githubusercontent.com/16669457/61013632-5325e800-a338-11e9-90e6-607f17d81495.png)
 
-Refer the screenshot above, there are many useful commands available: you can type "e" to print out the entire tensor, ''d" to dump the tensor to file (see below), "b" to break from this command loop, and "s" to skip all future `interactive_print()`. Most importantly, in this screen, you can specify a part of the tensor that you are particularly interested in and want to print out. For example, for this 20x1x5x5 tensor, you can type in "0, 0" and presss enter to check the sub-tensor with shape 5x5 at coordinate (0, 0). 
+Refer the screenshot above, there are many useful commands available: you can type "e" to print out the entire tensor, "d" to dump the tensor to file (see below), "b" to break from this command loop, and "s" to skip all future `interactive_print()`. Most importantly, in this screen, you can specify a part of the tensor that you are particularly interested in and want to print out. For example, for this 20x1x5x5 tensor, you can type in "0, 0" and presss enter to check the sub-tensor with shape 5x5 at coordinate (0, 0). 
 
 ### Check Tensor Value
 
@@ -102,7 +102,7 @@ In the first API, `ValueChecker checker` is a bool lambda function that takes in
 [] (DType x) {return x == 0};
 ```
 
-This checker is called on every value within the tensor. The return of the API is a `vector` of all the coordinates where the checker evaluates to `true`. The coordinates are themselves represented by `vector<int>`. If you set `interactive` to true, you will set a "break point" and enter a loop that asks for commands. This is similar to `interactive_print()`. You can type "p" to print the coordinates, "b" to break from the loop, and "s" to skip all future "break points" in `interactive_print()`.  Just like `interactive_print()`, this this interactive screen is also properly locked.
+This checker is called on every value within the tensor. The return of the API is a `vector` of all the coordinates where the checker evaluates to `true`. The coordinates are themselves represented by `vector<int>`. If you set `interactive` to true, you will set a "break point" and enter a loop that asks for commands. This is similar to `interactive_print()`. You can type "p" to print the coordinates, "b" to break from the loop, and "s" to skip all future "break points" in `interactive_print()`. You can also specify a coordinate to print only a part of the tensor or type "e" to print out the entire tensor.  Just like `interactive_print()`, this this interactive screen is also properly locked.
 
 ![Screen Shot 2019-07-10 at 5 34 20 PM](https://user-images.githubusercontent.com/16669457/61013773-fe36a180-a338-11e9-9a2b-5f11ccc7afa7.png)
 
@@ -132,7 +132,7 @@ std::vector<std::vector<int>> check_value(CheckerType ct,
 		bool interactive = false, std::string tag =  "");
 ```
 
-You can simply pass in a value from `CheckerType` where you would have passed in your own lambda if you were using the first API.
+You can simply pass in a value from `CheckerType` where you would have passed in your own lambda if you were using the first API. Note that it's the developer's responsibility to pass in a valid value checker.
 
 ### Dump Tensor Value
 
@@ -142,7 +142,7 @@ Sometimes, you might want to dump the tensor to a file in binary mode. Then, you
 void dump_to_file(std::string tag);
 ```
 
-This API will creat a file with name  "{tag}_{visit_count}.npy", where tag is the name that we give to the call, and visit is the visit count, should the operated be called more than once.
+This API will create a file with name  "{tag}_{visit_count}.npy", where tag is the name that we give to the call, and visit is the visit count, should the operated be called more than once.
 
 The output format is `.npy`, version 1.0. This is the Numpy format and we can easily load it with the following code:
 
@@ -156,9 +156,13 @@ Let's see the how it runs:
 
 ![Screen Shot 2019-07-10 at 5 17 29 PM](https://user-images.githubusercontent.com/16669457/61013259-cc244000-a336-11e9-8564-a018041634f6.png)
 
-Notice: in `interactive_print()`, you could also do value dumping with command "d". You will be prompt to enter the `tag` value:
+Notice: in `interactive_print()`, you could also do value dumping with command "d". You will be prompted to enter the `tag` value:
 
 ![Screen Shot 2019-07-11 at 4 57 41 PM](https://user-images.githubusercontent.com/16669457/61092906-0f48e680-a3fd-11e9-8251-c4371cdd00ad.png)
 
+### Test Coverage and Limitations
 
+This Utility has been tested on Mac and Ubuntu with and without CUDNN and MKLDNN. Supports for `Tensor`, `TBlob`, and `NDArray` and for CPU and GPU have been manually tested and exhibited no issue. 
+
+Currently, this utility only supports non-empty tensors and tensors with known shapes i.e. `tb_.ndim() > 0`. Also, this utility only supports dense `NDArray` objects, i.e. when the type is `kDefaultStorage`. 
 
