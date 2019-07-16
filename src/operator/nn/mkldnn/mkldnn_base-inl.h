@@ -622,4 +622,12 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
 
 }  // namespace mxnet
 #endif
+
+struct MKLDNNPostEltwiseParam {
+  mkldnn::algorithm alg = mkldnn::algorithm::algorithm_undef;
+  float scale = 1.f;
+  float alpha = 0.f;
+  float beta = 1.f;
+};
+
 #endif  // MXNET_OPERATOR_NN_MKLDNN_MKLDNN_BASE_INL_H_
