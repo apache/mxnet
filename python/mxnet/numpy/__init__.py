@@ -30,5 +30,6 @@ from .function_base import *  # pylint: disable=wildcard-import
 from .stride_tricks import *  # pylint: disable=wildcard-import
 from .io import *  # pylint: disable=wildcard-import
 from .arrayprint import *  # pylint: disable=wildcard-import
+from .index_tricks import *  # pylint: disable=wildcard-import
 
 __all__ = []

@@ -1467,6 +1467,36 @@ def test_np_indices():
                     assert mx_out.shape == np_out.shape
 
 
+@with_seed()
+@npx.use_np
+def test_np_mgrid():
+    nx, ny = (4, 5)
+    x = np.linspace(0, 1, nx)
+    y = np.linspace(0, 1, ny)
+    z = np.ones(())
+    xv, yv, zv = np.meshgrid(x, y, z)
+    xv_expected, yv_expected, zv_expected = _np.meshgrid(x.asnumpy(), y.asnumpy(), z.asnumpy())
+    assert same(xv.asnumpy(), xv_expected)
+    assert same(yv.asnumpy(), yv_expected)
+    assert same(zv.asnumpy(), zv_expected)
+    # TODO(junwu): Add more test
+
+
+@with_seed()
+@npx.use_np
+def test_np_ogrid():
+    nx, ny = (4, 5)
+    x = np.linspace(0, 1, nx)
+    y = np.linspace(0, 1, ny)
+    z = np.ones(())
+    xv, yv, zv = np.meshgrid(x, y, z)
+    xv_expected, yv_expected, zv_expected = _np.meshgrid(x.asnumpy(), y.asnumpy(), z.asnumpy())
+    assert same(xv.asnumpy(), xv_expected)
+    assert same(yv.asnumpy(), yv_expected)
+    assert same(zv.asnumpy(), zv_expected)
+    # TODO(junwu): Add more test
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
