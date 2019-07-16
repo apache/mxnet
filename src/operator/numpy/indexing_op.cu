@@ -44,10 +44,14 @@ void NumpyTakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
   const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
+  if (idxshape.Size() == 0) {
+    return;
+  }
+
   Stream<gpu> *s = ctx.get_stream<gpu>();
 
   if (param.axis.has_value()) {
-    const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
+    const int actual_axis = param.axis.value() + ((param.axis.value() < 0) ? arrshape.ndim() : 0);
 
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
       MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type

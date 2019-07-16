@@ -128,6 +128,10 @@ void NumpyTakeOpBackward(const nnvm::NodeAttrs& attrs,
       const mxnet::TShape& arrshape = outputs[0].shape_;
       const mxnet::TShape& oshape = inputs[0].shape_;
 
+      if (idxshape.Size() == 0) {
+        return;
+      }
+
       if (req[take_::kIdx] != kNullOp) {
         mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
           s, idxshape.Size(), outputs[take_::kIdx].dptr<IType>());

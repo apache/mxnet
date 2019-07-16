@@ -1935,27 +1935,26 @@ def take(a, indices, axis=None, mode='clip', out=None):
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.take.html>`_ in
     the following way(s):
 
-    - Only ndarray is accepted as valid input
+    - Only ndarray or scalar ndarray is accepted as valid input.
     - 'raise' mode is not supported.
 
     Examples
     --------
-    >>> a = [4, 3, 5, 7, 6, 8]
-    >>> indices = [0, 1, 4]
+    >>> a = np.array([4, 3, 5, 7, 6, 8])
+    >>> indices = np.array([0, 1, 4])
     >>> np.take(a, indices)
-    array([4, 3, 6])
+    array([4., 3., 6.])
 
-    In this example if `a` is an ndarray, "fancy" indexing can be used.
+    In this example for `a` is an ndarray, "fancy" indexing can be used.
 
-    >>> a = np.array(a)
     >>> a[indices]
-    array([4, 3, 6])
+    array([4., 3., 6.])
 
     If `indices` is not one dimensional, the output also has these dimensions.
 
-    >>> np.take(a, [[0, 1], [2, 3]])
-    array([[4, 3],
-        [5, 7]])
+    >>> np.take(a, np.array([[0, 1], [2, 3]]))
+    array([[4., 3.],
+           [5., 7.]])
     """
     return _mx_nd_np.take(a, indices, axis, mode, out)
 
