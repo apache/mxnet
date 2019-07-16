@@ -135,8 +135,6 @@ USE_LAPACK_PATH =
 USE_INTEL_PATH = NONE
 
 # If use MKL only for BLAS, choose static link automatically to allow python wrapper
-# Please Note: You have to set USE_BLAS = mkl here if you want to build mxnet with mkl correctly. Otherwise USE_STATIC_MKL will be set to NONE. 
-# USE_BLAS = mkl 
 ifeq ($(USE_BLAS), mkl)
 USE_STATIC_MKL = 1
 else
