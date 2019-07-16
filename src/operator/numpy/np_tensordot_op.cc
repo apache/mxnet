@@ -136,9 +136,11 @@ bool TensordotIntAxesOpShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  if ((a_shape.ndim() < 1) || (b_shape.ndim() < 1)) {
-    return false;
-  }
+  CHECK_GE(a_shape.ndim(), 1)
+      << "First input tensor should be at least 1 dimension";
+
+  CHECK_GE(b_shape.ndim(), 1)
+      << "Second input tensor should be at least 1 dimension";
 
   const TensordotIntAxesParam& param = nnvm::get<TensordotIntAxesParam>(attrs.parsed);
   const int& axes = param.axes;
