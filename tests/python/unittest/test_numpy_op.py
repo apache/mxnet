@@ -1496,6 +1496,7 @@ def test_np_mgrid():
             mx_out = np.mgrid[start:end, start:end, start:end, start:end]
             assert same(mx_out.asnumpy(), np_out)
 
+
 @with_seed()
 @npx.use_np
 def test_np_ogrid():
