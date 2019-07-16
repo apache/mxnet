@@ -44,8 +44,15 @@ namespace cuda {
 // Dynamic init here will emit a warning if runtime and compile-time cuda lib versions mismatch.
 // Also if the user has recompiled their source to a version no longer tested by upstream CI.
 bool cuda_version_check_performed = []() {
-  // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
-  if (dmlc::GetEnv("MXNET_CUDA_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
+  // MXNet might be built on a machine with a cuda toolkit, but no GPUs or GPU driver.
+  // To allow that machine to execute say: python -c 'import mxnet; print(mxnet.__version__)',
+  // we won't perform a check if there is no driver.  Any actual attempt to use the cuda API's
+  // will yield the desired message: CUDA driver version is insufficient for CUDA runtime version.
+  int cuda_driver_version = 0;
+  CUDA_CALL(cudaDriverGetVersion(&cuda_driver_version));
+  // Also, don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
+  if (dmlc::GetEnv("MXNET_CUDA_VERSION_CHECKING", true) && cuda_driver_version > 0
+                                                        && Context::GetGPUCount() > 0) {
     // Not currently performing a runtime check of linked-against vs. compiled-against
     // cuda runtime library, as major.minor must match for libmxnet.so to even load, per:
     // https://docs.nvidia.com/deploy/cuda-compatibility/#binary-compatibility
@@ -82,8 +89,15 @@ namespace cudnn {
 // Dynamic init here will emit a warning if runtime and compile-time cudnn lib versions mismatch.
 // Also if the user has recompiled their source to a version no longer tested by upstream CI.
 bool cudnn_version_check_performed = []() {
-  // Don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
-  if (dmlc::GetEnv("MXNET_CUDNN_VERSION_CHECKING", true) && Context::GetGPUCount() > 0) {
+  // MXNet might be built on a machine with a cuda toolkit, but no GPUs or GPU driver.
+  // To allow that machine to execute say: python -c 'import mxnet; print(mxnet.__version__)',
+  // we won't perform a check if there is no driver.  Any actual attempt to use the cuda API's
+  // will yield the desired message: CUDA driver version is insufficient for CUDA runtime version.
+  int cuda_driver_version = 0;
+  CUDA_CALL(cudaDriverGetVersion(&cuda_driver_version));
+  // Also, don't bother with checks if there are no GPUs visible (e.g. with CUDA_VISIBLE_DEVICES="")
+  if (dmlc::GetEnv("MXNET_CUDNN_VERSION_CHECKING", true) && cuda_driver_version > 0
+                                                         && Context::GetGPUCount() > 0) {
     size_t linkedAgainstCudnnVersion = cudnnGetVersion();
     if (linkedAgainstCudnnVersion != CUDNN_VERSION)
       LOG(WARNING) << "cuDNN library mismatch: linked-against version " << linkedAgainstCudnnVersion
