@@ -341,6 +341,53 @@ struct Take {
   }
 };
 
+template<bool clip = true>
+struct TakeCPU {
+  // assume that idx have been flattened to a 1-D tensor (N,)
+  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
+  // M is the number of columns of in_data and out_data
+  // K is the number of rows of in_data
+  // i is the index of out_data
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
+                                  const IType* idx, const size_t M, const int64_t K) {
+    int64_t j = static_cast<int64_t>(idx[i]);
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= K) j = K - 1;
+    } else {
+      j = j % K;
+      j += (j < 0) ? K : 0;
+    }
+    std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
+  }
+};
+
+/*! \brief name the struct Take instead of take
+ * to avoid conflict with the take function in mshadow
+ */
+template<bool clip = true>
+struct TakeGPU {
+  // assume that idx have been flattened to a 1-D tensor (N,)
+  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
+  // M is the number of columns of in_data and out_data
+  // K is the number of rows of in_data
+  // i is the index of out_data
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+                                  const IType* idx, const int64_t M, const int64_t K) {
+    int64_t j = static_cast<int64_t>(idx[i/M]);
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= K) j = K - 1;
+    } else {
+      j = j % K;
+      j += (j < 0) ? K : 0;
+    }
+    out_data[i] = in_data[j * M + i % M];
+  }
+};
+
 // Embedding forward implementation with dense weight
 template<typename xpu>
 void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
@@ -792,6 +839,24 @@ void TakeOpForward(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs);
 
+template<typename IndexType, typename DType, bool clip = true>
+inline void TakeGradZeroDim(mshadow::Tensor<cpu, 2, DType> dst,
+                        const mshadow::Tensor<cpu, 1, IndexType>& index,
+                        const mshadow::Tensor<cpu, 2, DType> &src) {
+  const int K = dst.shape_[0];
+  for (index_t y = 0; y < index.size(0); ++y) {
+    int j = index[y];
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= K) j = K - 1;
+    } else {
+      j = j % K;
+      j += (j < 0) ? K : 0;
+    }
+    dst[j] += src[y];
+  }
+}
+
 struct TakeGradGeneralKernel {
   /*!
    * \brief Map function for general case of take grad
@@ -1030,21 +1095,24 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
 
       const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-      int idxndim = idxshape.ndim();
-      Tensor<xpu, 1, IType> idx = inputs[1].get_with_shape<xpu, 1, IType>(
-          Shape1(idxshape.ProdShape(0, idxndim)), s);
-      Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
-          Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
-      Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
-          Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
-
-      // re-using the previous code for axis = 0 case
       if (actual_axis == 0) {
+        int idxndim = idxshape.ndim();
+        Tensor<xpu, 1, IType> idx = inputs[1].get_with_shape<xpu, 1, IType>(
+            Shape1(idxshape.ProdShape(0, idxndim)), s);
+        Tensor<xpu, 2, DType> grad_out = inputs[0].get_with_shape<xpu, 2, DType>(
+            Shape2(oshape.ProdShape(0, idxndim), oshape.ProdShape(idxndim, oshape.ndim())), s);
+        Tensor<xpu, 2, DType> grad_in = outputs[0].get_with_shape<xpu, 2, DType>(
+            Shape2(arrshape[0], arrshape.ProdShape(1, arrshape.ndim())), s);
+
         if (req[take_::kArr] == kWriteTo || req[take_::kArr] == kAddTo) {
           if (req[take_::kArr] == kWriteTo) {
             grad_in = scalar<DType>(0.0f);
           }
-          AddTakeGrad(grad_in, idx, grad_out);
+          if (param.mode == take_::kClip) {
+            TakeGradZeroDim<IType, DType, true>(grad_in, idx, grad_out);
+          } else {
+            TakeGradZeroDim<IType, DType, false>(grad_in, idx, grad_out);
+          }
         } else {
           LOG(FATAL) << "wrong req";
         }

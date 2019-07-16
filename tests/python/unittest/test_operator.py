@@ -4387,7 +4387,13 @@ def test_blockgrad():
 
 @with_seed()
 def test_take():
-    def grad_helper(grad_in, axis, idx):
+    def grad_helper(grad_in, axis, idx, mode):
+        k = grad_in.shape[axis]
+        if mode == 'clip':
+            idx = 0 if idx < 0 else idx
+            idx = k - 1 if idx >= k else idx
+        else:
+            idx = idx % k
         if axis == 0:
             if axis == len(grad_in.shape) - 1:
                 grad_in[idx] += 1.0
@@ -4421,7 +4427,7 @@ def test_take():
         exe = result.simple_bind(default_context(), a=data_shape,
                                  indices=idx_shape, axis=axis, mode=mode)
         data_real = np.random.normal(size=data_shape).astype('float32')
-        idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
+        idx_real = np.random.randint(low=data_shape[axis]*-100, high=data_shape[axis]*100, size=idx_shape)
         if axis < 0:
             axis += len(data_shape)
 
@@ -4434,10 +4440,10 @@ def test_take():
         assert_almost_equal(exe.outputs[0].asnumpy(), np.take(data_real, idx_real, axis=axis, mode=mode))
 
         for i in np.nditer(idx_real):
-            grad_helper(grad_in, axis, i)
+            grad_helper(grad_in, axis, i, mode)
 
         exe.backward([mx.nd.array(grad_out)])
-        assert_almost_equal(exe.grad_dict['a'].asnumpy(), grad_in)
+        same(exe.grad_dict['a'].asnumpy(), grad_in)
 
     def check_autograd_req():
         row_len = 2

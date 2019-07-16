@@ -323,6 +323,59 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
                                     num_runs_ptr, dst.size(0));
 }
 
+template<int x_bits, typename DType, typename DstPlan, typename SrcPlan1, typename SrcPlan2>
+__global__ void TakeGradZeroDimKernel(DstPlan dst,
+                                  SrcPlan1 index, SrcPlan2 src,
+                                  index_t ymax, index_t xmax,
+                                  const int K, bool clip) {
+  const unsigned x_size = 1 << x_bits;
+  const int xindex = blockIdx.x * x_size + threadIdx.x;
+  __shared__ int ptr;
+  for (unsigned y = 0; y < ymax; ++y) {
+    if (threadIdx.x == 0) {
+      ptr = index.Eval(0, y);
+      if (clip) {
+        if (ptr <= 0) ptr = 0;
+        else if (ptr >= K) ptr = K - 1;
+      } else {
+        ptr = ptr % K;
+        ptr += (ptr < 0) ? K : 0;
+      }
+    }
+    __syncthreads();
+    if (xindex < xmax) {
+      dst.REval(ptr, xindex) += src.Eval(y, xindex);
+    }
+  }
+}
+
+template<typename IndexType, typename DType, bool clip = true>
+inline void TakeGradZeroDim(mshadow::Tensor<gpu, 2, DType> dst,
+                        const mshadow::Tensor<gpu, 1, IndexType>& index,
+                        const mshadow::Tensor<gpu, 2, DType> &src) {
+  CHECK_EQ(dst.CheckContiguous(), true);
+  CHECK_EQ(index.CheckContiguous(), true);
+  CHECK_EQ(src.CheckContiguous(), true);
+  const int kUnitBits = 6;
+  dim3 dimBlock(1 << kUnitBits);
+  dim3 dimGrid((dst.size(1) + (1 << kUnitBits) - 1) >> kUnitBits);
+
+  CHECK_EQ(dst.size(1), src.size(1)) << "TakeGradZeroDim: shape mismatch";
+  CHECK_EQ(index.size(0), src.size(0)) << "TakeGradZeroDim: shape mismatch";
+  mshadow::cuda::CheckLaunchParam(dimGrid, dimBlock, "TakeGradZeroDim");
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
+  const int K = dst.shape_[0];
+
+  TakeGradZeroDimKernel<kUnitBits, DType>
+      <<<dimGrid, dimBlock, 0, stream>>>
+      (mshadow::expr::MakePlan(dst),
+       mshadow::expr::MakePlan(index),
+       mshadow::expr::MakePlan(src),
+       src.size(0), src.size(1),
+       K, clip);
+  MSHADOW_CUDA_POST_KERNEL_CHECK(TakeGradZeroDimKernel);
+}
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_TENSOR_INDEXING_OP_CUH_

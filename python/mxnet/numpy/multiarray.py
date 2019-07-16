@@ -44,7 +44,7 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
 __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'add', 'subtract', 'multiply', 'divide',
-           'mod', 'power']
+           'mod', 'power', 'take']
 
 
 # This function is copied from ndarray.py since pylint
@@ -1403,6 +1403,86 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
         Array of zeros with the given shape, dtype, and ctx.
     """
     return _mx_nd_np.ones(shape, dtype, order, ctx)
+
+
+@set_module('mxnet.numpy')
+def take(a, indices, axis=None, mode='clip', out=None):
+    r"""
+    Take elements from an array along an axis.
+
+    When axis is not None, this function does the same thing as "fancy"
+    indexing (indexing arrays using arrays); however, it can be easier to use
+    if you need elements along a given axis. A call such as
+    ``np.take(arr, indices, axis=3)`` is equivalent to
+    ``arr[:,:,:,indices,...]``.
+
+    Explained without fancy indexing, this is equivalent to the following use
+    of `ndindex`, which sets each of ``ii``, ``jj``, and ``kk`` to a tuple of
+    indices::
+
+        Ni, Nk = a.shape[:axis], a.shape[axis+1:]
+        Nj = indices.shape
+        for ii in ndindex(Ni):
+            for jj in ndindex(Nj):
+                for kk in ndindex(Nk):
+                    out[ii + jj + kk] = a[ii + (indices[jj],) + kk]
+
+    Parameters
+    ----------
+    a : ndarray
+        The source array.
+    indices : ndarray
+        The indices of the values to extract. Also allow scalars for indices.
+    axis : int, optional
+        The axis over which to select values. By default, the flattened
+        input array is used.
+    out : ndarray, optional
+        If provided, the result will be placed in this array. It should
+        be of the appropriate shape and dtype.
+    mode : {'clip', 'wrap'}, optional
+        Specifies how out-of-bounds indices will behave.
+
+        * 'clip' -- clip to the range (default)
+        * 'wrap' -- wrap around
+
+        'clip' mode means that all indices that are too large are replaced
+        by the index that addresses the last element along that axis. Note
+        that this disables indexing with negative numbers.
+
+    Returns
+    -------
+    out : ndarray
+        The returned array has the same type as `a`.
+
+    Notes
+    -----
+
+    This function differs from the original `numpy.take
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.take.html>`_ in
+    the following way(s):
+
+    - Only ndarray or scalar ndarray is accepted as valid input.
+    - 'raise' mode is not supported.
+
+    Examples
+    --------
+    >>> a = np.array([4, 3, 5, 7, 6, 8])
+    >>> indices = np.array([0, 1, 4])
+    >>> np.take(a, indices)
+    array([4., 3., 6.])
+
+    In this example for `a` is an ndarray, "fancy" indexing can be used.
+
+    >>> a[indices]
+    array([4., 3., 6.])
+
+    If `indices` is not one dimensional, the output also has these dimensions.
+
+    >>> np.take(a, np.array([[0, 1], [2, 3]]))
+    array([[4., 3.],
+           [5., 7.]])
+    """
+    return _mx_nd_np.take(a, indices, axis, mode, out)
 
 
 @set_module('mxnet.numpy')
