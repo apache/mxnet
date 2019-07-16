@@ -1470,31 +1470,62 @@ def test_np_indices():
 @with_seed()
 @npx.use_np
 def test_np_mgrid():
-    nx, ny = (4, 5)
-    x = np.linspace(0, 1, nx)
-    y = np.linspace(0, 1, ny)
-    z = np.ones(())
-    xv, yv, zv = np.meshgrid(x, y, z)
-    xv_expected, yv_expected, zv_expected = _np.meshgrid(x.asnumpy(), y.asnumpy(), z.asnumpy())
-    assert same(xv.asnumpy(), xv_expected)
-    assert same(yv.asnumpy(), yv_expected)
-    assert same(zv.asnumpy(), zv_expected)
-    # TODO(junwu): Add more test
+    starts = (-10, 5, 0, 1, 10)
+    ends = (-20, 0, 5, 2, 10, 30, 33)
+    steps = (1, 3, -1, -3, 2j, -5j, 1j)
+    for start in starts:
+        for end in ends:
+            for step in steps:
+                np_out = _np.mgrid[start:end:step]
+                mx_out = np.mgrid[start:end:step]
+                assert same(mx_out.asnumpy(), np_out)
 
+    starts = _np.arange(-5,10)
+    ends = _np.arange(10,16)
+    for start in starts:
+        for end in ends:
+            np_out = _np.mgrid[start:end, start:end]
+            mx_out = np.mgrid[start:end, start:end]
+            assert same(mx_out.asnumpy(), np_out)
+
+    starts = _np.arange(-5,10)
+    ends = _np.arange(10,16)
+    for start in starts:
+        for end in ends:
+            np_out = _np.mgrid[start:end, start:end, start:end, start:end]
+            mx_out = np.mgrid[start:end, start:end, start:end, start:end]
+            assert same(mx_out.asnumpy(), np_out)
 
 @with_seed()
 @npx.use_np
 def test_np_ogrid():
-    nx, ny = (4, 5)
-    x = np.linspace(0, 1, nx)
-    y = np.linspace(0, 1, ny)
-    z = np.ones(())
-    xv, yv, zv = np.meshgrid(x, y, z)
-    xv_expected, yv_expected, zv_expected = _np.meshgrid(x.asnumpy(), y.asnumpy(), z.asnumpy())
-    assert same(xv.asnumpy(), xv_expected)
-    assert same(yv.asnumpy(), yv_expected)
-    assert same(zv.asnumpy(), zv_expected)
-    # TODO(junwu): Add more test
+    starts = (-10, 5, 0, 1, 10)
+    ends = (-20, 0, 5, 2, 10, 30, 33)
+    steps = (1, 3, -1, -3, 2j, -5j, 1j)
+    for start in starts:
+        for end in ends:
+            for step in steps:
+                np_out = _np.ogrid[start:end:step]
+                mx_out = np.ogrid[start:end:step]
+                assert same(mx_out.asnumpy(), np_out)
+
+    starts = _np.arange(-5,10)
+    ends = _np.arange(10,16)
+    for start in starts:
+        for end in ends:
+            np_out = _np.ogrid[start:end, start:end]
+            mx_out = np.ogrid[start:end, start:end]
+            for mx_out_sub, np_out_sub  in zip(mx_out, np_out):
+                assert same(mx_out_sub.asnumpy(), np_out_sub)
+
+    starts = _np.arange(-5,10)
+    ends = _np.arange(10,16)
+    for start in starts:
+        for end in ends:
+            np_out = _np.mgrid[start:end, start:end, start:end, start:end]
+            mx_out = np.mgrid[start:end, start:end, start:end, start:end]
+            for mx_out_sub, np_out_sub  in zip(mx_out, np_out):
+                assert same(mx_out_sub.asnumpy(), np_out_sub)
 
 
 if __name__ == '__main__':

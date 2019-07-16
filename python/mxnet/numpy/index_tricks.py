@@ -24,6 +24,7 @@ from ..ndarray import numpy as _mx_nd_np
 __all__ = ['mgrid', 'ogrid']
 
 
+#pylint: disable=invalid-name, useless-object-inheritance, too-few-public-methods
 class nd_grid(object):
     """
     Construct a multi-dimensional "meshgrid".
@@ -55,11 +56,11 @@ class nd_grid(object):
     def __init__(self, sparse=False):
         self.sparse = sparse
 
-    def __getitem__(self, key):
+    def __getitem__(self, key):  #pylint: disable=too-many-branches
         try:
             size = []
             typ = int
-            for k in range(len(key)):
+            for k in range(len(key)):  #pylint: disable=consider-using-enumerate
                 step = key[k].step
                 start = key[k].start
                 if start is None:
@@ -94,11 +95,11 @@ class nd_grid(object):
                         step = (key[k].stop - start)/float(step-1)
                 nn[k] = (nn[k]*step+start)
             if self.sparse:
-                slobj = [None]*len(size)
+                slobj = [1]*len(size)
                 for k in range(len(size)):
-                    slobj[k] = slice(None, None)
-                    nn[k] = nn[k][tuple(slobj)]
-                    slobj[k] = None
+                    slobj[k] = -1
+                    nn[k] = nn[k].reshape(tuple(slobj))
+                    slobj[k] = 1
             return nn
         except (IndexError, TypeError):
             step = key.step
@@ -106,7 +107,7 @@ class nd_grid(object):
             start = key.start
             if start is None:
                 start = 0
-            if isinstance(step, complex):
+            if isinstance(step, complex):  #pylint: disable=no-else-return
                 step = abs(step)
                 length = int(step)
                 if step != 1:
@@ -115,28 +116,27 @@ class nd_grid(object):
                 return _mx_nd_np.arange(0, length, 1, float)*step + start
             else:
                 return _mx_nd_np.arange(start, stop, step)
+#pylint: enable=invalid-name, useless-object-inheritance, too-few-public-methods
 
 
+#pylint: disable=too-few-public-methods
 class MGridClass(nd_grid):
     """
     `nd_grid` instance which returns a dense multi-dimensional "meshgrid".
-    An instance of `numpy.lib.index_tricks.nd_grid` which returns an dense
-    (or fleshed out) mesh-grid when indexed, so that each returned argument
-    has the same shape.  The dimensions and number of the output arrays are
-    equal to the number of indexing dimensions.  If the step length is not a
-    complex number, then the stop is not inclusive.
+    An instance of `python.mxnet.numpy.index_tricks.nd_grid` which returns
+    an dense(or fleshed out) mesh-grid when indexed, so that each returned
+    argument has the same shape.  The dimensions and number of the output
+    arrays are equal to the number of indexing dimensions. If the step length
+    is not a complex number, then the stop is not inclusive.
     However, if the step length is a **complex number** (e.g. 5j), then
     the integer part of its magnitude is interpreted as specifying the
     number of points to create between the start and stop values, where
     the stop value **is inclusive**.
+
     Returns
     ----------
     mesh-grid `ndarrays` all of the same dimensions
-    See Also
-    --------
-    numpy.lib.index_tricks.nd_grid : class of `ogrid` and `mgrid` objects
-    ogrid : like mgrid but returns open (not fleshed out) mesh grids
-    r_ : array concatenator
+
     Examples
     --------
     >>> np.mgrid[0:5,0:5]
@@ -145,25 +145,29 @@ class MGridClass(nd_grid):
             [2, 2, 2, 2, 2],
             [3, 3, 3, 3, 3],
             [4, 4, 4, 4, 4]],
+
            [[0, 1, 2, 3, 4],
             [0, 1, 2, 3, 4],
             [0, 1, 2, 3, 4],
             [0, 1, 2, 3, 4],
-            [0, 1, 2, 3, 4]]])
+            [0, 1, 2, 3, 4]]], dtype=int64)
+
     >>> np.mgrid[-1:1:5j]
-    array([-1. , -0.5,  0. ,  0.5,  1. ])
+    array([-1. , -0.5,  0. ,  0.5,  1. ], dtype=float64)
     """
     def __init__(self):
         super(MGridClass, self).__init__(sparse=False)
+#pylint: enable=too-few-public-methods
 
 
-mgrid = MGridClass()
+mgrid = MGridClass()  #pylint: disable=invalid-name
 
 
+#pylint: disable=too-few-public-methods
 class OGridClass(nd_grid):
     """
     `nd_grid` instance which returns an open multi-dimensional "meshgrid".
-    An instance of `numpy.lib.index_tricks.nd_grid` which returns an open
+    An instance of `python.mxnet.numpy.index_tricks.nd_grid` which returns an open
     (i.e. not fleshed out) mesh-grid when indexed, so that only one dimension
     of each returned array is greater than 1.  The dimension and number of the
     output arrays are equal to the number of indexing dimensions.  If the step
@@ -172,29 +176,26 @@ class OGridClass(nd_grid):
     the integer part of its magnitude is interpreted as specifying the
     number of points to create between the start and stop values, where
     the stop value **is inclusive**.
+
     Returns
     -------
     mesh-grid
         `ndarrays` with only one dimension not equal to 1
-    See Also
-    --------
-    np.lib.index_tricks.nd_grid : class of `ogrid` and `mgrid` objects
-    mgrid : like `ogrid` but returns dense (or fleshed out) mesh grids
-    r_ : array concatenator
+
     Examples
     --------
-    >>> from numpy import ogrid
-    >>> ogrid[-1:1:5j]
-    array([-1. , -0.5,  0. ,  0.5,  1. ])
-    >>> ogrid[0:5,0:5]
+    >>> np.ogrid[-1:1:5j]
+    array([-1. , -0.5,  0. ,  0.5,  1. ], dtype=float64)
+    >>> np.ogrid[0:5,0:5]
     [array([[0],
             [1],
             [2],
             [3],
-            [4]]), array([[0, 1, 2, 3, 4]])]
+            [4]], dtype=int64), array([[0, 1, 2, 3, 4]], dtype=int64)]
     """
     def __init__(self):
         super(OGridClass, self).__init__(sparse=True)
+#pylint: enable=too-few-public-methods
 
 
-ogrid = OGridClass()
+ogrid = OGridClass()  #pylint: disable=invalid-name
