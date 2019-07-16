@@ -71,25 +71,25 @@ def test_np_tensordot():
             if not (i in b_axes_summed):
                 b_axes_remained.append(i)
         b_axes = b_axes_summed[:] + b_axes_remained[:]
-        
+
         ad1 = _np.prod([a.shape[i] for i in a_axes_remained]) if len(a_axes_remained) > 0 else 1
         ad2 = _np.prod([a.shape[i] for i in a_axes_summed]) if len(a_axes_summed) > 0 else 1
         bd1 = _np.prod([b.shape[i] for i in b_axes_summed]) if len(b_axes_summed) > 0 else 1
         bd2 = _np.prod([b.shape[i] for i in b_axes_remained]) if len(b_axes_remained) > 0 else 1
-        
+
         out_grad = _np.ones((ad1, bd2))
 
         new_a = _np.transpose(a, a_axes)
         new_a_shape = new_a.shape[:]
-        new_a = new_a.reshape((ad1, ad2)) 
-        new_b = _np.transpose(b, b_axes) 
+        new_a = new_a.reshape((ad1, ad2))
+        new_b = _np.transpose(b, b_axes)
         new_b_shape = new_b.shape[:]
         new_b = new_b.reshape((bd1, bd2))
-        
+
         reverse_a_axes = [0 for i in a_axes]
         for i in range(len(a_axes)):
             reverse_a_axes[a_axes[i]] = i
-            
+
         reverse_b_axes = [0 for i in b_axes]
         for i in range(len(b_axes)):
             reverse_b_axes[b_axes[i]] = i
@@ -98,37 +98,40 @@ def test_np_tensordot():
         grad_b = _np.transpose(grad_b, reverse_b_axes)
         grad_a = _np.dot(out_grad, new_b.T).reshape(new_a_shape)
         grad_a = _np.transpose(grad_a, reverse_a_axes)
-        
+
         return [grad_a, grad_b]
 
     # test non zero size input
-    tensor_shapes = [ 
+    tensor_shapes = [
         ((3, 5), (5, 4), 1),  # (a_shape, b_shape, axes)
-        ((3,), (3,), 1),       
+        ((3,), (3,), 1),
         ((3, 4, 5, 6, 7), (5, 6, 7, 1, 2), 3),
         ((3, 5, 4, 6, 7), (7, 6, 5, 1, 2), [[1, 3, 4], [2, 1, 0]]),
+        ((3, 5, 4), (5, 4, 3), [[1, 0, 2], [0, 2, 1]]),
+        ((3, 5, 4), (5, 3, 4), [[2, 0], [2, 1]]),
         ((2, 2), (2, 2), 2),
-        ((3, 5, 4), (5, ), [[1], [0]]),  
+        ((3, 5, 4), (5, ), [[1], [0]]),
         ((2,), (2, 3), 1),
         ((3,), (3,), 0),
         ((2,), (2, 3), 0),
-        ((3, 5, 4), (5, ), 0)
+        ((3, 5, 4), (5, ), 0),
+        ((2, 3, 4), (4, 3, 2), [[], []])
     ]
-    
+
     for hybridize in [True, False]:
         for a_shape, b_shape, axes in tensor_shapes:
             for dtype in [_np.float32, _np.float64]:
                 test_tensordot = TestTensordot(axes)
                 if hybridize:
                     test_tensordot.hybridize()
-                a = rand_ndarray(shape = a_shape, dtype = dtype).as_np_ndarray() 
-                b = rand_ndarray(shape = b_shape, dtype = dtype).as_np_ndarray() 
+                a = rand_ndarray(shape = a_shape, dtype = dtype).as_np_ndarray()
+                b = rand_ndarray(shape = b_shape, dtype = dtype).as_np_ndarray()
                 a.attach_grad()
                 b.attach_grad()
 
                 np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
                 with mx.autograd.record():
-                    mx_out = test_tensordot(a, b)               
+                    mx_out = test_tensordot(a, b)
                 assert mx_out.shape == np_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
                 mx_out.backward()
@@ -140,35 +143,36 @@ def test_np_tensordot():
                 mx_out = np.tensordot(a, b, axes)
                 np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-                
+
                 # test numeric gradient
                 a_sym = mx.sym.Variable("a").as_np_ndarray()
                 b_sym = mx.sym.Variable("b").as_np_ndarray()
                 mx_sym = mx.sym.np.tensordot(a_sym, b_sym, axes).as_nd_ndarray()
                 check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
-                  rtol=1e-2, atol=1e-2, dtype = dtype)
+                  rtol=1e-1, atol=1e-1, dtype = dtype)
 
     # test zero size input
     zero_shapes = [
-        ((3, 0), (0, 5), 1),    
-        ((0, 3), (3, 5), 1)    
+        ((3, 0), (0, 5), 1),
+        ((3, 0), (0, 4), [1, 0]),
+        ((0, 3), (3, 5), 1)
     ]
-    
+
     for hybridize in [True, False]:
         for a_shape, b_shape, axes in zero_shapes:
             for dtype in [_np.float32, _np.float64]:
                 test_tensordot = TestTensordot(axes)
                 if hybridize:
                     test_tensordot.hybridize()
-                a = rand_ndarray(shape = a_shape, dtype = dtype).as_np_ndarray() 
-                b = rand_ndarray(shape = b_shape, dtype = dtype).as_np_ndarray() 
+                a = rand_ndarray(shape = a_shape, dtype = dtype).as_np_ndarray()
+                b = rand_ndarray(shape = b_shape, dtype = dtype).as_np_ndarray()
 
                 np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
                 with mx.autograd.record():
-                    mx_out = test_tensordot(a, b)               
+                    mx_out = test_tensordot(a, b)
                 assert mx_out.shape == np_out.shape
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
-                
+
                 # Test imperative once again
                 mx_out = np.tensordot(a, b, axes)
                 np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)

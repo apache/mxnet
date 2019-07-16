@@ -41,9 +41,11 @@ bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  if ((a_shape.ndim() < 1) || (b_shape.ndim() < 1)) {
-    return false;
-  }
+  CHECK_GE(a_shape.ndim(), 1)
+      << "First input tensor should be at least 1 dimension";
+
+  CHECK_GE(b_shape.ndim(), 1)
+      << "Second input tensor should be at least 1 dimension";
 
   const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);
   const Tuple<int>& a_axes_summed = param.a_axes_summed;
