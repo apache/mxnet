@@ -52,6 +52,14 @@ ifndef AMALGAMATION_PATH
 	AMALGAMATION_PATH = $(ROOTDIR)/amalgamation
 endif
 
+ifndef TVM_PATH
+	TVM_PATH = $(TPARTYDIR)/tvm
+endif
+
+ifndef LLVM_PATH
+	LLVM_PATH = $(TVM_PATH)/build/llvm
+endif
+
 ifneq ($(USE_OPENMP), 1)
 	export NO_OPENMP = 1
 endif
@@ -100,6 +108,12 @@ else
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
+
+ifeq ($(USE_TVM_OP), 1)
+	LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
+	CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
+	LDFLAGS += -L$(TVM_PATH)/build -ltvm_runtime
+endif
 
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
@@ -589,6 +603,30 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
+TVM_USE_CUDA := OFF
+ifeq ($(USE_CUDA), 1)
+	TVM_USE_CUDA := ON
+	ifneq ($(USE_CUDA_PATH), NONE)
+		TVM_USE_CUDA := $(USE_CUDA_PATH)
+	endif
+endif
+
+lib/libtvm_runtime.so:
+	echo "Compile TVM"
+	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
+	cd $(TVM_PATH)/build; \
+	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
+		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
+	$(MAKE) VERBOSE=1; \
+	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
+	cd $(ROOTDIR)
+
+lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
+	echo "Compile TVM operators"
+	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib:$PYTHONPATH \
+		LD_LIBRARY_PATH=lib \
+	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -o $(ROOTDIR)/lib/libtvmop.so
+
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
 $(NNVM_PATH)/lib/libnnvm.a: $(NNVM_INC) $(NNVM_SRC)
@@ -726,6 +764,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
