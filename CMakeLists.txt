@@ -734,6 +734,28 @@ if(USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
 endif()
 
+if(USE_TVM_OP)
+  add_definitions(-DMXNET_USE_TVM_OP=1)
+  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  include(cmake/BuildTVM.cmake)
+  add_subdirectory("3rdparty/tvm")
+
+  if(NOT Python3_EXECUTABLE)
+    find_package(PythonInterp 3 REQUIRED)
+    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python3 executable")
+    if(NOT Python3_EXECUTABLE)
+      message(FATAL_ERROR "No python3 interpreter found to build TVM operators")
+    endif()
+  endif()
+
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E env
+          PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
+          LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/build"
+          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py -o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so
+    )
+endif()
+
 target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
 
 if(USE_PLUGINS_WARPCTC)
