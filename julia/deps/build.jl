@@ -26,14 +26,27 @@ libmxnet_detected = false
 libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "master")
 curr_win = "20190608"  # v1.5.0
 
-if haskey(ENV, "MXNET_HOME")
-  MXNET_HOME = ENV["MXNET_HOME"]
-  @info("MXNET_HOME environment detected: $MXNET_HOME")
+MXNET_ROOT = get(ENV, "MXNET_ROOT", "")
+search_locations = if !isempty(MXNET_ROOT)
+  @info "env var: MXNET_ROOT -> $MXNET_ROOT"
+  [joinpath(MXNET_ROOT, "lib"), MXNET_ROOT]
+else
+  []
+end
+
+MXNET_LIBRARY_PATH = get(ENV, "MXNET_LIBRARY_PATH", "")
+println(typeof(MXNET_LIBRARY_PATH))
+# In case of macOS, if user build libmxnet from source and set the MXNET_ROOT,
+# the output is still named as `libmxnet.so`.
+search_names = ["libmxnet.$(Libdl.dlext)", "libmxnet.so"]
+if !isempty(MXNET_LIBRARY_PATH)
+  @info "env var: MXNET_LIBRARY_PATH -> $MXNET_LIBRARY_PATH"
+  pushfirst!(search_names, MXNET_LIBRARY_PATH)
+end
+
+if (!isempty(MXNET_ROOT)) || (!isempty(MXNET_LIBRARY_PATH))
   @info("Trying to load existing libmxnet...")
-  # In case of macOS, if user build libmxnet from source and set the MXNET_HOME,
-  # the output is still named as `libmxnet.so`.
-  lib = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],
-                           [joinpath(MXNET_HOME, "lib"), MXNET_HOME])
+  lib = Libdl.find_library(search_names, search_locations)
   if !isempty(lib)
     @info("Existing libmxnet detected at $lib, skip building...")
     libmxnet_detected = true

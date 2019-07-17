@@ -1052,7 +1052,7 @@ unittest_ubuntu_gpu_R() {
 unittest_ubuntu_cpu_julia() {
     set -ex
     export PATH="$1/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
+    export MXNET_ROOT='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
     export INTEGRATION_TEST=1
 
@@ -1062,7 +1062,7 @@ unittest_ubuntu_cpu_julia() {
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
-    # use the prebuilt binary from $MXNET_HOME/lib
+    # use the prebuilt binary from $MXNET_ROOT/lib
     julia --project=./julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
@@ -1213,7 +1213,7 @@ build_docs() {
 
     # Setup environment for Julia docs
     export PATH="/work/julia10/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
+    export MXNET_ROOT='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
 
     julia -e 'using InteractiveUtils; versioninfo()'
@@ -1425,7 +1425,7 @@ deploy_docs() {
 
     # Setup for Julia docs
     export PATH="/work/julia10/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
+    export MXNET_ROOT='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
 
     julia -e 'using InteractiveUtils; versioninfo()'
