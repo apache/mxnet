@@ -2331,6 +2331,72 @@ def test_math():
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
 
+
+@with_seed()
+@use_np
+def test_np_flip():
+    class TestFlip(HybridBlock):
+        def __init__(self, axis):
+            super(TestFlip, self).__init__()
+            # necessary initializations
+            self.axis = axis
+
+        def hybrid_forward(self, F, x):
+            return F.np.flip(x, self.axis)
+
+    shapes1 = [(), (1,), (1, 2, 3), (1, 0), (3, 0, 2)]
+    shapes2 = [(2, 2, 3, 3), (1, 1, 2, 4)]
+    types = ['int32', 'int64', 'float16', 'float32', 'double']
+    for hybridize in [True, False]:
+        for oneType in types:
+            if oneType is 'float16':
+                rtol=1e-2
+                atol=1e-2
+            else:
+                rtol=1e-3
+                atol=1e-5
+            for shape in shapes1:
+                for axis in [None]:
+                    test_flip = TestFlip(axis)
+                    if hybridize:
+                        test_flip.hybridize()
+                    x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                    x.attach_grad()
+                    np_out = np.flip(x.asnumpy(), axis)
+                    with mx.autograd.record():
+                        mx_out = test_flip(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                    mx_out.backward()
+                    np_backward = np.ones(np_out.shape)
+                    assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    mx_out = mx.np.flip(x, axis)
+                    np_out = np.flip(x.asnumpy(), axis)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+            for shape in shapes2:
+                for axis in [None, 2, (0, 1), (1, 3), (0, 2)]:
+                    test_flip = TestFlip(axis)
+                    if hybridize:
+                        test_flip.hybridize()
+                    x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                    x.attach_grad()
+                    np_out = np.flip(x.asnumpy(), axis)
+                    with mx.autograd.record():
+                        mx_out = test_flip(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                    mx_out.backward()
+                    np_backward = np.ones(np_out.shape)
+                    assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    mx_out = mx.np.flip(x, axis)
+                    np_out = np.flip(x.asnumpy(), axis)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

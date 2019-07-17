@@ -33,7 +33,7 @@ __all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'concatenate', 'arang
            'clip', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'split', 'swapaxes',
            'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt',
            'abs', 'exp', 'arctan', 'sign', 'log', 'degrees', 'log2', 'rint', 'radians', 'mean',
-           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot']
+           'reciprocal', 'square', 'arcsin', 'argsort', 'hstack', 'tensordot', 'flip']
 
 
 def _num_outputs(sym):
@@ -2356,6 +2356,44 @@ def tensordot(a, b, axes=2):
         raise ValueError('Axes length mismatch')
 
     return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
+
+
+@set_module('mxnet.symbol.numpy')
+def flip(x, axis=None, out=None, **kwargs):
+    r"""
+    flip(x, axis=None, out=None)
+
+    Reverse the order of elements in an array along the given axis.
+
+    The shape of the array is preserved, but the elements are reordered.
+
+    Parameters
+    ----------
+    m : _Symbol or scalar
+        Input array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to flip over. The default,
+        axis=None, will flip over all of the axes of the input array.
+        If axis is negative it counts from the last to the first axis.
+
+        If axis is a tuple of ints, flipping is performed on all of the axes
+        specified in the tuple.
+    out : _Symbol or scalar, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and type as the expected output.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        A view of `m` with the entries of axis reversed.  Since a view is
+        returned, this operation is done in constant time.
+    """
+    if isinstance(x, numeric_types):
+        return _np.flip(x, axis, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.flip(x, axis, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
 
 
 _set_np_symbol_class(_Symbol)
