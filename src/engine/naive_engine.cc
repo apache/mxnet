@@ -238,7 +238,11 @@ class NaiveEngine final : public Engine {
     static_cast<NaiveEngine*>(engine)->req_completed_ = true;
   }
   // whether action is completed
-  bool req_completed_;
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local bool req_completed_;
+#else
+  static MX_THREAD_LOCAL bool req_completed_;
+#endif
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};
   // CPU stream
@@ -261,5 +265,12 @@ class NaiveEngine final : public Engine {
 Engine *CreateNaiveEngine() {
   return new NaiveEngine();
 }
+
+#if DMLC_CXX11_THREAD_LOCAL
+thread_local bool NaiveEngine::req_completed_ = false;
+#else
+MX_THREAD_LOCAL bool NaiveEngine::req_completed_ = false;
+#endif
+
 }  // namespace engine
 }  // namespace mxnet
