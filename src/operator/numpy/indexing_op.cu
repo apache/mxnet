@@ -36,7 +36,7 @@ void NumpyTakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   if (req[take_::kOut] == kNullOp) return;
-  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
+  const NumpyTakeParam& param = nnvm::get<NumpyTakeParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 

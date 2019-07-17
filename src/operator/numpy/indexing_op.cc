@@ -147,6 +147,10 @@ NNVM_REGISTER_OP(_backward_np_take)
 .set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr_parser(ParamParser<NumpyTakeParam>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyTakeOpBackward<cpu>);
 

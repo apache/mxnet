@@ -137,7 +137,16 @@ void NumpyTakeOpBackward(const nnvm::NodeAttrs& attrs,
           s, idxshape.Size(), outputs[take_::kIdx].dptr<IType>());
       }
 
-      if (!param.axis.has_value() || (param.axis.has_value() && param.axis.value() == 0)) {
+      bool flag = false;
+      if (!param.axis.has_value()) {
+        flag = true;
+      } else if (param.axis.value() == 0) {
+        flag = true;
+      } else if (param.axis.value() + arrshape.ndim() == 0) {
+        flag = true;
+      }
+
+      if (flag) {
         int idxndim = idxshape.ndim();
         Tensor<xpu, 1, IType> idx = inputs[1].get_with_shape<xpu, 1, IType>(
             Shape1(idxshape.ProdShape(0, idxndim)), s);
