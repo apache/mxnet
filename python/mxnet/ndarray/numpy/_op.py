@@ -129,6 +129,10 @@ def identity(n, dtype=None, **kwargs):
            [0., 1., 0.],
            [0., 0., 1.]])
     """
+    if not isinstance(n, int):
+        raise TypeError("Input 'n' should be an integer")
+    if n < 0:
+        raise ValueError("Input 'n' cannot be negative")
     ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()

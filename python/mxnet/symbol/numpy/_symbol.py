@@ -1003,6 +1003,10 @@ def identity(n, dtype=None, **kwargs):
         `n` x `n` array with its main diagonal set to one,
         and all other elements 0.
     """
+    if not isinstance(n, int):
+        raise TypeError("Input 'n' should be an integer")
+    if n < 0:
+        raise ValueError("Input 'n' cannot be negative")
     ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()
