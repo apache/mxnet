@@ -22,37 +22,43 @@
 
 def _np_reshape(a, newshape, order='C'):
     """
-    reshape(a, newshape, order='C')
-
     Gives a new shape to an array without changing its data.
 
     Parameters
     ----------
     a : ndarray
         Array to be reshaped.
-    newshape : int or tuple of ints
+    newshape : int, tuple of ints or list of ints
         The new shape should be compatible with the original shape. If
         an integer, then the result will be a 1-D array of that length.
         One shape dimension can be -1. In this case, the value is
         inferred from the length of the array and remaining dimensions.
-    order : {'C'}, optional
+    order : 'C', optional
         Read the elements of `a` using this index order, and place the
         elements into the reshaped array using this index order.  'C'
         means to read / write the elements using C-like index order,
         with the last axis index changing fastest, back to the first
-        axis index changing slowest. Other order types such as 'F'/'A'
-        may be added in the future.
+        axis index changing slowest.
 
     Returns
     -------
     reshaped_array : ndarray
-        It will be always a copy of the original array. This behavior is different
-        from the official NumPy package where views of the original array may be
-        generated.
+        This will be a new view object.
 
-    See Also
+    Notes
+    -----
+    Now, order only support "C", So we will add 'F'/'A' order types in the future.
+
+    Examples
     --------
-    ndarray.reshape : Equivalent method.
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.reshape(a, 6)
+    array([1., 2., 3., 4., 5., 6.])
+
+    >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
+    array([[1, 2],
+           [3, 4],
+           [5, 6]])
     """
     pass
 
@@ -494,3 +500,76 @@ def _np_trace(a, offset=0, axis1=0, axis2=1, out=None):
 	    (2, 3)
 	    """
 	    pass
+
+
+def _np_max(axis=None, keepdims=False, initial=None, out=None):
+    """
+    Return the maximum of an array or maximum along an axis.
+
+    amax: equivalent function
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : None, int, tuple of ints or list of ints, optional
+        Axis or axes along which to operate.  By default, flattened input is
+        used.
+        If this is a tuple of ints, the maximum is selected over multiple axes,
+        instead of a single axis or all the axes as before.
+
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `amax` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+
+    initial :
+        Parameter initial is not supported yet, we will support it in the future.
+        now it must be None.
+
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+
+    Returns
+    -------
+    amax : ndarray or scalar
+        Maximum of `a`. If `axis` is None, the result is a scalar value.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    amax     equivalent function
+
+    Notes
+    -----
+    - Cannot support axis < 0.
+
+    Examples not work:
+    >>> np.max(np.array([[-50], [10]]), axis= -1)
+    i >= 0 && i < ndim(): axis = -1 must be in range [0, 2)
+
+    Examples
+    --------
+    >>> a = np.arange(4).reshape((2,2))
+    >>> a
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.max(a)           # Maximum of the flattened array
+    array(3.)
+    >>> np.max(a, axis=None)
+    array(3.)
+    >>> np.max(a, axis=0)   # Maxima along the first axis
+    array([2., 3.])
+    >>> np.max(a, axis=1)   # Maxima along the second axis
+    array([1., 3.])
+
+    """
+    pass

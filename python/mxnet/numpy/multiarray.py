@@ -48,7 +48,7 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort', 'hstack', 'tensordot']
+           'argsort', 'hstack', 'tensordot', 'ceil', 'log1p', 'tanh']
 
 
 @set_module('mxnet.numpy')
@@ -1448,25 +1448,63 @@ def array(object, dtype=None, ctx=None):
 @set_module('mxnet.numpy')
 def zeros(shape, dtype=_np.float32, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
-    This function currently only supports storing multi-dimensional data
-    in row-major (C-style).
 
     Parameters
     ----------
-    shape : int or tuple of int
-        The shape of the empty array.
-    dtype : str or numpy.dtype, optional
-        An optional value type (default is `numpy.float32`). Note that this
-        behavior is different from NumPy's `ones` function where `float64`
-        is the default value, because `float32` is considered as the default
-        data type in deep learning.
+    shape : int , tuple of ints or list of ints
+        Shape of the new array, e.g., ``(2, 3)`` or ``2``.
+    dtype : data-type, optional
+        The desired data-type for the array, e.g., `numpy.int8`.  Default is
+        `numpy.float32`.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
     Returns
     -------
     out : ndarray
-        Array of zeros with the given shape, dtype, and ctx.
+        Array of zeros with the given shape, dtype, and order.
+
+    Notes
+    -----
+    - parameter shape  does not support ndarray dtype.
+    for example :
+    >>> a = np.array((2,2))
+    >>> np.zeros(a)
+    mxnet.base.MXNetError: Invalid Parameter format for shape expect Shape(tuple)
+
+    - parameter dtype does not support custom dtype
+    >>> np.zeros((2,), dtype=[('x', 'i4'), ('y', 'i4')]) # custom dtype
+    mxnet.base.MXNetError: Invalid Input.
+
+    See Also
+    --------
+    zeros_like : Return an array of zeros with shape and type of input.
+    ones : Return a new array setting values to one.
+
+    Examples
+    --------
+    >>> np.zeros(5)
+    array([0., 0., 0., 0., 0.])
+
+    >>> np.zeros((5,), dtype=int)
+    array([0, 0, 0, 0, 0])
+
+    >>> np.zeros((2, 1))
+    array([[0.],
+           [0.]])
+
+    >>> s = (2,2)
+    >>> np.zeros(s)
+    array([[0., 0.],
+           [0., 0.]])
+
+    if you install mxnet gpu version, you can use gpu.
+
+    >>> from mxnet import npx
+    >>> np.zeros((2,3), ctx=npx.gpu(0))
+    array([[0., 0., 0.],
+           [0., 0., 0.]], dtype=float32, ctx=gpu(0))
+
     """
     return _mx_nd_np.zeros(shape, dtype, **kwargs)
 
@@ -1860,7 +1898,7 @@ def concatenate(seq, axis=0, out=None):
 
     Parameters
     ----------
-    a1, a2, ... : sequence of array_like
+    seq : sequence of ndarray
         The arrays must have the same shape, except in the dimension
         corresponding to `axis` (the first, by default).
     axis : int, optional
@@ -1875,6 +1913,31 @@ def concatenate(seq, axis=0, out=None):
     -------
     res : ndarray
         The concatenated array.
+
+    Notes
+    -----
+    - Cannot support axis = None
+
+    >>> np.concatenate((a, b), axis=None)
+    Invalid Parameter format for dim expect int but value='None',
+
+    Examples
+    --------
+    >>> a = np.array([[1, 2], [3, 4]])
+    >>> b = np.array([[5, 6]])
+    >>> np.concatenate((a, b), axis=0)
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
+    >>> np.concatenate((a, b.T), axis=1)
+    array([[1., 2., 5.],
+           [3., 4., 6.]])
+    >>> c = np.arange(6).reshape((3,2))
+    >>> np.concatenate((a,b), axis=0, out=c)
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
+
     """
     return _mx_nd_np.concatenate(seq, axis=axis, out=out)
 
@@ -2310,7 +2373,7 @@ def sin(x, out=None, **kwargs):
         The sine of each element of x. This is a scalar if `x` is a scalar.
 
     Notes
-    ----
+    -----
     This function only supports input type of float.
     """
     return _mx_nd_np.sin(x, out=out, **kwargs)
@@ -2336,7 +2399,7 @@ def cos(x, out=None, **kwargs):
         The corresponding cosine values. This is a scalar if x is a scalar.
 
     Notes
-    ----
+    -----
     This function only supports input type of float.
     """
     return _mx_nd_np.cos(x, out=out, **kwargs)
@@ -2363,7 +2426,7 @@ def sinh(x, out=None, **kwargs):
         The corresponding hyperbolic sine values. This is a scalar if `x` is a scalar.
 
     Notes
-    ----
+    -----
     This function only supports input type of float.
     """
     return _mx_nd_np.sinh(x, out=out, **kwargs)
@@ -2392,7 +2455,7 @@ def cosh(x, out=None, **kwargs):
         The corresponding hyperbolic cosine values. This is a scalar if `x` is a scalar.
 
     Notes
-    ----
+    -----
     This function only supports input type of float.
     """
     return _mx_nd_np.cosh(x, out=out, **kwargs)
@@ -2419,7 +2482,7 @@ def log10(x, out=None, **kwargs):
         returned where x is negative. This is a scalar if `x` is a scalar.
 
     Notes
-    ----
+    -----
     This function only supports input type of float.
     """
     return _mx_nd_np.log10(x, out=out, **kwargs)
@@ -2446,7 +2509,7 @@ def sqrt(x, out=None, **kwargs):
         square-root of each element in `x`. This is a scalar if `x` is a scalar.
 
     Notes
-    ----
+    -----
     This function only supports input type of float.
     """
     return _mx_nd_np.sqrt(x, out=out, **kwargs)
@@ -3084,3 +3147,152 @@ def arcsin(x, out=None, **kwargs):
     http://www.math.sfu.ca/~cbm/aands/
     """
     return _mx_nd_np.arcsin(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def ceil(x, out=None, **kwargs):
+    r"""
+    Return the ceiling of the input, element-wise.
+
+    The ceil of the ndarray `x` is the smallest integer `i`, such that
+    `i >= x`.  It is often denoted as :math:`\lceil x \rceil`.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs fill into. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output and input must be the same.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        The ceiling of each element in `x`, with `float` dtype.
+        This is a scalar if `x` is a scalar.
+
+    Examples
+    --------
+    >>> a = np.array([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0])
+    >>> np.ceil(a)
+    array([-1., -1., -0.,  1.,  2.,  2.,  2.])
+
+    >>> #if you use parameter out, x and out must be ndarray. if not, you will get an error!
+    >>> a = np.array(1)
+    >>> np.ceil(np.array(3.5), a)
+    array(4.)
+    >>> a
+    array(4.)
+
+    """
+    return _mx_nd_np.ceil(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def log1p(x, out=None, **kwargs):
+    """
+    Return the natural logarithm of one plus the input array, element-wise.
+
+    Calculates ``log(1 + x)``.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs fill into. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output and input must be the same.
+
+    Returns
+    -------
+    y : ndarray or scalar
+        Natural logarithm of 1 + x, element-wise. This is a scalar
+        if x is a scalar.
+
+    Notes
+    -----
+
+    For real-valued input, `log1p` is accurate also for `x` so small
+    that `1 + x == 1` in floating-point accuracy.
+
+    Logarithm is a multivalued function: for each `x` there is an infinite
+    number of `z` such that `exp(z) = 1 + x`. The convention is to return
+    the `z` whose imaginary part lies in `[-pi, pi]`.
+
+    For real-valued input data types, `log1p` always returns real output.
+    For each value that cannot be expressed as a real number or infinity,
+    it yields ``nan`` and sets the `invalid` floating point error flag.
+
+    cannot support complex-valued input.
+
+    Examples
+    --------
+    >>> np.log1p(1e-99)
+    1e-99
+    >>> a = np.array([3, 4, 5])
+    >>> np.log1p(a)
+    array([1.3862944, 1.609438 , 1.7917595])
+
+    """
+    return _mx_nd_np.log1p(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def tanh(x, out=None, **kwargs):
+    """
+    Compute hyperbolic tangent element-wise.
+
+    Equivalent to ``np.sinh(x)/np.cosh(x)``.
+
+    Parameters
+    ----------
+    x : ndarray or scalar.
+        Input array.
+    out : ndarray or None
+        A location into which the result is stored. If provided, it
+        must have a shape that the inputs fill into. If not provided
+        or None, a freshly-allocated array is returned. The dtype of the
+        output and input must be the same.
+
+    Returns
+    ----------
+    y : ndarray or scalar
+       The corresponding hyperbolic tangent values.
+
+    Notes
+    -----
+    If `out` is provided, the function writes the result into it,
+    and returns a reference to `out`.  (See Examples)
+
+    - input x does not support complex computation (like imaginary number)
+
+    >>> np.tanh(np.pi*1j)
+    TypeError: type <type 'complex'> not supported
+
+    Examples
+    --------
+    >>> np.tanh(np.array[0, np.pi]))
+    array([0.       , 0.9962721])
+
+    >>> np.tanh(np.pi)
+    0.99627207622075
+
+    >>> # Example of providing the optional output parameter illustrating
+    >>> # that what is returned is a reference to said parameter
+    >>> out1 = np.array(1)
+    >>> out2 = np.tanh(np.array(0.1), out1)
+    >>> out2 is out1
+    True
+
+    >>> # Example of ValueError due to provision of shape mis-matched `out`
+    >>> np.tanh(np.zeros((3,3)),np.zeros((2,2)))
+    mxnet.base.MXNetError:
+    [07:17:36] ../src/ndarray/./../operator/tensor/../elemwise_op_common.h:135:
+    Check failed: assign(&dattr, vec.at(i)): Incompatible attr in node
+    at 0-th output: expected [3,3], got [2,2]
+    """
+    return _mx_nd_np.tanh(x, out=out, **kwargs)

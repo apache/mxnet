@@ -129,7 +129,7 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // ceil
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_ceil, "x", mshadow_op::ceil)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_ceil, "x", mshadow_op::ceil)
 .describe(R"code(Return the ceiling of the input, element-wise.
 The ceil of the scalar x is the smallest integer i, such that i >= x.
 Example::
@@ -234,7 +234,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_log2, "x", mshadow_op::log2)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log2"});
 
 // log1p
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_log1p, "x", mshadow_op::log1p)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_log1p, "x", mshadow_op::log1p)
 .describe(R"code(Return the natural logarithm of one plus the input array, element-wise.
 Calculates ``log(1 + x)``.
 )code" ADD_FILELINE)
@@ -338,7 +338,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_cosh, "x", mshadow_op::cosh)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_cosh" });
 
 // tanh
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_np_tanh, "x", mshadow_op::tanh)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_tanh, "x", mshadow_op::tanh)
 .describe(R"code(Returns the hyperbolic tangent of the input array, computed element-wise.
 .. math::
    tanh(x) = sinh(x) / cosh(x)
