@@ -25,6 +25,7 @@
  */
 
 #include <mxnet/base.h>
+#include <mxnet/op_attr_types.h>
 
 #include <vector>
 #include <map>
@@ -54,6 +55,27 @@ bool NodeEqual(const Node * n, const Node * m) {
   if (n->is_variable() || m->is_variable()) return false;
   if (n->op() != m->op()) return false;
   if (n->attrs.dict != m->attrs.dict) return false;
+
+  // If an op is marked explicitly as having deterministic output
+  static auto& deterministic_output = Op::GetAttr<FHasDeterministicOutput>("FHasDeterministicOutput");
+  if (deterministic_output.get(n->op(), false)) return true;
+
+  // Stateful ops cannot be be equal to each other
+  static auto& fstateful = Op::GetAttr<FCreateOpState>("FCreateOpState");
+  if (fstateful.get(n->op(), nullptr) != nullptr) return false;
+
+  // Ops that require resource could ask for
+  // random resource, so need to be explicitly marked
+  // to be eligible
+  static auto& resource_request = Op::GetAttr<FResourceRequest>("FResourceRequest");
+  static auto& resource_request_ex = Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
+  if (resource_request.get(n->op(), nullptr) != nullptr) return false;
+  if (resource_request_ex.get(n->op(), nullptr) != nullptr) return false;
+
+  // Ops that mutate inputs cannot be optimized out
+  static auto& fmutate_inputs = Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
+  if (fmutate_inputs.get(n->op(), nullptr) != nullptr) return false;
+
   return true;
 }
 
