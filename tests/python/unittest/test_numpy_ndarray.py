@@ -23,12 +23,12 @@ import numpy as _np
 import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
-from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, assert_exception
+from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, assert_exception, use_np
 from common import with_seed, TemporaryDirectory
 
 
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_array_creation():
     dtypes = [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64, None]
     objects = [
@@ -53,7 +53,7 @@ def test_array_creation():
 
 
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_zeros():
     # test np.zeros in Gluon
     class TestZeros(HybridBlock):
@@ -101,7 +101,7 @@ def test_zeros():
 
 
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_ones():
     # test np.ones in Gluon
     class TestOnes(HybridBlock):
@@ -167,7 +167,7 @@ def test_ndarray_binary_element_wise_ops():
     def get_np_ret(x1, x2, op):
         return np_op_map[op](x1, x2)
 
-    @npx.use_np_shape
+    @use_np
     class TestBinaryElementWiseOp(HybridBlock):
         def __init__(self, op, scalar=None, reverse=False):
             super(TestBinaryElementWiseOp, self).__init__()
@@ -235,7 +235,7 @@ def test_ndarray_binary_element_wise_ops():
                 print(self._op)
                 assert False
 
-    @npx.use_np_shape
+    @use_np
     def check_binary_op_result(shape1, shape2, op, dtype=None):
         if shape1 is None:
             mx_input1 = abs(_np.random.uniform()) + 1
@@ -305,7 +305,7 @@ def test_ndarray_binary_element_wise_ops():
 
 @with_seed()
 def test_hybrid_block_multiple_outputs():
-    @npx.use_np_shape
+    @use_np
     class TestAllNumpyOutputs(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
             return F.npx.relu(x), F.np.sum(x)
@@ -325,7 +325,7 @@ def test_hybrid_block_multiple_outputs():
             assert type(out1) is expected_out_type
             assert type(out2) is expected_out_type
 
-    @npx.use_np_array
+    @use_np
     class TestMixedTypeOutputsFailure(HybridBlock):
         def hybrid_forward(self, F, x, *args, **kwargs):
             return F.relu(x.as_nd_ndarray()), F.np.sum(x)
@@ -337,7 +337,7 @@ def test_hybrid_block_multiple_outputs():
 
 
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_grad_ndarray_type():
     data = np.array(2, dtype=_np.float32)
     data.attach_grad()
@@ -375,7 +375,7 @@ def test_np_ndarray_copy():
 
 
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_np_ndarray_indexing():
     def test_getitem(np_array, index):
         """`is_scalar` indicates whether we should expect a scalar for the result.
@@ -627,7 +627,7 @@ def test_np_ndarray_indexing():
 
 
 @with_seed()
-@npx.use_np
+@use_np
 def test_np_save_load_ndarrays():
     shapes = [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0), (4, 5, 6), (0, 0, 0)]
     array_list = [_np.random.randint(0, 10, size=shape) for shape in shapes]
@@ -671,7 +671,7 @@ def test_np_save_load_ndarrays():
 
 @retry(5)
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_np_multinomial():
     pvals_list = [[0.0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0.0]]
     sizes = [None, (), (3,), (2, 5, 7), (4, 9)]
