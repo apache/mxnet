@@ -208,32 +208,27 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctan,
       // ograds[0]: head_grad_grads (dL/dy_grad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
+      // n: dL/dy * f'(x)
       // f(x) = arctanh(x)
-      // n: f'(x) = 1/(1+x^2)
+      // dydx = f'(x) = 1/(1+x^2)
       // f''(x) = f'(x) * f'(x) * -2 * x = (-2 * x) / (1 + x^2)^2
-      auto dydx = n->inputs[0];
+      // return:
+      //     0: dL/dy_grad * dy/dx
+      //     1: dL/dy_grad * dL/dy * f''(x)
+      auto dldy = n->inputs[0];
       auto x = n->inputs[1];
-      auto dydx_mul_grad_x = nnvm::NodeEntry{n};
-      const std::unordered_map<std::string, std::string> neg_two = {{"scalar", "-2.0"}};
+      auto dldy_mul_dydx = nnvm::NodeEntry{n};
+      auto Op = mxnet::util::NodeOp{n};
 
-      auto grad_x = MakeNode("elemwise_div", n->attrs.name + "_grad_x",
-                             {dydx_mul_grad_x, dydx}, nullptr, &n);
-      auto grad_x_square = MakeNode("square", n->attrs.name + "_grad_x_square",
-                                    {nnvm::NodeEntry{grad_x}}, nullptr, &n);
-      auto grad_x_square_mul_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_x_square_mul_x",
-                                          {nnvm::NodeEntry{grad_x_square}, x}, nullptr, &n);
-      auto grad_x_square_mul_neg_2_x = MakeNode("_mul_scalar",
-                                           n->attrs.name + "_grad_x_square__neg_mul_2_x",
-                                           {nnvm::NodeEntry{grad_x_square_mul_x}}, &neg_two, &n);
-      auto grad_grad_x = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_x",
-                                  {dydx, nnvm::NodeEntry{grad_x_square_mul_neg_2_x}},
-                                  nullptr, &n);
+      auto grad_x = Op.div(dldy_mul_dydx, dldy);
+      auto grad_x_square = Op.square(grad_x);
+      auto grad_x_square_mul_x = Op.mul(grad_x_square, x);
+      auto grad_x_square_mul_2_x = Op.mul(-2.0, grad_x_square_mul_x);
+      auto grad_grad_x = Op.mul(dldy, grad_x_square_mul_2_x);
 
       std::vector<nnvm::NodeEntry> ret;
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                                {ograds[0], nnvm::NodeEntry{grad_x}}, nullptr, &n));
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
-                                {ograds[0], nnvm::NodeEntry{grad_grad_x}}, nullptr, &n));
+      ret.emplace_back(Op.mul(ograds[0], grad_x));
+      ret.emplace_back(Op.mul(ograds[0], grad_grad_x));
       return ret;
     });
 
@@ -379,19 +374,23 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctanh,
       // ograds[0]: head_grad_grads (dL/dy_grad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
+      // n: dL/dy * dy/dx
       // f(x) = arctanh(x)
-      // n: f'(x) = 1/(1-x^2)
+      // dy/dx = f'(x) = 1/(1-x^2)
       // f''(x) = f'(x) * f'(x) * 2 * x = (2 * x) / (1 - x^2)^2
-      auto dydx = n->inputs[0];
+      // return:
+      //     0: dL/dy_grad * dy/dx
+      //     1: dL/dy_grad * dL/dy * f''(x)
+      auto dldy = n->inputs[0];
       auto x = n->inputs[1];
-      auto dydx_mul_grad_x = nnvm::NodeEntry{n};
+      auto dldy_mul_dydx = nnvm::NodeEntry{n};
       auto Op = mxnet::util::NodeOp{n};
 
-      auto grad_x = Op.div(dydx_mul_grad_x, dydx);
+      auto grad_x = Op.div(dldy_mul_dydx, dldy);
       auto grad_x_square = Op.square(grad_x);
       auto grad_x_square_mul_x = Op.mul(grad_x_square, x);
       auto grad_x_square_mul_2_x = Op.mul(2.0, grad_x_square_mul_x);
-      auto grad_grad_x = Op.mul(dydx, grad_x_square_mul_2_x);
+      auto grad_grad_x = Op.mul(dldy, grad_x_square_mul_2_x);
 
       std::vector<nnvm::NodeEntry> ret;
       ret.emplace_back(Op.mul(ograds[0], grad_x));
