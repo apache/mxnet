@@ -678,8 +678,8 @@ This fixes an buffer overflow detected by ASAN.
   This PR adds or updates the docs for the infer_range feature.
 
   Clarifies the param in the C op docs
-  Clarifies the param in the the Scala symbol docs
-  Adds the param for the the Scala ndarray docs
+  Clarifies the param in the Scala symbol docs
+  Adds the param for the Scala ndarray docs
   Adds the param for the Python symbol docs
   Adds the param for the Python ndarray docs
 
