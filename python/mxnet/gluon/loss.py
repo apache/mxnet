@@ -29,7 +29,6 @@ import numpy as np
 from .. import ndarray
 from ..base import numeric_types
 from .block import HybridBlock
-from .utils import _adapt_np_array
 from ..util import is_np_array
 
 
@@ -188,7 +187,6 @@ class L1Loss(Loss):
     def __init__(self, weight=None, batch_axis=0, **kwargs):
         super(L1Loss, self).__init__(weight, batch_axis, **kwargs)
 
-    @_adapt_np_array
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
         loss = F.abs(label - pred)
