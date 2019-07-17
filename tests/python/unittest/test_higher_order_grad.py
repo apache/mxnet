@@ -370,6 +370,31 @@ def test_dense_backward():
         same(x.grad, nd.zeros(4))
 
 
+def test_fc():
+    x = nd.random.uniform(shape=(5,3,2))
+    w = nd.random.uniform(shape=(8,6))
+    b = nd.random.uniform(shape=(8,))
+    x.attach_grad()
+    w.attach_grad()
+    ag.set_recording(True)
+    y = nd.FullyConnected(data=x, weight=w, bias=b, flatten=True, num_hidden=8)
+    #x_grad = ag.grad(y, x, create_graph=True, retain_graph=True)
+    #x_grad_grad = ag.grad(x_grad, x, create_graph=False, retain_graph=True)
+    w_grad = ag.grad(y, w, create_graph=True, retain_graph=True)[0]
+    #w_grad.backward()
+    #w_grad_grad=w_grad.grad
+    w_grad_grad = ag.grad(w_grad, w, create_graph=False, retain_graph=True)[0]
+    ag.set_recording(False)
+    #print(y)
+    #print(x_grad)
+    print(w)
+    #print(x_grad_grad)
+    print("w_grad: {}".format(w_grad.shape))
+    print("w_grad_grad: {}".format(w_grad_grad.shape))
+    print(w_grad_grad)
+
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

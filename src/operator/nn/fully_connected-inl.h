@@ -1,4 +1,4 @@
-/*
+      /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -248,6 +248,68 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "Unsupported type " << dtype;
   }
 }
+
+///
+// Inputs are:
+// o_x_grad : head gradient for x_grad
+// o_w_grad : head gradient for w_grad
+// o_b_grad : if param.no_bias is false
+// o_y : head gradient of y
+//
+// outputs are:
+// o_y_grad : not used
+// x_grad_grad : o_w_grad * o_y^T
+// w_grad_grad : o_x_grad * o_y
+//
+template<typename xpu>
+void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
+                                          const OpContext& ctx,
+                                          const std::vector<TBlob>& inputs,
+                                          const std::vector<OpReqType>& req,
+                                          const std::vector<TBlob>& outputs) {
+  using namespace std;
+  cout << "FullyConnectedGradGradCompute!!!" << endl;
+  Stream<xpu> *stream = ctx.get_stream<xpu>();
+  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  const size_t num_inputs = param.no_bias ? 3U : 4U;
+  CHECK_EQ(inputs.size(), num_inputs);  // o_x_grad, o_w_grad, o_y
+  CHECK_EQ(outputs.size(), 3U);
+  CHECK_EQ(req.size(), 3U);
+  if (param.flatten) {
+    /*
+    Tensor<xpu, 2, double> o_x_grad = inputs[0].get_with_shape<xpu, 2, double>();
+    Tensor<xpu, 2, double> o_w_grad = inputs[1].get_with_shape<xpu, 2, double>();
+    Tensor<xpu, 2, double> o_y = inputs[param.no_bias ? 2 : 3].get_with_shape<xpu, 2, double>();
+    Tensor<xpu, 2, double> o_y_grad = outputs[0];
+    Tensor<xpu, 2, double> x_grad_grad = outputs[1];
+    Tensor<xpu, 2, double> w_grad_grad = outputs[2];
+     */
+
+    for (int i = 0; i < 3; ++i)
+      cout << outputs[i].shape_ << endl;
+    /*
+    cout << "o_w_grad shape:";
+    cout << o_w_grad.shape_ << endl;
+
+    cout << "o_y shape:";
+    cout << o_y.shape_ << endl;
+
+    cout << "o_y_grad shape:";
+    cout << o_y_grad.shape_ << endl;
+
+
+    cout << "x_grad_grad shape:";
+    cout << x_grad_grad.shape_ << endl;
+
+    cout << "w_grad_grad shape:";
+    cout << w_grad_grad.shape_ << endl;
+     */
+  } else {
+    CHECK(false) << "TODO(larroy)";
+  }
+}
+
+
 
 }  // namespace op
 }  // namespace mxnet

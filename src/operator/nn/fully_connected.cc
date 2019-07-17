@@ -1,4 +1,4 @@
-/*
+    /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -177,42 +177,16 @@ struct FullyConnectedGrad {
 };
 
 
-static std::vector<nnvm::NodeEntry> FullyConnectedBackwardGrad(
-    const nnvm::NodePtr& n,
-    const std::vector<nnvm::NodeEntry>& ograds) {
-  // FC is y = wx + b
-  CHECK_EQ(ograds.size(), n->num_outputs());
-  using namespace nnvm;
-  using namespace std;
-  //const bool has_bias = n->inputs.size() == 3;
-  enum FCBackwardInputs {
-    kY_ograd,   // head gradient of y
-    kX,
-    kW
-  };
-  enum FCBackwardBackwardOgrads {
-    kO_x_g,
-    kO_w_g,
-    kO_b_g,
-  };
-  std::vector<NodeEntry> ret;
-  const std::vector<NodeEntry>& fc_grad_in = n->inputs;
-  const NodeEntry& y_ograd = fc_grad_in.at(kY_ograd);
-  ret.emplace_back(nnvm::MakeNode("zeros_like", n->attrs.name + "_backward_o_y_g", {y_ograd}));
-  ret.emplace_back(nnvm::MakeNode("dot", n->attrs.name + "_backward_x_gg", {
-      y_ograd,
-      ograds.at(kO_x_g)
-    },
-    {{"transpose_a", "true"}}
-  ));
-  ret.emplace_back(nnvm::MakeNode("dot", n->attrs.name + "_backward_w_gg", {
-      y_ograd,
-      ograds.at(kO_w_g)
-    }
-  ));
-  //ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_backward_do_w_g", {ograds.at(kO_x_g)}, nullptr, &n));
-  return ret;
-}
+struct FullyConnectedGradGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+    std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+    heads.push_back(n->inputs[0]);  // o_y : head gradient of the output y
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
+
 
 static bool FCStorageType(const nnvm::NodeAttrs& attrs,
                           const int dev_mask,
@@ -277,6 +251,8 @@ static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
 #endif
   return dispatched;
 }
+
+
 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
@@ -362,7 +338,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{1, 0}};
 })
-.set_attr<nnvm::FGradient>("FGradient", FullyConnectedBackwardGrad)
+.set_attr<nnvm::FGradient>("FGradient", FullyConnectedGradGrad{"_backward_backward_FullyConnected"})
 .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 #if MXNET_USE_MKLDNN == 1
@@ -370,6 +346,33 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);
+
+
+// Higher order gradient for fully connected
+// Inputs are:
+// o_x_grad : head gradient for x_grad
+// o_w_grad : head gradient for w_grad
+// o_b_grad : if param.no_bias is false
+// o_y : head gradient of y
+//
+// outputs are:
+// o_y_grad : not used
+// x_grad_grad : o_w_grad * o_y^T
+// w_grad_grad : o_x_grad * o_y
+//
+// For a detailed development of the second gradient see here: TODO(larroy)
+NNVM_REGISTER_OP(_backward_backward_FullyConnected)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const FullyConnectedParam& params = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  return params.no_bias ? 3 : 4;
+})
+.set_num_outputs([](const NodeAttrs& attrs) {
+  return 3;
+})
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr_parser(ParamParser<FullyConnectedParam>)
+.set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradGradCompute<cpu>);
+
 
 }  // namespace op
 }  // namespace mxnet
