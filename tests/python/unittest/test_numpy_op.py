@@ -57,6 +57,12 @@ def test_np_tensordot():
             if _np.isscalar(b_axes_summed):
                 b_axes_summed = b_axes_summed,
 
+            for i in range(len(a_axes_summed)):
+                a_axes_summed[i] = (a_axes_summed[i] + a.ndim) % a.ndim
+
+            for i in range(len(b_axes_summed)):
+                b_axes_summed[i] = (b_axes_summed[i] + b.ndim) % b.ndim
+
         if len(a_axes_summed) != len(b_axes_summed):
             raise ValueError('Axes length mismatch') 
 
@@ -105,11 +111,12 @@ def test_np_tensordot():
     tensor_shapes = [
         ((3, 5), (5, 4), 1),  # (a_shape, b_shape, axes)
         ((3,), (3,), 1),
-        ((3, 4, 5, 6, 7), (5, 6, 7, 1, 2), 3),
-        ((3, 5, 4, 6, 7), (7, 6, 5, 1, 2), [[1, 3, 4], [2, 1, 0]]),
+        ((3, 4, 5, 3, 2), (5, 3, 2, 1, 2), 3),
+        ((3, 5, 4, 3, 2), (2, 3, 5, 1, 2), [[1, 3, 4], [2, 1, 0]]),
         ((3, 5, 4), (5, 4, 3), [[1, 0, 2], [0, 2, 1]]),
-        ((3, 5, 4), (5, 3, 4), [[2, 0], [2, 1]]),
+        ((3, 5, 4), (5, 3, 4), [[2, 0], [-1, -2]]),
         ((2, 2), (2, 2), 2),
+        ((3, 5, 4), (5, ), [[-2], [0]]),
         ((3, 5, 4), (5, ), [[1], [0]]),
         ((2,), (2, 3), 1),
         ((3,), (3,), 0),

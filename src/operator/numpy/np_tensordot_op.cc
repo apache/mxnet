@@ -41,51 +41,58 @@ bool TensordotOpShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  CHECK_GE(a_shape.ndim(), 1)
-      << "First input tensor should be at least 1 dimension";
+  if (a_shape.ndim() == 0) {
+    // a is scalar
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, b_shape);
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
+  } else if (b_shape.ndim() == 0) {
+    // b is scalar
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, a_shape);
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  } else {
+    // Two tensors of at least 1 dimensions.
+    const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);
+    Tuple<int> a_axes_summed = param.a_axes_summed;
+    Tuple<int> b_axes_summed = param.b_axes_summed;
+    ShiftAxes(&a_axes_summed, a_shape.ndim());
+    ShiftAxes(&b_axes_summed, b_shape.ndim());
 
-  CHECK_GE(b_shape.ndim(), 1)
-      << "Second input tensor should be at least 1 dimension";
+    Tuple<int> a_axes_remained;
+    Tuple<int> b_axes_remained;
+    Tuple<int> a_axes;
+    Tuple<int> b_axes;
+    GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
+                    &b_axes, a_shape, b_shape);
 
-  const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);
-  const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& b_axes_summed = param.b_axes_summed;
+    CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
 
-  Tuple<int> a_axes_remained;
-  Tuple<int> b_axes_remained;
-  Tuple<int> a_axes;
-  Tuple<int> b_axes;
-  GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
-                   &b_axes, a_shape, b_shape);
+    mxnet::TShape out_shape(a_axes_remained.ndim() + b_axes_remained.ndim(), -1);
+    for (int i = 0; i < a_axes_remained.ndim(); i++) {
+      out_shape[i] = a_shape[a_axes_remained[i]];
+    }
+    for (int i = 0; i < b_axes_remained.ndim(); i++) {
+      out_shape[a_axes_remained.ndim() + i] = b_shape[b_axes_remained[i]];
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
 
-  CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
+    mxnet::TShape tem_shape1(a_axes.ndim(), -1);
+    for (int i = 0; i < a_axes_remained.ndim(); i++) {
+      tem_shape1[a_axes_remained[i]] = out_shape[i];
+    }
+    for (int i = 0; i < a_axes_summed.ndim(); i++) {
+      tem_shape1[a_axes_summed[i]] = b_shape[b_axes_summed[i]];
+    }
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, tem_shape1);
 
-  mxnet::TShape out_shape(a_axes_remained.ndim() + b_axes_remained.ndim(), -1);
-  for (int i = 0; i < a_axes_remained.ndim(); i++) {
-    out_shape[i] = a_shape[a_axes_remained[i]];
+    mxnet::TShape tem_shape2(b_axes.ndim(), -1);
+    for (int i = 0; i < b_axes_remained.ndim(); i++) {
+      tem_shape2[b_axes_remained[i]] = out_shape[a_axes_remained.ndim() + i];
+    }
+    for (int i = 0; i < b_axes_summed.ndim(); i++) {
+      tem_shape2[b_axes_summed[i]] = a_shape[a_axes_summed[i]];
+    }
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, tem_shape2);
   }
-  for (int i = 0; i < b_axes_remained.ndim(); i++) {
-    out_shape[a_axes_remained.ndim() + i] = b_shape[b_axes_remained[i]];
-  }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
-
-  mxnet::TShape tem_shape1(a_axes.ndim(), -1);
-  for (int i = 0; i < a_axes_remained.ndim(); i++) {
-    tem_shape1[a_axes_remained[i]] = out_shape[i];
-  }
-  for (int i = 0; i < a_axes_summed.ndim(); i++) {
-    tem_shape1[a_axes_summed[i]] = b_shape[b_axes_summed[i]];
-  }
-  SHAPE_ASSIGN_CHECK(*in_attrs, 0, tem_shape1);
-
-  mxnet::TShape tem_shape2(b_axes.ndim(), -1);
-  for (int i = 0; i < b_axes_remained.ndim(); i++) {
-    tem_shape2[b_axes_remained[i]] = out_shape[a_axes_remained.ndim() + i];
-  }
-  for (int i = 0; i < b_axes_summed.ndim(); i++) {
-    tem_shape2[b_axes_summed[i]] = a_shape[a_axes_summed[i]];
-  }
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, tem_shape2);
 
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
@@ -136,54 +143,56 @@ bool TensordotIntAxesOpShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  CHECK_GE(a_shape.ndim(), 1)
-      << "First input tensor should be at least 1 dimension";
+  if (a_shape.ndim() == 0) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, b_shape);
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
+  } else if (b_shape.ndim() == 0) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, a_shape);
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  } else {
+    const TensordotIntAxesParam& param = nnvm::get<TensordotIntAxesParam>(attrs.parsed);
+    const int& axes = param.axes;
 
-  CHECK_GE(b_shape.ndim(), 1)
-      << "Second input tensor should be at least 1 dimension";
+    Tuple<int> a_axes_summed;
+    Tuple<int> b_axes_summed;
+    GetSummedAxes(&a_axes_summed, &b_axes_summed, axes, a_shape);
 
-  const TensordotIntAxesParam& param = nnvm::get<TensordotIntAxesParam>(attrs.parsed);
-  const int& axes = param.axes;
+    Tuple<int> a_axes_remained;
+    Tuple<int> b_axes_remained;
+    Tuple<int> a_axes;
+    Tuple<int> b_axes;
+    GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
+                    &b_axes, a_shape, b_shape);
 
-  Tuple<int> a_axes_summed;
-  Tuple<int> b_axes_summed;
-  GetSummedAxes(&a_axes_summed, &b_axes_summed, axes, a_shape);
+    CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
 
-  Tuple<int> a_axes_remained;
-  Tuple<int> b_axes_remained;
-  Tuple<int> a_axes;
-  Tuple<int> b_axes;
-  GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
-                   &b_axes, a_shape, b_shape);
+    mxnet::TShape out_shape(a_axes_remained.ndim() + b_axes_remained.ndim(), -1);
+    for (int i = 0; i < a_axes_remained.ndim(); i++) {
+      out_shape[i] = a_shape[a_axes_remained[i]];
+    }
+    for (int i = 0; i < b_axes_remained.ndim(); i++) {
+      out_shape[a_axes_remained.ndim() + i] = b_shape[b_axes_remained[i]];
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
 
-  CHECK_EQ(a_axes_summed.ndim(), b_axes_summed.ndim());
+    mxnet::TShape tem_shape1(a_axes.ndim(), -1);
+    for (int i = 0; i < a_axes_remained.ndim(); i++) {
+      tem_shape1[a_axes_remained[i]] = out_shape[i];
+    }
+    for (int i = 0; i < a_axes_summed.ndim(); i++) {
+      tem_shape1[a_axes_summed[i]] = b_shape[b_axes_summed[i]];
+    }
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, tem_shape1);
 
-  mxnet::TShape out_shape(a_axes_remained.ndim() + b_axes_remained.ndim(), -1);
-  for (int i = 0; i < a_axes_remained.ndim(); i++) {
-    out_shape[i] = a_shape[a_axes_remained[i]];
+    mxnet::TShape tem_shape2(b_axes.ndim(), -1);
+    for (int i = 0; i < b_axes_remained.ndim(); i++) {
+      tem_shape2[b_axes_remained[i]] = out_shape[a_axes_remained.ndim() + i];
+    }
+    for (int i = 0; i < b_axes_summed.ndim(); i++) {
+      tem_shape2[b_axes_summed[i]] = a_shape[a_axes_summed[i]];
+    }
+    SHAPE_ASSIGN_CHECK(*in_attrs, 1, tem_shape2);
   }
-  for (int i = 0; i < b_axes_remained.ndim(); i++) {
-    out_shape[a_axes_remained.ndim() + i] = b_shape[b_axes_remained[i]];
-  }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape);
-
-  mxnet::TShape tem_shape1(a_axes.ndim(), -1);
-  for (int i = 0; i < a_axes_remained.ndim(); i++) {
-    tem_shape1[a_axes_remained[i]] = out_shape[i];
-  }
-  for (int i = 0; i < a_axes_summed.ndim(); i++) {
-    tem_shape1[a_axes_summed[i]] = b_shape[b_axes_summed[i]];
-  }
-  SHAPE_ASSIGN_CHECK(*in_attrs, 0, tem_shape1);
-
-  mxnet::TShape tem_shape2(b_axes.ndim(), -1);
-  for (int i = 0; i < b_axes_remained.ndim(); i++) {
-    tem_shape2[b_axes_remained[i]] = out_shape[a_axes_remained.ndim() + i];
-  }
-  for (int i = 0; i < b_axes_summed.ndim(); i++) {
-    tem_shape2[b_axes_summed[i]] = a_shape[a_axes_summed[i]];
-  }
-  SHAPE_ASSIGN_CHECK(*in_attrs, 1, tem_shape2);
 
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }

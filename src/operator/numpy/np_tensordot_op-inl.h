@@ -41,6 +41,15 @@ struct TensordotParam : public dmlc::Parameter<TensordotParam> {
 };
 
 /**
+ * deals with negative axes.
+ */
+inline void ShiftAxes(Tuple<int>* axes_summed, const int ndim) {
+  for (auto& i : *axes_summed) {
+    i = (i + ndim) % ndim;
+  }
+}
+
+/**
  * Gets matrix dimensions of a and b after transpose and reshape.
  */
 inline void GetMatrixDimensions(int* ad1,
@@ -176,6 +185,17 @@ void MatrixDot(const OpContext& ctx,
 }
 
 /**
+ * Scalar multiply.
+ */
+template<int req>
+struct scalar_mul_kernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType *out, const DType* tensor, const DType *scalar) {
+    KERNEL_ASSIGN(out[i], req, tensor[i] * scalar[0]);
+  }
+};
+
+/**
  * Calculates tensordot.
  */
 template<typename xpu>
@@ -206,43 +226,58 @@ void TensordotImpl(const Tuple<int>& a_axes_summed,
        (out.type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
       << "Tensordot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
 
-  Tuple<int> a_axes_remained;
-  Tuple<int> b_axes_remained;
-  Tuple<int> a_axes;
-  Tuple<int> b_axes;
-  GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
-                   &b_axes, a_shape, b_shape);
-
-  int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
-  GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
-                      b_axes_remained, b_axes_summed, a_shape, b_shape);
-
-  mxnet::TShape a_temp_shape = GetReorderedShape(a_shape, a_axes);
-  mxnet::TShape b_temp_shape = GetReorderedShape(b_shape, b_axes);
-
   MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-    if (a_shape.Size() == 0U || b_shape.Size() == 0U) {  // 0-size input
+    if (a_shape.Size() == 0U || b_shape.Size() == 0U) {
+      // 0-size input
       if (req[0] != kAddTo) {
         Tensor<xpu, 1, DType> out_data = out.get_with_shape<xpu, 1, DType>(
             Shape1(out.shape_.Size()), s);
         out_data = static_cast<DType>(0);
       }
-      return;
+    } else if (a_shape.ndim() == 0 && b_shape.ndim() == 0) {
+      // Both 0-D scalars, equivalent to multiply
+      Tensor<xpu, 1, DType> a_data = a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> b_data = b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> out_data = out.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      ASSIGN_DISPATCH(out_data, req[0], a_data * b_data);
+    } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
+      // Either of them is a scalar, just scale by one of them
+      const DType* tensor = (a_shape.ndim() == 0) ? b.dptr<DType>() : a.dptr<DType>();
+      const DType* scalar = (a_shape.ndim() == 0) ? a.dptr<DType>() : b.dptr<DType>();
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<scalar_mul_kernel<Req>, xpu>::Launch(
+          s, out.Size(), out.dptr<DType>(), tensor, scalar);
+      });
+    } else {
+      // Two tensors of at least 1 dimensions.
+      Tuple<int> a_axes_remained;
+      Tuple<int> b_axes_remained;
+      Tuple<int> a_axes;
+      Tuple<int> b_axes;
+      GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
+                       &b_axes, a_shape, b_shape);
+
+      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
+                          b_axes_remained, b_axes_summed, a_shape, b_shape);
+
+      mxnet::TShape a_temp_shape = GetReorderedShape(a_shape, a_axes);
+      mxnet::TShape b_temp_shape = GetReorderedShape(b_shape, b_axes);
+
+      Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
+        (Shape1(a.Size() + b.Size()), s);
+      DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
+      DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
+      TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask);
+      TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask);
+
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, a_res,
+                                    mxnet::TShape(a_axes.begin(), a_axes.end()));
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res,
+                                    mxnet::TShape(b_axes.begin(), b_axes.end()));
+
+      MatrixDot<xpu>(ctx, a_res, b_res, out, req[0], ad1, ad2, bd1, bd2);
     }
-
-    Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
-      (Shape1(a.Size() + b.Size()), s);
-    DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
-    DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
-    TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask);
-    TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask);
-
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, a_res,
-                                  mxnet::TShape(a_axes.begin(), a_axes.end()));
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res,
-                                  mxnet::TShape(b_axes.begin(), b_axes.end()));
-
-    MatrixDot<xpu>(ctx, a_res, b_res, out, req[0], ad1, ad2, bd1, bd2);
   });
 }
 
@@ -262,10 +297,14 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& a = inputs[0];
   const TBlob& b = inputs[1];
   const TBlob& out = outputs[0];
+  const mxnet::TShape a_shape = a.shape_;
+  const mxnet::TShape b_shape = b.shape_;
 
   const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);
-  const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& b_axes_summed = param.b_axes_summed;
+  Tuple<int> a_axes_summed = param.a_axes_summed;
+  Tuple<int> b_axes_summed = param.b_axes_summed;
+  ShiftAxes(&a_axes_summed, a_shape.ndim());
+  ShiftAxes(&b_axes_summed, b_shape.ndim());
 
   TensordotImpl<xpu>(a_axes_summed, b_axes_summed, ctx, a, b, out, req);
 }
@@ -302,61 +341,93 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
   if ((a_shape.Size() == 0U) || (b_shape.Size() == 0U)) {
     return;  // zero-size output, no need to launch kernel
   }
-
-  Tuple<int> a_axes_remained;
-  Tuple<int> b_axes_remained;
-  Tuple<int> a_axes;
-  Tuple<int> b_axes;
-  GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
-                   &b_axes, a_shape, b_shape);
-
-  int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
-  GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
-                      b_axes_remained, b_axes_summed, a_shape, b_shape);
-
-  std::vector<int> a_T_axes;
-  for (int i = 0; i < a_axes_summed.ndim(); i++) {
-    a_T_axes.push_back(a_axes_summed[i]);
-  }
-  for (int i = 0; i < a_axes_remained.ndim(); i++) {
-    a_T_axes.push_back(a_axes_remained[i]);
-  }
-  mxnet::TShape a_temp_shape(GetReorderedShape(a_shape, a_axes));
-  mxnet::TShape a_T_temp_shape(GetReorderedShape(a_shape, a_T_axes));
-
-  std::vector<int> b_T_axes;
-  for (int i = 0; i < b_axes_remained.ndim(); i++) {
-    b_T_axes.push_back(b_axes_remained[i]);
-  }
-  for (int i = 0; i < b_axes_summed.ndim(); i++) {
-    b_T_axes.push_back(b_axes_summed[i]);
-  }
-  mxnet::TShape b_temp_shape(GetReorderedShape(b_shape, b_axes));
-  mxnet::TShape b_T_temp_shape(GetReorderedShape(b_shape, b_T_axes));
-
   MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
-    Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
-      (Shape1((a.Size() + b.Size()) * 2), s);
-    DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
-    DType* a_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
-    DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size());
-    DType* b_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size() + b.Size());
+    if (a_shape.ndim() == 0 && b_shape.ndim() == 0) {
+      // Both 0-D scalars, equivalent to multiply
+      Tensor<xpu, 1, DType> out_grad_data = out_grad.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> a_data = a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> b_data = b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> grad_a_data = grad_a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> grad_b_data = grad_b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      ASSIGN_DISPATCH(grad_a_data, req[0], b_data * out_grad_data);
+      ASSIGN_DISPATCH(grad_b_data, req[1], a_data * out_grad_data);
+    } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
+      // Either of them is a scalar, just scale by one of them
+      const TBlob& tensor = (a_shape.ndim() == 0) ? b : a;
+      const TBlob& tensor_grad = (a_shape.ndim() == 0) ? grad_b : grad_a;
+      const TBlob& scalar = (a_shape.ndim() == 0) ? a : b;
+      const TBlob& scalar_grad = (a_shape.ndim() == 0) ? grad_a : grad_b;
+      Tensor<xpu, 1, DType> scalar_ = scalar.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> scalar_grad_ = scalar_grad.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> tensor_ = tensor.FlatTo1D<xpu, DType>(s);
+      Tensor<xpu, 1, DType> tensor_grad_ = tensor_grad.FlatTo1D<xpu, DType>(s);
+      Tensor<xpu, 1, DType> out_grad_ = out_grad.FlatTo1D<xpu, DType>(s);
+      const OpReqType& tensor_req = (a_shape.ndim() == 0) ? req[1] : req[0];
+      const OpReqType& scalar_req = (a_shape.ndim() == 0) ? req[0] : req[1];
+      ASSIGN_DISPATCH(tensor_grad_, tensor_req,
+                      broadcast_scalar(scalar_, tensor_grad_.shape_) * out_grad_);
+      Tensor<xpu, 1, DType> workspace =
+        ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(out_grad.shape_.Size()), s);
+      ASSIGN_DISPATCH(workspace, kWriteTo, tensor_ * out_grad_);
 
-    TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask);
-    TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask);
-    TBlob a_res2 = TBlob(a_ptr2, a_T_temp_shape, xpu::kDevMask);
-    TBlob b_res2 = TBlob(b_ptr2, b_T_temp_shape, xpu::kDevMask);
+      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
+        ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+    } else {
+      // Two tensors of at least 1 dimensions.
+      Tuple<int> a_axes_remained;
+      Tuple<int> b_axes_remained;
+      Tuple<int> a_axes;
+      Tuple<int> b_axes;
+      GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
+                      &b_axes, a_shape, b_shape);
 
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, a_res2,
-                                  mxnet::TShape(a_T_axes.begin(), a_T_axes.end()));
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res2,
-                                  mxnet::TShape(b_T_axes.begin(), b_T_axes.end()));
+      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
+                          b_axes_remained, b_axes_summed, a_shape, b_shape);
 
-    MatrixDot<xpu>(ctx, a_res2, out_grad, b_res, req[1], ad2, ad1, ad1, bd2);
-    MatrixDot<xpu>(ctx, out_grad, b_res2, a_res, req[0], ad1, bd2, bd2, bd1);
+      std::vector<int> a_T_axes;
+      for (int i = 0; i < a_axes_summed.ndim(); i++) {
+        a_T_axes.push_back(a_axes_summed[i]);
+      }
+      for (int i = 0; i < a_axes_remained.ndim(); i++) {
+        a_T_axes.push_back(a_axes_remained[i]);
+      }
+      mxnet::TShape a_temp_shape(GetReorderedShape(a_shape, a_axes));
+      mxnet::TShape a_T_temp_shape(GetReorderedShape(a_shape, a_T_axes));
 
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a_res, grad_a, GetReverseShape(a_axes));
-    mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b_res, grad_b, GetReverseShape(b_axes));
+      std::vector<int> b_T_axes;
+      for (int i = 0; i < b_axes_remained.ndim(); i++) {
+        b_T_axes.push_back(b_axes_remained[i]);
+      }
+      for (int i = 0; i < b_axes_summed.ndim(); i++) {
+        b_T_axes.push_back(b_axes_summed[i]);
+      }
+      mxnet::TShape b_temp_shape(GetReorderedShape(b_shape, b_axes));
+      mxnet::TShape b_T_temp_shape(GetReorderedShape(b_shape, b_T_axes));
+
+      Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
+        (Shape1((a.Size() + b.Size()) * 2), s);
+      DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
+      DType* a_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
+      DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size());
+      DType* b_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size() + b.Size());
+
+      TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask);
+      TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask);
+      TBlob a_res2 = TBlob(a_ptr2, a_T_temp_shape, xpu::kDevMask);
+      TBlob b_res2 = TBlob(b_ptr2, b_T_temp_shape, xpu::kDevMask);
+
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a, a_res2,
+                                    mxnet::TShape(a_T_axes.begin(), a_T_axes.end()));
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res2,
+                                    mxnet::TShape(b_T_axes.begin(), b_T_axes.end()));
+
+      MatrixDot<xpu>(ctx, a_res2, out_grad, b_res, req[1], ad2, ad1, ad1, bd2);
+      MatrixDot<xpu>(ctx, out_grad, b_res2, a_res, req[0], ad1, bd2, bd2, bd1);
+
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, a_res, grad_a, GetReverseShape(a_axes));
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b_res, grad_b, GetReverseShape(b_axes));
+    }
   });
 }
 
@@ -378,10 +449,14 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
   const TBlob& b = inputs[2];
   const TBlob& grad_a = outputs[0];
   const TBlob& grad_b = outputs[1];
+  const mxnet::TShape a_shape = a.shape_;
+  const mxnet::TShape b_shape = b.shape_;
 
   const TensordotParam& param = nnvm::get<TensordotParam>(attrs.parsed);
-  const Tuple<int>& a_axes_summed = param.a_axes_summed;
-  const Tuple<int>& b_axes_summed = param.b_axes_summed;
+  Tuple<int> a_axes_summed = param.a_axes_summed;
+  Tuple<int> b_axes_summed = param.b_axes_summed;
+  ShiftAxes(&a_axes_summed, a_shape.ndim());
+  ShiftAxes(&b_axes_summed, b_shape.ndim());
 
   TensordotBackwardImpl<xpu>(a_axes_summed, b_axes_summed, ctx, out_grad, a, b, grad_a,
                              grad_b, req);
@@ -444,32 +519,46 @@ void TensordotIntAxesImpl(const int axes,
        (out.type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
       << "Tensordot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
 
-  Tuple<int> a_axes_summed;
-  Tuple<int> b_axes_summed;
-  GetSummedAxes(&a_axes_summed, &b_axes_summed, axes, a_shape);
-
-  Tuple<int> a_axes_remained;
-  Tuple<int> b_axes_remained;
-  Tuple<int> a_axes;
-  Tuple<int> b_axes;
-  GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
-                   &b_axes, a_shape, b_shape);
-
-  int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
-  GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
-                      b_axes_remained, b_axes_summed, a_shape, b_shape);
-
   MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
-    if (a_shape.Size() == 0U || b_shape.Size() == 0U) {  // 0-size input
+    if (a_shape.Size() == 0U || b_shape.Size() == 0U) {  
+      // 0-size input
       if (req != kAddTo) {
         Tensor<xpu, 1, DType> out_data = out.get_with_shape<xpu, 1, DType>(
             Shape1(out.shape_.Size()), s);
         out_data = static_cast<DType>(0);
       }
-      return;
-    }
+    } else if (a_shape.ndim() == 0 && b_shape.ndim() == 0) {
+      // Both 0-D scalars, equivalent to multiply
+      Tensor<xpu, 1, DType> a_data = a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> b_data = b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> out_data = out.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      ASSIGN_DISPATCH(out_data, req, a_data * b_data);
+    } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
+      // Either of them is a scalar, just scale by one of them
+      const DType* tensor = (a_shape.ndim() == 0) ? b.dptr<DType>() : a.dptr<DType>();
+      const DType* scalar = (a_shape.ndim() == 0) ? a.dptr<DType>() : b.dptr<DType>();
+      MXNET_ASSIGN_REQ_SWITCH(req, Req, {
+        mxnet_op::Kernel<scalar_mul_kernel<Req>, xpu>::Launch(
+          s, out.Size(), out.dptr<DType>(), tensor, scalar);
+      });
+    } else {
+      // Two tensors of at least 1 dimensions.
+      Tuple<int> a_axes_summed;
+      Tuple<int> b_axes_summed;
+      GetSummedAxes(&a_axes_summed, &b_axes_summed, axes, a_shape);
 
-    MatrixDot<xpu>(ctx, a, b, out, req, ad1, ad2, bd1, bd2);
+      Tuple<int> a_axes_remained;
+      Tuple<int> b_axes_remained;
+      Tuple<int> a_axes;
+      Tuple<int> b_axes;
+      GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
+                      &b_axes, a_shape, b_shape);
+
+      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
+                          b_axes_remained, b_axes_summed, a_shape, b_shape);
+      MatrixDot<xpu>(ctx, a, b, out, req, ad1, ad2, bd1, bd2);
+    }
   });
 }
 
@@ -512,24 +601,59 @@ void TensordotIntAxesBackwardImpl(const int axes,
     return;  // zero-size output, no need to launch kernel
   }
 
-  Tuple<int> a_axes_summed;
-  Tuple<int> b_axes_summed;
-  GetSummedAxes(&a_axes_summed, &b_axes_summed, axes, a_shape);
-
-  Tuple<int> a_axes_remained;
-  Tuple<int> b_axes_remained;
-  Tuple<int> a_axes;
-  Tuple<int> b_axes;
-  GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
-                   &b_axes, a_shape, b_shape);
-
-  int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
-  GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
-                      b_axes_remained, b_axes_summed, a_shape, b_shape);
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
-    MatrixDot<xpu>(ctx, a, out_grad, grad_b, req[1], ad1, ad2, ad1, bd2, true, false);
-    MatrixDot<xpu>(ctx, out_grad, b, grad_a, req[0], ad1, bd2, bd1, bd2, false, true);
+    if (a_shape.ndim() == 0 && b_shape.ndim() == 0) {
+      // Both 0-D scalars, equivalent to multiply
+      Tensor<xpu, 1, DType> out_grad_data = out_grad.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> a_data = a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> b_data = b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> grad_a_data = grad_a.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> grad_b_data = grad_b.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      ASSIGN_DISPATCH(grad_a_data, req[0], b_data * out_grad_data);
+      ASSIGN_DISPATCH(grad_b_data, req[1], a_data * out_grad_data);
+    } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
+      // Either of them is a scalar, just scale by one of them
+      const TBlob& tensor = (a_shape.ndim() == 0) ? b : a;
+      const TBlob& tensor_grad = (a_shape.ndim() == 0) ? grad_b : grad_a;
+      const TBlob& scalar = (a_shape.ndim() == 0) ? a : b;
+      const TBlob& scalar_grad = (a_shape.ndim() == 0) ? grad_a : grad_b;
+      Tensor<xpu, 1, DType> scalar_ = scalar.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> scalar_grad_ = scalar_grad.get_with_shape<xpu, 1, DType>(Shape1(1), s);
+      Tensor<xpu, 1, DType> tensor_ = tensor.FlatTo1D<xpu, DType>(s);
+      Tensor<xpu, 1, DType> tensor_grad_ = tensor_grad.FlatTo1D<xpu, DType>(s);
+      Tensor<xpu, 1, DType> out_grad_ = out_grad.FlatTo1D<xpu, DType>(s);
+      const OpReqType& tensor_req = (a_shape.ndim() == 0) ? req[1] : req[0];
+      const OpReqType& scalar_req = (a_shape.ndim() == 0) ? req[0] : req[1];
+      ASSIGN_DISPATCH(tensor_grad_, tensor_req,
+                      broadcast_scalar(scalar_, tensor_grad_.shape_) * out_grad_);
+      Tensor<xpu, 1, DType> workspace =
+        ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(out_grad.shape_.Size()), s);
+      ASSIGN_DISPATCH(workspace, kWriteTo, tensor_ * out_grad_);
+
+      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
+        ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+    } else {
+      // Two tensors of at least 1 dimensions.
+      Tuple<int> a_axes_summed;
+      Tuple<int> b_axes_summed;
+      GetSummedAxes(&a_axes_summed, &b_axes_summed, axes, a_shape);
+
+      Tuple<int> a_axes_remained;
+      Tuple<int> b_axes_remained;
+      Tuple<int> a_axes;
+      Tuple<int> b_axes;
+      GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
+                      &b_axes, a_shape, b_shape);
+
+      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
+                          b_axes_remained, b_axes_summed, a_shape, b_shape);
+
+      MatrixDot<xpu>(ctx, a, out_grad, grad_b, req[1], ad1, ad2, ad1, bd2, true, false);
+      MatrixDot<xpu>(ctx, out_grad, b, grad_a, req[0], ad1, bd2, bd1, bd2, false, true);
+    }
   });
 }
 
