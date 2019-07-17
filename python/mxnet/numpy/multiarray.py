@@ -48,7 +48,87 @@ __all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', '
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort', 'hstack']
+           'argsort', 'hstack', 'tensordot']
+
+
+@set_module('mxnet.numpy')
+def tensordot(a, b, axes=2):
+    r"""
+    tensordot(a, b, axes=2)
+
+    Compute tensor dot product along specified axes for arrays >= 1-D.
+
+    Given two tensors (arrays of dimension greater than or equal to one),
+    `a` and `b`, and an ndarray object containing two ndarray
+    objects, ``(a_axes, b_axes)``, sum the products of `a`'s and `b`'s
+    elements (components) over the axes specified by ``a_axes`` and
+    ``b_axes``. The third argument can be a single non-negative
+    integer_like scalar, ``N``; if it is such, then the last ``N``
+    dimensions of `a` and the first ``N`` dimensions of `b` are summed
+    over.
+
+    Parameters
+    ----------
+    a, b : ndarray, len(shape) >= 1
+        Tensors to "dot".
+
+    axes : int or (2,) ndarray
+        * integer_like
+        If an int N, sum over the last N axes of `a` and the first N axes
+        of `b` in order. The sizes of the corresponding axes must match.
+        * (2,) ndarray
+        Or, a list of axes to be summed over, first sequence applying to `a`,
+        second to `b`. Both elements ndarray must be of the same length.
+
+    See Also
+    --------
+    dot, einsum
+
+    Notes
+    -----
+    Three common use cases are:
+        * ``axes = 0`` : tensor product :math:`a\otimes b`
+        * ``axes = 1`` : tensor dot product :math:`a\cdot b`
+        * ``axes = 2`` : (default) tensor double contraction :math:`a:b`
+
+    When `axes` is integer_like, the sequence for evaluation will be: first
+    the -Nth axis in `a` and 0th axis in `b`, and the -1th axis in `a` and
+    Nth axis in `b` last.
+
+    When there is more than one axis to sum over - and they are not the last
+    (first) axes of `a` (`b`) - the argument `axes` should consist of
+    two sequences of the same length, with the first axis to sum over given
+    first in both sequences, the second axis second, and so forth.
+
+    Examples
+    --------
+    >>> a = np.arange(60.).reshape(3,4,5)
+    >>> b = np.arange(24.).reshape(4,3,2)
+    >>> c = np.tensordot(a,b, axes=([1,0],[0,1]))
+    >>> c.shape
+    (5, 2)
+    >>> c
+    array([[ 4400.,  4730.],
+           [ 4532.,  4874.],
+           [ 4664.,  5018.],
+           [ 4796.,  5162.],
+           [ 4928.,  5306.]])
+    """
+    if _np.isscalar(axes):
+        return _npi.tensordot_int_axes(a, b, axes)
+
+    if len(axes) != 2:
+        raise ValueError('Axes must consist of two arrays.')
+    a_axes_summed, b_axes_summed = axes
+    if _np.isscalar(a_axes_summed):
+        a_axes_summed = (a_axes_summed,)
+    if _np.isscalar(b_axes_summed):
+        b_axes_summed = (b_axes_summed,)
+
+    if len(a_axes_summed) != len(b_axes_summed):
+        raise ValueError('Axes length mismatch')
+
+    return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
 
 
 # This function is copied from ndarray.py since pylint
