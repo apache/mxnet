@@ -15,6 +15,17 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
+# v1.6.0
+
+* Rename environment variable `MXNET_HOME` to `MXNET_ROOT` (#15568).
+
+* Environment variable `MXNET_LIBRARY_PATH` supports (#15568).
+
+  ```shell
+  $ MXNET_LIBRARY_PATH=/path/to/libmxnet.so julia
+  ```
+
+
 # v1.5.0 (#TBD)
 
 * Following material from `mx` module got exported (#TBD):
