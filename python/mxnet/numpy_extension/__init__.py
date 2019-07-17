@@ -25,10 +25,7 @@ from . import image
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 from ..context import *  # pylint: disable=wildcard-import
-# TODO(junwu): revisit what functions should be exposed to users
-from ..util import use_np_shape, np_shape, is_np_shape
-from ..util import use_np_array, np_array, is_np_array
-from ..util import set_np, use_np, reset_np
+from ..util import is_np_shape, is_np_array, set_np, reset_np
 from ..ndarray import waitall
 from .utils import *  # pylint: disable=wildcard-import
 from .random import *  # pylint: disable=wildcard-import
