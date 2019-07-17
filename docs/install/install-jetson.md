@@ -59,11 +59,11 @@ sudo pip install \
 ```
 
 If you plan to cross-compile you will need to install these dependencies on that computer as well.
-If you get an error about something being busy, you can restart the nano and this error will go away and you can continue installation of the prerequisites.
+If you get an error about something being busy, you can restart the Nano and this error will go away. You can then continue installation of the prerequisites.
 
 ### Download the source & setup some environment variables:
 
-These steps are optional, but some of the following instructions expect MXNet source files and the `MXNET_HOME` environment variable. Also CUDA commands will not work out of the box without updating your path.
+These steps are optional, but some of the following instructions expect MXNet source files and the `MXNET_HOME` environment variable. Also, CUDA commands will not work out of the box without updating your path.
 
 Clone the MXNet source code repository using the following `git` command in your home directory:
 
@@ -95,7 +95,7 @@ You can check to see what version of CUDA is running with `nvcc`.
 nvcc --version
 ```
 
-To switch CUDA versions on a device or computer that has more than one version installed, use the following and replace the version as appropriate.
+To switch CUDA versions on a device or computer that has more than one version installed, use the following and replace the symbolic link to the version you want. This one uses CUDA 10.0, which is preinstalled on the Nano.
 
 ```bash
 sudo rm /usr/local/cuda
@@ -135,6 +135,7 @@ cd python
 sudo pip install -e .
 ```
 
+Refer to the following Conclusion and Next Steps section to test your installation. 
 
 ## Option 2. Build MXNet from Source
 
