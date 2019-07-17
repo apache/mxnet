@@ -420,8 +420,6 @@ void TopKImpl(const RunContext &ctx,
     mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
   temp_size = std::max(temp_size,
     mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
-  temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += PadBytes(sizeof(index_t) * src.Size(), alignment);
   // Temp space for cpu sorts.
@@ -563,13 +561,13 @@ void TopK(const nnvm::NodeAttrs& attrs,
           const std::vector<TBlob>& outputs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   if (param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnBoth) {
-    MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
         TopKImpl<xpu, DType, IDType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
       })
     });
   } else {
-    MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
     });
   }
@@ -695,13 +693,13 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& outputs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   if (param.ret_typ == topk_enum::kReturnBoth) {
-    MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
         TopKBackwardImpl<xpu, DType, IDType>(ctx, inputs, req, outputs, param);
       });
     });
   } else if (param.ret_typ == topk_enum::kReturnValue) {
-    MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       TopKBackwardImpl<xpu, DType, index_t>(ctx, inputs, req, outputs, param);
     });
   } else {
