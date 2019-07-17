@@ -965,58 +965,6 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
 }
 
 #ifdef __CUDACC__
-template<int x_bits, typename DType, typename DstPlan, typename SrcPlan1, typename SrcPlan2, bool clip = true>
-__global__ void TakeGradZeroDimKernel(DstPlan dst,
-                                  SrcPlan1 index, SrcPlan2 src,
-                                  index_t ymax, index_t xmax, const int K) {
-  const unsigned x_size = 1 << x_bits;
-  const int xindex = blockIdx.x * x_size + threadIdx.x;
-  __shared__ int ptr;
-  for (unsigned y = 0; y < ymax; ++y) {
-    if (threadIdx.x == 0) {
-      ptr = index.Eval(0, y);
-      if (clip) {
-        if (ptr <= 0) ptr = 0;
-        else if (ptr >= K) ptr = K - 1;
-      } else {
-        ptr = ptr % K;
-        ptr += (ptr < 0) ? K : 0;
-      }
-    }
-    __syncthreads();
-    if (xindex < xmax) {
-      dst.REval(ptr, xindex) += src.Eval(y, xindex);
-    }
-  }
-}
-
-template<typename IndexType, typename DType, bool clip = true>
-inline void TakeGradZeroDim(Tensor<gpu, 2, DType> dst,
-                        const Tensor<gpu, 1, IndexType>& index,
-                        const Tensor<gpu, 2, DType> &src) {
-  CHECK_EQ(dst.CheckContiguous(), true);
-  CHECK_EQ(index.CheckContiguous(), true);
-  CHECK_EQ(src.CheckContiguous(), true);
-  const int kUnitBits = kMemUnitBits + 1;
-  dim3 dimBlock(1 << kUnitBits);
-  dim3 dimGrid((dst.size(1) + (1 << kUnitBits) - 1) >> kUnitBits);
-
-  CHECK_EQ(dst.size(1), src.size(1)) << "TakeGradZeroDim: shape mismatch";
-  CHECK_EQ(index.size(0), src.size(0)) << "TakeGradZeroDim: shape mismatch";
-  CheckLaunchParam(dimGrid, dimBlock, "TakeGradZeroDim");
-  cudaStream_t stream = Stream<gpu>::GetStream(dst.stream_);
-  const int K = dst.shape_[0];
-
-  TakeGradZeroDimKernel<kUnitBits, DType, clip>
-      <<<dimGrid, dimBlock, 0, stream>>>
-      (expr::MakePlan(dst),
-       expr::MakePlan(index),
-       expr::MakePlan(src),
-       src.size(0),
-       src.size(1), K);
-  MSHADOW_CUDA_POST_KERNEL_CHECK(TakeGradZeroDimKernel);
-}
-
 template<bool clip = true>
 void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
                         const OpContext& ctx,
