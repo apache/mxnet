@@ -565,5 +565,52 @@ NNVM_REGISTER_OP(_np_roll)
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyRollParam::__FIELDS__());
 
+template<>
+void NumpyFlipForwardImpl<cpu>(const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<TBlob>& outputs,
+                               const std::vector<index_t>& stride_,
+                               const std::vector<index_t>& trailing_,
+                               const index_t& flip_index) {
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    mxnet_op::Kernel<reverse, cpu>::Launch(s, inputs[0].Size(), flip_index,
+      inputs[0].dptr<DType>(), outputs[0].dptr<DType>(),
+      stride_.data(), trailing_.data());
+  });
+}
+
+DMLC_REGISTER_PARAMETER(FlipParam);
+
+NNVM_REGISTER_OP(_npi_flip)
+.set_num_outputs(1)
+.set_num_inputs(1)
+.set_attr_parser(ParamParser<FlipParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+[](const NodeAttrs& attrs) {
+  return std::vector<std::string> {"data"};
+})
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyFlipForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_flip"})
+.add_argument("data", "NDArray-or-Symbol", "Input data array")
+.add_arguments(FlipParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_npi_flip)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<FlipParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+[](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
+})
+.set_attr<FCompute>("FCompute<cpu>", NumpyFlipForward<cpu>);
+
 }  // namespace op
 }  // namespace mxnet
