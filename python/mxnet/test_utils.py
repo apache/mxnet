@@ -49,6 +49,7 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
+from .util import use_np  # pylint: disable=unused-import
 
 
 def default_context():
