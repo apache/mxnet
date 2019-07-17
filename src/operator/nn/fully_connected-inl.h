@@ -249,6 +249,14 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
+template<typename xpu, typename DType>
+Shape<2> FlattenAs2D(const TBlob& tblob, const OpContext& ctx) {
+  const TShape& shape = tblob.shape_;
+  Stream<xpu> *stream = ctx.get_stream<xpu>();
+  return tblob.get_with_shape<xpu, 2, DType>(
+      Shape2(shape[0], shape.ProdShape(1, shape.ndim())), stream);
+}
+
 ///
 // Inputs are:
 // o_x_grad : head gradient for x_grad
@@ -257,17 +265,34 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
 // o_y : head gradient of y
 //
 // outputs are:
-// o_y_grad : not used
-// x_grad_grad : o_w_grad * o_y^T
-// w_grad_grad : o_x_grad * o_y
+// o_y_grad : gradient of o_y
+// x_grad_grad : o_y *  o_w_grad
+// w_grad_grad : o_y.T * o_x_grad
 //
-template<typename xpu>
+template<typename xpu, typename DType>
 void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
                                           const OpContext& ctx,
                                           const std::vector<TBlob>& inputs,
                                           const std::vector<OpReqType>& req,
                                           const std::vector<TBlob>& outputs) {
   using namespace std;
+  enum Inputs {
+    k_o_x_grad,
+    k_o_w_grad,
+  };
+  enum class InputsBias {
+    k_o_b_grad = 2,
+    k_o_y
+  };
+  enum class InputsNoBias {
+    k_o_y = 2,
+  };
+
+  enum Outputs {
+    k_o_y_grad,
+    k_x_grad_grad,
+    k_w_grad_grad
+  };
   cout << "FullyConnectedGradGradCompute!!!" << endl;
   Stream<xpu> *stream = ctx.get_stream<xpu>();
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
@@ -275,7 +300,15 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), num_inputs);  // o_x_grad, o_w_grad, o_y
   CHECK_EQ(outputs.size(), 3U);
   CHECK_EQ(req.size(), 3U);
-  if (param.flatten) {
+
+  const mxnet::TShape& y_shapes = outputs[k_o_y_grad].shape_;
+  const mxnet::TShape& x_shapes = inputs[k_o_x_grad].shape_;
+  const mxnet::TShape& w_shapes = inputs[k_o_w_grad].shape_;
+
+  Tensor<xpu, 2, DType>
+
+  if (!param.flatten) {
+    CHECK(false) << "TODO(larroy)";
     /*
     Tensor<xpu, 2, double> o_x_grad = inputs[0].get_with_shape<xpu, 2, double>();
     Tensor<xpu, 2, double> o_w_grad = inputs[1].get_with_shape<xpu, 2, double>();
@@ -305,7 +338,6 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
     cout << w_grad_grad.shape_ << endl;
      */
   } else {
-    CHECK(false) << "TODO(larroy)";
   }
 }
 
