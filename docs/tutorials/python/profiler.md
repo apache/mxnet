@@ -193,10 +193,10 @@ print(profiler.dumps())
 You can also dump the information collected by the profiler into a `json` file using the `profiler.dump()` function and view it in a browser.
 
 ```python
-profiler.dump()
+profiler.dump(finished=False)
 ```
 
-`dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above.
+`dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above. Note that setting the `finished` parameter to `False` will prevent the profiling from finishing writing to the file. If you just use `profiler.dump()`, you will no longer be able to profile the remaining sections of your model. 
 
 ![Tracing Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_chrome.png)
 
@@ -212,11 +212,6 @@ Should the existing NDArray operators fail to meet all your model's needs, MXNet
 Let's try profiling custom operators with the following code example:
 
 ```python
-
-import mxnet as mx
-from mxnet import nd
-from mxnet import profiler
-
 class MyAddOne(mx.operator.CustomOp):
     def forward(self, is_train, req, in_data, out_data, aux):  
         self.assign(out_data[0], req[0], in_data[0]+1)
@@ -244,7 +239,8 @@ class CustomAddOneProp(mx.operator.CustomOpProp):
 
 inp = mx.nd.zeros(shape=(500, 500))
 
-profiler.set_config(profile_all=True, continuous_dump = True)
+profiler.set_config(profile_all=True, continuous_dump=True, \
+                   aggregate_stats=True)
 profiler.set_state('run')
 
 w = nd.Custom(inp, op_type="MyAddOne")
@@ -252,7 +248,8 @@ w = nd.Custom(inp, op_type="MyAddOne")
 mx.nd.waitall()
 
 profiler.set_state('stop')
-profiler.dump()
+print(profiler.dumps())
+profiler.dump(finished=False)
 ```
 
 Here, we have created a custom operator called `MyAddOne`, and within its `forward()` function, we simply add one to the input. We can visualize the dump file in `chrome://tracing/`:
@@ -265,10 +262,10 @@ Please note that: to be able to see the previously described information, you ne
 
 ```python 
 # Set profile_all to True
-profiler.set_config(profile_all=True, aggregate_stats=True, continuous_dump = True)
+profiler.set_config(profile_all=True, aggregate_stats=True, continuous_dump=True)
 # OR, Explicitly Set profile_symbolic and profile_imperative to True
-profiler.set_config(profile_symbolic = True, profile_imperative = True, \
-    aggregate_stats=True, continuous_dump = True)
+profiler.set_config(profile_symbolic=True, profile_imperative=True, \
+                    aggregate_stats=True, continuous_dump=True)
 
 profiler.set_state('run')
 # Use Symbolic Mode
@@ -278,8 +275,14 @@ c = b.bind(mx.cpu(), {'a': inp})
 y = c.forward()
 mx.nd.waitall()
 profiler.set_state('stop')
+print(profiler.dumps())
 profiler.dump()
 ```
+
+### Some Rules to Pay Attention to
+1. Always use `profiler.dump(finished=False)` if you do not intend to finish dumping to file. Otherwise, just calling `profiler.dump()` may lead to unexpected behaviors; and if you subsequently call `profiler.set_config()`, the program will error out.
+
+2. You can only dump to one file. Do not change the target file by calling `profiler.set_config()` in the middle of your model. This will lead to incomplete dump outputs.
 
 ## Advanced: Using NVIDIA Profiling Tools
 
