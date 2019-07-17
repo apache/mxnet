@@ -75,6 +75,38 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   }
 };
 
+/**
+ * Flatten additional dimensions after the first
+ * @tparam xpu
+ * @tparam DType
+ * @param tblob
+ * @param ctx
+ * @return 2 Dimensional Tensor with upper shapes collapsed
+ */
+template<typename xpu, typename DType>
+Tensor<xpu, 2, DType> FlattenAs2DTail(const TBlob& tblob, const OpContext& ctx) {
+  const TShape& shape = tblob.shape_;
+  Stream<xpu> *stream = ctx.get_stream<xpu>();
+  return tblob.get_with_shape<xpu, 2, DType>(
+      Shape2(shape[0], shape.ProdShape(1, shape.ndim())), stream);
+}
+
+/**
+ * Flatten dimensions except last
+ * @tparam xpu
+ * @tparam DType
+ * @param tblob
+ * @param ctx
+ * @return 2 Dimensional tensor with front shapes collapsed
+ */
+template<typename xpu, typename DType>
+Tensor<xpu, 2, DType> FlattenAs2DHead(const TBlob& tblob, const OpContext& ctx) {
+  const TShape& shape = tblob.shape_;
+  Stream<xpu> *stream = ctx.get_stream<xpu>();
+  return tblob.get_with_shape<xpu, 2, DType>(
+      Shape2(shape.ProdShape(0, shape.ndim()-1), shape[shape.ndim()-1]), stream);
+}
+
 template<typename xpu, typename DType>
 void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
                const std::vector<TBlob> &in_data, const std::vector<OpReqType> &req,
@@ -91,21 +123,14 @@ void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
   CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
       << "Must init CuBLAS handle in stream";
 #endif  // __CUDACC__
-  const mxnet::TShape& ishape = in_data[fullc::kData].shape_;
-  const mxnet::TShape& oshape = out_data[fullc::kOut].shape_;
-
   Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
   Tensor<xpu, 2, DType> data, out;
   if (!param.flatten) {
-    data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
-        Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]), s);
-    out = out_data[fullc::kOut].get_with_shape<xpu, 2, DType>(
-        Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
+    data = FlattenAs2DHead<xpu, DType>(in_data[fullc::kData], ctx);
+    out = FlattenAs2DHead<xpu, DType>(out_data[fullc::kOut], ctx);
   } else {
-    data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
-        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
-    out = out_data[fullc::kOut].get_with_shape<xpu, 2, DType>(
-        Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
+    data = FlattenAs2DTail<xpu, DType>(in_data[fullc::kData], ctx);
+    out = FlattenAs2DTail<xpu, DType>(out_data[fullc::kOut], ctx);
   }
 
   CHECK_EQ(data.shape_[1], wmat.shape_[1])
@@ -126,6 +151,7 @@ void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
   }
 }
 
+
 template<typename xpu, typename DType>
 void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
                 const std::vector<TBlob> &out_grad, const std::vector<TBlob> &in_data,
@@ -134,59 +160,52 @@ void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
   using namespace mshadow::expr;
   // TODO(bing): check the BLAS Handle, be careful
   //  maybe need blas handle from context
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const mxnet::TShape& ishape = in_data[fullc::kData].shape_;
-  const mxnet::TShape& oshape = out_grad[fullc::kOut].shape_;
-
-  Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(s);
-  Tensor<xpu, 2, DType> data, grad, gdata;
+  Stream<xpu> *stream = ctx.get_stream<xpu>();
+  Tensor<xpu, 2, DType> wmat = in_data[fullc::kWeight].get<xpu, 2, DType>(stream);
+  Tensor<xpu, 2, DType> x, y_grad, x_grad;
   if (!param.flatten) {
-    data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
-        Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]), s);
-    grad = out_grad[fullc::kOut].get_with_shape<xpu, 2, DType>(
-        Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-    gdata = in_grad[fullc::kData].get_with_shape<xpu, 2, DType>(
-        Shape2(ishape.ProdShape(0, ishape.ndim()-1), ishape[ishape.ndim()-1]), s);
+    x = FlattenAs2DHead<xpu, DType>(in_data[fullc::kData], ctx);
+    y_grad = FlattenAs2DHead<xpu, DType>(out_grad[fullc::kOut], ctx);
+    x_grad = FlattenAs2DHead<xpu, DType>(in_grad[fullc::kData], ctx);
   } else {
-    data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
-        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
-    grad = out_grad[fullc::kOut].get_with_shape<xpu, 2, DType>(
-        Shape2(oshape[0], oshape.ProdShape(1, oshape.ndim())), s);
-    gdata = in_grad[fullc::kData].get_with_shape<xpu, 2, DType>(
-        Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);
+    x = FlattenAs2DTail<xpu, DType>(in_data[fullc::kData], ctx);
+    y_grad = FlattenAs2DTail<xpu, DType>(out_grad[fullc::kOut], ctx);
+    x_grad = FlattenAs2DTail<xpu, DType>(in_grad[fullc::kData], ctx);
   }
 
 #if defined(__CUDACC__)
-  CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+  CHECK_EQ(stream->blas_handle_ownership_, Stream<xpu>::OwnHandle)
       << "Must init CuBLAS handle in stream";
 #endif
+
   //  backprop
   CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
   // gradient of weight
-  Tensor<xpu, 2, DType> gwmat = in_grad[fullc::kWeight].get<xpu, 2, DType>(s);
+  Tensor<xpu, 2, DType> w_grad = in_grad[fullc::kWeight].get<xpu, 2, DType>(stream);
   // Legacy approach shown here for comparison:
-  //   out = Assign(gwmat, req[fullc::kWeight], dot(grad.T(), data));
-  linalg_gemm(grad, data, gwmat, true, false, s, req[fullc::kWeight]);
+  //   out = Assign(w_grad, req[fullc::kWeight], dot(grad.T(), data));
+  linalg_gemm(y_grad, x, w_grad, true, false, stream, req[fullc::kWeight]);
   // gradient of bias
   if (!param.no_bias) {
-    Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(s);
-    TBlob grad_blob = TBlob(grad);
+    Tensor<xpu, 1, DType> gbias = in_grad[fullc::kBias].get<xpu, 1, DType>(stream);
+    TBlob grad_blob = TBlob(y_grad);
     TBlob gbias_blob = TBlob(gbias);
-    mxnet::TShape x(1, 0);
+    mxnet::TShape axis(1, 0);
     mxnet::TShape small;
     if (shape_assign(&gbias_blob.shape_, Shape2(param.num_hidden, 1))) {
       small = gbias_blob.shape_;
     } else {
-      small = ReduceAxesShapeImpl(grad_blob.shape_, dmlc::optional<mxnet::TShape>(x), true, false);
+      small = ReduceAxesShapeImpl(grad_blob.shape_,
+          dmlc::optional<mxnet::TShape>(axis), true, false);
     }
     ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false,
-                          mshadow_op::identity>(ctx, {grad_blob}, {req[fullc::kBias]},
-                                                {in_grad[fullc::kBias]}, small);
+        mshadow_op::identity>(ctx, {grad_blob}, {req[fullc::kBias]},
+            {in_grad[fullc::kBias]}, small);
   }
   // gradient of data
   // Legacy approach shown here for comparison:
-  //   Assign(gdata, req[fullc::kData], dot(grad, wmat));
-  linalg_gemm(grad, wmat, gdata, false, false, s, req[fullc::kData]);
+  //   Assign(x_grad, req[fullc::kData], dot(y_grad, wmat));
+  linalg_gemm(y_grad, wmat, x_grad, false, false, stream, req[fullc::kData]);
 }
 
 template<typename xpu>
@@ -249,13 +268,6 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
-template<typename xpu, typename DType>
-Shape<2> FlattenAs2D(const TBlob& tblob, const OpContext& ctx) {
-  const TShape& shape = tblob.shape_;
-  Stream<xpu> *stream = ctx.get_stream<xpu>();
-  return tblob.get_with_shape<xpu, 2, DType>(
-      Shape2(shape[0], shape.ProdShape(1, shape.ndim())), stream);
-}
 
 ///
 // Inputs are:
@@ -271,10 +283,10 @@ Shape<2> FlattenAs2D(const TBlob& tblob, const OpContext& ctx) {
 //
 template<typename xpu, typename DType>
 void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
-                                          const OpContext& ctx,
-                                          const std::vector<TBlob>& inputs,
-                                          const std::vector<OpReqType>& req,
-                                          const std::vector<TBlob>& outputs) {
+                                   const OpContext& ctx,
+                                   const std::vector<TBlob>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<TBlob>& outputs) {
   using namespace std;
   enum Inputs {
     k_o_x_grad,
@@ -301,46 +313,50 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 3U);
   CHECK_EQ(req.size(), 3U);
 
-  const mxnet::TShape& y_shapes = outputs[k_o_y_grad].shape_;
-  const mxnet::TShape& x_shapes = inputs[k_o_x_grad].shape_;
-  const mxnet::TShape& w_shapes = inputs[k_o_w_grad].shape_;
+  // inputs
+  Tensor<xpu, 2, DType> o_x_grad;
+  Tensor<xpu, 2, DType> o_w_grad;
+  Tensor<xpu, 2, DType> o_y;
+  Tensor<xpu, 2, DType> o_b_grad;
 
-  Tensor<xpu, 2, DType>
+  // outputs
+  Tensor<xpu, 2, DType> o_y_grad;
+  Tensor<xpu, 2, DType> x_grad_grad;
+  Tensor<xpu, 2, DType> w_grad_grad;
 
   if (!param.flatten) {
-    CHECK(false) << "TODO(larroy)";
-    /*
-    Tensor<xpu, 2, double> o_x_grad = inputs[0].get_with_shape<xpu, 2, double>();
-    Tensor<xpu, 2, double> o_w_grad = inputs[1].get_with_shape<xpu, 2, double>();
-    Tensor<xpu, 2, double> o_y = inputs[param.no_bias ? 2 : 3].get_with_shape<xpu, 2, double>();
-    Tensor<xpu, 2, double> o_y_grad = outputs[0];
-    Tensor<xpu, 2, double> x_grad_grad = outputs[1];
-    Tensor<xpu, 2, double> w_grad_grad = outputs[2];
-     */
-
-    for (int i = 0; i < 3; ++i)
-      cout << outputs[i].shape_ << endl;
-    /*
-    cout << "o_w_grad shape:";
-    cout << o_w_grad.shape_ << endl;
-
-    cout << "o_y shape:";
-    cout << o_y.shape_ << endl;
-
-    cout << "o_y_grad shape:";
-    cout << o_y_grad.shape_ << endl;
-
-
-    cout << "x_grad_grad shape:";
-    cout << x_grad_grad.shape_ << endl;
-
-    cout << "w_grad_grad shape:";
-    cout << w_grad_grad.shape_ << endl;
-     */
+    o_x_grad = FlattenAs2DHead<xpu, DType>(inputs[k_o_x_grad], ctx);
+    o_w_grad = FlattenAs2DHead<xpu, DType>(inputs[k_o_w_grad], ctx);
+    //o_y = inputs[param.no_bias ? InputsNoBias::k_o_y : InputsBias::k_o_y].get<xpu, 2, DType>(stream);
   } else {
+    o_x_grad = FlattenAs2DTail<xpu, DType>(inputs[k_o_x_grad], ctx);
+    o_w_grad = FlattenAs2DTail<xpu, DType>(inputs[k_o_w_grad], ctx);
+    //o_y = inputs[param.no_bias ? InputsNoBias::k_o_y : InputsBias::k_o_y].get<xpu, 2, DType>(stream);
+    o_y_grad = outputs[0].get<xpu, 2, DType>(stream);
+    x_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_x_grad_grad], ctx);
+    w_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_w_grad_grad], ctx);
+  }
+  //linalg_gemm(grad, wmat, gdata, false, false, s, req[fullc::kData]);
+  linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream, req[fullc::kData]);
+  linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream, req[fullc::kData]);
+  if (! param.no_bias) {
+    // TODO(larroy)
   }
 }
 
+
+template<typename xpu>
+void FullyConnectedGradGradDtypeDispatch(
+    const nnvm::NodeAttrs& attrs,
+    const OpContext& ctx,
+    const std::vector<TBlob>& inputs,
+    const std::vector<OpReqType>& req,
+    const std::vector<TBlob>& outputs) {
+  const int dtype = inputs[0].type_flag_;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    FullyConnectedGradGradCompute<xpu, DType>(attrs, ctx, inputs, req, outputs);
+  });
+}
 
 
 }  // namespace op
