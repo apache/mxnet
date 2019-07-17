@@ -227,6 +227,7 @@ struct Context {
    * \return Context
    */
   inline static Context FromString(const std::string& str);
+
  private:
 #if MXNET_USE_CUDA
     static void CudaLibChecks();
