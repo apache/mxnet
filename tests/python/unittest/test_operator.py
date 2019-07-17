@@ -7953,7 +7953,6 @@ def test_op_all_names_monitor():
         except mx.base.MXNetError:
             # skip errors since test is to check all names
             pass
-        print(output_names)
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 
