@@ -20,7 +20,8 @@ from __future__ import absolute_import
 from __future__ import division
 
 import mxnet as mx
-from mxnet import gluon, autograd, np, npx
+from mxnet import gluon, autograd, np
+from mxnet.test_utils import use_np
 
 
 def test_create_np_param():
@@ -45,7 +46,7 @@ def test_create_np_param():
         def hybrid_forward(self, F, x, w):
             return F.dot(x, w)
 
-    @npx.use_np
+    @use_np
     class TestBlock2(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock2, self).__init__()
@@ -62,7 +63,7 @@ def test_create_np_param():
     check_block_params(x.as_np_ndarray(), TestBlock2, True, np.ndarray)
 
 
-@npx.use_np
+@use_np
 def test_optimizer_with_np_ndarrays():
     class LinearRegression(gluon.HybridBlock):
         def __init__(self, num_input_dim=0, num_hidden_dim=100, num_output_dim=10):
