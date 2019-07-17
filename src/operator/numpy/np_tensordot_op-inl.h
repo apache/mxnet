@@ -299,6 +299,10 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
   const mxnet::TShape& a_shape = a.shape_;
   const mxnet::TShape& b_shape = b.shape_;
 
+  if ((a_shape.Size() == 0U) || (b_shape.Size() == 0U)) {
+    return;  // zero-size output, no need to launch kernel
+  }
+
   Tuple<int> a_axes_remained;
   Tuple<int> b_axes_remained;
   Tuple<int> a_axes;
@@ -503,6 +507,10 @@ void TensordotIntAxesBackwardImpl(const int axes,
                                   const std::vector<OpReqType>& req) {
   const mxnet::TShape& a_shape = a.shape_;
   const mxnet::TShape& b_shape = b.shape_;
+
+  if ((a_shape.Size() == 0U) || (b_shape.Size() == 0U)) {
+    return;  // zero-size output, no need to launch kernel
+  }
 
   Tuple<int> a_axes_summed;
   Tuple<int> b_axes_summed;

@@ -115,7 +115,10 @@ def test_np_tensordot():
         ((3,), (3,), 0),
         ((2,), (2, 3), 0),
         ((3, 5, 4), (5, ), 0),
-        ((2, 3, 4), (4, 3, 2), [[], []])
+        ((2, 3, 4), (4, 3, 2), [[], []]),
+        ((3, 0), (0, 5), 1),
+        ((3, 0), (0, 4), [1, 0]),
+        ((0, 3), (3, 5), 1)
     ]
 
     for hybridize in [True, False]:
@@ -150,33 +153,6 @@ def test_np_tensordot():
                 mx_sym = mx.sym.np.tensordot(a_sym, b_sym, axes).as_nd_ndarray()
                 check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
                   rtol=1e-1, atol=1e-1, dtype = dtype)
-
-    # test zero size input
-    zero_shapes = [
-        ((3, 0), (0, 5), 1),
-        ((3, 0), (0, 4), [1, 0]),
-        ((0, 3), (3, 5), 1)
-    ]
-
-    for hybridize in [True, False]:
-        for a_shape, b_shape, axes in zero_shapes:
-            for dtype in [_np.float32, _np.float64]:
-                test_tensordot = TestTensordot(axes)
-                if hybridize:
-                    test_tensordot.hybridize()
-                a = rand_ndarray(shape = a_shape, dtype = dtype).as_np_ndarray()
-                b = rand_ndarray(shape = b_shape, dtype = dtype).as_np_ndarray()
-
-                np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
-                with mx.autograd.record():
-                    mx_out = test_tensordot(a, b)
-                assert mx_out.shape == np_out.shape
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
-
-                # Test imperative once again
-                mx_out = np.tensordot(a, b, axes)
-                np_out = _np.tensordot(a.asnumpy(), b.asnumpy(), axes)
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
