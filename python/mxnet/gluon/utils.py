@@ -40,7 +40,7 @@ except ImportError:
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape, is_np_array, wraps_safely
+from ..util import is_np_shape, is_np_array
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
