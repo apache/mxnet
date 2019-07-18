@@ -32,6 +32,7 @@ class OpDef:
         {"ldtype": "int32", "rdtype": "float16"},
         {"ldtype": "int32", "rdtype": "int16"},
     ]
+
     Parameters
     ----------
     func : function
@@ -95,6 +96,10 @@ def defop(name, target=None, auto_broadcast=False, **kwargs):
         auto_broadcast=True allows one to implement broadcast computation
         without considering whether dimension size equals to one.
         TVM maps buffer[i][j][k] -> buffer[i][0][k] if dimension i's shape equals 1.
+    Returns
+    -------
+    fdef : function
+        A wrapped operator definition function, which returns (schedule, [tensors])
     """
     assert name is not None and len(name) > 0
     target = "cpu" if target is None else target

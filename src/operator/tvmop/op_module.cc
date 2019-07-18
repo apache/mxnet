@@ -44,9 +44,9 @@ void TVMOpModule::Load(const std::string &filepath) {
   *module_ptr_ = module;
 }
 
-inline PackedFunc GetFunction(const std::shared_ptr<Module> &module,
-                              const std::string &op_name,
-                              const std::vector<mxnet::TBlob> &args) {
+PackedFunc GetFunction(const std::shared_ptr<Module> &module,
+                       const std::string &op_name,
+                       const std::vector<mxnet::TBlob> &args) {
   std::ostringstream func_name;
   func_name << op_name;
   for (const auto &arg : args) {
