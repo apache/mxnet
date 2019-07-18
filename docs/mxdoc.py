@@ -98,7 +98,7 @@ def build_mxnet(app):
 
 def build_julia_docs(app):
     """build Julia docs"""
-    os.environ['MXNET_HOME'] = str(os.path.abspath('{}/..'.format(app.builder.srcdir)))
+    os.environ['MXNET_HOME'] = os.path.abspath(os.path.join(app.builder.srcdir, '..'))
     print("Julia will check for MXNet in {}/lib".format(os.environ.get('MXNET_HOME')))
     dest_path = app.builder.outdir + '/api/julia/site'
     _run_cmd('cd {}/.. && make -C julia/docs'.format(app.builder.srcdir))
