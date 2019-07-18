@@ -7525,7 +7525,7 @@ def test_bilinear_resize_op():
                 w1r = 1.0 * w2 * rwidth
                 w1 = int(np.floor(w1r))
                 w1lambda = w1r - w1
-                w1p = 1 if w1 < (inputHeight - 1) else 0
+                w1p = 1 if w1 < (inputWidth - 1) else 0
                 for b in range(batch):
                     for c in range(channel):
                         y[b][c][h2][w2] = (1-h1lambda)*((1-w1lambda)*x[b][c][h1][w1] + \
