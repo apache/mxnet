@@ -3371,7 +3371,7 @@ def test_np_einsum():
                     for shape in operands:
                         x_np.append(_np.array(_np.random.uniform(-10.0, 10.0, shape),
                                             dtype=dtype))
-                        x.append(mx.nd.array(x_np[-1]).as_np_ndarray())
+                        x.append(np.array(x_np[-1], dtype=dtype))
                         x[-1].attach_grad()
                     expected_np = _np.einsum(subscripts, *x_np, optimize=optimize)
                     with mx.autograd.record():

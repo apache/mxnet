@@ -196,6 +196,10 @@ NNVM_REGISTER_OP(_npi_einsum)
 })
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyEinsumShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>(3, ResourceRequest::kTempSpace);
+  })
 .set_attr<FCompute>("FCompute<cpu>", NumpyEinsumForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_einsum"})
 .add_argument("data", "NDArray-or-Symbol[]", "List of eimsum operands")
@@ -212,6 +216,10 @@ NNVM_REGISTER_OP(_backward_npi_einsum)
   return static_cast<uint32_t>(param.num_args);
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>(3, ResourceRequest::kTempSpace);
+  })
 .set_attr<FCompute>("FCompute<cpu>", NumpyEinsumBackward<cpu>);
 
 }  // namespace op

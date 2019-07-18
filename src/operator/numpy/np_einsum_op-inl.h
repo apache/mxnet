@@ -61,6 +61,8 @@
 #include <mxnet/operator_util.h>
 #include <string>
 #include <vector>
+#include "./np_tensordot_op-inl.h"
+#include "./np_einsum_path_op-inl.h"
 #include "../../common/static_array.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
@@ -379,18 +381,36 @@ inline static int prepare_op_axes(int ndim, int iop, char *labels,
   return 0;
 }
 
+struct NumpyEinsumParam: public dmlc::Parameter<NumpyEinsumParam> {
+  int num_args;
+  int optimize;
+  std::string  subscripts;
+  DMLC_DECLARE_PARAMETER(NumpyEinsumParam) {
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+      .describe("Number of input arrays.");
+    DMLC_DECLARE_FIELD(subscripts)
+      .set_default("")
+      .describe("Specifies the subscripts for summation as comma separated list"
+      " of subscript labels. An implicit (classical Einstein summation) calculation"
+      " is performed unless the explicit indicator ‘->’ is included as well as"
+      " subscript labels of the precise output form.");
+    DMLC_DECLARE_FIELD(optimize)
+      .set_default(0);
+  }
+};
+
 template<int dimension, int req, bool back>
 struct numpy_einsum {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out,
-                                  mxnet::common::StaticArray<DType*, NPY_MAXARGS> op,
+                                  common::StaticArray<DType*, NPY_MAXARGS> op,
                                   mshadow::Shape<dimension> oshape,
                                   mshadow::Shape<dimension> ostride,
                                   mshadow::Shape<dimension> reduceshape,
                                   mshadow::Shape<dimension> reducestride,
                                   mshadow::Shape<dimension> itershape,
-                                  mxnet::common::StaticArray<mshadow::Shape<dimension>,
-                                                             NPY_MAXARGS> iterstride,
+                                  common::StaticArray<mshadow::Shape<dimension>,
+                                                      NPY_MAXARGS> iterstride,
                                   int nop,
                                   int iop0,
                                   const DType* out_grad) {
@@ -730,21 +750,6 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
   }
 }
 
-struct NumpyEinsumParam: public dmlc::Parameter<NumpyEinsumParam> {
-  int num_args;
-  std::string  subscripts;
-  DMLC_DECLARE_PARAMETER(NumpyEinsumParam) {
-    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
-      .describe("Number of input arrays.");
-    DMLC_DECLARE_FIELD(subscripts)
-      .set_default("")
-      .describe("Specifies the subscripts for summation as comma separated list"
-      " of subscript labels. An implicit (classical Einstein summation) calculation"
-      " is performed unless the explicit indicator ‘->’ is included as well as"
-      " subscript labels of the precise output form.");
-  }
-};
-
 template<typename xpu>
 inline void NumpyEinsumForward(const nnvm::NodeAttrs& attrs,
                                const OpContext& ctx,
@@ -755,10 +760,84 @@ inline void NumpyEinsumForward(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   const NumpyEinsumParam &param = nnvm::get<NumpyEinsumParam>(attrs.parsed);
   int num_args = param.num_args;
+  int optimize = param.optimize;
   const char* subscripts = param.subscripts.c_str();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), num_args);
   CHECK_EQ(outputs.size(), 1U);
-  NumpyEinsumProcess<xpu, 0>(inputs, req, outputs, subscripts, num_args, ctx);
+  if (optimize == 0) {
+    NumpyEinsumProcess<xpu, 0>(inputs, req, outputs, subscripts, num_args, ctx);
+    return;
+  }
+  std::vector<Step> paths;
+  std::vector<std::vector<int> > pos;
+  std::string string_repr;
+  paths = einsum_path(param.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
+  size_t paths_len = paths.size(), temp_space_size = 0, max_temp_space_size = 0;
+  std::vector<TBlob> operands(inputs), tmp_operands, temp_space_vec(paths_len - 1);
+  for (int i = 0; i < paths_len - 1; ++i) {
+    temp_space_size += paths[i].oshape.Size();
+  }
+  for (int i = 0; i < paths_len; ++i) {
+    max_temp_space_size = std::max(max_temp_space_size, paths[i].oshape.Size());
+  }
+  temp_space_size += max_temp_space_size;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    Tensor<xpu, 1, DType> temp_space =
+      ctx.requested[2].get_space_typed<xpu, 1, DType>(Shape1(temp_space_size), s);
+    size_t begin = max_temp_space_size;
+    for (int i = 0; i < paths_len - 1; ++i) {
+      TBlob tblob = TBlob(temp_space.Slice(begin, begin + paths[i].oshape.Size()));
+      temp_space_vec[i] = tblob.reshape(paths[i].oshape);
+      begin = begin + paths[i].oshape.Size();
+    }
+    for (int i = 0; i < paths_len; ++i) {
+      tmp_operands.clear();
+
+      // We remove inds from right to left
+      for (const int& p: paths[i].contract_inds) {
+        tmp_operands.push_back(operands[p]);
+        operands.erase(operands.begin() + p);
+      }
+      bool handle_out = (i == paths_len - 1);
+      // Call tensordot if still possible
+      if (paths[i].do_blas) {
+        // Contract!
+        if (paths[i].do_einsum || handle_out) {
+          TBlob max_temp_space = TBlob(temp_space.Slice(0, paths[i].tshape.Size()));
+          max_temp_space.FlatTo1D<xpu, DType>(s) = 0;
+          max_temp_space = max_temp_space.reshape(paths[i].tshape);
+          TensordotImpl<xpu>(paths[i].left_pos,
+                             paths[i].right_pos,
+                             ctx,
+                             tmp_operands[0],
+                             tmp_operands[1],
+                             max_temp_space,
+                             std::vector<OpReqType>{OpReqType::kWriteTo});
+          NumpyEinsumProcess<xpu, 0>(std::vector<TBlob>{max_temp_space},
+            handle_out ? req : std::vector<OpReqType>{OpReqType::kWriteTo},
+            handle_out ? outputs : std::vector<TBlob>{temp_space_vec[i]},
+            paths[i].blas2einsum_str.c_str(),
+            1, ctx);
+        } else {
+          TensordotImpl<xpu>(paths[i].left_pos,
+                             paths[i].right_pos,
+                             ctx,
+                             tmp_operands[0],
+                             tmp_operands[1],
+                             temp_space_vec[i],
+                             std::vector<OpReqType>{OpReqType::kWriteTo});  
+        }
+      } else {
+        NumpyEinsumProcess<xpu, 0>(tmp_operands,
+        handle_out ? req : std::vector<OpReqType>{OpReqType::kWriteTo},
+        handle_out ? outputs : std::vector<TBlob>{temp_space_vec[i]},
+        paths[i].einsum_str.c_str(), tmp_operands.size(), ctx);
+      }
+      if (!handle_out)
+        operands.push_back(temp_space_vec[i]);
+    }
+  })
 }
 
 template<typename xpu>
