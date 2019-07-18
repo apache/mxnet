@@ -757,6 +757,7 @@ if(USE_TVM_OP)
 endif()
 
 target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+target_link_libraries(mxnet PRIVATE ${CMAKE_DL_LIBS})
 
 if(USE_PLUGINS_WARPCTC)
   target_link_libraries(mxnet PUBLIC debug ${WARPCTC_LIB_DEBUG})

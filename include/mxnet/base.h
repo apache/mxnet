@@ -25,8 +25,9 @@
 #ifndef MXNET_BASE_H_
 #define MXNET_BASE_H_
 
-#include "dmlc/base.h"
 #include <string>
+#include <map>
+#include "dmlc/base.h"
 #include "dmlc/io.h"
 #include "dmlc/type_traits.h"
 #include "dmlc/parameter.h"
@@ -36,7 +37,8 @@
 #include "nnvm/symbolic.h"
 #include "libinfo.h"
 #include "tuple.h"
-
+#include "library.h"
+#include "mxnet_acc.h"
 
 /*!
  * \brief define compatible keywords in g++
@@ -98,15 +100,30 @@ typedef mshadow::default_real_t real_t;
 /*! \brief operator structure from NNVM */
 using Op = nnvm::Op;
 
+struct AccContext {
+  int kAccType;
+  std::string accName;
+
+  /*! \brief default constructor */
+  AccContext() : kAccType(0), accName("Error") {}
+  /*! \brief constructor */
+  AccContext(int type, std::string name) : kAccType(type), accName(name) {}
+};
+
 /*! \brief Context information about the execution environment */
 struct Context {
   /*! \brief Type of device */
-  enum DeviceType {
-    kCPU = cpu::kDevMask,
-    kGPU = gpu::kDevMask,
-    kCPUPinned = 3,
-    kCPUShared = 5,
-  };
+  static const int kCPU = 1;
+  static const int kGPU = 2;
+  static const int kCPUPinned = 3;
+  static const int kCPUShared = 5;
+  static const int kAccBase = 10;
+
+  typedef int DeviceType;
+
+  static std::map<int, AccContext> acc_map;
+  static std::map<std::string, int> acc_names;
+
   /*! \brief the device type we run the op on */
   DeviceType dev_type;
   /*! \brief device id we are going to run it on */
@@ -126,6 +143,7 @@ struct Context {
    */
   inline int real_dev_id() const {
     if (dev_type == kCPUPinned || dev_type == kGPU) return dev_id;
+    else if (dev_type >= kAccBase) return dev_id;
     return 0;
   }
   /*!
@@ -169,7 +187,7 @@ struct Context {
     return true;
   }
   /*! \brief the maximal device type */
-  static const int32_t kMaxDevType = 6;
+  static const int32_t kMaxDevType = 20;
   /*! \brief the maximal device index */
   static const int32_t kMaxDevID = 16;
   /*!
@@ -227,6 +245,12 @@ struct Context {
    * \return Context
    */
   inline static Context FromString(const std::string& str);
+  /*!
+   * Load accelerator from given path and get its name
+   * \param path of .so file and name of the accelerator
+   * \return No return value
+   */
+  inline static int LoadAcc(const std::string& path, char *name);
 
  private:
 #if MXNET_USE_CUDA
@@ -517,6 +541,9 @@ inline Context Context::FromString(const std::string& str) {
       ret = CPUPinned(id);
     } else if (type == "cpu_shared") {
       ret = CPUShared(id);
+    } else if (Context::acc_names.find(type) != Context::acc_names.end()) {
+      DeviceType dev_type = Context::acc_names[type];
+      ret = Create(dev_type, id);
     } else {
       LOG(FATAL) << "Invalid context string " << str;
     }
@@ -524,6 +551,34 @@ inline Context Context::FromString(const std::string& str) {
     LOG(FATAL) << "Invalid context string " << str;
   }
   return ret;
+}
+
+inline int Context::LoadAcc(const std::string& path, char *name) {
+  // load library
+  void *lib = load_lib(path.c_str());
+  if (!lib)
+    LOG(FATAL) << "Unable to load library";
+
+  // get name function from library
+  void (*getAccName)(char*);
+  get_func(lib, reinterpret_cast<void**>(&getAccName), const_cast<char*>("getAccName"));
+  if (!getAccName)
+    LOG(FATAL) << "Unable to get accelerator name from library";
+
+  // call name function
+  char accname[100];
+  getAccName(accname);
+  std::string name_str(accname);
+  snprintf(name, name_str.size(), "%s", name_str.c_str());
+
+  // create entry for accelerator
+  int id = Context::kAccBase + Context::acc_map.size();
+  AccContext ctx(id, name_str);
+
+  // add accelerator context to map
+  Context::acc_map[id] = ctx;
+  Context::acc_names[name_str] = id;
+  return id;
 }
 
 inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
@@ -535,6 +590,8 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
     out << "cpu_pinned(";
   } else if (ctx.dev_type == Context::kCPUShared) {
     out << "cpu_shared(";
+  } else if (Context::acc_map.find(ctx.dev_type) != Context::acc_map.end()) {
+    out << Context::acc_map[ctx.dev_type].accName << "(";
   } else {
     out << "unknown(";
   }
