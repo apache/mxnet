@@ -58,7 +58,9 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     operators_with_backward = []
 
     # Filter out deprecated operators
-    filters += ("normal","uniform")
+    filters += ("normal", "uniform", "BatchNorm_v1", "Flatten", "contrib_CTCLoss", "Pad", "Cast",
+                "Pooling_v1", "Concat", "Reshape", "Convolution_v1", "SliceChannel", "Crop",
+                "crop", "onehot_encode")
 
     if merge_op_forward_backward:
         filters += ("_backward",)
