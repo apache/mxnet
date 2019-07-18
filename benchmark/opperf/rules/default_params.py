@@ -62,6 +62,25 @@ DEFAULT_AXIS_SHAPE = [(), 0, (0, 1)]
 # NOTE: Data used is DEFAULT_DATA
 DEFAULT_AXIS = [0]
 
+# For optimizer operators
+DEFAULT_WEIGHT = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_GRAD = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_MOM = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_MEAN = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_VAR = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_N = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_LR = [[0.1,0.5,0.9]]
+DEFAULT_GAMMA_1 = [[0.1,0.5,0.9]]
+DEFAULT_GAMMA_2 = [[0.1,0.5,0.9]]
+DEFAULT_EPSILON = [[1e-08]]
+DEFAULT_BETA_1 = [[0.1,0.5,0.9]]
+DEFAULT_BETA_2 = [[0.1,0.5,0.9]]
+DEFAULT_T = [[1,5]]
+DEFAULT_RESCALE_GRAD = [[0.4, 0.77]]
+DEFAULT_CLIP_GRADIENT = [[-1.0,0.8]]
+DEFAULT_CLIP_WEIGHTS = [[-1.0,0.8]]
+DEFAULT_LAZY_UPDATE = [[0,1]]
+
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "lhs": DEFAULT_LHS,
@@ -81,7 +100,23 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "k_nd": DEFAULT_K_ND,
                    "p_nd": DEFAULT_P_ND,
                    "axis_shape": DEFAULT_AXIS_SHAPE,
-                   "axis": DEFAULT_AXIS}
+                   "axis": DEFAULT_AXIS,
+                   "weight" : DEFAULT_WEIGHT,
+                   "grad" : DEFAULT_GRAD,
+                   "mean" : DEFAULT_MEAN,
+                   "var" : DEFAULT_VAR,
+                   "mom" : DEFAULT_MOM,
+                   "n" : DEFAULT_N,
+                   "lr" : DEFAULT_LR,
+                   "gamma1" : DEFAULT_GAMMA_1,
+                   "gamma2" : DEFAULT_GAMMA_2,
+                   "epsilon" : DEFAULT_EPSILON,
+                   "beta1" : DEFAULT_BETA_1,
+                   "beta2" : DEFAULT_BETA_2,
+                   "t" : DEFAULT_T,
+                   "rescale_grad" : DEFAULT_RESCALE_GRAD,
+                   "clip_grad" : DEFAULT_CLIP_GRADIENT,
+                   "lazy_update" : DEFAULT_LAZY_UPDATE}
 
 # These are names of MXNet operator parameters that is of type NDArray.
 # We maintain this list to automatically recognize these parameters are to be
@@ -90,4 +125,5 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
 # can just say shape of the tensor, and we automatically create Tensors.
 PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp",
                           "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
-                          "low", "high", "weight", "bias", "moving_mean", "moving_var"]
+                          "low", "high", "weight", "bias", "moving_mean", "moving_var",
+                          "weight", "grad", "mean", "var", "mom", "n"]
