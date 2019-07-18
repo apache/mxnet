@@ -430,14 +430,14 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     debug_str = profiler.dumps(format = 'json')
     check_custom_operator_profiling_multiple_custom_ops_output(debug_str)
     profiler.set_state('stop')
+    
+def test_custom_operator_profiling_multiple_custom_ops_symbolic():
+    custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
+            'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
 def test_custom_operator_profiling_multiple_custom_ops_imperative():
     custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
-
-def test_custom_operator_profiling_multiple_custom_ops_symbolic():
-    custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
-            'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
