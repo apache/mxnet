@@ -81,10 +81,10 @@ def _flop_count(idx_contraction, inner, num_terms, size_dictionary):
     --------
 
     >>> _flop_count('abc', False, 1, {'a': 2, 'b':3, 'c':5})
-    90
+    30
 
     >>> _flop_count('abc', True, 2, {'a': 2, 'b':3, 'c':5})
-    270
+    60
 
     """
 
@@ -574,8 +574,6 @@ def _parse_einsum_input(operands):
         Parsed input strings
     output_string : str
         Parsed output string
-    operands : list of array_like
-        The operands to use in the numpy contraction
 
     Examples
     --------
@@ -693,7 +691,7 @@ def _parse_einsum_input(operands):
         raise ValueError("Number of einsum subscripts must be equal to the "
                          "number of operands.")
 
-    return (input_subscripts, output_subscript, operands)
+    return (input_subscripts, output_subscript)
 
 
 def einsum_path(*operands, **kwargs):
@@ -842,7 +840,8 @@ def einsum_path(*operands, **kwargs):
     einsum_call_arg = kwargs.pop("einsum_call", False)
 
     # Python side parsing
-    input_subscripts, output_subscript, operands = _parse_einsum_input(operands)
+    input_subscripts, output_subscript = _parse_einsum_input(operands)
+    operands = operands[1:]
 
     # Build a few useful list and sets
     input_list = input_subscripts.split(',')
@@ -1010,62 +1009,7 @@ def _einsum(module_name, *operands, **kwargs):
     # Grab non-einsum kwargs; do not optimize by default.
     optimize_arg = kwargs.pop('optimize', False)
     out = kwargs.pop('out', None)
-    # If no optimization, run pure einsum
-    if module_name == 'symbol' or optimize_arg is False:
-        subscripts = operands[0]
-        operands = operands[1:]
-        return _npi.einsum(*operands, subscripts=subscripts, out=out)
 
-    # Build the contraction list and operand
-    contraction_list = _einsum_path(*operands, optimize=optimize_arg,
-                                    einsum_call=True)
-    operands = list(operands[1:])
-    handle_out = False
-
-    # Start contraction loop
-    for num, contraction in enumerate(contraction_list):
-        inds, idx_rm, einsum_str, remaining, blas, oshape = contraction
-        tmp_operands = [operands.pop(x) for x in inds]
-
-        # Do we need to deal with the output?
-        handle_out = ((num + 1) == len(contraction_list))
-
-        # Call tensordot if still possible
-        if blas:
-            # Checks have already been handled
-            input_str, results_index = einsum_str.split('->')
-            input_left, input_right = input_str.split(',')
-
-            tensor_result = input_left + input_right
-            for s in idx_rm:
-                tensor_result = tensor_result.replace(s, "")
-
-            # Find indices to contract over
-            left_pos, right_pos = [], []
-            for s in sorted(idx_rm):
-                left_pos.append(input_left.find(s))
-                right_pos.append(input_right.find(s))
-
-            # Contract!
-            new_view = _npi.tensordot(*tmp_operands,
-                                      a_axes_summed=tuple(left_pos),
-                                      b_axes_summed=tuple(right_pos))
-
-            # Build a new view if needed
-            if (tensor_result != results_index) or handle_out:
-                cur_out = out if handle_out else None
-                new_view = _npi.einsum(new_view,
-                                       subscripts=tensor_result + '->' + results_index,
-                                       out=cur_out)
-
-        # Call einsum
-        else:
-            cur_out = out if handle_out else None
-            # Do the contraction
-            new_view = _npi.einsum(*tmp_operands, subscripts=einsum_str, out=cur_out)
-
-        # Append new items and dereference what we can
-        operands.append(new_view)
-        del tmp_operands, new_view
-
-    return operands[0]
+    subscripts = operands[0]
+    operands = operands[1:]
+    return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))
