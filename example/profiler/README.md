@@ -19,8 +19,7 @@
 
 This folder contains examples of using MXNet profiler to generate profiling results in json files.
 Please refer to [this link](http://mxnet.incubator.apache.org/faq/perf.html?highlight=profiler#profiler)
-for visualizing profiling results and make sure that you have installed a version of MXNet compiled
-with `USE_PROFILER=1`.
+for visualizing profiling results.
 
 - profiler_executor.py. To run this example,
     - clone mxnet-memonger (git clone https://github.com/dmlc/mxnet-memonger.git).
