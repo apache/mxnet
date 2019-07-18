@@ -108,7 +108,7 @@ class CustomOpProfiler {
    * forward() or backward() in the custom operator definition
    */
   inline std::string MakePythonCodeName(const std::string& op_type) {
-    std::cout << "python name " << op_type + "::pure_python" << std::endl;
+    std::cout << "python name  " << op_type + "::pure_python" << std::endl;
     return op_type + "::pure_python";
   }
   /*! \brief class mutex */
