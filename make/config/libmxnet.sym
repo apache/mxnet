@@ -13,3 +13,4 @@ Java_org_apache_mxnet*
 *on_enter_api*
 *on_exit_api*
 *MXAPISetLastError*
+*LibCheck*

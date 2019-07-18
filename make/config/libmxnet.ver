@@ -15,5 +15,6 @@
         *on_enter_api*;
         *on_exit_api*;
         *MXAPISetLastError*;
+        *LibCheck*;
     local: *;
 };
