@@ -42,7 +42,9 @@ There are several environment variables that change this behaviour.
 
 - `MXNET_ROOT`: If you already have a pre-installed version of mxnet
   you can use `MXNET_ROOT` to point the build-process in the right direction.
-- `MXNET_HOME`: This variable is replaced by `MXNET_ROOT`.
+  Note that you should set this variable as a absolute path.
+- `MXNET_HOME`: This variable is replaced by `MXNET_ROOT`. It has been renamed
+  as of v1.6.
 - `MXNET_LIBRARY_PATH`: The absolute path of the libmxnet share object.
 - `CUDA_HOME`: If the automatic CUDA detection fails you can also set `CUDA_HOME`
   to override the process.

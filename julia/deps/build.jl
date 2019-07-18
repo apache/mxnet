@@ -26,8 +26,15 @@ libmxnet_detected = false
 libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "master")
 curr_win = "20190608"  # v1.5.0
 
-MXNET_ROOT = get(ENV, "MXNET_ROOT", "")
+# TODO: remove MXNET_HOME backward compatibility in v1.7
+if haskey(ENV, "MXNET_HOME")
+  @warn "The environment variable `MXNET_HOME` has been renamed, please use `MXNET_ROOT` instead."
+end
+
+# TODO: remove MXNET_HOME backward compatibility in v1.7
+MXNET_ROOT = get(ENV, "MXNET_ROOT", get(ENV, "MXNET_HOME", ""))
 search_locations = if !isempty(MXNET_ROOT)
+  !isabspath(MXNET_ROOT) && error("MXNET_ROOT should be a absolute path")
   @info "env var: MXNET_ROOT -> $MXNET_ROOT"
   [joinpath(MXNET_ROOT, "lib"), MXNET_ROOT]
 else
@@ -40,6 +47,7 @@ println(typeof(MXNET_LIBRARY_PATH))
 # the output is still named as `libmxnet.so`.
 search_names = ["libmxnet.$(Libdl.dlext)", "libmxnet.so"]
 if !isempty(MXNET_LIBRARY_PATH)
+  !isabspath(MXNET_LIBRARY_PATH) && error("MXNET_LIBRARY_PATH should be a absolute path")
   @info "env var: MXNET_LIBRARY_PATH -> $MXNET_LIBRARY_PATH"
   pushfirst!(search_names, MXNET_LIBRARY_PATH)
 end
