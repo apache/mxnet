@@ -196,7 +196,7 @@ You can also dump the information collected by the profiler into a `json` file u
 profiler.dump(finished=False)
 ```
 
-`dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above. Note that setting the `finished` parameter to `False` will prevent the profiler from finishing dumpint to file. If you just use `profiler.dump()`, you will no longer be able to profile the remaining sections of your model. 
+`dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above. Note that setting the `finished` parameter to `False` will prevent the profiler from finishing dumping to file. If you just use `profiler.dump()`, you will no longer be able to profile the remaining sections of your model. 
 
 ![Tracing Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_chrome.png)
 
