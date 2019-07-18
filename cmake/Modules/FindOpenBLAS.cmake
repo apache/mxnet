@@ -15,6 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+if(TARGET CONAN_PKG::openblas)
+  set(OpenBLAS_FOUND ON)
+  set(OpenBLAS_LIB CONAN_PKG::openblas)
+  set(OpenBLAS_INCLUDE_DIR ${CONAN_INCLUDE_DIRS_OPENBLAS})
+  return()
+endif()
+
 file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
 file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
 
