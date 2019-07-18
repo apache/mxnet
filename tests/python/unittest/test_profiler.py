@@ -426,6 +426,7 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
         d.bind(mx.cpu(), {'a': inp}).forward()
     mx.nd.waitall()
     profiler.dump(False)
+    print(profiler.dumps())
     debug_str = profiler.dumps(format = 'json')
     check_custom_operator_profiling_multiple_custom_ops_output(debug_str)
     profiler.set_state('stop')
