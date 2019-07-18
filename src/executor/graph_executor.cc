@@ -34,6 +34,7 @@
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "../operator/subgraph/subgraph_property.h"
+#include "../operator/operator_common.h"
 
 namespace mxnet {
 namespace exec {
@@ -43,6 +44,7 @@ using namespace mxnet::common;
 GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
   need_grad_ = false;
+  is_dynamic_ = false;
   subgraph_property_ = dmlc::GetEnv("MXNET_SUBGRAPH_BACKEND", std::string());
   engine_ref_ = Engine::_GetSharedRef();
 }
@@ -75,20 +77,77 @@ void GraphExecutor::PartialForward(bool is_train, int step, int *step_left) {
 }
 
 void GraphExecutor::Backward(const std::vector<NDArray>& head_grads, bool is_train) {
-  const auto& idx = graph_.indexed_graph();
-  if (num_forward_inputs_ != idx.input_nodes().size()) {
-    for (size_t i = 0; i < head_grad_array_.size(); ++i) {
-      if (!head_grad_array_[i].is_none()) {
-        CHECK(i < head_grads.size() && !head_grads[i].is_none())
-            << "Because the last operator is not Loss function, "
-            << "head_gradient is required when calling backward. "
-            << "If you are attempting to minimize the output as "
-            << "an objective, please modify your network and "
-            << "pass it through the make_loss symbol.";
-        CopyFromTo(head_grads[i], &(head_grad_array_[i]));
+  {
+    const auto& idx = graph_.indexed_graph();
+    if (num_forward_inputs_ != idx.input_nodes().size()) {
+      for (size_t i = 0; i < head_grad_array_.size(); ++i) {
+        if (!head_grad_array_[i].is_none()) {
+          CHECK(i < head_grads.size() && !head_grads[i].is_none())
+              << "Because the last operator is not Loss function, "
+              << "head_gradient is required when calling backward. "
+              << "If you are attempting to minimize the output as "
+              << "an objective, please modify your network and "
+              << "pass it through the make_loss symbol.";
+          const NDArray &from = head_grads[i];
+          NDArray &to = head_grad_array_[i];
+          if (this->is_dynamic_) {
+            to.WaitToRead();
+            if (!shape_is_known(to.shape())) {
+              to.Init(from.shape());
+            }
+          }
+          CopyFromTo(from, &to);
+        }
       }
     }
   }
+  if (this->is_dynamic_) {
+    graph_ = InferShape(std::move(graph_), {}, "");
+    mxnet::ShapeVector rshape = graph_.MoveCopyAttr<mxnet::ShapeVector>("shape");
+    const auto& idx = graph_.indexed_graph();
+    for (size_t nid = 0; nid < idx.num_nodes(); ++nid) {
+      const auto& inode = idx[nid];
+      if (inode.source->is_variable()) continue;
+      OpNode& opnode = op_nodes_[nid];
+      if (opnode.skip_exec_node) continue;
+      for (NDArray &array : opnode.exec->in_array) {
+        array.WaitToRead();
+        if (!shape_is_known(array.shape())) {
+          array.SetShapeFromChunk();
+        }
+      }
+      int i = 0;
+      for (NDArray &array : opnode.exec->in_array) {
+        array.WaitToRead();
+        if (!shape_is_known(array.shape())) {
+          array.SetShapeFromChunk();
+        }
+        if (!shape_is_known(array.shape())) {
+          mxnet::TShape shape = rshape[idx.entry_id(inode.inputs[i])];
+          if (shape_is_known(shape)) {
+            array.ReshapeAndAlloc(shape);
+          }
+        }
+        ++i;
+      }
+      i = 0;
+      for (NDArray &array : opnode.exec->out_array) {
+        array.WaitToRead();
+        if (!shape_is_known(array.shape())) {
+          array.SetShapeFromChunk();
+        }
+        if (!shape_is_known(array.shape())) {
+          mxnet::TShape shape = rshape[idx.entry_id(nid, i)];
+          if (shape_is_known(shape)) {
+            array.ReshapeAndAlloc(shape);
+          }
+        }
+        ++i;
+      }
+    }
+    graph_.attrs["shape"] = std::make_shared<dmlc::any>(rshape);
+  }
+  const auto& idx = graph_.indexed_graph();
   RunOps(is_train, num_forward_nodes_, idx.num_nodes());
 }
 
@@ -101,6 +160,16 @@ void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
   os << "Total " << 11 << " TempSpace resource requested\n";
 }
 
+/*!
+ * \brief Return the "optimized" symbol contained in the executor graph.
+ */
+nnvm::Symbol GraphExecutor::GetOptimizedSymbol() {
+  Symbol ret;
+  ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
+      graph_.outputs.begin() + num_forward_outputs_);
+  return ret.Copy();
+}
+
 void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback, bool monitor_all) {
   CHECK(callback) << "invalid callback";
   monitor_callback_ = callback;
@@ -108,6 +177,14 @@ void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback, bool mon
 }
 
 const std::vector<NDArray>& GraphExecutor::outputs() const {
+  if (this->is_dynamic_) {
+    for (const NDArray &array : output_arrays_) {
+      array.WaitToRead();
+      if (!shape_is_known(array.shape())) {
+        const_cast<NDArray &>(array).SetShapeFromChunk();
+      }
+    }
+  }
   return output_arrays_;
 }
 
@@ -146,11 +223,12 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
     ng->attrs.op = Op::Get("_zeros_without_dtype");
     ng->attrs.name = "zeros_without_dtype";
     ng->attrs.op->attr_parser(&(ng->attrs));
-    return nnvm::NodeEntry{ng, 0, 0};
+    return nnvm::NodeEntry(std::move(ng), 0, 0);
   }
 
   // remove zero in the sum. at least keep 1.
   auto begin = std::remove_if(v.begin(), v.end(), [](const nnvm::NodeEntry& nodeEntry) {
+     CHECK(nodeEntry.node);
      return nodeEntry.node->op() == zeros_op || nodeEntry.node->op() == zeros_like_op;
   });
   if (begin == v.begin()) ++begin;
@@ -167,7 +245,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
       sum_node->attrs.dict["num_args"] = std::to_string(v.size());
       sum_node->attrs.op->attr_parser(&(sum_node->attrs));
       sum_node->inputs = std::move(v);
-      return nnvm::NodeEntry{sum_node, 0, 0};
+      return nnvm::NodeEntry(std::move(sum_node), 0, 0);
     } else {
       // use a stream line of plus instead
       nnvm::NodeEntry ret = v[0];
@@ -197,7 +275,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
         x->attrs.op = ewise_plus_op;
         x->attrs.name = os.str();
         x->inputs = {ret, v[i]};
-        ret = nnvm::NodeEntry{x, 0, 0};
+        ret = nnvm::NodeEntry(std::move(x), 0, 0);
       }
       // identity node is used to avoid exposure of dummy plus node
       // when its output get assigned to another space.
@@ -246,7 +324,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   }
   if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
-    NodeEntry ngrad{nnvm::Node::Create(), 0, 0};
+    NodeEntry ngrad(nnvm::Node::Create(), 0, 0);
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
     head_grad_map_[ngrad.node.get()] = i;
   }
@@ -254,7 +332,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   std::vector<NodeEntry> xs;
   for (size_t i = 0; i < grad_req_types.size(); ++i) {
     if (grad_req_types[i] != kNullOp) {
-      xs.emplace_back(NodeEntry{args[i], 0, 0});
+      xs.emplace_back(args[i]);
     }
   }
 
@@ -370,8 +448,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   arg_shapes.resize(idx.input_nodes().size(), mxnet::TShape());
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
-    HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
-                          g.GetAttr<mxnet::ShapeVector>("shape"));
+    this->is_dynamic_ = true;
   }
 
   arg_dtypes.resize(idx.input_nodes().size(), -1);
@@ -810,8 +887,7 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
   }
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
-    HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
-                          g.GetAttr<mxnet::ShapeVector>("shape"));
+    this->is_dynamic_ = true;
   }
   const mxnet::ShapeVector& shape_vec = g.GetAttr<mxnet::ShapeVector>("shape");
   std::vector<OpReqType> grad_req_types;
@@ -947,8 +1023,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
       auto eid = idx.entry_id(nid, i);
       data_context[eid] = vctx[nid];
-      CHECK_NE(vstorage_type[nid], kUndefinedStorage);
-      data_storage_type[eid] = (NDArrayStorageType) vstorage_type[nid];
+      CHECK_NE(vstorage_type[eid], kUndefinedStorage);
+      data_storage_type[eid] = (NDArrayStorageType) vstorage_type[eid];
     }
   }
 
@@ -966,14 +1042,16 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     uint32_t oid = head_grad_map_.at(idx[nid].source);
     uint32_t eid = idx.entry_id(idx.outputs()[oid]);
     NDArrayStorageType stype = (NDArrayStorageType) vstorage_type[eid];
-    CHECK_NE(vshape[eid].ndim(), 0U);
+    bool unknown_shape = !shape_is_known(vshape[eid]);
     CHECK_NE(vdtype[eid], -1);
     auto data_eid = idx.entry_id(nid, 0);
     // initialize based on storage_type
     if (stype != kDefaultStorage) {
       data_entry_[data_eid] = NDArray(stype, vshape[eid], data_context[eid], true, vdtype[eid]);
-    } else {
+    } else if (!unknown_shape) {
       data_entry_[data_eid] = NDArray(vshape[eid], data_context[eid], false, vdtype[eid]);
+    } else {
+      data_entry_[data_eid] = NDArray(data_context[eid], vdtype[eid]);
     }
     if (log_verbose_) {
       LOG(INFO) << "\tinit head_grad entry\t" << data_eid << "\tas "
@@ -983,7 +1061,11 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   // get maximum bytes in each pool
   for (size_t i = 0; i < vshape.size(); ++i) {
     if (!data_entry_[i].is_none()) continue;
-    size_t bytes = vshape[i].Size() * mshadow::mshadow_sizeof(vdtype[i]);
+    size_t shape_size = 0;
+    if (shape_is_known(vshape[i])) {
+      shape_size = vshape[i].Size();
+    }
+    size_t bytes = shape_size * mshadow::mshadow_sizeof(vdtype[i]);
     int storage_id = vstorage[i];
     // skip pool allocation for kBadStorageID, kExternalStorageID and kDynamicStorageID
     if (storage_id < 0) continue;
@@ -1002,7 +1084,10 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   std::multimap<size_t, NDArray> free_pool;
   if (shared_pool != nullptr) {
     for (const NDArray& nd : *shared_pool) {
-      size_t bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
+      size_t bytes = 0;
+      if (shape_is_known(nd.shape())) {
+        bytes = nd.shape().Size() * mshadow::mshadow_sizeof(nd.dtype());
+      }
       free_pool.insert(std::make_pair(bytes, nd));
     }
   }
@@ -1056,9 +1141,13 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     int storage_id = vstorage[i];
     auto storage_type = (NDArrayStorageType) vstorage_type[i];
     if (storage_type == kDefaultStorage) {
-      CHECK_GE(storage_id, 0) << "Do not support runtime shape op yet";
-      const NDArray& src = data_pool_.at(storage_id);
-      data_entry_[i] = src.AsArray(vshape[i], vdtype[i]);
+      if (!shape_is_known(vshape[i])) {
+        data_entry_[i] = NDArray(data_context[i], vdtype[i]);
+      } else {
+        CHECK_GE(storage_id, 0) << "Do not support runtime shape op yet";
+        const NDArray& src = data_pool_.at(storage_id);
+        data_entry_[i] = src.AsArray(vshape[i], vdtype[i]);
+      }
     } else {
       data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i],
                                true, vdtype[i]);
@@ -1198,7 +1287,10 @@ void GraphExecutor::InitOpSegs() {
   const profiler::Profiler *prof = profiler::Profiler::Get();
   bool prefer_bulk_exec_train = Imperative::PreferBulkExecTrain()
                                 && (!prof || !prof->AggregateEnabled());
-
+  if (this->is_dynamic_) {
+    prefer_bulk_exec_inference = false;
+    prefer_bulk_exec_train = false;
+  }
   bool is_training = num_forward_nodes_ != total_num_nodes;
 
   if (prefer_bulk_exec_train && is_training) {
@@ -1289,6 +1381,8 @@ void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
 }
 
 void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
+  static auto& finfer_shape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
+  static auto& is_backward = Op::GetAttr<nnvm::TIsBackward>("TIsBackward");
   // Update context
   const auto& idx = graph_.indexed_graph();
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
@@ -1300,6 +1394,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     opnode.exec->op_ctx.need_grad = need_grad_;
   }
 
+  mxnet::ShapeVector rshape = graph_.MoveCopyAttr<mxnet::ShapeVector>("shape");
   // Push Ops
   for (size_t nid = topo_start; nid < topo_end; ++nid) {
     auto seg_op = cached_seg_opr_[nid];
@@ -1312,12 +1407,77 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     }
     // Normal mode
     const auto& inode = idx[nid];
+    const uint32_t num_inputs = inode.inputs.size();
+    const uint32_t num_outputs = inode.source->num_outputs();
     if (inode.source->is_variable()) continue;
     OpNode& opnode = op_nodes_[nid];
     if (op_nodes_[nid].skip_exec_node) continue;
     // Monitor callbacks
     if (monitor_callback_ && monitor_all_) {
       ExecuteMonInputCallback(nid);
+    }
+    if (this->is_dynamic_) {
+      const auto &op = inode.source->op();
+      {
+        for (NDArray &array : opnode.exec->in_array) {
+          array.WaitToRead();
+          if (!shape_is_known(array.shape())) {
+            array.SetShapeFromChunk();
+          }
+        }
+        int i = 0;
+        for (NDArray &array : opnode.exec->out_array) {
+          array.WaitToRead();
+          if (!shape_is_known(array.shape())) {
+            array.SetShapeFromChunk();
+          }
+          if (!shape_is_known(array.shape())) {
+            mxnet::TShape shape = rshape[idx.entry_id(nid, i)];
+            if (shape_is_known(shape)) {
+              array.ReshapeAndAlloc(shape);
+            }
+          }
+          ++i;
+        }
+      }
+      if (finfer_shape.count(op)) {
+        mxnet::ShapeVector in_shapes;
+        mxnet::ShapeVector out_shapes;
+        for (NDArray &array : opnode.exec->in_array) {
+          in_shapes.push_back(array.shape());
+        }
+        for (NDArray &array : opnode.exec->out_array) {
+          out_shapes.push_back(array.shape());
+        }
+        auto finfer = finfer_shape[op];
+        try {
+          bool success = finfer(inode.source->attrs, &in_shapes, &out_shapes);
+          CHECK(success) << "InferShape failed in operator " << inode.source->attrs.name;
+        } catch (const std::exception& e) {
+          throw dmlc::Error("Error in operator " + inode.source->attrs.name + ": " + e.what());
+        }
+        int n_out = out_shapes.size();
+        for (int i = 0; i < n_out; ++i) {
+          NDArray &array = opnode.exec->out_array[i];
+          if (!shape_is_known(array.shape())) {
+            array.Init(out_shapes[i]);
+          }
+        }
+      } else if (is_backward.get(inode.source->op(), false) && inode.control_deps.size()) {
+        CHECK_GE(inode.control_deps.size(), 1U) <<
+          "BackwardOp need to have control_deps to its forward op";
+        uint32_t fid = inode.control_deps[0];
+        const OpNode& fopnode = op_nodes_[fid];
+        CHECK_EQ(fopnode.exec->in_array.size(), opnode.exec->out_array.size());
+        int nelem = fopnode.exec->in_array.size();
+        std::vector<NDArray> &from = fopnode.exec->in_array;
+        std::vector<NDArray> &to = opnode.exec->out_array;
+        for (int i = 0; i < nelem; ++i) {
+          if (!shape_is_known(to[i].shape())) {
+            to[i].Init(from[i].shape());
+          }
+        }
+      }
     }
     opnode.exec->op_ctx.is_train = is_train;
     opnode.exec->op_ctx.need_grad = need_grad_;
@@ -1332,14 +1492,35 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     } else if (opnode.cached_opr != nullptr) {
       bool profiling = profiler::Profiler::Get()->GetState() == profiler::Profiler::kRunning;
       Engine::Get()->Push(opnode.cached_opr, opnode.ctx, 0, profiling);
+      if (this->is_dynamic_) {
+        for (NDArray &array : opnode.exec->out_array) {
+          array.WaitToRead();
+          if (!shape_is_known(array.shape())) {
+            array.SetShapeFromChunk();
+          }
+        }
+      }
     } else {
       LOG(FATAL) << "Not accessed";
+    }
+    for (uint32_t i = 0; i < num_inputs; ++i) {
+      int eid = idx.entry_id(inode.inputs[i]);
+      if (!shape_is_known(rshape[eid])) {
+        rshape[eid] = opnode.exec->in_array[i].shape();
+      }
+    }
+    for (uint32_t i = 0; i < num_outputs; ++i) {
+      int eid = idx.entry_id(nid, i);
+      if (!shape_is_known(rshape[eid])) {
+        rshape[eid] = opnode.exec->out_array[i].shape();
+      }
     }
     // Monitor callbacks
     if (monitor_callback_) {
       ExecuteMonOutputCallback(nid);
     }
   }
+  graph_.attrs["shape"] = std::make_shared<dmlc::any>(rshape);
 }
 
 GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start, size_t topo_end) {

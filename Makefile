@@ -94,7 +94,7 @@ endif
 
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -O0
+	CFLAGS += -g -O0 -D_GLIBCXX_ASSERTIONS
 else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
@@ -104,6 +104,11 @@ LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
         LDFLAGS += --coverage
+endif
+
+ifeq ($(USE_NVTX), 1)
+        CFLAGS += -DMXNET_USE_NVTX=1
+        LDFLAGS += -lnvToolsExt
 endif
 
 ifeq ($(USE_TENSORRT), 1)
@@ -143,7 +148,6 @@ ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -I$(MKLDNNROOT)/include
 	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
-
 
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
@@ -189,6 +193,11 @@ ifeq ($(USE_OPERATOR_TUNING), 1)
 	CFLAGS += -DMXNET_USE_OPERATOR_TUNING=1
 endif
 
+ifeq ($(USE_INT64_TENSOR_SIZE), 1)
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=1
+else
+   CFLAGS += -DMSHADOW_INT64_TENSOR_SIZE=0
+endif
 # verify existence of separate lapack library when using blas/openblas/atlas
 # switch off lapack support in case it can't be found
 # issue covered with this
@@ -359,10 +368,32 @@ endif
 
 # Guard against displaying nvcc info messages to users not using CUDA.
 ifeq ($(USE_CUDA), 1)
+	# Get AR version, compare with expected ar version and find bigger and smaller version of the two
+	AR_VERSION := $(shell ar --version | egrep -o "([0-9]{1,}\.)+[0-9]{1,}")
+	EXPECTED_AR_VERSION := $(shell echo "2.27")
+	LARGE_VERSION := $(shell printf '%s\n' "$(AR_VERSION)" "$(EXPECTED_AR_VERSION)" | sort -V | tail -n 1)
+	SMALL_VERSION := $(shell printf '%s\n' "$(AR_VERSION)" "$(EXPECTED_AR_VERSION)" | sort -V | head -n 1)
+
 	# If NVCC is not at the location specified, use CUDA_PATH instead.
 	ifeq ("$(wildcard $(NVCC))","")
 		ifneq ($(USE_CUDA_PATH), NONE)
 			NVCC=$(USE_CUDA_PATH)/bin/nvcc
+
+# if larger version is the expected one and larger != smaller
+# this means ar version is less than expected version and user needs to be warned
+ifeq ($(LARGE_VERSION), $(EXPECTED_AR_VERSION))
+ifneq ($(LARGE_VERSION), $(SMALL_VERSION))
+define n
+
+
+endef
+
+$(warning WARNING: Archive utility: ar version being used is less than 2.27.0. $n \
+		   Note that with USE_CUDA=1 flag and USE_CUDNN=1 this is known to cause problems. $n \
+		   For more info see: https://github.com/apache/incubator-mxnet/issues/15084)
+$(shell sleep 5)
+endif
+endif
 $(info INFO: nvcc was not found on your path)
 $(info INFO: Using $(NVCC) as nvcc path)
 		else
@@ -409,14 +440,6 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	CFLAGS += -DMXNET_USE_DIST_KVSTORE -I$(PS_PATH)/include -I$(DEPS_PATH)/include
 	LIB_DEP += $(PS_PATH)/build/libps.a
 	LDFLAGS += $(PS_LDFLAGS_A)
-endif
-
-#sparse-matrix
-ifeq ($(USE_BLAS), mkl)
-	SPARSE_MATRIX_DIR =  $(ROOTDIR)/3rdparty/sparse-matrix
-	LIB_DEP += $(SPARSE_MATRIX_DIR)/libsparse_matrix.so
-	CFLAGS += -I$(SPARSE_MATRIX_DIR)
-	LDFLAGS += -L$(SPARSE_MATRIX_DIR) -lsparse_matrix -Wl,-rpath,'$${ORIGIN}'
 endif
 
 .PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
@@ -556,29 +579,10 @@ ifeq ($(UNAME_S), Darwin)
 endif
 endif
 
-ifeq ($(USE_BLAS), mkl)
-ifeq ($(UNAME_S), Darwin)
-	install_name_tool -change '@rpath/libsparse_matrix.dylib' '@loader_path/libsparse_matrix.dylib' $@
-endif
-endif
-
 $(PS_PATH)/build/libps.a: PSLITE
 
 PSLITE:
 	$(MAKE) CXX="$(CXX)" DEPS_PATH="$(DEPS_PATH)" -C $(PS_PATH) ps
-
-ifeq ($(USE_BLAS), mkl)
-$(SPARSE_MATRIX_DIR)/libsparse_matrix.so: SPARSE_MATRIX
-
-SPARSE_MATRIX:
-ifeq ($(USE_INTEL_PATH), NONE)
-	$(MAKE) -C $(SPARSE_MATRIX_DIR)
-else
-	$(MAKE) -C $(SPARSE_MATRIX_DIR) USE_INTEL_PATH=$(USE_INTEL_PATH)
-endif
-	mkdir -p $(ROOTDIR)/lib
-	cp $(SPARSE_MATRIX_DIR)/libsparse_matrix.so $(ROOTDIR)/lib/
-endif
 
 $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
@@ -612,10 +616,10 @@ lint: cpplint rcpplint jnilint pylint
 
 cpplint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
-	--exclude_path src/operator/contrib/ctc_include
+	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
-	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
 
 doc: docs
 
@@ -630,7 +634,7 @@ doxygen:
 
 # Cython build
 cython:
-	cd python; python setup.py build_ext --inplace --with-cython
+	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
 
 cython2:
 	cd python; python2 setup.py build_ext --inplace --with-cython
@@ -654,10 +658,6 @@ rpkg:
 		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
 		cp -rf lib/libiomp5.so R-package/inst/libs; \
 		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
-	fi
-
-	if [ -e "lib/libsparse_matrix.so" ]; then \
-		cp -rf lib/libsparse_matrix.so R-package/inst/libs; \
 	fi
 
 	mkdir -p R-package/inst/include
@@ -699,13 +699,32 @@ rclean:
 	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 
+build/rat/apache-rat/target/apache-rat-0.13.jar:
+	mkdir -p build
+	svn co http://svn.apache.org/repos/asf/creadur/rat/tags/apache-rat-project-0.13/ build/rat; \
+	cd build/rat; \
+	mvn -Dmaven.test.skip=true install;
+
+ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
+	exec 5>&1; \
+	RAT_JAR=build/rat/apache-rat/target/apache-rat-0.13.jar; \
+	OUTPUT=$(java -jar $(RAT_JAR) -E tests/nightly/apache_rat_license_check/rat-excludes -d .|tee >(cat - >&5)); \
+    ERROR_MESSAGE="Printing headers for text files without a valid license header"; \
+    echo "-------Process The Output-------"; \
+    if [[ $OUTPUT =~ $ERROR_MESSAGE ]]; then \
+        echo "ERROR: RAT Check detected files with unknown licenses. Please fix and run test again!"; \
+        exit 1; \
+    else \
+        echo "SUCCESS: There are no files with an Unknown License."; \
+    fi
+
+
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
-	cd $(SPARSE_MATRIX_DIR); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
@@ -716,7 +735,6 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
-	cd $(SPARSE_MATRIX_DIR); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif

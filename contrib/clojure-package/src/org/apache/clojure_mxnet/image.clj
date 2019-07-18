@@ -17,6 +17,7 @@
 
 (ns org.apache.clojure-mxnet.image
   "Image API of Clojure package."
+  (:refer-clojure :exclude [read])
   (:require [t6.from-scala.core :refer [$ $$] :as $]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
@@ -38,8 +39,10 @@
 (s/def ::decode-image-opts
   (s/keys :opt-un [::color-flag ::to-rgb ::output]))
 
-(defn decode-image
-  "Decodes an image from an input stream with OpenCV
+(defn ^:deprecated decode-image
+  "DEPRECATED: use `decode` instead.
+
+   Decodes an image from an input stream with OpenCV
     `input-stream`: `InputStream` - Contains the binary encoded image
     `color-flag`: 0 or 1 - Convert decoded image to grayscale (0) or color (1)
     `to-rgb`: boolean - Whether to convert decoded image to mxnet's default RGB
@@ -60,14 +63,47 @@
   ([input-stream]
    (decode-image input-stream {})))
 
+(s/def ::color #{:grayscale :color})
+(s/def ::decode-image-opts-2 (s/keys :opt-un [::color ::to-rgb ::output]))
+
+(defn- color->int [color]
+  (case color
+    :grayscale 0
+    :color 1))
+
+(defn decode
+  "Decodes an image from an input stream with OpenCV.
+    `input-stream`: `InputStream` - Contains the binary encoded image
+    `color`: keyword in `#{:color :grayscale}` - Convert decoded image to
+             grayscale or color
+    `to-rgb`: boolean - Whether to convert decoded image to mxnet's default RGB
+            format (instead of opencv's default BGR)
+    `output`: nil or `NDArray`
+    returns: `NDArray` with dtype uint8
+
+  Ex:
+    (decode input-stream)
+    (decode input-stream {:color :color})
+    (decode input-stream {:color :grayscale :output nd})"
+  ([input-stream {:keys [color to-rgb output]
+                  :or {color :color to-rgb true output nil}
+                  :as opts}]
+   (util/validate! ::input-stream input-stream "Invalid input stream")
+   (util/validate! ::decode-image-opts-2 opts "Invalid options for decoding")
+   (Image/imDecode input-stream (color->int color) to-rgb ($/option output)))
+  ([input-stream]
+   (decode input-stream {})))
+
 (s/def ::filename string?)
 (s/def ::optional-color-flag
   (s/or :none nil? :some ::color-flag))
 (s/def ::optional-to-rgb
   (s/or :none nil? :some ::to-rgb))
 
-(defn read-image
-  "Reads an image file and returns an ndarray with OpenCV. It returns image in
+(defn ^:deprecated read-image
+  "DEPRECATED: use `read` instead.
+
+   Reads an image file and returns an ndarray with OpenCV. It returns image in
    RGB by default instead of OpenCV's default BGR.
     `filename`: string - Name of the image file to be loaded
     `color-flag`: 0 or 1 - Convert decoded image to grayscale (0) or color (1)
@@ -95,11 +131,43 @@
   ([filename]
    (read-image filename {})))
 
+(defn read
+  "Reads an image file and returns an ndarray with OpenCV. It returns image in
+   RGB by default instead of OpenCV's default BGR.
+    `filename`: string - Name of the image file to be loaded
+    `color`: keyword in `#{:color :grayscale}` - Convert decoded image to
+             grayscale or color
+    `to-rgb`: boolean - Whether to convert decoded image to mxnet's default RGB
+            format (instead of opencv's default BGR)
+    `output`: nil or `NDArray`
+    returns: `NDArray` with dtype uint8
+
+   Ex:
+     (read \"cat.jpg\")
+     (read \"cat.jpg\" {:color :grayscale})
+     (read \"cat.jpg\" {:color :color :output nd})"
+  ([filename {:keys [color to-rgb output]
+              :or {color :color to-rgb nil output nil}
+              :as opts}]
+   (util/validate! ::filename filename "Invalid filename")
+   (util/validate! ::color color "Invalid color")
+   (util/validate! ::optional-to-rgb to-rgb "Invalid conversion flag")
+   (util/validate! ::output output "Invalid output")
+   (Image/imRead
+    filename
+    ($/option (when color (color->int color)))
+    ($/option to-rgb)
+    ($/option output)))
+  ([filename]
+   (read filename {})))
+
 (s/def ::int int?)
 (s/def ::optional-int (s/or :none nil? :some int?))
 
-(defn resize-image
-  "Resizes the image array to (width, height)
+(defn ^:deprecated resize-image
+  "DEPRECATED: use `resize` instead.
+
+   Resizes the image array to (width, height)
    `input`: `NDArray` - source image in NDArray
    `w`: int - Width of resized image
    `h`: int - Height of resized image
@@ -121,6 +189,30 @@
    (Image/imResize input w h ($/option interpolation) ($/option output)))
   ([input w h]
    (resize-image input w h {})))
+
+(defn resize
+  "Resizes the image array to (width, height)
+   `input`: `NDArray` - source image in NDArray
+   `w`: int - Width of resized image
+   `h`: int - Height of resized image
+   `interpolation`: Interpolation method. Default is INTER_LINEAR
+   `ouput`: nil or `NDArray`
+   returns: `NDArray`
+
+   Ex:
+     (resize nd-img 300 300)
+     (resize nd-img 28 28 {:output nd})"
+  ([input w h {:keys [interpolation output]
+               :or {interpolation nil output nil}
+               :as opts}]
+   (util/validate! ::ndarray input "Invalid input array")
+   (util/validate! ::int w "Invalid width")
+   (util/validate! ::int h "Invalid height")
+   (util/validate! ::optional-int interpolation "Invalid interpolation")
+   (util/validate! ::output output "Invalid output")
+   (Image/imResize input w h ($/option interpolation) ($/option output)))
+  ([input w h]
+   (resize input w h {})))
 
 (defn apply-border
   "Pad image border with OpenCV.
@@ -193,7 +285,17 @@
 (s/def ::to-image-ndarray
   (s/and ::ndarray ::all-bytes ::rgb-array))
 
-(defn to-image
+(defn ^:deprecated to-image
+  "DEPRECATED: user `ndarray->image` instead.
+
+   Convert a NDArray image in RGB format to a real image.
+   `input`: `NDArray` - Source image in NDArray
+   returns: `BufferedImage`"
+  [input]
+  (util/validate! ::to-image-ndarray input "Invalid input array")
+  (Image/toImage input))
+
+(defn ndarray->image
   "Convert a NDArray image in RGB format to a real image.
    `input`: `NDArray` - Source image in NDArray
    returns: `BufferedImage`"

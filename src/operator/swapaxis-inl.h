@@ -69,11 +69,11 @@ class SwapAxisOp : public Operator {
 
   void Reshape2Five(mshadow::Shape<5> *inter_shape,
                     const mxnet::TShape &shape,
-                    uint32_t dim1, uint32_t dim2) {
+                    int dim1, int dim2) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    index_t ndim_in = shape.ndim();
-    index_t si;
+    int ndim_in = shape.ndim();
+    int si;
 
     if (dim1 > dim2) {
       std::swap(dim1, dim2);
@@ -106,8 +106,8 @@ class SwapAxisOp : public Operator {
                 const std::vector<OpReqType> &req) {
     using namespace mshadow;
     using namespace mshadow::expr;
-    uint32_t dim1 = param_.dim1;
-    uint32_t dim2 = param_.dim2;
+    int dim1 = param_.dim1;
+    int dim2 = param_.dim2;
 
     TBlob data_in = in_data[swapaxisenum::kData];
     TBlob data_out = out_data[swapaxisenum::kData];

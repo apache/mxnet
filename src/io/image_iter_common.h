@@ -346,8 +346,13 @@ struct ImageDetNormalizeParam :  public dmlc::Parameter<ImageDetNormalizeParam> 
 
 // Define prefetcher parameters
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
+  enum CtxType { kGPU = 0, kCPU};
   /*! \brief number of prefetched batches */
   size_t prefetch_buffer;
+
+  /*! \brief Context data loader optimized for */
+  int ctx;
+
   /*! \brief data type */
   dmlc::optional<int> dtype;
 
@@ -355,6 +360,10 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
     DMLC_DECLARE_FIELD(prefetch_buffer).set_default(4)
         .describe("Maximum number of batches to prefetch.");
+    DMLC_DECLARE_FIELD(ctx).set_default(kGPU)
+        .add_enum("cpu", kCPU)
+        .add_enum("gpu", kGPU)
+        .describe("Context data loader optimized for.");
     DMLC_DECLARE_FIELD(dtype)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
@@ -362,6 +371,7 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
       .add_enum("int64", mshadow::kInt64)
       .add_enum("int32", mshadow::kInt32)
       .add_enum("uint8", mshadow::kUint8)
+      .add_enum("int8", mshadow::kInt8)
       .set_default(dmlc::optional<int>())
       .describe("Output data type. ``None`` means no change.");
   }

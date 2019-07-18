@@ -57,7 +57,7 @@ inline bool RegressionOpShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(in_attrs->size(), 2U) << "Input:[data, label]";
   const mxnet::TShape &dshape = in_attrs->at(0);
-  if (dshape.ndim() == 0) return false;
+  if (!shape_is_known(dshape)) return false;
   auto &lshape = (*in_attrs)[1];
   if (lshape.ndim() == 0) {
     // special treatment for 1D output, to allow 1D label by default.
@@ -272,7 +272,7 @@ struct RegressionOpGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(n->inputs[reg_enum::kLabel]);
-    heads.emplace_back(nnvm::NodeEntry{n, reg_enum::kOut, 0});
+    heads.emplace_back(n, reg_enum::kOut, 0);
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };

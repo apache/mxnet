@@ -410,18 +410,39 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
   const double temperature = param.temperature.has_value() ?
     param.temperature.value() : 1.0;
   mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for softmax with float16 inputs. "
+                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "for more details.");
+  }
+
   MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, DType, AType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      if (shape.ndim() == 2) {
-        Softmax<OP, negate, AType>(
-            ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
-            outputs[0].dptr<OType>(), shape.get<2>(), axis,
-            static_cast<DType>(temperature));
+      if (safe_acc) {
+        if (shape.ndim() == 2) {
+          Softmax<OP, negate, AType>(
+              ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
+              outputs[0].dptr<OType>(), shape.get<2>(), axis,
+              static_cast<DType>(temperature));
+        } else {
+          Softmax<OP, negate, AType>(
+              ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
+              outputs[0].dptr<OType>(), shape.get<3>(), axis,
+              static_cast<DType>(temperature));
+        }
       } else {
-        Softmax<OP, negate, AType>(
-            ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
-            outputs[0].dptr<OType>(), shape.get<3>(), axis,
-            static_cast<DType>(temperature));
+        if (shape.ndim() == 2) {
+          Softmax<OP, negate, DType>(
+              ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
+              outputs[0].dptr<OType>(), shape.get<2>(), axis,
+              static_cast<DType>(temperature));
+        } else {
+          Softmax<OP, negate, DType>(
+              ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
+              outputs[0].dptr<OType>(), shape.get<3>(), axis,
+              static_cast<DType>(temperature));
+        }
       }
     });
   });
@@ -443,20 +464,35 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
   mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
 
   int out_idx = softmax_has_dtype_override(attrs) ? 2 : 1;
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
 
   MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, OType, AType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        if (shape.ndim() == 2) {
-          SoftmaxGrad<OP1, OP2, Req, negate, AType>(
-              ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
-              inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
-              shape.get<2>(), axis, static_cast<DType>(temperature));
+        if (safe_acc) {
+          if (shape.ndim() == 2) {
+            SoftmaxGrad<OP1, OP2, Req, negate, AType>(
+                ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
+                inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
+                shape.get<2>(), axis, static_cast<DType>(temperature));
+          } else {
+            SoftmaxGrad<OP1, OP2, Req, negate, AType>(
+                ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
+                inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
+                shape.get<3>(), axis, static_cast<DType>(temperature));
+          }
         } else {
-          SoftmaxGrad<OP1, OP2, Req, negate, AType>(
-              ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
-              inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
-              shape.get<3>(), axis, static_cast<DType>(temperature));
+          if (shape.ndim() == 2) {
+            SoftmaxGrad<OP1, OP2, Req, negate, DType>(
+                ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
+                inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
+                shape.get<2>(), axis, static_cast<DType>(temperature));
+          } else {
+            SoftmaxGrad<OP1, OP2, Req, negate, DType>(
+                ctx.get_stream<xpu>(), inputs[out_idx].dptr<OType>(),
+                inputs[0].dptr<OType>(), outputs[0].dptr<DType>(),
+                shape.get<3>(), axis, static_cast<DType>(temperature));
+          }
         }
       });
     });

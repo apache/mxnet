@@ -26,9 +26,30 @@
 
 #include "./dropout-inl.h"
 #include "../operator_common.h"
+#include "mxnet/op_attr_types.h"
+
+
 
 namespace mxnet {
 namespace op {
+
+OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
+                                     const Context ctx,
+                                     const mxnet::ShapeVector &in_shapes,
+                                     const std::vector<int> &in_types) {
+  const auto& param = nnvm::get<DropoutParam>(attrs.parsed);
+  OpStatePtr state;
+  MSHADOW_REAL_TYPE_SWITCH(in_types[dropout::kData], DType, {
+    if (ctx.dev_type == kGPU) {
+      state = OpStatePtr::Create<DropoutOp<mxnet::gpu, DType>>(param, ctx);
+    } else {
+      state = OpStatePtr::Create<DropoutOp<mxnet::cpu, DType>>(param, ctx);
+    }
+    return state;
+  });
+  LOG(FATAL) << "should never reach here";
+  return OpStatePtr();  // should never reach here
+}
 
 struct DropoutGrad {
   const char *op_name;
@@ -36,7 +57,7 @@ struct DropoutGrad {
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(ograds[0]);
-    heads.emplace_back(nnvm::NodeEntry{n, dropout::kMask, 0});
+    heads.emplace_back(n, dropout::kMask, 0);
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
@@ -95,10 +116,10 @@ Example::
   CHECK_EQ(in_shape->size(), 1U);
   const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
   mxnet::TShape dshape(in_shape->at(0));
-  if (dshape.ndim() == 0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
-  for (index_t i = 0; i < param.axes.ndim(); ++i) {
+  for (int i = 0; i < param.axes.ndim(); ++i) {
     dshape[param.axes[i]] = 1;
   }
   out_shape->push_back(dshape);

@@ -109,7 +109,7 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
                            cmp_type,
                            CUBLAS_GEMM_DFALT));
 
-  Kernel<QuantizationRangeForMultiplicationStruct, gpu>::Launch(s, 1,
+  Kernel<QuantizationRangeForS8S8MultiplicationStruct, gpu>::Launch(s, 1,
     outputs[1].dptr<float>(), outputs[2].dptr<float>(),
      inputs[num_inputs].dptr<float>(),   inputs[num_inputs+1].dptr<float>(),
      inputs[num_inputs+2].dptr<float>(), inputs[num_inputs+3].dptr<float>());

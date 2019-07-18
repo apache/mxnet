@@ -22,4 +22,4 @@ set -ex
 # Retrieve ppa:graphics-drivers and install nvidia-drivers.
 # Note: DEBIAN_FRONTEND required to skip the interactive setup steps
 apt update
-DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-9-1
+DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-10-0

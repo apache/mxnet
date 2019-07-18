@@ -157,7 +157,7 @@ def construct_net():
     return net
 
 # construct and initialize network.
-ctx =  mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
+ctx =  mx.gpu() if mx.context.num_gpus() else mx.cpu()
 
 net = construct_net()
 net.hybridize()

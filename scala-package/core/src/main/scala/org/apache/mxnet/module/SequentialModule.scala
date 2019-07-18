@@ -112,6 +112,16 @@ class SequentialModule extends BaseModule {
   }
 
   /**
+    * Get output shapes.
+    * @return The output shapes of the last
+    * module is the output shape of a SequentialModule.
+    */
+  def outputDesc: IndexedSeq[DataDesc] = {
+    require(this.binded, "bind() must be called first.")
+    this.modules.reverse.head.dataShapes
+  }
+
+  /**
    * Get output shapes.
    * @return The output shapes of the last
    * module is the output shape of a SequentialModule.
@@ -306,12 +316,8 @@ class SequentialModule extends BaseModule {
         val dataNames = module.outputShapes.map(_._1)
         require(dataNames.length == data.data.length,
           s"dataNames $dataNames do not match with number of arrays in batch")
-        var provideData = ListMap[String, Shape]()
-        for ((name, x) <- dataNames.zip(out.head)) {
-          provideData += name -> x.shape
-        }
         data = new DataBatch(out.head, data.label, data.index,
-            data.pad, data.bucketKey, provideData, data.provideLabel)
+            data.pad, data.bucketKey, outputDesc, data.provideLabelDesc)
       }
     }
   }

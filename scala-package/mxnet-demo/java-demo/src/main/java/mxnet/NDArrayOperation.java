@@ -38,7 +38,7 @@ public class NDArrayOperation {
         System.out.println(eleAdd);
 
         // norm (L2 Norm)
-        NDArray normed = NDArray.norm(NDArray.new normParam(nd))[0];
+        NDArray normed = NDArray.norm(new normParam(nd))[0];
         System.out.println(normed);
     }
 }

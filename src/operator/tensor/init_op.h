@@ -28,6 +28,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator_util.h>
 #include <mxnet/op_attr_types.h>
+#include <mxnet/imperative.h>
 #include <dmlc/parameter.h>
 #include <dmlc/optional.h>
 #include <vector>
@@ -49,7 +50,7 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   int dtype;
   DMLC_DECLARE_PARAMETER(InitOpParam) {
     DMLC_DECLARE_FIELD(shape)
-    .set_default(mxnet::TShape())
+    .set_default(mxnet::TShape(0, 1))
     .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -173,6 +174,40 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
   }
 };
 
+struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {
+  double start;
+  double step;
+  int repeat;
+  std::string ctx;
+  int dtype;
+  dmlc::optional<int> axis;
+
+  DMLC_DECLARE_PARAMETER(RangeLikeParam) {
+    DMLC_DECLARE_FIELD(start)
+    .set_default(0)
+    .describe("Start of interval. The interval includes this value. The default start value is 0.");
+    DMLC_DECLARE_FIELD(step)
+    .set_default(1)
+    .describe("Spacing between values.");
+    DMLC_DECLARE_FIELD(repeat)
+    .set_default(1)
+    .describe("The repeating time of all elements."
+              " E.g repeat=3, the element a will be repeated three times --> a, a, a.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    MXNET_ADD_ALL_TYPES
+    .describe("Target data type.");
+    DMLC_DECLARE_FIELD(axis)
+    .set_default(dmlc::optional<int>())
+    .describe("Arange elements according to the size of a certain axis of input array."
+              " The negative numbers are interpreted counting from the backward."
+              " If not provided, will arange elements according to the input shape.");
+  }
+};
+
 /*! \brief Initialize and fill output with an arbitrary value */
 struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
   mxnet::TShape shape;
@@ -206,6 +241,33 @@ inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
   attrs->parsed = std::move(param);
 }
 
+struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
+  double start;
+  double stop;
+  int num;
+  bool endpoint;
+  std::string ctx;
+  int dtype;
+  DMLC_DECLARE_PARAMETER(LinspaceParam) {
+    DMLC_DECLARE_FIELD(start)
+    .describe("The starting value of the sequence.");
+    DMLC_DECLARE_FIELD(stop)
+    .describe("The ending value of the sequence");
+    DMLC_DECLARE_FIELD(num)
+    .describe("Number of samples to generate. Must be non-negative.");
+    DMLC_DECLARE_FIELD(endpoint)
+    .set_default(true)
+    .describe("If True, stop is the last sample. Otherwise, it is not included.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    MXNET_ADD_ALL_TYPES
+    .describe("Target data type.");
+  }
+};
+
 template<typename ParamType>
 inline bool InitShape(const nnvm::NodeAttrs& attrs,
                       mxnet::ShapeVector *in_attrs,
@@ -213,22 +275,21 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if ((*out_attrs)[0].ndim() != 0 && param.shape.ndim() == 0) return true;
-  for (unsigned int i=0 ; i < param.shape.ndim() ; ++i) {
-    if (param.shape[i] < 0U) {
-      LOG(FATAL) << "Shape cannot contain negative values " << param.shape;
-    }
+  mxnet::TShape param_shape = param.shape;
+  if (!Imperative::Get()->is_np_shape()) {
+    common::ConvertToNumpyShape(&param_shape);
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
-  return true;
+  if (shape_is_known((*out_attrs)[0]) && !shape_is_known(param_shape)) return true;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param_shape);
+  return shape_is_known(out_attrs->at(0));
 }
 
-template<typename ParamType>
+template<typename ParamType, int num_in = 0U>
 inline bool InitType(const nnvm::NodeAttrs& attrs,
                        std::vector<int> *in_attrs,
                        std::vector<int> *out_attrs) {
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(in_attrs->size(), num_in);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
   return true;
@@ -278,6 +339,8 @@ inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
  */
 template <bool is_integer = false, typename ValueType, typename xpu>
 void Fill(mshadow::Stream<xpu> *s, const TBlob& b, const OpReqType req, ValueType val) {
+  // If b is a zero-size tensor, do nothing.
+  if (b.Size() == 0) return;
   if (req != kNullOp) {
     const size_t size = b.Size();
     if (val == 0) {
@@ -458,13 +521,13 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
 
 struct range_fwd {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, int repeat, DType start, DType step,
+  MSHADOW_XINLINE static void Map(index_t i, index_t repeat, DType start, DType step,
                                   int req, DType* out) {
     KERNEL_ASSIGN(out[i], req, start + (i/repeat) * step);
   }
 };
 
-template<typename xpu>
+template<typename xpu, typename ParamType>
 void RangeCompute(const nnvm::NodeAttrs& attrs,
                   const OpContext& ctx,
                   const std::vector<TBlob>& inputs,
@@ -472,7 +535,7 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
                   const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       // Force unsigned params to take two's complement form on ARM to ensure consistency with x86
       // results.  Casting negative floats to unsigned types is undefined in the CPP standard.
@@ -514,6 +577,70 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
   const double out_size = std::ceil((param.stop.value() - param.start) / param.step)
                           * param.repeat;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
+  return true;
+}
+
+struct linspace_fwd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, double start, double stop, double step,
+                                  int req, DType* out) {
+    KERNEL_ASSIGN(out[i], req, static_cast<DType>(start + step * i));
+  }
+};
+
+template<typename xpu>
+void LinspaceCompute(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const LinspaceParam& param = nnvm::get<LinspaceParam>(attrs.parsed);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      int step_num = param.endpoint ? param.num - 1 : param.num;
+      double step = step_num > 0 ? (param.stop - param.start) / step_num : 0.0f;
+      Kernel<linspace_fwd, xpu>::Launch(s,
+                                        outputs[0].Size(),
+                                        param.start,
+                                        param.stop,
+                                        step,
+                                        req[0],
+                                        outputs[0].dptr<DType>());
+  });
+}
+
+inline bool LinspaceShape(const nnvm::NodeAttrs& attrs,
+                       mxnet::ShapeVector *in_attrs,
+                       mxnet::ShapeVector *out_attrs) {
+  const LinspaceParam& param = nnvm::get<LinspaceParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_GE(param.num, 0)
+    << "Number of sequence should be non-negative, received " << param.num;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(param.num)}));
+  return true;
+}
+
+inline bool RangeLikeShape(const nnvm::NodeAttrs& attrs,
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
+  const RangeLikeParam& param = nnvm::get<RangeLikeParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  int real_axis = -1;
+  if (param.axis.has_value()) {
+    real_axis = param.axis.value() < 0 ?
+        (param.axis.value() + (*in_attrs)[0].ndim()) : param.axis.value();
+    CHECK(real_axis >=0 && real_axis < (*in_attrs)[0].ndim())
+        << "cannot handle param.axis " << param.axis.value() << ".";
+  }
+  if (real_axis == -1) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  } else {
+    const index_t out_size = (*in_attrs)[0][real_axis];
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
+  }
   return true;
 }
 

@@ -916,13 +916,13 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
       if (in_shape.ndim() < 2)
         continue;
 
-      mxnet::TShape wt_shape(2);
+      mxnet::TShape wt_shape(2, -1);
       wt_shape[0] = num_hid;
       wt_shape[1] = GetFCWeightDim2(in_shape);
       NDArray weights(wt_shape, Context());
       InitDefaultArray(&weights, false);
 
-      mxnet::TShape bias_shape(1);
+      mxnet::TShape bias_shape(1, -1);
       bias_shape[0] = num_hid;
       NDArray bias(bias_shape, Context());
       InitDefaultArray(&bias, false);
@@ -931,7 +931,7 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
       inputs[1] = &weights;
       inputs[2] = &bias;
 
-      mxnet::TShape out_shape(2);
+      mxnet::TShape out_shape(2, -1);
       out_shape[0] = in_shape[0];
       out_shape[1] = num_hid;
 

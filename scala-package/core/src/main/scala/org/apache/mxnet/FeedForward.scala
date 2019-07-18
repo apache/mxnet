@@ -129,11 +129,11 @@ class FeedForward private(
   // Initialize weight parameters and auxiliary states
   // The NDArrays associated with the _argParms and _auxParams are not disposed instead
   // they are passed a outer scope if available.
-  private def initParams(inputShapes: Map[String, Shape], overwrite: Boolean = false)
+  private def initParams(inputShapes: IndexedSeq[DataDesc], overwrite: Boolean = false)
   : (IndexedSeq[String], IndexedSeq[String], IndexedSeq[String]) = {
     val (argShapes, _, auxShapes) = symbol.inferShape(inputShapes)
     val argNames = symbol.listArguments()
-    val inputNames = inputShapes.keys.toSet
+    val inputNames = inputShapes.map(_.name).toSet
     val paramNames = argNames.filter(!inputNames.contains(_))
     val auxNames = symbol.listAuxiliaryStates()
 
@@ -179,7 +179,7 @@ class FeedForward private(
   }
 
   // Initialize the predictor module for running prediction.
-  private def initPredictor(inputShapes: Map[String, Shape]): Unit = {
+  private def initPredictor(inputShapes: IndexedSeq[DataDesc]): Unit = {
     var shouldInit = true
     if (this.predExec != null) {
       val (argShapes, _, _) = symbol.inferShape(inputShapes)
@@ -193,7 +193,7 @@ class FeedForward private(
     }
     if(shouldInit) {
       // for now only use the first device
-      val predExec = symbol.simpleBind(ctx(0), gradReq = "null", shapeDict = inputShapes)
+      val predExec = symbol.simpleBind(ctx(0), gradReq = "null", inputShapes)
       predExec.copyParamsFrom(_argParams, _auxParams)
       ExecutorManager.checkArguments(symbol)
       this.predExec = predExec
@@ -233,8 +233,8 @@ class FeedForward private(
    */
   def predict(data: DataIter, numBatch: Int = -1): Array[NDArray] = {
     data.reset()
-    val dataShapes = data.provideData
-    val dataNames = dataShapes.map(_._1).toArray
+    val dataShapes = data.provideDataDesc
+    val dataNames = dataShapes.map(_.name).toArray
     initPredictor(dataShapes)
     val batchSize = data.batchSize
     val dataArrays = dataNames.map(predExec.argDict(_))
@@ -363,7 +363,7 @@ class FeedForward private(
       this.symbol = symGen.generate(trainData.defaultBucketKey)
       checkArguments()
     }
-    initParams(trainData.provideData ++ trainData.provideLabel)
+    initParams(trainData.provideDataDesc ++ trainData.provideLabelDesc)
   }
 
   private def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric = new Accuracy(),

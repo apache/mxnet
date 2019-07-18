@@ -81,7 +81,7 @@ inline void MultiBoxTargetForward(const Tensor<cpu, 2, DType> &loc_target,
                            const float negative_mining_ratio,
                            const float negative_mining_thresh,
                            const int minimum_negative_samples,
-                           const nnvm::Tuple<float> &variances) {
+                           const mxnet::Tuple<float> &variances) {
   const DType *p_anchor = anchors.dptr_;
   const int num_batches = labels.size(0);
   const int num_labels = labels.size(1);

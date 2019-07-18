@@ -935,14 +935,27 @@ def test_while_loop_rnn():
                     max_iterations=seq_len
                 )
         result = mx.sym.Group(result[0] + result[1][1: ])
-        arg_shapes, _, _ = result.infer_shape(
-            data=(seq_len, batch_size, input_dim),
-            s_0=(batch_size, hidden_dim),
-        )
         rnn_inputs = result.list_inputs()
-        args = {name: _array(arg_shapes[i]) for i, name in enumerate(rnn_inputs) if name != "i"}
-        args["i"] = mx.nd.zeros([1])
-        args_grad = {name: _array(arg_shapes[i]) for i, name in enumerate(rnn_inputs)}
+        args = {
+            "i": mx.nd.zeros([1]),
+            "data": _array((seq_len, batch_size, input_dim)),
+            "i2h_weight": _array((input_dim * hidden_dim, input_dim)),
+            "i2h_bias": _array((input_dim * hidden_dim, )),
+            "s_0": _array((batch_size, hidden_dim)),
+            "h2h_weight": _array((input_dim * hidden_dim, seq_len)),
+            "h2h_bias": _array((input_dim * hidden_dim, )),
+            "s_1": _array((batch_size, hidden_dim)),
+        }
+        args_grad = {
+            "i": _array([1]),
+            "data": _array((seq_len, batch_size, input_dim)),
+            "i2h_weight": _array((input_dim * hidden_dim, input_dim)),
+            "i2h_bias": _array((input_dim * hidden_dim, )),
+            "s_0": _array((batch_size, hidden_dim)),
+            "h2h_weight": _array((input_dim * hidden_dim, seq_len)),
+            "h2h_bias": _array((input_dim * hidden_dim, )),
+            "s_1": _array((batch_size, hidden_dim)),
+        }
         e_1 = result.bind(ctx=default_context(),
             args={name: array.copy() for name, array in args.items()},
             args_grad={name: array.copy() for name, array in args_grad.items() if name != "i"},
@@ -961,9 +974,9 @@ def test_while_loop_rnn():
             args_grad={name: array.copy() for name, array in args_grad.items() if name != "i"},
         )
         for case_id in range(100):
-            out_grads = [_array(arr.shape) for arr in e_1.outputs]
             args = {name: array.copy() for name, array in args.items()}
             e_1.forward(is_train=True, **args)
+            out_grads = [_array(arr.shape) for arr in e_1.outputs]
             e_1.backward(out_grads)
             args = {name: array.copy() for name, array in args.items() if name != "i"}
             e_2.forward(is_train=True, **args)
@@ -1178,7 +1191,6 @@ def check_contrib_rnn(cell_type, num_states):
         params2 = layer.collect_params()
         for key, val in orig_params1.items():
             params2[key].set_data(copy.deepcopy(val.data()))
-
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
             res2 = layer(rnn_data, states)

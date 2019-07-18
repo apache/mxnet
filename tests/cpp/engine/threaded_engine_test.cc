@@ -29,6 +29,7 @@
 #include <gtest/gtest.h>
 #include <mxnet/c_api.h>
 #include <mxnet/engine.h>
+#include <mxnet/ndarray.h>
 #include <dmlc/timer.h>
 #include <cstdio>
 #include <thread>
@@ -42,7 +43,7 @@
  * present the following workload
  *  n = reads.size()
  *  data[write] = (data[reads[0]] + ... data[reads[n]]) / n
- *  std::this_thread::sleep_for(std::chrono::microsecons(time));
+ *  std::this_thread::sleep_for(std::chrono::microseconds(time));
  */
 struct Workload {
   std::vector<int> reads;
@@ -76,7 +77,7 @@ void GenerateWorkload(int num_workloads, int num_var,
 /**
  * evaluate a single workload
  */
-void EvaluateWorload(const Workload& wl, std::vector<double>* data) {
+void EvaluateWorkload(const Workload& wl, std::vector<double>* data) {
   double tmp = 0;
   for (int i : wl.reads) tmp += data->at(i);
   data->at(wl.write) = tmp / (wl.reads.size() + 1);
@@ -88,9 +89,9 @@ void EvaluateWorload(const Workload& wl, std::vector<double>* data) {
 /**
  * evaluate a list of workload, return the time used
  */
-double EvaluateWorloads(const std::vector<Workload>& workloads,
-                      mxnet::Engine* engine,
-                      std::vector<double>* data) {
+double EvaluateWorkloads(const std::vector<Workload>& workloads,
+                         mxnet::Engine* engine,
+                         std::vector<double>* data) {
   using namespace mxnet;
   double t = dmlc::GetTime();
   std::vector<Engine::VarHandle> vars;
@@ -103,10 +104,10 @@ double EvaluateWorloads(const std::vector<Workload>& workloads,
   for (const auto& wl : workloads) {
     if (wl.reads.size() == 0) continue;
     if (engine == NULL) {
-      EvaluateWorload(wl, data);
+      EvaluateWorkload(wl, data);
     } else {
       auto func = [wl, data](RunContext ctx, Engine::CallbackOnComplete cb) {
-        EvaluateWorload(wl, data); cb();
+        EvaluateWorkload(wl, data); cb();
       };
       std::vector<Engine::VarHandle> reads;
       for (auto i : wl.reads) {
@@ -159,7 +160,7 @@ TEST(Engine, RandSumExpr) {
     std::vector<std::vector<double>> data(num_engine);
     for (int i = 0; i < num_engine; ++i) {
       data[i].resize(num_var, 1.0);
-      t[i] += EvaluateWorloads(workloads, engine[i], &data[i]);
+      t[i] += EvaluateWorkloads(workloads, engine[i], &data[i]);
     }
 
     for (int i = 1; i < num_engine; ++i) {
@@ -251,6 +252,53 @@ TEST(Engine, PushFunc) {
   // Test #8
   LOG(INFO) << "===== Test #8: PushSync invalid number of mutable vars =====";
   res = MXEnginePushSync(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &var, -1);
+  EXPECT_EQ(res, -1);
+}
+
+TEST(Engine, PushFuncND) {
+  auto ctx = mxnet::Context{};
+  mxnet::NDArray nd(ctx);
+
+  // Test #1
+  LOG(INFO) << "===== Test #1: PushAsyncND param and deleter =====";
+  int* a = new int(100);
+  int res = MXEnginePushAsyncND(FooAsyncFunc, a, FooFuncDeleter, &ctx, &nd, 1, nullptr, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #2
+  LOG(INFO) << "===== Test #2: PushAsyncND NULL param and NULL deleter =====";
+  res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &nd, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #3
+  LOG(INFO) << "===== Test #3: PushAsyncND invalid number of const nds =====";
+  res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx, &nd, -1, nullptr, 0);
+  EXPECT_EQ(res, -1);
+
+  // Test #4
+  LOG(INFO) << "===== Test #4: PushAsyncND invalid number of mutable nds =====";
+  res = MXEnginePushAsyncND(FooAsyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &nd, -1);
+  EXPECT_EQ(res, -1);
+
+  // Test #5
+  LOG(INFO) << "===== Test #5: PushSyncND param and deleter =====";
+  int* b = new int(101);
+  res = MXEnginePushSyncND(FooSyncFunc, b, FooFuncDeleter, &ctx, &nd, 1, nullptr, 0);
+  EXPECT_EQ(res, 0);
+
+  // Test #6
+  LOG(INFO) << "===== Test #6: PushSyncND NULL param and NULL deleter =====";
+  res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &nd, 1);
+  EXPECT_EQ(res, 0);
+
+  // Test #7
+  LOG(INFO) << "===== Test #7: PushSyncND invalid number of const nds =====";
+  res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx, &nd, -1, nullptr, 0);
+  EXPECT_EQ(res, -1);
+
+  // Test #8
+  LOG(INFO) << "===== Test #8: PushSyncND invalid number of mutable nds =====";
+  res = MXEnginePushSyncND(FooSyncFunc, nullptr, nullptr, &ctx, nullptr, 0, &nd, -1);
   EXPECT_EQ(res, -1);
 }
 

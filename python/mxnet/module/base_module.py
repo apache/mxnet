@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=fixme, too-many-arguments, too-many-locals
+# pylint: disable=fixme, too-many-arguments, too-many-locals, no-else-raise
 # pylint: disable=too-many-public-methods, too-many-branches, too-many-lines
 """`BaseModule` defines an API for modules."""
 
@@ -619,7 +619,7 @@ class BaseModule(object):
     # Parameters of a module
     ################################################################################
     def get_params(self):
-        """Gets parameters, those are potentially copies of the the actual parameters used
+        """Gets parameters, those are potentially copies of the actual parameters used
         to do computation on the device.
 
         Returns

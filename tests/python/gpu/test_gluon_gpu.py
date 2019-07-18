@@ -24,6 +24,7 @@ import multiprocessing as mp
 import unittest
 import random
 import mxnet as mx
+import mxnet.ndarray as nd
 import numpy as np
 import unittest
 import math
@@ -225,6 +226,69 @@ def check_layer_bidirectional(size, in_size, proj_size):
     assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy())
 
 
+def check_layer_bidirectional_varseqlen(size, in_size):
+    weights = {}
+    for d in ['l', 'r']:
+        weights['lstm_{}0_i2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, in_size))
+        weights['lstm_{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, size))
+        weights['lstm_{}0_i2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+        weights['lstm_{}0_h2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+
+    net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True, prefix='lstm_')
+    ref_net  = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False, prefix='lstm_ref_')
+    net.initialize()
+    ref_net.initialize()
+    net_params = net.collect_params()
+    ref_net_params = ref_net.collect_params()
+    for k in weights:
+        net_params[k].set_data(weights[k])
+        ref_net_params[k.replace("lstm_", "lstm_ref_")].set_data(weights[k])
+
+    batch_size = 10
+    num_timesteps = 11
+    data = mx.random.uniform(shape=(num_timesteps, batch_size, in_size))
+    data_np = data.asnumpy()
+
+    sequence_length = nd.random.randint(1, num_timesteps+1, shape=(batch_size)).astype("int32")
+    sequence_length_np = sequence_length.asnumpy().astype("int32")
+
+    # Reference net is processing batch elements one at a time, so that it is "perfectly sized"
+    # Because of that, we need to accumulate gradients in reference net.
+    for p in ref_net.collect_params().values():
+        p.grad_req = 'add'
+
+    ref_net_output = []
+    with autograd.record():
+        net_output = net(data.copy(), sequence_length=sequence_length.copy())
+
+        for b in range(batch_size):
+            data_slice = mx.nd.array(data_np[:sequence_length_np[b], b, :]).reshape(sequence_length_np[b], 1, in_size)
+            ref_output_slice = ref_net(data_slice)
+            ref_net_output.append(ref_output_slice)
+
+    net_output_np = net_output.asnumpy()
+
+    # TODO: test state return value as well output
+    # Only compare the valid sections for each batch entry
+    for b in range(batch_size):
+        assert_allclose(net_output_np[:sequence_length_np[b], b], ref_net_output[b].asnumpy().squeeze(1),
+                        rtol=1e-2, atol=1e-6)
+
+    # Now test backward
+    net_output.backward()
+
+    for ref_output_slice in ref_net_output:
+        ref_output_slice.backward()
+
+    ref_net_params = ref_net.collect_params()
+
+    for k in weights:
+        net_grad = net_params[k].grad()
+        ref_net_grad = ref_net_params[k.replace('lstm_', 'lstm_ref_')].grad()
+        assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
+                            rtol=1e-2, atol=1e-6)
+
+
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_layer_bidirectional():
@@ -235,6 +299,11 @@ def test_layer_bidirectional():
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_layer_bidirectional_proj():
     check_layer_bidirectional(7, 5, 3)
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+def test_layer_bidirectional_varseqlength():
+    check_layer_bidirectional_varseqlen(7, 5)
 
 
 @with_seed()
@@ -401,6 +470,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
 
 @with_seed()
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking():
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0, 0, True), (1, 1, True), (15, 15, False),

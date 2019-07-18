@@ -36,6 +36,12 @@ object Image {
     org.apache.mxnet.Image.imDecode(buf, flag, toRGB, None)
   }
 
+  /**
+    * Decode image with OpenCV.
+    * Note: return image in RGB by default, instead of OpenCV's default BGR.
+    * @param buf   Buffer containing binary encoded image
+    * @return NDArray in HWC format with DType [[DType.UInt8]]
+    */
   def imDecode(buf: Array[Byte]): NDArray = {
     imDecode(buf, 1, true)
   }
@@ -52,6 +58,12 @@ object Image {
     org.apache.mxnet.Image.imDecode(inputStream, flag, toRGB, None)
   }
 
+  /**
+    * Same imageDecode with InputStream
+    *
+    * @param inputStream the inputStream of the image
+    * @return NDArray in HWC format with DType [[DType.UInt8]]
+    */
   def imDecode(inputStream: InputStream): NDArray = {
     imDecode(inputStream, 1, true)
   }
@@ -69,6 +81,12 @@ object Image {
     org.apache.mxnet.Image.imRead(filename, Some(flag), Some(toRGB), None)
   }
 
+  /**
+    * Read and decode image with OpenCV.
+    * Note: return image in RGB by default, instead of OpenCV's default BGR.
+    * @param filename Name of the image file to be loaded.
+    * @return org.apache.mxnet.NDArray in HWC format with DType [[DType.UInt8]]
+    */
   def imRead(filename: String): NDArray = {
     imRead(filename, 1, true)
   }
@@ -86,6 +104,13 @@ object Image {
     org.apache.mxnet.Image.imResize(src, w, h, interpVal, None)
   }
 
+  /**
+    * Resize image with OpenCV.
+    * @param src    source image in NDArray
+    * @param w      Width of resized image.
+    * @param h      Height of resized image.
+    * @return org.apache.mxnet.NDArray
+    */
   def imResize(src: NDArray, w: Int, h: Int): NDArray = {
     imResize(src, w, h, null)
   }

@@ -19,11 +19,12 @@ package org.apache.mxnetexamples.gan
 
 import java.io.File
 
-import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Ignore}
 import org.slf4j.LoggerFactory
 
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 class GanExampleSuite extends FunSuite with BeforeAndAfterAll{

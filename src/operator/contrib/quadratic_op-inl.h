@@ -60,7 +60,7 @@ inline bool QuadraticOpShape(const nnvm::NodeAttrs& attrs,
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
+  return !mxnet::op::shape_is_none(out_attrs->at(0));
 }
 
 inline bool QuadraticOpType(const nnvm::NodeAttrs& attrs,

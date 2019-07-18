@@ -25,6 +25,7 @@ WORKDIR /work/deps
 
 RUN apt-get update && apt-get -y install sudo
 
+# Always last
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/

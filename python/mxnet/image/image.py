@@ -102,11 +102,11 @@ def imresize(src, w, h, *args, **kwargs):
         Possible values:
         0: Nearest Neighbors Interpolation.
         1: Bilinear interpolation.
-        2: Area-based (resampling using pixel area relation). It may be a
+        2: Bicubic interpolation over 4x4 pixel neighborhood.
+        3: Area-based (resampling using pixel area relation). It may be a
         preferred method for image decimation, as it gives moire-free
         results. But when the image is zoomed, it is similar to the Nearest
         Neighbors method. (used by default).
-        3: Bicubic interpolation over 4x4 pixel neighborhood.
         4: Lanczos interpolation over 8x8 pixel neighborhood.
         9: Cubic for enlarge, area for shrink, bilinear for others
         10: Random select from interpolation method metioned above.
@@ -1374,7 +1374,7 @@ class ImageIter(io.DataIter):
         pad = batch_size - i
         # handle padding for the last batch
         if pad != 0:
-            if self.last_batch_handle == 'discard':
+            if self.last_batch_handle == 'discard': # pylint: disable=no-else-raise
                 raise StopIteration
             # if the option is 'roll_over', throw StopIteration and cache the data
             elif self.last_batch_handle == 'roll_over' and \

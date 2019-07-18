@@ -144,13 +144,13 @@ Graph Gradient(Graph src) {
         << "because it is unreachable from the outputs.";
   }
 
-  // construct mirror reduece memory strategy if needed
+  // construct mirror as memory reduction strategy if needed
   std::unordered_map<Node*, NodePtr> mirror_map;
   if (mirror_fun != nullptr) {
-    for (const NodePtr& n : topo_order) {
-      if (mirror_fun(*n)) {
+    for (const NodePtr& node_ptr : topo_order) {
+      if (mirror_fun(*node_ptr)) {
         NodePtr new_node = Node::Create();
-        *new_node = *n;
+        *new_node = *node_ptr;
         new_node->attrs.name += "_mirror";
         for (auto& e : new_node->inputs) {
           e.node = mirror_map.at(e.node.get());
@@ -158,9 +158,9 @@ Graph Gradient(Graph src) {
         for (auto& n : new_node->control_deps) {
           n = mirror_map.at(n.get());
         }
-        mirror_map[n.get()] = std::move(new_node);
+        mirror_map[node_ptr.get()] = std::move(new_node);
       } else {
-        mirror_map[n.get()] = n;
+        mirror_map[node_ptr.get()] = node_ptr;
       }
     }
   }
@@ -186,7 +186,8 @@ Graph Gradient(Graph src) {
     if ((*rit)->inputs.size() != 0) {
       NodePtr fwd_node = (mirror_map.size() == 0 ? ptr : mirror_map.at(ptr.get()));
       std::vector<NodeEntry> input_grads;
-      if (grad_fun_map.count(ptr->op())) {
+      // Check for FGradient
+      if (grad_fun_map.contains(ptr->op())) {
         input_grads = grad_fun_map[ptr->op()](fwd_node, out_agg_grads);
         CHECK_EQ((*rit)->inputs.size(), input_grads.size())
             << "Gradient function not returning enough gradient";
@@ -206,20 +207,23 @@ Graph Gradient(Graph src) {
           if (p->op()->attr_parser != nullptr) {
             p->op()->attr_parser(&(p->attrs));
           }
-          input_grads.emplace_back(nnvm::NodeEntry{p, 0, 0});
+          input_grads.emplace_back(p, 0, 0);
         }
       } else {
         LOG(FATAL) << "Operator " << fwd_node->op()->name << " is non-differentiable "
                    << "because it didn't register FGradient attribute.";
       }
+      for (const auto& nodeEntry : input_grads)
+        CHECK(nodeEntry.node);
       auto git = input_grads.begin();
+      CHECK((*rit)->inputs.size() <= input_grads.size());
       for (auto it = (*rit)->inputs.begin(); it != (*rit)->inputs.end(); ++it, ++git) {
-        auto& ge = output_grads[it->node.get()][it->index];
+        auto& output_grad_entry = output_grads[it->node.get()][it->index];
         // if any of the backward op can do shape inference, the hint is not necessary.
-        if (finfer_shape.count(git->node->op())) {
-          ge.need_attr_hint = false;
+        if (finfer_shape.contains(git->node->op())) {
+          output_grad_entry.need_attr_hint = false;
         }
-        ge.grads.emplace_back(std::move(*git));
+        output_grad_entry.grads.emplace_back(std::move(*git));
       }
     }
   }

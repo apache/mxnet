@@ -166,9 +166,8 @@ def test_multiple_waitalls():
     mx.nd.waitall()
 
 @with_seed()
-def test_exc_profiler():
-    def run_training_iteration(data):
-        output = net(data)
+def run_training_iteration(data):
+    output = net(data)
 
     net = gluon.nn.HybridSequential()
     with net.name_scope():
@@ -181,6 +180,14 @@ def test_exc_profiler():
     run_training_iteration(data)
     mx.nd.waitall()
     mx.profiler.set_state("stop")
+
+@with_seed()
+def test_opencv_exception():
+    def check_resize():
+        img = mx.nd.ones((1200, 1600, 3))
+        img = mx.image.imresize(img, 320, 320, interp=-1)
+        img.asnumpy()
+    assert_raises(MXNetError, check_resize)
 
 
 if __name__ == '__main__':

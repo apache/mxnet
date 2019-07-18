@@ -40,7 +40,7 @@ namespace ndarray {
 struct BinaryBase {
   inline static mxnet::TShape GetShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape) {
     CHECK(lshape == rshape) << "operands shape mismatch";
-    CHECK(lshape.ndim() != 0) << "source operand have zero dimension shape";
+    CHECK(!mxnet::op::shape_is_none(lshape)) << "source operand have zero dimension shape";
     return lshape;
   }
 };

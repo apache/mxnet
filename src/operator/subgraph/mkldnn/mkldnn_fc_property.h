@@ -115,6 +115,13 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
       return candidates;
     }
   }
+
+  void Reset() override {
+    CHECK_GE(matched_list.size(), 1);
+    auto new_selector = SgMKLDNNFCSelector(disable_fc_relu);
+    new_selector.Select(*matched_list[0]);
+    *this = new_selector;
+  }
 };
 
 class SgMKLDNNFCProperty : public SubgraphProperty {
@@ -141,7 +148,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
     nnvm::Symbol new_sym;
-    new_sym.outputs.emplace_back(nnvm::NodeEntry{last_node, 0, 0});
+    new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
     node_name << "sg_mkldnn_";
     DFSVisit(new_sym.outputs, [&](const nnvm::NodePtr &node) {

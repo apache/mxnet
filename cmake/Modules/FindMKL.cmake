@@ -43,55 +43,6 @@ endif()
 # ---[ Root folders
 set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
 
-if(USE_MKLDNN)
-
-  find_path(MKL_ROOT include/mkl_blas.h
-    PATHS $ENV{MKL_ROOT}
-    ${INTEL_ROOT}/mklml
-    ${DIRECT_DEPENDENCY_ROOTS}
-    DOC "Folder contains MKL"
-    )
-
-  # ---[ Find include dir
-  find_path(MKL_INCLUDE_DIR mkl_blas.h PATHS ${MKL_ROOT} PATH_SUFFIXES include)
-  set(__looked_for MKL_INCLUDE_DIR)
-
-  # ---[ Find libraries
-  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(__path_suffixes lib lib/ia32)
-  else()
-    set(__path_suffixes lib lib/intel64)
-  endif()
-
-  set(__mkl_libs "")
-
-  if(WIN32)
-    list(APPEND __mkl_libs mklml_intel)
-  else()
-    list(APPEND __mkl_libs mklml_gnu)
-  endif()
-  list(APPEND __mkl_libs mkldnn)
-
-  foreach (__lib ${__mkl_libs})
-    set(__mkl_lib "${__lib}")
-    string(TOUPPER ${__mkl_lib} __mkl_lib_upper)
-
-    if(MKL_USE_STATIC_LIBS)
-      set(__mkl_lib "lib${__mkl_lib}.a")
-    endif()
-
-    find_library(${__mkl_lib_upper}_LIBRARY
-      NAMES ${__mkl_lib}
-      PATHS ${MKL_ROOT} "${MKL_INCLUDE_DIR}/.."
-      PATH_SUFFIXES ${__path_suffixes}
-      DOC "The path to Intel(R) MKL ${__mkl_lib} library")
-    mark_as_advanced(${__mkl_lib_upper}_LIBRARY)
-
-    list(APPEND __looked_for ${__mkl_lib_upper}_LIBRARY)
-    list(APPEND MKL_LIBRARIES ${${__mkl_lib_upper}_LIBRARY})
-  endforeach()
-
-else(USE_MKLDNN)
 
   # ---[ Options
   mxnet_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
@@ -193,7 +144,7 @@ else(USE_MKLDNN)
     list(APPEND MKL_LIBRARIES ${MKL_RTL_LIBRARY})
   endif()
 
-endif(USE_MKLDNN)
+
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MKL DEFAULT_MSG ${__looked_for})

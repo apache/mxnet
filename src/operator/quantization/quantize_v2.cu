@@ -28,7 +28,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_quantize_v2)
-.set_attr<FCompute>("FCompute<gpu>", QuantizeV2Compute<gpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", QuantizeV2Forward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -367,6 +367,11 @@ def test_simple_bind_gradient_graph_possible_with_cycle():
     res = data + data + data + data + data + data + data + data
     res.simple_bind(ctx=mx.cpu(), data=(1,))
 
+def test_children_same_name():
+    a = mx.sym.Variable('data')
+    b = a + a
+    for c in b.get_children():
+        pass
 
 if __name__ == '__main__':
     import nose

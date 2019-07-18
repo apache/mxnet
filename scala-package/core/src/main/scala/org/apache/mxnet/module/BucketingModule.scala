@@ -296,7 +296,7 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
     require(this.binded && this.paramsInitialized, "bind() and initParams() must be called first.")
     val bucketKey = dataBatch.bucketKey
     val originalBucketKey = this._currBucketKey
-    this.switchBucket(bucketKey, dataBatch.provideData, Option(dataBatch.provideLabel))
+    this.switchBucket(bucketKey, dataBatch.provideDataDesc, Option(dataBatch.provideLabelDesc))
     // switch back
     this.switchBucket(originalBucketKey, null, None)
   }
@@ -308,8 +308,8 @@ class BucketingModule(symGen: AnyRef => (Symbol, IndexedSeq[String], IndexedSeq[
    */
   override def forward(dataBatch: DataBatch, isTrain: Option[Boolean] = None): Unit = {
     require(binded && paramsInitialized, "bind() and initParams() must be called first.")
-    this.switchBucket(dataBatch.bucketKey, dataBatch.provideData,
-      Option(dataBatch.provideLabel))
+    this.switchBucket(dataBatch.bucketKey, dataBatch.provideDataDesc,
+      Option(dataBatch.provideLabelDesc))
     this._currModule.forward(dataBatch, isTrain)
   }
 

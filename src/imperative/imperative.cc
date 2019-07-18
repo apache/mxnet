@@ -25,9 +25,11 @@ namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
 thread_local bool Imperative::is_train_ = false;
 thread_local bool Imperative::is_recording_ = false;
+thread_local bool Imperative::is_np_shape_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_ = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_ = false;
+MX_THREAD_LOCAL bool Imperative::is_np_shape_ = false;
 #endif
 
 Imperative* Imperative::Get() {
@@ -109,7 +111,7 @@ OpStatePtr Imperative::Invoke(
   OpStatePtr ret = InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
   // the followinng loop is used for finding out the correct shape when some shapes are dynamic
   for (size_t i = 0; i < outputs.size(); i++) {
-    if (outputs[i]->shape().ndim() == 0) {
+    if (!shape_is_known(outputs[i]->shape())) {
       // the WaitToRead overhead here does not seem to be avoidable
       outputs[i]->WaitToRead();
       outputs[i]->SetShapeFromChunk();
@@ -165,7 +167,7 @@ void Imperative::GetBackwardDependency(
     std::vector<nnvm::NodeEntry> ograd_entries;
     ograd_entries.reserve(num_outputs);
     for (uint32_t i = 0; i < num_outputs; ++i) {
-      ograd_entries.emplace_back(nnvm::NodeEntry{nullptr, i, 1});
+      ograd_entries.emplace_back(nullptr, i, 1);
     }
     auto igrad_entries = fgradient[node->op()](node, ograd_entries);
     for (const auto& i : igrad_entries) {
@@ -361,7 +363,7 @@ std::vector<NDArray*> Imperative::Backward(
       auto node = Node::Create();
       node->attrs.op = copy_op;
       node->inputs.push_back(e);
-      graph.outputs.push_back(NodeEntry{node, 0, 0});
+      graph.outputs.emplace_back(std::move(node));
     } else {
       graph.outputs.push_back(e);
     }
@@ -497,6 +499,10 @@ std::vector<NDArray*> Imperative::Backward(
                                shapes[eid], vctx[i], true, dtypes[eid]);
       }
     }
+  }
+
+  if (dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false)) {
+    common::LogMemoryPlan(graph);
   }
 
   // Execution

@@ -78,7 +78,7 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .add_enum("always", dropout::kAlways)
     .set_default(dropout::kTraining)
     .describe("Whether to only turn on dropout during training or to also turn on for inference.");
-    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0, 0))
     .describe("Axes for variational dropout kernel.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>(false))
     .describe("Whether to turn off cudnn in dropout operator. "
@@ -398,6 +398,8 @@ class DropoutOp {
           }
         }
       } else {
+        if (req[dropout::kOut] == kWriteInplace) return;
+
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kOut], Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
             s, out.Size(), out.dptr<DType>(), in.dptr<DType>());
@@ -491,24 +493,6 @@ class DropoutOp {
   cudnnTensorDescriptor_t x_desc_, y_desc_, dx_desc_, dy_desc_;
 #endif  // MXNET_USE_CUDNN_DROPOUT
 };  // class DropoutOp
-
-static OpStatePtr CreateDropoutState(const nnvm::NodeAttrs &attrs,
-                                     const Context ctx,
-                                     const mxnet::ShapeVector &in_shapes,
-                                     const std::vector<int> &in_types) {
-  const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
-  OpStatePtr state;
-  MSHADOW_REAL_TYPE_SWITCH(in_types[dropout::kData], DType, {
-    if (ctx.dev_type == kGPU) {
-      state = OpStatePtr::Create<DropoutOp<gpu, DType>>(param, ctx);
-    } else {
-      state = OpStatePtr::Create<DropoutOp<cpu, DType>>(param, ctx);
-    }
-    return state;
-  });
-  LOG(FATAL) << "should never reach here";
-  return OpStatePtr();  // should never reach here
-}
 
 template<typename xpu>
 void DropoutCompute(const OpStatePtr& state,

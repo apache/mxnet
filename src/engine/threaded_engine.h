@@ -43,6 +43,7 @@
 #include "../profiler/profiler.h"
 #include "./openmp.h"
 #include "../common/object_pool.h"
+#include "../profiler/custom_op_profiler.h"
 
 namespace mxnet {
 namespace engine {
@@ -306,6 +307,7 @@ class ThreadedEngine : public Engine {
   void DeleteVariable(SyncFn delete_fn, Context exec_ctx, VarHandle var) override;
   void WaitForVar(VarHandle var) override;
   void WaitForAll() override;
+  void Throw(VarHandle var) override;
   void NotifyShutdown() override {
     shutdown_phase_.store(true);
   }
@@ -374,13 +376,13 @@ class ThreadedEngine : public Engine {
           LOG(INFO) << "ExecuteOprFn ";
         }
         try {
-          if (!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
-              threaded_opr->wait) {
+          if ((!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
+              threaded_opr->prop == FnProperty::kNoSkip) || threaded_opr->wait) {
             threaded_opr->fn(run_ctx, callback);
           } else {
             callback();
           }
-        } catch (dmlc::Error& e) {
+        } catch (const std::exception& e) {
           threaded_opr->opr_exception =
               std::make_shared<std::exception_ptr>(std::current_exception());
           callback();

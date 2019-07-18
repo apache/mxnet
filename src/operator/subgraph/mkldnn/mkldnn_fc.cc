@@ -156,7 +156,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         int32_t *quantized_bias_ptr = cached_bias_.data().dptr<int32_t>();
         size_t bias_size = bias.shape().Size();
         #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-        for (size_t i = 0; i < bias_size; ++i) {
+        for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
           quantized_bias_ptr[i] = bias_ptr[i] * bias_int32_rescale;
         }
       }
@@ -174,7 +174,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
           MaxAbs(cached_min_output_, cached_max_output_) / data_scale / weight_scale;
       } else {
         Stream<cpu> *s = ctx.get_stream<cpu>();
-        mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(
+        mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(
           s, 1, &cached_min_output_, &cached_max_output_,
           &min_data, &max_data, &min_weight, &max_weight);
       }

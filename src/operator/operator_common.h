@@ -103,9 +103,10 @@ struct InferStorageTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
-/*! \brief check if shape is empty or contains unknown (0) dim. */
+/*! \brief check if shape is empty or contains unknown (0) dim.
+ * DEPRECATED. */
 inline bool shape_is_none(const mxnet::TShape& x) {
-  return x.ndim() == 0 || x.Size() == 0;
+  return !mxnet::shape_is_known(x);
 }
 
 /*! \brief check if type is none (-1) */
@@ -120,7 +121,7 @@ inline bool storage_type_is_none(const int& x) {
 
 /*! \brief check if shape is scalar({1}). */
 inline bool shape_is_scalar(const mxnet::TShape& x) {
-  return x.ndim() == 1 && x.Size() == 1;
+  return x.ndim() == 0;
 }
 
 /*! \brief get string representation of shape */
@@ -159,16 +160,16 @@ inline std::string type_string(const int& x) {
  * \return whether x and y are compatible.
  */
 inline bool shape_assign(mxnet::TShape *y, const mxnet::TShape& x) {
-  if (y->ndim() == 0) {
+  if (!mxnet::ndim_is_known(*y)) {
     *y = x;
     return true;
   } else if (y->ndim() != x.ndim()) {
-    return x.ndim() == 0;
+    return !mxnet::ndim_is_known(x);
   } else {
-    for (size_t i = 0; i < y->ndim(); ++i) {
-      if ((*y)[i] == 0) {
+    for (int i = 0; i < y->ndim(); ++i) {
+      if (!mxnet::dim_size_is_known(*y, i)) {
         (*y)[i] = x[i];
-      } else if ((*y)[i] != x[i] && x[i] != 0) {
+      } else if ((*y)[i] != x[i] && x[i] >= 0) {
         return false;
       }
     }
@@ -396,7 +397,7 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
                     &inputs, &dict, &n);
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+    ret.emplace_back(p, i, 0);
   }
   return ret;
 }
@@ -413,8 +414,7 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
     } else {
       os << n->attrs.name << "_in" << i << "_backward";
     }
-    auto p = MakeNode("zeros_like", os.str(), {n->inputs[i]}, nullptr, &n);
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(MakeNode("zeros_like", os.str(), {n->inputs[i]}, nullptr, &n));
   }
   return ret;
 }
@@ -424,10 +424,13 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
 inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
   static const auto zero_op = nnvm::Op::Get("_zeros");
   static const auto zero_like_op = nnvm::Op::Get("zeros_like");
-  if (!ograds.size()) return false;
+  if (ograds.empty())
+    return false;
   for (const auto& grad : ograds) {
-    if (!grad.node) return false;
-    if (grad.node->op() != zero_op && grad.node->op() != zero_like_op ) return false;
+    if (!grad.node)
+      return false;
+    if (grad.node->op() != zero_op && grad.node->op() != zero_like_op )
+      return false;
   }
   return true;
 }
@@ -439,14 +442,15 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
     const std::unordered_map<std::string, std::string>& dict) {
-  if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
+  if (CheckGradAllZero(ograds))
+    return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
   p->inputs.insert(p->inputs.end(), ograds.begin(), ograds.end());
   p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+    ret.emplace_back(p, i, 0);
   }
   return ret;
 }
@@ -563,7 +567,7 @@ class OpSignature {
   }
 
   void AddSign(const mxnet::TShape &shape) {
-    for (size_t i = 0; i < shape.ndim(); i++) {
+    for (int i = 0; i < shape.ndim(); i++) {
       hash = hash * 2 + shape[i];
       eles.push_back(shape[i]);
     }

@@ -391,7 +391,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     # end of all epochs
 
 
-def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
+def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params, remove_amp_cast=True):
     """Checkpoint the model data into file.
 
     Parameters
@@ -406,13 +406,15 @@ def save_checkpoint(prefix, epoch, symbol, arg_params, aux_params):
         Model parameter, dict of name to NDArray of net's weights.
     aux_params : dict of str to NDArray
         Model parameter, dict of name to NDArray of net's auxiliary states.
+    remove_amp_cast : bool, optional
+        Whether to remove the amp_cast and amp_multicast operators, before saving the model.
     Notes
     -----
     - ``prefix-symbol.json`` will be saved for symbol.
     - ``prefix-epoch.params`` will be saved for parameters.
     """
     if symbol is not None:
-        symbol.save('%s-symbol.json' % prefix)
+        symbol.save('%s-symbol.json' % prefix, remove_amp_cast=remove_amp_cast)
 
     save_dict = {('arg:%s' % k) : v.as_in_context(cpu()) for k, v in arg_params.items()}
     save_dict.update({('aux:%s' % k) : v.as_in_context(cpu()) for k, v in aux_params.items()})
@@ -640,7 +642,7 @@ class FeedForward(BASE_ESTIMATOR):
         """Initialize the iterator given input."""
         if isinstance(X, (np.ndarray, nd.NDArray)):
             if y is None:
-                if is_train:
+                if is_train: # pylint: disable=no-else-raise
                     raise ValueError('y must be specified when X is numpy.ndarray')
                 else:
                     y = np.zeros(X.shape[0])
@@ -884,6 +886,8 @@ class FeedForward(BASE_ESTIMATOR):
                                    rescale_grad=(1.0/batch_size),
                                    **(self.kwargs))
         elif isinstance(self.optimizer, opt.Optimizer):
+            if not optimizer.idx2name:
+                optimizer.idx2name = param_idx2name.copy()
             optimizer = self.optimizer
 
         # do training
@@ -903,7 +907,7 @@ class FeedForward(BASE_ESTIMATOR):
                             sym_gen=self.sym_gen)
 
 
-    def save(self, prefix, epoch=None):
+    def save(self, prefix, epoch=None, remove_amp_cast=True):
         """Checkpoint the model checkpoint into file.
         You can also use `pickle` to do the job if you only work on Python.
         The advantage of `load` and `save` (as compared to `pickle`) is that
@@ -914,6 +918,8 @@ class FeedForward(BASE_ESTIMATOR):
         ----------
         prefix : str
             Prefix of model name.
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
 
         Notes
         -----
@@ -923,7 +929,7 @@ class FeedForward(BASE_ESTIMATOR):
         if epoch is None:
             epoch = self.num_epoch
         assert epoch is not None
-        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params)
+        save_checkpoint(prefix, epoch, self.symbol, self.arg_params, self.aux_params, remove_amp_cast=remove_amp_cast)
 
     @staticmethod
     def load(prefix, epoch, ctx=None, **kwargs):

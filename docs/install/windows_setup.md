@@ -183,7 +183,7 @@ cd C:\incubator-mxnet\build
 cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
 ```
 * Make sure you set the environment variables correctly (OpenBLAS_HOME, OpenCV_DIR) and change the version of the Visual studio 2017 to v14.11 before enter above command.
-6. After the CMake successfully completed, compile the the MXNet source code by using following command:
+6. After the CMake successfully completed, compile the MXNet source code by using following command:
 ```
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
@@ -269,6 +269,9 @@ To install MXNet on a computer with a CPU processor, choose from two options:
 #### Installing MXNet-R with the Prebuilt Binary Package(CPU)
 For Windows users, MXNet provides prebuilt binary packages.
 You can install the package directly in the R console.
+
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
 
 For CPU-only package:
 
@@ -379,6 +382,9 @@ Note: A pre-requisite to above softwares is [Nvidia-drivers](http://www.nvidia.c
 For Windows users, MXNet provides prebuilt binary packages.
 You can install the package directly in the R console after you have the above software installed.
 
+Note: packages for 3.6.x are not yet available.
+Install 3.5.x of R from [CRAN](https://cran.r-project.org/bin/windows/base/old/).
+
 For GPU package:
 
 ```r
@@ -488,7 +494,7 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 	Pkg.add("MXNet")
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](/api/julia/site/).
 
 
 ## Installing the MXNet Package for Scala
@@ -497,6 +503,6 @@ MXNet-Scala is not yet available for Windows.
 
 ## Next Steps
 
-* [Tutorials](http://mxnet.io/tutorials/index.html)
-* [How To](http://mxnet.io/faq/index.html)
-* [Architecture](http://mxnet.io/architecture/index.html)
+* [Tutorials](../tutorials/index.md)
+* [How To](../faq/index.md)
+* [Architecture](../architecture/index.md)

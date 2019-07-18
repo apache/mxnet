@@ -30,6 +30,7 @@
 namespace mxnet {
 namespace op {
 
+
 NNVM_REGISTER_OP(RNN)
 .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", RNNStatefulCompute<gpu>);
 

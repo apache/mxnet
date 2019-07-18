@@ -72,6 +72,7 @@ In the rest of this document, we list routines provided by the `symbol.contrib` 
     foreach
     while_loop
     cond
+    index_array
     index_copy
     getnnz
     edge_id

@@ -44,7 +44,7 @@ brew install opencv
 Run the following commands to install the prerequisites on Ubuntu.
 
 ```
-sudo apt-get install openjdk-8-java maven
+sudo apt-get install openjdk-8-jdk maven
 ```
 
 
@@ -123,7 +123,7 @@ Click "Import Changes" in this prompt.
 **Step 5.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
 
-**Step 6.** Navigate to the App.java class in the project and paste the code in `main` method from HelloWorld.java from [Java Demo project](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/src/main/java/sample/HelloWorld.java) on MXNet repository, overwriting the original hello world code.
+**Step 6.** Navigate to the App.java class in the project and paste the code in `main` method from HelloWorld.java from [Java Demo project](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/src/main/java/mxnet/HelloWorld.java) on MXNet repository, overwriting the original hello world code.
 You can also grab the entire [Java Demo project](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/mxnet-demo/java-demo) and run it by following the instructions on the [README](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/README.md).
 
 **Step 7.** Now run the App.java. 

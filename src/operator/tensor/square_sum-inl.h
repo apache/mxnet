@@ -434,14 +434,16 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
                             " when ograd_stype = kRowSparseStorage";
     CHECK_EQ(ograd.shape().ndim(), 2U);
     const TBlob ograd_row_idx = ograd.aux_data(rowsparse::kIdx);
-    CHECK(ograd_row_idx.Size() == in_row_idx.Size() || in_row_idx.Size() == in_data.shape_[0]);
+    CHECK(ograd_row_idx.Size() == in_row_idx.Size() ||
+          in_row_idx.Size() == static_cast<size_t>(in_data.shape_[0]));
     igrad->CheckAndAlloc({ograd.aux_shape(rowsparse::kIdx)});
     const TBlob& igrad_data = igrad->data();
     const TBlob igrad_row_idx = igrad->aux_data(rowsparse::kIdx);
     MSHADOW_IDX_TYPE_SWITCH(igrad_row_idx.type_flag_, IType, {
       // when ograd_row_idx and in_row_idx have the same size and input is not a full rsp
       // ograd_row_idx and in_row_idx are expected to have the same elements
-      if (in_row_idx.Size() != input.shape()[0]) {  // if input data is not a full rsp
+      if (in_row_idx.Size() != static_cast<size_t>(input.shape()[0])) {
+          // if input data is not a full rsp
         CHECK_EQ(ograd_row_idx.Size(), in_row_idx.Size()) << "SquareSumRspGradImpl only supports"
                                                              " equal ograd_row_idx and"
                                                              " input_row_idx when ograd and"
@@ -452,7 +454,8 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
       }
       MSHADOW_TYPE_SWITCH(igrad_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
-          if (in_row_idx.Size() != input.shape()[0]) {  // input data is not a full rsp
+          if (in_row_idx.Size() != static_cast<size_t>(input.shape()[0])) {
+              // input data is not a full rsp
             Kernel<SquareSumRspGradKernel<req_type, 1, kRowSparseStorage, false>, xpu>::Launch(
                 s, igrad_data.Size(), igrad_row_idx.dptr<IType>(),
                 igrad_data.dptr<DType>(), ograd_row_idx.dptr<IType>(),

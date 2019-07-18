@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument
+# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument, unnecessary-pass
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
@@ -26,7 +26,7 @@ import os
 import sys
 import inspect
 import platform
-import numpy as np
+import numpy as _np
 
 from . import libinfo
 
@@ -44,8 +44,8 @@ except NameError:
     long = int
 # pylint: enable=pointless-statement
 
-integer_types = (int, long, np.int32, np.int64)
-numeric_types = (float, int, long, np.generic)
+integer_types = (int, long, _np.int32, _np.int64)
+numeric_types = (float, int, long, _np.generic)
 string_types = basestring,
 
 if sys.version_info[0] > 2:
@@ -213,10 +213,11 @@ __version__ = libinfo.__version__
 _LIB = _load_lib()
 
 # type definitions
+mx_int = ctypes.c_int
 mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
 mx_float_p = ctypes.POINTER(mx_float)
-mx_real_t = np.float32
+mx_real_t = _np.float32
 NDArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
 OpHandle = ctypes.c_void_p
@@ -455,7 +456,7 @@ def ctypes2numpy_shared(cptr, shape):
     for s in shape:
         size *= s
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
-    return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
+    return _np.frombuffer(dbuffer, dtype=_np.float32).reshape(shape)
 
 
 def build_param_doc(arg_names, arg_types, arg_descs, remove_dup=True):

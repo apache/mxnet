@@ -100,7 +100,7 @@ class ToTensor(HybridBlock):
 
     Converts an image NDArray of shape (H x W x C) in the range
     [0, 255] to a float32 tensor NDArray of shape (C x H x W) in
-    the range [0, 1).
+    the range [0, 1].
 
     If batch input, converts a batch image NDArray of shape (N x H x W x C) in the
     range [0, 255] to a float32 tensor NDArray of shape (N x C x H x W).
