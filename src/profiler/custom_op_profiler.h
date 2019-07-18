@@ -100,12 +100,15 @@ class CustomOpProfiler {
  private:
   /* !\brief make the display name for sub-operators */
   inline std::string MakeSubOperatorName(const Tid& tid, const char* op_type) {
+    std::cout << "sub op name" <<
+        tid_to_op_type_[tid] + "::" + std::string(op_type) << std::endl;
     return tid_to_op_type_[tid] + "::" + std::string(op_type);
   }
   /* !\brief make the display name for the pure python call back function i.e.
    * forward() or backward() in the custom operator definition
    */
   inline std::string MakePythonCodeName(const std::string& op_type) {
+    std::cout << "python name" << op_type + "::pure_python" << std::endl;
     return op_type + "::pure_python";
   }
   /*! \brief class mutex */
