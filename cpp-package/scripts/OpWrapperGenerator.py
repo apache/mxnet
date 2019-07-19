@@ -106,7 +106,14 @@ class Arg:
         'tuple of <int (non-negative)>':'nnvm::Tuple<uint32_t>',\
         'tuple of <long (non-negative)>':'nnvm::Tuple<uint64_t>',\
         'tuple of <float>':'nnvm::Tuple<mx_float>',\
-        'tuple of <double>':'nnvm::Tuple<double>'}
+        'tuple of <double>':'nnvm::Tuple<double>',\
+        'tuple of <int> or None':'dmlc::optional<nnvm::Tuple<int> >',\
+        'tuple of <long> or None':'dmlc::optional<nnvm::Tuple<int64_t> >',\
+        'tuple of <int (non-negative)> or None':'dmlc::optional<nnvm::Tuple<uint32_t> >',\
+        'tuple of <long (non-negative)> or None':'dmlc::optional<nnvm::Tuple<uint64_t> >',\
+        'tuple of <float> or None':'dmlc::optional<nnvm::Tuple<float> >',\
+        'tuple of <double> or None':'dmlc::optional<nnvm::Tuple<double> >',\
+        }
     name = ''
     type = ''
     description = ''
