@@ -471,6 +471,7 @@ FP32_FUNCS = [
     'log_softmax',
     'InstanceNorm',
     'LayerNorm',
+    'GroupNorm',
     'L2Normalization',
     'LRN',
     'SoftmaxActivation',
