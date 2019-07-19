@@ -25,6 +25,9 @@ import mxnet.autograd as ag
 import mxnet.ndarray as nd
 from mxnet import gluon
 import mxnet
+import random
+from functools import reduce
+from operator import mul
 from nose.tools import ok_
 import numpy as np
 
@@ -331,6 +334,12 @@ def check_second_order_unary(x, op, grad_grad_op, rtol=None, atol=None):
     assert_almost_equal(expected_grad_grad,
                         x.grad.asnumpy(), rtol=rtol, atol=atol)
 
+def arange_shape_like(y):
+    shape = y.shape
+    nelems = reduce(mul, shape)
+    x = nd.arange(nelems).reshape(shape)
+    return x
+
 class RandomShapes(object):
     def __init__(self, dim, startdim=1):
         self.dim = dim
@@ -339,60 +348,72 @@ class RandomShapes(object):
     def __iter__(self):
         return self
 
+    @staticmethod
+    def random_shape(dimensions):
+        shape = rand_shape_nd(dimensions)
+        # x = nd.random.normal(shape=shape)
+        nelems = reduce(mul, shape)
+        x = nd.arange(nelems).reshape(shape)
+        return x
+
     def next(self):
         return self.__next__()
 
     def __next__(self):
         if self.curdim > self.dim:
             raise StopIteration
-        shape = rand_shape_nd(self.curdim)
-        x = nd.random.normal(shape=shape)
+        x = RandomShapes.random_shape(self.curdim)
         self.curdim += 1
         return x
 
 
+def flatten2d_right(x):
+    s_0 = x.shape[0]
+    s_1 = reduce(mul, x.shape[1:])
+    return x.reshape((s_0, s_1))
+
+
+def flatten2d_left(x):
+    s_0 = reduce(mul, x.shape[:-1])
+    s_1 = x.shape[-1]
+    return x.reshape((s_0, s_1))
+
+
 @with_seed()
-def test_dense_backward():
+def test_dense_backward_flatten():
     for x in RandomShapes(4,2):
-        print(x)
+        hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
         with net.name_scope():
-            net.add(gluon.nn.Dense(1))
-
+            net.add(gluon.nn.Dense(hidden, flatten=True))
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with ag.record():
             y = net.forward(x)
+            o_y = arange_shape_like(y)  # head gradient of y
             params = [p.data() for p in net.collect_params().values()]
-            print(params)
-            x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
-        x_grad.backward()
-        same(x.grad, nd.zeros(4))
+            w = params[0]
+            b = params[1]
 
+            # print(params)
+            x_grad = ag.grad(heads=y, variables=x, head_grads=o_y,
+                             create_graph=True, retain_graph=True)[0]
+            o_x_grad = arange_shape_like(x_grad)
+            #x_grad.attach_grad()
+            x_grad_grad = ag.grad(heads=x_grad, variables=w, head_grads=o_x_grad, create_graph=False)[0]
+            w_grad = ag.grad(heads=y, variables=w, head_grads=o_y,
+                             create_graph=True, retain_graph=True)[0]
+            o_w_grad = arange_shape_like(w_grad)
+            w_grad_grad = ag.grad(heads=w_grad, variables=x, head_grads=o_w_grad, create_graph=False)[0]
 
-def test_fc():
-    x = nd.random.uniform(shape=(5,3,2))
-    w = nd.random.uniform(shape=(8,6))
-    b = nd.random.uniform(shape=(8,))
-    x.attach_grad()
-    w.attach_grad()
-    ag.set_recording(True)
-    y = nd.FullyConnected(data=x, weight=w, bias=b, flatten=True, num_hidden=8)
-    #x_grad = ag.grad(y, x, create_graph=True, retain_graph=True)
-    #x_grad_grad = ag.grad(x_grad, x, create_graph=False, retain_graph=True)
-    w_grad = ag.grad(y, w, create_graph=True, retain_graph=True)[0]
-    #w_grad.backward()
-    #w_grad_grad=w_grad.grad
-    w_grad_grad = ag.grad(w_grad, w, create_graph=False, retain_graph=True)[0]
-    ag.set_recording(False)
-    #print(y)
-    #print(x_grad)
-    print(w)
-    #print(x_grad_grad)
-    print("w_grad: {}".format(w_grad.shape))
-    print("w_grad_grad: {}".format(w_grad_grad.shape))
-    print(w_grad_grad)
-
+        expect_w_grad = nd.dot(o_y, x, transpose_a=True)
+        expect_w_grad_grad = nd.dot(o_y, o_x_grad, transpose_a=True)
+        expect_x_grad = nd.dot(o_y, w)
+        expect_x_grad_grad = nd.dot(o_y, o_w_grad)
+        same(expect_w_grad, w_grad)
+        same(expect_w_grad_grad, w_grad_grad)
+        same(expect_x_grad, x_grad)
+        same(expect_x_grad_grad, x_grad_grad)
 
 
 if __name__ == '__main__':

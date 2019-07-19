@@ -298,6 +298,21 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
 // x_grad_grad : o_y *  o_w_grad
 // w_grad_grad : o_y.T * o_x_grad
 //
+// For implementation details see this PR: https://github.com/apache/incubator-mxnet/pull/14779
+
+/**
+ * Second order gradient for Fully Connected
+ * x_grad_grad = o_y * o_w_grad
+ * w_grad_grad = o_y.T * o_x_grad
+ *
+ * @tparam xpu
+ * @tparam DType
+ * @param attrs
+ * @param ctx
+ * @param inputs
+ * @param req
+ * @param outputs
+ */
 template<typename xpu, typename DType>
 void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
                                    const OpContext& ctx,
@@ -306,8 +321,6 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
                                    const std::vector<TBlob>& outputs) {
   using namespace std;
   using namespace fullc;
-
-  cout << "FullyConnectedGradGradCompute!!!" << endl;
   Stream<xpu> *stream = ctx.get_stream<xpu>();
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const size_t num_inputs = param.no_bias ? 3U : 4U;
@@ -343,8 +356,8 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
     w_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_w_grad_grad], ctx);
   }
   //linalg_gemm(grad, wmat, gdata, false, false, s, req[fullc::kData]);
-  linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream, req[fullc::kData]);
-  linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream, req[fullc::kData]);
+  linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream);
+  linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream);
   if (! param.no_bias) {
     // TODO(larroy)
   }
