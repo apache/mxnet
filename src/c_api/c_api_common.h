@@ -81,10 +81,14 @@ struct MXAPIThreadLocalEntry {
   std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
   /*! \brief result holder for returning shape pointer */
   std::vector<const int*> arg_shape_data_ex, out_shape_data_ex, aux_shape_data_ex;
+  std::vector<const int64_t*> arg_shape_data_ex_int64, out_shape_data_ex_int64,
+                              aux_shape_data_ex_int64;
   /*! \brief uint32_t buffer for returning shape pointer */
   std::vector<uint32_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
   /*! \brief uint32_t buffer for returning shape pointer */
   std::vector<int> arg_shape_buffer_ex, out_shape_buffer_ex, aux_shape_buffer_ex;
+  std::vector<int64_t> arg_shape_buffer_ex_int64, out_shape_buffer_ex_int64,
+                       aux_shape_buffer_ex_int64;
   /*! \brief bool buffer */
   std::vector<bool> save_inputs, save_outputs;
   // DEPRECATED. Use SetupShapeArrayReturnWithBufferEx instead.
@@ -122,6 +126,30 @@ struct MXAPIThreadLocalEntry {
     }
     buffer->resize(size);
     int *ptr = buffer->data();
+    for (size_t i = 0; i < shapes.size(); ++i) {
+      ndim->at(i) = shapes[i].ndim();
+      data->at(i) = ptr;
+      if (shapes[i].ndim() > 0) {
+        ptr = mxnet::ShapeTypeCast(shapes[i].begin(), shapes[i].end(), ptr);
+      }
+    }
+  }
+
+  inline static void SetupShapeArrayReturnWithBufferExInt64(
+      const mxnet::ShapeVector &shapes,
+      std::vector<int> *ndim,
+      std::vector<const int64_t*> *data,
+      std::vector<int64_t> *buffer) {
+    ndim->resize(shapes.size());
+    data->resize(shapes.size());
+    size_t size = 0;
+    for (const auto& s : shapes) {
+      if (s.ndim() > 0) {
+        size += s.ndim();
+      }
+    }
+    buffer->resize(size);
+    int64_t *ptr = buffer->data();
     for (size_t i = 0; i < shapes.size(); ++i) {
       ndim->at(i) = shapes[i].ndim();
       data->at(i) = ptr;
