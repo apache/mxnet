@@ -587,7 +587,7 @@ You can use the Maven packages defined in the following dependency to include MX
 ```
 
 </div>
-<div class="source">
+<div class="build-from-source">
 Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet Ubuntu installation guide</a>.
 
 </div>
@@ -891,7 +891,7 @@ Not available at this time. <br>
 ]add MXNet#v1.5.0
 ```
 </div>
-<div class="source">
+<div class="build-from-source">
 Refer to the <a href="osx_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet macOS installation guide</a>.
 
 </div>
@@ -1227,7 +1227,7 @@ MXNet-Java for Windows is not yet available.
 ]add MXNet#v1.5.0
 ```
 </div>
-<div class="source">
+<div class="build-from-source">
 Refer to the <a href="windows_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet Windows installation guide</a>.
 
 </div>
