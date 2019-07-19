@@ -98,37 +98,67 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
     temp_data_shape[i+1] = data_shape[i];
   }
 
-  TBlob data_ = data.reshape(temp_data_shape);
-  const TBlob& output = outputs[groupnorm::kOut].reshape(temp_data_shape);
-
-  mxnet::TShape axes(temp_data_shape.ndim() - 2, 2);
-  for (int i = 0; i < axes.ndim(); ++i) {
-    axes[i] = i + 2;
-  }
-  MomentsForwardImpl<xpu>(
-    ctx, {data_}, {req[1], req[2]}, {mean, std}, dmlc::optional<mxnet::TShape>(axes), false);
-  // Now std actually holds var
-
   mxnet::TShape moments_shape(temp_data_shape.ndim(), 1);
   for (int i = 0; i < data.shape_.ndim(); ++i) {
     moments_shape[i] = (i < mean.shape_.ndim()) ? mean.shape_[i] : 1;
   }
-  const TBlob& mean_ = mean.reshape(moments_shape);
-  const TBlob& std_ = std.reshape(moments_shape);
-  // Calculate data = data - mean
-  BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(
-    attrs, ctx, {data_, mean_}, {kWriteTo}, {output});
 
-  // Calculate std = sqrt(var + eps)
-  MSHADOW_REAL_TYPE_SWITCH(std.type_flag_, DType, {
-    Tensor<xpu, 1, DType> std_tensor = std.FlatTo1D<xpu, DType>(s);
-    std_tensor = F<mshadow_op::square_root>(std_tensor + scalar<DType>(param.eps));
+  mxnet::TShape red_src_shape, red_dst_shape;
+  BroadcastReduceShapeCompact(temp_data_shape, moments_shape, &red_src_shape, &red_dst_shape);
+  int channel_size = red_src_shape.Size() / red_dst_shape.Size();
+
+  TBlob data_ = data.reshape(red_src_shape);
+  const TBlob& mean_ = mean.reshape(red_dst_shape);
+  const TBlob& std_ = std.reshape(red_dst_shape);
+
+  Tensor<xpu, 1, char> workspace;
+
+  size_t workspace_size = 0;
+  MSHADOW_REAL_TYPE_SWITCH(data.type_flag_, DType, {
+    BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
+      workspace_size =
+        broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_dst_shape, req[0], red_src_shape);
+    });
+  });
+
+  workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+
+  // Calculate mean
+  MSHADOW_REAL_TYPE_SWITCH(data.type_flag_, DType, {
+    BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
+      broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::identity, true>(
+        s, mean_, req[0], workspace, data_);
+      Tensor<xpu, 1, DType> mean_data_tensor = mean_.FlatTo1D<xpu, DType>(s);
+      mean_data_tensor /= scalar<DType>(channel_size);
+    });
+  });
+
+  TBlob data_grp = data.reshape(temp_data_shape);
+  const TBlob& mean_grp = mean.reshape(moments_shape);
+  const TBlob& std_grp = std.reshape(moments_shape);
+  const TBlob& output = outputs[groupnorm::kOut].reshape(temp_data_shape);
+
+  // Calculate data = data - mean
+  BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
+                                                     {data_grp, mean_grp},
+                                                     {kWriteTo}, {output});
+
+  // Calculate std
+  const TBlob centered_out = outputs[groupnorm::kOut].reshape(red_src_shape);
+  MSHADOW_REAL_TYPE_SWITCH(output.type_flag_, DType, {
+    BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
+      broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, true>(
+        s, std_, req[0], workspace, centered_out);
+      Tensor<xpu, 1, DType> std_data_tensor = std_.FlatTo1D<xpu, DType>(s);
+      std_data_tensor = F<mshadow_op::square_root>(std_data_tensor / scalar<DType>(channel_size)
+                        + scalar<DType>(param.eps));
+    });
   });
 
   // Calculate data = data / std
-  BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
-                                                   {output, std_},
-                                                   {kWriteTo}, {output});
+  BinaryBroadcastCompute<xpu, mshadow_op::div>(attrs, ctx,
+                                               {output, std_grp},
+                                               {kWriteTo}, {output});
 
   mxnet::TShape new_param_shape(data_shape.ndim() + 1, 1);
   new_param_shape[1] = num_groups;
@@ -147,7 +177,7 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
 }
 
 /*
-Calculate the gradient of layer normalization.
+Calculate the gradient of group normalization.
 We have the following gradient for gamma, beta and x:
 
 \bar{x} = (x - mean) / std
