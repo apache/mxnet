@@ -21,7 +21,6 @@ import random
 from mxnet import nd, autograd
 from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd, same
 from common import with_seed
-import mxnet.autograd as ag
 import mxnet.ndarray as nd
 from mxnet import gluon
 import mxnet
@@ -334,13 +333,15 @@ def check_second_order_unary(x, op, grad_grad_op, rtol=None, atol=None):
     assert_almost_equal(expected_grad_grad,
                         x.grad.asnumpy(), rtol=rtol, atol=atol)
 
+
 def arange_shape_like(y):
     shape = y.shape
     nelems = reduce(mul, shape)
     x = nd.arange(nelems).reshape(shape)
     return x
 
-class RandomShapes(object):
+
+class NDArrayGenerator(object):
     def __init__(self, dim, startdim=1):
         self.dim = dim
         self.curdim = startdim
@@ -349,9 +350,8 @@ class RandomShapes(object):
         return self
 
     @staticmethod
-    def random_shape(dimensions):
+    def gen(dimensions):
         shape = rand_shape_nd(dimensions)
-        # x = nd.random.normal(shape=shape)
         nelems = reduce(mul, shape)
         x = nd.arange(nelems).reshape(shape)
         return x
@@ -362,7 +362,7 @@ class RandomShapes(object):
     def __next__(self):
         if self.curdim > self.dim:
             raise StopIteration
-        x = RandomShapes.random_shape(self.curdim)
+        x = NDArrayGenerator.gen(self.curdim)
         self.curdim += 1
         return x
 
@@ -381,31 +381,29 @@ def flatten2d_left(x):
 
 @with_seed()
 def test_dense_backward_flatten():
-    for x in RandomShapes(4,2):
+    for x in NDArrayGenerator(4,2):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
         with net.name_scope():
             net.add(gluon.nn.Dense(hidden, flatten=True))
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
-        with ag.record():
+        with autograd.record():
             y = net.forward(x)
             o_y = arange_shape_like(y)  # head gradient of y
             params = [p.data() for p in net.collect_params().values()]
             w = params[0]
             b = params[1]
-
-            # print(params)
-            x_grad = ag.grad(heads=y, variables=x, head_grads=o_y,
-                             create_graph=True, retain_graph=True)[0]
+            x_grad = autograd.grad(heads=y, variables=x, head_grads=o_y,
+                                   create_graph=True, retain_graph=True)[0]
             o_x_grad = arange_shape_like(x_grad)
-            #x_grad.attach_grad()
-            x_grad_grad = ag.grad(heads=x_grad, variables=w, head_grads=o_x_grad, create_graph=False)[0]
-            w_grad = ag.grad(heads=y, variables=w, head_grads=o_y,
-                             create_graph=True, retain_graph=True)[0]
+            x_grad_grad = autograd.grad(heads=x_grad, variables=w,
+                                        head_grads=o_x_grad, create_graph=False)[0]
+            w_grad = autograd.grad(heads=y, variables=w, head_grads=o_y,
+                                   create_graph=True, retain_graph=True)[0]
             o_w_grad = arange_shape_like(w_grad)
-            w_grad_grad = ag.grad(heads=w_grad, variables=x, head_grads=o_w_grad, create_graph=False)[0]
-
+            w_grad_grad = autograd.grad(heads=w_grad, variables=x,
+                                        head_grads=o_w_grad, create_graph=False)[0]
         expect_w_grad = nd.dot(o_y, x, transpose_a=True)
         expect_w_grad_grad = nd.dot(o_y, o_x_grad, transpose_a=True)
         expect_x_grad = nd.dot(o_y, w)

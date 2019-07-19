@@ -343,7 +343,6 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);
 
-
 // 2nd gradient for fully connected
 // Inputs are:
 // o_x_grad : head gradient for x_grad
