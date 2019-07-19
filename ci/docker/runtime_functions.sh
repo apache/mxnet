@@ -1213,7 +1213,7 @@ build_docs() {
 
     # Setup environment for Julia docs
     export PATH="/work/julia10/bin:$PATH"
-    export MXNET_ROOT='/work/mxnet'
+    export MXNET_HOME='/work/mxnet'  # test for backward compatibility
     export JULIA_DEPOT_PATH='/work/julia-depot'
 
     julia -e 'using InteractiveUtils; versioninfo()'
