@@ -22,11 +22,11 @@ When developing new operators, developers need to deal with tensor objects exten
 
 ## Usage 
 
-This utility is located in `src/common/tensor_inspector.h`. To use it in any operator code, just include `tensor_inspector`, construct an `TensorInspector` object, and call the APIs on that object. You can run any script that uses the operator you just modified then.
+This utility is located in `src/common/tensor_inspector.h`. To use it in any operator code, just include it using `#include "{path}/tensor_inspector.h"`, construct an `TensorInspector` object, and call the APIs on that object. You can run any script that uses the operator you just modified then.
 
 The screenshot below shows a sample usage in `src/operator/nn/convolution-inl.h`.
 
-![Screen Shot 2019-07-08 at 5 03 46 PM](https://user-images.githubusercontent.com/16669457/60850062-68690e00-a1a2-11e9-8268-033edde17aa4.png)
+![tensor_inspector_example_usage](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_example_usage.png)
 
 
 ## Functionalities/APIs
@@ -35,9 +35,9 @@ The screenshot below shows a sample usage in `src/operator/nn/convolution-inl.h`
 
 You can create a `TensorInspector` object by passing in two things: 1) an object of type `Tensor`, `Tbob`, or `NDArray`, and 2) an `RunContext` object.
 
-Essentially, `TensorInspector` can be understood as a wrapper class around `TBlob`. Internally, the `Tensor`, `Tbob`, or `NDArray` object that you passed in will be converted to a `TBlob` object. The `RunContext` object is used when the the tensor is a GPU tensor; in such a case, we need to use the context information to copy the data from GPU memory to CPU/main memory.
+Essentially, `TensorInspector` can be understood as a wrapper class around `TBlob`. Internally, the `Tensor`, `Tbob`, or `NDArray` object that you passed in will be converted to a `TBlob` object. The `RunContext` object is used when the tensor is a GPU tensor; in such a case, we need to use the context information to copy the data from GPU memory to CPU/main memory.
 
-Below are the three constructors:
+Following are the three constructors:
 
 ```c++
 // Construct from Tensor object
@@ -53,15 +53,15 @@ TensorInspector(const NDArray& arr, const RunContext& ctx):
 
 ### Print Tensor Value (Static) 
 
-To print out the tensor value in a nicely structured way,  you can use this API:
+To print out the tensor value in a nicely structured way, you can use this API:
 
 ```c++
 void print_string();
 ```
 
-This API will print the entire tensor to `std::cout` and preserve the shape (it supports all dimensions from 1 and up). You can copy the output and interpret it with any `JSON` loader. Also, on the last line of the output you can find some useful information about the tensor. Refer to the case below, we are able to know that this is a float-typed tensor with shape 20x1x5x5.
+This API will print the entire tensor to `std::cout` and preserve the shape (it supports all dimensions from 1 and up). You can copy the output and interpret it with any `JSON` loader. You can find some useful information about the tensor on the last line of the output. Refer to the case below, we are able to know that this is a float-typed tensor with shape 20x1x5x5.
 
-![Screen Shot 2019-07-08 at 4 07 16 PM](https://user-images.githubusercontent.com/16669457/60848554-d8c06100-a19b-11e9-9fe0-23e79a7a371a.png)
+![tensor_inspector_to_string](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_to_string.png)
 
 If instead of printing the tensor to `std::cout`, you just need a `string`, you can use this API:
 ```c++
@@ -70,17 +70,17 @@ std::string void to_string();
 
 ### Interactively Print Tensor Value (Dynamic) 
 
-When debugging, situations might occur that at compilation time, you do not know which part of a tensor to inspect. Also, sometimes, it would be nice to pause the operator control flow to “zoom into” a specific, erroneous part of a tensor multiple times until you are satisfied. In this regard, you can use this API to interactively inspect the tensor:
+Sometimes at compilation time, you may not know which part of a tensor to inspect. Also, it may be nice to pause the operator control flow to “zoom into” a specific, erroneous part of a tensor multiple times until you are satisfied. In this regard, you can use this API to interactively inspect the tensor:
 
 ```c++
 void  interactive_print(std::string tag =  "") {
 ```
 
-This API will set a "break point" in your code, so that you will enter a loop that will keep asking you for further command. In the API call, `tag` is an optional parameter to give the call a name, so that you can identify it when you have multiple `interactive_print()` calls in different parts of your code. A visit count will tell you for how many times have you stepped into this particular "break point", should this operator be called more than once. Note that all `interactive_print()` calls are properly locked, so you can use it in many different places without issues.
+This API will set a "break point" in your code. What that "break point" is reached, you will enter a loop that will keep asking you for further command input. In the API call, `tag` is an optional parameter to give the call a name, so that you can identify it when you have multiple `interactive_print()` calls in different parts of your code. A visit count will tell you how many times you stepped into this particular "break point", should this operator be called more than once. Note that all `interactive_print()` calls are properly locked, so you can use it in many different places without issues.
 
-![Screen Shot 2019-07-10 at 5 29 07 PM](https://user-images.githubusercontent.com/16669457/61013632-5325e800-a338-11e9-90e6-607f17d81495.png)
+![tensor_inspector_interactive_print](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png)
 
-Refer the screenshot above, there are many useful commands available: you can type "e" to print out the entire tensor, "d" to dump the tensor to file (see below), "b" to break from this command loop, and "s" to skip all future `interactive_print()`. Most importantly, in this screen, you can specify a part of the tensor that you are particularly interested in and want to print out. For example, for this 20x1x5x5 tensor, you can type in "0, 0" and presss enter to check the sub-tensor with shape 5x5 at coordinate (0, 0). 
+There are many useful commands available, as described in the previous screenshot: you can type "e" to print out the entire tensor, "d" to dump the tensor to file (see below), "b" to break from this command loop, and "s" to skip all future `interactive_print()`. Most importantly, in this screen, you can specify a part of the tensor that you are particularly interested in and want to print out. For example, for this 64x20x24x24 tensor, you can type in "0, 0" and presss enter to check the sub-tensor with shape 24x24 at coordinate (0, 0). 
 
 ### Check Tensor Value
 
@@ -104,24 +104,24 @@ In the first API, `ValueChecker checker` is a bool lambda function that takes in
 
 This checker is called on every value within the tensor. The return of the API is a `vector` of all the coordinates where the checker evaluates to `true`. The coordinates are themselves represented by `vector<int>`. If you set `interactive` to true, you will set a "break point" and enter a loop that asks for commands. This is similar to `interactive_print()`. You can type "p" to print the coordinates, "b" to break from the loop, and "s" to skip all future "break points" in `interactive_print()`. You can also specify a coordinate to print only a part of the tensor or type "e" to print out the entire tensor.  Just like `interactive_print()`, this this interactive screen is also properly locked.
 
-![Screen Shot 2019-07-10 at 5 34 20 PM](https://user-images.githubusercontent.com/16669457/61013773-fe36a180-a338-11e9-9a2b-5f11ccc7afa7.png)
+![tensor_inspector_value_check](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_value_check.png)
 
 Also, there are a bunch of built-int value checkers. Refer to the Enum below:
 
 ```c++
 enum  CheckerType {
-	NegativeChecker, // check if is negative
-	PositiveChecker, // check if is positive
-	ZeroChecker, // check if is zero
-	NaNChecker, // check if is NaN, will always return false if DType is not a float type
-	InfChecker, // check if is infinity, will always return false if DType is not a float type
-	PositiveInfChecker, // check if is positive infinity,
+	NegativeChecker, // check if negative
+	PositiveChecker, // check if positive
+	ZeroChecker, // check for zero
+	NaNChecker, // check if for NaN, will always return false if DType is not a float type
+	InfChecker, // check for infinity, will always return false if DType is not a float type
+	PositiveInfChecker, // check for positive infinity,
 						// will always return false if DType is not a float type
-	NegativeInfChecker, // check if is nagative infinity,
+	NegativeInfChecker, // check for nagative infinity,
 						// will always return false if DType is not a float type
-	FiniteChecker, // check if is finite, will always return false if DType is not a float type
-	NormalChecker, // check if is neither infinity nor NaN
-	AbnormalChecker, // chekck if is infinity or nan
+	FiniteChecker, // check if finite, will always return false if DType is not a float type
+	NormalChecker, // check if it is neither infinity nor NaN
+	AbnormalChecker, // chekck if it is infinity or nan
 };
 ```
 
@@ -136,7 +136,7 @@ You can simply pass in a value from `CheckerType` where you would have passed in
 
 ### Dump Tensor Value
 
-Sometimes, you might want to dump the tensor to a file in binary mode. Then, you might want to use a python script to further analyze the tensor value.  Or, you might do that simply because a binary dumps has better precision and is faster to load than if you copy-paste the output from `print_string()` and load it as a `JASON` string. Either way, you can use this API:
+Sometimes, you might want to dump the tensor to a file in binary mode. Then, you might want to use a python script to further analyze the tensor value. Or, you might do that simply because a binary dump has better precision and is faster to load than the output copy-pasted from `print_string()` and loaded as a `JSON` string. Either way, you can use this API:
 
 ```c++
 void dump_to_file(std::string tag);
@@ -152,13 +152,13 @@ a = np.load('abc_1.npy')
 print(a)
 ```
 
-Let's see the how it runs:
+Let's see how it runs:
 
-![Screen Shot 2019-07-10 at 5 17 29 PM](https://user-images.githubusercontent.com/16669457/61013259-cc244000-a336-11e9-8564-a018041634f6.png)
+![tensor_inspector_dump_to_file](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_dump_to_file.png)
 
 Notice: in `interactive_print()`, you could also do value dumping with command "d". You will be prompted to enter the `tag` value:
 
-![Screen Shot 2019-07-11 at 4 57 41 PM](https://user-images.githubusercontent.com/16669457/61092906-0f48e680-a3fd-11e9-8251-c4371cdd00ad.png)
+![tensor_inspector_interactive_print](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png)
 
 ### Test Coverage and Limitations
 
