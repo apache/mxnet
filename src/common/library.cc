@@ -33,7 +33,7 @@ void* load_lib(const char* path) {
   if (!handle) {
     std::cerr << "Error loading accelerator library: '" << path
               << "'\n" << dlerror() << std::endl;
-    return 0;
+    return nullptr;
   }
   return handle;
 }
