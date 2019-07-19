@@ -19,7 +19,7 @@ import mxnet as mx
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 from benchmark.opperf.utils.op_registry_utils import get_all_optimizer_operators
 
-"""Performance benchmark tests for MXNet NDArray Optimizer Operators.
+"""Performance benchmark tests for MXNet Neural Network Optimizer Update Operators.
 
 1. Stochastic Gradient Descent (SGD)
     1.1 multi_sgd_mom_update
@@ -42,7 +42,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_optimizer_operators
 
 def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the neural network
-    optimizer operators  in MXNet.
+    optimizer update operators in MXNet.
 
     Parameters
     ----------
