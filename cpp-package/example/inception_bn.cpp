@@ -172,6 +172,7 @@ int main(int argc, char const *argv[]) {
   }
 #endif
 
+  TRY
   auto inception_bn_net = InceptionSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
@@ -255,5 +256,6 @@ int main(int argc, char const *argv[]) {
   delete exec;
   delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

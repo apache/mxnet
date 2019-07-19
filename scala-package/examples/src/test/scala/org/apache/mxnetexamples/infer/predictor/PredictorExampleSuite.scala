@@ -65,23 +65,25 @@ class PredictorExampleSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("test Predictor With Fixed Shape and random shape") {
-    val inputDesc = IndexedSeq(new DataDesc("data", Shape(1, 3, 224, 224),
-      DType.Float32, Layout.NCHW))
-    val predictor = PredictorExample.loadModel(modelDirPrefix, inputDesc, context, 0)
-    // fix size
-    var img = PredictorExample.preProcess(inputImagePath, 224, 224)
-    var result = PredictorExample.doInference(predictor, img)(0)
-    var top1 = PredictorExample.postProcess(modelDirPrefix, result.toArray)
-    assert(top1 === "n02110958 pug, pug-dog")
-    // random size 512
-    img = PredictorExample.preProcess(inputImagePath, 512, 512)
-    result = PredictorExample.doInference(predictor, img)(0)
-    top1 = PredictorExample.postProcess(modelDirPrefix, result.toArray)
-    assert(top1 === "n02110958 pug, pug-dog")
-    // original size
-    img = PredictorExample.preProcess(inputImagePath, 1024, 576)
-    result = PredictorExample.doInference(predictor, img)(0)
-    top1 = PredictorExample.postProcess(modelDirPrefix, result.toArray)
-    assert(top1 === "n02110958 pug, pug-dog")
+    ResourceScope.using() {
+      val inputDesc = IndexedSeq(new DataDesc("data", Shape(1, 3, 224, 224),
+                                              DType.Float32, Layout.NCHW))
+      val predictor = PredictorExample.loadModel(modelDirPrefix, inputDesc, context, 0)
+      // fix size
+      var img = PredictorExample.preProcess(inputImagePath, 224, 224)
+      var result = PredictorExample.doInference(predictor, img)(0)
+      var top1 = PredictorExample.postProcess(modelDirPrefix, result.toArray)
+      assert(top1 === "n02110958 pug, pug-dog")
+      // random size 512
+      img = PredictorExample.preProcess(inputImagePath, 512, 512)
+      result = PredictorExample.doInference(predictor, img)(0)
+      top1 = PredictorExample.postProcess(modelDirPrefix, result.toArray)
+      assert(top1 === "n02110958 pug, pug-dog")
+      // original size
+      img = PredictorExample.preProcess(inputImagePath, 1024, 576)
+      result = PredictorExample.doInference(predictor, img)(0)
+      top1 = PredictorExample.postProcess(modelDirPrefix, result.toArray)
+      assert(top1 === "n02110958 pug, pug-dog")
+    }
   }
 }

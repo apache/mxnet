@@ -31,7 +31,15 @@ private[mxnet] object CToScalaUtils {
     "double" -> "Double",
     "bool" -> "Boolean")
 
-  // Convert C++ Types to Scala Types
+  /**
+    * Convert C++ Types to Scala Types
+    * @param in Input raw string that contains C type docs
+    * @param argType Arg type that used for error messaging
+    * @param argName Arg name used for error messaging
+    * @param returnType The type that NDArray/Symbol should be
+    * @param isJava Check if generating for Java
+    * @return String that contains right Scala/Java types
+    */
   def typeConversion(in : String, argType : String = "", argName : String,
                      returnType : String, isJava : Boolean) : String = {
     val header = returnType.split("\\.").dropRight(1)
@@ -47,7 +55,8 @@ private[mxnet] object CToScalaUtils {
       case "double" | "doubleorNone" => types("double")
       case "string" => "String"
       case "boolean" | "booleanorNone" => types("bool")
-      case "tupleof<float>" | "tupleof<double>" | "tupleof<>" | "ptr" | "" => "Any"
+      case "tupleof<int>" | "tupleof<float>" | "tupleof<double>" | "tupleof<intorNone>" |
+           "tupleof<>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default\nString argType: $argType\nargName: $argName")
     }
@@ -63,6 +72,8 @@ private[mxnet] object CToScalaUtils {
     * optional, what is it Scala type and possibly pass in a default value
     * @param argName The name of the argument
     * @param argType Raw arguement Type description
+    * @param returnType Return type of the function (Symbol/NDArray)
+    * @param isJava Check if Java args should be generated
     * @return (Scala_Type, isOptional)
     */
   def argumentCleaner(argName: String, argType : String,

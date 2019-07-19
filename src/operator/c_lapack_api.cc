@@ -36,15 +36,29 @@
 
   #define MXNET_LAPACK_CWRAPPER2(func, dtype) \
   int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
-                                 int lda, dtype* tau, dtype* work, int lwork) { \
+                          int lda, dtype* tau, dtype* work, int lwork) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1; \
   }
 
   #define MXNET_LAPACK_CWRAPPER3(func, dtype) \
   int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype *a, \
-                                 int lda, dtype *w, dtype *work, int lwork, \
-                                 int *iwork, int liwork) { \
+                          int lda, dtype *w, dtype *work, int lwork, \
+                          int *iwork, int liwork) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
+  #define MXNET_LAPACK_CWRAPPER4(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, \
+                          dtype *a, int lda, int *ipiv) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
+  #define MXNET_LAPACK_CWRAPPER5(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int n, dtype *a, int lda, \
+                          int *ipiv, dtype *work, int lwork) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1; \
   }
@@ -69,4 +83,10 @@
 
   MXNET_LAPACK_CWRAPPER3(ssyevd, float)
   MXNET_LAPACK_CWRAPPER3(dsyevd, double)
+
+  MXNET_LAPACK_CWRAPPER4(sgetrf, float)
+  MXNET_LAPACK_CWRAPPER4(dgetrf, double)
+
+  MXNET_LAPACK_CWRAPPER5(sgetri, float)
+  MXNET_LAPACK_CWRAPPER5(dgetri, double)
 #endif  // MSHADOW_USE_MKL == 0

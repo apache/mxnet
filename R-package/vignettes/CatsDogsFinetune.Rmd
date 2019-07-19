@@ -162,13 +162,13 @@ val   <- data$val
 
 ## Load pretrained model
 
-Here we use the pretrained model from http://data.dmlc.ml/models/imagenet/.
+Here we use the pretrained model from http://data.mxnet.io/mxnet/data/.
 There are 1000 classes in imagenet,
 and we need to replace the last fully connected layer with a new layer for 2 classes.
 
 
 ```{r}
-download.file('http://data.dmlc.ml/data/Inception.zip', destfile = 'Inception.zip')
+download.file('http://data.mxnet.io/mxnet/data/Inception.zip', destfile = 'Inception.zip')
 unzip("Inception.zip")
 inception_bn <- mx.model.load("./Inception-BN", iteration = 126)
 

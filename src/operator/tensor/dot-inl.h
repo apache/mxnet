@@ -1207,6 +1207,9 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& lshape = (*in_attrs)[0];
   mxnet::TShape& rshape = (*in_attrs)[1];
+  if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
+  CHECK_GT(lshape.ndim(), 0) << "scalar tensor is not supported by this operator.";
+  CHECK_GT(rshape.ndim(), 0) << "scalar tensor is not supported by this operator.";
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
     CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
@@ -1217,20 +1220,20 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
     if (Ta) {
       L[0] = mshadow::Shape1(lshape[0]);
       L[1] = lshape.ndim() > 1 ?
-             mxnet::TShape(&lshape[1], &lshape[lshape.ndim()]) : mxnet::TShape(1);
+             mxnet::TShape(&lshape[1], lshape.end()) : mxnet::TShape(1, 1);
     } else {
       L[0] = lshape.ndim() > 1 ?
-             mxnet::TShape(&lshape[0], &lshape[lshape.ndim()-1]) : mxnet::TShape(1);
+             mxnet::TShape(&lshape[0], &lshape[lshape.ndim()-1]) : mxnet::TShape(1, 1);
       L[1] = mshadow::Shape1(lshape[lshape.ndim()-1]);
     }
     if (Tb) {
       R[0] = rshape.ndim() > 1 ?
-             mxnet::TShape(&rshape[0], &rshape[rshape.ndim()-1]) : mxnet::TShape(1);
+             mxnet::TShape(&rshape[0], &rshape[rshape.ndim()-1]) : mxnet::TShape(1, 1);
       R[1] = mshadow::Shape1(rshape[rshape.ndim()-1]);
     } else {
       R[0] = mshadow::Shape1(rshape[0]);
       R[1] = rshape.ndim() > 1 ?
-             mxnet::TShape(&rshape[1], &rshape[rshape.ndim()]) : mxnet::TShape(1);
+             mxnet::TShape(&rshape[1], rshape.end()) : mxnet::TShape(1, 1);
     }
 
     if (L[!Ta].Size() != 0 && R[Tb].Size() != 0) {
@@ -1238,12 +1241,13 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
         << "dot shape error: " << lshape << " X " << rshape;
     }
     std::vector<index_t> buf;
-    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], &L[Ta][L[Ta].ndim()]);
-    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], &R[!Tb][R[!Tb].ndim()]);
+    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], L[Ta].end());
+    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], R[!Tb].end());
     mxnet::TShape oshape(buf.begin(), buf.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
-  return true;
+  // return true if output shape is fully inferred
+  return shape_is_known((*out_attrs)[0]);
 }
 
 template<typename xpu>
@@ -1479,7 +1483,13 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   mxnet::TShape& lshape = (*in_attrs)[0];
   mxnet::TShape& rshape = (*in_attrs)[1];
+  // return false if lhs and rhs both have fully unknown shape
+  if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
   if (lshape.ndim() == 3 && rshape.ndim() == 3) {
+    // only partially infer shape if last dim of lhs and second dim of rhs is known
+    bool last_dim_known = dim_size_is_known(lshape, 2);
+    bool second_dim_known = dim_size_is_known(rshape, 1);
+    if ( !last_dim_known || !second_dim_known) return false;
     CHECK(lshape[0] == rshape[0])
       << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape
       << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
@@ -1495,7 +1505,8 @@ inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "batch_dot currently only support 3D*3D array"
                << lshape << " v.s. " << rshape;
   }
-  return true;
+  // return true if output shape is fully inferred
+  return shape_is_known((*out_attrs)[0]);
 }
 
 }  // namespace op

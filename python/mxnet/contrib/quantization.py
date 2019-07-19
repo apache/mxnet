@@ -61,6 +61,7 @@ def _quantize_params(qsym, params, th_dict):
         if name.endswith(('weight_quantize', 'bias_quantize')):
             original_name = name[:-len('_quantize')]
             param = params[original_name]
+            # pylint: disable=unbalanced-tuple-unpacking
             val, vmin, vmax = ndarray.contrib.quantize(data=param,
                                                        min_range=ndarray.min(param),
                                                        max_range=ndarray.max(param),

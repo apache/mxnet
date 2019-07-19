@@ -21,10 +21,12 @@ import java.net.URL
 
 import org.apache.commons.io.FileUtils
 import org.apache.mxnet.Context
+import org.apache.mxnet.ResourceScope;
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 class CustomOpExampleSuite extends FunSuite with BeforeAndAfterAll {
@@ -36,21 +38,23 @@ class CustomOpExampleSuite extends FunSuite with BeforeAndAfterAll {
       System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
       logger.info("CPU test only, skipped...")
     } else {
-      logger.info("Downloading mnist model")
-      val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
-      val tempDirPath = System.getProperty("java.io.tmpdir")
-      val modelDirPath = tempDirPath + File.separator + "mnist/"
-      val tmpFile = new File(tempDirPath + "/mnist/mnist.zip")
-      if (!tmpFile.exists()) {
-        FileUtils.copyURLToFile(new URL(baseUrl + "/mnist/mnist.zip"),
-          tmpFile)
+      ResourceScope.using() {
+        logger.info("Downloading mnist model")
+        val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
+        val tempDirPath = System.getProperty("java.io.tmpdir")
+        val modelDirPath = tempDirPath + File.separator + "mnist/"
+        val tmpFile = new File(tempDirPath + "/mnist/mnist.zip")
+        if (!tmpFile.exists()) {
+          FileUtils.copyURLToFile(new URL(baseUrl + "/mnist/mnist.zip"),
+                                  tmpFile)
+        }
+        // TODO: Need to confirm with Windows
+        Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
+                  + tempDirPath + "/mnist/") !
+        val context = Context.cpu()
+        val output = ExampleCustomOp.test(modelDirPath, context)
+        assert(output >= 0.95f)
       }
-      // TODO: Need to confirm with Windows
-      Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
-        + tempDirPath + "/mnist/") !
-      val context = Context.cpu()
-      val output = ExampleCustomOp.test(modelDirPath, context)
-      assert(output >= 0.95f)
     }
   }
 
@@ -61,18 +65,20 @@ class CustomOpExampleSuite extends FunSuite with BeforeAndAfterAll {
     if (RTC_fixed) {
       if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
         System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
-        logger.info("Downloading mnist model")
-        val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
-        val tempDirPath = System.getProperty("java.io.tmpdir")
-        val modelDirPath = tempDirPath + File.separator + "mnist/"
-        Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
-          tempDirPath + "/mnist/mnist.zip")
-        // TODO: Need to confirm with Windows
-        Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
-          + tempDirPath + "/mnist/") !
-        val context = Context.gpu()
-        val output = ExampleCustomOpWithRtc.test(modelDirPath, context)
-        assert(output >= 0.95f)
+        ResourceScope.using() {
+          logger.info("Downloading mnist model")
+          val baseUrl = "https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci"
+          val tempDirPath = System.getProperty("java.io.tmpdir")
+          val modelDirPath = tempDirPath + File.separator + "mnist/"
+          Util.downloadUrl(baseUrl + "/mnist/mnist.zip",
+                           tempDirPath + "/mnist/mnist.zip")
+          // TODO: Need to confirm with Windows
+          Process("unzip " + tempDirPath + "/mnist/mnist.zip -d "
+                    + tempDirPath + "/mnist/") !
+          val context = Context.gpu()
+          val output = ExampleCustomOpWithRtc.test(modelDirPath, context)
+          assert(output >= 0.95f)
+        }
       } else {
         logger.info("GPU test only, skipped...")
       }

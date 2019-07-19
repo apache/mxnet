@@ -16,19 +16,21 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except, too-many-lines
+# pylint: disable=invalid-name, protected-access, too-many-arguments, no-self-use, too-many-locals, broad-except, too-many-lines, unnecessary-pass
 """numpy interface for operators."""
 from __future__ import absolute_import
 
 import traceback
 import warnings
+import collections
 
 from array import array
 from threading import Lock
+import ctypes
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
 
-from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf
+from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf, mx_int, OpHandle
 from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
 from . import symbol, context
 from .ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
@@ -164,7 +166,7 @@ class NumpyOp(PythonOp):
         fb_functype = CFUNCTYPE(None, c_int, POINTER(POINTER(mx_float)), POINTER(c_int),
                                 POINTER(POINTER(mx_uint)), POINTER(c_int), c_void_p)
         infer_functype = CFUNCTYPE(None, c_int, POINTER(c_int),
-                                   POINTER(POINTER(mx_uint)), c_void_p)
+                                   POINTER(POINTER(mx_int)), c_void_p)
         list_functype = CFUNCTYPE(None, POINTER(POINTER(POINTER(c_char))), c_void_p)
         class NumpyOpInfo(Structure):
             """Structure that holds Callback information. Passed to NumpyOpProp"""
@@ -214,9 +216,9 @@ class NumpyOp(PythonOp):
             assert len(ishape) == n_in
             rshape = list(ishape) + list(oshape)
             for i in range(n_in+n_out):
-                tensor_shapes[i] = cast(c_array_buf(mx_uint,
-                                                    array('I', rshape[i])),
-                                        POINTER(mx_uint))
+                tensor_shapes[i] = cast(c_array_buf(mx_int,
+                                                    array('i', rshape[i])),
+                                        POINTER(mx_int))
                 tensor_dims[i] = len(rshape[i])
 
         def list_outputs_entry(out, _):
@@ -266,7 +268,7 @@ class NDArrayOp(PythonOp):
     def get_symbol(self, *args, **kwargs):
         fb_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_void_p), POINTER(c_int), c_void_p)
         infer_functype = CFUNCTYPE(c_bool, c_int, POINTER(c_int),
-                                   POINTER(POINTER(mx_uint)), c_void_p)
+                                   POINTER(POINTER(mx_int)), c_void_p)
         list_functype = CFUNCTYPE(c_bool, POINTER(POINTER(POINTER(c_char))), c_void_p)
         deps_functype = CFUNCTYPE(c_bool, c_int_p, c_int_p, c_int_p,
                                   c_int_p, POINTER(c_int_p), c_void_p)
@@ -335,9 +337,9 @@ class NDArrayOp(PythonOp):
                 assert len(ishape) == n_in
                 rshape = list(ishape) + list(oshape)
                 for i in range(n_in+n_out):
-                    tensor_shapes[i] = cast(c_array_buf(mx_uint,
-                                                        array('I', rshape[i])),
-                                            POINTER(mx_uint))
+                    tensor_shapes[i] = cast(c_array_buf(mx_int,
+                                                        array('i', rshape[i])),
+                                            POINTER(mx_int))
                     tensor_dims[i] = len(rshape[i])
             except Exception:
                 print('Error in NDArrayOp.infer_shape: %s' % traceback.format_exc())
@@ -698,7 +700,7 @@ def register(reg_name):
         del_functype = CFUNCTYPE(c_int, c_void_p)
 
         infershape_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int),
-                                        POINTER(POINTER(mx_uint)), c_void_p)
+                                        POINTER(POINTER(mx_int)), c_void_p)
         infertype_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
         inferstorage_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), c_void_p)
         inferstorage_backward_functype = CFUNCTYPE(c_int, c_int, POINTER(c_int), \
@@ -747,9 +749,9 @@ def register(reg_name):
                         "shapes, got %d."%(n_aux, len(ashape))
                     rshape = list(ishape) + list(oshape) + list(ashape)
                     for i in range(n_in+n_out+n_aux):
-                        tensor_shapes[i] = cast(c_array_buf(mx_uint,
-                                                            array('I', rshape[i])),
-                                                POINTER(mx_uint))
+                        tensor_shapes[i] = cast(c_array_buf(mx_int,
+                                                            array('i', rshape[i])),
+                                                POINTER(mx_int))
                         tensor_dims[i] = len(rshape[i])
 
                     infer_shape_entry._ref_holder = [tensor_shapes]
@@ -1099,3 +1101,60 @@ def register(reg_name):
     return do_register
 
 register("custom_op")(CustomOpProp)
+
+
+def get_all_registered_operators():
+    """Get all registered MXNet operator names.
+
+    Returns
+    -------
+    operator_names : list of string
+    """
+    plist = ctypes.POINTER(ctypes.c_char_p)()
+    size = ctypes.c_uint()
+
+    check_call(_LIB.MXListAllOpNames(ctypes.byref(size),
+                                     ctypes.byref(plist)))
+
+    mx_registered_operator_names = [py_str(plist[i]) for i in range(size.value)]
+    return mx_registered_operator_names
+
+OperatorArguments = collections.namedtuple('OperatorArguments', ['narg', 'names', 'types'])
+
+def get_operator_arguments(op_name):
+    """Given operator name, fetch operator arguments - number of arguments,
+    argument names, argument types.
+
+    Parameters
+    ----------
+    op_name: str
+        Handle for the operator
+
+    Returns
+    -------
+    operator_arguments : OperatorArguments, namedtuple with number of arguments, names and types
+    """
+    op_handle = OpHandle()
+    check_call(_LIB.NNGetOpHandle(c_str(op_name), ctypes.byref(op_handle)))
+    real_name = ctypes.c_char_p()
+    desc = ctypes.c_char_p()
+    num_args = mx_uint()
+    arg_names = ctypes.POINTER(ctypes.c_char_p)()
+    arg_types = ctypes.POINTER(ctypes.c_char_p)()
+    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+    key_var_num_args = ctypes.c_char_p()
+    ret_type = ctypes.c_char_p()
+
+    check_call(_LIB.MXSymbolGetAtomicSymbolInfo(
+        op_handle, ctypes.byref(real_name), ctypes.byref(desc),
+        ctypes.byref(num_args),
+        ctypes.byref(arg_names),
+        ctypes.byref(arg_types),
+        ctypes.byref(arg_descs),
+        ctypes.byref(key_var_num_args),
+        ctypes.byref(ret_type)))
+
+    narg = int(num_args.value)
+    arg_names = [py_str(arg_names[i]) for i in range(narg)]
+    arg_types = [py_str(arg_types[i]) for i in range(narg)]
+    return OperatorArguments(narg, arg_names, arg_types)

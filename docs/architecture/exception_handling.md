@@ -123,6 +123,3 @@ except mx.base.MXNetError as ex:
 d.asnumpy()
 ```
 
-### Limitation
-
-Rethrowing exceptions as part of `mx.nd.waitall` is not supported. So if your code executes a few operators and then calls `waitall` instead of `wait_to_read`/`asnumpy`, the exception will disappear. Please avoid waitalls in your code unless you are confident about your code not throwing exception in any scenario.

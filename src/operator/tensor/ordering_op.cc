@@ -76,7 +76,7 @@ Examples::
       std::vector<nnvm::NodeEntry> inputs;
       uint32_t n_out = n->num_outputs();
       for (uint32_t i = 0; i < n_out; ++i) {
-        inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+        inputs.emplace_back(n, i, 0);
       }
       return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs, n->attrs.dict);
     } else {
@@ -114,7 +114,7 @@ Examples::
              [ 1.,  3.]]
 
   // flattens and then sorts
-  sort(x) = [ 1.,  1.,  3.,  4.]
+  sort(x, axis=None) = [ 1.,  1.,  3.,  4.]
 
   // sorts along the first axis
   sort(x, axis=0) = [[ 1.,  1.],
@@ -138,7 +138,7 @@ Examples::
     std::vector<nnvm::NodeEntry> inputs;
     uint32_t n_out = n->num_outputs();
     for (uint32_t i = 0; i < n_out; ++i) {
-      inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
+      inputs.emplace_back(n, i, 0);
     }
     return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs,
                                {{"axis", n->attrs.dict["axis"]},
@@ -173,7 +173,7 @@ Examples::
                         [ 0.,  1.,  0.]]
 
   // flatten and then sort
-  argsort(x) = [ 3.,  1.,  5.,  0.,  4.,  2.]
+  argsort(x, axis=None) = [ 3.,  1.,  5.,  0.,  4.,  2.]
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)

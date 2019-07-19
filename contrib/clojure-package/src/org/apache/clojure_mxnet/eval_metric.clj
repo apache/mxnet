@@ -18,7 +18,7 @@
 (ns org.apache.clojure-mxnet.eval-metric
   (:refer-clojure :exclude [get update])
   (:require [org.apache.clojure-mxnet.util :as util])
-  (:import (org.apache.mxnet Accuracy TopKAccuracy F1 Perplexity MAE MSE RMSE CustomMetric)))
+  (:import (org.apache.mxnet Accuracy TopKAccuracy F1 Perplexity MAE MSE RMSE CustomMetric CompositeEvalMetric)))
 
 (defn accuracy
   "Basic Accuracy Metric"
@@ -74,11 +74,21 @@
   [f-eval mname]
   `(new CustomMetric (util/scala-fn ~f-eval) ~mname))
 
+(defn comp-metric
+  "Create a metric instance composed out of several metrics"
+  [metrics]
+  (let [cm (CompositeEvalMetric.)]
+    (doseq [m metrics] (.add cm m))
+    cm))
+
 (defn get
-  "Get the values of the metric in a vector form (name and value)"
+  "Get the values of the metric in as a map of {name value} pairs"
   [metric]
-  (let [[[mname] [mvalue]] (util/tuple->vec (.get metric))]
-    [mname mvalue]))
+  (let [m (apply zipmap (-> (.get metric)
+                            util/tuple->vec))]
+    (if-not (instance? CompositeEvalMetric metric)
+      (first m)
+      m)))
 
 (defn reset
   "clear the internal statistics to an initial state"

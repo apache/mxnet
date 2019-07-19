@@ -34,7 +34,6 @@ $MAKE DEPS_PATH=$DEPS_PATH $PWD/3rdparty/tvm/nnvm/lib/libnnvm.a
 $MAKE DEPS_PATH=$DEPS_PATH PSLITE
 
 if [[ $VARIANT == *mkl ]]; then
-    MKLDNN_LICENSE='license.txt'
     if [[ $PLATFORM == 'linux' ]]; then
         IOMP_LIBFILE='libiomp5.so'
         MKLML_LIBFILE='libmklml_intel.so'
@@ -45,15 +44,12 @@ if [[ $VARIANT == *mkl ]]; then
         MKLDNN_LIBFILE='libmkldnn.0.dylib'
     fi
     $MAKE DEPS_PATH=$DEPS_PATH mkldnn
+    if [ ! -d lib ]; then
+        mkdir lib
+    fi
     cp 3rdparty/mkldnn/build/install/lib/$IOMP_LIBFILE lib
     cp 3rdparty/mkldnn/build/install/lib/$MKLML_LIBFILE lib
     cp 3rdparty/mkldnn/build/install/lib/$MKLDNN_LIBFILE lib
-    cp 3rdparty/mkldnn/build/install/$MKLDNN_LICENSE lib
-    cp 3rdparty/mkldnn/LICENSE ./MKLML_LICENSE
-fi
-
-if [[ $VARIANT == cu* ]]; then
-    cp 3rdparty/cub/LICENSE.TXT ./CUB_LICENSE
 fi
 
 >&2 echo "Now building mxnet..."

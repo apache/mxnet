@@ -115,13 +115,18 @@ class CPUSharedStorageManager final : public StorageManager {
 };  // class CPUSharedStorageManager
 
 void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
+  if (handle->size == 0) {
+    handle->dptr = nullptr;
+    return;
+  }
+
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   std::uniform_int_distribution<> dis(0, std::numeric_limits<int>::max());
   int fid = -1;
   std::string filename;
   bool is_new = false;
   size_t size = handle->size + alignment_;
-  void *ptr = nullptr;
+  void* ptr = nullptr;
 #ifdef _WIN32
   CheckAndRealFree();
   HANDLE map_handle = nullptr;

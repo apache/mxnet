@@ -94,7 +94,7 @@ update_args_D<- updater_D(weight = exec_D$ref.arg.arrays, grad = exec_D$ref.grad
 mx.exec.update.arg.arrays(exec_D, update_args_D, skip.null=TRUE)
 ```
 
-The generator loss comes from the backpropagation of the the discriminator loss into its generated output. By faking the generator labels to be real samples into the discriminator, the discriminator back-propagated loss provides the generator with the information on how to best adapt its parameters to trick the discriminator into believing the fake samples are real.
+The generator loss comes from the backpropagation of the discriminator loss into its generated output. By faking the generator labels to be real samples into the discriminator, the discriminator back-propagated loss provides the generator with the information on how to best adapt its parameters to trick the discriminator into believing the fake samples are real.
 
 This requires to backpropagate the gradients up to the input data of the discriminator (whereas this input gradient is typically ignored in vanilla feedforward network).
 

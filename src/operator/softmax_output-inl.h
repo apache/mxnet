@@ -337,19 +337,19 @@ class SoftmaxOutputProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
     const mxnet::TShape &dshape = in_shape->at(0);
-    if (dshape.ndim() == 0) return false;
+    if (!shape_is_known(dshape)) return false;
 
     // label.shape == data.shape: use probability as label
     if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
       if (param_.multi_output) {
         mxnet::TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
-        mxnet::TShape lshape2(dshape.ndim() - 1);
+        mxnet::TShape lshape2(dshape.ndim() - 1, -1);
         lshape2[0] = dshape[0];
-        for (index_t i = 2; i < dshape.ndim(); ++i)
+        for (int i = 2; i < dshape.ndim(); ++i)
           lshape2[i-1] = dshape[i];
         mxnet::TShape lshape3 = dshape;
         lshape3[1] = 1;
-        if (in_shape->at(softmaxout_enum::kLabel).ndim() == 0) {
+        if (!mxnet::ndim_is_known(in_shape->at(softmaxout_enum::kLabel))) {
           in_shape->at(softmaxout_enum::kLabel) = lshape1;
         } else if (in_shape->at(softmaxout_enum::kLabel) == lshape1) {
         } else if (in_shape->at(softmaxout_enum::kLabel) == lshape2) {
@@ -361,8 +361,8 @@ class SoftmaxOutputProp : public OperatorProperty {
           throw InferShapeError(os.str(), softmaxout_enum::kLabel);
         }
       } else {
-        mxnet::TShape label_shape(dshape.ndim() - 1);
-        for (index_t i = 0; i + 1 < dshape.ndim(); ++i)
+        mxnet::TShape label_shape(dshape.ndim() - 1, -1);
+        for (int i = 0; i + 1 < dshape.ndim(); ++i)
           label_shape[i] = dshape[i];
         SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
       }

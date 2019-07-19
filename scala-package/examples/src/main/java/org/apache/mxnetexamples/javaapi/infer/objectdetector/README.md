@@ -84,7 +84,7 @@ After the previous steps, you should be able to run the code using the following
 From the `scala-package/examples/scripts/infer/objectdetector/` folder run:
 
 ```bash
-./run_ssd_example.sh ../models/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images
+./run_ssd_java_example.sh ../models/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images
 ```
 
 **Notes**:
@@ -103,7 +103,7 @@ Class: dog
 Probabilties: 0.8226818
 (Coord:,83.82353,179.13998,206.63783,476.7875)
 ```
-the outputs come from the the input image, with top3 predictions picked.
+the outputs come from the input image, with top3 predictions picked.
 
 
 ## Infer API Details

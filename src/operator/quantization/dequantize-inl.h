@@ -68,42 +68,25 @@ struct dequantize_zero_centered {
   }
 };
 
-template<typename xpu>
-void DequantizeCompute(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mxnet_op;
-  using mshadow::red::limits::MinValue;
-  using mshadow::red::limits::MaxValue;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  if (inputs[0].type_flag_ == mshadow::kUint8) {
-    Kernel<dequantize_unsigned, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<float>(),
-      inputs[0].dptr<uint8_t>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
-      MinValue<uint8_t>(), MaxValue<uint8_t>());
-  } else if (inputs[0].type_flag_ == mshadow::kInt8) {
-    Kernel<dequantize_zero_centered, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<float>(),
-      inputs[0].dptr<int8_t>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
-      MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-  } else {
-    LOG(FATAL) << "dequantize op only supports input type int8 or uint8";
-  }
-}
-
 inline bool DequantizeShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector *in_attrs,
                           mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
 
+  mxnet::TShape dshape = (*in_attrs)[0];
   for (size_t i = 1; i < 3; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_attrs, i, mxnet::TShape({1}));
+    SHAPE_ASSIGN_CHECK(*in_attrs, i, mxnet::TShape(1, 1));
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  return !shape_is_none(out_attrs->at(0));
+
+  if ((*out_attrs)[0].ndim() > 0) {
+    dshape[0] = ((*out_attrs)[0])[0];
+    SHAPE_ASSIGN_CHECK(*in_attrs, 0, dshape);
+  }
+
+  return shape_is_known(out_attrs->at(0));
 }
 
 inline bool DequantizeType(const nnvm::NodeAttrs& attrs,
@@ -117,6 +100,44 @@ inline bool DequantizeType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*in_attrs, 2, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
   return (*in_attrs)[0] != -1;
+}
+
+template <typename xpu>
+class DequantizeOperator {
+ public:
+  explicit DequantizeOperator(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
+  void Forward(const OpContext &ctx, const std::vector<TBlob> &inputs,
+               const std::vector<OpReqType> &req, const std::vector<TBlob> &outputs) {
+    using namespace mshadow;
+    using namespace mxnet_op;
+    using mshadow::red::limits::MaxValue;
+    using mshadow::red::limits::MinValue;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    if (inputs[0].type_flag_ == mshadow::kUint8) {
+      Kernel<dequantize_unsigned, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<float>(),
+                                               inputs[0].dptr<uint8_t>(), inputs[1].dptr<float>(),
+                                               inputs[2].dptr<float>(), MinValue<uint8_t>(),
+                                               MaxValue<uint8_t>());
+    } else if (inputs[0].type_flag_ == mshadow::kInt8) {
+      Kernel<dequantize_zero_centered, xpu>::Launch(
+          s, outputs[0].Size(), outputs[0].dptr<float>(), inputs[0].dptr<int8_t>(),
+          inputs[1].dptr<float>(), inputs[2].dptr<float>(),
+          MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
+    } else {
+      LOG(FATAL) << "dequantize op only supports input type int8 or uint8";
+    }
+  }
+
+ private:
+  nnvm::NodeAttrs attrs_;
+};
+
+template <typename xpu>
+static void DequantizeForward(const OpStatePtr &state_ptr, const OpContext &ctx,
+                              const std::vector<TBlob> &inputs, const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &outputs) {
+  auto &op = state_ptr.get_state<DequantizeOperator<xpu>>();
+  op.Forward(ctx, inputs, req, outputs);
 }
 
 }  // namespace op

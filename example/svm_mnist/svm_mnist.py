@@ -82,7 +82,7 @@ print("Data prepared.")
 # Article's suggestion on batch size
 batch_size = 200
 
-ctx = mx.gpu() if len(mx.test_utils.list_gpus()) > 0 else mx.cpu()
+ctx = mx.gpu() if mx.context.num_gpus() > 0 else mx.cpu()
 
 results = {}
 for output in [mlp_svm_l2, mlp_svm_l1, mlp_softmax]:

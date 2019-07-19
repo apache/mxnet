@@ -264,9 +264,9 @@
         _ (executor/set-arg exec "datas" data-vec)
         output (-> (executor/forward exec) (executor/outputs) first)]
     (is (approx= 1e-5 expected output))
-    (is (= [0 0 0 0]) (-> (executor/backward exec (ndarray/ones shape-vec))
+    (is (= [0 0 0 0] (-> (executor/backward exec (ndarray/ones shape-vec))
                           (executor/get-grad "datas")
-                          (ndarray/->vec)))))
+                          (ndarray/->int-vec))))))
 
 (defn check-symbol-operation
   [operator data-vec-1 data-vec-2 expected]
@@ -280,8 +280,8 @@
         output (-> (executor/forward exec) (executor/outputs) first)]
     (is (approx= 1e-5 expected output))
     _ (executor/backward exec (ndarray/ones shape-vec))
-    (is (= [0 0 0 0]) (-> (executor/get-grad exec "datas") (ndarray/->vec)))
-    (is (= [0 0 0 0]) (-> (executor/get-grad exec "datas2") (ndarray/->vec)))))
+    (is (= [0 0 0 0] (-> (executor/get-grad exec "datas") (ndarray/->int-vec))))
+    (is (= [0 0 0 0] (-> (executor/get-grad exec "datas2") (ndarray/->int-vec))))))
 
 (defn check-scalar-2-operation
   [operator data-vec expected]
@@ -292,9 +292,9 @@
         _ (executor/set-arg exec "datas" data-vec)
         output (-> (executor/forward exec) (executor/outputs) first)]
     (is (approx= 1e-5 expected output))
-    (is (= [0 0 0 0]) (-> (executor/backward exec (ndarray/ones shape-vec))
+    (is (= [0 0 0 0] (-> (executor/backward exec (ndarray/ones shape-vec))
                           (executor/get-grad "datas")
-                          (ndarray/->vec)))))
+                          (ndarray/->int-vec))))))
 
 (deftest test-scalar-equal
   (check-scalar-operation sym/equal [1 2 3 4] 2 [0 1 0 0]))

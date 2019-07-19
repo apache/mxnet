@@ -49,12 +49,12 @@ void ResizeImplCUDA(Stream<gpu> *s,
 #endif  // MXNET_USE_CUDA
 
 struct ResizeParam : public dmlc::Parameter<ResizeParam> {
-  nnvm::Tuple<int> size;
+  mxnet::Tuple<int> size;
   bool keep_ratio;
   int interp;
   DMLC_DECLARE_PARAMETER(ResizeParam) {
     DMLC_DECLARE_FIELD(size)
-    .set_default(nnvm::Tuple<int>())
+    .set_default(mxnet::Tuple<int>())
     .describe("Size of new image. Could be (width, height) or (size)");
     DMLC_DECLARE_FIELD(keep_ratio)
     .describe("Whether to resize the short edge or both edges to `size`, "

@@ -35,6 +35,7 @@
 #include <array>
 #include "./vtune.h"
 #include "./aggregate_stats.h"
+#include "./nvtx.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #include <windows.h>
@@ -126,6 +127,9 @@ struct ProfileStat {
 
   /*! \brief operation categories (comma-delimited) */
   profile_stat_string categories_;
+
+  /*! \brief whether to add this stat to AggregateStats */
+  bool enable_aggregate_ = true;
 
   /* !\brief Process id */
   size_t process_id_ = current_process_id();
@@ -489,6 +493,12 @@ class Profiler {
 #define VTUNE_ONLY_CODE(...) /* */        /* This is undefined at the bottom of this file */
 #endif
 
+#ifdef MXNET_USE_NVTX
+#define NVTX_ONLY_CODE(...) __VA_ARGS__  /* This is undefined at the bottom of this file */
+#else
+#define NVTX_ONLY_CODE(...) /* */        /* This is undefined at the bottom of this file */
+#endif
+
 /**
  *  _____              __  _  _  _                ____  _     _            _
  * |  __ \            / _|(_)| |(_)              / __ \| |   (_)          | |
@@ -608,6 +618,12 @@ struct ProfileCounter : public ProfileObject {
       return IncrementValue(static_cast<uint64_t>(v));
     }
   }
+
+  inline bool operator >=(int64_t v) {
+      CHECK_GE(v, 0);
+      return value_ >= static_cast<uint64_t>(v);
+  }
+
   /*! \brief operator: object = v */
   inline ProfileCounter& operator = (uint64_t v) {
     SetValue(v);
@@ -771,6 +787,14 @@ struct ProfileTask : public ProfileDuration {
     categories_.set(domain_->name());
     categories_.append(",task");
     VTUNE_ONLY_CODE(vtune_task_.reset(new vtune::VTuneTask(name, domain->dom())));
+    NVTX_ONLY_CODE(nvtx_duration_.reset(new nvtx::NVTXDuration(name)));
+  }
+
+  /*!
+   * \brief Set the domain
+   */
+  void setDomain(ProfileDomain* domain) {
+    domain_ = domain;
   }
 
   /*!
@@ -779,6 +803,7 @@ struct ProfileTask : public ProfileDuration {
   void start() override {
     start_time_ = ProfileStat::NowInMicrosec();
     VTUNE_ONLY_CODE(vtune_task_->start());
+    NVTX_ONLY_CODE(nvtx_duration_->start());
   }
 
   /*!
@@ -786,10 +811,18 @@ struct ProfileTask : public ProfileDuration {
    */
   void stop() override {
     VTUNE_ONLY_CODE(vtune_task_->stop());
+    NVTX_ONLY_CODE(nvtx_duration_->stop());
     SendStat();
   }
 
   ProfileObjectType type() const override { return kTask; }
+
+  /*!
+   * \brief Whether to add stat to AggregateStats
+   */
+  void enableAggregateStats(bool enabled = true) {
+    enable_aggregate_ = enabled;
+  }
 
  protected:
   /*!
@@ -815,6 +848,7 @@ struct ProfileTask : public ProfileDuration {
   inline void SendStat() {
     Profiler::Get()->AddNewProfileStat<ProfileTaskStat>([this](ProfileTaskStat *stat) {
       stat->categories_.set(domain_->name());
+      stat->enable_aggregate_ = enable_aggregate_;
     }, name_.c_str(), start_time_, ProfileStat::NowInMicrosec());
   }
   /*! \brief Task name */
@@ -825,6 +859,10 @@ struct ProfileTask : public ProfileDuration {
   ProfileDomain *domain_;
   /*! \brief VTune task object */
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneTask> vtune_task_);
+  /*! \brief NVTX duration object */
+  NVTX_ONLY_CODE(std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_);
+  /*! \brief whether to add this stat to AggregateStats */
+  bool enable_aggregate_ = true;
 
  protected:
   /*! \brief Task's start tick */
@@ -843,6 +881,7 @@ struct ProfileEvent  : public ProfileDuration {
     : name_(name)
       , categories_("event") {
     VTUNE_ONLY_CODE(vtune_event_ = vtune::VTuneEvent::registry_.get(name));
+    NVTX_ONLY_CODE(nvtx_duration_.reset(new nvtx::NVTXDuration(name)));
   }
 
   /*!
@@ -851,6 +890,7 @@ struct ProfileEvent  : public ProfileDuration {
   void start() override {
     start_time_ = ProfileStat::NowInMicrosec();
     VTUNE_ONLY_CODE(vtune_event_->start());
+    NVTX_ONLY_CODE(nvtx_duration_->start());
   }
 
   /*!
@@ -899,6 +939,8 @@ struct ProfileEvent  : public ProfileDuration {
   profile_stat_string categories_;
   /*! \brief VTune event object */
   VTUNE_ONLY_CODE(vtune::VTuneEvent *vtune_event_);
+  /*! \brief NVTX duration object */
+  NVTX_ONLY_CODE(std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_;);
 
  protected:
   /*! \brief Start time of the event */
@@ -920,6 +962,7 @@ struct ProfileFrame : public ProfileDuration {
     CHECK_NOTNULL(domain);
     categories_.set(domain_->name());
     categories_.append(",frame");
+    NVTX_ONLY_CODE(nvtx_duration_.reset(new nvtx::NVTXDuration(name)));
     VTUNE_ONLY_CODE(vtune_frame_.reset(new vtune::VTuneFrame(domain->dom())));
   }
 
@@ -929,6 +972,7 @@ struct ProfileFrame : public ProfileDuration {
   void start() override {
     start_time_ = ProfileStat::NowInMicrosec();
     VTUNE_ONLY_CODE(vtune_frame_->start());
+    NVTX_ONLY_CODE(nvtx_duration_->start());
   }
 
   /*!
@@ -971,6 +1015,8 @@ struct ProfileFrame : public ProfileDuration {
   ProfileDomain *domain_;
   /*! \brief VTune Frame object */
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneFrame> vtune_frame_);
+  /*! \brief NVTX duration object */
+  NVTX_ONLY_CODE(std::unique_ptr<nvtx::NVTXDuration> nvtx_duration_);
 
  protected:
   /*! \brief Frame start time */
@@ -1072,6 +1118,8 @@ struct ProfileMarker {
   VTUNE_ONLY_CODE(std::unique_ptr<vtune::VTuneInstantMarker> vtune_instant_marker_);
 };
 
+static ProfileDomain custom_op_domain("Custom Operator");
+
 /*!
  * \brief Operator profiler object. Logs as both an independent event and a task in
  * the operator domain
@@ -1123,8 +1171,16 @@ struct ProfileOperator : public ProfileEvent {
     : ProfileEvent(name)
       , as_task_(name, &domain_)
       , name_(name)
-      , attributes_(attributes) {
-    SetCategories(domain_.name());
+      , attributes_(attributes)
+      , profiling_(!IsDeprecatedOperator(name)) {
+    if (IsSubOperatorOfCustom(name)) {
+      as_task_.setDomain(&custom_op_domain);
+      SetCategories(custom_op_domain.name());
+    } else {
+      SetCategories(domain_.name());
+    }
+    // make as_task_ not to add stat to AggregateStats; otherwise we will add twice
+    as_task_.enableAggregateStats(false);
   }
   /*!
    * \brief Start the profiling scope
@@ -1134,15 +1190,19 @@ struct ProfileOperator : public ProfileEvent {
   void start(mxnet::Context::DeviceType dev_type, uint32_t dev_id) {
     dev_type_ = dev_type;
     dev_id_ = dev_id;
-    ProfileEvent::start();
-    as_task_.start();
+    if (profiling_) {
+      ProfileEvent::start();
+      as_task_.start();
+    }
   }
   /*!
    * \brief Stop the profiling scope
    */
   void stop() override {
-    as_task_.stop();
-    ProfileEvent::stop();
+    if (profiling_) {
+      as_task_.stop();
+      ProfileEvent::stop();
+    }
   }
 
   /*!
@@ -1167,7 +1227,11 @@ struct ProfileOperator : public ProfileEvent {
       if (attributes) {
         name_.append(attributes->to_string().c_str());
       }
-      categories_.set("operator");
+      if (IsSubOperatorOfCustom(name)) {
+        categories_.set(custom_op_domain.name());
+      } else {
+        categories_.set("operator");
+      }
       items_[kStart].timestamp_ = start_time;
       items_[kStop].timestamp_ = stop_time;
     }
@@ -1187,6 +1251,20 @@ struct ProfileOperator : public ProfileEvent {
       start_time_, ProfileStat::NowInMicrosec(),
       attributes_.get());
   }
+  /*!
+   * \brief Check if this operator is no longer profiled
+   * Notice that this operator may still be used for e.g synchronization
+   */
+  inline static bool IsDeprecatedOperator(const char* name) {
+    return strcmp(name, "CustomOperatorWait") == 0 ||
+           strcmp(name, "Custom") == 0 || strcmp(name, "_backward_Custom") == 0;
+  }
+  /*!
+   * \brief Check if this operator a sub-operator of a custom operator
+   */
+  inline static bool IsSubOperatorOfCustom(const char* name) {
+    return strstr(name, "::");
+  }
   /*! \brief Also log the operator as a task in the operator domain */
   ProfileTask as_task_;
   /* !\brief Operator name */
@@ -1199,6 +1277,8 @@ struct ProfileOperator : public ProfileEvent {
   static ProfileDomain domain_;
   /*! \brief Optional operator attributes */
   std::unique_ptr<Attributes> attributes_;
+  /*! \brief Whether to profile or not */
+  const bool profiling_;
 };
 
 /*

@@ -261,7 +261,7 @@ class FComputeExExecutor : public OpExecutor {
   ExecType exec_type_;
 };
 
-void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
+void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, size_t i) {
   using nnvm::DTypeVector;
   using mxnet::ShapeVector;
   using nnvm::FMutateInputs;
@@ -302,6 +302,10 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
 
     OpStatePtr state = fcreate_op_state[op](
         inode.source->attrs, vctx[i], ishape, itype);
+    if (p_state) {
+      CHECK_GT(p_state->size(), i);
+      p_state->at(i) = state;
+    }
     FStatefulComputeEx fcompute_ex = common::GetFCompute<FStatefulComputeEx>(
         op, "FStatefulComputeEx", vctx[i]);
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
@@ -359,7 +363,7 @@ Graph AttachOpExecs(Graph g) {
   const auto& idx = g.indexed_graph();
   OpExecVector ret(idx.num_nodes());
   for (size_t i = 0; i < idx.num_nodes(); ++i) {
-    CreateOpExecs(g, &ret, i);
+    CreateOpExecs(g, &ret, nullptr, i);
   }
   g.attrs["op_execs"] = std::make_shared<nnvm::any>(ret);
   return g;

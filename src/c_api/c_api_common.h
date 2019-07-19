@@ -75,12 +75,19 @@ struct MXAPIThreadLocalEntry {
   std::vector<int> arg_storage_types, out_storage_types, aux_storage_types;
   /*! \brief result holder for returning shape dimensions */
   std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
+  /*! \brief result holder for returning shape dimensions */
+  std::vector<int> arg_shape_ndim_ex, out_shape_ndim_ex, aux_shape_ndim_ex;
   /*! \brief result holder for returning shape pointer */
   std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
+  /*! \brief result holder for returning shape pointer */
+  std::vector<const int*> arg_shape_data_ex, out_shape_data_ex, aux_shape_data_ex;
   /*! \brief uint32_t buffer for returning shape pointer */
   std::vector<uint32_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
+  /*! \brief uint32_t buffer for returning shape pointer */
+  std::vector<int> arg_shape_buffer_ex, out_shape_buffer_ex, aux_shape_buffer_ex;
   /*! \brief bool buffer */
   std::vector<bool> save_inputs, save_outputs;
+  // DEPRECATED. Use SetupShapeArrayReturnWithBufferEx instead.
   // helper function to setup return value of shape array
   inline static void SetupShapeArrayReturnWithBuffer(
       const mxnet::ShapeVector &shapes,
@@ -97,6 +104,30 @@ struct MXAPIThreadLocalEntry {
       ndim->at(i) = shapes[i].ndim();
       data->at(i) = ptr;
       ptr = nnvm::ShapeTypeCast(shapes[i].begin(), shapes[i].end(), ptr);
+    }
+  }
+  // helper function to setup return value of shape array
+  inline static void SetupShapeArrayReturnWithBufferEx(
+      const mxnet::ShapeVector &shapes,
+      std::vector<int> *ndim,
+      std::vector<const int*> *data,
+      std::vector<int> *buffer) {
+    ndim->resize(shapes.size());
+    data->resize(shapes.size());
+    size_t size = 0;
+    for (const auto& s : shapes) {
+      if (s.ndim() > 0) {
+        size += s.ndim();
+      }
+    }
+    buffer->resize(size);
+    int *ptr = buffer->data();
+    for (size_t i = 0; i < shapes.size(); ++i) {
+      ndim->at(i) = shapes[i].ndim();
+      data->at(i) = ptr;
+      if (shapes[i].ndim() > 0) {
+        ptr = mxnet::ShapeTypeCast(shapes[i].begin(), shapes[i].end(), ptr);
+      }
     }
   }
 };

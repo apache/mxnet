@@ -27,6 +27,15 @@
 
 using namespace mxnet::cpp;
 
+#define TRY \
+  try {
+#define CATCH \
+  } catch(dmlc::Error &err) { \
+    LG << "Status: FAIL";\
+    LG << "With Error: " << MXGetLastError(); \
+    return 1; \
+  }
+
 bool isFileExists(const std::string &filename) {
   std::ifstream fhandle(filename.c_str());
   return fhandle.good();

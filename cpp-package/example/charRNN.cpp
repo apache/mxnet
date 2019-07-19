@@ -42,6 +42,7 @@
 #include <thread>
 #include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
+#include "utils.h"
 
 using namespace mxnet::cpp;
 
@@ -163,8 +164,9 @@ Symbol LSTMWithBuiltInRNNOp(int num_lstm_layer, int sequence_length, int input_d
   auto rnn_h_init = Symbol::Variable("LSTM_init_h");
   auto rnn_c_init = Symbol::Variable("LSTM_init_c");
   auto rnn_params = Symbol::Variable("LSTM_parameters");  // See explanations near RNNXavier class
-  auto rnn = RNN(embed, rnn_params, rnn_h_init, rnn_c_init, num_hidden, num_lstm_layer,
-      RNNMode::kLstm, false, dropout, !isTrain);
+  auto variable_sequence_length = Symbol::Variable("sequence_length");
+  auto rnn = RNN(embed, rnn_params, rnn_h_init, rnn_c_init, variable_sequence_length, num_hidden,
+                 num_lstm_layer, RNNMode::kLstm, false, dropout, !isTrain);
   auto hidden = Reshape(rnn[0], Shape(), false, Shape(0, num_hidden), false);
 
   auto cls_weight = Symbol::Variable("cls_weight");
@@ -721,6 +723,7 @@ int main(int argc, char** argv) {
   TIME_MAJOR = task.find("TimeMajor") != std::string::npos;
   std::cout << "use BuiltIn cuDNN RNN: " << builtIn << std::endl
          << "use data as TimeMajor: " << TIME_MAJOR << std::endl;
+  TRY
   if (task.find("train") == 0) {
     std::cout << "train batch size:      " << argv[3] << std::endl
            << "train max epoch:       " << argv[4] << std::endl;
@@ -746,5 +749,6 @@ int main(int argc, char** argv) {
   }
 
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

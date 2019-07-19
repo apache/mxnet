@@ -23,7 +23,9 @@ ZLIB_VERSION=1.2.6
 if [[ ! -f $DEPS_PATH/lib/libz.a ]]; then
     # Download and build zlib
     >&2 echo "Building zlib..."
-    curl -s -L https://github.com/LuaDist/zlib/archive/$ZLIB_VERSION.zip -o $DEPS_PATH/zlib.zip
+    download \
+        https://github.com/LuaDist/zlib/archive/${ZLIB_VERSION}.zip \
+        ${DEPS_PATH}/zlib.zip
     unzip -q $DEPS_PATH/zlib.zip -d $DEPS_PATH
     mkdir -p $DEPS_PATH/zlib-$ZLIB_VERSION/build
     pushd .

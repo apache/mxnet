@@ -39,7 +39,9 @@ fi
 if [[ ! -f $DEPS_PATH/lib/libopencv_core.a ]] || [[ ! -f $DEPS_PATH/lib/libopencv_imgcodecs.a ]] || [[ ! -f $DEPS_PATH/lib/libopencv_imgproc.a ]]; then
     # download and build opencv since we need the static library
     >&2 echo "Building opencv..."
-    curl -s -L https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip -o $DEPS_PATH/opencv.zip
+    download \
+        https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
+        ${DEPS_PATH}/opencv.zip
     unzip -q $DEPS_PATH/opencv.zip -d $DEPS_PATH
     mkdir -p $DEPS_PATH/opencv-$OPENCV_VERSION/build
     pushd .

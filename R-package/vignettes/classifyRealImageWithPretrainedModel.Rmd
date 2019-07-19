@@ -31,7 +31,7 @@ Make sure you unzip the pre-trained model in current folder. And we can use the 
 loading function to load the model into R.
 
 ```{r}
-download.file('http://data.dmlc.ml/data/Inception.zip', destfile = 'Inception.zip')
+download.file('http://data.mxnet.io/mxnet/data/Inception.zip', destfile = 'Inception.zip')
 unzip("Inception.zip")
 model <- mx.model.load("Inception/Inception_BN", iteration = 39)
 ```

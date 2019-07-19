@@ -35,7 +35,7 @@ from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle
+from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int
 from ..base import ctypes2buffer
 from ..context import Context, current_context
 from . import _internal
@@ -43,11 +43,12 @@ from . import op
 from ._internal import NDArrayBase
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
-           "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
-           "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
-           "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
-           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
-           "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
+           "ones", "add", "arange", "linspace", "eye", "divide", "equal", "full", "greater",
+           "greater_equal", "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or",
+           "logical_xor", "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal",
+           "onehot_encode", "power", "subtract", "true_divide", "waitall", "_new_empty_handle",
+           "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
+           "from_numpy"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -143,11 +144,11 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
 
 def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateFromSharedMem(
+    check_call(_LIB.MXNDArrayCreateFromSharedMemEx(
         ctypes.c_int(shared_pid),
         ctypes.c_int(shared_id),
-        c_array(mx_uint, shape),
-        mx_uint(len(shape)),
+        c_array(mx_int, shape),
+        mx_int(len(shape)),
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         ctypes.byref(hdl)))
     return hdl
@@ -158,12 +159,9 @@ def waitall():
 
     This function is used for benchmarking only.
 
-    .. warning::
+    .. note::
 
-       If your code has exceptions, `waitall` can cause silent failures.
-       For this reason you should avoid `waitall` in your code.
-       Use it only if you are confident that your code is error free.
-       Then make sure you call `wait_to_read` on all outputs after `waitall`.
+       If your mxnet code throws an exception, then waitall can cause performance impact.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
@@ -1848,11 +1846,14 @@ fixed-size items.
         >>> y.shape
         (2L, 3L, 4L)
         """
-        ndim = mx_uint()
-        pdata = ctypes.POINTER(mx_uint)()
-        check_call(_LIB.MXNDArrayGetShape(
+        ndim = mx_int()
+        pdata = ctypes.POINTER(mx_int)()
+        check_call(_LIB.MXNDArrayGetShapeEx(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
-        return tuple(pdata[:ndim.value]) # pylint: disable=invalid-slice-index
+        if ndim.value == -1:
+            return None
+        else:
+            return tuple(pdata[:ndim.value])  # pylint: disable=invalid-slice-index
 
 
     @property
@@ -2226,6 +2227,10 @@ fixed-size items.
         NDArray, CSRNDArray or RowSparseNDArray
             A copy of the array with the chosen storage stype
         """
+        if stype == 'csr' and len(self.shape) != 2:
+            raise ValueError("To convert to a CSR, the NDArray should be 2 Dimensional. Current "
+                             "shape is %s" % str(self.shape))
+
         return op.cast_storage(self, stype=stype)
 
     def to_dlpack_for_read(self):
@@ -2609,6 +2614,52 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dty
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              infer_range=False, dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
+
+
+# pylint: disable= no-member, protected-access, too-many-arguments
+def linspace(start, stop, num, endpoint=True, ctx=None, dtype=mx_real_t):
+    """Return evenly spaced numbers within a specified interval.
+
+    Values are generated within the half-open interval [`start`, `stop`) or
+    closed interval [start, stop] depending on whether `endpoint` is True or
+    False. The function is similar to `numpy.linspace`, but returns an `NDArray`.
+
+    Parameters
+    ----------
+    start : number
+        Start of interval.
+    stop : number
+        End of interval, unless endpoint is set to False.  In that case,
+        the sequence consists of all but the last of `num + 1` evenly spaced
+        samples, so that stop is excluded. Note that the step size changes
+        when endpoint is False.
+    num : number
+        Number of samples to generate. Must be non-negative.
+    endpoint : bool
+        If True, stop is the last sample. Otherwise, it is not included.
+        The default is True.
+    ctx : Context, optional
+        Device context. Default context is the current default context.
+    dtype : str or numpy.dtype, optional
+        The data type of the `NDArray`. The default datatype is `np.float32`.
+
+    Returns
+    -------
+    NDArray
+        `NDArray` of evenly spaced values in the specified range.
+
+    Examples
+    --------
+    >>> mx.nd.linspace(2.0, 3.0, 5).asnumpy()
+    array([ 2.,  2.25.,  2.5,  2.75,  3.], dtype=float32)
+    >>> mx.nd.linspace(2.0, 3.0, 5, endpoint=False).asnumpy()
+    array([ 2.,  2.2.,  2.4,  2.6,  2.8], dtype=float32)
+    """
+    if ctx is None:
+        ctx = current_context()
+    return _internal._linspace(start=start, stop=stop, num=num,
+                               endpoint=endpoint, dtype=dtype, ctx=str(ctx))
+# pylint: disable= no-member, protected-access, too-many-arguments
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
@@ -4109,9 +4160,118 @@ def from_dlpack(dlpack):
     assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
         'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
     dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
-    check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
+    check_call(_LIB.MXNDArrayFromDLPackEx(dlpack_handle, False, ctypes.byref(handle)))
     # Rename PyCapsule (DLPack)
     ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
     # delete the deleter of the old dlpack
     ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
+    return NDArray(handle=handle)
+
+class DLContext(ctypes.Structure):
+    _fields_ = [("device_type", ctypes.c_int),
+                ("device_id", ctypes.c_int)]
+
+
+class DLDataType(ctypes.Structure):
+    _fields_ = [("type_code", ctypes.c_uint8),
+                ("bits", ctypes.c_uint8),
+                ("lanes", ctypes.c_uint16)]
+    TYPE_MAP = {
+        "int32": (0, 32, 1),
+        "int64": (0, 64, 1),
+        "bool": (1, 1, 1),
+        "uint32": (1, 32, 1),
+        "uint64": (1, 64, 1),
+        "float32": (2, 32, 1),
+        "float64": (2, 64, 1),
+    }
+
+
+class DLTensor(ctypes.Structure):
+    _fields_ = [("data", ctypes.c_void_p),
+                ("ctx", DLContext),
+                ("ndim", ctypes.c_int),
+                ("dtype", DLDataType),
+                ("shape", ctypes.POINTER(ctypes.c_int64)),
+                ("strides", ctypes.POINTER(ctypes.c_int64)),
+                ("byte_offset", ctypes.c_uint64)]
+
+class DLManagedTensor(ctypes.Structure):
+    pass
+
+
+DeleterFunc = ctypes.CFUNCTYPE(None, ctypes.POINTER(DLManagedTensor))
+
+
+DLManagedTensor._fields_ = [("dl_tensor", DLTensor),           # pylint: disable=protected-access
+                            ("manager_ctx", ctypes.c_void_p),
+                            ("deleter", DeleterFunc)]
+
+
+@DeleterFunc
+def dl_managed_tensor_deleter(dl_managed_tensor_handle):
+    void_p = dl_managed_tensor_handle.contents.manager_ctx
+    pyobj = ctypes.cast(void_p, ctypes.py_object)
+    ctypes.pythonapi.Py_DecRef(pyobj)
+
+
+def from_numpy(ndarray, zero_copy=True):
+    """Returns an MXNet's ndarray backed by numpy's ndarray.
+    When `zero_copy` is set to be true,
+    this API consumes numpy's ndarray and produces MXNet's ndarray
+    without having to copy the content. In this case, we disallow
+    users to modify the given numpy ndarray, and it is suggested
+    not to read the numpy ndarray as well for internal correctness.
+
+    Parameters
+    ----------
+    ndarray: numpy.ndarray
+        input data
+
+    zero_copy: bool
+        Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
+        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+
+    Returns
+    -------
+    NDArray
+        a NDArray backed by a dlpack tensor
+
+    """
+
+    def _make_manager_ctx(obj):
+        pyobj = ctypes.py_object(obj)
+        void_p = ctypes.c_void_p.from_buffer(pyobj)
+        ctypes.pythonapi.Py_IncRef(pyobj)
+        return void_p
+
+    def _make_dl_tensor(array):
+        if str(array.dtype) not in DLDataType.TYPE_MAP:
+            raise ValueError(str(array.dtype) + " is not supported.")
+        dl_tensor = DLTensor()
+        dl_tensor.data = array.ctypes.data_as(ctypes.c_void_p)
+        dl_tensor.ctx = DLContext(1, 0)
+        dl_tensor.ndim = array.ndim
+        dl_tensor.dtype = DLDataType.TYPE_MAP[str(array.dtype)]
+        dl_tensor.shape = array.ctypes.shape_as(ctypes.c_int64)
+        dl_tensor.strides = None
+        dl_tensor.byte_offset = 0
+        return dl_tensor
+
+    def _make_dl_managed_tensor(array):
+        c_obj = DLManagedTensor()
+        c_obj.dl_tensor = _make_dl_tensor(array)
+        c_obj.manager_ctx = _make_manager_ctx(array)
+        c_obj.deleter = dl_managed_tensor_deleter
+        return c_obj
+
+    if not zero_copy:
+        return array(ndarray, dtype=ndarray.dtype)
+
+    if not ndarray.flags['C_CONTIGUOUS']:
+        raise ValueError("Only c-contiguous arrays are supported for zero-copy")
+    ndarray.flags['WRITEABLE'] = False
+    c_obj = _make_dl_managed_tensor(ndarray)
+    handle = NDArrayHandle()
+    check_call(_LIB.MXNDArrayFromDLPackEx(ctypes.byref(c_obj), True, ctypes.byref(handle)))
     return NDArray(handle=handle)

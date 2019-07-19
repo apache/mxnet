@@ -38,7 +38,7 @@ extern "C" {
  * to the input graph for partitioning. This function should be
  * used only for the testing purpose.
  */
-MXNET_DLL int MXPartitionGraphByOpNames(SymbolHandle sym_handle,
+MXNET_DLL int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
                                         const char* prop_name,
                                         const mx_uint num_ops,
                                         const char** op_names,

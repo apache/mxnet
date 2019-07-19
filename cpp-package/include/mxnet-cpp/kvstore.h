@@ -39,12 +39,21 @@ class KVStore {
   static void SetType(const std::string& type);
   static void RunServer();
   static void Init(int key, const NDArray& val);
+  static void Init(const std::string& key, const NDArray& val);
   static void Init(const std::vector<int>& keys, const std::vector<NDArray>& vals);
+  static void Init(const std::vector<std::string>& keys, const std::vector<NDArray>& vals);
   static void Push(int key, const NDArray& val, int priority = 0);
+  static void Push(const std::string& key, const NDArray& val, int priority = 0);
   static void Push(const std::vector<int>& keys,
-      const std::vector<NDArray>& vals, int priority = 0);
+                   const std::vector<NDArray>& vals, int priority = 0);
+  static void Push(const std::vector<std::string>& keys,
+                   const std::vector<NDArray>& vals, int priority = 0);
   static void Pull(int key, NDArray* out, int priority = 0);
-  static void Pull(const std::vector<int>& keys, std::vector<NDArray>* outs, int priority = 0);
+  static void Pull(const std::string& key, NDArray* out, int priority = 0);
+  static void Pull(const std::vector<int>& keys,
+                   std::vector<NDArray>* outs, int priority = 0);
+  static void Pull(const std::vector<std::string>& keys,
+                   std::vector<NDArray>* outs, int priority = 0);
   // TODO(lx): put lr in optimizer or not?
   static void SetOptimizer(std::unique_ptr<Optimizer> optimizer, bool local = false);
   static std::string GetType();

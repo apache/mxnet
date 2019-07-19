@@ -31,5 +31,5 @@ cd ${DATA_DIR}
 wget --no-check-certificate https://raw.githubusercontent.com/dmlc/mxnet.js/master/data/cat.png;
 
 # Get inception model
-wget --no-check-certificate http://data.dmlc.ml/mxnet/models/imagenet/inception-bn.tar.gz;
+wget --no-check-certificate http://data.mxnet.io/models/imagenet/inception-bn.tar.gz
 tar -zxvf inception-bn.tar.gz

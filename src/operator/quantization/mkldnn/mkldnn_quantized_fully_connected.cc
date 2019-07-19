@@ -31,11 +31,6 @@
 namespace mxnet {
 namespace op {
 
-namespace quantized_fc_enum {
-enum QuantizedFCInputMinMax { kDataMin, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax };
-enum QuantizedFCOutputs { kOut, kOutMin, kOutMax };
-}
-
 void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
                                           const OpContext &ctx,
                                           const std::vector<NDArray> &in_data,
@@ -52,15 +47,15 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   NDArray weight = in_data[fullc::kWeight];
 
   const float min_data =
-    in_data[num_inputs + quantized_fc_enum::kDataMin].data().dptr<float>()[0];
+    in_data[num_inputs + quantized_fullc::kDataMin].data().dptr<float>()[0];
   const float max_data =
-    in_data[num_inputs + quantized_fc_enum::kDataMax].data().dptr<float>()[0];
+    in_data[num_inputs + quantized_fullc::kDataMax].data().dptr<float>()[0];
   const float min_weight =
-    in_data[num_inputs + quantized_fc_enum::kWeightMin].data().dptr<float>()[0];
+    in_data[num_inputs + quantized_fullc::kWeightMin].data().dptr<float>()[0];
   const float max_weight =
-    in_data[num_inputs + quantized_fc_enum::kWeightMax].data().dptr<float>()[0];
-  float *min_output_ptr = out_data[quantized_fc_enum::kOutMin].data().dptr<float>();
-  float *max_output_ptr = out_data[quantized_fc_enum::kOutMax].data().dptr<float>();
+    in_data[num_inputs + quantized_fullc::kWeightMax].data().dptr<float>()[0];
+  float *min_output_ptr = out_data[quantized_fullc::kOutMin].data().dptr<float>();
+  float *max_output_ptr = out_data[quantized_fullc::kOutMax].data().dptr<float>();
 
   auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
   float data_scale = data_range / MaxAbs(min_data, max_data);
@@ -69,8 +64,8 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   NDArray quantized_bias;
   if (!param.no_bias) {
     NDArray bias = in_data[fullc::kBias];
-    float min_bias = in_data[num_inputs + quantized_fc_enum::kBiasMin].data().dptr<float>()[0];
-    float max_bias = in_data[num_inputs + quantized_fc_enum::kBiasMax].data().dptr<float>()[0];
+    float min_bias = in_data[num_inputs + quantized_fullc::kBiasMin].data().dptr<float>()[0];
+    float max_bias = in_data[num_inputs + quantized_fullc::kBiasMax].data().dptr<float>()[0];
     float bias_int32_rescale = data_scale * weight_scale * MaxAbs(min_bias, max_bias) / kInt8Range;
 
     quantized_bias = NDArray(bias.storage_type(), bias.shape(),
@@ -79,13 +74,13 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
     int32_t *quantized_bias_ptr = quantized_bias.data().dptr<int32_t>();
     size_t bias_size = bias.shape().Size();
     #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (size_t i = 0; i < bias_size; ++i) {
+    for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
       quantized_bias_ptr[i] = bias_ptr[i] * bias_int32_rescale;
     }
   }
 
   Stream<cpu> *s = ctx.get_stream<cpu>();
-  mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
+  mxnet_op::Kernel<QuantizationRangeForS8S8MultiplicationStruct, cpu>::Launch(s, 1,
     min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
 
   bool is_train = false;
@@ -98,8 +93,11 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   const mkldnn::memory *weight_mem = nullptr;
 
   if (weight.IsDefaultData()) {
-    weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(), 1);
+    // We also need to modify the layout on the original weight array.
+    // Don't switch below sequence because naive engine will executes
+    // pushAsync synchronously.
     weight.MKLDNNDataReorderAsync(fwd.fwd_pd.weights_primitive_desc());
+    weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(), 1);
   } else {
     weight_mem = weight.GetMKLDNNData();
     CHECK(weight_mem->get_primitive_desc() == fwd.fwd_pd.weights_primitive_desc());

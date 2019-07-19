@@ -195,9 +195,9 @@ class SliceChannelProp : public OperatorProperty {
     CHECK_EQ(in_shape->size(), 1U);
     mxnet::TShape dshape = in_shape->at(slice_enum::kData);
     mxnet::TShape ishape = in_shape->at(slice_enum::kData);
-    if (dshape.ndim() == 0) return false;
+    if (!mxnet::ndim_is_known(dshape)) return false;
     if (param_.axis >= 0) {
-      CHECK_LT(static_cast<size_t>(param_.axis), dshape.ndim());
+      CHECK_LT(param_.axis, dshape.ndim());
     } else {
       CHECK_LT(param_.axis + dshape.ndim(), dshape.ndim());
     }
@@ -212,15 +212,18 @@ class SliceChannelProp : public OperatorProperty {
       << " evenly sized chunks, but this is not possible because "
       << param_.num_outputs << " does not evenly divide "
       << dshape[real_axis];
-    if (param_.squeeze_axis && ishape[real_axis] != 0) {
-      CHECK_EQ(ishape[real_axis], static_cast<size_t>(param_.num_outputs))
+    if (param_.squeeze_axis && ishape[real_axis] != -1) {
+      CHECK_EQ(ishape[real_axis], param_.num_outputs)
         << "If squeeze axis is True, the size of the sliced axis must be the same as num_outputs."
         << " Input shape=" << ishape << ", axis=" << real_axis
         << ", num_outputs=" << param_.num_outputs << ".";
     }
-    dshape[real_axis] /= param_.num_outputs;
-    if (param_.squeeze_axis && (dshape[real_axis] == 1 || ishape[real_axis] == 0)) {
-      for (int d = real_axis; d < static_cast<int>(dshape.ndim()) - 1; ++d) {
+    if (dshape[real_axis] >= 0) {
+      dshape[real_axis] /= param_.num_outputs;
+    }
+    if (param_.squeeze_axis && (dshape[real_axis] == 1
+        || !mxnet::dim_size_is_known(ishape, real_axis))) {
+      for (int d = real_axis; d < dshape.ndim() - 1; ++d) {
         dshape[d] = dshape[d+1];
       }
       dshape = mxnet::TShape(&dshape[0], &dshape[dshape.ndim()-1]);

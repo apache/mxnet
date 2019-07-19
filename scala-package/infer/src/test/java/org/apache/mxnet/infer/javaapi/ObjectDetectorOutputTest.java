@@ -36,8 +36,8 @@ public class ObjectDetectorOutputTest {
         Assert.assertEquals(odOutput.getClassName(), predictedClassName);
         Assert.assertEquals("Threshold not matching", odOutput.getProbability(), 0f, delta);
         Assert.assertEquals("Threshold not matching", odOutput.getXMin(), 1f, delta);
-        Assert.assertEquals("Threshold not matching", odOutput.getXMax(), 2f, delta);
-        Assert.assertEquals("Threshold not matching", odOutput.getYMin(), 3f, delta);
+        Assert.assertEquals("Threshold not matching", odOutput.getXMax(), 3f, delta);
+        Assert.assertEquals("Threshold not matching", odOutput.getYMin(), 2f, delta);
         Assert.assertEquals("Threshold not matching", odOutput.getYMax(), 4f, delta);
 
     }

@@ -44,9 +44,11 @@
 #include "mxnet/rtc.h"
 #include "mxnet/storage.h"
 #include "mxnet/libinfo.h"
+#include "mxnet/imperative.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
+#include "../common/utils.h"
 
 using namespace mxnet;
 
@@ -471,7 +473,7 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
   NDArray *ptr = new NDArray();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
-  nnvm::Tuple<dim_t> shape(dims, dims+ndim);
+  mxnet::Tuple<dim_t> shape(dims, dims+ndim);
   CHECK_GT(arr->shape().Size(), 0) << "Source ndarray's shape is undefined. Input shape: "
     << arr->shape();
   mxnet::TShape new_shape = mxnet::op::InferReshapeShape(shape, arr->shape(), reverse);
@@ -511,6 +513,34 @@ int MXNDArrayGetShape(NDArrayHandle handle,
   API_END();
 }
 
+int MXNDArrayGetShapeEx(NDArrayHandle handle,
+                        int *out_dim,
+                        const int **out_pdata) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    mxnet::TShape s = arr->shape();
+    if (!Imperative::Get()->is_np_shape()) {
+      common::ConvertToLegacyShape(&s);
+    }
+    *out_dim = s.ndim();
+    if (s.ndim() >= 0) {
+      std::vector<int> &buffer = ret->arg_shape_buffer_ex;
+      buffer.resize(s.ndim());
+      mxnet::ShapeTypeCast(s.begin(), s.end(), buffer.data());
+      *out_pdata = buffer.data();
+    }
+  } else {
+    if (Imperative::Get()->is_np_shape()) {
+      *out_dim = -1;
+    } else {
+      *out_dim = 0;
+    }
+  }
+  API_END();
+}
+
 int MXNDArrayGetData(NDArrayHandle handle,
                      void **out_pdata) {
   API_BEGIN();
@@ -533,9 +563,16 @@ int MXNDArrayToDLPack(NDArrayHandle handle,
 
 int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
                         NDArrayHandle *out_handle) {
+  return MXNDArrayFromDLPackEx(dlpack, false, out_handle);
+}
+
+int MXNDArrayFromDLPackEx(DLManagedTensorHandle dlpack,
+                          const bool transient_handle,
+                          NDArrayHandle *out_handle) {
   API_BEGIN();
   *out_handle = new NDArray(NDArray::FromDLPack(
-              static_cast<DLManagedTensor*>(dlpack)));
+              static_cast<DLManagedTensor*>(dlpack),
+              transient_handle));
   API_END();
 }
 
@@ -791,7 +828,7 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   // temp hack to make label 1D
   // TODO(tianjun) make label 1D when label_width=0
   mxnet::TShape shape = db.data[1].shape();
-  if (shape[1] == 1) {
+  if (shape.ndim() > 1 && shape[1] == 1) {
     *pndarray = db.data[1].Reshape(mshadow::Shape1(shape[0]));
   } else {
     *pndarray = db.data[1];
@@ -1399,5 +1436,147 @@ int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const mx_uint *s
                                  mx_uint ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  API_END();
+}
+
+int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
+                                   int ndim, int dtype, NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  API_END();
+}
+
+typedef Engine::VarHandle VarHandle;
+typedef Engine::CallbackOnComplete CallbackOnComplete;
+
+void AssertValidNumberVars(int num_const_vars, int num_mutable_vars) {
+  CHECK_GE(num_const_vars, 0) << "Non-negative number of const vars expected.";
+  CHECK_GE(num_mutable_vars, 0) << "Non-negative number of mutable vars expected.";
+}
+
+int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
+                      EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                      EngineVarHandle const_vars_handle, int num_const_vars,
+                      EngineVarHandle mutable_vars_handle, int num_mutable_vars,
+                      EngineFnPropertyHandle prop_handle, int priority,
+                      const char* opr_name, bool wait) {
+  API_BEGIN();
+
+  auto exec_ctx = *static_cast<const Context*>(ctx_handle);
+  auto const_vars = static_cast<VarHandle*>(const_vars_handle);
+  auto mutable_vars = static_cast<VarHandle*>(mutable_vars_handle);
+  auto prop = FnProperty::kNormal;
+  if (prop_handle) {
+    prop = *static_cast<const FnProperty*>(prop_handle);
+  }
+
+  Engine::AsyncFn exec_fn;
+  if (deleter == nullptr) {
+    exec_fn = [async_func, func_param](RunContext rctx,
+                                       CallbackOnComplete on_complete) {
+      async_func(&rctx, &on_complete, func_param);
+    };
+  } else {
+    // Wrap func_param in a shared_ptr with deleter such that deleter
+    // will be called when the lambda goes out of scope.
+    std::shared_ptr<void> shared_func_param(func_param, deleter);
+    exec_fn = [async_func, shared_func_param](RunContext rctx,
+                                              CallbackOnComplete on_complete) {
+      async_func(&rctx, &on_complete, shared_func_param.get());
+    };
+  }
+
+  AssertValidNumberVars(num_const_vars, num_mutable_vars);
+  std::vector<VarHandle> const_var_vec(const_vars, const_vars + num_const_vars);
+  std::vector<VarHandle> mutable_var_vec(mutable_vars, mutable_vars + num_mutable_vars);
+  Engine::Get()->PushAsync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
+                           prop, priority, opr_name, wait);
+
+  API_END();
+}
+
+int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
+                     EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                     EngineVarHandle const_vars_handle, int num_const_vars,
+                     EngineVarHandle mutable_vars_handle, int num_mutable_vars,
+                     EngineFnPropertyHandle prop_handle, int priority,
+                     const char* opr_name) {
+  API_BEGIN();
+
+  auto exec_ctx = *static_cast<const Context*>(ctx_handle);
+  auto const_vars = static_cast<VarHandle*>(const_vars_handle);
+  auto mutable_vars = static_cast<VarHandle*>(mutable_vars_handle);
+  auto prop = FnProperty::kNormal;
+  if (prop_handle) {
+    prop = *static_cast<const FnProperty*>(prop_handle);
+  }
+
+  Engine::SyncFn exec_fn;
+  if (deleter == nullptr) {
+    exec_fn = [sync_func, func_param](RunContext rctx) {
+      sync_func(&rctx, func_param);
+    };
+  } else {
+    // Wrap func_param in a shared_ptr with deleter such that deleter
+    // will be called when the lambda goes out of scope.
+    std::shared_ptr<void> shared_func_param(func_param, deleter);
+    exec_fn = [sync_func, shared_func_param](RunContext rctx) {
+      sync_func(&rctx, shared_func_param.get());
+    };
+  }
+
+  AssertValidNumberVars(num_const_vars, num_mutable_vars);
+  std::vector<VarHandle> const_var_vec(const_vars, const_vars + num_const_vars);
+  std::vector<VarHandle> mutable_var_vec(mutable_vars, mutable_vars + num_mutable_vars);
+  Engine::Get()->PushSync(exec_fn, exec_ctx, const_var_vec, mutable_var_vec,
+                          prop, priority, opr_name);
+
+  API_END();
+}
+
+int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
+                      EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                      NDArrayHandle const_nds_handle, int num_const_nds,
+                      NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                      EngineFnPropertyHandle prop_handle, int priority,
+                      const char* opr_name, bool wait) {
+  API_BEGIN();
+  NDArray* const_nds = static_cast<NDArray*>(const_nds_handle);
+  NDArray* mutable_nds = static_cast<NDArray*>(mutable_nds_handle);
+  std::vector<VarHandle> const_var_vec(num_const_nds);
+  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
+  std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
+  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
+  return MXEnginePushAsync(async_func, func_param, deleter, ctx_handle,
+                           const_var_vec.data(), num_const_nds,
+                           mutable_var_vec.data(), num_mutable_nds,
+                           prop_handle, priority, opr_name, wait);
+  API_END();
+}
+
+int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
+                     EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                     NDArrayHandle const_nds_handle, int num_const_nds,
+                     NDArrayHandle mutable_nds_handle, int num_mutable_nds,
+                     EngineFnPropertyHandle prop_handle, int priority,
+                     const char* opr_name) {
+  API_BEGIN();
+  NDArray* const_nds = static_cast<NDArray*>(const_nds_handle);
+  NDArray* mutable_nds = static_cast<NDArray*>(mutable_nds_handle);
+  std::vector<VarHandle> const_var_vec(num_const_nds);
+  for (int i = 0; i < num_const_nds; ++i) const_var_vec[i] = (const_nds+i)->var();
+  std::vector<VarHandle> mutable_var_vec(num_mutable_nds);
+  for (int i = 0; i < num_mutable_nds; ++i) mutable_var_vec[i] = (mutable_nds+i)->var();
+  return MXEnginePushSync(sync_func, func_param, deleter, ctx_handle,
+                          const_var_vec.data(), num_const_nds,
+                          mutable_var_vec.data(), num_mutable_nds,
+                          prop_handle, priority, opr_name);
+  API_END();
+}
+
+int MXStorageEmptyCache(int dev_type, int dev_id) {
+  API_BEGIN();
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+  Storage::Get()->ReleaseAll(ctx);
   API_END();
 }

@@ -22,7 +22,25 @@ import org.apache.mxnet.init.Base._
 import scala.collection.mutable.ListBuffer
 
 class LibInfo {
+  /**
+    * Get the list of the symbol ids
+    * @param symbolList Pass in an empty ListBuffer and obtain a list of operator IDs
+    * @return Callback result
+    */
   @native def mxSymbolListAtomicSymbolCreators(symbolList: ListBuffer[SymbolHandle]): Int
+
+  /**
+    * Get the detailed information of an operator
+    * @param handle The ID of the operator
+    * @param name Name of the operator
+    * @param desc Description of the operator
+    * @param numArgs Number of arguments
+    * @param argNames Argument names
+    * @param argTypes Argument types
+    * @param argDescs Argument descriptions
+    * @param keyVarNumArgs Kwargs number
+    * @return Callback result
+    */
   @native def mxSymbolGetAtomicSymbolInfo(handle: SymbolHandle,
                                           name: RefString,
                                           desc: RefString,
@@ -31,6 +49,18 @@ class LibInfo {
                                           argTypes: ListBuffer[String],
                                           argDescs: ListBuffer[String],
                                           keyVarNumArgs: RefString): Int
+  /**
+    * Get the name list of all operators
+    * @param names Names of all operator
+    * @return Callback result
+    */
   @native def mxListAllOpNames(names: ListBuffer[String]): Int
+
+  /**
+    * Get operator ID from its name
+    * @param opName Operator name
+    * @param opHandle Operator ID
+    * @return Callback result
+    */
   @native def nnGetOpHandle(opName: String, opHandle: RefLong): Int
 }

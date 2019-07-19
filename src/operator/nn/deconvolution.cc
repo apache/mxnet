@@ -54,7 +54,7 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
   }
   out_shape->resize(1, mxnet::TShape());
   const mxnet::TShape &dshape = (*in_shape)[deconv::kData];
-  if (dshape.ndim() ==  0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
 
   if (param_.kernel.ndim() == 1) {
     // 1d conv
@@ -90,8 +90,12 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
     Shape<3> oshape;
     oshape[0] = dshape_ncw[0];
     oshape[1] = param_.num_filter;
-    oshape[2] = param_.stride[0] * (dshape_ncw[2] - 1) +
-      dilated_ksize_x - 2 * o_pad[0] + o_adj[0];
+    if (mxnet::dim_size_is_known(dshape_ncw[2])) {
+      oshape[2] = param_.stride[0] * (dshape_ncw[2] - 1) +
+          dilated_ksize_x - 2 * o_pad[0] + o_adj[0];
+    } else {
+      oshape[2] = -1;
+    }
 
     if (param_.target_shape.ndim() > 0) {
       if (param_.target_shape[0] > 0) {
@@ -141,10 +145,18 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
     Shape<4> oshape;
     oshape[0] = dshape_nchw[0];
     oshape[1] = param_.num_filter;
-    oshape[2] = param_.stride[0] * (dshape_nchw[2] - 1) +
-      dilated_ksize_y - 2 * o_pad[0] + o_adj[0];
-    oshape[3] = param_.stride[1] * (dshape_nchw[3] - 1) +
-      dilated_ksize_x - 2 * o_pad[1] + o_adj[1];
+    if (mxnet::dim_size_is_known(dshape_nchw[2])) {
+      oshape[2] = param_.stride[0] * (dshape_nchw[2] - 1) +
+          dilated_ksize_y - 2 * o_pad[0] + o_adj[0];
+    } else {
+      oshape[2] = -1;
+    }
+    if (mxnet::dim_size_is_known(dshape_nchw[3])) {
+      oshape[3] = param_.stride[1] * (dshape_nchw[3] - 1) +
+          dilated_ksize_x - 2 * o_pad[1] + o_adj[1];
+    } else {
+      oshape[3] = -1;
+    }
 
     if (param_.target_shape.ndim() > 1) {
       if (param_.target_shape[0] > 0) {
@@ -203,12 +215,24 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
     Shape<5> oshape;
     oshape[0] = dshape_ncdhw[0];
     oshape[1] = param_.num_filter;
-    oshape[2] = param_.stride[0] * (dshape_ncdhw[2] - 1) +
-      dilated_ksize_d - 2 * o_pad[0] + o_adj[0];
-    oshape[3] = param_.stride[1] * (dshape_ncdhw[3] - 1) +
-      dilated_ksize_y - 2 * o_pad[1] + o_adj[1];
-    oshape[4] = param_.stride[2] * (dshape_ncdhw[4] - 1) +
-      dilated_ksize_x - 2 * o_pad[2] + o_adj[2];
+    if (mxnet::dim_size_is_known(dshape_ncdhw[2])) {
+      oshape[2] = param_.stride[0] * (dshape_ncdhw[2] - 1) +
+          dilated_ksize_d - 2 * o_pad[0] + o_adj[0];
+    } else {
+      oshape[2] = -1;
+    }
+    if (mxnet::dim_size_is_known(dshape_ncdhw[3])) {
+      oshape[3] = param_.stride[1] * (dshape_ncdhw[3] - 1) +
+          dilated_ksize_y - 2 * o_pad[1] + o_adj[1];
+    } else {
+      oshape[3] = -1;
+    }
+    if (mxnet::dim_size_is_known(dshape_ncdhw[4])) {
+      oshape[4] = param_.stride[2] * (dshape_ncdhw[4] - 1) +
+          dilated_ksize_x - 2 * o_pad[2] + o_adj[2];
+    } else {
+      oshape[4] = -1;
+    }
 
     if (param_.target_shape.ndim() > 2) {
       if (param_.target_shape[0] > 0) {

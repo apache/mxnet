@@ -228,6 +228,7 @@ int main(int argc, char const *argv[]) {
   }
 #endif
 
+  TRY
   /*net symbol*/
   auto Net = AlexnetSymbol(10);
 
@@ -352,5 +353,6 @@ int main(int argc, char const *argv[]) {
   delete exec;
   delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

@@ -34,7 +34,7 @@ object TestCharRnn {
   private val logger = LoggerFactory.getLogger(classOf[TrainCharRnn])
 
   def runInferenceCharRNN(dataPath: String, modelPrefix: String, starterSentence : String): Unit = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       // The batch size for training
       val batchSize = 32
       // We can support various length input

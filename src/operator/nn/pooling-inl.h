@@ -55,7 +55,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   dmlc::optional<bool> count_include_pad;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
-    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape())  // add default value here
+    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape(0, 0))  // add default value here
     .enforce_nonzero()
     .describe("Pooling kernel size: (y, x) or (d, y, x)");
 
@@ -78,11 +78,11 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("same", pool_enum::kSame)
     .describe("Pooling convention to be applied.");
 
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0, 0))
     .enforce_nonzero()
     .describe("Stride: for pooling (y, x) or (d, y, x). Defaults to 1 for each dimension.");
 
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0, 0))
     .describe("Pad for pooling: (y, x) or (d, y, x). Defaults to no padding.");
 
     DMLC_DECLARE_FIELD(p_value).set_default(dmlc::optional<int>())
@@ -200,11 +200,11 @@ class PoolingOp {
         kernel = mxnet::TShape(ishape.data() + 2,
                         ishape.data() + ishape.ndim());
       }
-      padding = mxnet::TShape(ishape.ndim() - 2);
+      padding = mxnet::TShape(ishape.ndim() - 2, 0);
       for (index_t i = 0; i < ishape.ndim() - 2; i++) {
         padding[i] = 0;
       }
-      stride = mxnet::TShape(ishape.ndim() - 2);
+      stride = mxnet::TShape(ishape.ndim() - 2, 1);
     }
     const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?
                         param_.p_value.value() : 1;
@@ -257,11 +257,11 @@ class PoolingOp {
         kernel = mxnet::TShape(ishape.data() + 2,
                         ishape.data() + ishape.ndim());
       }
-      padding = mxnet::TShape(ishape.ndim() - 2);
+      padding = mxnet::TShape(ishape.ndim() - 2, 0);
       for (index_t i = 0; i < ishape.ndim() - 2; i++) {
         padding[i] = 0;
       }
-      stride = mxnet::TShape(ishape.ndim() - 2);
+      stride = mxnet::TShape(ishape.ndim() - 2, 1);
     }
 
     const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?

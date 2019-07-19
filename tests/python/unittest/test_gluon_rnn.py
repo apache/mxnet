@@ -22,8 +22,7 @@ import copy
 from numpy.testing import assert_allclose
 import unittest
 from mxnet.test_utils import almost_equal, assert_almost_equal
-from common import assert_raises_cudnn_not_satisfied
-
+from common import assert_raises_cudnn_not_satisfied, with_seed
 
 def test_rnn():
     cell = gluon.rnn.RNNCell(100, prefix='rnn_')
@@ -244,6 +243,7 @@ def test_bidirectional():
 
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@with_seed()
 def test_layer_bidirectional():
     class RefBiLSTM(gluon.Block):
         def __init__(self, size, **kwargs):
@@ -279,7 +279,7 @@ def test_layer_bidirectional():
         ref_net_params[k.replace('l0', 'l0l0').replace('r0', 'r0l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
-    assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy())
+    assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy(), rtol=1e-04, atol=1e-02)
 
 
 
@@ -634,32 +634,33 @@ def test_layer_fill_shape():
 
 
 def test_bidirectional_unroll_valid_length():
-    # Test BidirectionalCell.
-    # In 1.3.1 version, after hybridize( ), BidirectionalCell would failed when pass valid_length to unroll( ).
-    
-    class BiLSTM(gluon.nn.HybridBlock):
-        def __init__(self, rnn_size, time_step, **kwargs):
-            super(BiLSTM, self).__init__(**kwargs)
-            self.time_step = time_step
-            with self.name_scope():
-                self.bi_lstm = gluon.rnn.BidirectionalCell(
-                    gluon.rnn.LSTMCell(rnn_size, prefix='rnn_l0_'),
-                    gluon.rnn.LSTMCell(rnn_size, prefix='rnn_r0_'),
-                    output_prefix='lstm_bi_')
+    def _check_bidirectional_unroll_valid_length(length):
+        class BiLSTM(gluon.nn.HybridBlock):
+            def __init__(self, rnn_size, time_step, **kwargs):
+                super(BiLSTM, self).__init__(**kwargs)
+                self.time_step = time_step
+                with self.name_scope():
+                    self.bi_lstm = gluon.rnn.BidirectionalCell(
+                        gluon.rnn.LSTMCell(rnn_size, prefix='rnn_l0_'),
+                        gluon.rnn.LSTMCell(rnn_size, prefix='rnn_r0_'),
+                        output_prefix='lstm_bi_')
 
-        def hybrid_forward(self, F, inputs, valid_len):
-            outputs, states = self.bi_lstm.unroll(self.time_step, inputs, valid_length=valid_len,
-                                                  layout='NTC', merge_outputs=True)
-            return outputs, states
+            def hybrid_forward(self, F, inputs, valid_len):
+                outputs, states = self.bi_lstm.unroll(self.time_step, inputs, valid_length=valid_len,
+                                                      layout='NTC', merge_outputs=True)
+                return outputs, states
 
-    rnn_size, time_step = 100, 3
-    net = BiLSTM(rnn_size, time_step)
-    net.initialize()
-    net.hybridize()
-    inputs_data = mx.nd.random.uniform(shape=(10, 3, 50))
-    valid_len = mx.nd.array([1]*10)
-    outputs, _ = net(inputs_data, valid_len)
-    assert outputs.shape == (10, 3, 200)
+        rnn_size = 100
+        net = BiLSTM(rnn_size, length)
+        net.initialize()
+        net.hybridize()
+        inputs_data = mx.nd.random.uniform(shape=(10, length, 50))
+        valid_len = mx.nd.array([length]*10)
+        outputs, _ = net(inputs_data, valid_len)
+        assert outputs.shape == (10, length, 200)
+
+    _check_bidirectional_unroll_valid_length(1)
+    _check_bidirectional_unroll_valid_length(3)
 
 
 if __name__ == '__main__':

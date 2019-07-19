@@ -41,6 +41,26 @@ scala_prepare() {
     export MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn"
 }
 
+check_cython() {
+    set -ex
+    local python_ver=$1
+    local is_cython_used=$(python${python_ver} <<EOF
+import sys
+import mxnet as mx
+cython_ndarraybase = 'mxnet._cy' + str(sys.version_info.major) + '.ndarray'
+print(mx.nd._internal.NDArrayBase.__module__ == cython_ndarraybase)
+EOF
+)
+
+    if [ "${is_cython_used}" != "True" ]; then
+        echo "ERROR: cython is not used."
+        return 1
+    else
+        echo "NOTE: cython is used."
+        return 0
+    fi
+}
+
 build_ccache_wrappers() {
     set -ex
 
@@ -66,37 +86,29 @@ build_ccache_wrappers() {
     # But in the beginning, we'll make this opt-in. In future, loads of processes like
     # the scala make step or numpy compilation and other pip package generations
     # could be heavily sped up by using ccache as well.
-    mkdir /tmp/ccache-redirects
+    mkdir -p /tmp/ccache-redirects
     export PATH=/tmp/ccache-redirects:$PATH
-    ln -s ccache /tmp/ccache-redirects/gcc
-    ln -s ccache /tmp/ccache-redirects/gcc-8
-    ln -s ccache /tmp/ccache-redirects/g++
-    ln -s ccache /tmp/ccache-redirects/g++-8
-    ln -s ccache /tmp/ccache-redirects/nvcc
-    ln -s ccache /tmp/ccache-redirects/clang++-3.9
-    ln -s ccache /tmp/ccache-redirects/clang-3.9
-    ln -s ccache /tmp/ccache-redirects/clang++-5.0
-    ln -s ccache /tmp/ccache-redirects/clang-5.0
-    ln -s ccache /tmp/ccache-redirects/clang++-6.0
-    ln -s ccache /tmp/ccache-redirects/clang-6.0
-    ln -s ccache /usr/local/bin/gcc
-    ln -s ccache /usr/local/bin/gcc-8
-    ln -s ccache /usr/local/bin/g++
-    ln -s ccache /usr/local/bin/g++-8
-    ln -s ccache /usr/local/bin/nvcc
-    ln -s ccache /usr/local/bin/clang++-3.9
-    ln -s ccache /usr/local/bin/clang-3.9
-    ln -s ccache /usr/local/bin/clang++-5.0
-    ln -s ccache /usr/local/bin/clang-5.0
-    ln -s ccache /usr/local/bin/clang++-6.0
-    ln -s ccache /usr/local/bin/clang-6.0
-
-    export NVCC=ccache
+    CCACHE=`which ccache`
+    ln -sf $CCACHE /tmp/ccache-redirects/gcc
+    ln -sf $CCACHE /tmp/ccache-redirects/gcc-8
+    ln -sf $CCACHE /tmp/ccache-redirects/g++
+    ln -sf $CCACHE /tmp/ccache-redirects/g++-8
+    ln -sf $CCACHE /tmp/ccache-redirects/clang++-3.9
+    ln -sf $CCACHE /tmp/ccache-redirects/clang-3.9
+    ln -sf $CCACHE /tmp/ccache-redirects/clang++-5.0
+    ln -sf $CCACHE /tmp/ccache-redirects/clang-5.0
+    ln -sf $CCACHE /tmp/ccache-redirects/clang++-6.0
+    ln -sf $CCACHE /tmp/ccache-redirects/clang-6.0
+    #Doesn't work: https://github.com/ccache/ccache/issues/373
+    # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
+    # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
+    # export NVCC="/tmp/ccache-redirects/nvcc"
 
     # Uncomment if you would like to debug CCache hit rates.
     # You can monitor using tail -f ccache-log
-    # export CCACHE_LOGFILE=/work/mxnet/ccache-log
-    # export CCACHE_DEBUG=1
+    #export CCACHE_LOGFILE=/work/mxnet/ccache-log
+    #export CCACHE_LOGFILE=/tmp/ccache-log
+    #export CCACHE_DEBUG=1
 }
 
 build_wheel() {
@@ -370,6 +382,8 @@ build_ubuntu_cpu_openblas() {
         USE_LIBJPEG_TURBO=1           \
         USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_cpu_mkl() {
@@ -565,7 +579,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda91_cudnn7
+    build_ubuntu_gpu_cuda101_cudnn7
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -665,10 +679,9 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda91_cudnn7() {
+build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
-    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
-    # build_ccache_wrappers
+    build_ccache_wrappers
     make \
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
@@ -682,6 +695,9 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
+
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_amalgamation() {
@@ -749,6 +765,54 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DBUILD_CYTHON_MODULES=1                \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
+}
+
+build_ubuntu_cpu_large_tensor() {
+    set -ex
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=OFF                          \
+        -DUSE_CUDNN=OFF                         \
+        -DUSE_MKLDNN=OFF                        \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DUSE_INT64_TENSOR_SIZE=ON              \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
+}
+
+build_ubuntu_gpu_large_tensor() {
+    set -ex
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=ON                           \
+        -DUSE_CUDNN=ON                          \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_MKLML_MKL=OFF                     \
+        -DUSE_MKLDNN=OFF                        \
+        -DUSE_DIST_KVSTORE=ON                   \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
 
@@ -769,12 +833,25 @@ sanity_check() {
     nosetests-3.4 tests/tutorials/test_sanity_tutorials.py
 }
 
-
-unittest_ubuntu_python2_cpu() {
+unittest_ubuntu_python2_cpu_cython() {
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=1
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 2
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
+}
+
+unittest_ubuntu_python2_cpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
@@ -783,8 +860,9 @@ unittest_ubuntu_python2_cpu() {
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
@@ -792,8 +870,9 @@ unittest_ubuntu_python3_cpu() {
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
 }
@@ -801,18 +880,31 @@ unittest_ubuntu_python3_cpu_mkldnn() {
 unittest_ubuntu_python2_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+}
+
+unittest_ubuntu_python3_gpu_cython() {
+    set -ex
+    export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=1
+    export MXNET_ENFORCE_CYTHON=1
+    check_cython 3
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -821,6 +913,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export CUDNN_OFF_TEST_ONLY=true
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -829,7 +922,8 @@ unittest_ubuntu_tensorrt_gpu() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
 }
@@ -839,9 +933,10 @@ unittest_ubuntu_tensorrt_gpu() {
 unittest_ubuntu_python2_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -850,17 +945,11 @@ unittest_ubuntu_python2_quantization_gpu() {
 unittest_ubuntu_python3_quantization_gpu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
-}
-
-unittest_ubuntu_cpu_scala() {
-    set -ex
-    scala_prepare
-    cd scala-package
-    mvn -B integration-test
 }
 
 unittest_centos7_cpu_scala() {
@@ -1003,7 +1092,7 @@ unittest_centos7_cpu() {
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    export CUDNN_VERSION=7.0.3
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1060,12 +1149,19 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
 }
 
+integrationtest_ubuntu_cpu_scala() {
+    set -ex
+    scala_prepare
+    cd scala-package
+    mvn -B verify -DskipTests=false
+}
+
 integrationtest_ubuntu_gpu_scala() {
     set -ex
     scala_prepare
     cd scala-package
     export SCALA_TEST_ON_GPU=1
-    mvn -B integration-test -DskipTests=false
+    mvn -B verify -DskipTests=false
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
@@ -1114,6 +1210,16 @@ test_ubuntu_cpu_python3() {
 build_docs() {
     set -ex
     pushd .
+
+    # Setup environment for Julia docs
+    export PATH="/work/julia10/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+
+    julia -e 'using InteractiveUtils; versioninfo()'
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
     cd /work/mxnet/docs/build_version_doc
     # Parameters are set in the Jenkins pipeline: restricted-website-build
     # $1: the list of branches/tags to build
@@ -1181,6 +1287,13 @@ nightly_test_KVStore_singleNode() {
     set -ex
     export PYTHONPATH=./python/
     python tests/nightly/test_kvstore.py
+}
+
+#Test Large Tensor Size
+nightly_test_large_tensor() {
+    set -ex
+    export PYTHONPATH=./python/
+    nosetests-3.4 tests/nightly/test_large_array.py
 }
 
 #Tests Amalgamation Build with 5 different sets of flags
@@ -1296,21 +1409,21 @@ nightly_scala_demo_test_cpu() {
     bash bin/run_im.sh
 }
 
+nightly_estimator() {
+    set -ex
+    cd /work/mxnet/tests/nightly/estimator
+    export PYTHONPATH=/work/mxnet/python/
+    nosetests test_estimator_cnn.py
+    nosetests test_sentiment_rnn.py
+}
+
 # Deploy
 
 deploy_docs() {
     set -ex
     pushd .
 
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make docs SPHINXOPTS=-W USE_MKLDNN=0
-
-    popd
-}
-
-deploy_jl_docs() {
-    set -ex
+    # Setup for Julia docs
     export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
@@ -1320,14 +1433,16 @@ deploy_jl_docs() {
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    # End Julia setup
 
-    make -C julia/docs
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make docs SPHINXOPTS=-W USE_MKLDNN=0
 
-    # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
-    # ...
+    popd
 }
 
-build_scala_static_mkl() {
+build_static_scala_mkl() {
     set -ex
     pushd .
     scala_prepare
@@ -1341,6 +1456,14 @@ build_static_python_mkl() {
     set -ex
     pushd .
     export mxnet_variant=mkl
+    ./ci/publish/python/build.sh
+    popd
+}
+
+build_static_python_cu101mkl() {
+    set -ex
+    pushd .
+    export mxnet_variant=cu101mkl
     ./ci/publish/python/build.sh
     popd
 }

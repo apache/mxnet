@@ -167,8 +167,8 @@ Symbol::RObjectType Symbol::GetOutput(mx_uint index) const {
 
 // helper function to convert shape into Rcpp vector
 inline Rcpp::List BuildShapeData(mx_uint shape_size,
-                                 const mx_uint *shape_ndim,
-                                 const mx_uint **shape_data,
+                                 const int *shape_ndim,
+                                 const int **shape_data,
                                  const std::vector<std::string> &names) {
   Rcpp::List ret(shape_size);
   for (mx_uint i = 0; i < shape_size; ++i) {
@@ -185,7 +185,7 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
       << "Need to pass parameters in key=value style.\n";
   std::vector<std::string> keys = kwargs.names();
   std::vector<mx_uint> arg_ind_ptr(1, 0);
-  std::vector<mx_uint> arg_shape_data;
+  std::vector<int> arg_shape_data;
 
   for (size_t i = 0; i < kwargs.size(); ++i) {
     RCHECK(keys[i].length() != 0)
@@ -197,17 +197,17 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
   std::vector<const char*> c_keys = CKeys(keys);
 
   mx_uint in_shape_size;
-  const mx_uint *in_shape_ndim;
-  const mx_uint **in_shape_data;
+  const int *in_shape_ndim;
+  const int **in_shape_data;
   mx_uint out_shape_size;
-  const mx_uint *out_shape_ndim;
-  const mx_uint **out_shape_data;
+  const int *out_shape_ndim;
+  const int **out_shape_data;
   mx_uint aux_shape_size;
-  const mx_uint *aux_shape_ndim;
-  const mx_uint **aux_shape_data;
+  const int *aux_shape_ndim;
+  const int **aux_shape_data;
   int complete;
 
-  MX_CALL(MXSymbolInferShape(
+  MX_CALL(MXSymbolInferShapeEx(
       handle_, static_cast<mx_uint>(kwargs.size()), dmlc::BeginPtr(c_keys),
       dmlc::BeginPtr(arg_ind_ptr), dmlc::BeginPtr(arg_shape_data),
       &in_shape_size, &in_shape_ndim, &in_shape_data,

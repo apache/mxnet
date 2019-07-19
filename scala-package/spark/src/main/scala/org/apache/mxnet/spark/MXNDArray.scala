@@ -20,7 +20,7 @@ package org.apache.mxnet.spark
 import org.apache.mxnet.NDArray
 
 /**
- * A wrapper for serialize & deserialize <pre>[[org.apache.mxnet.NDArray]]</pre> in spark job
+ * A wrapper for serialize & deserialize ``org.apache.mxnet.NDArray`` in spark job
  * @author Yizhi Liu
  */
 class MXNDArray(@transient private var ndArray: NDArray) extends Serializable {

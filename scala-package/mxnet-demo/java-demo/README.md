@@ -18,6 +18,7 @@
 # MXNet Java Sample Project
 This is a project demonstrating how to use the Maven published Scala/Java MXNet package. 
 The examples provided include:
+* Hello World
 * NDArray creation
 * NDArray operation
 * Object Detection using the Inference API
@@ -31,6 +32,8 @@ mvn package
 This command will pick the default values specified in the [pom](https://github.com/apache/incubator-mxnet/blob/master/scala-package/mxnet-demo/java-demo/pom.xml) file.
 
 Note: If you are planning to use GPU, please add `-Dmxnet.profile=linux-x86_64-gpu`
+
+Note: The Maven package is built with CUDA 9.2.
 
 ### Use customized version set
 You can use the following instruction as an alternative to achieve the same result:

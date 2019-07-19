@@ -47,17 +47,18 @@ inline NDArray::NDArray(const NDArrayHandle &handle) {
   blob_ptr_ = std::make_shared<NDBlob>(handle);
 }
 inline NDArray::NDArray(const std::vector<mx_uint> &shape, const Context &context,
-                        bool delay_alloc) {
+                        bool delay_alloc, int dtype) {
   NDArrayHandle handle;
-  CHECK_EQ(MXNDArrayCreate(shape.data(), shape.size(), context.GetDeviceType(),
-                           context.GetDeviceId(), delay_alloc, &handle),
+  CHECK_EQ(MXNDArrayCreateEx(shape.data(), shape.size(), context.GetDeviceType(),
+                             context.GetDeviceId(), delay_alloc, dtype, &handle),
            0);
   blob_ptr_ = std::make_shared<NDBlob>(handle);
 }
-inline NDArray::NDArray(const Shape &shape, const Context &context, bool delay_alloc) {
+inline NDArray::NDArray(const Shape &shape, const Context &context,
+                        bool delay_alloc, int dtype) {
   NDArrayHandle handle;
-  CHECK_EQ(MXNDArrayCreate(shape.data(), shape.ndim(), context.GetDeviceType(),
-                           context.GetDeviceId(), delay_alloc, &handle),
+  CHECK_EQ(MXNDArrayCreateEx(shape.data(), shape.ndim(), context.GetDeviceType(),
+                             context.GetDeviceId(), delay_alloc, dtype, &handle),
            0);
   blob_ptr_ = std::make_shared<NDBlob>(handle);
 }
@@ -208,7 +209,7 @@ inline void NDArray::SyncCopyToCPU(std::vector<mx_float> *data, size_t size) {
   MXNDArraySyncCopyToCPU(blob_ptr_->handle_, data->data(), size);
 }
 inline NDArray NDArray::Copy(const Context &ctx) const {
-  NDArray ret(GetShape(), ctx);
+  NDArray ret(GetShape(), ctx, true, this->GetDType());
   Operator("_copyto")(*this).Invoke(ret);
   return ret;
 }
@@ -233,12 +234,12 @@ inline NDArray NDArray::Reshape(const Shape &new_shape) const {
   return NDArray(handle);
 }
 inline void NDArray::WaitToRead() const {
-  CHECK_EQ(MXNDArrayWaitToRead(blob_ptr_->handle_), 0);
+  CHECK_EQ(MXNDArrayWaitToRead(blob_ptr_->handle_), 0) << MXGetLastError();
 }
 inline void NDArray::WaitToWrite() {
-  CHECK_EQ(MXNDArrayWaitToWrite(blob_ptr_->handle_), 0);
+  CHECK_EQ(MXNDArrayWaitToWrite(blob_ptr_->handle_), 0) << MXGetLastError();
 }
-inline void NDArray::WaitAll() { CHECK_EQ(MXNDArrayWaitAll(), 0); }
+inline void NDArray::WaitAll() { CHECK_EQ(MXNDArrayWaitAll(), 0) << MXGetLastError(); }
 inline void NDArray::SampleGaussian(mx_float mu, mx_float sigma, NDArray *out) {
   Operator("_random_normal")(mu, sigma).Invoke(*out);
 }
@@ -374,11 +375,15 @@ inline void NDArray::Save(const std::string &file_name,
 }
 
 inline size_t NDArray::Offset(size_t h, size_t w) const {
-  return (h * GetShape()[1]) + w;
+  auto const shape = GetShape();
+  CHECK_EQ(shape.size(), 2) << "The NDArray needs to be 2 dimensional.";
+
+  return (h * shape[1]) + w;
 }
 
 inline size_t NDArray::Offset(size_t c, size_t h, size_t w) const {
   auto const shape = GetShape();
+  CHECK_EQ(shape.size(), 3) << "The NDArray needs to be 3 dimensional.";
   return h * shape[0] * shape[2] + w * shape[0] + c;
 }
 
@@ -390,6 +395,13 @@ inline mx_float NDArray::At(size_t c, size_t h, size_t w) const {
   return GetData()[Offset(c, h, w)];
 }
 
+inline mx_float NDArray::At(size_t index) const {
+  auto shape = GetShape();
+  CHECK_EQ(shape.size(), 1) << "The NDArray needs to be 1 dimensional.";
+  CHECK_LT(index, shape[0]) << "Specified index is out of range.";
+  return GetData()[index];
+}
+
 inline size_t NDArray::Size() const {
   size_t ret = 1;
   for (auto &i : GetShape()) ret *= i;
@@ -397,11 +409,11 @@ inline size_t NDArray::Size() const {
 }
 
 inline std::vector<mx_uint> NDArray::GetShape() const {
-  const mx_uint *out_pdata;
-  mx_uint out_dim;
-  MXNDArrayGetShape(blob_ptr_->handle_, &out_dim, &out_pdata);
+  const int *out_pdata;
+  int out_dim;
+  MXNDArrayGetShapeEx(blob_ptr_->handle_, &out_dim, &out_pdata);
   std::vector<mx_uint> ret;
-  for (mx_uint i = 0; i < out_dim; ++i) {
+  for (int i = 0; i < out_dim; ++i) {
     ret.push_back(out_pdata[i]);
   }
   return ret;

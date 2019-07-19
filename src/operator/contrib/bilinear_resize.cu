@@ -32,6 +32,26 @@ namespace op {
 
 using namespace mshadow;
 
+template<typename xpu, typename Dtype, typename Acctype>
+__global__ void like_mode_kernel_backward(const int n,
+    Tensor<xpu, 4, Dtype> dataLike) {
+  int index = threadIdx.x + blockIdx.x * blockDim.x;
+  const int batchsize = dataLike.size(0);
+  const int channels = dataLike.size(1);
+  const int height = dataLike.size(2);
+  const int width = dataLike.size(3);
+  if (index < n) {
+    const int w = index % width;
+    const int h = index / width;
+    for (int n = 0; n < batchsize ; n++) {
+      for (int c = 0; c < channels; ++c) {
+        dataLike[n][c][h][w] = 0;
+      }
+    }
+    return;
+  }
+}
+
 // Backward (adjoint) operation 1 <- 2 (accumulates)
 template<typename xpu, typename Dtype, typename Acctype>
 __global__ void caffe_gpu_interp2_kernel_backward(const int n,
@@ -118,7 +138,8 @@ void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
                                               const std::vector<TBlob> &input,
-                                              const std::vector<TBlob> &output) {
+                                              const std::vector<TBlob> &output,
+                                              bool modeLike) {
   Tensor<xpu, 4, DType> data1 = output[0].get<xpu, 4, DType>(s);
   Tensor<xpu, 4, DType> data2 = input[0].get<xpu, 4, DType>(s);
   int height1 = data1.size(2);
@@ -135,6 +156,20 @@ void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
   caffe_gpu_interp2_kernel_backward<xpu, DType, AccReal>
   <<<blocks, threads, 0, stream>>>(
     num_kernels, rheight, rwidth, data1, data2);
+
+  if (modeLike) {
+    Tensor<xpu, 4, DType> dataLike = output[1].get<xpu, 4, DType>(s);
+    int heightLike = dataLike.size(2);
+    int widthLike = dataLike.size(3);
+    const int num_kernels_like = heightLike * widthLike;
+    const int num_threads_like = getNumThreads(num_kernels_like, false);
+    dim3 blocksLike(static_cast<int>(num_kernels_like / num_threads_like) + 1);
+    dim3 threadsLike(num_threads_like);
+    like_mode_kernel_backward<xpu, DType, AccReal>
+    <<<blocksLike, threadsLike, 0, stream>>>(
+      num_kernels_like, dataLike);
+  }
+
   MSHADOW_CUDA_POST_KERNEL_CHECK(SpatialUpSamplingBilinearUpdateGradInput);
 }
 

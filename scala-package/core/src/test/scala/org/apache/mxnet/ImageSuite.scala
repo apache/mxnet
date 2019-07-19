@@ -57,7 +57,7 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
 
   test("Test load image") {
     val nd = Image.imRead(imLocation)
-    logger.info(s"OpenCV load image with shape: ${nd.shape}")
+    logger.debug(s"OpenCV load image with shape: ${nd.shape}")
     require(nd.shape == Shape(576, 1024, 3), "image shape not Match!")
   }
 
@@ -65,14 +65,14 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
     val url = new URL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg")
     val inputStream = url.openStream
     val nd = Image.imDecode(inputStream)
-    logger.info(s"OpenCV load image with shape: ${nd.shape}")
+    logger.debug(s"OpenCV load image with shape: ${nd.shape}")
     require(nd.shape == Shape(576, 1024, 3), "image shape not Match!")
   }
 
   test("Test resize image") {
     val nd = Image.imRead(imLocation)
     val resizeIm = Image.imResize(nd, 224, 224)
-    logger.info(s"OpenCV resize image with shape: ${resizeIm.shape}")
+    logger.debug(s"OpenCV resize image with shape: ${resizeIm.shape}")
     require(resizeIm.shape == Shape(224, 224, 3), "image shape not Match!")
   }
 
@@ -94,7 +94,28 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
     val tempDirPath = System.getProperty("java.io.tmpdir")
     val img = Image.toImage(resizeIm)
     ImageIO.write(img, "png", new File(tempDirPath + "/inputImages/out.png"))
-    logger.info(s"converted image stored in ${tempDirPath + "/inputImages/out.png"}")
+    logger.debug(s"converted image stored in ${tempDirPath + "/inputImages/out.png"}")
+  }
+
+  test("Test draw Bounding box") {
+    val buf = ImageIO.read(new File(imLocation))
+    val box = Array(
+      Map("xmin" -> 190, "xmax" -> 850, "ymin" -> 50, "ymax" -> 450),
+      Map("xmin" -> 200, "xmax" -> 350, "ymin" -> 440, "ymax" -> 530)
+    )
+    val names = Array("pug", "cookie")
+    Image.drawBoundingBox(buf, box, Some(names), fontSizeMult = Some(1.4f))
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    ImageIO.write(buf, "png", new File(tempDirPath + "/inputImages/out2.png"))
+    logger.debug(s"converted image stored in ${tempDirPath + "/inputImages/out2.png"}")
+    for (coord <- box) {
+      val topLeft = buf.getRGB(coord("xmin"), coord("ymin"))
+      val downLeft = buf.getRGB(coord("xmin"), coord("ymax"))
+      val topRight = buf.getRGB(coord("xmax"), coord("ymin"))
+      val downRight = buf.getRGB(coord("xmax"), coord("ymax"))
+      require(downLeft == downRight)
+      require(topRight == downRight)
+    }
   }
 
 }

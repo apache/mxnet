@@ -49,3 +49,4 @@ include/*
 .*.json.ref
 searchtools_custom.js
 theme.conf
+LICENSE.binary.dependencies

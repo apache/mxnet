@@ -19,6 +19,7 @@ package AI::MXNet::Random;
 use strict;
 use warnings;
 use Scalar::Util qw/blessed/;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::NDArray::Base;
 use AI::MXNet::Function::Parameters;

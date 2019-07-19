@@ -25,6 +25,7 @@
  * CSV format.
  */
 #include <chrono>
+#include <string>
 #include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
 
@@ -156,6 +157,7 @@ int main(int argc, char** argv) {
     .SetParam("shuffle", 0)
     .CreateDataIter();
 
+    TRY
     auto net = mlp(hidden_units);
 
     Context ctx = Context::cpu();
@@ -269,5 +271,6 @@ int main(int argc, char** argv) {
     delete exec;
     delete opt;
     MXNotifyShutdown();
+    CATCH
     return 0;
 }

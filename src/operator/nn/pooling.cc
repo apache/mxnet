@@ -106,19 +106,19 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     CHECK(param.pad[0] == 0 && param.pad[1] == 0 && param.pad[2] == 0)
       << "Same pooling convention disables the use of pad parameter.";
   }
-  CHECK_GE(dshape.ndim(), 3U)
+  CHECK_GE(dshape.ndim(), 3)
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
-  CHECK_LE(dshape.ndim(), 5U)
+  CHECK_LE(dshape.ndim(), 5)
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
-  if (dshape.ndim() == 0) return false;
+  if (!mxnet::ndim_is_known(dshape)) return false;
   int layout = param.GetLayout(dshape.ndim());
   if (param.global_pool) {
     mxnet::TShape oshape = dshape;
-    size_t c_index = 0;
+    int c_index = 0;
     switch (layout) {
       case mshadow::kNCW:
       case mshadow::kNCHW:
@@ -133,7 +133,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       default:
         LOG(FATAL) << "Unsupported tensor layout " << param.layout.value();
     }
-    for (size_t i{1}; i < dshape.ndim(); i++)
+    for (int i = 1; i < dshape.ndim(); i++)
       if (i != c_index)
         oshape[i] = 1;
     out_shape->clear();
@@ -389,8 +389,8 @@ The definition of *f* depends on ``pooling_convention``, which has two options:
 
     f(x, k, p, s) = ceil((x+2*p-k)/s)+1
 
-But ``global_pool`` is set to be true, then do a global pooling, namely reset
-``kernel=(height, width)``.
+When ``global_pool`` is set to be true, then global pooling is performed. It will reset
+``kernel=(height, width)`` and set the appropiate padding to 0.
 
 Three pooling options are supported by ``pool_type``:
 

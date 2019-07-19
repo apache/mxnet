@@ -26,6 +26,7 @@
 #include "./pooled_storage_manager.h"
 #include "./cpu_shared_storage_manager.h"
 #include "./cpu_device_storage.h"
+#include "./gpu_device_storage.h"
 #include "./pinned_memory_storage.h"
 #include "../common/lazy_alloc_array.h"
 #include "../profiler/storage_profiler.h"
@@ -38,6 +39,7 @@ class StorageImpl : public Storage {
   void Alloc(Handle* handle) override;
   void Free(Handle handle) override;
   void DirectFree(Handle handle) override;
+  void ReleaseAll(Context ctx) override;
   void SharedIncrementRefCount(Handle handle) override;
   StorageImpl() {}
   virtual ~StorageImpl() = default;
@@ -104,13 +106,14 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
             std::string strategy = type;
 
             if (strategy == "Round") {
-              ptr = new storage::GPUPooledRoundedStorageManager();
+              ptr = new storage::GPUPooledRoundedStorageManager(handle->ctx);
               LOG(INFO) << "Using GPUPooledRoundedStorageManager.";
+            } else if (strategy == "Naive") {
+              ptr = new storage::GPUPooledStorageManager(handle->ctx);
+            } else if (strategy == "Unpooled") {
+              ptr = new storage::NaiveStorageManager<storage::GPUDeviceStorage>();
             } else {
-              if (strategy != "Naive") {
-                LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
-              }
-              ptr = new storage::GPUPooledStorageManager();
+              LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
             }
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
@@ -127,6 +130,10 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
+  // Do nothing if dtpr is nullptr because the handle may have already
+  // been freed or have not been allocated memory yet.
+  if (handle.dptr == nullptr) return;
+
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
@@ -140,6 +147,10 @@ void StorageImpl::Free(Storage::Handle handle) {
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
+  // Do nothing if dtpr is nullptr because the handle may have already
+  // been freed or have not been allocated memory yet.
+  if (handle.dptr == nullptr) return;
+
   const Context &ctx = handle.ctx;
   auto&& device = storage_managers_.at(ctx.dev_type);
   std::shared_ptr<storage::StorageManager> manager = device.Get(
@@ -150,6 +161,16 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
 
   manager->DirectFree(handle);
   profiler_.OnFree(handle);
+}
+
+void StorageImpl::ReleaseAll(Context ctx) {
+  auto&& device = storage_managers_.at(ctx.dev_type);
+  std::shared_ptr<storage::StorageManager> manager = device.Get(
+    ctx.real_dev_id(), []() {
+    LOG(FATAL) << "Cannot Free space to a device you have not allocated";
+    return nullptr;
+  });
+  manager->ReleaseAll();
 }
 
 void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {

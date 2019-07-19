@@ -33,8 +33,8 @@
         <exclude>org.slf4j:slf4j-api</exclude>
         <exclude>args4j:args4j</exclude>
       </excludes>
-      <outputDirectory>/</outputDirectory>
-      <useProjectArtifact>true</useProjectArtifact>
+      <outputDirectory>.</outputDirectory>
+      <useProjectArtifact>false</useProjectArtifact>
       <unpack>true</unpack>
       <scope>runtime</scope>
     </dependencySet>
@@ -66,12 +66,13 @@
       <outputDirectory>lib/native</outputDirectory>
     </fileSet>
     <fileSet>
-      <directory>${MXNET_DIR}/3rdparty</directory>
+      <directory>${MXNET_DIR}/licenses</directory>
       <includes>
-        <include>cub/LICENSE.TXT</include>
-        <include>mkldnn/external/mklml_mac_2019.0.1.20180928/license.txt</include>
+        <include>LICENSE.binary.dependencies</include>
+        <include>NOTICE</include>
+        <include>LICENSE</include>
       </includes>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory>.</outputDirectory>
     </fileSet>
   </fileSets>
 </assembly>

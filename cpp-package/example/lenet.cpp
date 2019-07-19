@@ -25,6 +25,7 @@
 #include <vector>
 #include <cstdlib>
 #include "mxnet-cpp/MxNetCpp.h"
+#include "utils.h"
 
 using namespace mxnet::cpp;
 
@@ -257,8 +258,10 @@ class Lenet {
 };
 
 int main(int argc, char const *argv[]) {
+  TRY
   Lenet lenet;
   lenet.Run(argc > 1 ? strtol(argv[1], NULL, 10) : 100000);
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

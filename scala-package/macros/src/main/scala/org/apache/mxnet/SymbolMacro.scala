@@ -23,14 +23,29 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
 private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnotation {
+/**
+  * Generate non-typesafe method for Symbol operations
+  * @param annottees Annottees used to define Class or Module
+  * @return Generated code for injection
+  */
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolMacro.addDefs
 }
 
 private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation {
+/**
+  * Generate typesafe method for Symbol
+  * @param annottees Annottees used to define Class or Module
+  * @return Generated code for injection
+  */
   private[mxnet] def macroTransform(annottees: Any*) = macro TypedSymbolAPIMacro.typeSafeAPIDefs
 }
 
 private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
+/**
+  * Generate typesafe method for Random Symbol
+  * @param annottees Annottees used to define Class or Module
+  * @return Generated code for injection
+  */
   private[mxnet] def macroTransform(annottees: Any*) =
   macro TypedSymbolRandomAPIMacro.typeSafeAPIDefs
 }
@@ -40,6 +55,12 @@ private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnot
   */
 private[mxnet] object SymbolMacro extends GeneratorBase {
 
+  /**
+    * Methods that check the ``isContrib`` and call code generation
+    * @param c Context used for code gen
+    * @param annottees Annottees used to define Class or Module
+    * @return Generated code for injection
+    */
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
     val isContrib: Boolean = c.prefix.tree match {
@@ -50,7 +71,7 @@ private[mxnet] object SymbolMacro extends GeneratorBase {
   }
 
   private def impl(c: blackbox.Context)
-                  (isContrib: Boolean, annottees: c.Expr[Any]*): c.Expr[Any] = {
+                  (isContrib: Boolean, annottees: c.Expr[Any]*): c.Expr[Nothing] = {
     import c.universe._
 
     val functions = functionsToGenerate(isSymbol = false, isContrib)
@@ -76,6 +97,12 @@ private[mxnet] object SymbolMacro extends GeneratorBase {
   */
 private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
 
+  /**
+    * Methods that check the ``isContrib`` and call code generation
+    * @param c Context used for code gen
+    * @param annottees Annottees used to define Class or Module
+    * @return Generated code for injection
+    */
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
     val isContrib: Boolean = c.prefix.tree match {
@@ -88,6 +115,12 @@ private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
     structGeneration(c)(functionDefs, annottees: _*)
   }
 
+  /**
+    * Methods that construct the code and build the syntax tree
+    * @param c Context used for code gen
+    * @param function Case class that store all information of the single function
+    * @return Generated syntax tree
+    */
   protected def buildTypedFunction(c: blackbox.Context)
                                   (function: Func): c.universe.DefDef = {
     import c.universe._
@@ -140,6 +173,12 @@ private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
 private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
   with RandomHelpers {
 
+  /**
+    * Methods that check the ``isContrib`` and call code generation
+    * @param c Context used for code gen
+    * @param annottees Annottees used to define Class or Module
+    * @return Generated code for injection
+    */
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     val functionDefs = typeSafeRandomFunctionsToGenerate(isSymbol = true)
       .map(f => buildTypedFunction(c)(f))
@@ -147,6 +186,12 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
     structGeneration(c)(functionDefs, annottees: _*)
   }
 
+  /**
+    * Methods that construct the code and build the syntax tree
+    * @param c Context used for code gen
+    * @param function Case class that store all information of the single function
+    * @return Generated syntax tree
+    */
   protected def buildTypedFunction(c: blackbox.Context)
                                   (function: Func): c.universe.DefDef = {
     import c.universe._

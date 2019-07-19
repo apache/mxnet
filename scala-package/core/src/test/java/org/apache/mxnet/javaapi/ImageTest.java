@@ -20,8 +20,15 @@ package org.apache.mxnet.javaapi;
 import org.apache.commons.io.FileUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertArrayEquals;
 
@@ -56,12 +63,23 @@ public class ImageTest {
     }
 
     @Test
-    public void testImageProcess() {
+    public void testImageProcess() throws Exception {
         NDArray nd = Image.imRead(imLocation, 1, true);
         assertArrayEquals(nd.shape().toArray(), new int[]{576, 1024, 3});
         NDArray nd2 = Image.imResize(nd, 224, 224, null);
         assertArrayEquals(nd2.shape().toArray(), new int[]{224, 224, 3});
         NDArray cropped = Image.fixedCrop(nd, 0, 0, 224, 224);
         Image.toImage(cropped);
+        BufferedImage buf = ImageIO.read(new File(imLocation));
+        Map<String, Integer> map = new HashMap<>();
+        map.put("xmin", 190);
+        map.put("xmax", 850);
+        map.put("ymin", 50);
+        map.put("ymax", 450);
+        List<Map<String, Integer>> box = new ArrayList<>();
+        box.add(map);
+        List<String> names = new ArrayList<>();
+        names.add("pug");
+        Image.drawBoundingBox(buf, box, names);
     }
 }

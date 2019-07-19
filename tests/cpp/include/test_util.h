@@ -70,11 +70,9 @@ class BlobMemory {
     return handle_.dptr;
   }
   void Free() {
-    if (handle_.dptr) {
-      Storage *storage = mxnet::Storage::Get();
-      storage->DirectFree(handle_);
-      handle_.dptr = nullptr;
-    }
+    mxnet::Storage::Get()->DirectFree(handle_);
+    handle_.dptr = nullptr;
+    handle_.size = 0;
   }
   size_t Size() const {
     return handle_.size;
@@ -355,14 +353,14 @@ inline StreamType& print_blob_(const RunContext& ctx,
 
   if (dim == 1) {
     // probably a 1d tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<DType>(), mxnet::TShape(3), blob.dev_mask(), blob.dev_id());
+    TBlob changed(blob.dptr<DType>(), mxnet::TShape(3, -1), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];
     return print_blob_<DType>(ctx, &os, changed, false, false, add_endl);
   } else if (dim == 2) {
     // probably a 2d tensor (mshadow::Tensor is deprecated)
-    TBlob changed(blob.dptr<DType>(), mxnet::TShape(4), blob.dev_mask(), blob.dev_id());
+    TBlob changed(blob.dptr<DType>(), mxnet::TShape(4, -1), blob.dev_mask(), blob.dev_id());
     changed.shape_[0] = 1;
     changed.shape_[1] = 1;
     changed.shape_[2] = blob.shape_[0];

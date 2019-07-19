@@ -28,7 +28,7 @@
   (is (= [0.0 0.0 0.0 0.0] (->vec (zeros [2 2])))))
 
 (deftest test-to-array
-  (is (= [0.0 0.0 0.0 0.0]) (vec (ndarray/to-array (zeros [2 2])))))
+  (is (= [0.0 0.0 0.0 0.0] (vec (ndarray/to-array (zeros [2 2]))))))
 
 (deftest test-to-scalar
   (is (= 0.0 (ndarray/to-scalar (zeros [1]))))
@@ -61,8 +61,8 @@
     (is (= [2.0 2.0] (->vec (ndarray/+ ndones 1))))
     (is (= [1.0 1.0] (->vec ndones)))
     ;;; += mutuates
-    (is (= [2.0 2.0]) (->vec (+= ndones 1)))
-    (is (= [2.0 2.0]) (->vec ndones))))
+    (is (= [2.0 2.0] (->vec (+= ndones 1))))
+    (is (= [2.0 2.0] (->vec ndones)))))
 
 (deftest test-minus
   (let [ndones (ones [2 1])
@@ -71,8 +71,8 @@
     (is (= [-1.0 -1.0] (->vec (ndarray/- ndzeros 1))))
     (is (= [0.0 0.0] (->vec ndzeros)))
     ;;; += mutuates
-    (is (= [-1.0 -1.0]) (->vec (-= ndzeros 1)))
-    (is (= [-1.0 -1.0]) (->vec ndzeros))))
+    (is (= [-1.0 -1.0] (->vec (-= ndzeros 1))))
+    (is (= [-1.0 -1.0] (->vec ndzeros)))))
 
 (deftest test-multiplication
   (let [ndones (ones [2 1])
@@ -408,7 +408,7 @@
   (let [nda (ndarray/array [1 2 3 4 5 6] [3 2])
         res (ndarray/at nda 1)]
     (is (= [2] (-> res shape mx-shape/->vec)))
-    (is (= [3 4]))))
+    (is (= [3 4] (-> res ndarray/->int-vec)))))
 
 (deftest test-reshape
   (let [nda (ndarray/array [1 2 3 4 5 6] [3 2])

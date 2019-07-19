@@ -18,5 +18,5 @@
 # under the License.
 
 
-wget -c http://data.dmlc.ml/mxnet/data/Inception.zip
+wget -c http://data.mxnet.io/mxnet/data/Inception.zip
 unzip Inception.zip

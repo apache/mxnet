@@ -263,7 +263,7 @@ class SequenceLastProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength, Shape1(sbatch));
 
     // calculate output size
-    mxnet::TShape shape_o(dshape.ndim() - 1);
+    mxnet::TShape shape_o(dshape.ndim() - 1, -1);
     shape_o[0] = sbatch;
     for (index_t i = 1; i < shape_o.ndim(); ++i) shape_o[i] = dshape[i + 1];
 

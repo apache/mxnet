@@ -34,6 +34,7 @@ namespace op {
 
 static const size_t kUint8Range = 255;
 static const size_t kInt8Range = 127;
+static const size_t kInt32Range = 0x7fffffff;
 
 template<typename T>
 MSHADOW_XINLINE int Sign(T val) {
@@ -127,39 +128,31 @@ MSHADOW_XINLINE void RequantizeManyInNewRange(size_t count, T2* output, const T1
  * \brief Get the scaling factor for converting type T to float.
  */
 template<typename T>
-MSHADOW_XINLINE float FloatForOneQuantizedLevel(float range_min, float range_max) {
+MSHADOW_XINLINE float FloatForOneQuantizedLevel(float range_min, float range_max, bool all_sign) {
   using mshadow::red::limits::MinValue;
   using mshadow::red::limits::MaxValue;
-  const int64_t highest = static_cast<int64_t>(MaxValue<T>());
-  const int64_t lowest  = static_cast<int64_t>(MinValue<T>());
-  const float float_for_one_quantized_level =
-      (range_max - range_min) / (highest - lowest);
-  return float_for_one_quantized_level;
+  float range_data = MaxAbs(range_min, range_max);
+  float range_T = all_sign ? MinAbs(MinValue<T>(), MaxValue<T>()) : MaxValue<T>();
+  return range_data / range_T;
 }
 
 template <typename TA, typename TB, typename TC>
-MSHADOW_XINLINE void QuantizationRangeForMultiplication(float min_a, float max_a,
-                                                        float min_b, float max_b,
-                                                        float* min_c, float* max_c) {
-  using mshadow::red::limits::MinValue;
+MSHADOW_XINLINE void QuantizationRangeForMultiplication(float min_a, float max_a, float min_b,
+                                                        float max_b, float *min_c, float *max_c,
+                                                        bool all_sign) {
   using mshadow::red::limits::MaxValue;
-  const float a_float_for_one_quant_level =
-    FloatForOneQuantizedLevel<TA>(min_a, max_a);
-  const float b_float_for_one_quant_level =
-    FloatForOneQuantizedLevel<TB>(min_b, max_b);
-
-  const int64_t c_highest =
-    static_cast<int64_t>(MaxValue<TC>());
-  const int64_t c_lowest  =
-    static_cast<int64_t>(MinValue<TC>());
+  using mshadow::red::limits::MinValue;
+  const float a_float_for_one_quant_level = FloatForOneQuantizedLevel<TA>(min_a, max_a, all_sign);
+  const float b_float_for_one_quant_level = FloatForOneQuantizedLevel<TB>(min_b, max_b, all_sign);
+  const float range_c =
+      MinAbs(static_cast<int64_t>(MinValue<TC>()), static_cast<int64_t>(MaxValue<TC>()));
   const float c_float_for_one_quant_level =
-    a_float_for_one_quant_level * b_float_for_one_quant_level;
-
-  *min_c = c_float_for_one_quant_level * c_lowest;
-  *max_c = c_float_for_one_quant_level * c_highest;
+      a_float_for_one_quant_level * b_float_for_one_quant_level;
+  *max_c = c_float_for_one_quant_level * range_c;
+  *min_c = -*max_c;
 }
 
-struct QuantizationRangeForMultiplicationStruct {
+struct QuantizationRangeForS8S8MultiplicationStruct {
   MSHADOW_XINLINE static void Map(int i,
                                   float *min_c,
                                   float *max_c,
@@ -168,7 +161,20 @@ struct QuantizationRangeForMultiplicationStruct {
                                   const float *min_b,
                                   const float *max_b) {
   QuantizationRangeForMultiplication<int8_t, int8_t, int32_t>(
-    min_a[i], max_a[i], min_b[i], max_b[i], min_c, max_c);
+    min_a[i], max_a[i], min_b[i], max_b[i], min_c, max_c, true);
+  }
+};
+
+struct QuantizationRangeForS8U8MultiplicationStruct {
+  MSHADOW_XINLINE static void Map(int i,
+                                  float *min_c,
+                                  float *max_c,
+                                  const float *min_a,
+                                  const float *max_a,
+                                  const float *min_b,
+                                  const float *max_b) {
+  QuantizationRangeForMultiplication<int8_t, uint8_t, int32_t>(
+    min_a[i], max_a[i], min_b[i], max_b[i], min_c, max_c, false);
   }
 };
 
@@ -184,6 +190,29 @@ inline size_t ConfigReduce(mshadow::Stream<xpu>* s,
   CHECK_EQ(dst_shape->ndim(), NDim);
 
   return broadcast::ReduceWorkspaceSize<NDim, DType>(s, *dst_shape, kWriteTo, *src_shape);
+}
+
+enum QuantizeOutType { kAuto = 0, kInt8, kUint8 };
+
+template<typename Param>
+static mshadow::TypeFlag GetQuantizeOutputType(const Param &param) {
+  auto out_type = mshadow::kInt8;
+  if (param.out_type == QuantizeOutType::kAuto) {
+    if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+      if (param.min_calib_range.value() >= 0.0) {
+        out_type = mshadow::kUint8;
+      } else {
+        out_type = mshadow::kInt8;
+      }
+    }
+  } else if (param.out_type == QuantizeOutType::kInt8) {
+    out_type = mshadow::kInt8;
+  } else if (param.out_type == QuantizeOutType::kUint8) {
+    out_type = mshadow::kUint8;
+  } else {
+    LOG(FATAL) << "Unsupported out_type in params: " <<param.out_type;
+  }
+  return out_type;
 }
 
 }  // namespace op

@@ -287,8 +287,11 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
 
 void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool profiling) {
   BulkFlush();
-
   ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
+  if (profiling) {
+    threaded_opr->opr_name =
+        profiler::CustomOpProfiler::Get()->GenerateDisplayName(threaded_opr->opr_name);
+  }
   OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
 
@@ -333,9 +336,10 @@ void ThreadedEngine::PushAsync(AsyncFn fn, Context exec_ctx,
         << device_count_;
   }
 #endif
-  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars, prop, opr_name, wait);
-  opr->temporary = true;
   const bool profiling = profiler_->IsProfiling(profiler::Profiler::kImperative);
+  ThreadedOpr *opr = NewOperator(std::move(fn), const_vars, mutable_vars,
+                                 prop, opr_name, wait);
+  opr->temporary = true;
   Push(opr, exec_ctx, priority, profiling);
 }
 
@@ -415,6 +419,23 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
+  std::exception_ptr exception_to_rethrow = nullptr;
+  if (!global_exception_refs_.empty()) {
+    // iterate through all exception refs
+    for (const auto& global_exception_ref : global_exception_refs_) {
+      // the first exception will be saved to be rethrown later
+      if (*global_exception_ref != nullptr && exception_to_rethrow == nullptr) {
+        exception_to_rethrow = *global_exception_ref;
+      }
+      // clear exceptions, WaitToRead following WaitForAll shouldn't throw
+      *global_exception_ref = nullptr;
+    }
+    // A waitall following a waitall shouldn't throw any exceptions
+    global_exception_refs_.clear();
+    if (exception_to_rethrow != nullptr) {
+      std::rethrow_exception(exception_to_rethrow);
+    }
+  }
 }
 
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
@@ -428,6 +449,9 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   for (auto&& i : threaded_opr->mutable_vars) {
     if (threaded_opr->opr_exception && *threaded_opr->opr_exception) {
       i->var_exception = threaded_opr->opr_exception;
+      // add current operator exceptions to global exceptions if not already
+      // added
+      AddToGlobalExceptions(threaded_opr->opr_exception);
     }
     const bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
@@ -476,6 +500,11 @@ inline void ThreadedEngine::ThrowException(ThreadedVar* threaded_var) {
     std::rethrow_exception(tmp);
   }
   return;
+}
+
+void ThreadedEngine::Throw(VarHandle var) {
+  ThreadedVar *threaded_var = ThreadedVar::CastFromBase(var);
+  ThrowException(threaded_var);
 }
 
 void ThreadedEngine::OnCompleteStatic(Engine *engine, void *opr_block_,

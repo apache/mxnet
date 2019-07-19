@@ -39,22 +39,27 @@ class StorageManager {
  public:
   /*!
    * \brief Allocation.
-   * \param size Size to allocate.
-   * \return Pointer to the storage.
+   * \param handle Handle struct.
    */
   virtual void Alloc(Storage::Handle* handle) = 0;
   /*!
    * \brief Deallocation.
-   * \param ptr Pointer to deallocate.
-   * \param size Size of the storage.
+   * \param handle Handle struct.
    */
   virtual void Free(Storage::Handle handle) = 0;
   /*!
-   * \brief Direct de-allocation.
-   * \param ptr Pointer to deallocate.
-   * \param size Size of the storage.
+   * \brief Direct deallocation.
+   * \param handle Handle struct.
    */
   virtual void DirectFree(Storage::Handle handle) = 0;
+  /*!
+  * \brief Release all memory if using a pool storage manager
+  *
+  * This release all memory from pool storage managers such as
+  * GPUPooledStorageManager and GPUPooledRoundedStorageManager.
+  * For non-pool memory managers this has no effect.
+  */
+  virtual void ReleaseAll() {}
   /*!
    * \brief Destructor.
    */

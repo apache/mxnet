@@ -34,7 +34,7 @@ import numpy as _numpy
 
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
-from ..base import mx_uint, py_str, string_types, integer_types
+from ..base import mx_uint, py_str, string_types, integer_types, mx_int
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
@@ -45,10 +45,11 @@ from ..executor import Executor
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
+from ..util import is_np_shape
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
-           "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange",
-           "histogram", "split_v2"]
+           "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
+           "ones", "full", "arange", "linspace", "histogram", "split_v2"]
 
 
 class Symbol(SymbolBase):
@@ -90,7 +91,7 @@ class Symbol(SymbolBase):
         <Symbol d>
         <Symbol _plus0>
         """
-        return (self[i] for i in self.list_outputs())
+        return (self[i] for i in range(len(self)))
 
     def __add__(self, other):
         """x.__add__(y) <=> x+y
@@ -1013,7 +1014,6 @@ class Symbol(SymbolBase):
             return (arg_types, out_types, aux_types)
         else:
             return (None, None, None)
-            # pylint: enable=too-many-locals
 
     def infer_shape(self, *args, **kwargs):
         """Infers the shapes of all arguments and all outputs given the known shapes of
@@ -1071,6 +1071,7 @@ class Symbol(SymbolBase):
             List of auxiliary state shapes.
             The order is same as the order of list_auxiliary_states().
         """
+        # pylint: disable=too-many-locals
         try:
             res = self._infer_shape_impl(False, *args, **kwargs)
             if res[1] is None:
@@ -1078,7 +1079,11 @@ class Symbol(SymbolBase):
                 arg_names = self.list_arguments()
                 unknowns = []
                 for name, shape in zip(arg_names, arg_shapes):
-                    if not shape or not _numpy.prod(shape):
+                    if is_np_shape():
+                        shape_is_none = not shape or -1 in shape
+                    else:
+                        shape_is_none = not shape or 0 in shape
+                    if shape_is_none:
                         if len(unknowns) >= 10:
                             unknowns.append('...')
                             break
@@ -1174,25 +1179,25 @@ class Symbol(SymbolBase):
                 indptr.append(len(sdata))
             keys = c_str_array(str_keys)
         arg_shape_size = mx_uint()
-        arg_shape_ndim = ctypes.POINTER(mx_uint)()
-        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        arg_shape_ndim = ctypes.POINTER(mx_int)()
+        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         out_shape_size = mx_uint()
-        out_shape_ndim = ctypes.POINTER(mx_uint)()
-        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        out_shape_ndim = ctypes.POINTER(mx_int)()
+        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         aux_shape_size = mx_uint()
-        aux_shape_ndim = ctypes.POINTER(mx_uint)()
-        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        aux_shape_ndim = ctypes.POINTER(mx_int)()
+        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
         complete = ctypes.c_int()
         if partial:
-            infer_func = _LIB.MXSymbolInferShapePartial
+            infer_func = _LIB.MXSymbolInferShapePartialEx
         else:
-            infer_func = _LIB.MXSymbolInferShape
+            infer_func = _LIB.MXSymbolInferShapeEx
         check_call(infer_func(
             self.handle,
             mx_uint(len(indptr) - 1),
             keys,
             c_array_buf(mx_uint, array('I', indptr)),
-            c_array_buf(mx_uint, array('I', sdata)),
+            c_array_buf(mx_int, array('i', sdata)),
             ctypes.byref(arg_shape_size),
             ctypes.byref(arg_shape_ndim),
             ctypes.byref(arg_shape_data),
@@ -1204,12 +1209,15 @@ class Symbol(SymbolBase):
             ctypes.byref(aux_shape_data),
             ctypes.byref(complete)))
         if complete.value != 0:
-            arg_shapes = [
-                tuple(arg_shape_data[i][:arg_shape_ndim[i]]) for i in range(arg_shape_size.value)]
-            out_shapes = [
-                tuple(out_shape_data[i][:out_shape_ndim[i]]) for i in range(out_shape_size.value)]
-            aux_shapes = [
-                tuple(aux_shape_data[i][:aux_shape_ndim[i]]) for i in range(aux_shape_size.value)]
+            arg_shapes = [tuple(arg_shape_data[i][:arg_shape_ndim[i]])
+                          if arg_shape_ndim[i] >= 0 else None
+                          for i in range(arg_shape_size.value)]
+            out_shapes = [tuple(out_shape_data[i][:out_shape_ndim[i]])
+                          if out_shape_ndim[i] >= 0 else None
+                          for i in range(out_shape_size.value)]
+            aux_shapes = [tuple(aux_shape_data[i][:aux_shape_ndim[i]])
+                          if aux_shape_ndim[i] >= 0 else None
+                          for i in range(aux_shape_size.value)]
             return (arg_shapes, out_shapes, aux_shapes)
         else:
             return (None, None, None)
@@ -1268,7 +1276,7 @@ class Symbol(SymbolBase):
             self.handle, ctypes.byref(debug_str)))
         return py_str(debug_str.value)
 
-    def save(self, fname):
+    def save(self, fname, remove_amp_cast=True):
         """Saves symbol to a file.
 
         You can also use pickle to do the job if you only work on python.
@@ -1285,6 +1293,8 @@ class Symbol(SymbolBase):
             - "s3://my-bucket/path/my-s3-symbol"
             - "hdfs://my-bucket/path/my-hdfs-symbol"
             - "/path-to/my-local-symbol"
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
 
         See Also
         --------
@@ -1292,7 +1302,12 @@ class Symbol(SymbolBase):
         """
         if not isinstance(fname, string_types):
             raise TypeError('fname need to be string')
-        check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
+            check_call(_LIB.MXSymbolSaveToFile(handle, c_str(fname)))
+        else:
+            check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
     def tojson(self):
         """Saves symbol to a JSON string.
@@ -1363,6 +1378,12 @@ class Symbol(SymbolBase):
         else:
             raise TypeError('Only accept list of NDArrays or dict of str to NDArray')
         return c_array(NDArrayHandle, arg_handles), arg_arrays
+
+    def _gen_atomic_symbol(self):
+        handle = SymbolHandle()
+        check_call(_LIB.MXGenAtomicSymbolFromSymbol(self.handle, ctypes.byref(handle)))
+        return Symbol(handle)
+
 
     # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
@@ -1564,42 +1585,42 @@ class Symbol(SymbolBase):
         aux_state_handles = ctypes.POINTER(NDArrayHandle)()
 
         try:
-            check_call(_LIB.MXExecutorSimpleBind(self.handle,
-                                                 ctypes.c_int(ctx.device_typeid),
-                                                 ctypes.c_int(ctx.device_id),
-                                                 num_ctx_map_keys,
-                                                 ctx_map_keys,
-                                                 ctx_map_dev_types,
-                                                 ctx_map_dev_ids,
-                                                 mx_uint(provided_req_type_list_len),
-                                                 provided_grad_req_names,
-                                                 provided_grad_req_types,
-                                                 mx_uint(len(provided_arg_shape_names)),
-                                                 c_str_array(provided_arg_shape_names),
-                                                 c_array_buf(mx_uint,
-                                                             array('I', provided_arg_shape_data)),
-                                                 c_array_buf(mx_uint,
-                                                             array('I', provided_arg_shape_idx)),
-                                                 num_provided_arg_types,
-                                                 provided_arg_type_names,
-                                                 provided_arg_type_data,
-                                                 num_provided_arg_stypes,
-                                                 provided_arg_stype_names,
-                                                 provided_arg_stype_data,
-                                                 mx_uint(len(shared_arg_name_list)),
-                                                 c_str_array(shared_arg_name_list),
-                                                 ctypes.byref(shared_buffer_len),
-                                                 shared_buffer_names,
-                                                 shared_buffer_handles,
-                                                 ctypes.byref(updated_shared_buffer_names),
-                                                 ctypes.byref(updated_shared_buffer_handles),
-                                                 ctypes.byref(num_in_args),
-                                                 ctypes.byref(in_arg_handles),
-                                                 ctypes.byref(arg_grad_handles),
-                                                 ctypes.byref(num_aux_states),
-                                                 ctypes.byref(aux_state_handles),
-                                                 shared_exec_handle,
-                                                 ctypes.byref(exe_handle)))
+            check_call(_LIB.MXExecutorSimpleBindEx(self.handle,
+                                                   ctypes.c_int(ctx.device_typeid),
+                                                   ctypes.c_int(ctx.device_id),
+                                                   num_ctx_map_keys,
+                                                   ctx_map_keys,
+                                                   ctx_map_dev_types,
+                                                   ctx_map_dev_ids,
+                                                   mx_uint(provided_req_type_list_len),
+                                                   provided_grad_req_names,
+                                                   provided_grad_req_types,
+                                                   mx_uint(len(provided_arg_shape_names)),
+                                                   c_str_array(provided_arg_shape_names),
+                                                   c_array_buf(mx_int,
+                                                               array('I', provided_arg_shape_data)),
+                                                   c_array_buf(mx_uint,
+                                                               array('i', provided_arg_shape_idx)),
+                                                   num_provided_arg_types,
+                                                   provided_arg_type_names,
+                                                   provided_arg_type_data,
+                                                   num_provided_arg_stypes,
+                                                   provided_arg_stype_names,
+                                                   provided_arg_stype_data,
+                                                   mx_uint(len(shared_arg_name_list)),
+                                                   c_str_array(shared_arg_name_list),
+                                                   ctypes.byref(shared_buffer_len),
+                                                   shared_buffer_names,
+                                                   shared_buffer_handles,
+                                                   ctypes.byref(updated_shared_buffer_names),
+                                                   ctypes.byref(updated_shared_buffer_handles),
+                                                   ctypes.byref(num_in_args),
+                                                   ctypes.byref(in_arg_handles),
+                                                   ctypes.byref(arg_grad_handles),
+                                                   ctypes.byref(num_aux_states),
+                                                   ctypes.byref(aux_state_handles),
+                                                   shared_exec_handle,
+                                                   ctypes.byref(exe_handle)))
         except MXNetError as e:
             error_msg = "simple_bind error. Arguments:\n"
             for k, v in kwargs.items():
@@ -2740,6 +2761,8 @@ def pow(base, exp):
     Both inputs can be Symbol or scalar number.
     Broadcasting is not supported. Use `broadcast_pow` instead.
 
+    `sym.pow` is being deprecated, please use `sym.power` instead.
+
     Parameters
     ---------
     base : Symbol or scalar
@@ -2778,6 +2801,43 @@ def pow(base, exp):
         return base**exp
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(base)), str(type(exp))))
+
+
+def power(base, exp):
+    """Returns element-wise result of base element raised to powers from exp element.
+
+    Both inputs can be Symbol or scalar number.
+    Broadcasting is not supported. Use `broadcast_pow` instead.
+
+    Parameters
+    ---------
+    base : Symbol or scalar
+        The base symbol
+    exp : Symbol or scalar
+        The exponent symbol
+
+    Returns
+    -------
+    Symbol or scalar
+        The bases in x raised to the exponents in y.
+
+    Examples
+    --------
+    >>> mx.sym.power(2, 3)
+    8
+    >>> x = mx.sym.Variable('x')
+    >>> y = mx.sym.Variable('y')
+    >>> z = mx.sym.power(x, 2)
+    >>> z.eval(x=mx.nd.array([1,2]))[0].asnumpy()
+    array([ 1.,  4.], dtype=float32)
+    >>> z = mx.sym.power(3, y)
+    >>> z.eval(y=mx.nd.array([2,3]))[0].asnumpy()
+    array([  9.,  27.], dtype=float32)
+    >>> z = mx.sym.power(x, y)
+    >>> z.eval(x=mx.nd.array([3,4]), y=mx.nd.array([2,3]))[0].asnumpy()
+    array([  9.,  64.], dtype=float32)
+    """
+    return pow(base, exp)
 
 
 # pylint: disable=no-member
@@ -3034,6 +3094,42 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, d
         dtype = _numpy.float32
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
                              infer_range=infer_range, name=name, dtype=dtype)
+
+def linspace(start, stop, num, endpoint=True, name=None, dtype=None):
+    """Return evenly spaced numbers within a specified interval.
+
+    Values are generated within the half-open interval [`start`, `stop`) or
+    closed interval [start, stop] depending on whether `endpoint` is True or
+    False. The function is similar to `numpy.linspace`, but returns a `Symbol`.
+
+    Parameters
+    ----------
+    start : number
+        Start of interval.
+    stop : number
+        End of interval, unless endpoint is set to False.  In that case,
+        the sequence consists of all but the last of `num + 1` evenly spaced
+        samples, so that stop is excluded. Note that the step size changes
+        when endpoint is False.
+    num : number
+        Number of samples to generate. Must be non-negative.
+    endpoint : bool
+        If True, stop is the last sample. Otherwise, it is not included.
+        The default is True.
+    ctx : Context, optional
+        Device context. Default context is the current default context.
+    dtype : str or numpy.dtype, optional
+        The data type of the `NDArray`. The default datatype is `np.float32`.
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    if dtype is None:
+        dtype = _numpy.float32
+    return _internal._linspace(start=start, stop=stop, num=num, endpoint=endpoint,
+                               name=name, dtype=dtype)
 
 def histogram(a, bins=10, range=None, **kwargs):
     """Compute the histogram of the input data.

@@ -82,6 +82,9 @@ def test_gluon_customop():
 def test_gluon_custom_layer():
     assert _test_tutorial_nb('gluon/custom_layer')
 
+def test_gluon_transforms():
+    assert _test_tutorial_nb('gluon/transforms')
+
 def test_gluon_data_augmentation():
     assert _test_tutorial_nb('gluon/data_augmentation')
 
@@ -103,11 +106,17 @@ def test_gluon_autograd():
 def test_gluon_gluon():
     assert _test_tutorial_nb('gluon/gluon')
 
+def test_gluon_multi_gpu():
+    assert _test_tutorial_nb('gluon/multi_gpu')
+
 def test_gluon_save_load_params():
     assert _test_tutorial_nb('gluon/save_load_params')
 
 def test_gluon_hybrid():
     assert _test_tutorial_nb('gluon/hybrid')
+
+def test_gluon_performance():
+    assert _test_tutorial_nb('gluon/performance')
     
 def test_gluon_pretrained_models():
     assert _test_tutorial_nb('gluon/pretrained_models')    
@@ -139,9 +148,6 @@ def test_onnx_fine_tuning_gluon():
 def test_onnx_inference_on_onnx_model():
     assert _test_tutorial_nb('onnx/inference_on_onnx_model')
 
-def test_python_matrix_factorization():
-    assert _test_tutorial_nb('python/matrix_factorization')
-
 def test_python_linear_regression():
     assert _test_tutorial_nb('python/linear-regression')
 
@@ -169,6 +175,9 @@ def test_python_data_augmentation_with_masks():
 def test_python_kvstore():
     assert _test_tutorial_nb('python/kvstore')
 
+def test_module_to_gluon():
+    assert _test_tutorial_nb('python/module_to_gluon')
+
 def test_python_types_of_data_augmentation():
     assert _test_tutorial_nb('python/types_of_data_augmentation')
 
@@ -184,6 +193,9 @@ def test_sparse_csr():
 def test_sparse_train():
     assert _test_tutorial_nb('sparse/train')
 
+def test_sparse_train_gluon():
+    assert _test_tutorial_nb('sparse/train_gluon')
+
 def test_speech_recognition_ctc():
     assert _test_tutorial_nb('speech_recognition/ctc')
 
@@ -198,4 +210,6 @@ def test_vision_cnn_visualization():
 
 def test_control_flow():
     assert _test_tutorial_nb('control_flow/ControlFlowTutorial')
-    
+
+def test_amp():
+    assert _test_tutorial_nb('amp/amp_tutorial')

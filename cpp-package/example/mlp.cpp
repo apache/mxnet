@@ -24,6 +24,7 @@
 #include <vector>
 #include <string>
 #include "mxnet-cpp/MxNetCpp.h"
+#include "utils.h"
 
 using namespace mxnet::cpp;
 
@@ -173,7 +174,9 @@ void MLP(int max_epoch) {
 
 int main(int argc, char** argv) {
   int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 15000;
+  TRY
   MLP(max_epoch);
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

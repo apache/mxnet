@@ -24,6 +24,8 @@
             [org.apache.clojure-mxnet.module :as m]
             [org.apache.clojure-mxnet.optimizer :as optimizer]
             [org.apache.clojure-mxnet.symbol :as sym]
+            [org.apache.clojure-mxnet.symbol-api :as sym-api]
+            [org.apache.clojure-mxnet.util :as util]
             [clojure.reflect :as r]))
 
 (def data-dir "data/")
@@ -54,17 +56,19 @@
 (defn get-symbol []
   (as-> (sym/variable "data") data
 
-    (sym/convolution "conv1" {:data data :kernel [3 3] :num-filter 32 :stride [2 2]})
-    (sym/batch-norm "bn1" {:data data})
-    (sym/activation "relu1" {:data data :act-type "relu"})
-    (sym/pooling "mp1" {:data data :kernel [2 2] :pool-type "max" :stride [2 2]}) (sym/convolution "conv2" {:data data :kernel [3 3] :num-filter 32 :stride [2 2]})
-    (sym/batch-norm "bn2" {:data data})
-    (sym/activation "relu2" {:data data :act-type "relu"})
-    (sym/pooling "mp2" {:data data :kernel [2 2] :pool-type "max" :stride [2 2]})
+    (sym-api/convolution {:name "conv1" :data data :kernel [3 3] :num-filter 32 :stride [2 2]})
+    (sym-api/batch-norm {:name "bn1" :data data})
+    (sym-api/activation {:name "relu1" :data data :act-type "relu"})
+    (sym-api/pooling {:name "mp1" :data data :kernel [2 2] :pool-type "max" :stride [2 2]})
 
-    (sym/flatten "fl" {:data data})
-    (sym/fully-connected "fc2" {:data data :num-hidden 10})
-    (sym/softmax-output "softmax" {:data data})))
+    (sym-api/convolution {:name "conv2" :data data :kernel [3 3] :num-filter 32 :stride [2 2]})
+    (sym-api/batch-norm {:name "bn2" :data data})
+    (sym-api/activation {:name "relu2" :data data :act-type "relu"})
+    (sym-api/pooling {:name "mp2" :data data :kernel [2 2] :pool-type "max" :stride [2 2]})
+
+    (sym-api/flatten {:name "fl" :data data})
+    (sym-api/fully-connected {:name "fc2" :data data :num-hidden 10})
+    (sym-api/softmax-output {:name "softmax" :data data})))
 
 (deftest test-conv []
   (let [mod (m/module (get-symbol))]

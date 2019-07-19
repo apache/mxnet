@@ -17,6 +17,8 @@
 
 package org.apache.mxnet.util
 
+import scala.language.implicitConversions
+
 object OptionConversion {
   implicit def someWrapper[A](noSome : A) : Option[A] = Option(noSome)
 }

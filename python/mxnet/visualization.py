@@ -384,6 +384,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
             continue
         else:
             inputs = node["inputs"]
+
+            if node['op'] == '_contrib_BilinearResize2D':
+                inputs = [inputs[0]]
+
             for item in inputs:
                 input_node = nodes[item[0]]
                 input_name = input_node["name"]

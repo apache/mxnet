@@ -30,6 +30,7 @@
 #include <mxnet/base.h>
 #include <memory>
 #include "graph_algorithm.h"
+#include "../operator/operator_common.h"
 
 namespace nnvm {
 namespace pass {
@@ -75,7 +76,7 @@ class GraphAllocator {
 
   // request a free storage
   StorageID Request(int dev_id, int dtype, mxnet::TShape shape, uint32_t node_id) {
-    if (shape.ndim() == 0) return kBadStorageID;
+    if (!mxnet::shape_is_known(shape)) return kBadStorageID;
     // search memory block in [size / match_range_, size * match_range_)
     // TODO(tqchen) add size of the dtype, assume 4 bytes for now
     size_t size = shape.Size() * 4;
@@ -239,10 +240,16 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
         bool ignore_all_inputs = (fignore_inputs.count(inode.source->op()) != 0 &&
                                   fignore_inputs[inode.source->op()](
                                       inode.source->attrs).size() == inode.source->num_inputs());
+        // Identity should only be true if shape.Size() and types match
+        bool real_identity = identity[ipair] &&
+                             ndim_is_known(shape_vec[eid_out]) &&
+                             ndim_is_known(shape_vec[eid_in]) &&
+                             shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
+                             dtype_vec[eid_out] == dtype_vec[eid_in];
         if (taken[kv.first] == false &&
             sid_out == GraphAllocator::kBadStorageID &&
             sid_in >= 0 &&
-            ((storage_ref_count[sid_in] == 1 && !ignore_all_inputs) || identity[ipair]) &&
+            ((storage_ref_count[sid_in] == 1 && !ignore_all_inputs) || real_identity) &&
             entry_ref_count[eid_out] > 0 &&
             shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
              (dtype_vec[eid_out] == dtype_vec[eid_in] ||
@@ -267,8 +274,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
       // only request memory for kBadStorageID
       if (storage[eid] == GraphAllocator::kBadStorageID) {
         auto &eshape = shape_vec[eid];
-        size_t esize = 0;
-        if (eshape.ndim() != 0) esize = eshape.Size();
+        size_t esize = ndim_is_known(shape_vec[eid]) ? eshape.Size() : 0;
         eids.insert(std::make_pair(esize, eid));
       }
     }
@@ -295,7 +301,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
       auto sid = storage[eid];
       // storage_ref_count == 0 means it is taken by inplace op
       if (sid < 0) continue;
-      // if we decrease it to zero, means we are ready to relase
+      // if we decrease it to zero, means we are ready to release
       --storage_ref_count[sid];
       if (storage_ref_count[sid] == 0) {
         allocator->Release(sid, nid);

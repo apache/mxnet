@@ -66,7 +66,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
   // Get shape to be sampled for each parameter set.
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
   mxnet::TShape sshape = param.shape;
-  for (size_t i = 0; i < sshape.ndim(); ++i) {
+  for (int i = 0; i < sshape.ndim(); ++i) {
     CHECK_GT(sshape[i], 0) << "shape parameter must be non-zero within each dimension";
   }
   // Examine output shape whether it is already defined.
