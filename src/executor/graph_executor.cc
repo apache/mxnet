@@ -1639,6 +1639,13 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
 static bool SubgraphBackendCheck(const op::SubgraphBackendPtr& backend,
                                  const Context& default_ctx,
                                  bool verbose = false) {
+  if (backend->HasAttr("enable") && (backend->GetAttr<bool>("enable") != true)) {
+    if (verbose) {
+      LOG(INFO) << "Subgraph backend " << backend->GetName()
+                << " isn't activated.";
+    }
+    return false;
+  }
   if (backend->HasAttr("context") && backend->GetAttr<Context>("context") != default_ctx) {
     if (verbose) {
       LOG(INFO) << "Subgraph backend " << backend->GetName()

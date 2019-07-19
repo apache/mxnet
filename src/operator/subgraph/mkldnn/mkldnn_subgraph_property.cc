@@ -29,6 +29,7 @@ namespace mxnet {
 namespace op {
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(MKLDNN)
+.set_attr("enable", MKLDNNEnvSet())
 .set_attr("context", Context::CPU());
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
