@@ -48,7 +48,7 @@ To complete this tutorial, you need:
 
 * Raspbian Wheezy or later, which can be downloaded [here](https://www.raspberrypi.org/downloads/raspbian/), loaded onto a 8GB+ micro SD card (with at least 4GB+ free)
 * A [Raspberry Pi 3](https://www.raspberrypi.org/blog/raspberry-pi-3-on-sale/) or equivalent Raspberry Pi with 1GB+ of RAM
-* A [Raspberry Pi Camera Module](https://www.raspberrypi.org/products/camera-module/) [activated and running with the corresponding Python module](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) (for the real-time video analysis with the deep network model)
+* A [Raspberry Pi Camera Module](https://www.raspberrypi.org/products/camera-module-v2/) [activated and running with the corresponding Python module](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) (for the real-time video analysis with the deep network model)
 * An AWS account With AWS IoT enabled and the [AWS IoT Python SDK](https://github.com/aws/aws-iot-device-sdk-python) (for remote, real-time managing and monitoring of the model running on the Pi)
 * The [cv2 Python library](http://www.pyimagesearch.com/2015/02/23/install-opencv-and-python-on-your-raspberry-pi-2-and-b/) for the Pi
 

@@ -301,7 +301,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
       auto sid = storage[eid];
       // storage_ref_count == 0 means it is taken by inplace op
       if (sid < 0) continue;
-      // if we decrease it to zero, means we are ready to relase
+      // if we decrease it to zero, means we are ready to release
       --storage_ref_count[sid];
       if (storage_ref_count[sid] == 0) {
         allocator->Release(sid, nid);

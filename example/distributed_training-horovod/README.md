@@ -43,8 +43,8 @@ $ pip install horovod
 ```
 
 This basic installation is good for laptops and for getting to know Horovod.
-If you're installing Horovod on a server with GPUs, read the [Horovod on GPU](https://github.com/horovod/horovod/blob/master/docs/gpus.md) page.
-If you want to use Docker, read the [Horovod in Docker](https://github.com/horovod/horovod/blob/master/docs/docker.md) page.
+If you're installing Horovod on a server with GPUs, read the [Horovod on GPU](https://github.com/horovod/horovod/blob/master/docs/gpus.rst) page.
+If you want to use Docker, read the [Horovod in Docker](https://github.com/horovod/horovod/blob/master/docs/docker.rst) page.
 
 ## Install MPI
 MPI is required to run distributed training with Horovod. Install [Open MPI](https://www.open-mpi.org/) or another MPI implementation.
@@ -177,7 +177,7 @@ model.fit(train_data,
 # Running Horovod
 
 The example commands below show how to run distributed training. See the 
-[Running Horovod](https://github.com/horovod/horovod/blob/master/docs/running.md)
+[Running Horovod](https://github.com/horovod/horovod/blob/master/docs/running.rst)
 page for more instructions.
 
 1. To run on a machine with 4 CPUs:

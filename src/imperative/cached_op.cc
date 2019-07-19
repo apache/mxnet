@@ -81,6 +81,7 @@ struct CachedOp::CachedOpState {
 
   std::vector<NDArray> buff;
   std::vector<NDArray*> arrays;
+  std::vector<NDArray*> arrays_with_in_out;
   std::vector<OpReqType> array_reqs;
 
   std::vector<OpStatePtr> op_states;
@@ -100,6 +101,7 @@ CachedOp::CachedOp(
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const auto _copy_op = Op::Get("_copy");
   config_.Init(flags);
+  this->dynamic_shape_checked_ = false;
 
   if (config_.static_shape) {
     CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
@@ -272,6 +274,11 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
                                        bool erase_result) {
   using namespace nnvm;
   using namespace imperative;
+  if (this->dynamic_shape_checked_) {
+    return config_.is_dynamic;
+  } else {
+    this->dynamic_shape_checked_ = true;
+  }
   CHECK_EQ(inputs.size(), num_inputs());
 
   auto state_ptr = GetCachedOpState(default_ctx);
@@ -290,7 +297,7 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   CheckAndInferShape(&g, std::move(shape_inputs), true,
                      {0, 0}, {0, 0},
                      &contain_dynamic_shape);
-  if (contain_dynamic_shape && erase_result) {
+  if (!config_.static_shape && erase_result) {
     g.attrs.erase("shape");
     g.attrs.erase("shape_inputs");
   }
@@ -756,7 +763,8 @@ OpStatePtr CachedOp::StaticForward(
   // We are going to add input and output arrays to the array list.
   // The input and output arrays should only be valid for this run,
   // so we shouldn't modify the state's array list.
-  auto arrays = state.arrays;
+  state.arrays_with_in_out = state.arrays;
+  auto& arrays = state.arrays_with_in_out;
   if (config_.static_shape) {
     for (auto i : config_.param_indices) {
       auto nid = idx.input_nodes()[i];
@@ -1057,7 +1065,8 @@ void CachedOp::StaticBackward(
   // We are going to add input and output arrays to the array list.
   // The input and output arrays should only be valid for this run,
   // so we shouldn't modify the state's array list.
-  auto arrays = state.arrays;
+  state.arrays_with_in_out = state.arrays;
+  auto& arrays = state.arrays_with_in_out;
   for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
     auto eid = state.info.bwd_input_eid[i];
     if (eid == kEidNotExist) {

@@ -114,8 +114,8 @@ jni_libmxnet_predict.so: jni_libmxnet_predict.o
 ifneq ($(ANDROID), 1)
         android:
 else
-        CFLAGS+=  -mhard-float -D_NDK_MATH_NO_SOFTFP=1 -O3
-        LDFLAGS+=  -Wl,--no-warn-mismatch -lm_hard
+        CFLAGS+= -O3
+        LDFLAGS+= -Wl,--no-warn-mismatch -lm_hard
         android: jni_libmxnet_predict.so
 endif
 

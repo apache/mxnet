@@ -340,7 +340,6 @@ FP16_FP32_FUNCS = [
     'take',
     'tanh',
     'tile',
-    'topk',
     'transpose',
     'trunc',
     'uniform',
@@ -463,6 +462,7 @@ FP32_FUNCS = [
     '_sparse_norm',
     '_sparse_rsqrt',
     'argsort',
+    'topk',
 
     # Neural network
     'SoftmaxOutput',

@@ -18,28 +18,11 @@
 package AI::MXNet::AutoGrad;
 use strict;
 use warnings;
+use AI::MXNet::NS 'global';
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use Scalar::Util qw(blessed);
 use Carp qw(confess);
-
-sub import
-{
-    my ($class, $short_name) = @_;
-    if($short_name)
-    {
-        $short_name =~ s/[^\w:]//g;
-        if(length $short_name)
-        {
-            my $short_name_package =<<"EOP";
-            package $short_name;
-            use parent 'AI::MXNet::AutoGrad';
-            1;
-EOP
-            eval $short_name_package;
-        }
-    }
-}
 
 =head1 NAME
 

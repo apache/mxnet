@@ -91,7 +91,8 @@ Select API:&nbsp;
    * [Image similiarity search with InfoGAN](/tutorials/gluon/info_gan.html)
 * Practitioner Guides
     * [Gotchas using NumPy](/tutorials/gluon/gotchas_numpy_in_mxnet.html)
-    * [Multi-GPU training](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+    * [Gluon Performance Tips & Tricks](/tutorials/gluon/performance.html)
+    * [Multi-GPU training](/tutorials/gluon/multi_gpu.html)<span style="color:red"> (new!) </span>([Alternative](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
     * [Checkpointing and Model Serialization (a.k.a. saving and loading)](/tutorials/gluon/save_load_params.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/> ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html))
     * [Distributed Training](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training)
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
@@ -101,10 +102,9 @@ Select API:&nbsp;
     * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
-    * [Module to Gluon API](/tutorials/python/module_to_gluon.html)<span style="color:red"> (new!)</span>
+    * [Module to Gluon API](/tutorials/python/module_to_gluon.html)
     * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
     * [Automatic Mixed Precision in Gluon](/tutorials/amp/amp_tutorial.html)
-
 * API Guides
     * Core APIs
         * NDArray
@@ -113,9 +113,9 @@ Select API:&nbsp;
             * [Difference between reshape and transpose](/tutorials/basic/reshape_transpose.html)
             * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
+                * [Introduction to Sparse NDArray](/tutorials/sparse/train_gluon.html)
                 * [Sparse Gradient Updates (RowSparseNDArray)](/tutorials/sparse/row_sparse.html)
                 * [Compressed Sparse Row Storage Format (CSRNDArray)](/tutorials/sparse/csr.html)
-                * [Linear Regression with Sparse Symbols](/tutorials/sparse/train.html)
         * Symbol
             * [Symbol API](/tutorials/basic/symbol.html) (Caution: written before Gluon existed)
         * KVStore
@@ -127,13 +127,14 @@ Select API:&nbsp;
             * [HybridBlocks](/tutorials/gluon/hybrid.html) ([Alternative](http://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Block Naming](/tutorials/gluon/naming.html)
             * [Custom Operators](/tutorials/gluon/customop.html)
-            * [Control Flow operators](/tutorials/control_flow/ControlFlowTutorial.html)<span style="color:red"> (new!)</span>
+            * [Control Flow operators](/tutorials/control_flow/ControlFlowTutorial.html)
         * Autograd
             * [AutoGrad API](/tutorials/gluon/autograd.html)
             * [AutoGrad API with chain rule](http://gluon.mxnet.io/chapter01_crashcourse/autograd.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
             * [AutoGrad API with Python control flow](http://gluon-crash-course.mxnet.io/autograd.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
         * Data
             * [Datasets and DataLoaders](/tutorials/gluon/datasets.html)
+            * [Data Transforms](/tutorials/gluon/transforms.html)
             * [Applying Data Augmentation](/tutorials/gluon/data_augmentation.html)
             * [Data Augmentation with Masks (for Object Segmentation)](https://mxnet.incubator.apache.org/tutorials/python/data_augmentation_with_masks.html)
 </div> <!--end of gluon-->

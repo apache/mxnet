@@ -18,42 +18,14 @@
 package AI::MXNet::Gluon;
 use strict;
 use warnings;
-use AI::MXNet::Gluon::Loss;
+use AI::MXNet::NS 'global';
+use AI::MXNet::Gluon::Loss 'loss';
 use AI::MXNet::Gluon::Trainer;
 use AI::MXNet::Gluon::Utils;
-use AI::MXNet::Gluon::Data;
-use AI::MXNet::Gluon::NN;
-use AI::MXNet::Gluon::RNN;
+use AI::MXNet::Gluon::Data 'data';
+use AI::MXNet::Gluon::NN 'nn';
+use AI::MXNet::Gluon::RNN 'rnn';
 
-sub import
-{
-    my ($class, $short_name) = @_;
-    if($short_name)
-    {
-        $short_name =~ s/[^\w:]//g;
-        if(length $short_name)
-        {
-            my $short_name_package =<<"EOP";
-            package $short_name;
-            no warnings 'redefine';
-            sub data { 'AI::MXNet::Gluon::Data' }
-            sub nn { 'AI::MXNet::Gluon::NN_' }
-            sub rnn { 'AI::MXNet::Gluon::RNN_' }
-            sub loss { 'AI::MXNet::Gluon::Loss_' }
-            sub utils { 'AI::MXNet::Gluon::Utils' }
-            sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo' }
-            sub Trainer { shift; AI::MXNet::Gluon::Trainer->new(\@_); }
-            sub Parameter { shift; AI::MXNet::Gluon::Parameter->new(\@_); }
-            sub ParameterDict { shift; AI::MXNet::Gluon::ParameterDict->new(\@_); }
-            \@${short_name}::ISA = ('AI::MXNet::Gluon_');
-            1;
-EOP
-            eval $short_name_package;
-        }
-    }
-}
-
-sub data { 'AI::MXNet::Gluon::Data' }
 sub utils { 'AI::MXNet::Gluon::Utils' }
 sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo' }
 
@@ -69,7 +41,7 @@ sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo'
     AI::MXNet::Gluon supports both imperative and symbolic programming,
     making it easy to train complex models imperatively in Perl.
 
-    Based on the the Gluon API specification,
+    Based on the Gluon API specification,
     the Gluon API in Apache MXNet provides a clear, concise, and simple API for deep learning.
     It makes it easy to prototype, build, and train deep learning models without sacrificing training speed.
 

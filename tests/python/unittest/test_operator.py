@@ -27,10 +27,11 @@ import itertools
 from distutils.version import LooseVersion
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
 from common import run_in_spawned_process
-from nose.tools import assert_raises
+from nose.tools import assert_raises, ok_
 import unittest
 import os
 
@@ -694,6 +695,27 @@ def test_symbol_pow():
     data_dir = data_tmp**(exp_tmp - 1) * exp_tmp
     exp_dir = data_tmp**(exp_tmp) * np.log(data_tmp)
     check_symbolic_backward(test, [data_tmp, exp_tmp], [np.ones(shape)], [data_dir, exp_dir])
+
+
+@with_seed()
+def test_fully_connected():
+    data = mx.sym.var("data")
+    fc_weight = mx.sym.var("weight")
+    fc_bias = mx.sym.var("bias")
+    fc = mx.sym.FullyConnected(data=data, weight=fc_weight, bias=fc_bias, num_hidden=10, no_bias=False, name='fc')
+    data = mx.nd.random.uniform(shape=(5, 5, 5, 13), dtype=np.float32)
+    fc_weight = mx.nd.random.uniform(shape=(10, 325), dtype=np.float32)
+    fc_bias = mx.nd.random.uniform(shape=(10), dtype=np.float32)
+    fc_bias2 = mx.nd.random.uniform(shape=(10, 1), dtype=np.float32)
+    data_np = data.asnumpy().reshape(5, 325)
+    fc_weight_np = np.transpose(fc_weight.asnumpy())
+    fc_bias_np = fc_bias.asnumpy()
+    res = np.dot(data_np, fc_weight_np) + fc_bias.asnumpy()
+    check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np}, {'fc_output': res})
+    check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np},
+                           numeric_eps=1e-2, rtol=1e-4, atol=1e-2)
+    # TODO: Fix Bug #15032 when bias has ndim > 1
+    #check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias2.asnumpy()}, {'fc_output': res})
 
 
 @with_seed()
@@ -1884,6 +1906,88 @@ def test_depthwise_convolution():
 
                             for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
                                 np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
+
+
+@with_seed()
+def test_convolution_independent_gradients():
+    ctx = default_context()
+    # set a low bar for autotuned cudnn conv
+    atol = 1.0e-1 if ctx.device_type == "gpu" else 1.0e-3
+    rtol = 1.0e-2 if ctx.device_type == "gpu" else 1.0e-3
+    reqs = ["null", "write", "add"]
+    var_names = ["x", "w", "b"]
+    dims = [1, 2]
+    num_bases = [1, 16, 64]
+    kernel_xs = [3, 5]
+    stride_xs = [1, 2]
+    pad_xs = [0, 1]
+    in_sizes = [7, 32]
+    no_biases = [True, False]
+    for dim, num_base, kernel_x, stride_x, pad_x , in_size, no_bias in \
+            itertools.product(dims, num_bases, kernel_xs, stride_xs, pad_xs, in_sizes, no_biases):
+        # Prepare params shape
+        kernel = (kernel_x,) * dim
+        stride = (stride_x,) * dim
+        pad = (pad_x,) * dim
+        num_filter = num_base
+        x_shape = (2, num_base) + (in_size,) * dim
+        w_shape = (num_filter, num_base) + kernel
+
+        # Symbols definition
+        x = mx.sym.Variable('x')
+        w = mx.sym.Variable('w')
+        b = mx.sym.Variable('b') if not no_bias else None
+        conv = mx.sym.Convolution(x, w, b, num_filter=num_filter, 
+            kernel=kernel, stride=stride, pad=pad, no_bias=no_bias)
+        
+        for req_kind in reqs:
+            # Binding args for conv with possible dependent gradients
+            base_args = {
+                'x': mx.nd.random.normal(shape=x_shape),
+                'w': mx.nd.random.normal(shape=w_shape),
+                'b': mx.nd.random.normal(shape=(num_filter, )) if not no_bias else None}
+            args1 = copy.deepcopy(base_args)
+            grad1 = {
+                'x': mx.nd.zeros(shape=x_shape),
+                'w': mx.nd.zeros(shape=w_shape),
+                'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
+
+            grad_req1 = [req_kind] * 3
+            grad_req1 = dict(zip(var_names, grad_req1))
+
+            exe1 = conv.bind(ctx, args1, args_grad=grad1, grad_req=grad_req1)
+            exe1.forward(is_train=True)
+            exe1.backward(exe1.outputs[0])
+            
+            for x_req, w_req, b_req in itertools.product(reqs, repeat=3):
+                # Binding args for conv with independent gradients
+                args2 = copy.deepcopy(base_args)    # Deepcopy the same params of `exe1`
+                grad2 = {
+                    'x': mx.nd.zeros(shape=x_shape),
+                    'w': mx.nd.zeros(shape=w_shape),
+                    'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
+                grad_req2 = {"x": x_req, "w": w_req, "b": b_req}
+                exe2 = conv.bind(ctx, args2, args_grad=grad2, grad_req=grad_req2)
+                    
+                exe2.forward(is_train=True)
+                np.testing.assert_allclose(exe1.outputs[0].asnumpy(),
+                    exe2.outputs[0].asnumpy(), rtol=rtol, atol=atol)
+                
+                exe2.backward(exe2.outputs[0])
+                for var_name in var_names:
+                    if var_name == "b" and no_bias:
+                        continue
+                    if grad_req2[var_name] == "null":
+                        exe2_var_grad = grad2[var_name].asnumpy()
+                        np.testing.assert_allclose(exe2_var_grad,
+                            np.zeros_like(exe2_var_grad), rtol=rtol, atol=atol)
+                    if grad_req2[var_name] != grad_req1[var_name]:
+                        continue
+                    np.testing.assert_allclose(args1[var_name].asnumpy(),
+                        args2[var_name].asnumpy(), rtol=rtol, atol=atol)
+                    np.testing.assert_allclose(grad1[var_name].asnumpy(),
+                        grad2[var_name].asnumpy(), rtol=rtol, atol=atol)
+
 
 def gen_broadcast_data(idx):
     # Manually set test cases
@@ -4020,11 +4124,33 @@ def test_init():
         exe.forward()
         assert_almost_equal(exe.outputs[0].asnumpy(), np.array([0,1,2,3,4]))
 
+    def test_arange_like():
+        shape_list = [(10,), (10, 20), (10, 20, 30), (10, 20, 30, 40)]
+        axis_list = [0, -1]
+        for sh in shape_list:
+            for axis in axis_list:
+                val = np.random.rand(*sh)
+                data = mx.nd.array(val)
+                nd_out = mx.nd.contrib.arange_like(data, start=0, axis=axis)
+                np_out = np.arange(start=0, stop=sh[axis])
+                assert_almost_equal(nd_out.asnumpy(), np_out)
+
+    def test_arange_like_without_axis():
+        shape_list = [(10,), (10, 20), (10, 20, 30), (10, 20, 30, 40)]
+        for sh in shape_list:
+            val = np.random.rand(*sh)
+            data = mx.nd.array(val)
+            nd_out = mx.nd.contrib.arange_like(data, start=0)
+            np_out = np.arange(start=0, stop=val.size)
+            assert_almost_equal(nd_out.asnumpy(), np_out.reshape(sh))
+
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
     test_basic_val_init(mx.sym.ones, np.ones, (2, 2, 3), np.float16)
     test_arange()
     test_arange_inferstop()
+    test_arange_like()
+    test_arange_like_without_axis()
 
 
 @with_seed()
@@ -5336,6 +5462,30 @@ def test_boolean_mask():
     expected_grad = np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]])
     assert same(out.asnumpy(), expected)
     assert same(data.grad.asnumpy(), expected_grad)
+
+    # test gradient
+    shape = (100, 30)
+    a = mx.nd.random.randint(0, 100, shape=shape)
+    a.attach_grad()
+    bi = mx.nd.random.randint(0, 100, shape=shape[0:1]) > 50
+    ci = mx.nd.random.randint(0, 100, shape=shape[0:1]) < 50
+    mx_grad = mx.nd.zeros_like(a)
+    mx.autograd.mark_variables([a], [mx_grad], grad_reqs='add')
+    T = 3
+    for _ in range(T):
+        with mx.autograd.record():
+            b = mx.nd.contrib.boolean_mask(a, bi)
+            c = mx.nd.contrib.boolean_mask(a, ci)
+            su = b.sum() + c.sum()
+            su.backward()
+    grad = (bi + ci).asnumpy().reshape((-1,) + (1,) * (len(shape)-1))
+    grad = np.tile(grad, (1,) + shape[1:])
+    # T times
+    grad *= T
+    assert_allclose(a.grad.asnumpy(), grad)
+    a_np = a.asnumpy()
+    assert same(b.asnumpy(), a_np[bi.asnumpy().astype('bool')])
+    assert same(c.asnumpy(), a_np[ci.asnumpy().astype('bool')])
 
 
 @with_seed()
@@ -8608,6 +8758,22 @@ def test_add_n():
         rslt += data[i]
     add_n_rslt = mx.nd.add_n(*data, out=data[0])
     assert_almost_equal(rslt.asnumpy(), add_n_rslt.asnumpy(), atol=1e-5)
+
+
+def test_get_all_registered_operators():
+    ops = get_all_registered_operators()
+    ok_(isinstance(ops, list))
+    ok_(len(ops) > 0)
+    ok_('Activation' in ops)
+
+
+def test_get_operator_arguments():
+    operator_arguments = get_operator_arguments('Activation')
+    ok_(isinstance(operator_arguments, OperatorArguments))
+    ok_(operator_arguments.names == ['data', 'act_type'])
+    ok_(operator_arguments.types
+        == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"])
+    ok_(operator_arguments.narg == 2)
 
 
 if __name__ == '__main__':
