@@ -171,27 +171,7 @@ def test_sigmoid():
 
 
 def check_second_order_unary(x, op, grad_grad_op):
-    x = nd.array(x)
-    grad_grad_x = grad_grad_op(x)
-    x.attach_grad()
-
-    # Manual head_grads.
-    y_grad = nd.random.normal(shape=x.shape)
-    head_grad_grads = nd.random.normal(shape=x.shape)
-
-    # Perform compute.
-    with autograd.record():
-        y = op(x)
-        x_grad = autograd.grad(heads=y, variables=x, head_grads=y_grad,
-                               create_graph=True, retain_graph=True)[0]
-    x_grad.backward(head_grad_grads)
-
-    # Compute expected values.
-    expected_grad_grad = grad_grad_x.asnumpy() * head_grad_grads.asnumpy() * \
-        y_grad.asnumpy()
-
-    # Validate the gradients.
-    assert_almost_equal(expected_grad_grad, x.grad.asnumpy())
+    check_nth_order_unary(x, op, grad_grad_op, 2)
 
 
 def check_nth_order_unary(x, op, grad_ops, orders):
