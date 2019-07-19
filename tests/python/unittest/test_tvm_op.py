@@ -16,15 +16,17 @@
 # under the License.
 
 import mxnet as mx
-from mxnet.test_utils import same
+from mxnet.test_utils import same, rand_shape_nd
 from mxnet.runtime import Features
 
 _features = Features()
 
 def test_tvm_broadcast_add():
     if _features.is_enabled("TVM_OP"):
-        a = mx.nd.normal(shape=(2, 3, 4))
-        b = mx.nd.normal(shape=(1, 3, 1))
+        a_shape = rand_shape_nd(4)
+        b_shape = (1,) + a_shape[1:2] + (1, 1)
+        a = mx.nd.normal(shape=a_shape)
+        b = mx.nd.normal(shape=b_shape)
         c = mx.nd.contrib.tvm_vadd(a, b)
         c_np = a.asnumpy() + b.asnumpy()
         assert same(c.asnumpy(), c_np)
