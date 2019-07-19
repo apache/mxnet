@@ -8468,7 +8468,7 @@ def test_invalid_max_pooling_pad_type_same():
 
 @with_seed()
 def test_image_normalize():
-    # Part 1 - Test 3D Input
+    # Part 1 - Test 3D input with 3D mean/std
     shape_3d = (3, 28, 28)
     mean = (0, 1, 2)
     std = (3, 2, 1)
@@ -8499,7 +8499,7 @@ def test_image_normalize():
     # check backward using finite difference
     check_numeric_gradient(img_norm_sym, [data_in_3d], atol=0.001)
 
-    # Part 2 - Test 4D Input
+    # Part 2 - Test 4D input with 3D mean/std
     shape_4d = (2, 3, 28, 28)
 
     data_in_4d = mx.nd.random.uniform(0, 1, shape_4d)
@@ -8523,6 +8523,55 @@ def test_image_normalize():
     grad_expected_4d[1][:][:][0] = 1 / 3.0
     grad_expected_4d[1][:][:][1] = 1 / 2.0
     grad_expected_4d[1][:][:][2] = 1 / 1.0
+
+    # check backward
+    check_symbolic_backward(img_norm_sym, location=[data_in_4d], out_grads=[mx.nd.ones(shape_4d)],
+                            expected=[grad_expected_4d], rtol=1e-5, atol=1e-5)
+
+    # check backward using finite difference
+    check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
+
+    # Part 3 - Test 3D input with scalar mean/std
+    shape_3d = (3, 28, 28)
+    mean = 1.0
+    std = 2.0
+
+    data_in_3d = mx.nd.random.uniform(0, 1, shape_3d)
+    data_expected_3d = data_in_3d.asnumpy()
+    data_expected_3d[:][:][:] = (data_expected_3d[:][:][:] - 1.0) / 2.0
+
+    data = mx.symbol.Variable('data')
+    img_norm_sym = mx.sym.image.normalize(data=data, mean=mean, std=std)
+
+    # check forward
+    check_symbolic_forward(img_norm_sym, [data_in_3d], [data_expected_3d],
+                           rtol=1e-5, atol=1e-5)
+
+    # Gradient is 1/std_dev
+    grad_expected_3d = np.ones(shape_3d)
+    grad_expected_3d[:][:][:] = 1 / 2.0
+
+    # check backward
+    check_symbolic_backward(img_norm_sym, location=[data_in_3d], out_grads=[mx.nd.ones(shape_3d)],
+                            expected=[grad_expected_3d], rtol=1e-5, atol=1e-5)
+
+    # check backward using finite difference
+    check_numeric_gradient(img_norm_sym, [data_in_3d], atol=0.001)
+
+    # Part 4 - Test 4D input with scalar mean/std
+    shape_4d = (2, 3, 28, 28)
+
+    data_in_4d = mx.nd.random.uniform(0, 1, shape_4d)
+    data_expected_4d = data_in_4d.asnumpy()
+    data_expected_4d[:][:][:][:] = (data_expected_4d[:][:][:][:] - 1.0) / 2.0
+
+    # check forward
+    check_symbolic_forward(img_norm_sym, [data_in_4d], [data_expected_4d],
+                           rtol=1e-5, atol=1e-5)
+
+    # Gradient is 1/std_dev
+    grad_expected_4d = np.ones(shape_4d)
+    grad_expected_4d[:][:][:][:] = 1 / 2.0
 
     # check backward
     check_symbolic_backward(img_norm_sym, location=[data_in_4d], out_grads=[mx.nd.ones(shape_4d)],
