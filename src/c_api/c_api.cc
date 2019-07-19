@@ -188,13 +188,29 @@ int MXNDArrayCreate(const mx_uint *shape,
   API_END();
 }
 
+int MXNDArrayCreateExInt64(const mx_int64 *shape,
+                           int ndim,
+                           int dev_type,
+                           int dev_id,
+                           int delay_alloc,
+                           int dtype,
+                           NDArrayHandle *out) {
+  API_BEGIN();
+  *out = new NDArray(
+      mxnet::TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0,
+      dtype);
+  API_END();
+}
+
 int MXNDArrayCreateEx(const mx_uint *shape,
-                    mx_uint ndim,
-                    int dev_type,
-                    int dev_id,
-                    int delay_alloc,
-                    int dtype,
-                    NDArrayHandle *out) {
+                      mx_uint ndim,
+                      int dev_type,
+                      int dev_id,
+                      int delay_alloc,
+                      int dtype,
+                      NDArrayHandle *out) {
   API_BEGIN();
   *out = new NDArray(
       mxnet::TShape(shape, shape + ndim),
@@ -205,17 +221,17 @@ int MXNDArrayCreateEx(const mx_uint *shape,
 }
 
 int MXNDArrayCreateSparseEx(int storage_type,
-                    const mx_uint *shape,
-                    mx_uint ndim,
-                    int dev_type,
-                    int dev_id,
-                    int delay_alloc,
-                    int dtype,
-                    mx_uint num_aux,
-                    int *aux_type,
-                    mx_uint *aux_ndims,
-                    const mx_uint *aux_shape,
-                    NDArrayHandle *out) {
+                            const mx_uint *shape,
+                            mx_uint ndim,
+                            int dev_type,
+                            int dev_id,
+                            int delay_alloc,
+                            int dtype,
+                            mx_uint num_aux,
+                            int *aux_type,
+                            mx_uint *aux_ndims,
+                            const mx_uint *aux_shape,
+                            NDArrayHandle *out) {
   API_BEGIN();
   std::vector<int> aux_types;
   mxnet::ShapeVector aux_shapes;
@@ -536,6 +552,34 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
     *out_dim = s.ndim();
     if (s.ndim() >= 0) {
       std::vector<int> &buffer = ret->arg_shape_buffer_ex;
+      buffer.resize(s.ndim());
+      mxnet::ShapeTypeCast(s.begin(), s.end(), buffer.data());
+      *out_pdata = buffer.data();
+    }
+  } else {
+    if (Imperative::Get()->is_np_shape()) {
+      *out_dim = -1;
+    } else {
+      *out_dim = 0;
+    }
+  }
+  API_END();
+}
+
+int MXNDArrayGetShapeExInt64(NDArrayHandle handle,
+                             int *out_dim,
+                             const mx_int64 **out_pdata) {
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  if (!arr->is_none()) {
+    mxnet::TShape s = arr->shape();
+    if (!Imperative::Get()->is_np_shape()) {
+      common::ConvertToLegacyShape(&s);
+    }
+    *out_dim = s.ndim();
+    if (s.ndim() >= 0) {
+      std::vector<int64_t> &buffer = ret->arg_shape_buffer_ex_int64;
       buffer.resize(s.ndim());
       mxnet::ShapeTypeCast(s.begin(), s.end(), buffer.data());
       *out_pdata = buffer.data();
