@@ -1,4 +1,4 @@
-      /*
+  /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -47,6 +47,22 @@ namespace fullc {
 enum FullyConnectedOpInputs {kData, kWeight, kBias};
 enum FullyConnectedOpResource {kTempSpace};
 enum FullyConnectedOpOutputs {kOut};
+enum FullyConnectedGradGradOutputs {
+  k_o_y_grad,
+  k_x_grad_grad,
+  k_w_grad_grad
+};
+enum Inputs {
+  k_o_x_grad,
+  k_o_w_grad,
+};
+enum InputsBias {
+  k_o_b_grad = 2,
+  k_o_y_bias,
+};
+enum InputsNoBias {
+  k_o_y = 2,
+};
 }  // fullc
 
 namespace quantized_fullc {
@@ -269,6 +285,7 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
 }
 
 
+
 ///
 // Inputs are:
 // o_x_grad : head gradient for x_grad
@@ -288,23 +305,8 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<TBlob>& outputs) {
   using namespace std;
-  enum Inputs {
-    k_o_x_grad,
-    k_o_w_grad,
-  };
-  enum class InputsBias {
-    k_o_b_grad = 2,
-    k_o_y
-  };
-  enum class InputsNoBias {
-    k_o_y = 2,
-  };
+  using namespace fullc;
 
-  enum Outputs {
-    k_o_y_grad,
-    k_x_grad_grad,
-    k_w_grad_grad
-  };
   cout << "FullyConnectedGradGradCompute!!!" << endl;
   Stream<xpu> *stream = ctx.get_stream<xpu>();
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
@@ -323,16 +325,20 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 2, DType> o_y_grad;
   Tensor<xpu, 2, DType> x_grad_grad;
   Tensor<xpu, 2, DType> w_grad_grad;
-
+  size_t o_y_idx = std::numeric_limits<size_t>::max();
+  if (param.no_bias)
+    o_y_idx = k_o_y;
+  else
+    o_y_idx = k_o_y_bias;
   if (!param.flatten) {
     o_x_grad = FlattenAs2DHead<xpu, DType>(inputs[k_o_x_grad], ctx);
-    o_w_grad = FlattenAs2DHead<xpu, DType>(inputs[k_o_w_grad], ctx);
-    //o_y = inputs[param.no_bias ? InputsNoBias::k_o_y : InputsBias::k_o_y].get<xpu, 2, DType>(stream);
+    o_w_grad = inputs[k_o_w_grad].get<xpu, 2, DType>(stream);
+    o_y = FlattenAs2DHead<xpu, DType>(inputs[o_y_idx], ctx);
   } else {
     o_x_grad = FlattenAs2DTail<xpu, DType>(inputs[k_o_x_grad], ctx);
     o_w_grad = FlattenAs2DTail<xpu, DType>(inputs[k_o_w_grad], ctx);
-    //o_y = inputs[param.no_bias ? InputsNoBias::k_o_y : InputsBias::k_o_y].get<xpu, 2, DType>(stream);
-    o_y_grad = outputs[0].get<xpu, 2, DType>(stream);
+    o_y = inputs[o_y_idx].get<xpu, 2, DType>(stream);
+    o_y_grad = outputs[k_o_y_grad].get<xpu, 2, DType>(stream);
     x_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_x_grad_grad], ctx);
     w_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_w_grad_grad], ctx);
   }
