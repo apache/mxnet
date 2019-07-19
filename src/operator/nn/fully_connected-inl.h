@@ -365,7 +365,7 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
 
 
 template<typename xpu>
-void FullyConnectedGradGradDtypeDispatch(
+void FullyConnectedGradGradDTypeDispatch(
     const nnvm::NodeAttrs& attrs,
     const OpContext& ctx,
     const std::vector<TBlob>& inputs,

@@ -366,7 +366,7 @@ NNVM_REGISTER_OP(_backward_backward_FullyConnected)
 })
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
-.set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradGradDtypeDispatch<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradGradDTypeDispatch<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
