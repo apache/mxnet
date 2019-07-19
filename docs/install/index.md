@@ -582,9 +582,10 @@ You can use the Maven packages defined in the following dependency to include MX
 </br>
 <div class="pkg">
 
-```julia
+```
 ]add MXNet#v1.5.0
 ```
+
 </div>
 <div class="source">
 Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-julia">Julia section of the MXNet Ubuntu installation guide</a>.
@@ -886,7 +887,7 @@ Not available at this time. <br>
 </br>
 <div class="pkg">
 
-```julia
+```
 ]add MXNet#v1.5.0
 ```
 </div>
@@ -1222,7 +1223,7 @@ MXNet-Java for Windows is not yet available.
 </br>
 <div class="pkg">
 
-```julia
+```
 ]add MXNet#v1.5.0
 ```
 </div>
