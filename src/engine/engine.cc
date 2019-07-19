@@ -29,19 +29,20 @@
 
 namespace mxnet {
 
-static inline bool GetEngineType(const std::string& type_string) {
+static inline std::string GetEngineType(bool* is_default = nullptr) {
   const char *type = getenv("MXNET_ENGINE_TYPE");
-  const bool default_engine = (type == nullptr);
+  if (is_default) {
+    *is_default = (type == nullptr);
+  }
   if (type == nullptr) type = "ThreadedEnginePerDevice";
-  type_string = type;
-  return default_engine;
+  return std::string(type);
 }
 
 namespace engine {
 
 inline Engine* CreateEngine() {
-  std::string stype;
-  const bool default_engine = GetEngineType(stype);
+  bool default_engine = true;
+  const std::string stype = GetEngineType(&default_engine);
   Engine *ret = nullptr;
   #if MXNET_PREDICT_ONLY == 0
   if (stype == "NaiveEngine" || stype == "NaiveEnginePerThread") {
@@ -66,8 +67,7 @@ inline Engine* CreateEngine() {
 }  // namespace engine
 
 static bool IsCreatePerThread() {
-  std::string stype;
-  GetEngineType(stype);
+  std::string stype = GetEngineType();
   if (stype == "NaiveEnginePerThread") {
     return true;
   }
