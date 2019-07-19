@@ -36,8 +36,9 @@ from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int
+from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle, mx_int, mx_int64
 from ..base import ctypes2buffer
+from ..runtime import Features
 from ..context import Context, current_context
 from . import _internal
 from . import op
@@ -132,14 +133,24 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateEx(
-        c_array_buf(mx_uint, native_array('I', shape)),
-        mx_uint(len(shape)),
-        ctypes.c_int(ctx.device_typeid),
-        ctypes.c_int(ctx.device_id),
-        ctypes.c_int(int(delay_alloc)),
-        ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
-        ctypes.byref(hdl)))
+    if Features().is_enabled('INT64_TENSOR_SIZE'):
+        check_call(_LIB.MXNDArrayCreateExInt64(
+            c_array_buf(mx_int64, native_array('q', shape)),
+            ctypes.c_int(len(shape)),
+            ctypes.c_int(ctx.device_typeid),
+            ctypes.c_int(ctx.device_id),
+            ctypes.c_int(int(delay_alloc)),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.byref(hdl)))
+    else:
+        check_call(_LIB.MXNDArrayCreateEx(
+            c_array_buf(mx_uint, native_array('I', shape)),
+            mx_uint(len(shape)),
+            ctypes.c_int(ctx.device_typeid),
+            ctypes.c_int(ctx.device_id),
+            ctypes.c_int(int(delay_alloc)),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.byref(hdl)))
     return hdl
 
 
@@ -2218,9 +2229,14 @@ fixed-size items.
         (2L, 3L, 4L)
         """
         ndim = mx_int()
-        pdata = ctypes.POINTER(mx_int)()
-        check_call(_LIB.MXNDArrayGetShapeEx(
-            self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
+        if Features().is_enabled('INT64_TENSOR_SIZE'):
+            pdata = ctypes.POINTER(mx_int64)()
+            check_call(_LIB.MXNDArrayGetShapeExInt64(
+                self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
+        else:
+            pdata = ctypes.POINTER(mx_int)()
+            check_call(_LIB.MXNDArrayGetShapeEx(
+                self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         if ndim.value == -1:
             return None
         else:
