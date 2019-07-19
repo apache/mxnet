@@ -21,13 +21,12 @@
 namespace mxnet {
 namespace common {
 
-
 bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
-                                const std::vector<NDArray> *bufs,
-                                std::vector<TBlob> *blobs,
-                                std::vector<NDArray> *temp_src,
-                                std::vector<NDArray> *temp_dst,
-                                std::unordered_map<uint32_t, uint32_t> *idx_map) {
+                         const std::vector<NDArray> *bufs,
+                         std::vector<TBlob> *blobs,
+                         std::vector<NDArray> *temp_src,
+                         std::vector<NDArray> *temp_dst,
+                         std::unordered_map<uint32_t, uint32_t> *idx_map) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
     auto& nd = src[i];
@@ -55,11 +54,11 @@ bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
 }
 
 bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
-                                 const std::vector<NDArray> *bufs,
-                                 std::vector<OpReqType> *req,
-                                 std::vector<TBlob> *blobs,
-                                 std::vector<NDArray> *temp_src,
-                                 std::vector<NDArray> *temp_dst) {
+                          const std::vector<NDArray> *bufs,
+                          std::vector<OpReqType> *req,
+                          std::vector<TBlob> *blobs,
+                          std::vector<NDArray> *temp_src,
+                          std::vector<NDArray> *temp_dst) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
     auto& nd = src[i];
@@ -102,20 +101,19 @@ bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
   return require_cast;
 }
 
-
 void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
-                                   const std::vector<NDArray> &ndoutputs,
-                                   const std::vector<NDArray> *in_bufs,
-                                   const std::vector<NDArray> *out_bufs,
-                                   std::vector<OpReqType> *req,
-                                   std::vector<TBlob> *input_blobs,
-                                   std::vector<TBlob> *output_blobs,
-                                   std::vector<NDArray> *pre_temp_src,
-                                   std::vector<NDArray> *pre_temp_dst,
-                                   std::vector<NDArray> *post_temp_src,
-                                   std::vector<NDArray> *post_temp_dst,
-                                   std::unordered_map<uint32_t, uint32_t> *in_temp_idx_map,
-                                   const std::vector<uint32_t> &mutate_idx) {
+                            const std::vector<NDArray> &ndoutputs,
+                            const std::vector<NDArray> *in_bufs,
+                            const std::vector<NDArray> *out_bufs,
+                            std::vector<OpReqType> *req,
+                            std::vector<TBlob> *input_blobs,
+                            std::vector<TBlob> *output_blobs,
+                            std::vector<NDArray> *pre_temp_src,
+                            std::vector<NDArray> *pre_temp_dst,
+                            std::vector<NDArray> *post_temp_src,
+                            std::vector<NDArray> *post_temp_dst,
+                            std::unordered_map<uint32_t, uint32_t> *in_temp_idx_map,
+                            const std::vector<uint32_t> &mutate_idx) {
   // populate input blobs
   SetupDefaultBlobsIn(ndinputs, in_bufs, input_blobs, pre_temp_src, pre_temp_dst,
                       in_temp_idx_map);
@@ -132,11 +130,10 @@ void SetupDefaultBlobsInOut(const std::vector<NDArray> &ndinputs,
   }
 }
 
-
 void CastNonDefaultStorage(const std::vector<NDArray>& src,
-                                  const std::vector<NDArray>& dst,
-                                  const OpContext& ctx,
-                                  const bool is_gpu) {
+                           const std::vector<NDArray>& dst,
+                           const OpContext& ctx,
+                           const bool is_gpu) {
   CHECK_EQ(dst.size(), src.size());
   for (size_t i = 0; i < src.size(); i++) {
     if (is_gpu) {
@@ -151,10 +148,9 @@ void CastNonDefaultStorage(const std::vector<NDArray>& src,
   }
 }
 
-
 bool SameType(const nnvm::NodeAttrs& attrs,
-                     std::vector<int> *iattr,
-                     std::vector<int> *oattr) {
+              std::vector<int> *iattr,
+              std::vector<int> *oattr) {
   int def_v = -1;
   for (int v : *oattr) {
     if (v != -1) {
@@ -178,13 +174,11 @@ bool SameType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-
-
 bool DefaultStorageType(const nnvm::NodeAttrs& attrs,
-                               const int dev_mask,
-                               DispatchMode* dispatch_mode,
-                               std::vector<int> *iattr,
-                               std::vector<int> *oattr) {
+                        const int dev_mask,
+                        DispatchMode* dispatch_mode,
+                        std::vector<int> *iattr,
+                        std::vector<int> *oattr) {
   bool fallback = false;
   for (int& v : *oattr) {
     if (v == -1) v = kDefaultStorage;
@@ -282,8 +276,8 @@ void LogInferStorage(const nnvm::Graph& g) {
 }
 
 void HandleInferShapeError(const size_t num_forward_inputs,
-                                  const nnvm::IndexedGraph& idx,
-                                  const mxnet::ShapeVector& inferred_shapes) {
+                           const nnvm::IndexedGraph& idx,
+                           const mxnet::ShapeVector& inferred_shapes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
@@ -305,8 +299,8 @@ void HandleInferShapeError(const size_t num_forward_inputs,
 }
 
 void HandleInferTypeError(const size_t num_forward_inputs,
-                                 const nnvm::IndexedGraph& idx,
-                                 const nnvm::DTypeVector& inferred_dtypes) {
+                          const nnvm::IndexedGraph& idx,
+                          const nnvm::DTypeVector& inferred_dtypes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
@@ -329,8 +323,8 @@ void HandleInferTypeError(const size_t num_forward_inputs,
 
 
 void HandleInferStorageTypeError(const size_t num_forward_inputs,
-                                        const nnvm::IndexedGraph& idx,
-                                        const StorageTypeVector& inferred_stypes) {
+                                 const nnvm::IndexedGraph& idx,
+                                 const StorageTypeVector& inferred_stypes) {
   int cnt = 10;
   std::ostringstream oss;
   for (size_t i = 0; i < num_forward_inputs; ++i) {
@@ -353,12 +347,12 @@ void HandleInferStorageTypeError(const size_t num_forward_inputs,
 
 
 NDArray ReshapeOrCreate(const std::string& name,
-                               const mxnet::TShape& dest_arg_shape,
-                               const int dest_arg_dtype,
-                               const NDArrayStorageType dest_arg_stype,
-                               const Context& ctx,
-                               std::unordered_map<std::string, NDArray>* shared_buffer,
-                               bool enable_row_sparse_sharing) {
+                        const mxnet::TShape& dest_arg_shape,
+                        const int dest_arg_dtype,
+                        const NDArrayStorageType dest_arg_stype,
+                        const Context& ctx,
+                        std::unordered_map<std::string, NDArray>* shared_buffer,
+                        bool enable_row_sparse_sharing) {
   bool stype_shareable = dest_arg_stype == kDefaultStorage;
   if (enable_row_sparse_sharing) {
     stype_shareable = stype_shareable || dest_arg_stype == kRowSparseStorage;
@@ -397,14 +391,14 @@ NDArray ReshapeOrCreate(const std::string& name,
 
 
 nnvm::Graph AssignContext(nnvm::Graph g,
-                                 const Context& default_ctx,
-                                 const std::map<std::string, Context>& ctx_map,
-                                 const std::vector<Context>& in_arg_ctxes,
-                                 const std::vector<Context>& arg_grad_ctxes,
-                                 const std::vector<Context>& aux_state_ctxes,
-                                 const std::vector<OpReqType>& grad_req_types,
-                                 size_t num_forward_inputs,
-                                 size_t num_forward_outputs) {
+                          const Context& default_ctx,
+                          const std::map<std::string, Context>& ctx_map,
+                          const std::vector<Context>& in_arg_ctxes,
+                          const std::vector<Context>& arg_grad_ctxes,
+                          const std::vector<Context>& aux_state_ctxes,
+                          const std::vector<OpReqType>& grad_req_types,
+                          size_t num_forward_inputs,
+                          size_t num_forward_outputs) {
   const auto& idx = g.indexed_graph();
   const auto& mutable_nodes = idx.mutable_input_nodes();
   // default use default context.
@@ -520,7 +514,6 @@ nnvm::Graph AssignContext(nnvm::Graph g,
   g.attrs["context"] = std::make_shared<nnvm::any>(std::move(vcontext));
   return g;
 }
-
 
 }  // namespace common
 }  // namespace mxnet

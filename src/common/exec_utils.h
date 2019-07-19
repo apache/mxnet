@@ -169,18 +169,18 @@ void LogInferStorage(const nnvm::Graph& g);
 
 // prints a helpful message after shape inference errors in executor.
 void HandleInferShapeError(const size_t num_forward_inputs,
-                                  const nnvm::IndexedGraph& idx,
-                                  const mxnet::ShapeVector& inferred_shapes);
+                           const nnvm::IndexedGraph& idx,
+                           const mxnet::ShapeVector& inferred_shapes);
 
 // prints a helpful message after type inference errors in executor.
 void HandleInferTypeError(const size_t num_forward_inputs,
-                                 const nnvm::IndexedGraph& idx,
-                                 const nnvm::DTypeVector& inferred_dtypes);
+                          const nnvm::IndexedGraph& idx,
+                          const nnvm::DTypeVector& inferred_dtypes);
 
 // prints a helpful message after storage type checking errors in executor.
 void HandleInferStorageTypeError(const size_t num_forward_inputs,
-                                        const nnvm::IndexedGraph& idx,
-                                        const StorageTypeVector& inferred_stypes);
+                                 const nnvm::IndexedGraph& idx,
+                                 const StorageTypeVector& inferred_stypes);
 
 /*!
  * \brief If the requested ndarray's shape size is less than
@@ -191,26 +191,26 @@ void HandleInferStorageTypeError(const size_t num_forward_inputs,
  * if enable_row_sparse_sharing is `True`, otherwise default storage only.
  */
 NDArray ReshapeOrCreate(const std::string& name,
-                               const mxnet::TShape& dest_arg_shape,
-                               const int dest_arg_dtype,
-                               const NDArrayStorageType dest_arg_stype,
-                               const Context& ctx,
-                               std::unordered_map<std::string, NDArray>* shared_buffer,
-                               bool enable_row_sparse_sharing);
+                        const mxnet::TShape& dest_arg_shape,
+                        const int dest_arg_dtype,
+                        const NDArrayStorageType dest_arg_stype,
+                        const Context& ctx,
+                        std::unordered_map<std::string, NDArray>* shared_buffer,
+                        bool enable_row_sparse_sharing);
 
 /*!
  * \brief Assign context to the graph.
  * This is triggered by both simple_bind and bind flows.
  */
 nnvm::Graph AssignContext(nnvm::Graph g,
-                                 const Context& default_ctx,
-                                 const std::map<std::string, Context>& ctx_map,
-                                 const std::vector<Context>& in_arg_ctxes,
-                                 const std::vector<Context>& arg_grad_ctxes,
-                                 const std::vector<Context>& aux_state_ctxes,
-                                 const std::vector<OpReqType>& grad_req_types,
-                                 size_t num_forward_inputs,
-                                 size_t num_forward_outputs);
+                          const Context& default_ctx,
+                          const std::map<std::string, Context>& ctx_map,
+                          const std::vector<Context>& in_arg_ctxes,
+                          const std::vector<Context>& arg_grad_ctxes,
+                          const std::vector<Context>& aux_state_ctxes,
+                          const std::vector<OpReqType>& grad_req_types,
+                          size_t num_forward_inputs,
+                          size_t num_forward_outputs);
 
 }  // namespace common
 }  // namespace mxnet
