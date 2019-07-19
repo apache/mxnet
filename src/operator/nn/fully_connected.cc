@@ -1,4 +1,4 @@
-    /*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -176,7 +176,6 @@ struct FullyConnectedGrad {
   }
 };
 
-
 struct FullyConnectedGradGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
@@ -186,7 +185,6 @@ struct FullyConnectedGradGrad {
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
 };
-
 
 static bool FCStorageType(const nnvm::NodeAttrs& attrs,
                           const int dev_mask,
@@ -251,8 +249,6 @@ static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
 #endif
   return dispatched;
 }
-
-
 
 DMLC_REGISTER_PARAMETER(FullyConnectedParam);
 
@@ -348,7 +344,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);
 
 
-// Higher order gradient for fully connected
+// 2nd gradient for fully connected
 // Inputs are:
 // o_x_grad : head gradient for x_grad
 // o_w_grad : head gradient for w_grad
@@ -372,7 +368,6 @@ NNVM_REGISTER_OP(_backward_backward_FullyConnected)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradGradDtypeDispatch<cpu>);
-
 
 }  // namespace op
 }  // namespace mxnet
