@@ -56,7 +56,11 @@ DEFAULT_P_ND = [[0.4, 0.77]]
 
 # For reduction operators
 # NOTE: Data used is DEFAULT_DATA
-DEFAULT_AXIS = [(), 0, (0, 1)]
+DEFAULT_AXIS_SHAPE = [(), 0, (0, 1)]
+
+# For sorting and searching operators
+# NOTE: Data used is DEFAULT_DATA
+DEFAULT_AXIS = [0]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
@@ -76,6 +80,7 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "p": DEFAULT_P,
                    "k_nd": DEFAULT_K_ND,
                    "p_nd": DEFAULT_P_ND,
+                   "axis_shape": DEFAULT_AXIS_SHAPE,
                    "axis": DEFAULT_AXIS}
 
 # These are names of MXNet operator parameters that is of type NDArray.

@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to run MXNet on Ubuntu 16.04 for CPU
+# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
 FROM nvidia/cuda:10.1-devel-ubuntu16.04
 
@@ -67,13 +67,11 @@ RUN /work/ubuntu_docs.sh
 COPY install/ubuntu_tutorials.sh /work/
 RUN /work/ubuntu_tutorials.sh
 
-COPY install/ubuntu_nightly_tests.sh /work/
-RUN /work/ubuntu_nightly_tests.sh
-
-ENV CUDNN_VERSION=7.6.0.64
+ENV CUDNN_VERSION=7.5.1.10
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 
+# Always last
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/

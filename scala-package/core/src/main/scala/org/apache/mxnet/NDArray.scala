@@ -956,7 +956,9 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     DType(mxDtype.value)
   }
 
-  val sparseFormat: SparseFormat = {
+  // This is a optimization on the SparseFormat checking
+  // TODO: In some cases, the checking on Sparse is invalid (-1)
+  lazy val sparseFormat: SparseFormat = {
     val mxSF = new RefInt
     checkCall(_LIB.mxNDArrayGetStorageType(handle, mxSF))
     SparseFormat(mxSF.value)

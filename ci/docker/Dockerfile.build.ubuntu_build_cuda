@@ -21,7 +21,7 @@
 # package generation, requiring the actual CUDA library to be
 # present
 
-FROM nvidia/cuda:10.0-devel-ubuntu16.04
+FROM nvidia/cuda:10.1-devel-ubuntu16.04
 
 WORKDIR /work/deps
 
