@@ -26,7 +26,7 @@ This utility is located in `src/common/tensor_inspector.h`. To use it in any ope
 
 The screenshot below shows a sample usage in `src/operator/nn/convolution-inl.h`.
 
-![tensor_inspector_example_usage](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_example_usage.png)
+![tensor_inspector_example_usage](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_example_usage.png)
 
 
 ## Functionalities/APIs
@@ -61,7 +61,7 @@ void print_string();
 
 This API will print the entire tensor to `std::cout` and preserve the shape (it supports all dimensions from 1 and up). You can copy the output and interpret it with any `JSON` loader. You can find some useful information about the tensor on the last line of the output. Refer to the case below, we are able to know that this is a float-typed tensor with shape 20x1x5x5.
 
-![tensor_inspector_to_string](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_to_string.png)
+![tensor_inspector_to_string](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_to_string.png)
 
 If instead of printing the tensor to `std::cout`, you just need a `string`, you can use this API:
 ```c++
@@ -78,7 +78,7 @@ void  interactive_print(std::string tag =  "") {
 
 This API will set a "break point" in your code. What that "break point" is reached, you will enter a loop that will keep asking you for further command input. In the API call, `tag` is an optional parameter to give the call a name, so that you can identify it when you have multiple `interactive_print()` calls in different parts of your code. A visit count will tell you how many times you stepped into this particular "break point", should this operator be called more than once. Note that all `interactive_print()` calls are properly locked, so you can use it in many different places without issues.
 
-![tensor_inspector_interactive_print](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png)
+![tensor_inspector_interactive_print](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png)
 
 There are many useful commands available, as described in the previous screenshot: you can type "e" to print out the entire tensor, "d" to dump the tensor to file (see below), "b" to break from this command loop, and "s" to skip all future `interactive_print()`. Most importantly, in this screen, you can specify a part of the tensor that you are particularly interested in and want to print out. For example, for this 64x20x24x24 tensor, you can type in "0, 0" and presss enter to check the sub-tensor with shape 24x24 at coordinate (0, 0). 
 
@@ -104,7 +104,7 @@ In the first API, `ValueChecker checker` is a bool lambda function that takes in
 
 This checker is called on every value within the tensor. The return of the API is a `vector` of all the coordinates where the checker evaluates to `true`. The coordinates are themselves represented by `vector<int>`. If you set `interactive` to true, you will set a "break point" and enter a loop that asks for commands. This is similar to `interactive_print()`. You can type "p" to print the coordinates, "b" to break from the loop, and "s" to skip all future "break points" in `interactive_print()`. You can also specify a coordinate to print only a part of the tensor or type "e" to print out the entire tensor.  Just like `interactive_print()`, this this interactive screen is also properly locked.
 
-![tensor_inspector_value_check](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_value_check.png)
+![tensor_inspector_value_check](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_value_check.png)
 
 Also, there are a bunch of built-int value checkers. Refer to the Enum below:
 
@@ -154,11 +154,11 @@ print(a)
 
 Let's see how it runs:
 
-![tensor_inspector_dump_to_file](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_dump_to_file.png)
+![tensor_inspector_dump_to_file](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_dump_to_file.png)
 
 Notice: in `interactive_print()`, you could also do value dumping with command "d". You will be prompted to enter the `tag` value:
 
-![tensor_inspector_interactive_print](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/docs/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png)
+![tensor_inspector_interactive_print](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png)
 
 ### Test Coverage and Limitations
 
