@@ -28,16 +28,23 @@
 #include "./engine_impl.h"
 
 namespace mxnet {
-namespace engine {
-inline Engine* CreateEngine() {
+
+static inline bool GetEngineType(std::string& type_string) {
   const char *type = getenv("MXNET_ENGINE_TYPE");
   const bool default_engine = (type == nullptr);
   if (type == nullptr) type = "ThreadedEnginePerDevice";
-  std::string stype = type;
+  type_string = type;
+  return default_engine;
+}
 
+namespace engine {
+
+inline Engine* CreateEngine() {
+  std::string stype;
+  const bool default_engine = GetEngineType(stype);
   Engine *ret = nullptr;
   #if MXNET_PREDICT_ONLY == 0
-  if (stype == "NaiveEngine") {
+  if (stype == "NaiveEngine" || stype == "NaiveEnginePerThread") {
     ret = CreateNaiveEngine();
   } else if (stype == "ThreadedEngine") {
     ret = CreateThreadedEnginePooled();
@@ -49,22 +56,53 @@ inline Engine* CreateEngine() {
   #endif
 
   if (ret == nullptr) {
-    LOG(FATAL) << "Cannot find Engine " << type;
+    LOG(FATAL) << "Cannot find Engine " << stype;
   }
   if (!default_engine) {
-    LOG(INFO) << "MXNet start using engine: " << type;
+    LOG(INFO) << "MXNet start using engine: " << stype;
   }
   return ret;
 }
 }  // namespace engine
 
-std::shared_ptr<Engine> Engine::_GetSharedRef() {
-  static std::shared_ptr<Engine> sptr(engine::CreateEngine());
-  return sptr;
+static bool IsCreatePerThread() {
+  std::string stype;
+  GetEngineType(stype);
+  if (stype == "NaiveEnginePerThread") {
+    return true;
+  }
+  return false;
 }
 
-Engine* Engine::Get() {
-  static Engine *inst = _GetSharedRef().get();
-  return inst;
+std::shared_ptr<Engine> Engine::_GetSharedRef() {
+  static bool per_thread = IsCreatePerThread();
+  if (per_thread) {
+#if DMLC_CXX11_THREAD_LOCAL
+    static thread_local std::shared_ptr<Engine> sptr(engine::CreateEngine());
+#else
+    static MX_THREAD_LOCAL std::shared_ptr<Engine> sptr(engine::CreateEngine());
+#endif
+    return sptr;
+  } else {
+    static std::shared_ptr<Engine> sptr(engine::CreateEngine());
+    return sptr;
+  }
+}
+
+
+
+Engine *Engine::Get() {
+  static bool per_thread = IsCreatePerThread();
+  if (per_thread) {
+#if DMLC_CXX11_THREAD_LOCAL
+    static thread_local Engine *inst = _GetSharedRef().get();
+#else
+    static MX_THREAD_LOCAL Engine *inst = _GetSharedRef().get();
+#endif
+    return inst;
+  } else {
+    static Engine *inst = _GetSharedRef().get();
+    return inst;
+  }
 }
 }  // namespace mxnet
