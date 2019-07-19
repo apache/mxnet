@@ -90,7 +90,7 @@ def defop(name, target=None, auto_broadcast=False, **kwargs):
     ----------
     name : str
         function name
-    target : bool
+    target : str
         {"cpu", "gpu", "cuda"}
     auto_broadcast : bool
         auto_broadcast=True allows one to implement broadcast computation

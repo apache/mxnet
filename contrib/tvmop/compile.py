@@ -42,6 +42,7 @@ if __name__ == "__main__":
     func_list_llvm = []
     func_list_cuda = []
 
+    # TODO: attach instruction features to the library, e.g., avx-512, etc.
     for operator_def in __OP_DEF__:
         for sch, args in operator_def.invoke_all():
             if tvm.module.enabled(get_target(operator_def.target)):
