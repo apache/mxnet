@@ -1,4 +1,4 @@
-  /*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -32,6 +32,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <limits>
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../linalg.h"
@@ -63,7 +64,7 @@ enum InputsBias {
 enum InputsNoBias {
   k_o_y = 2,
 };
-}  // fullc
+}  // namespace fullc
 
 namespace quantized_fullc {
 enum QuantizedFCInputMinMax {kDataMin, kDataMax, kWeightMin, kWeightMax, kBiasMin, kBiasMax};
@@ -355,11 +356,10 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
     x_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_x_grad_grad], ctx);
     w_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_w_grad_grad], ctx);
   }
-  //linalg_gemm(grad, wmat, gdata, false, false, s, req[fullc::kData]);
   linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream);
   linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream);
   if (! param.no_bias) {
-    // TODO(larroy)
+    //  TODO(larroy)
   }
 }
 
