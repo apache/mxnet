@@ -42,12 +42,18 @@ to allocate space for the gradient. Then, start a `with autograd.record()` block
 and do some computation. Finally, call `backward()` on the result:
 
 ```python
->>> x = mx.nd.array([1,2,3,4])
->>> x.attach_grad()
->>> with mx.autograd.record():
-...     y = x * x + 1
->>> y.backward()
->>> print(x.grad)
+import mxnet as mx
+x = mx.nd.array([1,2,3,4])
+x.attach_grad()
+with mx.autograd.record():
+    y = x * x + 1
+y.backward()
+print(x.grad)
+```
+
+Which outputs:
+
+```
 [ 2.  4.  6.  8.]
 <NDArray 4 @cpu(0)>
 ```
@@ -84,9 +90,8 @@ Detailed tutorials are available in Part 1 of
 
 # Higher order gradient
 
-Some operators support higher order gradients. Meaning that you calculate the gradient of the
-gradient. For this the operator's backward must be differentiable as well. Some operators support
-differentiating multiple times, and others two, most just once.
+Some operators support higher order gradients. Some operators support differentiating multiple
+times, and others two, most just once.
 
 For calculating higher order gradients, we can use the `mx.autograd.grad` function while recording
 and then call backward, or call `mx.autograd.grad` two times. If we do the latter, is important that
@@ -119,8 +124,6 @@ with ag.record():
     y = f(x)
     x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
     x_grad_grad = ag.grad(heads=x_grad, variables=x, create_graph=False, retain_graph=False)[0]
-print(f"dL/dx: {x_grad}")
-print(f"d2L/dx2: {x_grad_grad}")
 ```
 
 Running backward on the backward graph:
@@ -131,15 +134,13 @@ with ag.record():
     x_grad = ag.grad(heads=y, variables=x, create_graph=True, retain_graph=True)[0]
 x_grad.backward()
 x_grad_grad = x.grad
-print(f"dL/dx: {x_grad}")
-print(f"d2L/dx2: {x_grad_grad}")
-
 ```
 
 Both methods are equivalent, except that in the second case, retain_graph on running backward is set
 to False by default. But both calls are running a backward pass as on the graph as usual to get the
 gradient of the first gradient `x_grad` with respect to `x` evaluated at the value of `x`.
 
+For more examples, check the [higher order gradient unit tests](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_higher_order_grad.py).
 
 
 <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
