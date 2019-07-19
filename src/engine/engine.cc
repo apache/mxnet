@@ -29,7 +29,7 @@
 
 namespace mxnet {
 
-static inline bool GetEngineType(std::string& type_string) {
+static inline bool GetEngineType(const std::string& type_string) {
   const char *type = getenv("MXNET_ENGINE_TYPE");
   const bool default_engine = (type == nullptr);
   if (type == nullptr) type = "ThreadedEnginePerDevice";
