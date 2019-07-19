@@ -843,7 +843,8 @@ class HybridBlock(Block):
         self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{}" is being hybridized while still having forward hook/pre-hook. '
-                          'If "{}" is a child of HybridBlock, the hooks will not take effect.')
+                          'If "{}" is a child of HybridBlock, the hooks will not take effect.'
+                          .format(self, self))
         super(HybridBlock, self).hybridize(active, **kwargs)
 
     def cast(self, dtype):
