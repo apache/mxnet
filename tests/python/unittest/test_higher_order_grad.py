@@ -30,10 +30,16 @@ def test_sin():
     def grad_grad_op(x):
         return -nd.sin(x)
 
+    def grad_grad_grad_op(x):
+        return -nd.cos(x)
+
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, sin, grad_grad_op)
+        # TODO(kshitij12345): Remove
+        check_nth_order_unary(array, sin,
+                              [grad_grad_op, grad_grad_grad_op], [2, 3])
 
 
 @with_seed()
@@ -44,10 +50,16 @@ def test_cos():
     def grad_grad_op(x):
         return -nd.cos(x)
 
+    def grad_grad_grad_op(x):
+        return nd.sin(x)
+
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, cos, grad_grad_op)
+        # TODO(kshitij12345): Remove
+        check_nth_order_unary(array, cos,
+                              [grad_grad_op, grad_grad_grad_op], [2, 3])
 
 
 @with_seed()
@@ -69,6 +81,9 @@ def test_log():
     def log(x):
         return nd.log(x)
 
+    def grad_op(x):
+        return 1/x
+
     def grad_grad_op(x):
         return -1/(x**2)
 
@@ -76,6 +91,8 @@ def test_log():
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, log, grad_grad_op)
+        # TODO(kshitij12345): Remove
+        check_nth_order_unary(array, log, [grad_op, grad_grad_op], [1, 2])
 
 
 @with_seed()
@@ -148,6 +165,9 @@ def test_sigmoid():
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, sigmoid, grad_grad_op)
+        # TODO(kshitij12345): Remove
+        check_nth_order_unary(array, sigmoid, [grad_op, grad_grad_op], [1, 2])
+        check_nth_order_unary(array, sigmoid, grad_grad_op, 2)
 
 
 def check_second_order_unary(x, op, grad_grad_op):
@@ -172,6 +192,41 @@ def check_second_order_unary(x, op, grad_grad_op):
 
     # Validate the gradients.
     assert_almost_equal(expected_grad_grad, x.grad.asnumpy())
+
+
+def check_nth_order_unary(x, op, grad_ops, orders):
+    if isinstance(orders, int):
+        orders = [orders]
+        grad_ops = [grad_ops]
+
+    x = nd.array(x)
+    x.attach_grad()
+
+    order = max(orders)
+    expected_grads = [grad_op(x) for grad_op in grad_ops]
+    computed_grads = []
+    head_grads = []
+
+    # Perform compute.
+    with autograd.record():
+        y = op(x)
+        for current_order in range(1, order+1):
+            head_grad = nd.random.normal(shape=x.shape)
+            y = autograd.grad(heads=y, variables=x, head_grads=head_grad,
+                              create_graph=True, retain_graph=True)[0]
+            if current_order in orders:
+                computed_grads.append(y)
+            head_grads.append(head_grad)
+
+    # Validate all the gradients.
+    for order, grad, computed_grad in \
+            zip(orders, expected_grads, computed_grads):
+        # Compute expected values.
+        expected_grad = grad.asnumpy()
+        for head_grad in head_grads[:order]:
+            expected_grad *= head_grad.asnumpy()
+
+        assert_almost_equal(expected_grad, computed_grad.asnumpy())
 
 
 if __name__ == '__main__':
