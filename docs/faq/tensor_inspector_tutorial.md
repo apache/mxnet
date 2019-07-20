@@ -42,7 +42,7 @@ Following are the three constructors:
 ```c++
 // Construct from Tensor object
 template<typename Device, int dimension, typename DType MSHADOW_DEFAULT_DTYPE>
-TensorInspector(const  mshadow::Tensor<Device, dimension, DType>& ts, const RunContext& ctx);
+TensorInspector(const mshadow::Tensor<Device, dimension, DType>& ts, const RunContext& ctx);
 
 // Construct from TBlob object
 TensorInspector(const TBlob& tb, const RunContext& ctx);
@@ -76,7 +76,7 @@ Sometimes at compilation time, you may not know which part of a tensor to inspec
 void  interactive_print(std::string tag =  "") {
 ```
 
-This API will set a "break point" in your code. What that "break point" is reached, you will enter a loop that will keep asking you for further command input. In the API call, `tag` is an optional parameter to give the call a name, so that you can identify it when you have multiple `interactive_print()` calls in different parts of your code. A visit count will tell you how many times you stepped into this particular "break point", should this operator be called more than once. Note that all `interactive_print()` calls are properly locked, so you can use it in many different places without issues.
+This API will set a "break point" in your code. When that "break point" is reached, you will enter a loop that will keep asking you for further command input. In the API call, `tag` is an optional parameter to give the call a name, so that you can identify it when you have multiple `interactive_print()` calls in different parts of your code. A visit count will tell you how many times you stepped into this particular "break point", should this operator be called more than once. Note that all `interactive_print()` calls are properly locked, so you can use it in many different places without issues.
 
 ![tensor_inspector_interactive_print](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png)
 
