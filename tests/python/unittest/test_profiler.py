@@ -441,10 +441,10 @@ def test_custom_operator_profiling_naive_engine():
             {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, \
             'test_custom_operator_profiling_naive.json')
     run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
-            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'imperative', \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'imperative', None, \
             'test_custom_operator_profiling_multiple_custom_ops_imperative_naive.json')
     run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
-            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'symbolic', \
+            {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'symbolic', None, \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 if __name__ == '__main__':
