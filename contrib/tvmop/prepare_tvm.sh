@@ -32,7 +32,7 @@ if [ "$os" = "Linux" ] && [ "$(arch)" = "x86_64" ]; then
         exit 1
     fi
 else
-    echo "Cannot identify operating system. Try downloading package manually."
+    echo "Cannot identify operating system. Try downloading LLVM manually."
     exit 1
 fi
 
