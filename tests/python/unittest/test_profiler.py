@@ -361,9 +361,7 @@ def check_custom_operator_profiling_multiple_custom_ops_output(debug_str):
         and 'MyAdd2::_plus_scalar' in target_dict['Time']['Custom Operator'] \
         and '_plus_scalar' not in target_dict['Time']['Custom Operator'] \
         and '[_plus_scalar]' not in target_dict['Time']['Custom Operator'] \
-        and 'operator' in target_dict['Time'] \
-        and ('_plus_scalar' in target_dict['Time']['operator'] or \
-            '[_plus_scalar]' in target_dict['Time']['operator'])
+        and 'operator' in target_dict['Time']
 
 def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     class MyAdd(mx.operator.CustomOp):
@@ -413,20 +411,17 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
                     aggregate_stats=True)
     inp = mx.nd.zeros(shape=(100, 100))
     if mode == 'imperative':
-        x = inp + 1
         y = mx.nd.Custom(inp, op_type='MyAdd1')
         z = mx.nd.Custom(inp, op_type='MyAdd2')
     elif mode == 'symbolic':
         a = mx.symbol.Variable('a')
-        b = a + 1
         c = mx.symbol.Custom(data=a, op_type='MyAdd1')
         d = mx.symbol.Custom(data=a, op_type='MyAdd2')
         b.bind(mx.cpu(), {'a': inp}).forward()
         c.bind(mx.cpu(), {'a': inp}).forward()
-        d.bind(mx.cpu(), {'a': inp}).forward()
     mx.nd.waitall()
     profiler.dump(False)
-    print(profiler.dumps())
+    print(profiler.dumps(reset=True))
     debug_str = profiler.dumps(format = 'json')
     check_custom_operator_profiling_multiple_custom_ops_output(debug_str)
     profiler.set_state('stop')
@@ -439,7 +434,7 @@ def test_custom_operator_profiling_multiple_custom_ops_imperative():
     custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+# @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
     # run the three tests above using Naive Engine
     run_in_spawned_process(test_custom_operator_profiling, \
