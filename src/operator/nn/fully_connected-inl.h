@@ -49,20 +49,20 @@ enum FullyConnectedOpInputs {kData, kWeight, kBias};
 enum FullyConnectedOpResource {kTempSpace};
 enum FullyConnectedOpOutputs {kOut};
 enum FullyConnectedGradGradOutputs {
-  k_o_y_grad,
-  k_x_grad_grad,
-  k_w_grad_grad
+  kOyGrad,
+  kXGradGrad,
+  kWGradGrad
 };
 enum Inputs {
-  k_o_x_grad,
-  k_o_w_grad,
+  kOxGrad,
+  kOwGrad,
 };
 enum InputsBias {
-  k_o_b_grad = 2,
-  k_o_y_bias,
+  kObGrad = 2,
+  kOyBias,
 };
 enum InputsNoBias {
-  k_o_y = 2,
+  kOy = 2,
 };
 }  // namespace fullc
 
@@ -167,7 +167,6 @@ void FCForward(const OpContext &ctx, const FullyConnectedParam &param,
     out += repmat(bias, data.size(0));
   }
 }
-
 
 template<typename xpu, typename DType>
 void FCBackward(const OpContext &ctx, const FullyConnectedParam &param,
@@ -341,25 +340,25 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 2, DType> w_grad_grad;
   size_t o_y_idx = std::numeric_limits<size_t>::max();
   if (param.no_bias)
-    o_y_idx = k_o_y;
+    o_y_idx = kOy;
   else
-    o_y_idx = k_o_y_bias;
+    o_y_idx = kOyBias;
   if (!param.flatten) {
-    o_x_grad = FlattenAs2DHead<xpu, DType>(inputs[k_o_x_grad], ctx);
-    o_w_grad = inputs[k_o_w_grad].get<xpu, 2, DType>(stream);
+    o_x_grad = FlattenAs2DHead<xpu, DType>(inputs[kOxGrad], ctx);
+    o_w_grad = inputs[kOwGrad].get<xpu, 2, DType>(stream);
     o_y = FlattenAs2DHead<xpu, DType>(inputs[o_y_idx], ctx);
   } else {
-    o_x_grad = FlattenAs2DTail<xpu, DType>(inputs[k_o_x_grad], ctx);
-    o_w_grad = FlattenAs2DTail<xpu, DType>(inputs[k_o_w_grad], ctx);
+    o_x_grad = FlattenAs2DTail<xpu, DType>(inputs[kOxGrad], ctx);
+    o_w_grad = FlattenAs2DTail<xpu, DType>(inputs[kOwGrad], ctx);
     o_y = inputs[o_y_idx].get<xpu, 2, DType>(stream);
-    o_y_grad = outputs[k_o_y_grad].get<xpu, 2, DType>(stream);
-    x_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_x_grad_grad], ctx);
-    w_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[k_w_grad_grad], ctx);
+    o_y_grad = outputs[kOyGrad].get<xpu, 2, DType>(stream);
+    x_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[kXGradGrad], ctx);
+    w_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[kWGradGrad], ctx);
   }
   linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream);
   linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream);
-  if (! param.no_bias) {
-    //  TODO(larroy)
+  if (!param.no_bias) {
+    // TODO(larroy)
   }
 }
 
