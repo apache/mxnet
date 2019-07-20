@@ -349,11 +349,6 @@ def test_custom_operator_profiling(seed = None, file_name = None):
 
 def check_custom_operator_profiling_multiple_custom_ops_output(debug_str):
     target_dict = json.loads(debug_str)
-    '''
-    We are calling _plus_scalar within MyAdd1 and MyAdd2 and outside both the custom 
-    operators, so in aggregate stats we should have three different kinds of 
-    _plus_scalar under domains "Custom Operator" and "operator"
-    '''
     assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
         and 'MyAdd1::pure_python' in target_dict['Time']['Custom Operator'] \
         and 'MyAdd2::pure_python' in target_dict['Time']['Custom Operator'] \
@@ -418,8 +413,8 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
         c.bind(mx.cpu(), {'a': inp}).forward()
     mx.nd.waitall()
     profiler.dump(False)
-    print(profiler.dumps(reset = True))
-    debug_str = profiler.dumps(format = 'json')
+    print(profiler.dumps())
+    debug_str = profiler.dumps(format = 'json', reset = True)
     check_custom_operator_profiling_multiple_custom_ops_output(debug_str)
     profiler.set_state('stop')
     
