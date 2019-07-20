@@ -339,7 +339,7 @@ def test_custom_operator_profiling(seed = None, file_name = None):
     y.backward()
     mx.nd.waitall()
     profiler.dump(False)
-    debug_str = profiler.dumps(format = 'json')
+    debug_str = profiler.dumps(format = 'json', reset = True)
     target_dict = json.loads(debug_str)
     assert 'Time' in target_dict and 'Custom Operator' in target_dict['Time'] \
         and 'MySigmoid::pure_python' in target_dict['Time']['Custom Operator'] \
@@ -358,10 +358,7 @@ def check_custom_operator_profiling_multiple_custom_ops_output(debug_str):
         and 'MyAdd1::pure_python' in target_dict['Time']['Custom Operator'] \
         and 'MyAdd2::pure_python' in target_dict['Time']['Custom Operator'] \
         and 'MyAdd1::_plus_scalar' in target_dict['Time']['Custom Operator'] \
-        and 'MyAdd2::_plus_scalar' in target_dict['Time']['Custom Operator'] \
-        and '_plus_scalar' not in target_dict['Time']['Custom Operator'] \
-        and '[_plus_scalar]' not in target_dict['Time']['Custom Operator'] \
-        and 'operator' in target_dict['Time']
+        and 'MyAdd2::_plus_scalar' in target_dict['Time']['Custom Operator']
 
 def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     class MyAdd(mx.operator.CustomOp):
@@ -415,13 +412,13 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
         z = mx.nd.Custom(inp, op_type='MyAdd2')
     elif mode == 'symbolic':
         a = mx.symbol.Variable('a')
-        c = mx.symbol.Custom(data=a, op_type='MyAdd1')
-        d = mx.symbol.Custom(data=a, op_type='MyAdd2')
+        b = mx.symbol.Custom(data=a, op_type='MyAdd1')
+        c = mx.symbol.Custom(data=a, op_type='MyAdd2')
         b.bind(mx.cpu(), {'a': inp}).forward()
         c.bind(mx.cpu(), {'a': inp}).forward()
     mx.nd.waitall()
     profiler.dump(False)
-    print(profiler.dumps(reset=True))
+    print(profiler.dumps(reset = True))
     debug_str = profiler.dumps(format = 'json')
     check_custom_operator_profiling_multiple_custom_ops_output(debug_str)
     profiler.set_state('stop')
