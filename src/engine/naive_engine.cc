@@ -155,9 +155,9 @@ class NaiveEngine final : public Engine {
                  int priority = 0,
                  const char* opr_name = nullptr,
                  bool wait = false) override {
+    bool req_completed = false;
     CallbackOnComplete callback = CreateCallback(
-        NaiveEngine::OnComplete, nullptr);
-    this->req_completed_ = false;
+        NaiveEngine::OnComplete, &req_completed);
     profiler::Profiler *profiler = profiler::Profiler::Get();
     auto opr_deleter = [this](NaiveOpr* p) {
       this->DeleteOperator(p);
@@ -202,7 +202,7 @@ class NaiveEngine final : public Engine {
     for (auto var : mutable_vars) {
       ++var->version_;
     }
-    CHECK(this->req_completed_)
+    CHECK(req_completed)
         << "NaiveEngine only support synchronize Push so far";
     if (profiling) {
       opr->opr_profile->stop();
@@ -235,14 +235,9 @@ class NaiveEngine final : public Engine {
   // callback to oncomplete
   static void OnComplete(Engine *engine, void *param,
                          const dmlc::Error* error) {
-    static_cast<NaiveEngine*>(engine)->req_completed_ = true;
+    bool *req_completed = static_cast<bool*>(param);
+    *req_completed = true;
   }
-  // whether action is completed
-#if DMLC_CXX11_THREAD_LOCAL
-  static thread_local bool req_completed_;
-#else
-  static MX_THREAD_LOCAL bool req_completed_;
-#endif
   /*! \brief whether it is during shutdown phase*/
   std::atomic<bool> shutdown_phase_{false};
   // CPU stream
@@ -265,12 +260,6 @@ class NaiveEngine final : public Engine {
 Engine *CreateNaiveEngine() {
   return new NaiveEngine();
 }
-
-#if DMLC_CXX11_THREAD_LOCAL
-thread_local bool NaiveEngine::req_completed_ = false;
-#else
-MX_THREAD_LOCAL bool NaiveEngine::req_completed_ = false;
-#endif
 
 }  // namespace engine
 }  // namespace mxnet
