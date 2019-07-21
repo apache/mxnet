@@ -1661,7 +1661,7 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """
 
     get_mnist_ubyte()
-    flat = False if len(input_shape) == 3 else True
+    flat = not bool(len(input_shape) == 3)
 
     train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
