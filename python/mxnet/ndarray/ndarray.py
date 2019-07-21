@@ -649,10 +649,18 @@ fixed-size items.
             try:
                 value_nd = array(value, ctx=self.context, dtype=self.dtype)
             except:
-                raise TypeError('NDArray does not support assignment with non-array-like'
-                                ' object %s of type %s' % (str(value), str(type(value))))
-        if value_nd.shape != vshape:
-            value_nd = value_nd.broadcast_to(vshape)
+                raise TypeError('NDArray does not support assignment with non-array-like '
+                                'object {} of type {}'.format(value, type(value)))
+
+        # First reshape `value_nd` to a new shape that incorporates existing
+        # axes, new axes and broadcasting axes in the right way.
+        tmp_shape = _shape_for_bcast(
+            value_nd.shape, target_ndim=len(bcast_shape), new_axes=new_axes
+        )
+        value_nd = value_nd.reshape(tmp_shape)
+
+        if value_nd.shape != bcast_shape:
+            value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
 
     # pylint: disable=invalid-name
@@ -1079,8 +1087,19 @@ fixed-size items.
             if axs_nd_permut[ax] not in dropped_axs
         ]
 
+        # if any array is numpy.ndarray, stack in numpy ndarray class. 
+        for idcs in bcast_idcs_short:
+            if type(idcs) != NDArray:
+                 return bcast_idcs_short
+    
         return op.stack(*bcast_idcs_short)
 
+        # # TODO(xinyge): check here
+        # bcast_idcs = op.stack(*bcast_idcs_short)
+        # none_axes = [ax for ax in range(len(key)) if key[ax] is None]
+        # for ax in none_axes:
+        #     bcast_idcs.insert(ax, 1)
+        # return op.stack(*bcast_indcs)
 
     def _set_nd_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
@@ -1094,7 +1113,22 @@ fixed-size items.
     def _get_nd_advanced_indexing(self, key):
         """Get item when key is a tuple of any objects of the following types:
         NDArray, np.ndarray, list, tuple, slice, and integer."""
-        return op.gather_nd(self, self._get_index_nd(key))
+        # TODO(xinyi): check this part
+        # print("key for slicing:", self._get_index_nd(key))
+        # temp_key = nd.array([[[1, 1], [2, 2]], [[3 ,4], [3, 4]], 1, 1, [[3, 3], [4, 4]]])
+        # print(temp_key)
+        sliced = op.gather_nd(self, self._get_index_nd(key))
+        # sliced = op.gather_nd(self, self._get_index_nd(key))
+        
+        # Reshape due to `None` entries in `key`.
+        # none_axes = [ax for ax in range(len(key)) if key[ax] is None]
+        # final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
+        # for ax in none_axes:  # pylint: disable=invalid-name
+        #     final_shape.insert(ax, 1)
+        # # print("none_axes:", none_axes)
+        # # print(final_shape)
+        return sliced
+
 
     def _sync_copyfrom(self, source_array):
         """Performs a synchronized copy from the `source_array` to the current array.
@@ -2770,6 +2804,11 @@ def _get_broadcast_shape(shape1, shape2):
         i -= 1
     return tuple(shape)
 
+def _broadcast_shapes(seq):
+    """Return the broadcast shape of all advanced indices in ``seq``.
+    All entries are assumed to have a ``shape`` property.
+    """
+    return reduce(_get_broadcast_shape, [x.shape for x in seq], ())
 
 def onehot_encode(indices, out):
     """One-hot encoding indices into matrix out.

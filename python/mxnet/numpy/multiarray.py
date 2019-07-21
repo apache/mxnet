@@ -22,6 +22,7 @@
 
 from __future__ import absolute_import
 from __future__ import division
+from builtins import super
 
 try:
     from __builtin__ import slice as py_slice
@@ -197,7 +198,6 @@ class ndarray(NDArray):
         This function indexes ``self`` with a tuple of `slice` objects only.
         """
         key_nd = tuple(idx for idx in key if idx is not None)
-        # print("key_nd:", key_nd)  # TODO: Remove
         if len(key_nd) < self.ndim:  # TODO: the dim checking part can be moved to _indexing_key_expand_implicit_axes
             raise RuntimeError(
                 'too few indices after normalization: expected `ndim` ({}) '
@@ -235,7 +235,6 @@ class ndarray(NDArray):
         begin, end, step = self._basic_indexing_key_to_begin_end_step(
             slc_key, self.shape, keep_none=False
         ) # tuples
-        # print("begin, end, step:", begin, end, step)
         # Pylint is wrong about this
         # pylint: disable=bad-continuation
         if any(
@@ -251,7 +250,7 @@ class ndarray(NDArray):
                 slc_key, self.shape
             )
             handle = NDArrayHandle()
-            flat_self = super().reshape(-1)
+            flat_self = self.reshape_view(-1)
             check_call(
                 _LIB.MXNDArraySlice(
                     flat_self.handle,
@@ -262,8 +261,6 @@ class ndarray(NDArray):
             )
             sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
             sliced = self.__class__(handle=handle, writable=self.writable).reshape_view(sliced_shape)
-            # print("sliced:", sliced)
-            # print("sliced shape", sliced.shape)
 
         else:
             begin, end, step = self._basic_indexing_key_to_begin_end_step(
@@ -280,7 +277,18 @@ class ndarray(NDArray):
             # Override for single element indexing
             final_shape = ()
         
-        return sliced.reshape_view(tuple(final_shape))
+        sliced = sliced.reshape_view(tuple(final_shape))
+        if final_shape == ():
+            return sliced.item()
+        return sliced
+
+    def _get_np_advanced_indexing(self, key):
+        idcs = self._get_index_nd(key)
+        if type(idcs) == NDArray:
+            idcs = idcs.as_np_ndarray()
+        else:
+            idcs = _npi.stack(*[i if type(i) == __class__ else i.as_np_ndarray() for i in idcs])
+        return _npi.gather_nd(self, idcs)
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
@@ -321,7 +329,7 @@ class ndarray(NDArray):
     #                 'index {} is out of bounds for axis 0 with size {}'.format(
     #                     key, shape[0]))
     #         return self._at(key)
-    #     # eg. # TODO: Slice() is python slice. 
+    #     # eg. Slice(1, 3, 1)
     #     elif isinstance(key, py_slice):
     #         if key.step is not None and key.step != 1:
     #             if key.step == 0:
@@ -1481,7 +1489,7 @@ class ndarray(NDArray):
         return _mx_np_op.squeeze(self, axis=axis)
 
     def broadcast_to(self, shape):
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_to')
+        return _mx_np_op.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
