@@ -197,12 +197,6 @@ def inner(a, b):
     >>> np.inner(a, b)
     array([[ 14,  38,  62],
            [ 86, 110, 134]])
-
-    An example where `b` is a scalar:
-
-    >>> np.inner(np.eye(2), 7)
-    array([[ 7.,  0.],
-           [ 0.,  7.]])
     """
     return tensordot(a, b, [-1, -1])
 
