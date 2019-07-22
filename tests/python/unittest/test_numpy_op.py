@@ -165,6 +165,59 @@ def test_np_tensordot():
 
 @with_seed()
 @npx.use_np_shape
+def test_np_vdot():
+    class TestVdot(HybridBlock):
+        def __init__(self):
+            super(TestVdot, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.vdot(a, b)
+
+    def vdot_backward(a, b):
+        a = a.flatten()
+        b = b.flatten()
+
+        return [b.T, a.T]
+
+    # test non zero size input
+    tensor_shapes = [(), (5,)]
+
+    for hybridize in [True, False]:
+        for shape in tensor_shapes:
+            for dtype in [_np.float32, _np.float64]:
+                test_vdot = TestVdot()
+                if hybridize:
+                    test_vdot.hybridize()
+                a = rand_ndarray(shape = shape, dtype = dtype).as_np_ndarray()
+                b = rand_ndarray(shape = shape, dtype = dtype).as_np_ndarray()
+                a.attach_grad()
+                b.attach_grad()
+
+                np_out = _np.vdot(a.asnumpy(), b.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_vdot(a, b)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
+                mx_out.backward()
+                np_backward = vdot_backward(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = 1e-3, atol=1e-5)
+                assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = 1e-3, atol=1e-5)
+
+                # Test imperative once again
+                mx_out = np.vdot(a, b)
+                np_out = _np.vdot(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+                # test numeric gradient
+                a_sym = mx.sym.Variable("a").as_np_ndarray()
+                b_sym = mx.sym.Variable("b").as_np_ndarray()
+                mx_sym = mx.sym.np.vdot(a_sym, b_sym).as_nd_ndarray()
+                check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
+                  rtol=1e-1, atol=1e-1, dtype = dtype)
+
+
+@with_seed()
+@npx.use_np_shape
 def test_np_sum():
     class TestSum(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
