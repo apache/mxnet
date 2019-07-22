@@ -581,7 +581,7 @@ class BucketingModule(BaseModule):
         nd.save("%s.buckets" % (prefix), nd.array(list(self._buckets.keys()), dtype=np.int32))
 
     @staticmethod
-    def load(prefix, epoch, load_optimizer_states=False, sym_gen=None, default_bucket_key=None, **kwargs):
+    def load(prefix, epoch, sym_gen=None, default_bucket_key=None, **kwargs):
         """Creates a model from previously saved checkpoint.
 
         Parameters
