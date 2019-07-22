@@ -464,6 +464,12 @@ class Constant(Initializer):
     def _init_weight(self, _, arr):
         arr[:] = self.value
 
+    def dumps(self):
+        val = self._kwargs['value']
+        if not np.isscalar(val):
+            self._kwargs['value'] = val.tolist() if isinstance(val, np.ndarray) else val.asnumpy().tolist()
+        return json.dumps([self.__class__.__name__.lower(), self._kwargs])
+
 @register
 class Uniform(Initializer):
     """Initializes weights with random values uniformly sampled from a given range.

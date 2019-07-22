@@ -53,6 +53,9 @@ ADD_LDFLAGS =
 # the additional compile flags you want to add
 ADD_CFLAGS =
 
+# whether to build operators written in TVM
+USE_TVM_OP = 0
+
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
 #---------------------------------------------
