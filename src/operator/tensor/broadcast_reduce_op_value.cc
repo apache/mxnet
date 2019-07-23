@@ -221,6 +221,8 @@ MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 Broadcasting is allowed on axes with size 1, such as from `(2,1,3,1)` to
 `(2,8,3,9)`. Elements will be duplicated on the broadcasted axes.
 
+`broadcast_axes` is an alias to the function `broadcast_axis`.
+
 Example::
 
    // given x of shape (1,2,1)

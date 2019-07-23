@@ -579,7 +579,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
 }
 
 build_ubuntu_gpu() {
-    build_ubuntu_gpu_cuda100_cudnn7
+    build_ubuntu_gpu_cuda101_cudnn7
 }
 
 build_ubuntu_gpu_tensorrt() {
@@ -679,7 +679,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         -j$(nproc)
 }
 
-build_ubuntu_gpu_cuda100_cudnn7() {
+build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     build_ccache_wrappers
     make \
@@ -1210,6 +1210,16 @@ test_ubuntu_cpu_python3() {
 build_docs() {
     set -ex
     pushd .
+
+    # Setup environment for Julia docs
+    export PATH="/work/julia10/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+
+    julia -e 'using InteractiveUtils; versioninfo()'
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
     cd /work/mxnet/docs/build_version_doc
     # Parameters are set in the Jenkins pipeline: restricted-website-build
     # $1: the list of branches/tags to build
@@ -1450,10 +1460,10 @@ build_static_python_mkl() {
     popd
 }
 
-build_static_python_cu100mkl() {
+build_static_python_cu101mkl() {
     set -ex
     pushd .
-    export mxnet_variant=cu100mkl
+    export mxnet_variant=cu101mkl
     ./ci/publish/python/build.sh
     popd
 }

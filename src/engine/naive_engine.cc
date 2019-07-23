@@ -128,7 +128,7 @@ class NaiveEngine final : public Engine {
             attrs.reset(new profiler::ProfileOperator::Attributes());
           }
           opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
-          opr->opr_profile->start(exec_ctx.dev_type, exec_ctx.dev_id);
+          opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
         }
         opr->fn(ctx, on_complete);
         if (opr->profiling) {
@@ -176,8 +176,8 @@ class NaiveEngine final : public Engine {
       if (profiler->AggregateEnabled()) {
         attrs.reset(new profiler::ProfileOperator::Attributes());
       }
-      opr->opr_profile.reset(new profiler::ProfileOperator(display_name, attrs.release()));
-      opr->opr_profile->start(exec_ctx.dev_type, exec_ctx.dev_id);
+      opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
+      opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
     }
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
