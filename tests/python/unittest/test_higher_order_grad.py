@@ -175,6 +175,35 @@ def check_second_order_unary(x, op, grad_grad_op):
 
 
 def check_nth_order_unary(x, op, grad_ops, orders):
+    """Assert n-th order autograd gradient against expected gradient.
+
+    Multiple order of gradients can be checked by passing list of
+    function computing the particular order gradient and passing the
+    corresponding list of order.
+
+    Note
+    ----
+    1. Orders should always be monotonically increasing.
+    2. Elements of grads_ops should correspond to elements of orders
+    i.e. grads_op = [grad_op, grad_grad_grad_op] should be passed with
+         orders = [1, 3]
+
+    Parameters
+    ----------
+    x : mxnet.NDArray
+        Input Array.
+    op : Callable
+        Operation to perform on Input Array.
+    grad_ops : Callable or List of Callable
+        Function to compute and assert gradient of given order.
+    orders : int or List of int
+        Order/s to assert expected and computed gradients.
+
+    Returns
+    -------
+    None
+
+    """
     if isinstance(orders, int):
         orders = [orders]
         grad_ops = [grad_ops]
