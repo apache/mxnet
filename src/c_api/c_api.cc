@@ -45,13 +45,13 @@
 #include "mxnet/storage.h"
 #include "mxnet/libinfo.h"
 #include "mxnet/imperative.h"
-#include "mxnet/library.h"
 #include "mxnet/lib_api.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
 #include "../common/utils.h"
+#include "../common/library.h"
 
 using namespace mxnet;
 
