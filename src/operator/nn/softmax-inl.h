@@ -34,6 +34,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../tensor/broadcast_reduce_op.h"
+#include "../../common/cuda_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -312,27 +313,6 @@ __global__ void softmax_compute_kernel(DType *in, OType *out, IType *length,
 
 const int softmax_threads_per_block = 512;
 
-template <typename OP, typename T>
-__device__ inline T warp_reduce(T value, OP redfun) {
-  value = redfun(value, __shfl_down_sync(0xffffffff, value, 16));
-  value = redfun(value, __shfl_down_sync(0xffffffff, value, 8));
-  value = redfun(value, __shfl_down_sync(0xffffffff, value, 4));
-  value = redfun(value, __shfl_down_sync(0xffffffff, value, 2));
-  value = redfun(value, __shfl_down_sync(0xffffffff, value, 1));
-  return value;
-}
-
-template <typename OP>
-__device__ inline mshadow::half::half_t warp_reduce(mshadow::half::half_t value, OP redfun) {
-  float v = static_cast<float>(value);
-  v = redfun(v, __shfl_down_sync(0xffffffff, v, 16));
-  v = redfun(v, __shfl_down_sync(0xffffffff, v, 8));
-  v = redfun(v, __shfl_down_sync(0xffffffff, v, 4));
-  v = redfun(v, __shfl_down_sync(0xffffffff, v, 2));
-  v = redfun(v, __shfl_down_sync(0xffffffff, v, 1));
-  return mshadow::half::half_t(v);
-}
-
 template<typename OP, bool negate, typename AType, typename LType,
   typename DType, typename OType, typename IType>
 __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, IType *length,
@@ -356,7 +336,7 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
   // the division by zero warning generated for such invalid cases.
   const int row_length = entries_per_load > 0 ? M / entries_per_load : 0;
 
-  const LType * in_aligned = reinterpret_cast<const LType *>(in);
+  const LType* in_aligned = reinterpret_cast<const LType*>(in);
   size_t base = my_row * row_length;
 
   for (index_t i = my_id; i < row_length; i += threads_per_row) {
@@ -420,7 +400,7 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
   }
   __syncthreads();
 
-  LType * out_aligned = reinterpret_cast<LType *>(out);
+  LType* out_aligned = reinterpret_cast<LType*>(out);
 
   for (index_t i = my_id; i < row_length; i += threads_per_row) {
     out_aligned[base + i] = persistent_storage[my_local_row * row_length + i];
@@ -428,18 +408,6 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
 }
 
 namespace {
-
-int get_load_type(size_t N) {
-  if (N % 8 == 0) {
-    return kFloat64;
-  } else if (N % 4 == 0) {
-    return kFloat32;
-  } else if (N % 2 == 0) {
-    return kFloat16;
-  } else {
-    return kInt8;
-  }
-}
 
 int get_rows_per_block(size_t N) {
   const int warp_size = 32;
@@ -479,9 +447,9 @@ inline void Softmax(Stream<gpu> *s, DType *in, OType *out, IType *length,
   // Using 20 kB of shared memory for persistent storage in the optimized case
   const size_t max_opt_M = 20 * 1024 / DSize;
   if (stride[axis] == 1 &&
-      M <= max_opt_M &&
+      static_cast<size_t>(M) <= max_opt_M &&
       std::is_same<DType, OType>::value) {
-    int ltype = get_load_type(M * sizeof(DType));
+    int ltype = mxnet::common::cuda::get_load_type(M * sizeof(DType));
     MSHADOW_TYPE_SWITCH(ltype, LType, {
       int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType));
       int nblocks = (N + rows_per_block - 1) / rows_per_block;

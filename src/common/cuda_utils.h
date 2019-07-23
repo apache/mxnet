@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file cuda_utils.h
- * \brief CUDA debugging utilities.
+ * \brief Common CUDA utilities.
  */
 #ifndef MXNET_COMMON_CUDA_UTILS_H_
 #define MXNET_COMMON_CUDA_UTILS_H_
@@ -326,6 +326,15 @@ class DeviceStore {
   bool restore_;
 };
 
+/*! \brief Get the largest datatype suitable to read
+ *         requested number of bytes.
+ *
+ *  \input Number of bytes to be read
+ *  \return mshadow representation of type that could
+ *          be used for reading
+ */
+int get_load_type(size_t N);
+
 }  // namespace cuda
 }  // namespace common
 }  // namespace mxnet
@@ -550,7 +559,7 @@ static inline  __device__  void atomicAdd(double *address, double val) {
 // Overload atomicAdd for half precision
 // Taken from:
 // https://github.com/torch/cutorch/blob/master/lib/THC/THCAtomics.cuh
-#if defined(__CUDA_ARCH__)
+#ifdef __CUDACC__
 static inline __device__ void atomicAdd(mshadow::half::half_t *address,
                                         mshadow::half::half_t val) {
   unsigned int *address_as_ui =
@@ -615,6 +624,28 @@ __device__ inline DType ldg(const DType* address) {
     return *address;
 #endif
 }
-#endif
+
+template <typename OP, typename T>
+__device__ inline T warp_reduce(T value, OP redfun) {
+  value = redfun(value, __shfl_down_sync(0xffffffff, value, 16));
+  value = redfun(value, __shfl_down_sync(0xffffffff, value, 8));
+  value = redfun(value, __shfl_down_sync(0xffffffff, value, 4));
+  value = redfun(value, __shfl_down_sync(0xffffffff, value, 2));
+  value = redfun(value, __shfl_down_sync(0xffffffff, value, 1));
+  return value;
+}
+
+template <typename OP>
+__device__ inline mshadow::half::half_t warp_reduce(mshadow::half::half_t value, OP redfun) {
+  float v = static_cast<float>(value);
+  v = redfun(v, __shfl_down_sync(0xffffffff, v, 16));
+  v = redfun(v, __shfl_down_sync(0xffffffff, v, 8));
+  v = redfun(v, __shfl_down_sync(0xffffffff, v, 4));
+  v = redfun(v, __shfl_down_sync(0xffffffff, v, 2));
+  v = redfun(v, __shfl_down_sync(0xffffffff, v, 1));
+  return mshadow::half::half_t(v);
+}
+
+#endif  // __CUDACC__
 
 #endif  // MXNET_COMMON_CUDA_UTILS_H_
