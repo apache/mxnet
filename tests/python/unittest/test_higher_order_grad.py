@@ -18,17 +18,16 @@
 
 import math
 import random
-from mxnet import nd, autograd
-from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd, same
-from common import with_seed
-import mxnet.ndarray as nd
-from mxnet import gluon
-import mxnet
-import random
 from functools import reduce
 from operator import mul
+import random
+
 from nose.tools import ok_
-import numpy as np
+
+from common import with_seed
+import mxnet
+from mxnet import nd, autograd, gluon
+from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd, same
 
 
 @with_seed()
