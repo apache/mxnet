@@ -25,7 +25,6 @@
 #ifndef MXNET_COMMON_LIBRARY_H_
 #define MXNET_COMMON_LIBRARY_H_
 
-#include <dlfcn.h>
 #include <iostream>
 #include "dmlc/io.h"
 

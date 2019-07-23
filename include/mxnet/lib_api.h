@@ -26,7 +26,6 @@
 #define MXNET_LIB_API_H_
 
 #include <cstdlib>
-#include "../dlpack/dlpack.h"
 
 #define INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);

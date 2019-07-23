@@ -26,7 +26,8 @@
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #include <windows.h>
-#include <stdio.h>
+#else
+#include <dlfcn.h>
 #endif
 
 #include "library.h"
