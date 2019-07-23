@@ -30,8 +30,8 @@ def check_fused_symbol(sym, **kwargs):
     shapes = {inp : kwargs[inp].shape for inp in inputs}
     test_sym = mx.sym.Group([mx.sym.identity(s) for s in sym])
     rtol = {'float16' : 1e-2,
-            'float32' : 1e-6,
-            'float64' : 1e-6,
+            'float32' : 1.5e-6,
+            'float64' : 1.5e-6,
             }
     atol = {'float16' : 1e-3,
             'float32' : 1e-7,
