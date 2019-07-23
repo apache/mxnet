@@ -23,7 +23,7 @@ import os
 from .base import _LIB
 from .base import check_call
 
-def load_lib(path):
+def load(path):
     """Loads library dynamically.
 
     Parameters
@@ -36,11 +36,12 @@ def load_lib(path):
     """
     #check if path exists
     if not os.path.exists(path):
-        print('load_lib path "%s" does NOT exist' % path)
+        print('load path "%s" does NOT exist' % path)
         return None
-    #check if path is to a file
-    if not os.path.isfile(path):
-        print('load_lib path "%s" is NOT a library file' % path)
+    #check if path is to a library file
+    _, file_ext = os.path.splitext(path)
+    if not file_ext in ['.so', '.dll']:
+        print('load path "%s" is NOT a library file' % path)
         return None
 
     byt_obj = path.encode('utf-8')

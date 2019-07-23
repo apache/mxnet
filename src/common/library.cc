@@ -26,22 +26,34 @@
 
 #include "../../include/mxnet/library.h"
 
+/*
+Loads the dynamic shared library file
+Parameter: Library file location
+Returns: handle for the loaded library, NULL if loading unsuccessful
+*/
 void* load_lib(const char* path) {
   void *handle;
   handle = dlopen(path, RTLD_LAZY);
 
   if (!handle) {
-    std::cerr << "Error loading accelerator library: '" << path
-              << "'\n" << dlerror() << std::endl;
+    LOG(FATAL) << "Error loading accelerator library: '" << path
+               << "'\n" << dlerror();
     return nullptr;
   }
   return handle;
 }
 
+/*
+Obtains address of given function in the loaded library
+Parameters
+- handle: handle for the loaded library
+- func: function pointer that gets output address
+- name: function name to be fetched
+*/
 void get_sym(void* handle, void** func, char* name) {
   *func = dlsym(handle, name);
   if (!(*func)) {
-    std::cerr << "Error getting function '" << name
-              << "' from accelerator library\n" << dlerror() << std::endl;
+    LOG(FATAL) << "Error getting function '" << name
+               << "' from accelerator library\n" << dlerror();
   }
 }

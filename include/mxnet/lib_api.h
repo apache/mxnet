@@ -36,8 +36,8 @@ extern "C" {
     Function: initialize
     Parameters:
     - int : MXNet version passed to library
-    Returns: Success/Failure code
-             Failure code if library cannot be used with passed MXNet version
+    Returns:
+    - int : Non-zero value on error i.e. library incompatible with passed MXNet version
     */
     int initialize(int);
 }

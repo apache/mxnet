@@ -92,16 +92,15 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 
 // NOTE: return value is added in API_END
 
+// Loads library and initializes it
 int MXLoadLib(const char *path) {
   API_BEGIN();
   void *lib = load_lib(path);
-  if(!lib)
+  if (!lib)
     LOG(FATAL) << "Unable to load library";
 
   initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(INITIALIZE_STR));
-  int version = MXNET_VERSION;
-  int flag = initialize(version);
-  if (!flag)
+  if (!initialize(int(MXNET_VERSION)))
     LOG(FATAL) << "Library failed to initialize";
   API_END();
 }

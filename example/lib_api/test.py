@@ -20,4 +20,4 @@
 
 import mxnet as mx
 
-mx.library.load_lib('mylib.so')
+mx.library.load('mylib.so')

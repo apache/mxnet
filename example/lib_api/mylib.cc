@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file my_accel.cc
+ * \file mylib.cc
  * \brief Sample library functions
  */
 
