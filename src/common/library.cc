@@ -24,7 +24,13 @@
  * and accessing its functions
  */
 
-#include "../../include/mxnet/library.h"
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#include <windows.h>
+#include <stdio.h>
+#endif
+
+#include "library.h"
+
 
 /*
 Loads the dynamic shared library file
@@ -33,11 +39,14 @@ Returns: handle for the loaded library, NULL if loading unsuccessful
 */
 void* load_lib(const char* path) {
   void *handle;
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  handle = LoadLibrary(path);
+#else
   handle = dlopen(path, RTLD_LAZY);
+#endif  // _WIN32 or _WIN64 or __WINDOWS__
 
   if (!handle) {
-    LOG(FATAL) << "Error loading accelerator library: '" << path
-               << "'\n" << dlerror();
+    LOG(FATAL) << "Error loading accelerator library: '" << path << "'";
     return nullptr;
   }
   return handle;
@@ -51,9 +60,14 @@ Parameters
 - name: function name to be fetched
 */
 void get_sym(void* handle, void** func, char* name) {
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  *func = GetProcAddress(handle, name);
+  FreeLibrary(hinstLib);
+#else
   *func = dlsym(handle, name);
+#endif  // _WIN32 or _WIN64 or __WINDOWS__
+
   if (!(*func)) {
-    LOG(FATAL) << "Error getting function '" << name
-               << "' from accelerator library\n" << dlerror();
+    LOG(FATAL) << "Error getting function '" << name << "' from accelerator library";
   }
 }
