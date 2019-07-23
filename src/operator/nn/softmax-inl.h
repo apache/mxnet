@@ -415,7 +415,8 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
 
   for (index_t i = my_id; i < M; i += threads_per_row) {
     const DType val = negate ? -row[i] : row[i];
-    row[i] = (i < len) ? DType(OP::Map((val - smax)/static_cast<DType>(temperature), ssum)) : DType(0.0f);
+    row[i] = (i < len) ? DType(OP::Map((val - smax)/static_cast<DType>(temperature), ssum)) :
+                         DType(0.0f);
   }
   __syncthreads();
 
