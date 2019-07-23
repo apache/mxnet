@@ -113,9 +113,7 @@ sudo apt-get install -y git \
     openjdk-8-jdk
     
 # CUDA installation 
-# Take CUDA 10 for example
-wget https://developer.nvidia.com/compute/cuda/10.0/Prod/local_installers/cuda_10.0.130_410.48_linux
-chmod +x cuda_10.0.130_410.48_linux && sudo ./cuda_10.0.130_410.48_linux
+# Take CUDA 10 for example, please follow the instructions on https://developer.nvidia.com/cuda-downloads
 # Install NVIDIA Accelerated Graphics Driver for Linux-x86_64 410.48?
 # (y)es/(n)o/(q)uit: y
 # 
@@ -195,12 +193,10 @@ tools/staticbuild/build.sh cu100mkl pip
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
 # Install python frontend
-cd python
-pip install -e . --pre
+pip install -e python
 # Test MXNet
 >>> import mxnet as mx
->>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
->>> exit()
+>>> mx.runtime.feature_list()
 
 # Test NCCL version
 export NCCL_DEBUG=VERSION
@@ -215,44 +211,7 @@ nosetests --verbose tests/python/gpu/test_nccl.py
 OK
 ```
 #### 3. Performance Sanity Check
-We will test against 3 basic models.
-###### ResNet50 with ImageNet
-```
-# Download the ImageNet on http://image-net.org/download and make record file
-# Install prerequisite package
-pip2 install psutil --user
-pip2 install pandas --upgrade --user
-pip install gluoncv==0.2.0b20180625
-# Clone the testing script
-git clone https://github.com/rahul003/deep-learning-benchmark-mirror.git
-# command 
-python2 benchmark_runner.py --framework mxnet --metrics-policy metrics_parameters_images_top_1 --task-name metrics_parameters_images_top_1 --metrics-suffix test --num-gpus 8 --command-to-execute 'python mxnet_benchmark/train_imagenet.py --use-rec --batch-size 128 --dtype float32 --num-data-workers 40 --num-epochs 3 --gpus 0,1,2,3,4,5,6,7 --lr 0.4 --warmup-epochs 5 --last-gamma --mode symbolic --model resnet50_v1b --rec-train /home/ubuntu/data/train-passthrough.rec --rec-train-idx /home/ubuntu/data/train-passthrough.idx --rec-val /home/ubuntu/data/val-passthrough.rec --rec-val-idx /home/ubuntu/data/val-passthrough.idx' --data-set data
-# if you want to run above command multiple times, remember to delete log file
-rm metrics_parameters_images_top_1.log
-```
-The throughput should be around `2800`
-###### LSTM training with PTB
-```
-# Make sure you install prerequisite package: psutil, pandas
-# Download testing script
-git clone https://github.com/awslabs/deeplearning-benchmark.git
-# command
-python2 benchmark_driver.py --framework mxnet --task-name mkl_lstm_ptb_symbolic --num-gpus 1 --epochs 10 --metrics-suffix test --kvstore local
-# If you want to run above command twice, remember to delete log file
-rm mkl_lstm_ptb_symbolic.log
-```
-The throughput should be around `1000`
-###### MLP with MNIST
-```
-# Make sure you install prerequisite package: psutil, pandas
-# Download testing script
-git clone https://github.com/awslabs/deeplearning-benchmark.git
-# Command
-python2 benchmark_driver.py --framework mxnet --task-name dependency_update_mlp --num-gpus 1 --epochs 10 --metrics-suffix test
-# If you want to run above command twice, remember to delete log file
-rm dependency_update_mlp.log
-```
-The throughput should be around `4400`
+Please run performance test aginast the MXNet you build before raising the PR.
 
 #### 4. Raise a PR
 1. Update the tools/setup_gpu_build_tools.sh please refer to PR [#14988](https://github.com/apache/incubator-mxnet/pull/14988), [#14887](https://github.com/apache/incubator-mxnet/pull/14887/files)
@@ -275,7 +234,7 @@ The throughput should be around `4400`
 2. Build from source to do sanity check
 ```
 # Compile mxnet to get libmxnet.so
-pip install -e . --pre
+pip install -e python
 python
 >>> import mxnet as mx
 >>> mx.nd.ones((1, 2))
@@ -324,23 +283,14 @@ tools/staticbuild/build.sh mkl pip
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
 # Install python frontend
-cd python
-pip3 install -e . --pre
-# test MXNet
+pip install -e python
+# Test MXNet
 >>> import mxnet as mx
->>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
->>> exit()
+>>> mx.runtime.feature_list()
 ```
 
-3. Compare the image.imdecode performance
-```python
->>> with open("test.jpg", 'rb') as fp:
-...     str_image = fp.read()
-...
->>> for _ in range(100):
-...    image = mx.img.imdecode(str_imag)
-# time the performance of for loop and compare it to original version
-```
+3. Run performance tests against image related tasks
+
 
 ### Other dependencies under tools/dependencies
 
@@ -383,10 +333,8 @@ tools/staticbuild/build.sh mkl pip
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
 # Install python frontend
-cd python
-pip3 install -e . --pre
+pip install -e python
 # Test MXNet
 >>> import mxnet as mx
->>> mx.nd.ones((2, 5) ctx=mx.gpu(0))
->>> exit()
+>>> mx.runtime.feature_list()
 ```
