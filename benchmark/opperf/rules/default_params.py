@@ -69,6 +69,12 @@ DEFAULT_MOM = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_MEAN = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_VAR = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_N = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_D = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_V = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_Z = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_G = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_DELTA = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_LRS = [(0.1,0.1)]
 DEFAULT_LR = [0.1,0.5,0.9]
 DEFAULT_GAMMA_1 = [0.1,0.5,0.9]
 DEFAULT_GAMMA_2 = [0.1,0.5,0.9]
@@ -102,12 +108,20 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "axis_shape": DEFAULT_AXIS_SHAPE,
                    "axis": DEFAULT_AXIS,
                    "weight" : DEFAULT_WEIGHT,
+                   "weight32" : DEFAULT_WEIGHT,
                    "grad" : DEFAULT_GRAD,
                    "mean" : DEFAULT_MEAN,
                    "var" : DEFAULT_VAR,
                    "mom" : DEFAULT_MOM,
                    "n" : DEFAULT_N,
+                   "d" : DEFAULT_D,
+                   "v" : DEFAULT_V,
+                   "z" : DEFAULT_Z,
+                   "g" : DEFAULT_G,
+                   "delta" : DEFAULT_DELTA,
                    "lr" : DEFAULT_LR,
+                   "lrs" : DEFAULT_LRS,
+                   "wds" : DEFAULT_LRS,
                    "gamma1" : DEFAULT_GAMMA_1,
                    "gamma2" : DEFAULT_GAMMA_2,
                    "epsilon" : DEFAULT_EPSILON,
@@ -126,4 +140,4 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
 PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp",
                           "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
                           "low", "high", "weight", "bias", "moving_mean", "moving_var",
-                          "weight", "grad", "mean", "var", "mom", "n"]
+                          "weight", "weight32", "grad", "mean", "var", "mom", "n", "d", "v", "z", "g", "delta"]
