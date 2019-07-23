@@ -1615,7 +1615,7 @@ def test_np_indexing():
         """
         start = time.time()
         np_index = index
-        if isinstance(index, mx.nd.NDArray):
+        if isinstance(index, mx.nd.NDArray):  # TODO(xinyge): Abandon use of NDArray. 
             np_index = index.asnumpy()
         if isinstance(index, tuple):
             np_index = tuple(
@@ -1640,6 +1640,70 @@ def test_np_indexing():
         print("All calculation:", end - start)
         print("Actual calculation:", end2 - start2)
         print("Numpy calculation:", end3 - start3)
+
+    def test_setitem(np_array, index, is_scalar=False):
+        """
+        `is_scalar` indicates whether we should expect a scalar for the result.
+        If so, the indexed array should call asscalar to compare
+        with numpy's indexed array.
+
+        np_array is a native numpy array.
+        """
+        def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
+            if np_value is not None:
+                np_array[np_index] = np_value
+            elif isinstance(mx_value, np.ndarray):
+                np_array[np_index] = mx_value.asnumpy()
+            else:
+                np_array[np_index] = mx_value
+
+            try:
+                mx_array[mx_index] = mx_value
+            except Exception as e:
+                print('Failed with index = {}, value.shape = {}'.format(mx_index, mx_value.shape))
+                raise e
+
+            assert same(np_array, mx_array.asnumpy())
+
+        np_index = index  # keep this native numpy type
+        if isinstance(index, np.ndarray):
+            np_index = index.asnumpy()
+        if isinstance(index, tuple):
+            np_index = []
+            for idx in index:
+                if isinstance(idx, np.ndarray):
+                    np_index.append(idx.asnumpy())
+                else:
+                    np_index.append(idx)
+            np_index = tuple(np_index)
+
+        mx_array = np.array(np_array, dtype=np_array.dtype)  # mxnet.np.ndarray
+        np_array = mx_array.asnumpy()  # native numpy array
+        if is_scalar:
+            # test value is a numeric type
+            assert_same(np_array, np_index, mx_array, index, _np.random.randint(low=-10000, high=0))
+            value_nd = [_np.random.randint(low=-10000, high=0)]
+            assert_same(np_array, np_index, mx_array, index, value_nd, value_nd[0])
+        else:
+            indexed_array_shape = np_array[np_index].shape
+            np_indexed_array = _np.random.randint(low=-10000, high=0, size=indexed_array_shape)
+            # test value is a native numpy array without broadcast
+            assert_same(np_array, np_index, mx_array, index, np_indexed_array)
+            # test value is a mxnet numpy array without broadcast
+            assert_same(np_array, np_index, mx_array, index, np.array(np_indexed_array))
+            # test value is an numeric_type
+            assert_same(np_array, np_index, mx_array, index, _np.random.randint(low=-10000, high=0))
+            if len(indexed_array_shape) > 1:
+                np_value = _np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],))
+                # test mxnet ndarray with broadcast
+                assert_same(np_array, np_index, mx_array, index, np.array(np_value))
+                # test native numpy array with broadcast
+                assert_same(np_array, np_index, mx_array, index, np_value)
+                # test list with broadcast
+                assert_same(np_array, np_index, mx_array, index,
+                            [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
+
+
 
     shape = (8, 16, 9, 9)
     np_array = _np.arange(_np.prod(_np.array(shape)), dtype='int32').reshape(shape)  # native np array
@@ -1720,47 +1784,48 @@ def test_np_indexing():
                 # ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
                 # ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
                 # ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
-                ([1], False), ([1, 2], False), ([2, 1, 3], False), ([7, 5, 0, 3, 6, 2, 1], False),
-                (np.array([6, 3], dtype=np.int32), False), # debug here
-                (np.array([[3, 4], [0, 6]], dtype=np.int32), False),
-                (np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32), False),
-                (np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int64), False),
-                (np.array([[2], [0], [1]], dtype=np.int32), False),
-                (np.array([[2], [0], [1]], dtype=np.int64), False),
-                (mx.nd.array([4, 7], dtype=np.int32), False), # debug here
-                (mx.nd.array([4, 7], dtype=np.int64), False),
-                (mx.nd.array([[3, 6], [2, 1]], dtype=np.int32), False),
-                (mx.nd.array([[3, 6], [2, 1]], dtype=np.int64), False),
-                (mx.nd.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32), False),
-                (mx.nd.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int64), False),
-                ((1, [2, 3]), False), ((1, [2, 3], np.array([[3], [0]], dtype=np.int32)), False),
-                ((1, [2, 3]), False), ((1, [2, 3], np.array([[3], [0]], dtype=np.int64)), False),
-                ((1, [2], np.array([[5], [3]], dtype=np.int32), slice(None)), False),
-                ((1, [2], np.array([[5], [3]], dtype=np.int64), slice(None)), False),
-                ((1, [2, 3], np.array([[6], [0]], dtype=np.int32), slice(2, 5)), False),
-                ((1, [2, 3], np.array([[6], [0]], dtype=np.int64), slice(2, 5)), False),
-                ((1, [2, 3], np.array([[4], [7]], dtype=np.int32), slice(2, 5, 2)), False),
-                ((1, [2, 3], np.array([[4], [7]], dtype=np.int64), slice(2, 5, 2)), False),
-                ((1, [2], np.array([[3]], dtype=np.int32), slice(None, None, -1)), False),
-                ((1, [2], np.array([[3]], dtype=np.int64), slice(None, None, -1)), False),
-                ((1, [2], np.array([[3]], dtype=np.int32), np.array([[5, 7], [2, 4]], dtype=np.int64)), False),
-                ((1, [2], mx.nd.array([[4]], dtype=np.int32), mx.nd.array([[1, 3], [5, 7]], dtype='int64')),
-                False),
-                ([0], False), ([0, 1], False), ([1, 2, 3], False), ([2, 0, 5, 6], False),
-                (([1, 1], [2, 3]), False), (([1], [4], [5]), False), (([1], [4], [5], [6]), False),
-                (([[1]], [[2]]), False), (([[1]], [[2]], [[3]], [[4]]), False),
-                ((slice(0, 2), [[1], [6]], slice(0, 2), slice(0, 5, 2)), False),
-                (([[[[1]]]], [[1]], slice(0, 3), [1, 5]), False),
-                (([[[[1]]]], 3, slice(0, 3), [1, 3]), False),
-                (([[[[1]]]], 3, slice(0, 3), 0), False),
-                (([[[[1]]]], [[2], [12]], slice(0, 3), slice(None)), False),
-                (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
-                (([1, 2], slice(3, 5), (2, 3), [3, 4]), False),
+                # ([1], False), ([1, 2], False), ([2, 1, 3], False), ([7, 5, 0, 3, 6, 2, 1], False),
+                # (np.array([6, 3], dtype=np.int32), False), # debug here
+                # (np.array([[3, 4], [0, 6]], dtype=np.int32), False),
+                # (np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32), False),
+                # (np.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int64), False),
+                # (np.array([[2], [0], [1]], dtype=np.int32), False),
+                # (np.array([[2], [0], [1]], dtype=np.int64), False),
+                # (mx.nd.array([4, 7], dtype=np.int32), False), # debug here
+                # (mx.nd.array([4, 7], dtype=np.int64), False),
+                # (mx.nd.array([[3, 6], [2, 1]], dtype=np.int32), False),
+                # (mx.nd.array([[3, 6], [2, 1]], dtype=np.int64), False),
+                # (mx.nd.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int32), False),
+                # (mx.nd.array([[7, 3], [2, 6], [0, 5], [4, 1]], dtype=np.int64), False),
+                # ((1, [2, 3]), False), ((1, [2, 3], np.array([[3], [0]], dtype=np.int32)), False),
+                # ((1, [2, 3]), False), ((1, [2, 3], np.array([[3], [0]], dtype=np.int64)), False),
+                # ((1, [2], np.array([[5], [3]], dtype=np.int32), slice(None)), False),
+                # ((1, [2], np.array([[5], [3]], dtype=np.int64), slice(None)), False),
+                # ((1, [2, 3], np.array([[6], [0]], dtype=np.int32), slice(2, 5)), False),
+                # ((1, [2, 3], np.array([[6], [0]], dtype=np.int64), slice(2, 5)), False),
+                # ((1, [2, 3], np.array([[4], [7]], dtype=np.int32), slice(2, 5, 2)), False),
+                # ((1, [2, 3], np.array([[4], [7]], dtype=np.int64), slice(2, 5, 2)), False),
+                # ((1, [2], np.array([[3]], dtype=np.int32), slice(None, None, -1)), False),
+                # ((1, [2], np.array([[3]], dtype=np.int64), slice(None, None, -1)), False),
+                # ((1, [2], np.array([[3]], dtype=np.int32), np.array([[5, 7], [2, 4]], dtype=np.int64)), False),
+                # ((1, [2], mx.nd.array([[4]], dtype=np.int32), mx.nd.array([[1, 3], [5, 7]], dtype='int64')),
+                # False),
+                # ([0], False), ([0, 1], False), ([1, 2, 3], False), ([2, 0, 5, 6], False),
+                # (([1, 1], [2, 3]), False), (([1], [4], [5]), False), (([1], [4], [5], [6]), False),
+                # (([[1]], [[2]]), False), (([[1]], [[2]], [[3]], [[4]]), False),
+                # ((slice(0, 2), [[1], [6]], slice(0, 2), slice(0, 5, 2)), False),
+                # (([[[[1]]]], [[1]], slice(0, 3), [1, 5]), False),
+                # (([[[[1]]]], 3, slice(0, 3), [1, 3]), False),
+                # (([[[[1]]]], 3, slice(0, 3), 0), False),
+                # (([[[[1]]]], [[2], [12]], slice(0, 3), slice(None)), False),
+                # (([1, 2], slice(3, 5), [2, 3], [3, 4]), False),
+                # (([1, 2], slice(3, 5), (2, 3), [3, 4]), False),
     ]
 
     for index in index_list:
         print(index)
-        test_getitem(np_array, index[0], index[1])
+        # test_getitem(np_array, index[0], index[1])
+        test_setitem(np_array, index[0], index[1])
 
     # Test empyt tensor
     # test_getitem(np.array(3), 0, True)

@@ -530,6 +530,7 @@ NNVM_REGISTER_OP(_backward_slice)
 
 NNVM_REGISTER_OP(_slice_assign)
 .add_alias("_crop_assign")
+.add_alias("_npi_slice_assign")
 .MXNET_DESCRIBE("Assign the rhs to a cropped subset of lhs.\n\n"
 "Requirements\n"
 "------------\n"
@@ -554,6 +555,7 @@ NNVM_REGISTER_OP(_slice_assign)
 .add_arguments(SliceParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_slice_assign_scalar)
+.add_alias("_npi_slice_assign_scalar")
 .add_alias("_crop_assign_scalar")
 .MXNET_DESCRIBE("(Assign the scalar to a cropped subset of the input.\n\n"
 "Requirements\n"

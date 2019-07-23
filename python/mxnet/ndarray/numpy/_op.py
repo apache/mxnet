@@ -28,12 +28,12 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
-__all__ = ['zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
+__all__ = ['zeros', 'ones', 'full', 'maximum', 'minimum', 'stack', 'arange', 'argmax',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'rint', 'radians', 'mean', 'reciprocal', 'square', 'arcsin',
-           'argsort', 'hstack', 'tensordot']
+           'argsort', 'hstack', 'tensordot', "slice_assign_scalar", "slice_assign"]
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -176,6 +176,17 @@ def ones(shape, dtype=None, **kwargs):
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def full(shape, fill_value, dtype=None, ctx=None, out=None):
+    """
+    # TODO(xinyge) add and check doc here
+    """
+    if ctx is None:
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
@@ -1902,3 +1913,19 @@ def arcsin(x, out=None, **kwargs):
     http://www.math.sfu.ca/~cbm/aands/
     """
     return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def slice_assign_scalar(lhs, value, begin, end, step, out=None):
+    """
+    TODO(xinyge): add doc here
+    """
+    _npi.slice_assign_scalar(lhs, value, begin=begin, end=end, step=step, out=out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def slice_assign(lhs, rhs, begin, end, step, out=None):
+    """
+    TODO(xinyge): add doc here
+    """
+    _npi.slice_assign(lhs, rhs, begin=begin, end=end, step=step, out=out)

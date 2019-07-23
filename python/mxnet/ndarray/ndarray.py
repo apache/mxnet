@@ -47,7 +47,8 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "logical_xor", "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal",
            "onehot_encode", "power", "subtract", "true_divide", "waitall", "_new_empty_handle",
            "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
-           "from_numpy", "_indexing_key_expand_implicit_axes", "_get_indexing_dispatch_code", "_int_to_slice"]  # TODO: can I add function here?
+           "from_numpy", "_indexing_key_expand_implicit_axes", "_get_indexing_dispatch_code", 
+           "_int_to_slice", "_shape_for_bcast"]  # TODO: can I add function here?
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -197,7 +198,7 @@ fixed-size items.
 
     def as_nd_ndarray(self):
         """A convenience function for creating a classic ndarray from the current
-        ndarray with zero copy. For this class, it just returns itself since it is
+        ndarray with zero copy. For thisx  class, it just returns itself since it is
         already a classic ndarray."""
         return self
 
@@ -641,7 +642,7 @@ fixed-size items.
         if isinstance(value, numeric_types):
             value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
             new_axes = []  # ignore for scalar
-        elif isinstance(value, NDArray):
+        elif type(value) == NDArray:
             value_nd = value.as_in_context(self.context)
             if value_nd.dtype != self.dtype:
                 value_nd = value_nd.astype(self.dtype)
@@ -802,7 +803,7 @@ fixed-size items.
 
         if can_assign_directly:
             # Easy case, overwrite whole array.
-            if isinstance(value, NDArray):
+            if type(value) == self.__class__:
                 if value.handle is not self.handle:
                     # Need to do this before `broadcast_to`.
                     tmp_shape = _shape_for_bcast(
@@ -815,10 +816,8 @@ fixed-size items.
                     value.copyto(self)
 
             elif isinstance(value, numeric_types):
-                _internal._full(
-                    shape=self.shape, value=float(value), ctx=self.context,
-                    dtype=self.dtype, out=self
-                )
+                # _internal._full(
+                self._full(value)
 
             elif isinstance(value, (np.ndarray, np.generic)):
                 tmp_shape = _shape_for_bcast(
@@ -829,6 +828,7 @@ fixed-size items.
                 if isinstance(value, np.generic) or value.shape != self.shape:
                     value = np.broadcast_to(value, self.shape)
                 self._sync_copyfrom(value)
+                # bug here
             else:
                 # Other array-like
                 value_nd = self._prepare_value_nd(
@@ -837,15 +837,13 @@ fixed-size items.
                 value_nd.copyto(self)
 
         elif isinstance(value, numeric_types):
-            _internal._slice_assign_scalar(
-                self, float(value), begin, end, step, out=self
-            )
+            self.slice_assign_scalar(float(value), begin, end, step)
 
         else:
             value_nd = self._prepare_value_nd(
                 value, new_axes=int_axes, bcast_shape=indexed_shape
             )
-            _internal._slice_assign(self, value_nd, begin, end, step, out=self)
+            self.slice_assign(value_nd, begin, end, step)
 
     def _get_nd_basic_indexing(self, key):
         """This function indexes ``self`` with a tuple of `slice` objects only."""
@@ -1036,7 +1034,7 @@ fixed-size items.
         adv_axs = [ax for ax, idx in enumerate(key) if _is_advanced_index(idx)]
         adv_axs_nd = [ax for ax, idx in enumerate(key_nd) if _is_advanced_index(idx)]
         adv_idcs_are_adjacent = bool(np.all(np.diff(adv_axs) == 1))
-        nonadv_axs_nd = [ax for ax in range(ndim) if ax not in adv_axs_nd]
+        nonadv_axs_nd = [ax for ax in range(ndim) if ax not in adv_axs_nd]  
         adv_idcs_nd = [key_nd[ax] for ax in adv_axs_nd]
         idcs_short = self._drop_slice_none_at_end(key_nd)
         dropped_axs = list(range(len(idcs_short), ndim))
@@ -2431,6 +2429,21 @@ fixed-size items.
                [ 1.,  1.,  1.]], dtype=float32)
         """
         return self.copyto(self.context)
+    
+
+    def slice_assign_scalar(self, value, begin, end, step):
+        """
+        TODO(xinyge): add doc here
+        """
+        _internal._slice_assign_scalar(self, value, begin=begin, end=end, step=step, out=self)
+
+    
+    def slice_assign(self, rhs, begin, end, step):
+        """
+        TODO(xinyge): add doc here
+        """
+        _internal._slice_assign(self, rhs, begin=begin, end=end, step=step, out=self)
+
 
     def as_in_context(self, context):
         """Returns an array on the target device with the same value as this array.
@@ -2601,6 +2614,9 @@ fixed-size items.
         <NDArray 2x3 @cpu(0)>
         """
         return to_dlpack_for_write(self)
+
+    def _full(self, value):
+        return _internal._full(self.shape, value=float(value), ctx=self.context, dtype=self.dtype, out=self)
 
 def _indexing_key_expand_implicit_axes(key, shape):
     """Make implicit axes explicit by adding ``slice(None)``.

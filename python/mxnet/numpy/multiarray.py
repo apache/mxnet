@@ -35,17 +35,18 @@ import ctypes
 import warnings
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
-from ..ndarray import _indexing_key_expand_implicit_axes, _get_indexing_dispatch_code, _int_to_slice
+from ..ndarray import _indexing_key_expand_implicit_axes, _get_indexing_dispatch_code, _int_to_slice, _shape_for_bcast
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
+from ..context import Context
 from ..util import _sanity_check_params, set_module
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 
-__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'maximum', 'minimum', 'stack', 'arange',
+__all__ = ['ndarray', 'empty', 'array', 'zeros', 'ones', 'full', 'maximum', 'minimum', 'stack', 'arange',
            'argmax', 'add', 'subtract', 'multiply', 'divide', 'mod', 'power', 'concatenate',
            'clip', 'split', 'swapaxes', 'expand_dims', 'tile', 'linspace', 'eye', 'sin', 'cos',
            'sin', 'cos', 'sinh', 'cosh', 'log10', 'sqrt', 'abs', 'exp', 'arctan', 'sign', 'log',
@@ -354,32 +355,160 @@ class ndarray(NDArray):
 
     def __setitem__(self, key, value):
         """
+        x.__setitem__(i, y) <=> x[i]=y
+        Sets ``self[key]`` to ``value``.
+
         Overriding the method in NDArray class in a numpy fashion. 
         """
-        # TODO(junwu): calling base class __setitem__ is a temp solution
-        # TODO(xinyi): need to find a way to ensure np.array(1.0) is OK.
-        if isinstance(value, NDArray) and not isinstance(value, ndarray):
-            raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
+        # # TODO(junwu): calling base class __setitem__ is a temp solution
+        # if isinstance(value, NDArray) and not isinstance(value, ndarray):
+        #     raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
+        # if self.ndim == 0:
+        #     if not isinstance(key, tuple) or len(key) != 0:
+        #         raise IndexError('scalar tensor can only accept `()` as index')
+        # if isinstance(value, ndarray):
+        #     value = value._as_nd_ndarray()
+        # # TODO(junwu): Better handling of this situation
+        # if isinstance(key, tuple) and len(key) == 0:
+        #     self._as_nd_ndarray().__setitem__(slice(None), value)
+        #     return
+
+        # if isinstance(key, ndarray):
+        #     key = key._as_nd_ndarray()
+        # elif isinstance(key, tuple):
+        #     key = [_get_index(idx) for idx in key]
+        #     key = tuple(key)
+        # elif isinstance(key, list):
+        #     key = [_get_index(idx) for idx in key]
+        # elif sys.version_info[0] > 2 and isinstance(key, range):
+        #     key = _get_index(key)
+        # self._as_nd_ndarray().__setitem__(key, value)
         if self.ndim == 0:
             if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
-        if isinstance(value, ndarray):
-            value = value._as_nd_ndarray()
-        # TODO(junwu): Better handling of this situation
-        if isinstance(key, tuple) and len(key) == 0:
-            self._as_nd_ndarray().__setitem__(slice(None), value)
-            return
+            # # TODO(xinyge): need to add special handling here. 
+            full(shape=self.shape, fill_value=float(value), ctx=self.context,
+                 dtype=self.dtype, out=self)
+        else:
+            key = _indexing_key_expand_implicit_axes(key, self.shape)
+            slc_key = tuple(idx for idx in key if idx is not None)
 
-        if isinstance(key, ndarray):
-            key = key._as_nd_ndarray()
-        elif isinstance(key, tuple):
-            key = [_get_index(idx) for idx in key]
-            key = tuple(key)
-        elif isinstance(key, list):
-            key = [_get_index(idx) for idx in key]
-        elif sys.version_info[0] > 2 and isinstance(key, range):
-            key = _get_index(key)
-        self._as_nd_ndarray().__setitem__(key, value)
+            if len(slc_key) < self.ndim:
+                raise RuntimeError(
+                    'too few indices after normalization: expected `ndim` ({}) '
+                    'but got {}. This is a bug, please report it!'
+                    ''.format(self.ndim, len(slc_key))
+                )
+            elif len(slc_key) > self.ndim and self.ndim != 0:
+                raise IndexError(
+                    'too many indices ({}) for array with {} dimensions'
+                    ''.format(len(slc_key), self.ndim)
+                )
+            indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
+            if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
+                self._set_nd_basic_indexing(slc_key, value)
+            elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+                self._set_nd_advanced_indexing(slc_key, value)
+            else:
+                raise ValueError(
+                    'Indexing NDArray with index {} of type {} is not supported'
+                    ''.format(key, type(key))
+                )
+
+    def _prepare_value_nd(self, value, new_axes, bcast_shape):
+        """Return a broadcast `NDArray` with same context and dtype as ``self``.
+        Before broadcasting, ``new_axes`` of length 1 will be added to
+        ``value``. This is done in contrast to blindly reshaping based on
+        ``bcast_shape``, since the latter would silently ignore wrongly shaped
+        ``value`` arrays, e.g. ``nd.zeros((2, 3))[:, :1] = nd.ones(2)``.
+        """
+        # TODO(xinyge): currently do not support NDArray as assignment. 
+        if isinstance(value, numeric_types):
+            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+            new_axes = []  # ignore for scalar
+        elif isinstance(value, self.__class__):
+            value_nd = value.as_in_context(self.context)
+            if value_nd.dtype != self.dtype:
+                value_nd = value_nd.astype(self.dtype)
+        else:
+            try:
+                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+            except:
+                raise TypeError('mxnet.np.ndarray does not support assignment with non-array-like '
+                                'object {} of type {}'.format(value, type(value)))
+
+        # First reshape `value_nd` to a new shape that incorporates existing
+        # axes, new axes and broadcasting axes in the right way.
+        tmp_shape = _shape_for_bcast(
+            value_nd.shape, target_ndim=len(bcast_shape), new_axes=new_axes
+        )
+        value_nd = value_nd.reshape(tmp_shape)
+
+        if value_nd.shape != bcast_shape:
+            value_nd = value_nd.broadcast_to(bcast_shape)
+        return value_nd
+
+    # def _set_nd_basic_indexing(self, key, value):
+    #     """This function indexes ``self`` with a tuple of ``slice`` objects only."""
+    #     for idx in key:
+    #         if not isinstance(idx, (py_slice, integer_types)):
+    #             raise RuntimeError(
+    #                 '`key` may only contain `slice` or integer objects in the '
+    #                 'basic implementation, got object of type {}. '
+    #                 'This is a bug, please report it!'
+    #                 ''.format(type(idx)))
+    #     int_axes = [
+    #         ax for ax in range(len(key)) if isinstance(key[ax], integer_types)
+    #     ]
+    #     begin, end, step = self._basic_indexing_key_to_begin_end_step(
+    #         key, self.shape, keep_none=False
+    #     )
+    #     indexed_shape = tuple(
+    #         _get_dim_size(b, e, s) for b, e, s in zip(begin, end, step)
+    #     )
+    #     can_assign_directly = (
+    #         (indexed_shape == self.shape) and all(s > 0 for s in step)
+    #     )
+    #     begin, end, step = self._basic_indexing_key_to_begin_end_step(
+    #         key, self.shape, keep_none=True
+    #     )
+
+    #     if can_assign_directly:
+    #         # Easy case, overwrite whole array.
+    #         if isinstance(value, self.__class__):
+    #             if value.handle is not self.handle:
+    #                 # Need to do this before `broadcast_to`.
+    #                 tmp_shape = _shape_for_bcast(
+    #                     value.shape, target_ndim=self.ndim, new_axes=int_axes
+    #                 )
+    #                 value = value.reshape(tmp_shape)
+
+    #                 if value.shape != self.shape:
+    #                     value = value.broadcast_to(self.shape)
+    #                 value.copyto(self)
+
+    #         elif isinstance(value, numeric_types):
+    #             self.full(
+    #                 shape=self.shape, value=float(value), ctx=self.context,
+    #                 dtype=self.dtype, out=self
+    #             )
+
+    #         elif isinstance(value, (np.ndarray, np.generic)):
+    #             tmp_shape = _shape_for_bcast(
+    #                 value.shape, target_ndim=self.ndim, new_axes=int_axes
+    #             )
+    #             value = value.reshape(tmp_shape)
+
+    #             if isinstance(value, np.generic) or value.shape != self.shape:
+    #                 value = np.broadcast_to(value, self.shape)
+    #             self._sync_copyfrom(value)
+    #         else:
+    #             # Other array-like
+    #             value_nd = self._prepare_value_nd(
+    #                 value, new_axes=int_axes, bcast_shape=self.shape
+    #              )
+    #             value_nd.copyto(self)
+
 
     def __add__(self, other):
         """x.__add__(y) <=> x + y"""
@@ -764,7 +893,7 @@ class ndarray(NDArray):
         ``self.shape`` should be the same. This function copies the value from
         ``self`` to ``other``.
 
-        If ``other`` is a context, a new ``NDArray`` will be first created on
+        If ``other`` is a context, a new ``np.ndarray`` will be first created on
         the target context, and the value of ``self`` is copied.
 
         Parameters
@@ -789,9 +918,17 @@ class ndarray(NDArray):
         array([[ 1.,  1.,  1.],
                [ 1.,  1.,  1.]], dtype=float32)
         """
+        # TODO(xinyge): check doc
         if isinstance(other, ndarray):
-            other = other._as_nd_ndarray()
-        return self._as_nd_ndarray().copyto(other).as_np_ndarray()
+            if other.handle is self.handle:
+                warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
+                return False
+            return _npi.copyto(self, out=other)
+        elif isinstance(other, Context):
+            hret = ndarray(_new_alloc_handle(self.shape, other, True, self.dtype))
+            return _npi.copyto(self, out=hret)
+        else:
+            raise TypeError('copyto does not support type ' + str(type(other)))
 
     def asscalar(self):
         # TODO(xinyge): Add documentation; in NumPy 1.16 this is deprecated.
@@ -959,6 +1096,18 @@ class ndarray(NDArray):
         this array as data.
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute slice_like')
+
+    def slice_assign_scalar(self, value, begin, end, step):
+        """
+        TODO(xinyge): add doc here
+        """
+        return _npi.slice_assign_scalar(self, value, begin=begin, end=end, step=step, out=self)
+
+    def slice_assign(self, rhs, begin, end, step):
+        """
+        TODO(xinyge): add doc here
+        """
+        return _npi.slice_assign(self, rhs, begin=begin, end=end, step=step, out=self)
 
     def take(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`take`.
@@ -1494,6 +1643,12 @@ class ndarray(NDArray):
     def broadcast_like(self, other):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
 
+    def _full(self, value):
+        """
+        Currently for internal use only. Implemented for __setitem__.
+        Assign to self an array of self's same shape and type, filled with value.
+        """
+        return _mx_nd_np.full(self.shape, value, ctx=self.context, dtype=self.dtype, out=self)
 
     @property
     def shape(self):
@@ -1635,6 +1790,14 @@ def ones(shape, dtype=None, **kwargs):
         Array of zeros with the given shape, dtype, and ctx.
     """
     return _mx_nd_np.ones(shape, dtype, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def full(shape, fill_value, dtype=None, ctx=None, out=None):
+    """
+    # TODO(xinyge) add and check doc here
+    """
+    return _mx_nd_np.full(shape, fill_value, ctx=ctx, dtype=dtype, out=out)
 
 
 @set_module('mxnet.numpy')
