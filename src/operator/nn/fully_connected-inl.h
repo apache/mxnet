@@ -51,7 +51,8 @@ enum FullyConnectedOpOutputs {kOut};
 enum FullyConnectedGradGradOutputs {
   kOyGrad,
   kXGradGrad,
-  kWGradGrad
+  kWGradGrad,
+  kOGradGrad
 };
 enum Inputs {
   kOxGrad,
@@ -297,6 +298,7 @@ void FullyConnectedGradCompute(const nnvm::NodeAttrs& attrs,
 // o_y_grad : gradient of o_y
 // x_grad_grad : o_y *  o_w_grad
 // w_grad_grad : o_y.T * o_x_grad
+// b_grad_grad: if param.no_bias is false
 //
 // For implementation details see this PR: https://github.com/apache/incubator-mxnet/pull/14779
 
@@ -324,20 +326,24 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *stream = ctx.get_stream<xpu>();
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const size_t num_inputs = param.no_bias ? 3U : 4U;
-  CHECK_EQ(inputs.size(), num_inputs);  // o_x_grad, o_w_grad, o_y
-  CHECK_EQ(outputs.size(), 3U);
-  CHECK_EQ(req.size(), 3U);
+  // outputs are: o_x_grad, o_w_grad, o_y   || o_x_grad, o_w_grad, o_b_grad, o_y
+  const size_t num_outputs = param.no_bias ? 3U : 4U;
+  CHECK_EQ(inputs.size(), num_inputs);
+  CHECK_EQ(outputs.size(), num_outputs);
+  CHECK_EQ(req.size(), num_outputs);
 
   // inputs
   Tensor<xpu, 2, DType> o_x_grad;
   Tensor<xpu, 2, DType> o_w_grad;
   Tensor<xpu, 2, DType> o_y;
-  Tensor<xpu, 2, DType> o_b_grad;
+  // unused
+  // Tensor<xpu, 1, DType> o_b_grad;
 
   // outputs
   Tensor<xpu, 2, DType> o_y_grad;
   Tensor<xpu, 2, DType> x_grad_grad;
   Tensor<xpu, 2, DType> w_grad_grad;
+  Tensor<xpu, 1, DType> b_grad_grad;
   size_t o_y_idx = std::numeric_limits<size_t>::max();
   if (param.no_bias)
     o_y_idx = kOy;
@@ -358,7 +364,10 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream);
   linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream);
   if (!param.no_bias) {
-    // TODO(larroy)
+    // The second order gradient for b doesn't depend on x or w. Thus we set it to 0.
+    b_grad_grad = outputs.at(kOGradGrad).get<xpu, 1, DType>(stream);
+    TBlob b_grad_grad_blob = TBlob(b_grad_grad);
+    Fill(stream, b_grad_grad_blob, kWriteTo, static_cast<DType>(0));
   }
 }
 
