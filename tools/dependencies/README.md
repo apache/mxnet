@@ -45,7 +45,7 @@ This issue appeared in the OSX build with XCode version 8.0 above (reproduced on
 
 # Dependency Update Runbook
 
-MXNet is built on top of many dependencies. Managing those dependencies could be a big headache. This goal of this document is to give a overview of those dependencies and how to upgrade when new version of those are rolled out.
+MXNet is built on top of many dependencies. Managing these dependencies could be a big headache. This goal of this document is to give a overview of those dependencies and how to upgrade when new version of those are rolled out.
 
 ## Overview
 
@@ -82,8 +82,12 @@ The dependencies could be categorized by several groups: BLAS libraries, CPU-bas
 
 ### CUDA, cuDNN, NCCL
 #### 1. Environment Setup
+We will install all the prerequsite software.
+We demonstrate with CUDA10/cuDNN7.5/NCCL 2.4.2.
+You might want to change these versions to suit your needs.
+
 ```
-# Take Ubuntu 16.04 for example
+# Take Ubuntu 16.04 for example.
 sudo apt update
 sudo apt-get install -y git \
     cmake \
@@ -112,7 +116,6 @@ sudo apt-get install -y git \
 # Take CUDA 10 for example
 wget https://developer.nvidia.com/compute/cuda/10.0/Prod/local_installers/cuda_10.0.130_410.48_linux
 chmod +x cuda_10.0.130_410.48_linux && sudo ./cuda_10.0.130_410.48_linux
-# Installation except:
 # Install NVIDIA Accelerated Graphics Driver for Linux-x86_64 410.48?
 # (y)es/(n)o/(q)uit: y
 # 
@@ -174,7 +177,8 @@ sudo apt update
 sudo apt install libnccl2 libnccl-dev
 # we will check the NCCL version later
 ```
-#### 2. Build 
+#### 2. Build
+We will build MXNet with statically linked dependencies.
 ```
 # Clone MXNet repo
 git clone --recursive https://github.com/apache/incubator-mxnet.git
@@ -211,7 +215,7 @@ nosetests --verbose tests/python/gpu/test_nccl.py
 OK
 ```
 #### 3. Performance Sanity Check
-We will test against 3 basic models
+We will test against 3 basic models.
 ###### ResNet50 with ImageNet
 ```
 # Download the ImageNet on http://image-net.org/download and make record file
