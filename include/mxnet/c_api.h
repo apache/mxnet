@@ -506,6 +506,15 @@ MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t 
  */
 MXNET_DLL int MXGetVersion(int *out);
 
+/*!
+ * \brief Load TVM operator from the binary library
+ * \param libpath TVM operators lib file
+ * \return 0 when success, -1 when failure happens
+ */
+#if MXNET_USE_TVM_OP
+MXNET_DLL int MXLoadTVMOp(const char *libpath);
+#endif  // MXNET_USE_TVM_OP
+
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion
@@ -1764,6 +1773,55 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_ha
                                const mx_uint num_offline, const char **offline_params,
                                const char *quantized_dtype, const bool calib_quantize);
 
+/*!
+ * \brief Convert a symbol into a mixed precision symbol with cast operators for target dtype casting
+ * \param sym_handle symbol to be converted
+ * \param ret_sym_handle mixed precision symbol result
+ * \param num_args number of arguments for known dtypes
+ * \param arg_type_data arg types of the arguments
+ * \param target_dtype target_dtype for mixed precision symbol
+ * \param cast_optional_params whether to cast optional params to target_dtype
+ * \param num_target_dtype_op_names number of ops to be casted to target_dtype
+ * \param num_fp32_op_names number of ops to be casted to FP32
+ * \param num_widest_dtype_op_names number of ops to be casted to widest dtype
+ * \param num_conditional_fp32_op_names number of ops to be casted to FP32 based on a condition
+ * \param num_excluded_symbols number of symbols to be excluded from casting
+ * \param num_model_params number of model parameters
+ * \param num_widest_dtype_op_names number of ops to be casted to the widest dtype
+ * \param num_conditional_fp32_op_names number of ops to be cast to fp32 based on precision
+ * \param target_dtype_op_names op names to be casted to target_dtype
+ * \param fp32_op_names op names to be casted to fp32
+ * \param widest_dtype_op_names names to be casted to widest dtype
+ * \param conditional_fp32_op_names names to be casted to FP32 conditionally
+ * \param excluded_symbols symbol names to be excluded from casting
+ * \param param_names param names for conditional FP32 casting
+ * \param param_values param values for conditional FP32 casting
+ * \param arg_names argument names for which type information is provided
+ * \param model_param_names names for model parameters
+ */
+MXNET_DLL int MXReducePrecisionSymbol(SymbolHandle sym_handle,
+                                      SymbolHandle *ret_sym_handle,
+                                      mx_uint num_args,
+                                      const int* arg_type_data,
+                                      mx_uint num_ind_ptr,
+                                      const int* ind_ptr,
+                                      const int* target_dtype,
+                                      const int cast_optional_params,
+                                      const mx_uint num_target_dtype_op_names,
+                                      const mx_uint num_fp32_op_names,
+                                      const mx_uint num_widest_dtype_op_names,
+                                      const mx_uint num_conditional_fp32_op_names,
+                                      const mx_uint num_excluded_symbols,
+                                      const mx_uint num_model_params,
+                                      const char **target_dtype_op_names,
+                                      const char **fp32_op_names,
+                                      const char **widest_dtype_op_names,
+                                      const char **conditional_fp32_op_names,
+                                      const char **excluded_symbols,
+                                      const char **conditional_param_names,
+                                      const char **conditional_param_vals,
+                                      const char **model_param_names,
+                                      const char **arg_names);
 /*!
  * \brief Set calibration table to node attributes in the sym
  * \param sym_handle symbol whose node attributes are to be set by calibration table

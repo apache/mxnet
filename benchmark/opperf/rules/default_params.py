@@ -14,10 +14,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import sys
+
+# We will use all operators inside NDArray Module
+# If you want to run benchmark for all operators in different namespace,
+# for example mxnet.numpy.op, update here. All operators for benchmarks
+# will be picked up from this module
+MX_OP_MODULE = sys.modules["mxnet.ndarray.op"]
+
 
 """Default Input Tensor shapes to use for benchmarking"""
-
-""""""
 
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
@@ -50,7 +56,11 @@ DEFAULT_P_ND = [[0.4, 0.77]]
 
 # For reduction operators
 # NOTE: Data used is DEFAULT_DATA
-DEFAULT_AXIS = [(), 0, (0, 1)]
+DEFAULT_AXIS_SHAPE = [(), 0, (0, 1)]
+
+# For sorting and searching operators
+# NOTE: Data used is DEFAULT_DATA
+DEFAULT_AXIS = [0]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
@@ -70,6 +80,7 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "p": DEFAULT_P,
                    "k_nd": DEFAULT_K_ND,
                    "p_nd": DEFAULT_P_ND,
+                   "axis_shape": DEFAULT_AXIS_SHAPE,
                    "axis": DEFAULT_AXIS}
 
 # These are names of MXNet operator parameters that is of type NDArray.

@@ -340,7 +340,6 @@ FP16_FP32_FUNCS = [
     'take',
     'tanh',
     'tile',
-    'topk',
     'transpose',
     'trunc',
     'uniform',
@@ -463,6 +462,7 @@ FP32_FUNCS = [
     '_sparse_norm',
     '_sparse_rsqrt',
     'argsort',
+    'topk',
 
     # Neural network
     'SoftmaxOutput',
@@ -471,6 +471,7 @@ FP32_FUNCS = [
     'log_softmax',
     'InstanceNorm',
     'LayerNorm',
+    'GroupNorm',
     'L2Normalization',
     'LRN',
     'SoftmaxActivation',
@@ -600,6 +601,23 @@ WIDEST_TYPE_CASTS = [
     '_sparse_elemwise_mul',
     '_sparse_elemwise_sub',
     '_sparse_sum',
+
+    'random_pdf_gamma',
+    'random_pdf_exponential',
+    'random_pdf_uniform',
+    'random_pdf_negative_binomial',
+    'random_pdf_generalized_negative_binomial',
+    'random_pdf_dirichlet',
+    'random_pdf_normal',
+    'random_pdf_poisson',
+    '_random_pdf_gamma',
+    '_random_pdf_exponential',
+    '_random_pdf_uniform',
+    '_random_pdf_negative_binomial',
+    '_random_pdf_generalized_negative_binomial',
+    '_random_pdf_dirichlet',
+    '_random_pdf_normal',
+    '_random_pdf_poisson',
     ]
 
 LOSS_OUTPUT_FUNCTIONS = [

@@ -731,8 +731,13 @@ method forward(@args)
 method register(Str $container)
 {
     my $sub_name = $self->_class_name;
+    my $dest = $self->can('new');
+    my $func = sub {
+        splice @_, 0, 1, $self;
+        goto $dest;
+    };
     no strict 'refs';
-    *{$container.'_::'.$sub_name} = sub { shift; $self->new(@_) };
+    *{"$container\::$sub_name"} = $func;
 }
 
 =head2 summary

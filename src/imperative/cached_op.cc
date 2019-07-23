@@ -236,6 +236,7 @@ struct CachedOp::CachedOpState {
 
   std::vector<NDArray> buff;
   std::vector<NDArray*> arrays;
+  std::vector<NDArray*> arrays_with_in_out;
   std::vector<OpReqType> array_reqs;
 
   std::vector<OpStatePtr> op_states;
@@ -848,7 +849,8 @@ OpStatePtr CachedOp::StaticForward(
   // We are going to add input and output arrays to the array list.
   // The input and output arrays should only be valid for this run,
   // so we shouldn't modify the state's array list.
-  auto arrays = state.arrays;
+  state.arrays_with_in_out = state.arrays;
+  auto& arrays = state.arrays_with_in_out;
   if (config_.static_shape) {
     for (auto i : config_.param_indices) {
       auto nid = idx.input_nodes()[i];
@@ -1151,7 +1153,8 @@ void CachedOp::StaticBackward(
   // We are going to add input and output arrays to the array list.
   // The input and output arrays should only be valid for this run,
   // so we shouldn't modify the state's array list.
-  auto arrays = state.arrays;
+  state.arrays_with_in_out = state.arrays;
+  auto& arrays = state.arrays_with_in_out;
   for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
     auto eid = state.info.bwd_input_eid[i];
     if (eid == kEidNotExist) {

@@ -42,7 +42,7 @@ With Gluon API, you need to take care of three things to convert a model to supp
 1. Cast Gluon `Block`'s parameters and expected input type to float16 by calling the [cast](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.cast) method of the `Block` representing the network.
 
 ```python
-net = net.cast('float16')
+net.cast('float16')
 ```
 
 2. Ensure the data input to the network is of float16 type. If your `DataLoader` or `Iterator` produces output in another datatype, then you would have to cast your data. There are different ways you can do this. The easiest would be to use the [astype](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.astype) method of NDArrays.

@@ -24,10 +24,11 @@ With this utility, for each MXNet operator you can get the following details:
 **Timing**
 1. Forward execution time
 2. Backward execution time
-3. Time spent for memory management
 
 **Memory**
-1. Total memory allocated
+1. Average and Max memory allocated
+
+NOTE: This is the `pool memory`. It does not reflect the exact memory requested by the operator.
 
 # Motivation
 
@@ -45,8 +46,6 @@ Hence, in this utility, we will build the functionality to allow users and devel
 # How to use
 
 ## Prerequisites
-
-This utility uses MXNet profiler under the hood to fetch compute and memory metrics. Hence, you need to build MXNet with `USE_PROFILER=1` flag.
 
 Make sure to build the flavor of MXNet, for example - with/without MKL, with CUDA 9 or 10.1 etc., on which you would like to measure operator performance. Finally, you need to add path to your cloned MXNet repository to the PYTHONPATH.
 
