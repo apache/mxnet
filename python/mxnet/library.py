@@ -16,9 +16,36 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=arguments-differ
+"""Library management API of mxnet."""
+from __future__ import absolute_import
+import ctypes
+import os
+from .base import _LIB
+from .base import check_call
 
-import mxnet as mx
+def load_lib(path):
+    """Loads library dynamically.
 
-ctx = mx.context.load_acc('libmyacc.so')
-print(ctx)
+    Parameters
+    ---------
+    path : Path to library .so file
+
+    Returns
+    ---------
+    void
+    """
+    #check if path exists
+    if not os.path.exists(path):
+        print('load_lib path "%s" does NOT exist' % path)
+        return None
+    #check if path is to a file
+    if not os.path.isfile(path):
+        print('load_lib path "%s" is NOT a library file' % path)
+        return None
+
+    byt_obj = path.encode('utf-8')
+    chararr = ctypes.c_char_p(byt_obj)
+    check_call(_LIB.MXLoadLib(chararr))
+
+    return
+

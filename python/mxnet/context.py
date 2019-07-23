@@ -21,7 +21,6 @@ from __future__ import absolute_import
 import threading
 import warnings
 import ctypes
-import os
 from .base import classproperty, with_metaclass, _MXClassPropertyMetaClass
 from .base import _LIB
 from .base import check_call
@@ -72,7 +71,6 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
     _default_ctx = threading.local()
     devtype2str = {1: 'cpu', 2: 'gpu', 3: 'cpu_pinned', 5: 'cpu_shared'}
     devstr2type = {'cpu': 1, 'gpu': 2, 'cpu_pinned': 3, 'cpu_shared': 5}
-    acc_map = {}
     def __init__(self, device_type, device_id=0):
         if isinstance(device_type, Context):
             self.device_typeid = device_type.device_typeid
@@ -167,42 +165,6 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
 
 # initialize the default context in Context
 Context._default_ctx.value = Context('cpu', 0)
-
-
-def load_acc(path):
-    """Loads accelerator library and returns corresponding context.
-
-    Parameters
-    ----------
-    path : Path to accelerator library .so file
-
-    Returns
-    -------
-    context : Context
-    """
-    #check if path exists
-    if not os.path.exists(path):
-        print('load_acc path "%s" does NOT exist' % path)
-        return None
-    #check if path is to a file
-    if not os.path.isfile(path):
-        print('load_acc path "%s" is NOT a library file' % path)
-        return None
-
-    byt_obj = path.encode('utf-8')
-    chararr = ctypes.c_char_p(byt_obj)
-    dev_id = ctypes.c_int()
-    name = ctypes.create_string_buffer(100)
-
-    check_call(_LIB.MXLoadAccLib(chararr, ctypes.byref(dev_id), name))
-
-    dev_id = dev_id.value
-    name = name.value
-    Context.devtype2str[dev_id] = name
-    Context.devstr2type[name] = dev_id
-    Context.acc_map[dev_id] = (name, path)
-
-    return Context(name, 0)
 
 
 def cpu(device_id=0):

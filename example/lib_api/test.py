@@ -15,8 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all:
-	g++ -shared -fPIC myacc.cpp -o libmyacc.so -I ../../include/mxnet
+# coding: utf-8
+# pylint: disable=arguments-differ
 
-clean:
-	rm -rf libmyacc.so
+import mxnet as mx
+
+mx.library.load_lib('mylib.so')

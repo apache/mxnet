@@ -18,14 +18,20 @@
  */
 
 /*!
- *  Copyright (c) 2015 by Contributors
- * \file base.cc
- * \brief Defining map variables for the header file
+ * Copyright (c) 2015 by Contributors
+ * \file my_accel.cc
+ * \brief Sample library functions
  */
-#include <string>
-#include <map>
 
-#include "../../include/mxnet/base.h"
+#include <iostream>
+#include "lib_api.h"
 
-std::map<int, mxnet::AccContext> mxnet::Context::acc_map;
-std::map<std::string, int> mxnet::Context::acc_names;
+int initialize(int version) {
+  if (version >= 10400) {
+    std::cout << "MXNet version " << version << " supported" << std::endl;
+    return 1;
+  } else {
+    std::cout << "MXNet version " << version << " not supported" << std::endl;
+    return 0;
+  }  
+}

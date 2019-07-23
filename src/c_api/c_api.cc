@@ -45,6 +45,8 @@
 #include "mxnet/storage.h"
 #include "mxnet/libinfo.h"
 #include "mxnet/imperative.h"
+#include "mxnet/library.h"
+#include "mxnet/lib_api.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
@@ -87,13 +89,20 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
   *arg_descriptions = dmlc::BeginPtr(ret->ret_vec_charp) + (e->arguments.size() * 2);
   API_END();
 }
+
 // NOTE: return value is added in API_END
 
-int MXLoadAccLib(const char *path, int *id, char *name) {
+int MXLoadLib(const char *path) {
   API_BEGIN();
-  std::string tmp(path);
-  int dev_id = mxnet::Context::LoadAcc(tmp, name);
-  *id = dev_id;
+  void *lib = load_lib(path);
+  if(!lib)
+    LOG(FATAL) << "Unable to load library";
+
+  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(INITIALIZE_STR));
+  int version = MXNET_VERSION;
+  int flag = initialize(version);
+  if (!flag)
+    LOG(FATAL) << "Library failed to initialize";
   API_END();
 }
 

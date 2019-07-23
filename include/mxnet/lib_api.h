@@ -19,15 +19,26 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file my_accel.cc
- * \brief Sample library functions
+ * \file lib_api.h
+ * \brief APIs to interact with libraries
  */
+#ifndef MXNET_LIB_API_H_
+#define MXNET_LIB_API_H_
 
-#include "mxnet_acc.h"
-#include <string>
-#include <cstring>
+#include <cstdlib>
+#include "../dlpack/dlpack.h"
 
-void getAccName(char* s) {
-  std::string name = "myacc";
-  strcpy(s,name.c_str());
+#define INITIALIZE_STR "initialize"
+typedef int (*initialize_t)(int);
+
+extern "C" {
+    /*
+    Function: initialize
+    Parameters:
+    - int : MXNet version passed to library
+    Returns: Success/Failure code
+             Failure code if library cannot be used with passed MXNet version
+    */
+    int initialize(int);
 }
+#endif  // MXNET_LIB_API_H_

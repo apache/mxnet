@@ -227,13 +227,11 @@ MXNET_DLL const char *MXGetLastError();
 //-------------------------------------
 
 /*!
- * \brief Get the context name and id for the accelerator library
+ * \brief Load library dynamically
  * \param path to the library .so file
- * \param id pointer to accelerator id
- * \param name pointer to context name
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXLoadAccLib(const char *path, int *id, char *name);
+MXNET_DLL int MXLoadLib(const char *path);
 
 /*!
  * \brief Get list of features supported on the runtime
