@@ -419,7 +419,7 @@ inline void PushFCompute(const FCompute& fn,
       // mapping from index in input_blobs to index in pre_temp_dst
       std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
 #if MXNET_USE_MKLDNN == 1
-      InvalidateOutputs(outputs, req);
+      if (exec_type != ExecType::kCrossDeviceCopy) InvalidateOutputs(outputs, req);
 #endif
       std::vector<OpReqType> tmp_req = req;
       // setup blobs
@@ -461,7 +461,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
   const auto& run = [=](RunContext rctx) {
       OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
 #if MXNET_USE_MKLDNN == 1
-      InvalidateOutputs(outputs, req);
+      if (exec_type != ExecType::kCrossDeviceCopy) InvalidateOutputs(outputs, req);
 #endif
       fn(attrs, opctx, inputs, req, outputs);
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync && !rctx.is_bulk) {
@@ -508,7 +508,7 @@ inline void PushOperator(const OpStatePtr& state,
                           engine::CallbackOnComplete on_complete) {
       OpContext opctx{need_grad, is_train, rctx, on_complete, requested};
 #if MXNET_USE_MKLDNN == 1
-      InvalidateOutputs(outputs, req);
+      if (exec_type != ExecType::kCrossDeviceCopy) InvalidateOutputs(outputs, req);
 #endif
       fcompute_ex(state, opctx, inputs, req, outputs);
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync
@@ -547,7 +547,7 @@ inline void PushOperator(const OpStatePtr& state,
         // mapping from index in input_blobs to index in pre_temp_dst
         std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
 #if MXNET_USE_MKLDNN == 1
-        InvalidateOutputs(outputs, req);
+        if (exec_type != ExecType::kCrossDeviceCopy) InvalidateOutputs(outputs, req);
 #endif
         std::vector<OpReqType> tmp_req = req;
         // populate input blobs and output blobs
