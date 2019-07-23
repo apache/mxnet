@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument, unnecessary-pass
+# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument, unnecessary-pass, wrong-import-position
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
@@ -734,3 +734,8 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+
+from .runtime import Features
+if Features().is_enabled("TVM_OP"):
+    _LIB_TVM_OP = libinfo.find_lib_path("libtvmop")
+    check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))

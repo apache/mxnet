@@ -278,7 +278,7 @@ class KVStoreLocal : public KVStore {
                                 std::vector<std::vector<NDArray>> *grouped_vals,
                                 bool ignore_sparse) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const NDArray& nd, bool ignore_sparse) -> bool {
+    auto validator = [](const int key, const NDArray& nd, bool ignore_sparse) -> bool {
       CHECK(!ignore_sparse) << "Cannot ignore sparse arrays for push";
       auto stype = nd.storage_type();
       // valid NDArray
@@ -323,7 +323,7 @@ class KVStoreLocal : public KVStore {
                                    std::vector<std::vector<RSPVal>> *grouped_vals,
                                    bool ignore_sparse) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const RSPVal& val_rowid, bool ignore_sparse) -> bool {
+    auto validator = [](const int key, const RSPVal& val_rowid, bool ignore_sparse) -> bool {
       CHECK(!ignore_sparse) << "Cannot ignore sparse arrays in row_sparse_pull";
       auto val_stype = val_rowid.first->storage_type();
       auto rowid_stype = val_rowid.second.storage_type();

@@ -506,6 +506,15 @@ MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t 
  */
 MXNET_DLL int MXGetVersion(int *out);
 
+/*!
+ * \brief Load TVM operator from the binary library
+ * \param libpath TVM operators lib file
+ * \return 0 when success, -1 when failure happens
+ */
+#if MXNET_USE_TVM_OP
+MXNET_DLL int MXLoadTVMOp(const char *libpath);
+#endif  // MXNET_USE_TVM_OP
+
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion

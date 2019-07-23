@@ -23,17 +23,17 @@
 /julia/                           @iblis17
 
 # C++ base
-/src/kvstore/     @rahul003 @anirudh2290 @eric-haibin-lin
+/src/kvstore/     @rahul003 @anirudh2290 @eric-haibin-lin @apeforest
 /include/         @anirudh2290 @pllarroy @eric-haibin-lin
-/src/c_api/       @anirudh2290 @eric-haibin-lin
+/src/c_api/       @anirudh2290 @eric-haibin-lin @apeforest
 /src/common/      @anirudh2290
-/src/engine/      @anirudh2290 @eric-haibin-lin
-/src/executor/    @anirudh2290 @eric-haibin-lin
-/src/imperative/  @anirudh2290 @eric-haibin-lin
-/src/io/          @anirudh2290 @eric-haibin-lin
-/src/ndarray/     @anirudh2290 @eric-haibin-lin
-/src/nnvm/        @anirudh2290 @eric-haibin-lin
-/src/operator/    @anirudh2290 @eric-haibin-lin
+/src/engine/      @anirudh2290 @eric-haibin-lin @apeforest
+/src/executor/    @anirudh2290 @eric-haibin-lin @apeforest
+/src/imperative/  @anirudh2290 @eric-haibin-lin @apeforest
+/src/io/          @anirudh2290 @eric-haibin-lin @apeforest
+/src/ndarray/     @anirudh2290 @eric-haibin-lin @apeforest
+/src/nnvm/        @anirudh2290 @eric-haibin-lin @apeforest
+/src/operator/    @anirudh2290 @eric-haibin-lin @apeforest
 /src/profiler/    @anirudh2290 @eric-haibin-lin
 /src/storage/     @anirudh2290 @eric-haibin-lin
 /tests/cpp/       @anirudh2290
