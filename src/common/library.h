@@ -22,8 +22,8 @@
  * \file library.h
  * \brief Defining accelerator loading functions
  */
-#ifndef MXNET_LIBRARY_H_
-#define MXNET_LIBRARY_H_
+#ifndef MXNET_COMMON_LIBRARY_H_
+#define MXNET_COMMON_LIBRARY_H_
 
 #include <dlfcn.h>
 #include <iostream>
@@ -53,4 +53,4 @@ T get_func(void *lib, char *func_name) {
   return func;
 }
 
-#endif  // MXNET_LIBRARY_H_
+#endif  // MXNET_COMMON_LIBRARY_H_
