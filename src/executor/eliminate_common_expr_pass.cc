@@ -57,7 +57,8 @@ bool NodeEqual(const Node * n, const Node * m) {
   if (n->attrs.dict != m->attrs.dict) return false;
 
   // If an op is marked explicitly as having deterministic output
-  static auto& deterministic_output = Op::GetAttr<FHasDeterministicOutput>("FHasDeterministicOutput");
+  static auto& deterministic_output =
+    Op::GetAttr<FHasDeterministicOutput>("FHasDeterministicOutput");
   if (deterministic_output.get(n->op(), false)) return true;
 
   // Stateful ops cannot be be equal to each other
@@ -81,7 +82,8 @@ bool NodeEqual(const Node * n, const Node * m) {
 
 std::vector<std::pair<NodePtr, NodePtr> > GetCommonNodes(const Graph& g) {
   std::vector<std::pair<NodePtr, NodePtr> > ret;
-  std::map<std::vector<std::pair<const Node*, uint32_t> >, std::vector<const NodePtr*> > grouped_nodes;
+  std::map<std::vector<std::pair<const Node*, uint32_t> >,
+                       std::vector<const NodePtr*> > grouped_nodes;
   nnvm::DFSVisit(g.outputs, [&grouped_nodes](const NodePtr& n) {
     if (n->inputs.size() != 0) {
       grouped_nodes[ConvertInputs(n->inputs)].push_back(&n);
@@ -107,7 +109,8 @@ std::vector<std::pair<NodePtr, NodePtr> > GetCommonNodes(const Graph& g) {
   return ret;
 }
 
-void EliminateCommonNodes(Graph * g, const std::vector<std::pair<NodePtr, NodePtr> >& common_nodes) {
+void EliminateCommonNodes(Graph * g,
+                          const std::vector<std::pair<NodePtr, NodePtr> >& common_nodes) {
   for (const auto& p : common_nodes) {
     std::vector<NodePtr> nodes_to_change;
     const NodePtr& src = p.first;
