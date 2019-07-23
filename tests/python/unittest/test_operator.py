@@ -2001,9 +2001,10 @@ def test_depthwise_convolution():
 
 @with_seed()
 def test_convolution_independent_gradients():
-    ctx = default_context()
-    if ctx.device_type == "gpu":
-        return
+    # NOTE(zixuanweeei): Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/15603.
+    # GPU context will be enabled after figuring out the possible issue tracked at
+    # https://github.com/apache/incubator-mxnet/issues/15638.
+    ctx = mx.cpu()
     atol = 1.0e-3
     rtol = 1.0e-3
     reqs = ["null", "write", "add"]
