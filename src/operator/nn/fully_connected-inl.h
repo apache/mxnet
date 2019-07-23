@@ -52,7 +52,7 @@ enum FullyConnectedGradGradOutputs {
   kOyGrad,
   kXGradGrad,
   kWGradGrad,
-  kOGradGrad
+  kBGradGrad
 };
 enum Inputs {
   kOxGrad,
@@ -327,7 +327,8 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const size_t num_inputs = param.no_bias ? 3U : 4U;
   // outputs are: o_x_grad, o_w_grad, o_y   || o_x_grad, o_w_grad, o_b_grad, o_y
-  const size_t num_outputs = param.no_bias ? 3U : 4U;
+  //const size_t num_outputs = param.no_bias ? 3U : 4U;
+  const size_t num_outputs = 3U;
   CHECK_EQ(inputs.size(), num_inputs);
   CHECK_EQ(outputs.size(), num_outputs);
   CHECK_EQ(req.size(), num_outputs);
@@ -341,6 +342,7 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
 
   // outputs
   Tensor<xpu, 2, DType> o_y_grad;
+  TBlob o_y_grad_blob = outputs[kOyGrad];
   Tensor<xpu, 2, DType> x_grad_grad;
   Tensor<xpu, 2, DType> w_grad_grad;
   Tensor<xpu, 1, DType> b_grad_grad;
@@ -353,22 +355,27 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
     o_x_grad = FlattenAs2DHead<xpu, DType>(inputs[kOxGrad], ctx);
     o_w_grad = inputs[kOwGrad].get<xpu, 2, DType>(stream);
     o_y = FlattenAs2DHead<xpu, DType>(inputs[o_y_idx], ctx);
+    x_grad_grad = FlattenAs2DHead<xpu, DType>(outputs[kXGradGrad], ctx);
+    w_grad_grad = FlattenAs2DHead<xpu, DType>(outputs[kWGradGrad], ctx);
   } else {
     o_x_grad = FlattenAs2DTail<xpu, DType>(inputs[kOxGrad], ctx);
     o_w_grad = FlattenAs2DTail<xpu, DType>(inputs[kOwGrad], ctx);
     o_y = inputs[o_y_idx].get<xpu, 2, DType>(stream);
-    o_y_grad = outputs[kOyGrad].get<xpu, 2, DType>(stream);
     x_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[kXGradGrad], ctx);
     w_grad_grad = FlattenAs2DTail<xpu, DType>(outputs[kWGradGrad], ctx);
   }
   linalg_gemm(o_y, o_w_grad, x_grad_grad, false, false, stream);
   linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream);
+  // 3rd order not supported
+  Fill(stream, o_y_grad_blob, kWriteTo, static_cast<DType>(0));
+  /* TODO(larroy) bias is not supported yet as there's no bias input to backward
   if (!param.no_bias) {
     // The second order gradient for b doesn't depend on x or w. Thus we set it to 0.
-    b_grad_grad = outputs.at(kOGradGrad).get<xpu, 1, DType>(stream);
+    b_grad_grad = outputs.at(kBGradGrad).get<xpu, 1, DType>(stream);
     TBlob b_grad_grad_blob = TBlob(b_grad_grad);
     Fill(stream, b_grad_grad_blob, kWriteTo, static_cast<DType>(0));
   }
+  */
 }
 
 

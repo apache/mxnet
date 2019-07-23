@@ -351,7 +351,7 @@ class NDArrayGenerator(object):
 
     @staticmethod
     def gen(dimensions):
-        shape = rand_shape_nd(dimensions)
+        shape = rand_shape_nd(dimensions, 4)
         nelems = reduce(mul, shape)
         x = nd.arange(nelems).reshape(shape)
         return x
@@ -415,10 +415,81 @@ def test_dense_backward_flatten():
         ok_(w_grad_grad.shape == w.shape)
         ok_(x_grad.shape == x.shape)
         ok_(x_grad_grad.shape == x.shape)
+        #print("x_grad:\n{}".format(x_grad));
+        #print("x_grad_e:\n{}".format(x_grad_e));
+        #print("x_grad_grad:\n{}".format(x_grad_grad));
+        #print("x_grad_grad_e:\n{}".format(x_grad_grad_e));
+        #print("w_grad:\n{}".format(w_grad));
+        #print("w_grad_e:\n{}".format(w_grad_e));
+        #print("w_grad_grad:\n{}".format(w_grad_grad));
+        #print("w_grad_grad_e:\n{}".format(w_grad_grad_e));
         w_grad_check = same(flatten2d_right(w_grad), flatten2d_right(w_grad_e))
         w_grad_grad_check = same(flatten2d_right(w_grad_grad), flatten2d_right(w_grad_grad_e))
         x_grad_check = same(flatten2d_right(x_grad), flatten2d_right(x_grad_e))
         x_grad_grad_check = same(flatten2d_right(x_grad_grad), flatten2d_right(x_grad_grad_e))
+        ok_(x_grad_check)
+        ok_(w_grad_check)
+        ok_(x_grad_grad_check)
+        ok_(w_grad_grad_check)
+
+@with_seed()
+def test_dense_backward_no_flatten():
+    print("2nd order gradient for Fully Connected, flatten=False")
+    for x in NDArrayGenerator(5,3):
+        hidden = random.randrange(1, 4)
+        net = gluon.nn.Sequential()
+        with net.name_scope():
+            net.add(gluon.nn.Dense(hidden, flatten=False))
+        net.initialize(mxnet.initializer.Constant(.5))
+        x.attach_grad()
+        with autograd.record():
+            y = net.forward(x)
+            o_y = arange_shape_like(y)  # head gradient of y
+            params = [p.data() for p in net.collect_params().values()]
+            w = params[0]
+            b = params[1]
+            print("Checking y ({}) = x({}) * w^T({}) + b({})".format(y.shape, x.shape, w.shape, b.shape))
+            x_grad = autograd.grad(heads=y, variables=x, head_grads=o_y,
+                                   create_graph=True, retain_graph=True)[0]
+            o_x_grad = arange_shape_like(x_grad)
+            w_grad_grad = autograd.grad(heads=x_grad, variables=w,
+                                        head_grads=o_x_grad, create_graph=False)[0]
+            w_grad = autograd.grad(heads=y, variables=w, head_grads=o_y,
+                                   create_graph=True, retain_graph=True)[0]
+            o_w_grad = arange_shape_like(w_grad)
+            x_grad_grad = autograd.grad(heads=w_grad, variables=x,
+                                        head_grads=o_w_grad, create_graph=False)[0]
+        #print("x_grad_shape:\n{}".format(x_grad.shape));
+        #print("x_grad_grad.shape:\n{}".format(x_grad_grad.shape));
+        #print("w_grad.shape:\n{}".format(w_grad.shape));
+        #print("w_grad_grad.shape:\n{}".format(w_grad_grad.shape));
+        #print("o_x_grad.shape:\n{}".format(o_x_grad.shape));
+        #print("o_w_grad.shape:\n{}".format(o_w_grad.shape));
+        # Expected results
+        o_y = flatten2d_left(o_y)
+        x = flatten2d_left(x)
+        o_x_grad = flatten2d_left(o_x_grad)
+        o_w_grad = flatten2d_left(o_w_grad)
+        w_grad_e = nd.dot(o_y, x, transpose_a=True)
+        w_grad_grad_e = nd.dot(o_y, o_x_grad, transpose_a=True)
+        x_grad_e = nd.dot(o_y, w)
+        x_grad_grad_e = nd.dot(o_y, o_w_grad)
+        #print("x_grad_e.shape:\n{}".format(x_grad_e.shape));
+        #print("x_grad_grad_e.shape:\n{}".format(x_grad_grad_e.shape));
+        #print("w_grad_e.shape:\n{}".format(w_grad_e.shape));
+        #print("w_grad_grad_e.shape:\n{}".format(w_grad_grad_e.shape));
+        #print("x_grad:\n{}".format(x_grad));
+        #print("x_grad_e:\n{}".format(x_grad_e));
+        #print("x_grad_grad:\n{}".format(x_grad_grad));
+        #print("x_grad_grad_e:\n{}".format(x_grad_grad_e));
+        #print("w_grad:\n{}".format(w_grad));
+        #print("w_grad_e:\n{}".format(w_grad_e));
+        #print("w_grad_grad:\n{}".format(w_grad_grad));
+        #print("w_grad_grad_e:\n{}".format(w_grad_grad_e));
+        w_grad_check = same(flatten2d_left(w_grad), flatten2d_left(w_grad_e))
+        w_grad_grad_check = same(flatten2d_left(w_grad_grad), flatten2d_left(w_grad_grad_e))
+        x_grad_check = same(flatten2d_left(x_grad), flatten2d_left(x_grad_e))
+        x_grad_grad_check = same(flatten2d_left(x_grad_grad), flatten2d_left(x_grad_grad_e))
         ok_(x_grad_check)
         ok_(w_grad_check)
         ok_(x_grad_grad_check)
