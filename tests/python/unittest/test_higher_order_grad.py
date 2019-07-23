@@ -381,6 +381,7 @@ def flatten2d_left(x):
 
 @with_seed()
 def test_dense_backward_flatten():
+    print("2nd order gradient for Fully Connected, flatten=True")
     for x in NDArrayGenerator(4,2):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
@@ -394,24 +395,34 @@ def test_dense_backward_flatten():
             params = [p.data() for p in net.collect_params().values()]
             w = params[0]
             b = params[1]
+            print("Checking y ({}) = x({}) * w^T({}) + b({})".format(y.shape, x.shape, w.shape, b.shape))
             x_grad = autograd.grad(heads=y, variables=x, head_grads=o_y,
                                    create_graph=True, retain_graph=True)[0]
             o_x_grad = arange_shape_like(x_grad)
-            x_grad_grad = autograd.grad(heads=x_grad, variables=w,
+            w_grad_grad = autograd.grad(heads=x_grad, variables=w,
                                         head_grads=o_x_grad, create_graph=False)[0]
             w_grad = autograd.grad(heads=y, variables=w, head_grads=o_y,
                                    create_graph=True, retain_graph=True)[0]
             o_w_grad = arange_shape_like(w_grad)
-            w_grad_grad = autograd.grad(heads=w_grad, variables=x,
+            x_grad_grad = autograd.grad(heads=w_grad, variables=x,
                                         head_grads=o_w_grad, create_graph=False)[0]
-        expect_w_grad = nd.dot(o_y, x, transpose_a=True)
-        expect_w_grad_grad = nd.dot(o_y, o_x_grad, transpose_a=True)
-        expect_x_grad = nd.dot(o_y, w)
-        expect_x_grad_grad = nd.dot(o_y, o_w_grad)
-        same(expect_w_grad, w_grad)
-        same(expect_w_grad_grad, w_grad_grad)
-        same(expect_x_grad, x_grad)
-        same(expect_x_grad_grad, x_grad_grad)
+        # Expected results
+        w_grad_e = nd.dot(o_y, x, transpose_a=True)
+        w_grad_grad_e = nd.dot(o_y, o_x_grad, transpose_a=True)
+        x_grad_e = nd.dot(o_y, w)
+        x_grad_grad_e = nd.dot(o_y, o_w_grad)
+        ok_(w_grad.shape == w.shape)
+        ok_(w_grad_grad.shape == w.shape)
+        ok_(x_grad.shape == x.shape)
+        ok_(x_grad_grad.shape == x.shape)
+        w_grad_check = same(flatten2d_right(w_grad), flatten2d_right(w_grad_e))
+        w_grad_grad_check = same(flatten2d_right(w_grad_grad), flatten2d_right(w_grad_grad_e))
+        x_grad_check = same(flatten2d_right(x_grad), flatten2d_right(x_grad_e))
+        x_grad_grad_check = same(flatten2d_right(x_grad_grad), flatten2d_right(x_grad_grad_e))
+        ok_(x_grad_check)
+        ok_(w_grad_check)
+        ok_(x_grad_grad_check)
+        ok_(w_grad_grad_check)
 
 
 if __name__ == '__main__':
