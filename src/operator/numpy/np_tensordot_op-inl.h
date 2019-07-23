@@ -367,7 +367,7 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
       ASSIGN_DISPATCH(tensor_grad_, tensor_req,
                       broadcast_scalar(scalar_, tensor_grad_.shape_) * out_grad_);
       Tensor<xpu, 1, DType> workspace =
-        ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(out_grad.shape_.Size()), s);
+        ctx.requested[1].get_space_typed<xpu, 1, DType>(Shape1(out_grad.shape_.Size()), s);
       ASSIGN_DISPATCH(workspace, kWriteTo, tensor_ * out_grad_);
 
       ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
@@ -405,7 +405,7 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
       mxnet::TShape b_temp_shape(GetReorderedShape(b_shape, b_axes));
       mxnet::TShape b_T_temp_shape(GetReorderedShape(b_shape, b_T_axes));
 
-      Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
+      Tensor<xpu, 1, DType> workspace = ctx.requested[1].get_space_typed<xpu, 1, DType>
         (Shape1((a.Size() + b.Size()) * 2), s);
       DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
       DType* a_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
@@ -629,7 +629,7 @@ void TensordotIntAxesBackwardImpl(const int axes,
       ASSIGN_DISPATCH(tensor_grad_, tensor_req,
                       broadcast_scalar(scalar_, tensor_grad_.shape_) * out_grad_);
       Tensor<xpu, 1, DType> workspace =
-        ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(out_grad.shape_.Size()), s);
+        ctx.requested[1].get_space_typed<xpu, 1, DType>(Shape1(out_grad.shape_.Size()), s);
       ASSIGN_DISPATCH(workspace, kWriteTo, tensor_ * out_grad_);
 
       ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
