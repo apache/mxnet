@@ -17,13 +17,21 @@
 
 # Test gluon estimator on CNN models
 
-import argparse
-import numpy as np
+import os
+import sys
+
 import mxnet as mx
+import numpy as np
 from mxnet import gluon, init, nd
 from mxnet.gluon import data
 from mxnet.gluon.contrib.estimator import estimator
 from mxnet.gluon.model_zoo import vision
+
+# use with_seed decorator in python/unittest/common.py
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python', 'unittest'))
+from common import with_seed
+import unittest
+
 
 def load_data_mnist(batch_size, resize=None, num_workers=4):
     '''
@@ -44,6 +52,7 @@ def load_data_mnist(batch_size, resize=None, num_workers=4):
         num_workers=num_workers)
     return train_iter, test_iter
 
+
 def bilinear_kernel(in_channels, out_channels, kernel_size):
     '''
     Bilinear interpolation using transposed convolution
@@ -59,6 +68,7 @@ def bilinear_kernel(in_channels, out_channels, kernel_size):
     weight = np.zeros((in_channels, out_channels, kernel_size, kernel_size), dtype='float32')
     weight[range(in_channels), range(out_channels), :, :] = filt
     return nd.array(weight)
+
 
 def get_net(model_name, context):
     if model_name == 'FCN':
@@ -82,6 +92,8 @@ def get_net(model_name, context):
         loss_axis = -1
     return net, input_shape, label_shape, loss_axis
 
+
+@with_seed()
 def test_estimator_cpu():
     '''
     Test estimator by doing one pass over each model with synthetic data
@@ -112,6 +124,10 @@ def test_estimator_cpu():
                 val_data=val_data,
                 epochs=1)
 
+
+# using fixed seed to reduce flakiness in accuracy assertion
+@with_seed(7)
+@unittest.skipIf(mx.context.num_gpus() < 1, "skip if no GPU")
 def test_estimator_gpu():
     '''
     Test estimator by training resnet18_v1 for 5 epochs on MNIST and verify accuracy
@@ -139,13 +155,7 @@ def test_estimator_gpu():
 
     assert acc.get()[1] > 0.80
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='test gluon estimator')
-    parser.add_argument('--type', type=str, default='cpu')
-    opt = parser.parse_args()
-    if opt.type == 'cpu':
-        test_estimator_cpu()
-    elif opt.type == 'gpu':
-        test_estimator_gpu()
-    else:
-        raise RuntimeError("Unknown test type")
+    import nose
+    nose.runmodule()

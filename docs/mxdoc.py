@@ -41,7 +41,7 @@ if _DOC_SET not in parser.sections():
 
 for section in [ _DOC_SET ]:
     print("Document sets to generate:")
-    for candidate in [ 'scala_docs', 'java_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
+    for candidate in [ 'scala_docs', 'java_docs', 'clojure_docs', 'doxygen_docs', 'julia_docs', 'r_docs' ]:
         print('%-12s  : %s' % (candidate, parser.get(section, candidate)))
 
 _MXNET_DOCS_BUILD_MXNET = parser.getboolean('mxnet', 'build_mxnet')
@@ -50,6 +50,7 @@ _JAVA_DOCS = parser.getboolean(_DOC_SET, 'java_docs')
 _CLOJURE_DOCS = parser.getboolean(_DOC_SET, 'clojure_docs')
 _DOXYGEN_DOCS = parser.getboolean(_DOC_SET,  'doxygen_docs')
 _R_DOCS = parser.getboolean(_DOC_SET, 'r_docs')
+_JULIA_DOCS = parser.getboolean(_DOC_SET, 'julia_docs')
 _ARTIFACTS = parser.getboolean(_DOC_SET, 'artifacts')
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
@@ -94,6 +95,15 @@ def build_mxnet(app):
     else:
         _run_cmd("cd %s/.. && make -j$(nproc) USE_MKLDNN=0 USE_CPP_PACKAGE=1 " %
                 app.builder.srcdir)
+
+def build_julia_docs(app):
+    """build Julia docs"""
+    os.environ['MXNET_HOME'] = os.path.abspath(os.path.join(app.builder.srcdir, '..'))
+    print("Julia will check for MXNet in {}/lib".format(os.environ.get('MXNET_HOME')))
+    dest_path = app.builder.outdir + '/api/julia/site'
+    _run_cmd('cd {}/.. && make -C julia/docs'.format(app.builder.srcdir))
+    _run_cmd('mkdir -p {}'.format(dest_path))
+    _run_cmd('cd {}/.. && cp -a julia/docs/site/* {}'.format(app.builder.srcdir, dest_path))
 
 def build_r_docs(app):
     """build r pdf"""
@@ -458,7 +468,7 @@ def copy_artifacts(app):
 def setup(app):
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
-    if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1' or _MXNET_DOCS_BUILD_MXNET:
+    if os.getenv('MXNET_DOCS_BUILD_MXNET') == '1'or _MXNET_DOCS_BUILD_MXNET:
         print("Building MXNet!")
         app.connect("builder-inited", build_mxnet)
     if _DOXYGEN_DOCS:
@@ -476,6 +486,9 @@ def setup(app):
     if _CLOJURE_DOCS:
         print("Building Clojure Docs!")
         app.connect("builder-inited", build_clojure_docs)
+    if _JULIA_DOCS:
+        print("Building Julia Docs!")
+        app.connect("builder-inited", build_julia_docs)
     if _R_DOCS:
         print("Building R Docs!")
         app.connect("builder-inited", build_r_docs)

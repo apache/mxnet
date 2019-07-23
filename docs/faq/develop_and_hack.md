@@ -19,6 +19,7 @@
 - [Create new operators](new_op.md)
 - [Use Torch from MXNet](torch.md)
 - [Set environment variables of MXNet](env_var.md)
+- [Use TensorInspector to Help Debug Operators](tensor_inspector_tutorial.md)
 
 # Other Resources
 - [MXNet System Architecture Overview](/architecture/overview.html)

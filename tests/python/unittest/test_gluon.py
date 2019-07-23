@@ -744,6 +744,15 @@ def test_layernorm():
 
 
 @with_seed()
+def test_groupnorm():
+    layer = nn.GroupNorm()
+    check_layer_forward(layer, (2, 10, 10, 10))
+    layer = nn.GroupNorm(num_groups=2)
+    check_layer_forward(layer, (2, 10, 10, 10))
+    layer = nn.GroupNorm(num_groups=5)
+    check_layer_forward(layer, (2, 10, 10, 10))
+
+@with_seed()
 def test_reflectionpad():
     layer = nn.ReflectionPad2D(3)
     check_layer_forward(layer, (2, 3, 24, 24))
