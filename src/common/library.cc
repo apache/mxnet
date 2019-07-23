@@ -62,8 +62,7 @@ Parameters
 */
 void get_sym(void* handle, void** func, char* name) {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  *func = GetProcAddress(handle, name);
-  FreeLibrary(hinstLib);
+  *func = GetProcAddress((HMODULE)handle, name);
 #else
   *func = dlsym(handle, name);
 #endif  // _WIN32 or _WIN64 or __WINDOWS__
