@@ -48,7 +48,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "onehot_encode", "power", "subtract", "true_divide", "waitall", "_new_empty_handle",
            "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
            "from_numpy", "_indexing_key_expand_implicit_axes", "_get_indexing_dispatch_code", 
-           "_int_to_slice", "_shape_for_bcast"]  # TODO: can I add function here?
+           "_int_to_slice", "_shape_for_bcast", "_get_oshape_of_gather_nd_op"]  # TODO: can I add function here?
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -642,7 +642,7 @@ fixed-size items.
         if isinstance(value, numeric_types):
             value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
             new_axes = []  # ignore for scalar
-        elif type(value) == NDArray:
+        elif type(value) == self.__class__:
             value_nd = value.as_in_context(self.context)
             if value_nd.dtype != self.dtype:
                 value_nd = value_nd.astype(self.dtype)
@@ -650,8 +650,8 @@ fixed-size items.
             try:
                 value_nd = array(value, ctx=self.context, dtype=self.dtype)
             except:
-                raise TypeError('NDArray does not support assignment with non-array-like '
-                                'object {} of type {}'.format(value, type(value)))
+                raise TypeError('{} does not support assignment with non-array-like '
+                                'object {} of type {}'.format(self.__class__, value, type(value)))
 
         # First reshape `value_nd` to a new shape that incorporates existing
         # axes, new axes and broadcasting axes in the right way.
@@ -1101,12 +1101,10 @@ fixed-size items.
 
     def _set_nd_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
-        indices = self._get_index_nd(key)
-        vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)
+        indices = self._get_index_nd(key)  # 不OK
+        vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)  # oK
         value_nd = self._prepare_value_nd(value, new_axes=[], bcast_shape=vshape)
-        _internal._scatter_set_nd(
-            lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
-        )
+        self._scatter_set_nd(value_nd, indices)
 
     def _get_nd_advanced_indexing(self, key):
         """Get item when key is a tuple of any objects of the following types:
@@ -2616,7 +2614,20 @@ fixed-size items.
         return to_dlpack_for_write(self)
 
     def _full(self, value):
+        """
+        # TODO(xinyge) add doc here. 
+        This is added as an NDArray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
+        """
         return _internal._full(self.shape, value=float(value), ctx=self.context, dtype=self.dtype, out=self)
+    
+    def _scatter_set_nd(self, value_nd, indices):
+        """
+        # TODO(xinyge) add doc here. 
+        This is added as an NDArray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
+        """
+        return _internal._scatter_set_nd( 
+            lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
+        )
 
 def _indexing_key_expand_implicit_axes(key, shape):
     """Make implicit axes explicit by adding ``slice(None)``.

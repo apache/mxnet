@@ -35,7 +35,7 @@ import ctypes
 import warnings
 import numpy as _np
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
-from ..ndarray import _indexing_key_expand_implicit_axes, _get_indexing_dispatch_code, _int_to_slice, _shape_for_bcast
+from ..ndarray import _indexing_key_expand_implicit_axes, _get_indexing_dispatch_code, _int_to_slice, _shape_for_bcast, _get_oshape_of_gather_nd_op
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle
@@ -291,6 +291,17 @@ class ndarray(NDArray):
             idcs = _npi.stack(*[i if type(i) == __class__ else i.as_np_ndarray() for i in idcs])
         return _npi.gather_nd(self, idcs)
 
+    def _set_np_advanced_indexing(self, key, value):
+        """This function is called by __setitem__ when key is an advanced index."""
+        idcs = self._get_index_nd(key)
+        if type(idcs) == NDArray:
+            idcs = idcs.as_np_ndarray()
+        else:
+            idcs = _npi.stack(*[i if type(i) == __class__ else i.as_np_ndarray() for i in idcs])
+        vshape = _get_oshape_of_gather_nd_op(self.shape, idcs.shape)
+        value_nd = self._prepare_value_nd(value, new_axes=[], bcast_shape=vshape)
+        self._scatter_set_nd(value_nd, idcs)
+
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
         """
@@ -406,9 +417,9 @@ class ndarray(NDArray):
                 )
             indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
             if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
-                self._set_nd_basic_indexing(slc_key, value)
+                self._set_nd_basic_indexing(slc_key, value)  # function is inheritated from NDArray class
             elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-                self._set_nd_advanced_indexing(slc_key, value)
+                self._set_np_advanced_indexing(slc_key, value)  # function is inheritated from NDArray class
             else:
                 raise ValueError(
                     'Indexing NDArray with index {} of type {} is not supported'
@@ -416,7 +427,7 @@ class ndarray(NDArray):
                 )
 
     def _prepare_value_nd(self, value, new_axes, bcast_shape):
-        """Return a broadcast `NDArray` with same context and dtype as ``self``.
+        """Return a broadcast `ndarray` with same context and dtype as ``self``.
         Before broadcasting, ``new_axes`` of length 1 will be added to
         ``value``. This is done in contrast to blindly reshaping based on
         ``bcast_shape``, since the latter would silently ignore wrongly shaped
@@ -447,67 +458,6 @@ class ndarray(NDArray):
         if value_nd.shape != bcast_shape:
             value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
-
-    # def _set_nd_basic_indexing(self, key, value):
-    #     """This function indexes ``self`` with a tuple of ``slice`` objects only."""
-    #     for idx in key:
-    #         if not isinstance(idx, (py_slice, integer_types)):
-    #             raise RuntimeError(
-    #                 '`key` may only contain `slice` or integer objects in the '
-    #                 'basic implementation, got object of type {}. '
-    #                 'This is a bug, please report it!'
-    #                 ''.format(type(idx)))
-    #     int_axes = [
-    #         ax for ax in range(len(key)) if isinstance(key[ax], integer_types)
-    #     ]
-    #     begin, end, step = self._basic_indexing_key_to_begin_end_step(
-    #         key, self.shape, keep_none=False
-    #     )
-    #     indexed_shape = tuple(
-    #         _get_dim_size(b, e, s) for b, e, s in zip(begin, end, step)
-    #     )
-    #     can_assign_directly = (
-    #         (indexed_shape == self.shape) and all(s > 0 for s in step)
-    #     )
-    #     begin, end, step = self._basic_indexing_key_to_begin_end_step(
-    #         key, self.shape, keep_none=True
-    #     )
-
-    #     if can_assign_directly:
-    #         # Easy case, overwrite whole array.
-    #         if isinstance(value, self.__class__):
-    #             if value.handle is not self.handle:
-    #                 # Need to do this before `broadcast_to`.
-    #                 tmp_shape = _shape_for_bcast(
-    #                     value.shape, target_ndim=self.ndim, new_axes=int_axes
-    #                 )
-    #                 value = value.reshape(tmp_shape)
-
-    #                 if value.shape != self.shape:
-    #                     value = value.broadcast_to(self.shape)
-    #                 value.copyto(self)
-
-    #         elif isinstance(value, numeric_types):
-    #             self.full(
-    #                 shape=self.shape, value=float(value), ctx=self.context,
-    #                 dtype=self.dtype, out=self
-    #             )
-
-    #         elif isinstance(value, (np.ndarray, np.generic)):
-    #             tmp_shape = _shape_for_bcast(
-    #                 value.shape, target_ndim=self.ndim, new_axes=int_axes
-    #             )
-    #             value = value.reshape(tmp_shape)
-
-    #             if isinstance(value, np.generic) or value.shape != self.shape:
-    #                 value = np.broadcast_to(value, self.shape)
-    #             self._sync_copyfrom(value)
-    #         else:
-    #             # Other array-like
-    #             value_nd = self._prepare_value_nd(
-    #                 value, new_axes=int_axes, bcast_shape=self.shape
-    #              )
-    #             value_nd.copyto(self)
 
 
     def __add__(self, other):
@@ -1649,6 +1599,15 @@ class ndarray(NDArray):
         Assign to self an array of self's same shape and type, filled with value.
         """
         return _mx_nd_np.full(self.shape, value, ctx=self.context, dtype=self.dtype, out=self)
+    
+    def _scatter_set_nd(self, value_nd, indices):
+        """
+        # TODO(xinyge) add doc here. 
+        This is added as an NDArray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
+        """
+        return _npi.scatter_set_nd( 
+            lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
+        )
 
     @property
     def shape(self):
