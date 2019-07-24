@@ -88,7 +88,7 @@ struct Alternative {
 struct Step {
   std::vector<int> contract_inds;
   std::bitset<MAXCHAR> idx_removed;
-  std::string einsum_str, blas2einsum_str;
+  std::string einsum_str, blas2einsum_str, einsum2blas_str;
   std::vector<std::string> input_list;
   bool do_blas, do_einsum;
   TShape oshape, tshape;
@@ -115,7 +115,7 @@ inline size_t _compute_size_by_dict(const std::bitset<MAXCHAR>& indices,
   return ret;
 }
 
-inline size_t _flop_count(const std::string& idx_contraction,
+inline int _flop_count(const std::string& idx_contraction,
                    bool inner,
                    int num_terms,
                    const dim_t size_dictionary[]) {
@@ -127,7 +127,7 @@ inline size_t _flop_count(const std::string& idx_contraction,
   return overall_size * op_factor;
 }
 
-inline size_t _flop_count(const std::bitset<MAXCHAR>& idx_contraction,
+inline int _flop_count(const std::bitset<MAXCHAR>& idx_contraction,
                    bool inner,
                    int num_terms,
                    const dim_t size_dictionary[]) {
@@ -173,7 +173,7 @@ inline int _parse_possible_contraction(const std::vector<int>& positions,
 
   // Sieve the results based on memory_limit
   size_t new_size = _compute_size_by_dict(contract.new_result, idx_dict);
-  if (new_size > memory_limit) {
+  if (new_size > static_cast<size_t>(memory_limit)) {
     return -1;
   }
 
@@ -184,7 +184,7 @@ inline int _parse_possible_contraction(const std::vector<int>& positions,
   }
   int remove_size = old_sizes - new_size;
 
-  size_t cost = _flop_count(contract.idx_contract, contract.idx_removed.any(),
+  int cost = _flop_count(contract.idx_contract, contract.idx_removed.any(),
                             positions.size(), idx_dict);
   ret->cost[0] = -remove_size;
   ret->cost[1] = cost;
@@ -245,7 +245,7 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
 
   // Build up a naive cost
   std::vector<int> range(isize);
-  for (int i = 0; i < isize; ++i) {
+  for (size_t i = 0; i < isize; ++i) {
     range[i] = i;
   }
   Contraction contract = _find_contraction(range, *input_sets, output_set);
@@ -258,10 +258,10 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
   int path_cost = 0;
   std::vector<std::vector<int> > ret;
 
-  for (int iteration = 0; iteration < iteration_num - 1; ++iteration) {
+  for (size_t iteration = 0; iteration + 1 < iteration_num; ++iteration) {
     if (iteration == 0) {
-      for (int x = 0; x < isize; ++x) {
-        for (int y = x + 1; y < isize; ++y) {
+      for (int x = 0; x < static_cast<int>(isize); ++x) {
+        for (int y = x + 1; y < static_cast<int>(isize); ++y) {
           if (!((input_sets->at(x) & input_sets->at(y)).any())) {
             continue;
           }
@@ -280,7 +280,7 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
         }
       }
     } else {
-      for (int x = 0; x < isize - 1; ++x) {
+      for (int x = 0; x < static_cast<int>(isize) - 1; ++x) {
         int y = isize - 1;
         if (!((input_sets->at(x) & input_sets->at(y)).any())) {
             continue;
@@ -303,8 +303,8 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
     // If we do not have a inner contraction, rescan pairs including outer products
     if (known_contractions.size() == 0) {
       // Then check the outer productsj
-      for (int x = 0; x < isize; ++x) {
-        for (int y = x + 1; y < isize; ++y) {
+      for (int x = 0; x < static_cast<int>(isize); ++x) {
+        for (int y = x + 1; y < static_cast<int>(isize); ++y) {
           Alternative alternative;
           int result = _parse_possible_contraction(std::vector<int>{x, y},
                                                    *input_sets,
@@ -322,6 +322,10 @@ inline std::vector<std::vector<int> > _greedy_path(const SetVector* input_sets,
 
       // If we still did not find any remaining contractions, default back to einsum like behavior
       if (known_contractions.size() == 0) {
+        std::vector<int> range(isize);
+        for (size_t i = 0; i < isize; ++i) {
+          range[i] = i;
+        }
         ret.push_back(range);
         break;
       }
@@ -388,7 +392,7 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
       // can't do implicit summation or dimension collapse e.g.
       // "ab,bc->c" (implicitly sum over 'a')
       // "ab,ca->ca" (take diagonal of 'a')
-      if (nl + nr - 1 == static_cast<int>(result.test(c))) {
+      if (nl + nr == static_cast<size_t>(result.test(c)) + 1) {
         return false;
       }
     }
@@ -701,7 +705,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
   std::vector<std::string> input_list = split(parsed_subscripts[0], ",");
   size_t isize = input_list.size();
   SetVector input_sets;
-  for (int i = 0; i < isize; ++i) {
+  for (int i = 0; i < static_cast<int>(isize); ++i) {
     input_sets.push_back(str2set(input_list[i]));
   }
   std::bitset<MAXCHAR> output_set = str2set(parsed_subscripts[1]);
@@ -825,7 +829,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
 
     // Last contraction
     std::string idx_result;
-    if (i - size_path == -1) {
+    if (i + 1 == size_path) {
       idx_result = parsed_subscripts[1];
     } else {
       idx_result = set2str(contract.new_result);
@@ -840,7 +844,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     }
     size_t len_idx_result = idx_result.length();
     ret[i].oshape = TShape(len_idx_result, -1);
-    for (int j = 0; j < len_idx_result; ++j) {
+    for (size_t j = 0; j < len_idx_result; ++j) {
       ret[i].oshape[j] = dimension_dict[static_cast<int>(idx_result[j])];
     }
 
@@ -876,19 +880,18 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
       ret[i].left_pos = Tuple<int>(left_pos);
       ret[i].right_pos = Tuple<int>(right_pos);
       // Calculate do_einsum
-      if (tensor_result != idx_result) {
-        ret[i].do_einsum = true;
-      }
+      ret[i].do_einsum = (tensor_result != idx_result);
       // Calculate tshape
       CHECK_EQ(tensor_result.length(), len_idx_result)
         << "tensordot produces dim " << tensor_result.length()
         << ", while einsum produces dim " << len_idx_result << ".";
       ret[i].tshape = TShape(len_idx_result, -1);
-      for (int j = 0; j < len_idx_result; ++j) {
+      for (size_t j = 0; j < len_idx_result; ++j) {
         ret[i].tshape[j] = dimension_dict[static_cast<int>(tensor_result[j])];
       }
       // Calculate blas2einsum_str
       ret[i].blas2einsum_str = tensor_result + "->" + idx_result;
+      ret[i].einsum2blas_str = idx_result + "->" + tensor_result;
     }
     input_list.push_back(idx_result);
     broadcast_indices.push_back(new_bcast_inds);

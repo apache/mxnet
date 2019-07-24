@@ -28,9 +28,9 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_einsum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyEinsumForward<gpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", NumpyEinsumForward<gpu>);
 NNVM_REGISTER_OP(_backward_npi_einsum)
-.set_attr<FCompute>("FCompute<gpu>", NumpyEinsumBackward<gpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", NumpyEinsumBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

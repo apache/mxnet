@@ -274,7 +274,7 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
       }
     }
     // relax the constraint for einsum (which needs 3) and tensordot (which needs 2)
-    CHECK_LE(ntmp, 3) << "Only support 3 temp space requests";
+    CHECK_LE(ntmp, 4) << "Only support 4 temp space requests";
   }
 
   // append extra resource requests for storage fallback
