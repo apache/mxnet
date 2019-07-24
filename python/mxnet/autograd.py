@@ -493,14 +493,13 @@ class Function(object):
                                       POINTER(CFUNCTYPE(c_int))),
                                  cast(c_array(c_void_p, [None]*len(callbacks)),
                                       POINTER(c_void_p)))
+        Function._registry.ref_holder[key] = context
         check_call(_LIB.MXCustomFunctionRecord(
             c_int(len(inputs)),
             c_handle_array(inputs),
             c_int(len(outputs)),
             c_handle_array(outputs),
             ctypes.byref(context)))
-
-        Function._registry.ref_holder[key] = context
 
         return ret_outputs
 

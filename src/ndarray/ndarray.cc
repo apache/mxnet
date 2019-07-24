@@ -612,12 +612,17 @@ void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::primitive_desc &desc)
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
   NDArray tmp = *this;
+  const auto version = this->version();
   Engine::Get()->PushAsync(
-    [tmp, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
-      tmp.ptr_->MKLDNNDataReorder(desc);
-      on_complete();
-    }, ctx(), const_vars, mutable_vars,
-    FnProperty::kNormal, 0, "Reorder");
+      [tmp, version, desc](RunContext ctx, Engine::CallbackOnComplete on_complete) {
+        // MXNet will try to reuse NDArray from memory planning, so we need to ensure
+        // the NDArray is still holding the original trunk data.
+        if (tmp.version() == version) {
+          tmp.ptr_->MKLDNNDataReorder(desc);
+        }
+        on_complete();
+      },
+      ctx(), const_vars, mutable_vars, FnProperty::kNormal, 0, "Reorder");
 }
 
 const mkldnn::memory *NDArray::GetMKLDNNData() const {

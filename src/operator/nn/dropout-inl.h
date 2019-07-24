@@ -398,6 +398,8 @@ class DropoutOp {
           }
         }
       } else {
+        if (req[dropout::kOut] == kWriteInplace) return;
+
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kOut], Req, {
           mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
             s, out.Size(), out.dptr<DType>(), in.dptr<DType>());

@@ -18,6 +18,7 @@
 # MXNet Java Sample Project
 This is a project demonstrating how to use the Maven published Scala/Java MXNet package. 
 The examples provided include:
+* Hello World
 * NDArray creation
 * NDArray operation
 * Object Detection using the Inference API

@@ -410,7 +410,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     kwargs_left = param_.InitAllowUnknown(kwargs);
 
-    CHECK((param_.inter_method >= 1 && param_.inter_method <= 4) ||
+    CHECK((param_.inter_method >= 0 && param_.inter_method <= 4) ||
      (param_.inter_method >= 9 && param_.inter_method <= 10))
       << "invalid inter_method: valid value 0,1,2,3,9,10";
 

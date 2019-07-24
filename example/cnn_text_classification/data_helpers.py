@@ -55,6 +55,9 @@ def load_data_and_labels():
     Returns split sentences and labels.
     """
     # Load data from files
+    # The dataset is from https://github.com/dennybritz/cnn-text-classification-tf/tree/master/data/rt-polaritydata
+    # The dataset is copyright to Denny Britz and licensed under Apache License 2.0.
+    # For full text of the license, see https://github.com/dennybritz/cnn-text-classification-tf/blob/master/LICENSE
     pos_path = "./data/rt-polaritydata/rt-polarity.pos"
     neg_path = "./data/rt-polaritydata/rt-polarity.neg"
     if not os.path.exists(pos_path):

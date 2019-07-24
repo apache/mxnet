@@ -103,7 +103,7 @@ Class: dog
 Probabilties: 0.8226818
 (Coord:,83.82353,179.13998,206.63783,476.7875)
 ```
-the outputs come from the the input image, with top3 predictions picked.
+the outputs come from the input image, with top3 predictions picked.
 
 
 ## Infer API Details

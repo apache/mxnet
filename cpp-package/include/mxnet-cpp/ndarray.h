@@ -321,6 +321,12 @@ class NDArray {
    */
   size_t Offset(size_t c, size_t h, size_t w) const;
   /*!
+  * \brief return value of the element at (index)
+  * \param index  position
+  * \return value of one dimensions array
+  */
+  mx_float At(size_t index) const;
+  /*!
   * \brief return value of the element at (h, w)
   * \param h height position
   * \param w width position

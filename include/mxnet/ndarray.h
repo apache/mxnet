@@ -199,7 +199,7 @@ class NDArray {
   }
   /*
    * This indicates whether an array is a view of another array (created by
-   * reshape or slice). If an array is a view and the the data is stored in
+   * reshape or slice). If an array is a view and the data is stored in
    * MKLDNN format, we need to convert the data to the default format when
    * data in the view is accessed.
    */

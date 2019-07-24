@@ -27,6 +27,10 @@ endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
+add_executable(test_regress_label test_regress_label.cpp ${CPP_PACKAGE_HAEDERS})
+target_link_libraries(test_regress_label ${CPP_EXAMPLE_LIBS})
+add_dependencies(test_regress_label ${CPPEX_DEPS})
+
 add_executable(lenet lenet.cpp ${CPP_PACKAGE_HEADERS})
 target_link_libraries(lenet ${CPP_EXAMPLE_LIBS})
 add_dependencies(lenet ${CPPEX_DEPS})

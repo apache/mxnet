@@ -24,10 +24,10 @@ The SSD model is trained on the Pascal VOC 2012 dataset. The network is a SSD mo
 ## Prerequisites
 
 To complete this tutorial, you need the following:
-* [MXNet Java Setup on IntelliJ IDEA](/java/mxnet_java_on_intellij.html) (Optional)
-* [wget](https://www.gnu.org/software/wget/) To download model artifacts 
+* [MXNet Java Setup on IntelliJ IDEA](mxnet_java_on_intellij.md) (Optional)
+* [wget](https://www.gnu.org/software/wget/) To download model artifacts
 * SSD Model artifacts
-    * Use the following script to get the SSD Model files : 
+    * Use the following script to get the SSD Model files :
 ```bash
 data_path=/tmp/resnet50_ssd
 mkdir -p "$data_path"
@@ -36,7 +36,7 @@ wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_mode
 wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/synset.txt -P $data_path
 ```
 * Test images  : A few sample images to run inference on.
-    * Use the following script to download sample images : 
+    * Use the following script to download sample images :
 ```bash
 image_path=/tmp/resnet50_ssd/images
 mkdir -p "$image_path"
@@ -46,9 +46,9 @@ wget https://cloud.githubusercontent.com/assets/3307514/20012563/cbb41382-a27d-1
 ```
 
 Alternately, you can get the entire SSD Model artifacts + images in one single script from the MXNet Repository by running [get_ssd_data.sh script](https://github.com/apache/incubator-mxnet/blob/master/scala-package/examples/scripts/infer/objectdetector/get_ssd_data.sh)  
-     
-## Time to code! 
-1\. Following the [MXNet Java Setup on IntelliJ IDEA](/java/mxnet_java_on_intellij.html) tutorial, in the same project `JavaMXNet`, create a new empty class called : `ObjectDetectionTutorial.java`.
+
+## Time to code!
+1\. Following the [MXNet Java Setup on IntelliJ IDEA](mxnet_java_on_intellij.md) tutorial, in the same project `JavaMXNet`, create a new empty class called : `ObjectDetectionTutorial.java`.
 
 2\. In the `main` function of `ObjectDetectionTutorial.java` define the downloaded model path and the image data paths. This is the same path where we downloaded the model artifacts and images in a previous step.
 
@@ -58,9 +58,9 @@ String inputImagePath = "/tmp/resnet50_ssd/images/dog.jpg";
 ```
 
 3\. We can run the inference code in this example on either CPU or GPU (if you have a GPU backed machine) by choosing the appropriate context.
-    
+
 ```java
-        
+
 List<Context> context = getContext();
 ...
 
@@ -175,7 +175,7 @@ To run the ObjectDetectionTutorial.java use the following command from the proje
 ```bash
 java -cp "target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/*" mxnet.ObjectDetectionTutorial
 ```
-    
+
 You should see a similar output being generated for the dog image that we used:
 ```bash
 Class: car
@@ -188,16 +188,16 @@ Class: dog
 Probabilties: 0.82268167
 Coord:83.82356, 179.14001, 206.63783, 476.78754
 ```
-     
+
 ![dog_1](https://cloud.githubusercontent.com/assets/3307514/20012567/cbb60336-a27d-11e6-93ff-cbc3f09f5c9e.jpg)
-    
+
 The results returned by the inference call translate into the regions in the image where the model detected objects.
-     
+
 ![dog_2](https://cloud.githubusercontent.com/assets/3307514/19171063/91ec2792-8be0-11e6-983c-773bd6868fa8.png)
 
 ## Next Steps
 For more information about MXNet Java resources, see the following:
 
-* [Java Inference API](/api/java/index.html)
+* [Java Inference API](/api/java/index.md)
 * [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
-* [MXNet Tutorials Index](/tutorials/index.html)
+* [MXNet Tutorials Index](/tutorials/index.md)

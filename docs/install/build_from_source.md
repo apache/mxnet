@@ -42,14 +42,14 @@ Building from source follows this general two-step flow of building the shared l
             * [non-Intel CPUs](#recommended-for-Systems-with-non-Intel-CPUs)
 2. [Install the language API binding(s)](#installing-mxnet-language-bindings) you would like to use for MXNet.
 MXNet's newest and most popular API is Gluon. Gluon is built into the Python binding. If Python isn't your preference, you still have more options. MXNet supports several other language APIs:
-    - [Python (includes Gluon)](../api/python/index.html)
-    - [C++](../api/c++/index.html)
-    - [Clojure](../api/clojure/index.html)
-    - [Java](../api/java/index.html)
-    - [Julia](../api/julia/index.html)
-    - [Perl](../api/perl/index.html)
-    - [R](../api/r/index.html)
-    - [Scala](../api/scala/index.html)
+    - [Python (includes Gluon)](../api/python/index.md)
+    - [C++](../api/c++/index.md)
+    - [Clojure](../api/clojure/index.md)
+    - [Java](../api/java/index.md)
+    - [Julia](../api/julia/index.md)
+    - [Perl](../api/perl/index.md)
+    - [R](../api/r/index.md)
+    - [Scala](../api/scala/index.md)
 
 <hr>
 
@@ -58,12 +58,11 @@ MXNet's newest and most popular API is Gluon. Gluon is built into the Python bin
 Detailed instructions are provided per operating system. Each of these guides also covers how to install the specific [Language Bindings](#installing-mxnet-language-bindings) you require.
 You may jump to those, but it is recommended that you continue reading to understand more general "build from source" options.
 
-* [Amazon Linux / CentOS / RHEL](centos_setup.html)
-* [macOS](osx_setup.html)
-* [Raspbian](raspian_setup.html)
-* [TX2](tx2_setup.html)
-* [Ubuntu](ubuntu_setup.html)
-* [Windows](windows_setup.html)
+* [Amazon Linux / CentOS / RHEL](centos_setup.md)
+* [macOS](osx_setup.md)
+* [Devices](https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU)
+* [Ubuntu](ubuntu_setup.md)
+* [Windows](windows_setup.md)
 
 
 <hr>
@@ -124,8 +123,7 @@ You can set the BLAS library explicitly by setting the BLAS variable to:
 
 See the [cmake/ChooseBLAS.cmake](https://github.com/apache/incubator-mxnet/blob/master/cmake/ChooseBlas.cmake) file for the options.
 
-Intel's MKL (Math Kernel Library) is one of the most powerful math libraries
-https://software.intel.com/en-us/mkl
+[Intel's MKL (Math Kernel Library)](https://software.intel.com/en-us/mkl) is one of the most powerful math libraries
 
 It has following flavors:
 
@@ -145,6 +143,8 @@ shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn or the [MKL-DNN
 Since the full MKL library is almost always faster than any other BLAS library it's turned on by default,
 however it needs to be downloaded and installed manually before doing `cmake` configuration.
 Register and download on the [Intel performance libraries website](https://software.intel.com/en-us/performance-libraries).
+You can also install MKL through [YUM](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-yum-repo)
+or [APT](https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-apt-repo) Repository.
 
 Note: MKL is supported only for desktop builds and the framework itself supports the following
 hardware:
@@ -179,6 +179,8 @@ More information on turning these features on or off are found in the following 
 
 There is a configuration file for make,
 [`make/config.mk`](https://github.com/apache/incubator-mxnet/blob/master/make/config.mk), that contains all the compilation options. You can edit it and then run `make` or `cmake`. `cmake` is recommended for building MXNet (and is required to build with MKLDNN), however you may use `make` instead. For building with Java/Scala/Clojure, only `make` is supported.
+
+**NOTE:** When certain set of build flags are set, MXNet archive increases to more than 4 GB. Since MXNet uses archive internally archive runs into a bug ("File Truncated": [bugreport](https://sourceware.org/bugzilla/show_bug.cgi?id=14625)) for archives greater than 4 GB. Please use ar version 2.27 or greater to overcome this bug. Please see https://github.com/apache/incubator-mxnet/issues/15084 for more details.
 
 <hr>
 
@@ -231,7 +233,7 @@ For example, you can specify using all cores on Linux as follows:
 
 ```bash
 mkdir build && cd build
-cmake -GNinja .
+cmake -GNinja ..
 ninja -v
 ```
 
@@ -241,7 +243,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja .
+cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -250,7 +252,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja .
+cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -259,7 +261,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja .
+cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja ..
 ninja -v
 ```
 
@@ -268,7 +270,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_CUDA=0 -DBLAS=open -GNinja .
+cmake -DUSE_CUDA=0 -DBLAS=open -GNinja ..
 ninja -v
 ```
 
@@ -278,7 +280,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DUSE_OPENCV=0 -GNinja .
+cmake -DUSE_OPENCV=0 -GNinja ..
 ninja -v
 ```
 
@@ -286,7 +288,7 @@ ninja -v
 
 ```bash
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja .
+cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja ..
 ninja -v
 ```
 
@@ -295,7 +297,7 @@ ninja -v
 ```bash
 brew install llvm
 mkdir build && cd build
-cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja .
+cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja ..
 ninja -v
 ```
 
