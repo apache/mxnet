@@ -20,7 +20,7 @@
 /*
  * Copyright (c) 2005-2019, NumPy Developers.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -61,6 +61,7 @@
 #include <mxnet/operator_util.h>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include "./np_tensordot_op-inl.h"
 #include "./np_einsum_path_op-inl.h"
 #include "../../common/static_array.h"
@@ -398,6 +399,20 @@ struct NumpyEinsumParam: public dmlc::Parameter<NumpyEinsumParam> {
       .set_default(0);
   }
 };
+
+class EinsumOp {
+ public:
+  int num_args;
+  int optimize;
+  std::string subscripts;
+  std::shared_ptr<NDArray> tempspace;
+  std::vector<Step> paths;
+  explicit EinsumOp(int num_args, int optimize, std::string subscripts) {
+    this->num_args = num_args;
+    this->optimize = optimize;
+    this->subscripts = subscripts;
+  }
+};  // class EinsumOp
 
 template<int dimension, int req, bool back>
 struct numpy_einsum {
@@ -751,17 +766,17 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
 }
 
 template<typename xpu>
-inline void NumpyEinsumForward(const nnvm::NodeAttrs& attrs,
+inline void NumpyEinsumForward(const OpStatePtr& state_ptr,
                                const OpContext& ctx,
                                const std::vector<TBlob>& inputs,
                                const std::vector<OpReqType>& req,
                                const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
-  const NumpyEinsumParam &param = nnvm::get<NumpyEinsumParam>(attrs.parsed);
-  int num_args = param.num_args;
-  int optimize = param.optimize;
-  const char* subscripts = param.subscripts.c_str();
+  EinsumOp& state = state_ptr.get_state<EinsumOp>();
+  int num_args = state.num_args;
+  int optimize = state.optimize;
+  const char* subscripts = state.subscripts.c_str();
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), num_args);
   CHECK_EQ(outputs.size(), 1U);
@@ -769,23 +784,26 @@ inline void NumpyEinsumForward(const nnvm::NodeAttrs& attrs,
     NumpyEinsumProcess<xpu, 0>(inputs, req, outputs, subscripts, num_args, ctx);
     return;
   }
-  std::vector<Step> paths;
+  std::vector<Step>& paths = state.paths;
   std::vector<std::vector<int> > pos;
   std::string string_repr;
-  paths = einsum_path(param.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
-  size_t paths_len = paths.size(), temp_space_size = 0, max_temp_space_size = 0;
+  paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
+  int paths_len = paths.size(), temp_space_size = 0, max_temp_space_size = 0;
   std::vector<TBlob> operands(inputs), tmp_operands, temp_space_vec(paths_len - 1);
-  for (int i = 0; i < paths_len - 1; ++i) {
+  for (int i = 0; i + 1 < paths_len; ++i) {
     temp_space_size += paths[i].oshape.Size();
   }
   for (int i = 0; i < paths_len; ++i) {
-    max_temp_space_size = std::max(max_temp_space_size, paths[i].oshape.Size());
+    max_temp_space_size = std::max(max_temp_space_size, static_cast<int>(paths[i].oshape.Size()));
   }
   temp_space_size += max_temp_space_size;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Tensor<xpu, 1, DType> temp_space =
-      ctx.requested[2].get_space_typed<xpu, 1, DType>(Shape1(temp_space_size), s);
-    size_t begin = max_temp_space_size;
+    state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(temp_space_size)),
+                                               ctx.run_ctx.ctx,
+                                               false,
+                                               outputs[0].type_flag_));
+    Tensor<xpu, 1, DType> temp_space = state.tempspace->data().FlatTo1D<xpu, DType>();
+    int begin = max_temp_space_size;
     for (int i = 0; i < paths_len - 1; ++i) {
       TBlob tblob = TBlob(temp_space.Slice(begin, begin + paths[i].oshape.Size()));
       temp_space_vec[i] = tblob.reshape(paths[i].oshape);
@@ -795,7 +813,7 @@ inline void NumpyEinsumForward(const nnvm::NodeAttrs& attrs,
       tmp_operands.clear();
 
       // We remove inds from right to left
-      for (const int& p: paths[i].contract_inds) {
+      for (const int& p : paths[i].contract_inds) {
         tmp_operands.push_back(operands[p]);
         operands.erase(operands.begin() + p);
       }
@@ -826,7 +844,7 @@ inline void NumpyEinsumForward(const nnvm::NodeAttrs& attrs,
                              tmp_operands[0],
                              tmp_operands[1],
                              temp_space_vec[i],
-                             std::vector<OpReqType>{OpReqType::kWriteTo});  
+                             std::vector<OpReqType>{OpReqType::kWriteTo});
         }
       } else {
         NumpyEinsumProcess<xpu, 0>(tmp_operands,
@@ -837,23 +855,132 @@ inline void NumpyEinsumForward(const nnvm::NodeAttrs& attrs,
       if (!handle_out)
         operands.push_back(temp_space_vec[i]);
     }
-  })
+  });
 }
 
 template<typename xpu>
-inline void NumpyEinsumBackward(const nnvm::NodeAttrs& attrs,
+inline void NumpyEinsumBackward(const OpStatePtr& state_ptr,
                                 const OpContext& ctx,
                                 const std::vector<TBlob>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow_op;
-  const NumpyEinsumParam &param = nnvm::get<NumpyEinsumParam>(attrs.parsed);
-  int num_args = param.num_args;
-  const char* subscripts = param.subscripts.c_str();
+  const EinsumOp& state = state_ptr.get_state<EinsumOp>();
+  int num_args = state.num_args;
+  int optimize = state.optimize;
+  const char* subscripts = state.subscripts.c_str();
+  Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_EQ(inputs.size(), 1 + num_args);
   CHECK_EQ(outputs.size(), num_args);
-  NumpyEinsumProcess<xpu, 1>(inputs, req, outputs, subscripts, num_args, ctx);
+  if (optimize == 0) {
+    NumpyEinsumProcess<xpu, 1>(inputs, req, outputs, subscripts, num_args, ctx);
+    return;
+  }
+  // calculate temporary space size for temp_grad
+  const std::vector<Step>& paths = state.paths;
+  int paths_len = paths.size(), temp_space_size = 0, max_temp_space_size = 0;
+  for (int i = 0; i < paths_len - 1; ++i) {
+    temp_space_size += paths[i].oshape.Size();
+  }
+  for (int i = 0; i < paths_len; ++i) {
+    max_temp_space_size = std::max(max_temp_space_size, static_cast<int>(paths[i].oshape.Size()));
+  }
+  temp_space_size += max_temp_space_size;
+  // replay the forward process
+  std::vector<std::vector<int> > op_idx(paths_len + 1);
+  for (int i = 0; i <= paths_len; ++i) {
+    if (i == 0) {
+      op_idx[i].reserve(num_args);
+      for (int j = 0; j < num_args; ++j) {
+        op_idx[i].push_back(j + 1);
+      }
+    } else {
+      op_idx[i] = op_idx[i - 1];
+      // We remove inds from right to left
+      for (const int& p : paths[i - 1].contract_inds) {
+        op_idx[i].erase(op_idx[i].begin() + p);
+      }
+      op_idx[i].push_back(-static_cast<int>(i - 1));
+    }
+  }
+
+  // allocate temporary space and propagate
+  std::vector<TBlob> temp_grad(paths_len - 1), temp_data(paths_len - 1);
+  std::vector<TBlob> temp_inputs, temp_outputs;
+  std::vector<OpReqType> temp_req;
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    // allocate temporary space for gradients of intermediate results
+    Tensor<xpu, 1, DType> temp_space = ctx.requested[2].get_space_typed<xpu, 1, DType>
+      (Shape1(temp_space_size), s);
+    int begin = max_temp_space_size;
+    for (int i = 0; i + 1 < paths_len; ++i) {
+      TBlob tblob = TBlob(temp_space.Slice(begin, begin + paths[i].oshape.Size()));
+      temp_grad[i] = tblob.reshape(paths[i].oshape);
+      begin = begin + paths[i].oshape.Size();
+    }
+
+    // reinterprete ndarray for intermediate results
+    Tensor<xpu, 1, DType> ndarray_space = state.tempspace->data().FlatTo1D<xpu, DType>();
+    begin = max_temp_space_size;
+    for (int i = 0; i + 1 < paths_len; ++i) {
+      TBlob tblob = TBlob(ndarray_space.Slice(begin, begin + paths[i].oshape.Size()));
+      temp_data[i] = tblob.reshape(paths[i].oshape);
+      begin = begin + paths[i].oshape.Size();
+    }
+
+    // go through the paths in the reversed order
+    for (int i = paths_len - 1; i >= 0; i--) {
+      temp_inputs.clear();
+      temp_outputs.clear();
+      temp_req.clear();
+      bool handle_out = (i == paths_len - 1);
+
+      if (handle_out) {
+        temp_inputs.push_back(inputs[0]);
+      } else {
+        temp_inputs.push_back(temp_grad[i]);
+      }
+      for (auto p : paths[i].contract_inds) {
+        int idx = op_idx[i][p];
+        if (idx >= 1) {
+          temp_inputs.push_back(inputs[idx]);
+          temp_outputs.push_back(outputs[idx - 1]);
+          temp_req.push_back(req[idx - 1]);
+        } else {
+          temp_inputs.push_back(temp_data[-idx]);
+          temp_outputs.push_back(temp_grad[-idx]);
+          temp_req.push_back(OpReqType::kWriteTo);
+        }
+      }
+      if (paths[i].do_blas) {
+        CHECK_EQ(temp_inputs.size(), 3U);
+        CHECK_EQ(temp_outputs.size(), 2U);
+        CHECK_EQ(temp_req.size(), 2U);
+        if (paths[i].do_einsum) {
+          TBlob max_temp_space = TBlob(temp_space.Slice(0, paths[i].tshape.Size()));
+          max_temp_space = max_temp_space.reshape(paths[i].tshape);
+          NumpyEinsumProcess<xpu, 0>(std::vector<TBlob>{temp_inputs[0]},
+                                     std::vector<OpReqType>{kWriteTo},
+                                     std::vector<TBlob>{max_temp_space},
+                                     paths[i].einsum2blas_str.c_str(),
+                                     1, ctx);
+          TensordotBackwardImpl<xpu>(paths[i].left_pos, paths[i].right_pos, ctx,
+                                     max_temp_space, temp_inputs[1], temp_inputs[2],
+                                     temp_outputs[0], temp_outputs[1], temp_req);
+        } else {
+          TensordotBackwardImpl<xpu>(paths[i].left_pos, paths[i].right_pos, ctx,
+                                     temp_inputs[0], temp_inputs[1], temp_inputs[2],
+                                     temp_outputs[0], temp_outputs[1], temp_req);
+        }
+      } else {
+        NumpyEinsumProcess<xpu, 1>(temp_inputs, temp_req, temp_outputs,
+                                   paths[i].einsum_str.c_str(),
+                                   temp_outputs.size(),
+                                   ctx);
+      }
+    }
+  });
 }
 
 }  // namespace op

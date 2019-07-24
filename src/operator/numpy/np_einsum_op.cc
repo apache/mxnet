@@ -174,6 +174,14 @@ bool NumpyEinsumShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(oshape);
 }
 
+OpStatePtr CreateEinsumState(const NodeAttrs& attrs,
+                             Context ctx,
+                             const mxnet::ShapeVector& in_shapes,
+                             const std::vector<int>& in_types) {
+  const NumpyEinsumParam& param = dmlc::get<NumpyEinsumParam>(attrs.parsed);
+  return OpStatePtr::Create<EinsumOp>(param.num_args, param.optimize, param.subscripts);
+}
+
 DMLC_REGISTER_PARAMETER(NumpyEinsumParam);
 
 NNVM_REGISTER_OP(_npi_einsum)
@@ -196,11 +204,12 @@ NNVM_REGISTER_OP(_npi_einsum)
 })
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyEinsumShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
+.set_attr<FCreateOpState>("FCreateOpState", CreateEinsumState)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(3, ResourceRequest::kTempSpace);
   })
-.set_attr<FCompute>("FCompute<cpu>", NumpyEinsumForward<cpu>)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", NumpyEinsumForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_einsum"})
 .add_argument("data", "NDArray-or-Symbol[]", "List of eimsum operands")
 .add_arguments(NumpyEinsumParam::__FIELDS__());
@@ -215,12 +224,13 @@ NNVM_REGISTER_OP(_backward_npi_einsum)
   const NumpyEinsumParam& param = dmlc::get<NumpyEinsumParam>(attrs.parsed);
   return static_cast<uint32_t>(param.num_args);
 })
+.set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(3, ResourceRequest::kTempSpace);
   })
-.set_attr<FCompute>("FCompute<cpu>", NumpyEinsumBackward<cpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", NumpyEinsumBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

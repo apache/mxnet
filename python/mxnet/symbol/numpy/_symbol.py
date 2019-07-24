@@ -4458,10 +4458,9 @@ def einsum(*operands, **kwargs):
         These are the arrays for the operation.
     out : _Symbol, optional
         If provided, the calculation is done into this array.
-    optimize : {False, True, 'greedy', 'optimal'}, optional
+    optimize : {False, True}, optional
         Controls if intermediate optimization should occur. No optimization
-        will occur if False and True will default to the 'greedy' algorithm.
-        Defaults to False.
+        will occur if False.
 
     Returns
     -------
@@ -4536,8 +4535,8 @@ def einsum(*operands, **kwargs):
     memory footprint during computation.
 
     Typically a 'greedy' algorithm is applied which empirical tests have shown
-    returns the optimal path in the majority of cases. In some cases 'optimal'
-    will return the superlative path through a more expensive, exhaustive search.
+    returns the optimal path in the majority of cases. 'optimal' is not supported
+    for now.
     """
     return _einsum_path_util._einsum('symbol', *operands, **kwargs)
 

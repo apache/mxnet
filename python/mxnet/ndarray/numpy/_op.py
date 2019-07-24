@@ -4520,10 +4520,9 @@ def einsum(*operands, **kwargs):
         These are the arrays for the operation.
     out : ndarray, optional
         If provided, the calculation is done into this array.
-    optimize : {False, True, 'greedy', 'optimal'}, optional
+    optimize : {False, True}, optional
         Controls if intermediate optimization should occur. No optimization
-        will occur if False and True will default to the 'greedy' algorithm.
-        Defaults to False.
+        will occur if False.
 
     Returns
     -------
@@ -4598,8 +4597,8 @@ def einsum(*operands, **kwargs):
     memory footprint during computation.
 
     Typically a 'greedy' algorithm is applied which empirical tests have shown
-    returns the optimal path in the majority of cases. In some cases 'optimal'
-    will return the superlative path through a more expensive, exhaustive search.
+    returns the optimal path in the majority of cases. 'optimal' is not supported
+    for now.
 
     Examples
     --------
@@ -4709,11 +4708,8 @@ def einsum(*operands, **kwargs):
     # Basic `einsum`: ~42.22ms  (benchmarked on 3.4GHz Intel Xeon.)
     >>> for iteration in range(500):
     ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a)
-    # Optimal `einsum`: ~0.672ms
+    # Greedy `einsum` (faster optimal path approximation): ~0.117ms
     >>> for iteration in range(500):
-    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a, optimize='optimal')
-    # Greedy `einsum` (faster optimal path approximation): ~0.306ms
-    >>> for iteration in range(500):
-    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a, optimize='greedy')
+    ...     np.einsum('ijk,ilm,njm,nlk,abc->',a,a,a,a,a, optimize=True)
     """
     return _einsum_path_util._einsum('ndarray', *operands, **kwargs)
