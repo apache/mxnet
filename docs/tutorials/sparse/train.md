@@ -59,7 +59,7 @@ import random
 # set the seeds for repeatability
 random.seed(42)
 np.random.seed(42)
-mx.random.seed(42) 
+mx.random.seed(42)
 
 # Create a variable to hold an NDArray
 a = mx.sym.Variable('a')
@@ -118,7 +118,7 @@ eval_b = b_exec.outputs[0]
 
 
 
-    {'eval_b': 
+    {'eval_b':
      <CSRNDArray 2x2 @cpu(0)>, 'eval_b.asnumpy()': array([[ 1.,  1.],
             [ 1.,  1.]], dtype=float32)}
 
@@ -154,7 +154,7 @@ f = mx.sym.sparse.elemwise_add(c, c)
 ### Storage Type Inference
 
 What will be the output storage types of sparse symbols? In MXNet, for any sparse symbol, the result storage types are inferred based on storage types of inputs.
-You can read the [Sparse Symbol API](http://mxnet.io/versions/master/api/python/symbol/sparse.html) documentation to find what output storage types are. In the example below we will try out the storage types introduced in the Row Sparse and Compressed Sparse Row tutorials: `default` (dense), `csr`, and `row_sparse`.
+You can read the [Sparse Symbol API](https://mxnet.incubator.apache.org/versions/master/api/python/symbol/sparse.html) documentation to find what output storage types are. In the example below we will try out the storage types introduced in the Row Sparse and Compressed Sparse Row tutorials: `default` (dense), `csr`, and `row_sparse`.
 
 
 ```python
@@ -197,10 +197,10 @@ fallback_log = fallback_exec.outputs[1]
 
 
 
-    {'fallback_add': 
+    {'fallback_add':
      [[ 0.  0.]
       [ 0.  0.]]
-     <NDArray 2x2 @cpu(0)>, 'fallback_log': 
+     <NDArray 2x2 @cpu(0)>, 'fallback_log':
      [[-inf -inf]
       [-inf -inf]]
      <NDArray 2x2 @cpu(0)>}

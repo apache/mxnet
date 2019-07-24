@@ -26,6 +26,7 @@
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.eval-metric :as eval-metric]
+            [org.apache.clojure-mxnet.infer :as infer]
             [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.layout :as layout]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
@@ -33,6 +34,8 @@
             [org.apache.clojure-mxnet.module :as m]))
 
 (def model-dir "data/")
+
+(def test-prefix "test-fine-tuning-bert-sentence-pairs")
 
 (when-not (.exists (io/file (str model-dir "static_bert_qa-0002.params")))
   (println "Downloading bert qa data")
@@ -47,7 +50,7 @@
           num-epoch 1
           bert-base (m/load-checkpoint {:prefix model-path-prefix :epoch 0})
           model-sym (fine-tune-model (m/symbol bert-base) {:num-classes 2 :dropout 0.1})
-          {:keys [data0s data1s data2s labels train-num]} (prepare-data)
+          {:keys [data0s data1s data2s labels train-num]} (prepare-data (get-raw-data))
           batch-size 32
           data-desc0 (mx-io/data-desc {:name "data0"
                                        :shape [train-num seq-length]
@@ -82,5 +85,20 @@
                                                :aux-params (m/aux-params bert-base)
                                                :optimizer (optimizer/adam {:learning-rate 5e-6 :episilon 1e-9})
                                                :batch-end-callback (callback/speedometer batch-size 1)})})
-      (is (< 0.5 (-> (m/score model {:eval-data train-data :eval-metric (eval-metric/accuracy) })
-                     (last)))))))
+      (m/save-checkpoint model {:prefix test-prefix :epoch num-epoch})
+      (testing "accuracy"
+        (is (< 0.5 (last (m/score model {:eval-data train-data :eval-metric (eval-metric/accuracy)})))))
+      (testing "prediction"
+        (let [test-predictor (infer/create-predictor (infer/model-factory test-prefix
+                                                                          [{:name "data0" :shape [1 seq-length] :dtype dtype/FLOAT32 :layout layout/NT}
+                                                                           {:name "data1" :shape [1 seq-length] :dtype dtype/FLOAT32 :layout layout/NT}
+                                                                           {:name "data2" :shape [1]            :dtype dtype/FLOAT32 :layout layout/N}])
+                                                     {:epoch num-epoch})
+              prediction (predict-equivalence test-predictor
+                                              "The company cut spending to compensate for weak sales ."
+                                              "In response to poor sales results, the company cut spending .")]
+          ;; We can't say much about how the model will find this prediction, so we test only the prediction's shape.
+          (is (vector? prediction))
+          (is (number? (first prediction)))
+          (is (number? (second prediction)))
+          (is (= 2 (count prediction))))))))

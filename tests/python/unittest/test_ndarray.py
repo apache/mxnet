@@ -29,6 +29,7 @@ from mxnet.test_utils import default_context
 from mxnet.test_utils import np_reduce
 from mxnet.test_utils import same
 from mxnet.test_utils import random_sample, rand_shape_nd
+from mxnet import runtime
 from numpy.testing import assert_allclose
 import mxnet.autograd
 
@@ -747,6 +748,7 @@ def test_linspace():
 def test_order():
     ctx = default_context()
     dat_size = 5
+    is_large_tensor_enabled = runtime.Features().is_enabled('INT64_TENSOR_SIZE')
     def gt_topk(dat, axis, ret_typ, k, is_ascend):
         if ret_typ == "indices":
             if is_ascend:
@@ -819,7 +821,8 @@ def test_order():
 
         # test for ret_typ=indices
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="indices", k=3, is_ascend=True).asnumpy()
-        assert nd_ret_topk.dtype == np.float32  # Test the default dtype
+        # Test the default dtype
+        assert nd_ret_topk.dtype == np.float32
         gt = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk, gt)
         nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="indices", k=2, is_ascend=False, dtype=np.float64).asnumpy()

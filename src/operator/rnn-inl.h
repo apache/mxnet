@@ -1583,8 +1583,11 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
   int dtype = in_types[rnn_enum::kData];
   int itype = dtype;
   if (param.use_sequence_length) {
-    itype = in_types[rnn_enum::kSequenceLength];
-    if (param.mode == rnn_enum::kLstm) itype -= 1;
+      size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+      if  (param.mode != rnn_enum::kLstm) {
+        seq_len_input_idx -= 1;
+      }
+    itype = in_types[seq_len_input_idx];
   }
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
@@ -1649,7 +1652,7 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
   // Hacky. This relies on fact that seq-len type is either the last input,
   // or we aren't using seq-len input and this type should be same as dtype.
   // Would prefer direct access to RNNParam object here but not sure how to get.
-  int itype = inputs[inputs.size()-1].type_flag_;
+  int itype = outputs[outputs.size()-1].type_flag_;
 
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       MSHADOW_TYPE_SWITCH(itype, IType, {
@@ -1667,6 +1670,15 @@ void RNNStatefulGradCompute(const OpStatePtr& state,
               out_data.push_back(inputs[index++]);
               out_grad.push_back(inputs[index]);
             }
+          }
+
+
+          if (param.use_sequence_length) {
+            size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+            if  (param.mode != rnn_enum::kLstm) {
+              seq_len_input_idx -= 1;
+            }
+            in_data.push_back(outputs[seq_len_input_idx]);
           }
 
           op.Backward(ctx, out_grad, in_data, out_data, req, in_grad);

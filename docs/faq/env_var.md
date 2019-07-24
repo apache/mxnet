@@ -146,7 +146,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: 0(false) or 1(true) ```(default=0)```
   - If true, MXNet tries to use tree reduction for Push and Pull communication.
   - Otherwise, MXNet uses the default Push and Pull implementation.
-  - [Tree reduction technology](http://www.sysml.cc/doc/178.pdf) has been shown to be faster than the standard ```--kv-store device``` Push/Pull and ```--kv-store nccl``` Push/Pull for small batch sizes.
+  - Tree reduction technology has been shown to be faster than the standard ```--kv-store device``` Push/Pull and ```--kv-store nccl``` Push/Pull for small batch sizes.
 
 * MXNET_KVSTORE_LOGTREE
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -188,7 +188,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 
 ## Control the profiler
 
-When USE_PROFILER is enabled in Makefile or CMake, the following environments can be used to profile the application without changing code. Execution options may affect the granularity of profiling result. If you need profiling result of every operator, please set `MXNET_EXEC_BULK_EXEC_INFERENCE`, `MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN` and `MXNET_EXEC_BULK_EXEC_TRAIN` to 0.
+The following environments can be used to profile the application without changing code. Execution options may affect the granularity of profiling result. If you need profiling result of every operator, please set `MXNET_EXEC_BULK_EXEC_INFERENCE`, `MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN` and `MXNET_EXEC_BULK_EXEC_TRAIN` to 0.
 
 * MXNET_PROFILER_AUTOSTART
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -241,6 +241,16 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - 0(false) or 1(true) ```(default=0)```
 	- If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
 	- If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
+
+* MXNET_CUDA_LIB_CHECKING
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows various runtime checks of the cuda library version and associated warning messages.
+  - If set to '1', permits these checks (e.g. compile vs. link mismatch, old version no longer CI-tested)
+
+* MXNET_CUDNN_LIB_CHECKING
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows various runtime checks of the cuDNN library version and associated warning messages.
+  - If set to '1', permits these checks (e.g. compile vs. link mismatch, old version no longer CI-tested)
 
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
@@ -331,5 +341,5 @@ Settings for controlling OMP tuning
 
 - Set ```MXNET_USE_NUM_CORES_OPERATOR_TUNING``` to define num_cores to be used by operator tuning code.
   - This reduces operator tuning overhead when there are multiple instances of mxnet running in the system and we know that
-    each mxnet will take only partial num_cores available with system. 
+    each mxnet will take only partial num_cores available with system.
   - refer: https://github.com/apache/incubator-mxnet/pull/13602

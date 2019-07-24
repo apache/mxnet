@@ -71,6 +71,8 @@ The committers are the granted write access to the project.
   - Tao is a major contributor to the MXNet MKL-DNN backend and performance on CPU.
 * [Zach Kimberg](https://github.com/zachgk)
   - Zach is one of the major maintainers of the MXNet Scala package.
+* [Lin Yuan](https://github.com/apeforest)
+  - Lin supports MXNet distributed training using Horovod and is also a major contributor to higher order gradients.
 
 
 ### Become a Committer
@@ -199,7 +201,6 @@ List of Contributors
 * [Thomas Delteil](https://github.com/ThomasDelteil)
 * [Jesse Brizzi](https://github.com/jessebrizzi)
 * [Hang Zhang](http://hangzh.com)
-* [Lin Yuan](https://github.com/apeforest)
 * [Kou Ding](https://github.com/chinakook)
 * [Istvan Fehervari](https://github.com/ifeherva)
 * [Aaron Markham](https://github.com/aaronmarkham)
@@ -243,6 +244,7 @@ List of Contributors
 * [Shoubhik Bhattacharya](https://github.com/shoubhik)
 * [Rohit Srivastava](https://github.com/access2rohit)
 * [Caner Turkmen](https://github.com/canerturkmen)
+* [Disi A](https://github.com/adis300)
 
 Label Bot
 ---------

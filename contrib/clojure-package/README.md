@@ -237,7 +237,7 @@ If you are having trouble getting started or have a question, feel free to reach
 There are quite a few examples in the examples directory. To use.
 
 `lein install` in the main project
-`cd` in the the example project of interest
+`cd` in the example project of interest
 
 There are README is every directory outlining instructions.
 

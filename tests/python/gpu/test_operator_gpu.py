@@ -44,6 +44,7 @@ from test_sparse_operator import *
 from test_ndarray import *
 from test_subgraph_op import *
 from test_contrib_operator import test_multibox_target_op
+from test_tvm_op import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
@@ -1127,6 +1128,36 @@ def test_pooling_full_2d():
     test_pooling_full_2d_type('max')
     test_pooling_full_2d_type('avg')
     test_pooling_full_2d_type('sum')
+
+
+@with_seed()
+def test_flatten_slice_after_conv():
+    ctx_list = []
+
+    data = mx.sym.Variable('conv_data')
+    conv = mx.symbol.Convolution(data=data, name='conv', num_filter=16, kernel=(3,3), stride=(1,1))
+    flatten = mx.symbol.flatten(data=conv)
+    slice_sym = mx.symbol.slice(data=flatten, begin=0, end=1)
+
+    ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}},
+                {'ctx': mx.cpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}}]
+    check_consistency(slice_sym, ctx_list)
+
+
+@with_seed()
+def test_bilinear_resize_op():
+    ctx_list = [{'ctx': mx.cpu(0), 'data': (2, 2, 20, 20), 'type_dict': {'data': np.float32}},
+                {'ctx': mx.gpu(0), 'data': (2, 2, 20, 20), 'type_dict': {'data': np.float32}}]
+
+    data = mx.sym.Variable('data')
+    sym = mx.sym.contrib.BilinearResize2D(data, height=10, width=5)
+    check_consistency(sym, ctx_list)
+
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=2, scale_width=0.5, mode='odd_scale')
+    check_consistency(sym, ctx_list)
+
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=0.5, scale_width=2, mode='to_even_up')
+    check_consistency(sym, ctx_list)
 
 
 @with_seed()

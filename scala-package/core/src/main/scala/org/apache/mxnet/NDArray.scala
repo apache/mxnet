@@ -21,7 +21,8 @@ import java.nio.{ByteBuffer, ByteOrder}
 
 import org.apache.mxnet.Base._
 import org.apache.mxnet.DType.DType
-import org.apache.mxnet.MX_PRIMITIVES.{MX_PRIMITIVE_TYPE}
+import org.apache.mxnet.MX_PRIMITIVES.MX_PRIMITIVE_TYPE
+import org.apache.mxnet.SparseFormat.SparseFormat
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -113,10 +114,22 @@ object NDArray extends NDArrayBase {
       }
 
     val outputs = ArrayBuffer.empty[NDArrayHandle]
-    checkCall(_LIB.mxImperativeInvoke(function.handle, ndArgs.map(_.handle).toArray, outputVars,
-      outputs, updatedKwargs.size, updatedKwargs.keys.toArray, updatedKwargs.values.toArray))
+    val outStypes = ArrayBuffer.empty[Int]
+    checkCall(_LIB.mxImperativeInvokeEx(function.handle,
+      ndArgs.map(_.handle).toArray,
+      outputVars,
+      outputs,
+      updatedKwargs.size,
+      updatedKwargs.keys.toArray,
+      updatedKwargs.values.toArray,
+      outStypes))
     new NDArrayFuncReturn(Option(oriOutputs).getOrElse {
-      val outputArrs = outputs.map(new NDArray(_)).toArray
+      val outputArrs = (outputs zip outStypes).map(
+        ele => ele._2 match {
+          case 0 => new NDArray(ele._1)
+          case _ => new SparseNDArray(ele._1)
+        }
+        ).toArray
       addDependency(ndArgs.toArray, outputArrs)
       outputArrs
     })
@@ -943,6 +956,14 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     DType(mxDtype.value)
   }
 
+  // This is a optimization on the SparseFormat checking
+  // TODO: In some cases, the checking on Sparse is invalid (-1)
+  lazy val sparseFormat: SparseFormat = {
+    val mxSF = new RefInt
+    checkCall(_LIB.mxNDArrayGetStorageType(handle, mxSF))
+    SparseFormat(mxSF.value)
+  }
+
   /**
    * Return a copied numpy array of current array with specified type.
    * @param dtype Desired type of result array.
@@ -1309,6 +1330,30 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     if (this.context == context) this else this.copyTo(context)
   }
 
+  /**
+    * check if NDArray is SparseNDArray
+    * @return Boolean
+    */
+  def isSparse: Boolean = {
+      this.sparseFormat.id != 0
+  }
+
+  /**
+    * Convert a NDArray to SparseNDArray
+    *
+    * @param sfOption the target sparse type
+    * @return SparseNDArray
+    */
+  def toSparse(sfOption : Option[SparseFormat] = None): SparseNDArray = {
+    val sf = sfOption.getOrElse(SparseFormat.ROW_SPARSE)
+    if (sf.id == 0) throw new IllegalArgumentException("Require Sparse")
+    if (isSparse && sfOption.isEmpty) {
+        this.asInstanceOf[SparseNDArray]
+    } else {
+      NDArray.api.cast_storage(this, sf.toString).head.asInstanceOf[SparseNDArray]
+    }
+  }
+
   override def equals(o: Any): Boolean = o match {
     case that: NDArray =>
       that != null && that.shape == this.shape && that.toArray.sameElements(this.toArray)
@@ -1479,6 +1524,7 @@ private[mxnet] class NDArrayInternal (private val internal: Array[Byte], private
       case DType.Float32 => units.map(wrapBytes(_).getFloat.toDouble)
       case DType.Float64 => units.map(wrapBytes(_).getDouble)
       case DType.Int32 => units.map(wrapBytes(_).getInt.toDouble)
+      case DType.Int64 => units.map(wrapBytes(_).getLong.toDouble)
       case DType.UInt8 => internal.map(_.toDouble)
     }
   }
@@ -1488,6 +1534,7 @@ private[mxnet] class NDArrayInternal (private val internal: Array[Byte], private
       case DType.Float32 => units.map(wrapBytes(_).getFloat)
       case DType.Float64 => units.map(wrapBytes(_).getDouble.toFloat)
       case DType.Int32 => units.map(wrapBytes(_).getInt.toFloat)
+      case DType.Int64 => units.map(wrapBytes(_).getLong.toFloat)
       case DType.UInt8 => internal.map(_.toFloat)
     }
   }
@@ -1497,7 +1544,18 @@ private[mxnet] class NDArrayInternal (private val internal: Array[Byte], private
       case DType.Float32 => units.map(wrapBytes(_).getFloat.toInt)
       case DType.Float64 => units.map(wrapBytes(_).getDouble.toInt)
       case DType.Int32 => units.map(wrapBytes(_).getInt)
+      case DType.Int64 => units.map(wrapBytes(_).getLong.toInt)
       case DType.UInt8 => internal.map(_.toInt)
+    }
+  }
+  def toLongArray: Array[Long] = {
+    require(dtype != DType.Float16, "Currently cannot convert float16 to native numerical types")
+    dtype match {
+      case DType.Float32 => units.map(wrapBytes(_).getFloat.toLong)
+      case DType.Float64 => units.map(wrapBytes(_).getDouble.toLong)
+      case DType.Int32 => units.map(wrapBytes(_).getInt.toLong)
+      case DType.Int64 => units.map(wrapBytes(_).getLong)
+      case DType.UInt8 => internal.map(_.toLong)
     }
   }
   def toByteArray: Array[Byte] = {
@@ -1506,6 +1564,7 @@ private[mxnet] class NDArrayInternal (private val internal: Array[Byte], private
       case DType.Float16 | DType.Float32 => units.map(wrapBytes(_).getFloat.toByte)
       case DType.Float64 => units.map(wrapBytes(_).getDouble.toByte)
       case DType.Int32 => units.map(wrapBytes(_).getInt.toByte)
+      case DType.Int64 => units.map(wrapBytes(_).getLong.toByte)
       case DType.UInt8 => internal.clone()
     }
   }
