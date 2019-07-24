@@ -2028,9 +2028,9 @@ def test_convolution_independent_gradients():
         x = mx.sym.Variable('x')
         w = mx.sym.Variable('w')
         b = mx.sym.Variable('b') if not no_bias else None
-        conv = mx.sym.Convolution(x, w, b, num_filter=num_filter, 
+        conv = mx.sym.Convolution(x, w, b, num_filter=num_filter,
             kernel=kernel, stride=stride, pad=pad, no_bias=no_bias)
-        
+
         for req_kind in reqs:
             # Binding args for conv with possible dependent gradients
             base_args = {
@@ -2049,7 +2049,7 @@ def test_convolution_independent_gradients():
             exe1 = conv.bind(ctx, args1, args_grad=grad1, grad_req=grad_req1)
             exe1.forward(is_train=True)
             exe1.backward(exe1.outputs[0])
-            
+
             for x_req, w_req, b_req in itertools.product(reqs, repeat=3):
                 # Binding args for conv with independent gradients
                 args2 = copy.deepcopy(base_args)    # Deepcopy the same params of `exe1`
@@ -2059,11 +2059,11 @@ def test_convolution_independent_gradients():
                     'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
                 grad_req2 = {"x": x_req, "w": w_req, "b": b_req}
                 exe2 = conv.bind(ctx, args2, args_grad=grad2, grad_req=grad_req2)
-                    
+
                 exe2.forward(is_train=True)
                 np.testing.assert_allclose(exe1.outputs[0].asnumpy(),
                     exe2.outputs[0].asnumpy(), rtol=rtol, atol=atol)
-                
+
                 exe2.backward(exe2.outputs[0])
                 for var_name in var_names:
                     if var_name == "b" and no_bias:
@@ -8081,7 +8081,7 @@ def test_op_all_names_monitor():
         check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
 
         sm_sym = mx.sym.softmax(data, name='softmax')
-        check_name(sm_sym, ['data', 'softmax_input0', 'softmax_output'])
+        check_name(sm_sym, ['data', 'softmax_data', 'softmax_output'])
 
         length = mx.sym.Variable("length", shape=(10, 10, 10))
         sm_sym = mx.sym.softmax(data, length, axis=1, use_length=True, name='softmax')
