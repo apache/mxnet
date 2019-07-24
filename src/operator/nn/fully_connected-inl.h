@@ -327,7 +327,6 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const size_t num_inputs = param.no_bias ? 3U : 4U;
   // outputs are: o_x_grad, o_w_grad, o_y   || o_x_grad, o_w_grad, o_b_grad, o_y
-  //const size_t num_outputs = param.no_bias ? 3U : 4U;
   const size_t num_outputs = 3U;
   CHECK_EQ(inputs.size(), num_inputs);
   CHECK_EQ(outputs.size(), num_outputs);
@@ -368,7 +367,8 @@ void FullyConnectedGradGradCompute(const nnvm::NodeAttrs& attrs,
   linalg_gemm(o_y, o_x_grad, w_grad_grad, true, false, stream);
   // 3rd order not supported
   Fill(stream, o_y_grad_blob, kWriteTo, static_cast<DType>(0));
-  /* TODO(larroy) bias is not supported yet as there's no bias input to backward
+  /* TODO(larroy) bias is not supported yet as there's no bias input to backward. Bias grad grad is
+   * zero.
   if (!param.no_bias) {
     // The second order gradient for b doesn't depend on x or w. Thus we set it to 0.
     b_grad_grad = outputs.at(kBGradGrad).get<xpu, 1, DType>(stream);
