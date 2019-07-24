@@ -38,6 +38,10 @@ extern "C" {
     Returns:
     - int : Non-zero value on error i.e. library incompatible with passed MXNet version
     */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+    __declspec(dllexport) int __cdecl initialize(int);
+#else
     int initialize(int);
+#endif
 }
 #endif  // MXNET_LIB_API_H_
