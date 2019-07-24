@@ -26,7 +26,7 @@ import numpy as np
 
 from .activations import Activation
 from ..block import Block, HybridBlock
-from ..utils import _indent, _adapt_np_array
+from ..utils import _indent
 from ... import nd, sym
 from ...util import is_np_array
 
@@ -522,7 +522,6 @@ class InstanceNorm(HybridBlock):
                                     shape=(in_channels,), init=beta_initializer,
                                     allow_deferred_init=True)
 
-    @_adapt_np_array
     def hybrid_forward(self, F, x, gamma, beta):
         if self._axis == 1:
             return F.InstanceNorm(x, gamma, beta,
@@ -795,7 +794,6 @@ class HybridLambda(HybridBlock):
                 "Unrecognized function in lambda: {} of type {}"
                 .format(function, type(function)))
 
-    @_adapt_np_array
     def hybrid_forward(self, F, x, *args):
         return self._func(F, x, *args)
 

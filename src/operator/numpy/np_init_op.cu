@@ -41,7 +41,7 @@ NNVM_REGISTER_OP(_np_ones_like)
 .set_attr<FCompute>("FCompute<gpu>", FillCompute<gpu, 1>);
 
 NNVM_REGISTER_OP(_npi_arange)
-.set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
 
 }  // namespace op
 }  // namespace mxnet
