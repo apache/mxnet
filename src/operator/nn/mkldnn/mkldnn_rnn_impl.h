@@ -127,43 +127,35 @@ static void ConcatData(mkldnn::memory::format src_format,
  * For bidirectional, it will fused as data + back_data (weight, bias,
  * iter etc)
  * 
- * @param L Number of Layers
- * @param D Direction of the RNN implement. It should be 1 or 2.
- * @param T The maximum sequence length.
- * @param N Batch size.
- * @param I Input channel. Also the dimension of the input feature.
- * @param H Hidden state size.
+ * @param num_layer Number of Layers
+ * @param direction Direction of the RNN implement. It should be 1 or 2.
+ * @param seq_len The maximum sequence length.
+ * @param batch_size Batch size.
+ * @param input_size Input channel. Also the dimension of the input feature.
+ * @param hidden_size Hidden state size.
  * @return The required cache size.
  */
-static size_t GetMKLDNNRNNCacheMemorySize(int L,
-                                          int D,
-                                          int T,
-                                          int N,
-                                          int I,
-                                          int H,
+static size_t GetMKLDNNRNNCacheMemorySize(int num_layer,
+                                          int direction,
+                                          int seq_len,
+                                          int batch_size,
+                                          int input_size,
+                                          int hidden_size,
                                           int mode) {
-  size_t size = 0;
-  switch (mode) {
-    case rnn_enum::kLstm:
-      size = 2 * (D * (I + H) * 4 * H + (L - 1) * D * (D * H + H) * 4 * H +
-             L * D * 2 * N * H) + T * N * D * H + L * 2 * D * 4 * H + (L + 2) * D * 2 * N * H +
-             6 * D * (I + H + 2) * 4 * H + T * N * I * 2;
-      break;
-    case rnn_enum::kGru:
-      size = 2 * (D * (I + H) * 3 * H + (L - 1) * D * (D * H + H) * 3 * H +
-             L * D * 2 * N * H) + T * N * D * H + L * 2 * D * 4 * H + (L + 2) * D * 2 * N * H +
-             6 * D * (I + H + 2) * 3 * H + T * N * I * 2;
-      break;
-    case rnn_enum::kRnnRelu:
-    case rnn_enum::kRnnTanh:
-      size = 2 * (D * (I + H) * 1 * H + (L - 1) * D * (D * H + H) * 1 * H +
-             L * D * 2 * N * H) + T * N * D * H + L * 2 * D * 1 * H + (L + 2) * D * 2 * N * H +
-             6 * D * (I + H + 2) * 1 * H + T * N * I * 2;
-      break;
-    default:
-      LOG(FATAL) << "unknown RNN mode " << mode;
-      break;
-  }
+  int n_gates = 0, n_states = 0;
+  GetMKLDNNRNNAlgo(mode, &n_gates, &n_states);
+  int n_bias = mode == rnn_enum::kGru ? n_gates + 1 : n_gates;
+  // sizes of single gates from a single cell
+  const size_t weights_size_0 = direction * (input_size + hidden_size) * hidden_size;
+  const size_t weights_size_n = direction * (direction * hidden_size + hidden_size) * hidden_size;
+  const size_t bias_size      = direction * hidden_size;
+  const size_t src_iter_size  = direction * batch_size * hidden_size;
+  const size_t dst_iter_size  = direction * batch_size * hidden_size;
+  const size_t dst_layer_size = seq_len * batch_size * direction * hidden_size;
+
+  size_t size = (weights_size_0 + weights_size_n * (num_layer - 1)) * n_gates * 2 +
+      bias_size * num_layer * n_bias + src_iter_size * num_layer * n_states * 2 +
+      dst_iter_size * num_layer * n_states + dst_layer_size * 2;
   return size;
 }
 
@@ -221,7 +213,6 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
                                           std::vector<primitive> *rnn_forward_prim,
                                           int layer_index,
                                           bool *has_cache,
-                                          int lvalue,
                                           int dtype,
                                           bool is_train,
                                           int mode) {
@@ -277,15 +268,12 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
     ConcatData(mkldnn::memory::format::ldgoi, mkldnn::memory::format::ldgoi,
         {weights_iter_r_tz, weights_iter_r_tz}, weights_iter_tz,
         mkldnn_dtype, 1, srcs_data1, src_wh, &(mkldnn_mems->weight_iter_mems));
-    int tmpvalue = 0;
-    if (lvalue > 0) {
-      tmpvalue = lvalue + 1;
-    }
-    MKLDNNStream::Get()->RegisterPrim(reorder(src_wx, mkldnn_mems->wx_memory[tmpvalue]));
-    MKLDNNStream::Get()->RegisterPrim(reorder(src_wh, mkldnn_mems->wh_memory[tmpvalue]));
+
+    MKLDNNStream::Get()->RegisterPrim(reorder(src_wx, mkldnn_mems->wx_memory[layer_index]));
+    MKLDNNStream::Get()->RegisterPrim(reorder(src_wh, mkldnn_mems->wh_memory[layer_index]));
 
     DType* user_bias = reinterpret_cast<DType *>
-        (mkldnn_mems->bias_memory[tmpvalue].get_data_handle());
+        (mkldnn_mems->bias_memory[layer_index].get_data_handle());
     if (mode == rnn_enum::kGru) {
       // While mxnet gru gate order is reset, update and new gates,
       // mkldnn gru gate order is update, reset and new gates. So
@@ -312,14 +300,6 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
         user_bias[mx_single_b_sz + j] = back_bx[j] + back_bh[j];
       }
     }
-  }
-  if (lvalue > 0) {
-    mkldnn_mems->wx_memory[layer_index].set_data_handle(
-        mkldnn_mems->wx_memory[lvalue + 1].get_data_handle());
-    mkldnn_mems->wh_memory[layer_index].set_data_handle(
-        mkldnn_mems->wh_memory[lvalue + 1].get_data_handle());
-    mkldnn_mems->bias_memory[layer_index].set_data_handle(
-        mkldnn_mems->bias_memory[lvalue + 1].get_data_handle());
   }
 
   auto src_layer_md = mkldnn::memory::desc(
@@ -577,7 +557,7 @@ static void MKLDNNRNNForwardUnidi(bool state_outputs,
           user_bias_f[g + l * single_b_size] =
               b_ptr[g + H + l * mx_single_b_sz * 2]
               + b_ptr[g + H + l * mx_single_b_sz * 2 + mx_single_b_sz];
-        } 
+        }
         #pragma omp parallel for num_threads(omp_threads)
         for (int g = 2 * H; g < 3 * H; g++) {
           user_bias_f[g + l * single_b_size] = b_ptr[g + l * mx_single_b_sz * 2];
@@ -692,7 +672,7 @@ static void MKLDNNRNNForward(bool state_outputs,
       MKLDNNRNNForwardSingleLayerBi(state_outputs, T, N, I, H, x_ptr,
           hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr,
           mkldnn_mems, rnn_forward_prim,
-          0, has_cache, 0, dtype, is_train, mode);
+          0, has_cache, dtype, is_train, mode);
     } else {
       MKLDNNRNNForwardUnidi(state_outputs, 1, T, N, I, H, x_ptr,
           hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr,
@@ -721,7 +701,7 @@ static void MKLDNNRNNForward(bool state_outputs,
           MKLDNNRNNForwardSingleLayerBi(state_outputs, T, N, D * H, H, tmpNull,
               hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr,
               cy_ptr, mkldnn_mems, rnn_forward_prim,
-              1, has_cache, l + 1, dtype, is_train, mode);
+              1, has_cache, dtype, is_train, mode);
           mkldnn_mems->user_src_layer_memory_l = mkldnn_mems->y_memory[1];
           w_ptr += w_size;
           b_ptr += b_size;
