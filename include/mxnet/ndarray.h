@@ -85,7 +85,7 @@ class NDArray {
  public:
   /*! \brief default constructor */
   NDArray()
-    : entry_(nullptr) {
+    : autograd_(nullptr) {
   }
   /*!
    * \brief constructs a new dynamic NDArray
@@ -100,7 +100,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_(nullptr) {
   }
   /*! \brief constructor for NDArray with storage type
    */
@@ -119,7 +119,7 @@ class NDArray {
         shape_(),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_(nullptr) {
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
@@ -133,7 +133,7 @@ class NDArray {
         shape_(data.shape_),
         dtype_(data.type_flag_),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_(nullptr) {
   }
 
   /*!
@@ -151,7 +151,7 @@ class NDArray {
         }),
         shape_(data.shape_),
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_(nullptr) {
   }
 
   /*! \brief create ndarray from shared memory */
@@ -160,7 +160,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_(nullptr) {
   }
 
   /*!
@@ -179,7 +179,7 @@ class NDArray {
         shape_(shape),
         dtype_(data.type_flag_),
         storage_type_(stype),
-        entry_(nullptr) {
+        autograd_(nullptr) {
   }
   /*!
    * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
@@ -657,7 +657,7 @@ class NDArray {
    */
   NDArray Detach() const {
     NDArray ret(*this);
-    ret.entry_ = nnvm::NodeEntry(nullptr);
+    ret.autograd_ = nnvm::NodeEntry(nullptr);
     return ret;
   }
 
@@ -1109,7 +1109,7 @@ class NDArray {
   /*! \brief storage type of data */
   NDArrayStorageType storage_type_ = kUndefinedStorage;
   /*! \brief node entry for autograd */
-  nnvm::NodeEntry entry_;
+  nnvm::NodeEntry autograd_;
   /*!
    * \brief internal TBlob
    * \note When user access tblob_ by some const methods like

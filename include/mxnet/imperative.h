@@ -67,7 +67,7 @@ class AGInfo {
   }
 
   static bool IsNone(const NDArray& arr) {
-    return arr.entry_.node == nullptr || arr.entry_.node->info.empty();
+    return arr.autograd_.node == nullptr || arr.autograd_.node->info.empty();
   }
 
   static bool IsVariable(const nnvm::NodePtr& node) {

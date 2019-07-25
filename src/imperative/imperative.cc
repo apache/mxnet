@@ -127,18 +127,18 @@ void Imperative::MarkVariables(
   for (size_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
     {
-      variables[i]->entry_ = nnvm::NodeEntry{
+      variables[i]->autograd_ = nnvm::NodeEntry{
           nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
-      AGInfo &info = AGInfo::Create(variables[i]->entry_.node);
+      AGInfo &info = AGInfo::Create(variables[i]->autograd_.node);
       info.outputs.emplace_back(variables[i]->Detach());
       info.out_grads.emplace_back(gradients[i]->Detach());
       info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
       info.ctx = variables[i]->ctx();
     }
     {
-      gradients[i]->entry_ = nnvm::NodeEntry{
+      gradients[i]->autograd_ = nnvm::NodeEntry{
           nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
-      AGInfo &grad_info = AGInfo::Create(gradients[i]->entry_.node);
+      AGInfo &grad_info = AGInfo::Create(gradients[i]->autograd_.node);
       grad_info.outputs.emplace_back(gradients[i]->Detach());
       grad_info.ctx = gradients[i]->ctx();
     }
@@ -246,11 +246,11 @@ void Imperative::RecordOp(
         input_info.outputs.back().dtype_ = inputs[i]->dtype();
         input_info.outputs.back().storage_type_ = inputs[i]->storage_type();
       }
-      inputs[i]->entry_ = std::move(entry);  // assign last to prevent cyclic reference
+      inputs[i]->autograd_ = std::move(entry);  // assign last to prevent cyclic reference
     } else if ((*p_save_inputs)[i]) {
-      AGInfo::Get(inputs[i]->entry_.node).outputs[inputs[i]->entry_.index] = inputs[i]->Detach();
+      AGInfo::Get(inputs[i]->autograd_.node).outputs[inputs[i]->autograd_.index] = inputs[i]->Detach();
     }
-    node->inputs[i] = inputs[i]->entry_;
+    node->inputs[i] = inputs[i]->autograd_;
   }
 
   for (auto output : outputs) {
@@ -269,7 +269,7 @@ void Imperative::RecordOp(
       info.outputs.back().dtype_ = outputs[i]->dtype();
       info.outputs.back().storage_type_ = outputs[i]->storage_type();
     }
-    outputs[i]->entry_ = nnvm::NodeEntry{node, static_cast<uint32_t>(i), 0};
+    outputs[i]->autograd_ = nnvm::NodeEntry{node, static_cast<uint32_t>(i), 0};
   }
 }
 
@@ -283,7 +283,7 @@ nnvm::Graph Imperative::CreateGraph(const std::vector<NDArray *> &outputs) {
       << "You need to set is_recording to true or use autograd.record() to save "
       << "computational graphs for backward. If you want to differentiate the same "
       << "graph twice, you need to pass retain_graph=True to backward.";
-    g.outputs.emplace_back(i->entry_);
+    g.outputs.emplace_back(i->autograd_);
   }
   return g;
 }
@@ -326,10 +326,10 @@ Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(
     var_nodes.op_req_types.reserve(variables.size());
     for (size_t i = 0; i < variables.size(); ++i) {
       CHECK(!AGInfo::IsNone(*variables[i]) &&
-            AGInfo::IsVariable(variables[i]->entry_.node))
+            AGInfo::IsVariable(variables[i]->autograd_.node))
           << "Cannot differentiate with respect to the " << i+1 << "-th variable"
           << " because it does not require gradient. Did you forget attach_grad()?";
-      var_nodes.variable_nodes.emplace_back(variables[i]->entry_);
+      var_nodes.variable_nodes.emplace_back(variables[i]->autograd_);
       var_nodes.gradients.push_back(new NDArray());
       var_nodes.op_req_types.push_back(kWriteTo);
     }
@@ -427,7 +427,7 @@ std::vector<NDArray*> Imperative::Backward(
         const size_t nid = indexed_graph.node_id(n.get());
         const size_t eid = indexed_graph.entry_id(nid, i);
         buff[eid] = info.outputs[i];
-        buff[eid].entry_ = NodeEntry{n, static_cast<uint32_t>(i), 0};
+        buff[eid].autograd_ = NodeEntry{n, static_cast<uint32_t>(i), 0};
         ref_count[eid] = 1;
       }
     });
@@ -436,7 +436,7 @@ std::vector<NDArray*> Imperative::Backward(
       if (!indexed_graph.exist(ograd_entry.node.get())) continue;
       size_t eid = indexed_graph.entry_id(ograd_entry);
       buff[eid] = info.outputs[0];
-      buff[eid].entry_ = ograd_entry;
+      buff[eid].autograd_ = ograd_entry;
     }
   } else {
     states.reserve(num_forward_nodes);
