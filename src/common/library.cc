@@ -52,7 +52,7 @@ void* load_lib(const char* path) {
         NULL,
         dw,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        &lpMsgBuf,
+        lpMsgBuf,
         0, NULL );
     LOG(FATAL) << "Error loading library: '" << path << "'\n" << lpMsgBuf;
     LocalFree(lpMsgBuf);
