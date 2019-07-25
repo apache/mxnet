@@ -140,7 +140,9 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
                            const std::vector<int> &in_ndims,
                            const std::vector<int> &out_ndims,
                            const int nvec,
-                           const std::string &kernel_name) {
+                           const std::string &kernel_name,
+                           const std::vector<mxnet::TShape> &node_shapes,
+                           const std::vector<int> &node_dtypes) {
   const auto& g = this->subgraph_.indexed_graph();
   std::string code = "";
   int temp_name_counter = 0;
@@ -319,8 +321,7 @@ void FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 
         if (op_name == "_backward_cast") {
           CHECK_EQ(outputs[i], 1);
-          const std::vector<int>& types = this->subgraph_.GetAttr<nnvm::DTypeVector>("dtype");
-          const int output_type = types[g.entry_id(i, 0)];
+          const int output_type = node_dtypes[g.entry_id(i, 0)];
           const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
           code += "const auto " + var_name + " = cast<" + mshadowTypeToString(output_type) +
                   ">(" + arg + ");\n";
@@ -488,6 +489,56 @@ bool FusedOp::CheckComputeCapability(const OpContext &ctx) {
   return ret;
 }
 
+void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
+                                  const std::vector<TBlob> &outputs,
+                                  std::vector<int> *in_dtypes,
+                                  std::vector<int> *in_ndims,
+                                  std::vector<int> *out_dtypes,
+                                  std::vector<int> *out_ndims,
+                                  int *nvec) {
+  std::vector<mxnet::TShape> in_shapes;
+  std::vector<mxnet::TShape> out_shapes;
+  CHECK_EQ(inputs.size(), inputs_.size());
+  CHECK_EQ(outputs.size(), outputs_.size());
+
+  for (size_t counter = 0; counter < inputs.size(); ++counter) {
+    const auto& blob = inputs[counter];
+    in_dtypes->push_back(blob.type_flag_);
+    in_ndims->push_back(blob.ndim());
+    in_shapes.push_back(blob.shape_);
+    initialized_ = initialized_ && blob.type_flag_ == inputs_[counter].dtype;
+    inputs_[counter].dtype = blob.type_flag_;
+    *nvec = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
+  }
+
+  for (size_t counter = 0; counter < outputs.size(); ++counter) {
+    const auto& blob = outputs[counter];
+    out_dtypes->push_back(blob.type_flag_);
+    out_ndims->push_back(blob.ndim());
+    out_shapes.push_back(blob.shape_);
+    initialized_ = initialized_ && blob.type_flag_ == outputs_[counter].dtype;
+    outputs_[counter].dtype = blob.type_flag_;
+    *nvec = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
+  }
+
+  for (auto it = intermediate_shapes_.begin();
+       it != intermediate_shapes_.end();
+       ++it) {
+    if (it->input_attr == in_shapes && it->output_attr == out_shapes) {
+      intermediate_shapes_.erase(intermediate_shapes_.begin(), it);
+      break;
+    }
+  }
+  for (auto it = intermediate_dtypes_.begin();
+       it != intermediate_dtypes_.end();
+       ++it) {
+    if (it->input_attr == *in_dtypes && it->output_attr == *out_dtypes) {
+      intermediate_dtypes_.erase(intermediate_dtypes_.begin(), it);
+      break;
+    }
+  }
+}
+
 template <>
 void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
                            const OpContext &ctx,
@@ -504,25 +555,11 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<int> out_ndims;
   int nvec = 1;
 
-  CHECK_EQ(inputs.size(), inputs_.size());
-  for (size_t counter = 0; counter < inputs.size(); ++counter) {
-    const auto& blob = inputs[counter];
-    in_dtypes.push_back(blob.type_flag_);
-    in_ndims.push_back(blob.ndim());
-    initialized_ = initialized_ && (blob.type_flag_ == inputs_[counter].dtype);
-    inputs_[counter].dtype = blob.type_flag_;
-    nvec = max(nvec, mshadowTypeToVectorLength(blob.type_flag_));
-  }
+  CheckShapesAndTypes(inputs, outputs, &in_dtypes, &in_ndims,
+                      &out_dtypes, &out_ndims, &nvec);
 
-  CHECK_EQ(outputs.size(), outputs_.size());
-  for (size_t counter = 0; counter < outputs.size(); ++counter) {
-    const auto& blob = outputs[counter];
-    out_dtypes.push_back(blob.type_flag_);
-    out_ndims.push_back(blob.ndim());
-    initialized_ = initialized_ && (blob.type_flag_ == outputs_[counter].dtype);
-    outputs_[counter].dtype = blob.type_flag_;
-    nvec = max(nvec, mshadowTypeToVectorLength(blob.type_flag_));
-  }
+  const auto& node_shapes = intermediate_shapes_[0].internal_attr;
+  const auto& node_dtypes = intermediate_dtypes_[0].internal_attr;
 
   // Check and save compute capability of the current GPU
   if (!CheckComputeCapability(ctx)) initialized_ = false;
@@ -531,7 +568,8 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
   saved_reqs_ = req;
 
   if (!initialized_) {
-    this->GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims, nvec, attrs.name);
+    this->GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims,
+                       nvec, attrs.name, node_shapes, node_dtypes);
     this->CompileCode(attrs.name);
     initialized_ = true;
   }

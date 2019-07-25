@@ -93,6 +93,10 @@ bool FusedOp::InferShape(const nnvm::NodeAttrs &attrs,
   for (const auto& attr : *out_attrs) {
     inferred = inferred && !op::shape_is_none(attr);
   }
+  if (inferred) {
+    std::lock_guard<std::mutex> lock(my_mutex_);
+    intermediate_shapes_.push_back({*in_attrs, *out_attrs, shapes});
+  }
   return inferred;
 }
 
@@ -131,6 +135,10 @@ bool FusedOp::InferType(const nnvm::NodeAttrs &attrs,
   }
   for (const auto& attr : *out_attrs) {
     inferred = inferred && !op::type_is_none(attr);
+  }
+  if (inferred) {
+    std::lock_guard<std::mutex> lock(my_mutex_);
+    intermediate_dtypes_.push_back({*in_attrs, *out_attrs, types});
   }
   return inferred;
 }

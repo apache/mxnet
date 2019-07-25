@@ -108,15 +108,40 @@ class FusedOp {
                     const std::vector<int> &in_ndims,
                     const std::vector<int> &out_ndims,
                     const int nvec,
-                    const std::string& kernel_name);
+                    const std::string& kernel_name,
+                    const std::vector<mxnet::TShape> &node_shapes,
+                    const std::vector<int> &node_dtypes);
   void CompileCode(const std::string &kernel_name);
   bool CheckComputeCapability(const OpContext &ctx);
+  void CheckShapesAndTypes(const std::vector<TBlob> &inputs,
+                           const std::vector<TBlob> &outputs,
+                           std::vector<int> *in_dtypes,
+                           std::vector<int> *in_ndims,
+                           std::vector<int> *out_dtypes,
+                           std::vector<int> *out_ndims,
+                           int *nvec);
 
   std::vector<FusedOpEntry> inputs_;
   std::vector<FusedOpEntry> outputs_;
 
   std::string code_;
   nnvm::Graph subgraph_;
+
+  template <typename T>
+  struct IntermediateAttr {
+    std::vector<T> input_attr;
+    std::vector<T> output_attr;
+    std::vector<T> internal_attr;
+  };
+
+  // Shapes and types inside the subgraph
+  // copied here, because a subsequent call
+  // to InferShape/InferType can overwrite the
+  // original information stored in subgraph_
+  // attributes while the previous iterations
+  // still need them.
+  std::vector<IntermediateAttr<mxnet::TShape> > intermediate_shapes_;
+  std::vector<IntermediateAttr<int> > intermediate_dtypes_;
 
   std::vector<std::vector<mxnet::TShape>> aux_in_shapes;
   std::vector<std::vector<mxnet::TShape>> aux_out_shapes;
