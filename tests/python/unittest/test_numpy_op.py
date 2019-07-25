@@ -58,7 +58,7 @@ def test_np_tensordot():
                 b_axes_summed = b_axes_summed,
 
         if len(a_axes_summed) != len(b_axes_summed):
-            raise ValueError('Axes length mismatch') 
+            raise ValueError('Axes length mismatch')
 
         a_axes_remained = []
         for i in range(a.ndim):
@@ -254,7 +254,7 @@ def test_np_dot():
         ((3, 4, 5), (5, )),  # Case 4
         ((3, 4, 5), (5, 2)), # Case 5
         ((5,), (5, 2)),
-        ((3, 5, 4), (5, 4, 3)),  
+        ((3, 5, 4), (5, 4, 3)),
         ((3, 4), (5, 4, 3)),
         ((4,), (5, 4, 3))
     ]
@@ -1007,15 +1007,15 @@ def test_np_argsort():
             return F.np.argsort(a, self._axis)
 
     shapes = [
-        (), 
-        (1,), 
+        (),
+        (1,),
         (5,4),
         (5,0,4),
         (5,0,0),
         (0,0,5),
         (0,0,0),
         (5,3,4)
-    ] 
+    ]
     for hybridize in [True, False]:
         for shape in shapes:
             for ax in list(range(len(shape))) + [-1, None]:
@@ -1033,6 +1033,52 @@ def test_np_argsort():
                 mx_out = np.argsort(x, axis=ax)
                 np_out = _np.argsort(x.asnumpy(), axis=ax)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_unique():
+    class TestUnique(HybridBlock):
+        def __init__(self, return_index=False, return_inverse=False, return_counts=False, axis=None):
+            super(TestUnique, self).__init__()
+            self._return_index = return_index
+            self._return_inverse = return_inverse
+            self._return_counts = return_counts
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.unique(a, self._return_index, self._return_inverse, self._return_counts, self._axis)
+
+    configs = [
+        ((), True, True, True, None),
+        ((1, ), True, True, True, -1),
+        ((5, ), True, True, True, 0),
+        ((3, ), True, True, True, None),
+        ((5, 4), True, True, True, -1),
+        ((5, 0, 4), True, True, True, None),
+        ((0, 0, 0), True, True, True, None),
+        ((5, 3, 4), True, True, True, -1),
+        ((5, 3, 4), True, True, True, None),
+        ((5, 3, 4), True, True, True, 1),
+    ]
+    for hybridize in [True, False]:
+        for config in configs:
+            test_unique = TestUnique(*config[1:])
+            if hybridize:
+                test_unique.hybridize()
+
+            x = np.random.uniform(size=config[0])
+            np_out = _np.unique(x.asnumpy(), *config[1:])
+            mx_out = test_unique(x)
+            assert mx_out[0].shape == np_out[0].shape
+            for i in range(4):
+                assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+
+            # Test imperative once again
+            mx_out = np.unique(x, *config[1:])
+            np_out = _np.unique(x.asnumpy(), *config[1:])
+            for i in range(4):
+                assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
@@ -1131,7 +1177,7 @@ def test_np_hstack():
         if len(shape) == 0:
             l = random.randint(0,3)
             if l == 0:
-                return shape 
+                return shape
             else:
                 return (l,)
         shape_lst = list(shape)
