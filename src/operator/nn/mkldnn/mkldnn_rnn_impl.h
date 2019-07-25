@@ -374,7 +374,8 @@ static void MKLDNNRNNForwardSingleLayerBi(bool state_outputs,
   MKLDNNStream::Get()->Submit();
 
   if (state_outputs) {
-    DType* dst_hcy = reinterpret_cast<DType *>(mkldnn_mems->hcy_memory[layer_index].get_data_handle());
+    DType* dst_hcy = reinterpret_cast<DType *>(
+        mkldnn_mems->hcy_memory[layer_index].get_data_handle());
     if (mode == rnn_enum::kLstm) {
       offset1 = nstates * single_cell_size;
       offset2 = (nstates + 1) * single_cell_size;
@@ -542,7 +543,8 @@ static void MKLDNNRNNForwardUnidi(bool state_outputs,
     MKLDNNStream::Get()->RegisterPrim(reorder(src_wx_f, mkldnn_mems->wx_memory[layer_index]));
     MKLDNNStream::Get()->RegisterPrim(reorder(src_wh_f, mkldnn_mems->wh_memory[layer_index]));
 
-    DType* user_bias_f = reinterpret_cast<DType *>(mkldnn_mems->bias_memory[layer_index].get_data_handle());
+    DType* user_bias_f = reinterpret_cast<DType *>(
+        mkldnn_mems->bias_memory[layer_index].get_data_handle());
     if (mode == rnn_enum::kGru) {
       const int mx_single_b_sz = ngates * H;
       for (int l = 0; l < L; l++) {
@@ -569,7 +571,8 @@ static void MKLDNNRNNForwardUnidi(bool state_outputs,
       #pragma omp parallel for num_threads(omp_threads)
       for (int j = 0; j < L * single_b_size; j++) {
         int k = j / single_b_size;
-        user_bias_f[j] = b_ptr[j + k * single_b_size] + b_ptr[j + k * single_b_size + single_b_size];
+        user_bias_f[j] = b_ptr[j + k * single_b_size] +
+            b_ptr[j + k * single_b_size + single_b_size];
       }
     }
   }
@@ -604,7 +607,8 @@ static void MKLDNNRNNForwardUnidi(bool state_outputs,
   MKLDNNStream::Get()->Submit();
 
   if (state_outputs) {
-    DType* dst_hcy = reinterpret_cast<DType *>(mkldnn_mems->hcy_memory[layer_index].get_data_handle());
+    DType* dst_hcy = reinterpret_cast<DType *>(
+        mkldnn_mems->hcy_memory[layer_index].get_data_handle());
     if (mode == rnn_enum::kLstm) {
       for (int l = 0; l < L; l++) {
         offset1 = l * single_cell_size;

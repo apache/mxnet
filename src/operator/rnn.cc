@@ -491,8 +491,9 @@ static void RNNStatefulComputeCPU(const OpStatePtr& state_ptr,
                 = mkldnn::memory({ user_weight_iter_md, cpu_engine }, weight_iter_n);
             op.mkldnn_mems.wh_memory.push_back(user_weight_iter_memory_n);
 
-            DType* bias_n = weight_iter_n + (L - 1) * H * ngates * H;  //  Generally, (L - 1) * ngates * H
-                                                                       //  LBR-Gru, (L -1) * (ngates + 1) * H
+            DType* bias_n = weight_iter_n + (L - 1) * H * ngates * H;  // Generally, (L - 1) *
+                                                                       // ngates * H. LBR-Gru,
+                                                                       // (L -1) * (ngates + 1) * H
             auto user_bias_memory_n =
                 mkldnn::memory({ user_bias_md, cpu_engine }, bias_n);
             op.mkldnn_mems.bias_memory.push_back(user_bias_memory_n);
