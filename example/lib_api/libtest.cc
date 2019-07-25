@@ -30,7 +30,7 @@
 #endif
 
 #include <stdio.h>
-#include "../../include/mxnet/lib_api.h"
+#include "lib_api.h"
 
 #define MXNET_VERSION 10500
 
@@ -38,7 +38,7 @@ int main(void) {
   // Get a handle to the library.
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   HINSTANCE handle;
-  handle = LoadLibrary(TEXT("lib.dll"));
+  handle = LoadLibrary(TEXT("mylib.dll"));
 #else
   void *handle;
   handle = dlopen("mylib.so", RTLD_LAZY);
