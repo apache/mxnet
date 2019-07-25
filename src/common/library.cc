@@ -47,7 +47,7 @@ void* load_lib(const char* path) {
 #endif  // _WIN32 or _WIN64 or __WINDOWS__
 
   if (!handle) {
-    LOG(FATAL) << "Error loading accelerator library: '" << path << "'";
+    LOG(FATAL) << "Error loading library: '" << path << "'";
     return nullptr;
   }
   return handle;
@@ -68,6 +68,6 @@ void get_sym(void* handle, void** func, char* name) {
 #endif  // _WIN32 or _WIN64 or __WINDOWS__
 
   if (!(*func)) {
-    LOG(FATAL) << "Error getting function '" << name << "' from accelerator library";
+    LOG(FATAL) << "Error getting function '" << name << "' from library";
   }
 }
