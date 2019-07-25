@@ -506,7 +506,7 @@ class CheckpointHandler(TrainBegin, BatchEnd, EpochEnd):
 
     def _save_symbol(self, estimator):
         symbol_file = os.path.join(self.model_dir, self.model_prefix + '-symbol.json')
-        if hasattr(estimator.net, '_cached_graph') and not estimator.net._cached_graph:
+        if hasattr(estimator.net, '_cached_graph') and estimator.net._cached_graph:
             sym = estimator.net._cached_graph[1]
             sym.save(symbol_file)
         else:
