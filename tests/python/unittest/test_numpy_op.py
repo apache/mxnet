@@ -444,31 +444,52 @@ def test_np_max():
 @with_seed()
 @use_np
 def test_np_transpose():
-    # TODO(junwu): Add more test cases
-    data = mx.sym.var('a').as_np_ndarray()
-    ret = data.transpose()
-    assert type(ret) == mx.sym.np._Symbol
+    def np_transpose_grad(out_shape, dtype, axes=None):
+        ograd = _np.ones(out_shape, dtype=dtype)
+        if axes is None or axes == ():
+            return _np.transpose(ograd, axes)
+        np_axes = _np.array(list(axes))
+        return _np.transpose(ograd, tuple(list(_np.argsort(np_axes))))
 
-    dtypes = ['float32', 'int32']
-    for dtype in dtypes:
-        for ndim in [0, 1, 2, 3, 4, 5, 6]:
-            shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
-            np_data = _np.random.uniform(low=-100, high=100, size=shape).astype(dtype)
-            mx_data = np.array(np_data, dtype=dtype)
-            axes = [None]
-            if ndim == 0:
-                axes += [()]
-            else:
-                axis = [i for i in range(ndim)]
-                axes.append(tuple(axis))
-                random.shuffle(axis)
-                axes.append(tuple(axis))
-            for axis in axes:
-                np_out = _np.transpose(np_data, axes=axis)
-                mx_out = np.transpose(mx_data, axes=axis)
-                assert np_out.dtype == mx_out.dtype
-                assert same(mx_out.asnumpy(), np_out)
-    # TODO(junwu): Add numerical gradient test and Gluon API test.
+    class TestTranspose(HybridBlock):
+        def __init__(self, axes=None):
+            super(TestTranspose, self).__init__()
+            self.axes = axes
+
+        def hybrid_forward(self, F, a):
+            return F.np.transpose(a, self.axes)
+
+    for hybridize in [True, False]:
+        for dtype in [_np.int32, _np.float32]:
+            for ndim in range(7):
+                shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
+                axeses = [None]
+                if ndim == 0:
+                    axeses += [()]
+                else:
+                    axes = [i for i in range(ndim)]
+                    axeses.append(tuple(axes))
+                    random.shuffle(axes)
+                    axeses.append(tuple(axes))
+                for axes in axeses:
+                    test_trans = TestTranspose(axes)
+                    if hybridize:
+                        test_trans.hybridize()
+                    x = rand_ndarray(shape).as_np_ndarray()
+                    x = x.astype(dtype)
+                    x.attach_grad()
+                    np_out = _np.transpose(x.asnumpy(), axes)
+                    with mx.autograd.record():
+                        mx_out = test_trans(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                    mx_out.backward()
+                    np_backward = np_transpose_grad(np_out.shape, dtype, axes)
+                    assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+                    mx_out = np.transpose(x, axes)
+                    np_out = _np.transpose(x.asnumpy(), axes)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
