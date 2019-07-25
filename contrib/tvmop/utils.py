@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,12 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
-if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-julia -e 'Pkg.clone(pwd())'
-(
-    cd `julia -e 'println(Pkg.dir("MXNet", "deps"))'` &&
-    ln -fs $TRAVIS_BUILD_DIR/deps/src
-)
-julia -e 'Pkg.build("MXNet"); Pkg.test("MXNet"; coverage=true)'
+# coding: utf-8
+AllTypes = ["float32", "float64", "float16", "uint8", "int8", "int32", "int64"]
+RealTypes = ["float32", "float64", "float16"]

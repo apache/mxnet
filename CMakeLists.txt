@@ -34,7 +34,6 @@ mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON 
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support" OFF)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
-mxnet_option(USE_PROFILER         "Build with Profiler support"   ON)
 mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
 mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
 mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
@@ -43,6 +42,7 @@ mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
 mxnet_option(USE_CXX14_IF_AVAILABLE "Build with C++14 if the compiler supports it" OFF)
 mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
+mxnet_option(USE_TVM_OP           "Enable use of TVM operator build system." OFF)
 mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" ON)
 mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
 mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
@@ -732,6 +732,28 @@ if(USE_DIST_KVSTORE)
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
   include_directories(SYSTEM ${pslite_INCLUDE_DIR})
   list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
+endif()
+
+if(USE_TVM_OP)
+  add_definitions(-DMXNET_USE_TVM_OP=1)
+  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  include(cmake/BuildTVM.cmake)
+  add_subdirectory("3rdparty/tvm")
+
+  if(NOT Python3_EXECUTABLE)
+    find_package(PythonInterp 3 REQUIRED)
+    set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python3 executable")
+    if(NOT Python3_EXECUTABLE)
+      message(FATAL_ERROR "No python3 interpreter found to build TVM operators")
+    endif()
+  endif()
+
+  add_custom_command(TARGET mxnet POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E env
+          PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
+          LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/build"
+          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py -o${CMAKE_CURRENT_BINARY_DIR}/libtvmop.so
+    )
 endif()
 
 target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
