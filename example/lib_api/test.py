@@ -19,5 +19,9 @@
 # pylint: disable=arguments-differ
 
 import mxnet as mx
+import os
 
-mx.library.load('mylib.so')
+if (os.name=='posix'):
+    mx.library.load('mylib.so')
+elif (os.name=='nt'):
+    mx.library.load('mylib.dll')

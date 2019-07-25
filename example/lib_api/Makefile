@@ -18,5 +18,14 @@
 all:
 	g++ -shared -fPIC mylib.cc -o mylib.so -I ../../include/mxnet
 
+test:
+	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl -I ../../include/mxnet
+
+windows:
+	cl /LD mylib.cc
+
+win_test:
+	cl libtest.cc
+
 clean:
-	rm -rf mylib.so
+	rm -rf mylib.so libtest

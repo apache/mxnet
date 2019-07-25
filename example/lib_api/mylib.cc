@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file mylib.cc
- * \brief Sample library functions
+ * \brief Sample library file
  */
 
 #include <iostream>
@@ -33,5 +33,5 @@ int initialize(int version) {
   } else {
     std::cout << "MXNet version " << version << " not supported" << std::endl;
     return 0;
-  }  
+  }
 }
