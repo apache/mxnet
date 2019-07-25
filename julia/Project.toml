@@ -1,7 +1,7 @@
 name = "MXNet"
 uuid = "a7949054-b901-59c6-b8e3-7238c29bf7f0"
 authors = ["Chiyuan Zhang <pluskid@gmail.com>", "Valentin Churavy <vchuravy@mit.edu>", "Iblis Lin <iblis@hs.ntnu.edu.tw>"]
-version = "1.5.0"
+version = "1.6.0"
 
 [deps]
 BinDeps = "9e28174c-4ba2-5203-b857-d8d62c4213ee"

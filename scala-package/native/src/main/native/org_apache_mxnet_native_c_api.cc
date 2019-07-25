@@ -247,9 +247,6 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvokeEx
                                cParamVals,
                                &cOutStypes);
   env->ReleaseLongArrayElements(inputs, cInputs, 0);
-  if (cOutputsGiven) {
-    env->ReleaseLongArrayElements(outputsGiven, cOutputsGiven, 0);
-  }
 
   // release allocated memory
   if (numParams > 0) {
@@ -282,6 +279,10 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvokeEx
                             env->NewObject(intCls, intConst,
                             cOutStypes[i]));
     }
+  }
+
+  if (cOutputsGiven) {
+    env->ReleaseLongArrayElements(outputsGiven, cOutputsGiven, 0);
   }
 
   return ret;
