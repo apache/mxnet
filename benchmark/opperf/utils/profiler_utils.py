@@ -42,14 +42,28 @@ def _get_memory_profile(memory_profile_results):
 
 def _get_operator_profile(operator_name, operator_profile_results):
     operator_profile = {}
+
+    # alias map : dictionary of the form {"alias" : "registered_name"}
+    # allows to retrieve alias operator profile from the profiler results
+    # TODO handling - "identity" : "_copy"
+    alias_map = {"broadcast_plus" : "broadcast_add", "broadcast_minus" : "broadcast_sub", "flatten" : "Flatten", "max_axis" : "max",
+                 "swapaxes" : "SwapAxis", "flip" : "reverse", "reshape" : "Reshape", "crop" : "slice", "sum_axis" : "sum", "min_axis" : "min"}
+
+    op_name = None
+
+    if operator_name in alias_map:
+        op_name = alias_map[operator_name]
+    else:
+        op_name = operator_name
+
     for line in operator_profile_results:
-        if operator_name in line or operator_name[:3] + " " in line:
+        if op_name in line or op_name[:3] + " " in line:
             operation = line.split()[0]
             operation_avg_time = float(line.split()[-1])
             if "_backward" in operation:
-                operator_profile["avg_time" + operation] = operation_avg_time
+                operator_profile["avg_time_backward_" + operator_name] = operation_avg_time
             else:
-                operator_profile["avg_time_forward_" + operation] = operation_avg_time
+                operator_profile["avg_time_forward_" + operator_name] = operation_avg_time
 
     return operator_profile
 

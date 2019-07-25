@@ -87,6 +87,16 @@ DEFAULT_CLIP_GRADIENT = [-1.0,0.8]
 DEFAULT_CLIP_WEIGHTS = [-1.0,0.8]
 DEFAULT_LAZY_UPDATE = [0,1]
 
+# For rearrange operators
+# NOTE: Data needs to be a 4D tensor for  operators like space_to_depth and depth_to_space
+# Hence below we append 4d to mark the difference.
+# For depth_to_space, dimension 3 needs to be a multiple of 'block' and 1 should be a multiple of `block^2`
+DEFAULT_DATA_4d = [(1, 4, 2, 4), (10,25,10,100)]
+DEFAULT_DIM_1 = [0, 1, 2, 3]
+DEFAULT_DIM_2 = [1, 2, 3, 0]
+DEFAULT_BLOCK_SIZE = [2, 5]
+
+
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "lhs": DEFAULT_LHS,
@@ -130,7 +140,12 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "t" : DEFAULT_T,
                    "rescale_grad" : DEFAULT_RESCALE_GRAD,
                    "clip_grad" : DEFAULT_CLIP_GRADIENT,
-                   "lazy_update" : DEFAULT_LAZY_UPDATE}
+                   "lazy_update" : DEFAULT_LAZY_UPDATE
+                   "data_4d": DEFAULT_DATA_4d,
+                   "dim1": DEFAULT_DIM_1,
+                   "dim2": DEFAULT_DIM_2,
+                   "block_size": DEFAULT_BLOCK_SIZE}
+
 
 # These are names of MXNet operator parameters that is of type NDArray.
 # We maintain this list to automatically recognize these parameters are to be

@@ -89,6 +89,9 @@ class FeatureSet {
     feature_bits.set(INT64_TENSOR_SIZE, MXNET_USE_INT64_TENSOR_SIZE);
     feature_bits.set(SIGNAL_HANDLER, MXNET_USE_SIGNAL_HANDLER);
 
+    // TVM operators
+    feature_bits.set(TVM_OP, MXNET_USE_TVM_OP);
+
 #ifndef NDEBUG
     feature_bits.set(DEBUG);
 #endif
@@ -159,6 +162,7 @@ const std::vector<std::string> EnumNames::names = {
   "INT64_TENSOR_SIZE",
   "SIGNAL_HANDLER",
   "DEBUG",
+  "TVM_OP",
 };
 
 }  // namespace features

@@ -58,9 +58,7 @@
 45. SoftmaxOutput
 46. linalg_extractdiag
 48. SequenceLast
-50. flip
 51. SequenceReverse
-52. swapaxes
 53. SVMOutput
 54. linalg_trsm
 55. where
@@ -72,7 +70,6 @@
 62. BilinearSampler
 64. choose_element_0index
 65. tile
-66. space_to_depth
 67. gather_nd
 69. SequenceMask
 70. reshape_like
@@ -98,13 +95,11 @@
 94. broadcast_like
 95. Embedding
 96. linalg_makediag
-97. transpose
 98. linalg_syrk
 99. squeeze
 101. ROIPooling
 103. SliceChannel
 104. slice_like
-105. depth_to_space
 106. linalg_maketrian
 108. pad
 109. LayerNorm

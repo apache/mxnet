@@ -1831,6 +1831,97 @@ def test_batchnorm():
 
 
 @with_seed()
+def test_groupnorm():
+    acc_types = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64'}
+    def x_hat_helper(x, num_groups, eps):
+        dtype = x.dtype
+        dshape = x.shape
+        assert len(dshape) == 4
+        acc_type = acc_types[str(dtype)]
+        new_shape = (dshape[0], num_groups, int(dshape[1] / num_groups), dshape[2], dshape[3])
+        new_moments_shape = (dshape[0], num_groups, 1, 1, 1)
+        data = x.reshape(new_shape)
+        mean = np.mean(data, axis=(2, 3, 4), keepdims=False, dtype=acc_type).astype(dtype)
+        std = np.sqrt(np.var(data, axis=(2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype) + eps)
+        x_hat = (data - mean.reshape(new_moments_shape)) / std.reshape(new_moments_shape)
+        return x_hat, mean, std
+
+    def np_groupnorm(data, gamma, beta, num_groups, eps):
+        new_param_shape = (1, num_groups, 1, 1, 1)
+        x_hat, mean, std = x_hat_helper(data, num_groups, eps)
+        out = x_hat * gamma.reshape(new_param_shape) + beta.reshape(new_param_shape)
+        return out.reshape(dshape), mean, std
+
+    def np_groupnorm_grad(ograd, data, gamma, beta, mean, std, num_groups, eps):
+        x_hat, mean, std = x_hat_helper(data, num_groups, eps)
+        new_shape = x_hat.shape
+        dshape = data.shape
+        dtype = data.dtype
+        new_moments_shape = (new_shape[0], num_groups, 1, 1, 1)
+        new_param_shape = (1, num_groups, 1, 1, 1)
+        acc_type = acc_types[str(dtype)]
+        ograd = ograd.reshape(new_shape)
+        data = data.reshape(new_shape)
+        gamma = gamma.reshape(new_param_shape)
+        beta = beta.reshape(new_param_shape)
+        mean = mean.reshape(new_moments_shape)
+        std = std.reshape(new_moments_shape)
+        beta_grad = np.sum(ograd, axis=(0, 2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype)
+        gamma_grad = np.sum(x_hat * ograd, axis=(0, 2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype)
+        x_hat_grad = ograd * gamma
+        ograd_mult = x_hat_grad / std
+        red_out = np.mean(ograd_mult, axis=(2, 3, 4), dtype=acc_type, keepdims=True).astype(dtype)
+        data_grad = ograd_mult - red_out
+        red_out = np.mean(ograd_mult * x_hat, axis=(2, 3, 4), dtype=acc_type, keepdims=True).astype(dtype)
+        data_grad = data_grad - x_hat * red_out
+        return data_grad.reshape(dshape), gamma_grad, beta_grad
+
+
+    batch_size = random.randint(1, 8)
+    num_groups = random.randint(2, 3)
+    num_channels = random.randint(2, 3) * num_groups
+    height = random.randint(1, 5)
+    width = random.randint(1, 5)
+    dshape = (batch_size, num_channels, height, width)
+    param_shape = (num_groups,)
+    temp_shape = (batch_size, num_groups, int(num_channels / num_groups), height, width)
+    np_data = np.random.uniform(0.2, 1.0, dshape)
+    np_gamma = np.random.uniform(-1.0, 1.0, param_shape)
+    np_beta = np.random.uniform(-1.0, 1.0, param_shape)
+    data_sym = mx.sym.Variable("data")
+    gamma_sym = mx.sym.Variable("gamma")
+    beta_sym = mx.sym.Variable("beta")
+    for dtype in [np.float16, np.float32, np.float64]:
+        eps = 1e-2 if dtype == np.float16 else 1e-5
+        mx_data = mx.nd.array(np_data, dtype=dtype)
+        mx_gamma = mx.nd.array(np_gamma, dtype=dtype)
+        mx_beta = mx.nd.array(np_beta, dtype=dtype)
+        np_out, np_mean, np_std = np_groupnorm(np_data.astype(dtype),
+                                               np_gamma.astype(dtype),
+                                               np_beta.astype(dtype),
+                                               num_groups=num_groups,
+                                               eps=eps)
+        mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
+                                  num_groups=num_groups, eps=eps, output_mean_var=True)
+        check_symbolic_forward(mx_sym, [mx_data, mx_gamma, mx_beta], [np_out, np_mean, np_std],
+                               rtol=1e-2 if dtype == np.float16 else 1e-3,
+                               atol=5e-3 if dtype == np.float16 else 1e-5, dtype=dtype)
+        mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
+                                  num_groups=num_groups, eps=eps, output_mean_var=False)
+        np_ograd = np.random.uniform(-1.0, 1.0, dshape).astype(dtype)
+        np_data_grad, np_gamma_grad, np_beta_grad = np_groupnorm_grad(np_ograd,
+                                                                      np_data.astype(dtype),
+                                                                      np_gamma.astype(dtype),
+                                                                      np_beta.astype(dtype),
+                                                                      np_mean, np_std,
+                                                                      num_groups, eps)
+        check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd)],
+                                [np_data_grad, np_gamma_grad, np_beta_grad],
+                                rtol=1e-2 if dtype == np.float16 else 1e-3,
+                                atol=5e-2 if dtype == np.float16 else 1e-5, dtype=dtype)
+
+
+@with_seed()
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
         num_filter = 4
@@ -5105,6 +5196,39 @@ def test_softmax_dtype():
         check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
                                   'float32', 'float64', 'float64')
 
+
+@with_seed()
+def test_softmax_with_length():
+    def np_softmax_with_length(data, length):
+        res = np.zeros(data.shape)
+        for i in range(length.shape[0]):
+            for j in range(length.shape[1]):
+                leng = int(length[i, j])
+                res[i, 0:leng, j] = np_softmax(data[i, 0:leng, j])
+        return res
+
+    ndim = 3
+    shape = rand_shape_nd(ndim, dim=10)
+    len_shape = list(shape)
+    del len_shape[1]
+    len_shape = tuple(len_shape)
+    for dtype in [np.float16, np.float32, np.float64]:
+        mx_data = rand_ndarray(shape, dtype=dtype)
+        np_data = mx_data.asnumpy()
+        np_length = np.random.randint(1, shape[1] + 1, len_shape)
+        mx_length = mx.nd.array(np_length, dtype=np.int32)
+        np_out = np_softmax_with_length(np_data, np_length)
+        data = mx.sym.Variable("data")
+        length = mx.sym.Variable("length")
+        mx_sym = mx.sym.softmax(data=data, length=length, use_length=True, axis=1)
+        location = {"data": mx_data, "length": mx_length}
+        rtol = 1e-2 if dtype == np.float16 else 1e-3
+        atol = 1e-4 if dtype == np.float16 else 1e-5
+        check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype="asnumpy")
+        check_symbolic_backward(mx_sym, location, [np.ones(shape, dtype=dtype)],
+                                [np.zeros(shape), np.zeros(len_shape, dtype=np.int32)], rtol=1e-2, atol=1e-3, dtype="asnumpy")
+
+
 @with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
@@ -7525,7 +7649,7 @@ def test_bilinear_resize_op():
                 w1r = 1.0 * w2 * rwidth
                 w1 = int(np.floor(w1r))
                 w1lambda = w1r - w1
-                w1p = 1 if w1 < (inputHeight - 1) else 0
+                w1p = 1 if w1 < (inputWidth - 1) else 0
                 for b in range(batch):
                     for c in range(channel):
                         y[b][c][h2][w2] = (1-h1lambda)*((1-w1lambda)*x[b][c][h1][w1] + \
@@ -7943,7 +8067,11 @@ def test_op_all_names_monitor():
     check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
 
     sm_sym = mx.sym.softmax(data, name='softmax')
-    check_name(sm_sym, ['data', 'softmax_input0', 'softmax_output'])
+    check_name(sm_sym, ['data', 'softmax_data', 'softmax_output'])
+
+    length = mx.sym.Variable("length", shape=(10, 10, 10))
+    sm_sym = mx.sym.softmax(data, length, axis=1, use_length=True, name='softmax')
+    check_name(sm_sym, ['data', 'softmax_data', 'length', 'softmax_length', 'softmax_output'])
 
     sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
     check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
@@ -8550,7 +8678,7 @@ def test_invalid_max_pooling_pad_type_same():
 
 @with_seed()
 def test_image_normalize():
-    # Part 1 - Test 3D Input
+    # Part 1 - Test 3D input with 3D mean/std
     shape_3d = (3, 28, 28)
     mean = (0, 1, 2)
     std = (3, 2, 1)
@@ -8581,7 +8709,7 @@ def test_image_normalize():
     # check backward using finite difference
     check_numeric_gradient(img_norm_sym, [data_in_3d], atol=0.001)
 
-    # Part 2 - Test 4D Input
+    # Part 2 - Test 4D input with 3D mean/std
     shape_4d = (2, 3, 28, 28)
 
     data_in_4d = mx.nd.random.uniform(0, 1, shape_4d)
@@ -8605,6 +8733,55 @@ def test_image_normalize():
     grad_expected_4d[1][:][:][0] = 1 / 3.0
     grad_expected_4d[1][:][:][1] = 1 / 2.0
     grad_expected_4d[1][:][:][2] = 1 / 1.0
+
+    # check backward
+    check_symbolic_backward(img_norm_sym, location=[data_in_4d], out_grads=[mx.nd.ones(shape_4d)],
+                            expected=[grad_expected_4d], rtol=1e-5, atol=1e-5)
+
+    # check backward using finite difference
+    check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
+
+    # Part 3 - Test 3D input with scalar mean/std
+    shape_3d = (3, 28, 28)
+    mean = 1.0
+    std = 2.0
+
+    data_in_3d = mx.nd.random.uniform(0, 1, shape_3d)
+    data_expected_3d = data_in_3d.asnumpy()
+    data_expected_3d[:][:][:] = (data_expected_3d[:][:][:] - 1.0) / 2.0
+
+    data = mx.symbol.Variable('data')
+    img_norm_sym = mx.sym.image.normalize(data=data, mean=mean, std=std)
+
+    # check forward
+    check_symbolic_forward(img_norm_sym, [data_in_3d], [data_expected_3d],
+                           rtol=1e-5, atol=1e-5)
+
+    # Gradient is 1/std_dev
+    grad_expected_3d = np.ones(shape_3d)
+    grad_expected_3d[:][:][:] = 1 / 2.0
+
+    # check backward
+    check_symbolic_backward(img_norm_sym, location=[data_in_3d], out_grads=[mx.nd.ones(shape_3d)],
+                            expected=[grad_expected_3d], rtol=1e-5, atol=1e-5)
+
+    # check backward using finite difference
+    check_numeric_gradient(img_norm_sym, [data_in_3d], atol=0.001)
+
+    # Part 4 - Test 4D input with scalar mean/std
+    shape_4d = (2, 3, 28, 28)
+
+    data_in_4d = mx.nd.random.uniform(0, 1, shape_4d)
+    data_expected_4d = data_in_4d.asnumpy()
+    data_expected_4d[:][:][:][:] = (data_expected_4d[:][:][:][:] - 1.0) / 2.0
+
+    # check forward
+    check_symbolic_forward(img_norm_sym, [data_in_4d], [data_expected_4d],
+                           rtol=1e-5, atol=1e-5)
+
+    # Gradient is 1/std_dev
+    grad_expected_4d = np.ones(shape_4d)
+    grad_expected_4d[:][:][:][:] = 1 / 2.0
 
     # check backward
     check_symbolic_backward(img_norm_sym, location=[data_in_4d], out_grads=[mx.nd.ones(shape_4d)],
