@@ -275,7 +275,7 @@ void Imperative::RecordOp(
       info.outputs.back().dtype_ = outputs[i]->dtype();
       info.outputs.back().storage_type_ = outputs[i]->storage_type();
     }
-    outputs[i]->entry_ = nnvm::NodeEntry{node, i, 0};
+    outputs[i]->entry_ = nnvm::NodeEntry{node, static_cast<uint32_t>(i), 0};
   }
 }
 
@@ -341,9 +341,7 @@ Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(
   } else {
     nnvm::Symbol s;
     s.outputs = outputs;
-    std::vector<nnvm::NodePtr> input_ro_nodes = s.ListInputs(
-        Symbol::kReadOnlyArgs
-        s.outputs = outputs;);
+    std::vector<nnvm::NodePtr> input_ro_nodes = s.ListInputs(Symbol::kReadOnlyArgs);
     var_nodes.variable_nodes.reserve(input_ro_nodes.size());
     var_nodes.gradients.reserve(input_ro_nodes.size());
     var_nodes.op_req_types.reserve(input_ro_nodes.size());
