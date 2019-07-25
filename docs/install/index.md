@@ -372,7 +372,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 
 **NOTES:**
 
-*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+*mxnet-cu101mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 10.1.
 
 All MKL pip packages are experimental prior to version 1.3.0.
 
