@@ -248,7 +248,8 @@ void Imperative::RecordOp(
       }
       inputs[i]->autograd_ = std::move(entry);  // assign last to prevent cyclic reference
     } else if ((*p_save_inputs)[i]) {
-      AGInfo::Get(inputs[i]->autograd_.node).outputs[inputs[i]->autograd_.index] = inputs[i]->Detach();
+      AGInfo::Get(inputs[i]->autograd_.node).outputs[inputs[i]->autograd_.index] =
+          inputs[i]->Detach();
     }
     node->inputs[i] = inputs[i]->autograd_;
   }
