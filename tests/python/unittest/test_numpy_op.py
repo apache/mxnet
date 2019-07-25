@@ -2384,7 +2384,7 @@ def test_np_around():
 
                     mx_out = np.around(x, d)
                     np_out = _np.around(x.asnumpy(), d)
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)    
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
 @with_seed()
@@ -2460,7 +2460,7 @@ def test_np_nonzero():
     class TestNonzero(HybridBlock):
         def __init__(self):
             super(TestNonzero, self).__init__()
-            
+
         def hybrid_forward(self, F, x):
             return F.npx.nonzero(x)
 
@@ -2550,6 +2550,52 @@ def test_np_hypot():
                 mx_out = np.hypot(x1, x2)
                 np_out = _np.hypot(x1.asnumpy(), x2.asnumpy())
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_unique():
+    class TestUnique(HybridBlock):
+        def __init__(self, return_index=False, return_inverse=False, return_counts=False, axis=None):
+            super(TestUnique, self).__init__()
+            self._return_index = return_index
+            self._return_inverse = return_inverse
+            self._return_counts = return_counts
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.unique(a, self._return_index, self._return_inverse, self._return_counts, self._axis)
+
+    configs = [
+        ((), True, True, True, None),
+        ((1, ), True, True, True, -1),
+        ((5, ), True, True, True, 0),
+        ((3, ), True, True, True, None),
+        ((5, 4), True, True, True, -1),
+        ((5, 0, 4), True, True, True, None),
+        ((0, 0, 0), True, True, True, None),
+        ((5, 3, 4), True, True, True, -1),
+        ((5, 3, 4), True, True, True, None),
+        ((5, 3, 4), True, True, True, 1),
+    ]
+    for hybridize in [True, False]:
+        for config in configs:
+            test_unique = TestUnique(*config[1:])
+            if hybridize:
+                test_unique.hybridize()
+
+            x = np.random.uniform(size=config[0])
+            np_out = _np.unique(x.asnumpy(), *config[1:])
+            mx_out = test_unique(x)
+            assert mx_out[0].shape == np_out[0].shape
+            for i in range(4):
+                assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+
+            # Test imperative once again
+            mx_out = np.unique(x, *config[1:])
+            np_out = _np.unique(x.asnumpy(), *config[1:])
+            for i in range(4):
+                assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
 if __name__ == '__main__':
