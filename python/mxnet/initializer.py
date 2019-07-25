@@ -648,7 +648,7 @@ class MSRAPrelu(Xavier):
     https://arxiv.org/abs/1502.01852.
 
     This initializer is proposed for initialization related to ReLu activation,
-    it maked some changes on top of Xavier method.
+    it makes some changes on top of Xavier method.
 
     Parameters
     ----------
