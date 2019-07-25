@@ -131,7 +131,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
     }
     return iter.Next(&out_);
   }
-  virtual const DataBatch& Value(void) const {
+  virtual const DataBatch &Value(void) const {
     return *out_;
   }
 

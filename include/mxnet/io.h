@@ -52,7 +52,7 @@ class IIterator : public dmlc::DataIter<DType> {
   /*! \brief move to next item */
   virtual bool Next(void) = 0;
   /*! \brief get current data */
-  virtual const DType& Value(void) const = 0;
+  virtual const DType &Value(void) const = 0;
   /*! \brief constructor */
   virtual ~IIterator(void) {}
   /*! \brief store the name of each data, it could be used for making NDArrays */

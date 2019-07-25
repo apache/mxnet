@@ -100,7 +100,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     return false;
   }
 
-  virtual const TBlobBatch& Value(void) const {
+  virtual const TBlobBatch &Value(void) const {
     return BatchLoader::Value();
   }
 

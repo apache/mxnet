@@ -145,22 +145,16 @@ void Imperative::MarkVariables(
   }
 }
 
-
-
-
-
 void Imperative::GetBackwardDependency(
     const nnvm::NodePtr& node,
     size_t num_inputs, size_t num_outputs,
-    std::vector<bool> *p_save_inputs,
-    std::vector<bool> *p_save_outputs) {
+    std::vector<bool> *save_inputs,
+    std::vector<bool> *save_outputs) {
   static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
-  std::vector<bool>& save_inputs = *p_save_inputs;
-  std::vector<bool>& save_outputs = *p_save_outputs;
-  save_inputs.resize(num_inputs);
-  save_outputs.resize(num_outputs);
-  std::fill(save_inputs.begin(), save_inputs.end(), false);
-  std::fill(save_outputs.begin(), save_outputs.end(), false);
+  save_inputs->resize(num_inputs);
+  save_outputs->resize(num_outputs);
+  std::fill(save_inputs->begin(), save_inputs->end(), false);
+  std::fill(save_outputs->begin(), save_outputs->end(), false);
 
   node->inputs.clear();
   node->inputs.reserve(num_inputs);
@@ -177,18 +171,18 @@ void Imperative::GetBackwardDependency(
     auto igrad_entries = fgradient[node->op()](node, ograd_entries);
     for (const auto& i : igrad_entries) {
       if (i.node == nullptr && i.version == 0) {
-        save_inputs[i.index] = true;
+        (*save_inputs)[i.index] = true;
       } else if (i.node == node) {
-        save_outputs[i.index] = true;
+        (*save_outputs)[i.index] = true;
       }
     }
     DFSVisit(igrad_entries, [&](const nnvm::NodePtr& gnode) {
         if (!gnode || gnode == node) return;
         for (const auto& i : gnode->inputs) {
           if (i.node == nullptr && i.version == 0) {
-            save_inputs[i.index] = true;
+            (*save_inputs)[i.index] = true;
           } else if (i.node == node) {
-            save_outputs[i.index] = true;
+            (*save_outputs)[i.index] = true;
           }
         }
       });
@@ -279,7 +273,8 @@ void Imperative::RecordOp(
   }
 }
 
-std::vector<nnvm::NodeEntry> Imperative::CreateForwardGraph(const std::vector<NDArray*>& outputs) {
+nnvm::Graph Imperative::CreateGraph(const std::vector<NDArray *> &outputs) {
+  nnvm::Graph g;
   std::vector<nnvm::NodeEntry> output_nodes;
   output_nodes.reserve(outputs.size());
   for (const auto &i : outputs) {
@@ -288,9 +283,9 @@ std::vector<nnvm::NodeEntry> Imperative::CreateForwardGraph(const std::vector<ND
       << "You need to set is_recording to true or use autograd.record() to save "
       << "computational graphs for backward. If you want to differentiate the same "
       << "graph twice, you need to pass retain_graph=True to backward.";
-    output_nodes.emplace_back(i->entry_);
+    g.outputs.emplace_back(i->entry_);
   }
-  return output_nodes;
+  return g;
 }
 
 std::vector<nnvm::NodeEntry> Imperative::CreateHeadGradientNodes(
@@ -333,7 +328,7 @@ Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(
       CHECK(!AGInfo::IsNone(*variables[i]) &&
             AGInfo::IsVariable(variables[i]->entry_.node))
           << "Cannot differentiate with respect to the " << i+1 << "-th variable"
-          << " because it does not require gradient.";
+          << " because it does not require gradient. Did you forget attach_grad()?";
       var_nodes.variable_nodes.emplace_back(variables[i]->entry_);
       var_nodes.gradients.push_back(new NDArray());
       var_nodes.op_req_types.push_back(kWriteTo);
@@ -360,8 +355,6 @@ Imperative::GradientVariableNodes Imperative::CreateGradientVariableNodes(
   return var_nodes;
 }
 
-
-
 std::vector<NDArray*> Imperative::Backward(
     const std::vector<NDArray*>& outputs,
     const std::vector<NDArray*>& ograds,
@@ -373,9 +366,7 @@ std::vector<NDArray*> Imperative::Backward(
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const Op* copy_op = Op::Get("_copy");
 
-  Graph graph;
-  graph.outputs = CreateForwardGraph(outputs);
-
+  Graph graph = CreateGraph(outputs);
 
   // Prepare head gradient nodes
   std::vector<NodeEntry> ograd_entries = CreateHeadGradientNodes(outputs, ograds);
@@ -405,7 +396,7 @@ std::vector<NDArray*> Imperative::Backward(
     }
   }
 
-  const auto& indexed_graph = graph.indexed_graph();
+  auto& indexed_graph = graph.indexed_graph();
   // get number of nodes used in forward pass
   size_t num_forward_nodes = 0;
   size_t num_forward_entries = 0;
@@ -429,19 +420,19 @@ std::vector<NDArray*> Imperative::Backward(
   if (create_graph) {
     states.resize(num_forward_nodes);
     nnvm::DFSVisit(forward_outputs, [&](const nnvm::NodePtr& n) {
-      AGInfo& info = AGInfo::Get(n);
+      const AGInfo& info = AGInfo::Get(n);
       states.at(indexed_graph.node_id(n.get())) = info.state;
-      for (uint32_t i = 0; i < info.outputs.size(); ++i) {
+      for (size_t i = 0; i < info.outputs.size(); ++i) {
         CHECK(indexed_graph.exist(n.get()));
-        size_t nid = indexed_graph.node_id(n.get());
-        size_t eid = indexed_graph.entry_id(nid, i);
+        const size_t nid = indexed_graph.node_id(n.get());
+        const size_t eid = indexed_graph.entry_id(nid, i);
         buff[eid] = info.outputs[i];
-        buff[eid].entry_ = NodeEntry{n, i, 0};
+        buff[eid].entry_ = NodeEntry{n, static_cast<uint32_t>(i), 0};
         ref_count[eid] = 1;
       }
     });
     for (auto& ograd_entry : ograd_entries) {
-      AGInfo& info = AGInfo::Get(ograd_entry.node);
+      const AGInfo& info = AGInfo::Get(ograd_entry.node);
       if (!indexed_graph.exist(ograd_entry.node.get())) continue;
       size_t eid = indexed_graph.entry_id(ograd_entry);
       buff[eid] = info.outputs[0];
@@ -450,13 +441,14 @@ std::vector<NDArray*> Imperative::Backward(
   } else {
     states.reserve(num_forward_nodes);
     for (size_t i = 0; i < num_forward_nodes; ++i) {
-      const AGInfo& info = dmlc::get<AGInfo>(indexed_graph[i].source->info);
+      // TODO(larroy): This is a code smell 💩
+      AGInfo& info = const_cast<AGInfo&>(dmlc::get<AGInfo>(indexed_graph[i].source->info));
       states.emplace_back(info.state);
       for (size_t j = 0; j < info.outputs.size(); ++j) {
-        size_t eid = indexed_graph.entry_id(i, j);
-        arrays[eid] = const_cast<NDArray*>(&(info.outputs[j]));
-
-        if (retain_graph || info.grad_req != kNullOp) ref_count[eid] = 1;
+        const size_t eid = indexed_graph.entry_id(i, j);
+        arrays[eid] = &(info.outputs[j]);
+        if (retain_graph || info.grad_req != kNullOp)
+          ref_count[eid] = 1;
       }
     }
     for (auto& ograd_entry : ograd_entries) {

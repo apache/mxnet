@@ -126,7 +126,7 @@ class SparsePrefetcherIter : public PrefetcherIter {
   virtual bool Next(void) {
     return PrefetcherIter::Next();
   }
-  virtual const DataBatch& Value(void) const {
+  virtual const DataBatch &Value(void) const {
     return PrefetcherIter::Value();
   }
 

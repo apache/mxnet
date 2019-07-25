@@ -170,7 +170,7 @@ class Imperative {
    * @param outputs source ndarrays
    * @return vector of nodes
    */
-  static std::vector<nnvm::NodeEntry> CreateForwardGraph(const std::vector<NDArray*>& outputs);
+  static nnvm::Graph CreateGraph(const std::vector<NDArray *> &outputs);
   /*! Create gradient nodes using output shapes and ctx.
    * Gradient heads are initialized to 1 if they are not present (nullptr)
    * @return vector of nodes
@@ -178,7 +178,7 @@ class Imperative {
   static std::vector<nnvm::NodeEntry> CreateHeadGradientNodes(const std::vector<NDArray*>& outputs,
                                                               const std::vector<NDArray*>& ograds);
 
-  class GradientVariableNodes;
+  struct GradientVariableNodes;
   /*! Create variable nodes.
    * If variables is provided, gradient nodes are crated for them. Otherwise it uses read only
    * inputs reachable from the outputs.
@@ -196,8 +196,8 @@ class Imperative {
   void GetBackwardDependency(
       const nnvm::NodePtr& node,
       size_t num_inputs, size_t num_outputs,
-      std::vector<bool> *p_save_inputs,
-      std::vector<bool> *p_save_outputs);
+      std::vector<bool> *save_inputs,
+      std::vector<bool> *save_outputs);
   /*! \brief indicate whether is training. */
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
