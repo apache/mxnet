@@ -42,7 +42,7 @@ int get_load_type(size_t N) {
   } else if (N % 2 == 0) {
     return kFloat16;
   } else {
-    return kInt8;
+    return kUint8;
   }
 }
 }  // namespace cuda

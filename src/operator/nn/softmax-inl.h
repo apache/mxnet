@@ -450,7 +450,7 @@ inline void Softmax(Stream<gpu> *s, DType *in, OType *out, IType *length,
       static_cast<size_t>(M) <= max_opt_M &&
       std::is_same<DType, OType>::value) {
     int ltype = mxnet::common::cuda::get_load_type(M * sizeof(DType));
-    MSHADOW_TYPE_SWITCH(ltype, LType, {
+    MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
       int rows_per_block = get_rows_per_block(M * sizeof(DType) / sizeof(LType));
       int nblocks = (N + rows_per_block - 1) / rows_per_block;
       CHECK_LE(sizeof(DType), sizeof(LType));
@@ -458,7 +458,7 @@ inline void Softmax(Stream<gpu> *s, DType *in, OType *out, IType *length,
         <<<nblocks, softmax_threads_per_block, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
           in, out, length, M, temperature, rows_per_block, N);
     });
-    MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_compute_kernel2);
+    MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_stride1_compute_kernel);
   } else {
     softmax_compute_kernel<x_bits, OP, negate, AType, ndim>
       <<<N, x_size, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
