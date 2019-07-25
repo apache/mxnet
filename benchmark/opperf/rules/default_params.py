@@ -34,7 +34,7 @@ DEFAULT_RHS = [[(1024, 1024), (10000, 10), (10000, 1)]]
 
 # For operators like - random_uniform, random_normal etc..
 DEFAULT_SHAPE = [(1024, 1024), (10000, 1), (10000, 100)]
-DEFAULT_SAMPLE = [(1, 2), (1, 10000, 2), (1, 10, 100, 2)]
+DEFAULT_SAMPLE = [(2,)]
 DEFAULT_LOW = [0]
 DEFAULT_HIGH = [5]
 DEFAULT_K = [1]
