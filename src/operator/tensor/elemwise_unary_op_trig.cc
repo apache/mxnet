@@ -143,9 +143,9 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshad
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
-      // n->inputs[0] : y_grad
+      // n->inputs[0] : y_grad (dL/dy)
       // n->inputs[1] : y = f(x) = tan(x) (ElemwiseGradUseOut)
-      // ograds[0] : head_grads (dL/dy_grad)
+      // ograds[0] : head_grads (dL/dxgrad)
       // f'(x) = sec^2(x)
       // f''(x) = 2 * f'(x) * f(x)
       //
@@ -320,9 +320,9 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<msha
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
-      // n->inputs[0] : y_grad
+      // n->inputs[0] : y_grad (dL/dy)
       // n->inputs[1] : y = f(x) = tanh(x) (ElemwiseGradUseOut)
-      // ograds[0] : head_grads dL/dy_grad
+      // ograds[0] : head_grads dL/dxgrad
       // f'(x) = sech^2(x)
       // f''(x) = -2 * f'(x) * f(x)
       //
