@@ -962,7 +962,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : x
-      // ograds[0] : head_grads
+      // ograds[0] : head_grad_grads (dL/dxgrad)
       // f(x) = 1/(x^1/2)
       // f'(x) = -1/(2*x^3/2)
       // f''(x) = f'(x) * -3/(2*x) = 3/(4 * x^5/2)
@@ -1077,7 +1077,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : x
-      // ograds[0] : head_grads
+      // ograds[0] : head_grad_grads (dL/dxgrad)
       // f(x) = 1/(x^1/3)
       // f'(x) = -1/(3*x^4/3)
       // f''(x) = f'(x) * -4/(3*x) = 4/(9 * x^7/3)
