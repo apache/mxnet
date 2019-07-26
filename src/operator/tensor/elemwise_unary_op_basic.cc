@@ -1090,8 +1090,8 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
                                                   unary_bwd<mshadow_op::log_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // ograds[0]: dL/dygrad
-    // inputs[0]: dL/dy
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy (ygrad)
     // inputs[1]: x (ElemewiseGradUseIn)
     // f(x) = y = log(x)
     // f'(x) = 1/x
@@ -1117,8 +1117,8 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
                                                   unary_bwd<mshadow_op::log10_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // ograds[0]: dL/dygrad
-    // inputs[0]: dL/dy
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy (ygrad)
     // inputs[1]: x (ElemewiseGradUseIn)
     // f(x) = y = log10(x)
     // f'(x) = 1 / (log(10) * x)
@@ -1146,8 +1146,8 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
                                                   unary_bwd<mshadow_op::log2_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    // ograds[0]: dL/dygrad
-    // inputs[0]: dL/dy
+    // ograds[0]: dL/dxgrad
+    // inputs[0]: dL/dy (ygrad)
     // inputs[1]: x (ElemewiseGradUseIn)
     // f(x) = y = log2(x)
     // f'(x) = 1 / (log(2) * x)
