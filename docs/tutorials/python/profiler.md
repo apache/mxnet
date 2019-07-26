@@ -240,7 +240,7 @@ class CustomAddOneProp(mx.operator.CustomOpProp):
 inp = mx.nd.zeros(shape=(500, 500))
 
 profiler.set_config(profile_all=True, continuous_dump=True, \
-                   aggregate_stats=True)
+                    aggregate_stats=True)
 profiler.set_state('run')
 
 w = nd.Custom(inp, op_type="MyAddOne")
