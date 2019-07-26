@@ -260,7 +260,7 @@ The storage type of ``sinh`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sinh, unary_bwd<mshadow_op::sinh_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-      // ograds[0]: d^2L/dx^2
+      // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseUseIn)
       // f(x) = sinh(x)
@@ -298,7 +298,7 @@ The storage type of ``cosh`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cosh, unary_bwd<mshadow_op::cosh_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-      // ograds[0]: d^2L/dx^2
+      // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseUseIn)
       // f(x) = cosh(x)
