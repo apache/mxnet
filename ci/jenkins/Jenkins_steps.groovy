@@ -1389,6 +1389,67 @@ def docs_website() {
     }]
 }
 
+
+def docs_python() {
+    return ['Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
+
+            master_url = utils.get_jenkins_master_url()
+            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
+                sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+            } else {
+                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
+            }
+          }
+        }
+      }
+    }]
+}
+
+def docs_c() {
+    return ['Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_c_docs', false)
+
+            master_url = utils.get_jenkins_master_url()
+            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
+                sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+            } else {
+                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
+            }
+          }
+        }
+      }
+    }]
+}
+
+def docs_scala() {
+    return ['Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_scala_docs', false)
+
+            master_url = utils.get_jenkins_master_url()
+            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
+                sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+            } else {
+                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
+            }
+          }
+        }
+      }
+    }]
+}
+
 def misc_asan_cpu() {
     return ['CPU ASAN': {
       node(NODE_LINUX_CPU) {

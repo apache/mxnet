@@ -1207,34 +1207,6 @@ test_ubuntu_cpu_python3() {
     popd
 }
 
-build_docs() {
-    set -ex
-    pushd .
-
-    # Setup environment for Julia docs
-    export PATH="/work/julia10/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
-    export JULIA_DEPOT_PATH='/work/julia-depot'
-
-    julia -e 'using InteractiveUtils; versioninfo()'
-    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-
-    cd /work/mxnet/docs/build_version_doc
-    # Parameters are set in the Jenkins pipeline: restricted-website-build
-    # $1: the list of branches/tags to build
-    # $2: the list of tags to display
-    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
-    # $3: the fork URL
-    ./build_all_version.sh $1 $2 $3
-    # $4: the default version tag for the website
-    # $5: the base URL
-    ./update_all_version.sh $2 $4 $5
-    cd VersionedWeb
-    tar -zcvf ../artifacts.tgz .
-    popd
-}
-
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers
@@ -1417,8 +1389,7 @@ nightly_estimator() {
     nosetests test_sentiment_rnn.py
 }
 
-# Deploy
-
+# For testing PRs
 deploy_docs() {
     set -ex
     pushd .
@@ -1439,6 +1410,67 @@ deploy_docs() {
     export CXX="ccache g++"
     make docs SPHINXOPTS=-W USE_MKLDNN=0
 
+    popd
+}
+
+build_python_docs() {
+    set -ex
+    pushd .
+
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make docs SPHINXOPTS=-W USE_MKLDNN=0
+
+    popd
+}
+
+build_c_docs() {
+    set -ex
+    pushd .
+
+    make doxygen
+
+    popd
+}
+
+
+build_scala_docs() {
+    set -ex
+    pushd .
+
+    publish_scala_build
+
+    find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"
+    # need to get rest of process here
+    popd
+}
+
+# for regular website publishing
+build_docs() {
+    set -ex
+    pushd .
+
+    # Setup environment for Julia docs
+    export PATH="/work/julia10/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+
+    julia -e 'using InteractiveUtils; versioninfo()'
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
+    cd /work/mxnet/docs/build_version_doc
+    # Parameters are set in the Jenkins pipeline: restricted-website-build
+    # $1: the list of branches/tags to build
+    # $2: the list of tags to display
+    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
+    # $3: the fork URL
+    ./build_all_version.sh $1 $2 $3
+    # $4: the default version tag for the website
+    # $5: the base URL
+    ./update_all_version.sh $2 $4 $5
+    cd VersionedWeb
+    tar -zcvf ../artifacts.tgz .
     popd
 }
 
