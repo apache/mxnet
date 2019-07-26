@@ -1909,10 +1909,12 @@ def test_depthwise_convolution():
 
 @with_seed()
 def test_convolution_independent_gradients():
-    ctx = default_context()
-    # set a low bar for autotuned cudnn conv
-    atol = 1.0e-1 if ctx.device_type == "gpu" else 1.0e-3
-    rtol = 1.0e-2 if ctx.device_type == "gpu" else 1.0e-3
+    # NOTE(zixuanweeei): Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/15603.
+    # GPU context will be enabled after figuring out the possible issue tracked at
+    # https://github.com/apache/incubator-mxnet/issues/15638.
+    ctx = mx.cpu()
+    atol = 1.0e-3
+    rtol = 1.0e-3
     reqs = ["null", "write", "add"]
     var_names = ["x", "w", "b"]
     dims = [1, 2]
@@ -1942,14 +1944,14 @@ def test_convolution_independent_gradients():
         for req_kind in reqs:
             # Binding args for conv with possible dependent gradients
             base_args = {
-                'x': mx.nd.random.normal(shape=x_shape),
-                'w': mx.nd.random.normal(shape=w_shape),
-                'b': mx.nd.random.normal(shape=(num_filter, )) if not no_bias else None}
+                'x': mx.nd.random.normal(shape=x_shape, ctx=ctx),
+                'w': mx.nd.random.normal(shape=w_shape, ctx=ctx),
+                'b': mx.nd.random.normal(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
             args1 = copy.deepcopy(base_args)
             grad1 = {
-                'x': mx.nd.zeros(shape=x_shape),
-                'w': mx.nd.zeros(shape=w_shape),
-                'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
+                'x': mx.nd.zeros(shape=x_shape, ctx=ctx),
+                'w': mx.nd.zeros(shape=w_shape, ctx=ctx),
+                'b': mx.nd.zeros(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
 
             grad_req1 = [req_kind] * 3
             grad_req1 = dict(zip(var_names, grad_req1))
@@ -1962,9 +1964,9 @@ def test_convolution_independent_gradients():
                 # Binding args for conv with independent gradients
                 args2 = copy.deepcopy(base_args)    # Deepcopy the same params of `exe1`
                 grad2 = {
-                    'x': mx.nd.zeros(shape=x_shape),
-                    'w': mx.nd.zeros(shape=w_shape),
-                    'b': mx.nd.zeros(shape=(num_filter, )) if not no_bias else None}
+                    'x': mx.nd.zeros(shape=x_shape, ctx=ctx),
+                    'w': mx.nd.zeros(shape=w_shape, ctx=ctx),
+                    'b': mx.nd.zeros(shape=(num_filter, ), ctx=ctx) if not no_bias else None}
                 grad_req2 = {"x": x_req, "w": w_req, "b": b_req}
                 exe2 = conv.bind(ctx, args2, args_grad=grad2, grad_req=grad_req2)
                     
