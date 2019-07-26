@@ -569,19 +569,36 @@ def test_npx_sigmoid():
 @with_seed()
 @use_np
 def test_np_reshape():
-    # TODO(junwu): Add more test cases
-    data = mx.sym.var('a').as_np_ndarray()
-    ret = data.reshape(())
-    assert type(ret) == mx.sym.np._Symbol
+    class TestReshape(HybridBlock):
+        def __init__(self, newshape):
+            super(TestReshape, self).__init__()
+            self._newshape = newshape
 
-    data = np.ones((1, 1, 1))
-    ret = np.reshape(data, ())
-    assert ret.shape == ()
-    ret = np.reshape(ret, (1, 1, 1, 1))
-    assert ret.shape == (1, 1, 1, 1)
-    assert type(ret) == np.ndarray
-    ret2 = ret.reshape(1, 1, -1)
-    assert ret2.shape == (1, 1, 1)
+        def hybrid_forward(self, F, a):
+            return F.np.reshape(a, self._newshape)
+
+    shape_pairs = [((2, 6), (6, 2)), ((2, 6), (3, 4)), ((1, 0), (0,)), ((0, 0), (0,))]
+    for hybridize in [True, False]:
+        for shape_pair in shape_pairs:
+            shape1, shape2 = shape_pair
+            print(shape1, shape2)
+            test_reshape = TestReshape(shape2)
+            if hybridize:
+                test_reshape.hybridize()
+            x = rand_ndarray(shape1).as_np_ndarray()
+            x.attach_grad()
+            np_out = _np.reshape(x.asnumpy(), shape2)
+            with mx.autograd.record():
+                mx_out = test_reshape(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            np_backward = _np.ones(shape1)
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+            mx_out = np.reshape(x, shape2)
+            np_out = _np.reshape(x.asnumpy(), shape2)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
