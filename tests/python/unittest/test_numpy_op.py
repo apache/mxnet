@@ -1519,14 +1519,34 @@ def test_np_prod():
 @with_seed()
 @use_np
 def test_np_flatten():
-    # TODO(junwu): Add more test cases
-    shapes = [(), (2, 0, 1), (3, 4, 5), 6]
-    for shape in shapes:
-        a = _np.random.uniform(size=shape).astype('float32')
-        a_mx = np.array(a, dtype=a.dtype)
-        expected_ret = a.flatten()
-        ret_mx = a_mx.flatten()
-        assert same(expected_ret, ret_mx.asnumpy())
+    class TestFlatten(HybridBlock):
+        def __init__(self):
+            super(TestFlatten, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return a.flatten()
+
+    shapes = [(), (2, 0, 1), (3, 4, 5), (6,)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            print(shape)
+            test_flatten = TestFlatten()
+            if hybridize:
+                test_flatten.hybridize()
+            x = rand_ndarray(shape).as_np_ndarray()
+            x.attach_grad()
+            np_out = x.asnumpy().flatten()
+            with mx.autograd.record():
+                mx_out = test_flatten(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            np_backward = _np.ones(shape)
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+            mx_out = x.flatten()
+            np_out = x.asnumpy().flatten()
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
