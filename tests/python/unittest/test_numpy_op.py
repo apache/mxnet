@@ -532,17 +532,38 @@ def test_npx_relu():
 @with_seed()
 @use_np
 def test_npx_sigmoid():
-    # TODO(junwu): Add more test cases
-    data = mx.sym.var('data').as_np_ndarray()
-    ret = mx.sym.npx.sigmoid(data)
-    assert type(ret) == mx.sym.np._Symbol
+    def np_sigmoid(x):
+        return _np.divide(1.0, (1.0 + _np.exp(-x)))
+    def np_sigmoid_grad(ya):
+        return ya * (1 - ya)
 
-    shapes = [(), (0, 2, 0)]
-    shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
-    for shape in shapes:
-        data = np.array(_np.random.uniform(size=shape).astype('float32'))
-        ret = npx.sigmoid(data)
-        assert type(ret) == np.ndarray
+    class TestSigmoid(HybridBlock):
+        def __init__(self):
+            super(TestSigmoid, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.npx.sigmoid(a)
+
+    shapes = [(), (2, 3, 4), (2, 0, 3), (1, 0, 0)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_sigmoid = TestSigmoid()
+            if hybridize:
+                test_sigmoid.hybridize()
+            x = rand_ndarray(shape).as_np_ndarray()
+            x.attach_grad()
+            np_out = np_sigmoid(x.asnumpy())
+            with mx.autograd.record():
+                mx_out = test_sigmoid(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            np_backward = np_sigmoid_grad(np_out)
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+            mx_out = npx.sigmoid(x)
+            np_out = np_sigmoid(x.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
