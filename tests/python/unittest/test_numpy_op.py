@@ -495,17 +495,38 @@ def test_np_transpose():
 @with_seed()
 @use_np
 def test_npx_relu():
-    # TODO(junwu): Add more test cases
-    data = mx.sym.var('data').as_np_ndarray()
-    ret = mx.sym.npx.relu(data)
-    assert type(ret) == mx.sym.np._Symbol
+    def np_relu(x):
+        return _np.maximum(x, 0.0)
+    def np_relu_grad(x):
+        return 1.0 * (x > 0.0)
 
-    shapes = [(), (0, 2, 0)]
-    shapes.extend([rand_shape_nd(ndim, allow_zero_size=True) for ndim in range(5)])
-    for shape in shapes:
-        data = np.array(_np.random.uniform(size=shape).astype('float32'))
-        ret = npx.relu(data)
-        assert type(ret) == np.ndarray
+    class TestReLU(HybridBlock):
+        def __init__(self):
+            super(TestReLU, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.npx.relu(a)
+
+    shapes = [(), (2, 3, 4), (2, 0, 3), (1, 0, 0)]
+    for hybridize in [True, False]:
+        for shape in shapes:
+            test_relu = TestReLU()
+            if hybridize:
+                test_relu.hybridize()
+            x = rand_ndarray(shape).as_np_ndarray()
+            x.attach_grad()
+            np_out = np_relu(x.asnumpy())
+            with mx.autograd.record():
+                mx_out = test_relu(x)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            mx_out.backward()
+            np_backward = np_relu_grad(x.asnumpy())
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=1e-3, atol=1e-5)
+
+            mx_out = npx.relu(x)
+            np_out = np_relu(x.asnumpy())
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
