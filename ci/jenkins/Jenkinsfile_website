@@ -38,6 +38,7 @@ core_logic: {
   ])
 
   utils.parallel_stage('Deploy', [
+    custom_steps.docs_c(),
     custom_steps.docs_python()
   ])
 }
