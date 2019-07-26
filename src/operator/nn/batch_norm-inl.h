@@ -93,9 +93,9 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
     .describe("Output the mean and inverse std ");
     DMLC_DECLARE_FIELD(axis).set_default(mxnet::op::batchnorm::DEFAULT_AXIS)
-      .describe("Specify which shape axis the channel is specified");
+    .describe("Specify which shape axis the channel is specified");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
-      .describe("Do not select CUDNN operator, if available");
+    .describe("Do not select CUDNN operator, if available");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -108,22 +108,19 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
               "quantized batch norm op to calculate primitive scale");
   }
 
-  bool operator==(const BatchNormParam& other) const {
-    bool flag = this->eps == other.eps &&
-                this->momentum == other.momentum &&
+  bool operator==(const BatchNormParam &other) const {
+    bool flag = this->eps == other.eps && this->momentum == other.momentum &&
                 this->fix_gamma == other.fix_gamma &&
                 this->use_global_stats == other.use_global_stats &&
-                this->output_mean_var == other.output_mean_var &&
-                this->axis == other.axis &&
+                this->output_mean_var == other.output_mean_var && this->axis == other.axis &&
                 this->cudnn_off == other.cudnn_off &&
                 this->min_calib_range.has_value() == other.min_calib_range.has_value() &&
                 this->max_calib_range.has_value() == other.max_calib_range.has_value();
     if (this->min_calib_range.has_value() && other.min_calib_range.has_value() &&
-        this->max_calib_range.has_value() && other.max_calib_range.has_value()){
-          flag = flag && 
-                this->min_calib_range.value() == other.min_calib_range.value() &&
-                this->max_calib_range.value() == other.max_calib_range.value();
-    }    
+        this->max_calib_range.has_value() && other.max_calib_range.has_value()) {
+      flag = flag && this->min_calib_range.value() == other.min_calib_range.value() &&
+             this->max_calib_range.value() == other.max_calib_range.value();
+    }
     return flag;
   }
 };

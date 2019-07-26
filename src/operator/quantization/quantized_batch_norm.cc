@@ -32,16 +32,15 @@
 namespace mxnet {
 namespace op {
 
-bool QuantizedBatchNormShape(const nnvm::NodeAttrs& attrs,
-                           mxnet::ShapeVector *in_shape,
-                           mxnet::ShapeVector *out_shape) {
-
+bool QuantizedBatchNormShape(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector* in_shape,
+                             mxnet::ShapeVector* out_shape) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
-  CHECK_EQ(in_shape->size(), 7U) << "Input:[data, gamma, beta, moving_mean, moving_var, min_data, max_data]";
+  CHECK_EQ(in_shape->size(), 7U)
+      << "Input:[data, gamma, beta, moving_mean, moving_var, min_data, max_data]";
   CHECK_EQ(out_shape->size(), 3U);
 
-  const mxnet::TShape &dshape = in_shape->at(batchnorm::kData);
+  const mxnet::TShape& dshape = in_shape->at(batchnorm::kData);
   if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
@@ -51,20 +50,19 @@ bool QuantizedBatchNormShape(const nnvm::NodeAttrs& attrs,
 
   SHAPE_ASSIGN_CHECK(*in_shape, 1, mxnet::TShape(Shape1(channelCount)))  // gamma,beta
   SHAPE_ASSIGN_CHECK(*in_shape, 2, mxnet::TShape(Shape1(channelCount)))
-  SHAPE_ASSIGN_CHECK(*in_shape, 3, mxnet::TShape(Shape1(channelCount))); // moving_mean, moving_var
+  SHAPE_ASSIGN_CHECK(*in_shape, 3, mxnet::TShape(Shape1(channelCount)));  // moving_mean, moving_var
   SHAPE_ASSIGN_CHECK(*in_shape, 4, mxnet::TShape(Shape1(channelCount)))
-  SHAPE_ASSIGN_CHECK(*in_shape, 5, mxnet::TShape(1, 1));                 // min_data, max_data
+  SHAPE_ASSIGN_CHECK(*in_shape, 5, mxnet::TShape(1, 1));  // min_data, max_data
   SHAPE_ASSIGN_CHECK(*in_shape, 6, mxnet::TShape(1, 1));
 
   SHAPE_ASSIGN_CHECK(*out_shape, 0, dshape);
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));               // min_output, max_output
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape(1, 1));  // min_output, max_output
   SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape(1, 1));
   return true;
 }
 
-bool QuantizedBatchNormType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int> *in_type,
-                          std::vector<int> *out_type) {
+bool QuantizedBatchNormType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
+                            std::vector<int>* out_type) {
   using namespace mshadow;
   CHECK_EQ(in_type->size(), 7U);
   CHECK_EQ(out_type->size(), 3U);
@@ -81,7 +79,6 @@ bool QuantizedBatchNormType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-
 NNVM_REGISTER_OP(_contrib_quantized_batch_norm)
 .describe(R"code(BatchNorm operator for input and output data type of int8.
 The input and output data comes with min and max thresholds for quantizing
@@ -95,11 +92,12 @@ the float32 data into int8.
 .set_attr_parser(ParamParser<BatchNormParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "gamma", "beta",  "moving_mean", "moving_var", "min_data", "max_data"};
+    return std::vector<std::string>{"data", "gamma", "beta",
+    "moving_mean", "moving_var", "min_data", "max_data"};
   })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"output","min_output","max_output"};
+    return std::vector<std::string>{"output", "min_output", "max_output"};
   })
 .set_attr<nnvm::FMutateInputs>("FMutateInputs", [](const nnvm::NodeAttrs& attrs) {
   return std::vector<uint32_t>{3, 4};
@@ -128,9 +126,11 @@ NNVM_REGISTER_OP(BatchNorm)
     }
     return node;
   })
-.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput",[](const NodeAttrs &attrs, size_t index) {
-  if (index==0) return false;
-  else return true;
+.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", [](const NodeAttrs &attrs, size_t index) {
+  if (index == 0)
+    return false;
+  else
+    return true;
 });
 
 }  // namespace op

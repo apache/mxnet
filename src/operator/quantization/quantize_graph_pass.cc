@@ -37,10 +37,12 @@ using nnvm::NodePtr;
 using nnvm::NodeEntry;
 using nnvm::Graph;
 
-inline size_t GetNumOutputs(NodePtr node){
-  // Get NumOutputs, check if current node has NumVisibleOutputs function, if yes, return num_visible_outputs
+inline size_t GetNumOutputs(NodePtr node) {
+  // Get NumOutputs, check if current node has NumVisibleOutputs function, if yes, return
+  // num_visible_outputs
   size_t num_outputs = node->num_outputs();
-  static const auto& num_visible_outputs_attr = nnvm::Op::GetAttr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs");
+  static const auto& num_visible_outputs_attr =
+      nnvm::Op::GetAttr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs");
   auto num_visible_output_func = num_visible_outputs_attr.get(node->op(), nullptr);
   if (num_visible_output_func != nullptr) {
     num_outputs = num_visible_output_func(node->attrs);
@@ -414,8 +416,7 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
                        << "` has negative input, consider use `auto` or `int8` as out_type";
         }
       }
-    }
-    else if (node->op() == Op::Get("_contrib_quantized_batch_norm")) {
+    } else if (node->op() == Op::Get("_contrib_quantized_batch_norm")) {
       auto quantized_op_idx = node->inputs[0].index;
       const std::string prefix = "quantized_";
       std::string out_data_name = node->attrs.name.substr(prefix.size());
