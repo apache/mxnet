@@ -41,7 +41,6 @@ The following performance numbers are collected via using C++ inference API on A
 ```
 export KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0
 export OMP_NUM_THREADS=$(vCPUs/2)
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 export MXNET_ENGINE_TYPE=NaiveEngine
 ```
 Also users are recommended to use ```numactl``` or ```taskset``` to bind a running process to the specified cores.
@@ -87,8 +86,6 @@ Follow the below steps to do inference with more models.
 
 The below command lines show how to run inference with FP32/INT8 resnet50_v1 model. Because the C++ inference script provides the almost same command line as this [Python script](https://github.com/apache/incubator-mxnet/blob/master/example/quantization/imagenet_inference.py) and then users can easily go from Python to C++.
 ```
-# set MKLDNN as subgraph backend
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # FP32 inference
 ./imagenet_inference --symbol_file "./model/resnet50_v1-symbol.json" --params_file "./model/resnet50_v1-0000.params" --dataset "./data/val_256_q90.rec" --rgb_mean "123.68 116.779 103.939" --rgb_std "58.393 57.12 57.375" --batch_size 64 --num_skipped_batches 50 --num_inference_batches 500

@@ -41,9 +41,11 @@ int MXBuildSubgraphByOpNames(SymbolHandle sym_handle,
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(sym_handle);
   *s = sym->Copy();
   if (!op_name_set.empty()) {
-    std::vector<mxnet::op::SubgraphPropertyPtr> properties =
-        mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
-    for (auto property : properties) {
+    auto& backend =
+        mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
+    LOG(INFO) << "Subgraph backend " << backend->GetName() << " is activated.";
+    const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+    for (auto property : subgraph_prop_list) {
       nnvm::Graph g;
       g.outputs = s->outputs;
       property->SetAttr("graph", g);

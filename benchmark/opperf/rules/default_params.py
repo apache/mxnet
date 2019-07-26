@@ -62,6 +62,15 @@ DEFAULT_AXIS_SHAPE = [(), 0, (0, 1)]
 # NOTE: Data used is DEFAULT_DATA
 DEFAULT_AXIS = [0]
 
+# For rearrange operators
+# NOTE: Data needs to be a 4D tensor for  operators like space_to_depth and depth_to_space
+# Hence below we append 4d to mark the difference.
+# For depth_to_space, dimension 3 needs to be a multiple of 'block' and 1 should be a multiple of `block^2`
+DEFAULT_DATA_4d = [(1, 4, 2, 4), (10,25,10,100)]
+DEFAULT_DIM_1 = [0, 1, 2, 3]
+DEFAULT_DIM_2 = [1, 2, 3, 0]
+DEFAULT_BLOCK_SIZE = [2, 5]
+
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "lhs": DEFAULT_LHS,
@@ -81,7 +90,11 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "k_nd": DEFAULT_K_ND,
                    "p_nd": DEFAULT_P_ND,
                    "axis_shape": DEFAULT_AXIS_SHAPE,
-                   "axis": DEFAULT_AXIS}
+                   "axis": DEFAULT_AXIS,
+                   "data_4d": DEFAULT_DATA_4d,
+                   "dim1": DEFAULT_DIM_1,
+                   "dim2": DEFAULT_DIM_2,
+                   "block_size": DEFAULT_BLOCK_SIZE}
 
 # These are names of MXNet operator parameters that is of type NDArray.
 # We maintain this list to automatically recognize these parameters are to be
