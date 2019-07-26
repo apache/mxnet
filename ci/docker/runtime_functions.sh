@@ -1207,34 +1207,6 @@ test_ubuntu_cpu_python3() {
     popd
 }
 
-build_docs() {
-    set -ex
-    pushd .
-
-    # Setup environment for Julia docs
-    export PATH="/work/julia10/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
-    export JULIA_DEPOT_PATH='/work/julia-depot'
-
-    julia -e 'using InteractiveUtils; versioninfo()'
-    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-
-    cd /work/mxnet/docs/build_version_doc
-    # Parameters are set in the Jenkins pipeline: restricted-website-build
-    # $1: the list of branches/tags to build
-    # $2: the list of tags to display
-    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
-    # $3: the fork URL
-    ./build_all_version.sh $1 $2 $3
-    # $4: the default version tag for the website
-    # $5: the base URL
-    ./update_all_version.sh $2 $4 $5
-    cd VersionedWeb
-    tar -zcvf ../artifacts.tgz .
-    popd
-}
-
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers
@@ -1417,8 +1389,7 @@ nightly_estimator() {
     nosetests test_sentiment_rnn.py
 }
 
-# Deploy
-
+# For testing PRs
 deploy_docs() {
     set -ex
     pushd .
@@ -1439,6 +1410,282 @@ deploy_docs() {
     export CXX="ccache g++"
     make docs SPHINXOPTS=-W USE_MKLDNN=0
 
+    popd
+}
+
+
+build_setup() {
+    build_folder="docs/_build"
+    if [ ! -d $build_folder ]; then
+      mkdir $build_folder
+    fi
+    mxnetlib_folder="/work/mxnet/lib"
+    if [ ! -d $mxnetlib_folder ]; then
+      mkdir $mxnetlib_folder
+    fi
+}
+
+
+fetch_latest_mxnet() {
+   wget -q http://jenkins.mxnet-ci.amazon-ml.com/job/docs-pipelines/job/test-mxnet-build/lastSuccessfulBuild/artifact/lib/libmxnet.so -O /work/mxnet/lib/libmxnet.so
+}
+
+
+build_ubuntu_cpu_docs() {
+    set -ex
+    export CC="gcc"
+    export CXX="g++"
+    build_ccache_wrappers
+    make \
+        DEV=1                         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
+        USE_DIST_KVSTORE=1            \
+        USE_LIBJPEG_TURBO=1           \
+        USE_SIGNAL_HANDLER=1          \
+        -j$(nproc)
+}
+
+
+fetch_new_docs_repo() {
+   git clone https://github.com/mli/new-docs.git $1 || exit 0
+}
+
+
+build_jekyll_docs() {
+   echo "This is where jekyll docs are built."
+
+}
+
+
+build_python_docs() {
+   set -ex
+   pushd .
+
+   build_setup
+
+   repo="new_docs_python"
+   fetch_new_docs_repo $repo
+   cd $repo/python
+   eval "$(/work/miniconda/bin/conda shell.bash hook)"
+   conda activate mxnet-docs
+
+   rm -rf build/_build/
+   make html EVAL=0
+
+   cd build/_build
+   tar zcvf python-artifacts.tgz html
+   popd
+   mv $repo/python/build/_build/python-artifacts.tgz docs/_build
+}
+
+
+build_r_docs() {
+    set -ex
+    pushd .
+
+    build_setup
+    repo="new_docs_r"
+    fetch_new_docs_repo $repo
+
+    pushd $repo/Rsite
+    eval "$(/work/miniconda/bin/conda shell.bash hook)"
+    conda activate mxnet-docs
+    make html EVAL=0
+    popd
+
+    doc_path="$repo/Rsite"
+    doc_artifact='r-artifacts.tgz'
+    pushd $doc_path
+    tar zcvf $doc_artifact build
+    popd
+    mv $doc_path/$doc_artifact docs/_build/
+}
+
+
+build_c_docs() {
+    set -ex
+    pushd .
+
+    build_setup
+    make doxygen
+    doc_path="docs/doxygen"
+    doc_artifact="c-artifacts.tgz"
+    pushd $doc_path
+    tar zcvf $doc_artifact html
+    popd
+    mv $doc_path/$doc_artifact docs/_build/
+}
+
+
+build_scala() {
+   set -ex
+   pushd .
+
+   cd scala-package
+   mvn -B install -DskipTests
+
+   popd
+}
+
+
+build_scala_docs() {
+    set -ex
+    pushd .
+    build_setup
+    fetch_latest_mxnet
+    build_scala
+
+    scala_path='scala-package'
+    docs_build_path='docs/_build/scala-docs'
+    artifacts_path='docs/_build/scala-artifacts.tgz'
+
+    pushd $scala_path
+
+    scala_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite"`
+    jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
+    jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
+    jar_core=`find core -name "*.jar" | tr "\\n" ":" `
+    jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
+    scala_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
+
+    scala_ignore_errors=''
+    legacy_ver=".*1.2|1.3.*"
+    # BUILD_VER needs to be pull from environment vars
+    if [[ $_BUILD_VER =~ $legacy_ver ]]
+    then
+      # There are unresolvable errors on mxnet 1.2.x. We are ignoring those
+      # errors while aborting the ci on newer versions
+      echo "We will ignoring unresolvable errors on MXNet 1.2/1.3."
+      scala_ignore_errors='; exit 0'
+    fi
+
+    scaladoc $scala_doc_sources -classpath $scala_doc_classpath $scala_ignore_errors
+    popd
+
+    # Clean-up old artifacts
+    rm -rf $docs_build_path
+    mkdir -p $docs_build_path
+
+    for doc_file in 'index', 'index.html', 'org', 'lib', 'index.js', 'package.html'; do
+        mv $scala_path/$doc_file $docs_build_path
+    done
+
+    tar -zcvf $artifacts_path $docs_build_path
+
+    popd
+}
+
+
+build_julia_docs() {
+   set -ex
+   pushd .
+
+   build_setup
+   fetch_latest_mxnet
+   # Setup environment for Julia docs
+   export PATH="/work/julia10/bin:$PATH"
+   export MXNET_HOME='/work/mxnet'
+   export JULIA_DEPOT_PATH='/work/julia-depot'
+   julia_doc_path='julia/docs/site/'
+   julia_doc_artifact='docs/_build/artifacts-julia.tgz'
+
+   echo "Julia will check for MXNet in $MXNET_HOME/lib"
+
+   make -C julia/docs
+
+   tar -zcvf $julia_doc_artifact $julia_doc_path
+
+   popd
+}
+
+
+build_java_docs() {
+    set -ex
+    pushd .
+
+    build_setup
+    build_scala
+
+    # Re-use scala-package build artifacts.
+    java_path='scala-package'
+    docs_build_path='docs/_build/scala-docs'
+    artifacts_path='docs/_build/java-artifacts.tgz'
+
+    pushd $java_path
+
+    java_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite"`
+    jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
+    jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
+    jar_core=`find core -name "*.jar" | tr "\\n" ":" `
+    jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
+    java_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
+
+    scaladoc $java_doc_sources -classpath $java_doc_classpath -feature -deprecation
+    popd
+
+    # Clean-up old artifacts
+    rm -rf $docs_build_path
+    mkdir -p $docs_build_path
+
+    for doc_file in 'index', 'index.html', 'org', 'lib', 'index.js', 'package.html'; do
+        mv $java_path/$doc_file $docs_build_path
+    done
+
+    tar -zcvf $artifacts_path $docs_build_path
+
+    popd
+}
+
+
+build_clojure_docs() {
+    set -ex
+    pushd .
+
+    build_setup
+    build_scala
+
+    clojure_path='contrib/clojure-package'
+    clojure_doc_path='contrib/clojure-package/target/doc'
+    clojure_doc_artifact='docs/_build/artifacts-clojure.tgz'
+
+    pushd $clojure_path
+    lein codox
+    popd
+
+    tar -zcvf $clojure_doc_artifact $clojure_doc_path
+
+    popd
+}
+
+
+# for regular website publishing
+build_docs() {
+    set -ex
+    pushd .
+    build_setup
+    # Setup environment for Julia docs
+    export PATH="/work/julia10/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+
+    julia -e 'using InteractiveUtils; versioninfo()'
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+
+    cd /work/mxnet/docs/build_version_doc
+    # Parameters are set in the Jenkins pipeline: restricted-website-build
+    # $1: the list of branches/tags to build
+    # $2: the list of tags to display
+    # So you can build from the 1.2.0 branch, but display 1.2.1 on the site
+    # $3: the fork URL
+    ./build_all_version.sh $1 $2 $3
+    # $4: the default version tag for the website
+    # $5: the base URL
+    ./update_all_version.sh $2 $4 $5
+    cd VersionedWeb
+    tar -zcvf ../artifacts.tgz .
     popd
 }
 

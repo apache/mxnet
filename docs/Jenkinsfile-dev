@@ -32,20 +32,42 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
 
 utils.main_wrapper(
 core_logic: {
-  stage('Build Docs') {
-    node(NODE_LINUX_CPU) {
-      ws('workspace/docs') {
-        utils.init_git()
-        timeout(time: max_time, unit: 'MINUTES') {
-            sh "ci/build.py -p ubuntu_cpu --docker-registry ${env.DOCKER_CACHE_REGISTRY} --docker-build-retries 3 /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.fork} ${params.tag_default} ${params.domain}"
-            archiveArtifacts 'docs/build_version_doc/artifacts.tgz'
-            build 'test-website-publish'
+    stage('Build Python Docs') {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          utils.init_git()
+          timeout(time: max_time, unit: 'MINUTES') {
+              sh "ci/build.py -p ubuntu_cpu --docker-registry ${env.DOCKER_CACHE_REGISTRY} --docker-build-retries 3 /work/runtime_functions.sh build_python_docs"
+              archiveArtifacts 'docs/build_version_doc/python_artifacts.tgz'
+          }
         }
       }
     }
+      stage('Build Scala Docs') {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          utils.init_git()
+          timeout(time: max_time, unit: 'MINUTES') {
+              sh "ci/build.py -p ubuntu_cpu --docker-registry ${env.DOCKER_CACHE_REGISTRY} --docker-build-retries 3 /work/runtime_functions.sh build_scala_docs"
+              archiveArtifacts 'docs/build_version_doc/scala_artifacts.tgz'
+          }
+        }
+      }
+   }
+     stage('Build Docs') {
+       node(NODE_LINUX_CPU) {
+         ws('workspace/docs') {
+           utils.init_git()
+           timeout(time: max_time, unit: 'MINUTES') {
+               sh "ci/build.py -p ubuntu_cpu --docker-registry ${env.DOCKER_CACHE_REGISTRY} --docker-build-retries 3 /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.fork} ${params.tag_default} ${params.domain}"
+               archiveArtifacts 'docs/build_version_doc/artifacts.tgz'
+               build 'test-website-publish'
+           }
+         }
+       }
+     }
   }
-}
-,
+  ,
 failure_handler: {
   if (currentBuild.result == "FAILURE") {
     // Do nothing.

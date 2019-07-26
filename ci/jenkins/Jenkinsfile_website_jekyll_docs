@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 20
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -33,30 +33,9 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
 
 utils.main_wrapper(
 core_logic: {
-  utils.parallel_stage('Build', [
-    custom_steps.compile_unix_lite()
-  ])
 
-  utils.parallel_stage('1st Phase Docs', [
-    custom_steps.docs_c(),
-    custom_steps.docs_python()
-
-  ])
-
-  utils.parallel_stage('2nd Phase Docs', [
-    custom_steps.docs_julia(),
-    custom_steps.docs_r(),
-
-  ])
-
-  //utils.parallel_stage('3rd Phase Docs', [
-   // custom_steps.docs_scala(),
-   // custom_steps.docs_java(),
-   // custom_steps.docs_clojure()
-  //])
-
-  utils.parallel_stage('Publish', [
-      custom_steps.docs_publish()
+  utils.parallel_stage('Jekyll Website Docs', [
+    custom_steps.docs_jekyll()
 
   ])
 
