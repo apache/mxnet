@@ -59,7 +59,7 @@ std::string GraphDump(const std::vector<NodeEntry>& output_nodes) {
     g.outputs = output_nodes;
     auto& indexed_graph = g.indexed_graph();
     for (size_t i = 0; i < indexed_graph.num_nodes(); ++i) {
-      const IndexedGraph::Node& idst= indexed_graph[i];
+      const IndexedGraph::Node& idst = indexed_graph[i];
       for (const IndexedGraph::NodeEntry& input : idst.inputs) {
         const Node& dst = (*idst.source);
         const IndexedGraph::Node& isrc = indexed_graph[input.node_id];
