@@ -1250,6 +1250,132 @@ def test_np_squeeze():
 
 @with_seed()
 @use_np
+def test_npx_slice():
+    class TestSlice(HybridBlock):
+        def __init__(self, begin, end, step):
+            super(TestSlice, self).__init__()
+            self._begin = begin
+            self._end = end
+            self._step = step
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.npx.slice(a, begin=self._begin, end=self._end, step=self._step)
+
+    def get_start_end_step(shape):
+        start = []
+        end = []
+        step_switch = random.randint(-1,1)
+        step = None if step_switch == 0 else []
+        for i in range(len(shape)):
+            s = random.randint(0, shape[i]-1)
+            e = random.randint(s+1, shape[i])
+            if step_switch == 1:
+                step.append(1)
+                start.append(s)
+                end.append(e)
+            elif step_switch == -1:
+                step.append(-1)
+                if e == shape[i]:
+                    e -= 1
+                    s -= 1
+                    if s == -1:
+                        s = None
+                start.append(e)
+                end.append(s)
+            else:
+                start.append(s)
+                end.append(e)
+        return start, end, step
+
+    for hybridize in [True, False]:
+        for i in range(10):
+            dim = random.randint(1,4)
+            shape = [random.randint(1,5) for i in range(dim)]
+
+            # test gluon
+            start, end, step = get_start_end_step(shape)
+            test_slice = TestSlice(begin=start, end=end, step=step)
+            if hybridize:
+                test_slice.hybridize()
+
+            a = mx.nd.random.uniform(shape=shape).as_np_ndarray()
+            a.attach_grad()
+            if step is not None:
+                expected_ret = a.as_nd_ndarray().slice(start, end, step)
+            else:
+                expected_ret = a.as_nd_ndarray().slice(start, end)
+            with mx.autograd.record():
+                y = test_slice(a)
+
+            assert_almost_equal(y.asnumpy(), expected_ret.asnumpy(), rtol=1e-3, atol=1e-5)
+
+            # test backward
+            mx.autograd.backward(y)
+            expected_grad = _np.zeros(shape)
+            basic_index = tuple([ 
+                slice(start[i], end[i], step[i]) if step is not None else slice(start[i], end[i])
+                for i in range(len(start))
+                ])
+            expected_grad[basic_index] = 1
+            assert_almost_equal(a.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
+
+@with_seed()
+@use_np
+def test_npx_reshape():
+    class TestNumpyXReshape(HybridBlock):
+        def __init__(self, newshape):
+            super(TestNumpyXReshape, self).__init__()
+            self._newshape = newshape
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.npx.reshape(a, self._newshape)
+
+    test_cases = [
+        [(2, 3, 5, 5),  (-2, -1),         (2, 75)],
+        [(2, 3, 5, 5),  (-2, -2, -1),     (2, 3, 25)],
+        [(5, 3, 4, 5),  (-2, -1, -2),     (5, 15, 4)],
+        [(2, 3, 5, 4),  (-1, -2, -2),     (8, 3, 5)],
+        [(2, 3, 5, 5),  (-2, -2, -2, -2), (2, 3, 5, 5)],
+        [(2, 1, 4, 5),  (-2, -3, -2, -2), (2, 4, 5)],
+        [(1, 1, 4, 1),  (-3, -3, -2, -2), (4, 1)],
+        [(1, 1, 1, 1),  (-3, -3, -3, -3), ()],
+        [(2, 4, 5, 3),  (-1, 2, 2, 1),    (30, 2, 2, 1)],
+        [(2, 3, 5, 6),  (-4,),            (2, 3, 5, 6)],
+        [(2, 3, 5, 6),  (6, 1, -4),       (6, 1, 5, 6)],
+        [(2, 3, 5, 6),  (-5, -5),         (6, 30)],
+        [(2, 3, 5, 6),  (-5, -1),         (6, 30)],
+        [(64,),         (-6, 16, 4),      (16, 4)],
+        [(64,),         (-6, 16, -1),     (16, 4)],
+        [(64, 1, 2, 3), (-6, 16, -1, -4), (16, 4, 1, 2, 3)]
+    ]
+    for hybridize in [True, False]:
+        for shape, newshape, expected_ret_shape in test_cases:
+            # test gluon
+            test_reshape = TestNumpyXReshape(newshape=newshape)
+            if hybridize:
+                test_reshape.hybridize()
+
+            a = np.random.uniform(size=shape)
+            a.attach_grad()
+            with mx.autograd.record():
+                y = test_reshape(a)
+
+            assert y.shape == expected_ret_shape
+            assert_almost_equal(y.asnumpy(), a.asnumpy().reshape(expected_ret_shape), rtol=1e-3, atol=1e-5)
+
+            # test backward
+            mx.autograd.backward(y)
+            expected_grad = _np.ones(shape)
+            assert_almost_equal(a.grad.asnumpy(), expected_grad, rtol=1e-3, atol=1e-5)
+
+            # test imperative
+            npx_out = npx.reshape(a, newshape)
+            expected_out = _np.reshape(a.asnumpy(), expected_ret_shape)
+            assert_almost_equal(npx_out.asnumpy(), expected_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_split():
     class TestSplit(HybridBlock):
         def __init__(self, indices_or_sections, axis=None):

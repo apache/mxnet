@@ -946,7 +946,7 @@ def split(ary, indices_or_sections, axis=0):
         raise ValueError('indices_or_sections must either int or tuple of ints')
     ret = _npi.split(ary, indices, axis, False)
     if not isinstance(ret, list):
-        raise NotImplementedError('single output from split is not supported yet...')
+        raise NotImplementedError('Output of split should be list, get a return type %s'%(str(type(ret))))
     return ret
 # pylint: enable=line-too-long
 
