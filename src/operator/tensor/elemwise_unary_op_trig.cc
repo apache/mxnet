@@ -164,7 +164,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsin,
                                                   unary_bwd<mshadow_op::arcsin_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-      // ograds[0]: head_grad_grads (dL/dy_grad)
+      // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
       // f(x) = arcsin(x)
@@ -212,7 +212,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
                                                   unary_bwd<mshadow_op::arccos_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
     [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-      // ograds[0]: head_grad_grads (dL/dy_grad)
+      // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
       // f(x) = arccos(x)
