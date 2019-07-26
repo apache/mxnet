@@ -756,7 +756,7 @@ object NDArray extends NDArrayBase {
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean) extends NativeResource {
 
-  @deprecated("Please use ResourceScope instead", "1.6.0")
+  @deprecated("Please use ResourceScope instead", "1.5.0")
   def this(handle: NDArrayHandle,
            writable: Boolean = true,
            addToCollector: Boolean = true) {
