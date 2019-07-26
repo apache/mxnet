@@ -112,8 +112,7 @@ def compile_unix_cpu_openblas() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_lib_cython, true)
-            stash includes: mx_lib, name: 'mx_lib_files'
+            utils.pack_lib('cpu', mx_lib, true)
           }
         }
       }
@@ -1392,12 +1391,11 @@ def docs_website() {
 
 
 def docs_python() {
-    return ['Docs': {
+    return ['Python Docs': {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            unstash 'mx_lib_files'
-            utils.init_git()
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
 
             master_url = utils.get_jenkins_master_url()
