@@ -1457,7 +1457,7 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
 struct clip {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* datas,
-                                  DType a_min, DType a_max) {
+                                  const float a_min, const float a_max) {
     DType data = datas[i];
     if (data > a_max) {
       out[i] = a_max;
@@ -1473,7 +1473,7 @@ struct clip {
 struct clip_grad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* grad, const DType* datas,
-                                  DType a_min, DType a_max) {
+                                  const float a_min, const float a_max) {
     DType data = datas[i];
     if (data > a_max) {
       out[i] = 0;
@@ -1500,7 +1500,7 @@ void Clip(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     mxnet_op::Kernel<mxnet::op::clip, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
                                                    inputs[0].dptr<DType>(),
-                                                   DType(param.a_min), DType(param.a_max));
+                                                   param.a_min, param.a_max);
   });
 }
 
@@ -1529,7 +1529,7 @@ void ClipGrad_(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Kernel<clip_grad, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<DType>(),
-    inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), DType(param.a_min), DType(param.a_max));
+    inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), param.a_min, param.a_max);
   });
 }
 
