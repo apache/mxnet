@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file library.h
- * \brief Defining accelerator loading functions
+ * \brief Defining library loading functions
  */
 #ifndef MXNET_COMMON_LIBRARY_H_
 #define MXNET_COMMON_LIBRARY_H_
