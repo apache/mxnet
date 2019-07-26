@@ -284,22 +284,29 @@ class ndarray(NDArray):
         return sliced
 
     def _get_np_advanced_indexing(self, key):
-        idcs = self._get_index_nd(key)
+        idcs, new_axes = self._get_index_nd(key)
         if type(idcs) == NDArray:
             idcs = idcs.as_np_ndarray()
         else:
             idcs = _npi.stack(*[i if type(i) == __class__ else i.as_np_ndarray() for i in idcs])
-        return _npi.gather_nd(self, idcs)
+        sliced = _npi.gather_nd(self, idcs)
+
+        # Reshape due to `None` entries in `key`.
+        final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
+        for ax in new_axes:  # pylint: disable=invalid-name
+            final_shape.insert(ax, 1)
+        return sliced.reshape(tuple(final_shape))
+        
 
     def _set_np_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
-        idcs = self._get_index_nd(key)
+        idcs, new_axes = self._get_index_nd(key)
         if type(idcs) == NDArray:
             idcs = idcs.as_np_ndarray()
         else:
             idcs = _npi.stack(*[i if type(i) == __class__ else i.as_np_ndarray() for i in idcs])
         vshape = _get_oshape_of_gather_nd_op(self.shape, idcs.shape)
-        value_nd = self._prepare_value_nd(value, new_axes=[], bcast_shape=vshape)
+        value_nd = self._prepare_value_nd(value, new_axes=[], bcast_shape=vshape, squeeze_axes=new_axes)
         self._scatter_set_nd(value_nd, idcs)
 
     # pylint: disable=too-many-return-statements
@@ -419,14 +426,14 @@ class ndarray(NDArray):
             if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
                 self._set_nd_basic_indexing(slc_key, value)  # function is inheritated from NDArray class
             elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-                self._set_np_advanced_indexing(slc_key, value)  # function is inheritated from NDArray class
+                self._set_np_advanced_indexing(key, value)  # function is inheritated from NDArray class
             else:
                 raise ValueError(
                     'Indexing NDArray with index {} of type {} is not supported'
                     ''.format(key, type(key))
                 )
 
-    def _prepare_value_nd(self, value, new_axes, bcast_shape):
+    def _prepare_value_nd(self, value, new_axes, bcast_shape, squeeze_axes=None):
         """Return a broadcast `ndarray` with same context and dtype as ``self``.
         Before broadcasting, ``new_axes`` of length 1 will be added to
         ``value``. This is done in contrast to blindly reshaping based on
@@ -447,8 +454,13 @@ class ndarray(NDArray):
             except:
                 raise TypeError('mxnet.np.ndarray does not support assignment with non-array-like '
                                 'object {} of type {}'.format(value, type(value)))
+        
+        # For advanced indexing setitem, if there is None in indices, we need to squeeze the assigned value_nd
+        # since None is also ignored in slicing the original array. 
+        if squeeze_axes and value_nd.ndim > len(bcast_shape):
+            value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
-        # First reshape `value_nd` to a new shape that incorporates existing
+        # Reshape `value_nd` to a new shape that incorporates existing
         # axes, new axes and broadcasting axes in the right way.
         tmp_shape = _shape_for_bcast(
             value_nd.shape, target_ndim=len(bcast_shape), new_axes=new_axes

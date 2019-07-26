@@ -48,7 +48,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "onehot_encode", "power", "subtract", "true_divide", "waitall", "_new_empty_handle",
            "histogram", "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack",
            "from_numpy", "_indexing_key_expand_implicit_axes", "_get_indexing_dispatch_code", 
-           "_int_to_slice", "_shape_for_bcast", "_get_oshape_of_gather_nd_op"]  # TODO: can I add function here?
+           "_int_to_slice", "_shape_for_bcast", "_get_oshape_of_gather_nd_op"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -414,13 +414,10 @@ fixed-size items.
 
         Sets ``self[key]`` to ``value``.
 
-        This functions supports advanced indexing defined in the following reference with
-        some restrictions.
-
-        https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
-
-        - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
-          while not for key=[[1, 2]]. # TODO: check whether supports now. 
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
+        with the restriction that boolean array indexing is not supported.
 
         Parameters
         ----------
@@ -431,27 +428,24 @@ fixed-size items.
 
         Examples
         --------
-        >>> x = mx.nd.zeros((2,3))
+        >>> x = mx.nd.zeros((2, 3))
         >>> x[:] = 1
         >>> x.asnumpy()
         array([[ 1.,  1.,  1.],
                [ 1.,  1.,  1.]], dtype=float32)
-        >>> x.asnumpy()
-        array([[ 1.,  1.,  1.],
-               [ 1.,  1.,  1.]], dtype=float32)
-        >>> x[:,1:2] = 2
+        >>> x[:, 1:2] = 2
         >>> x.asnumpy()
         array([[ 1.,  2.,  1.],
                [ 1.,  2.,  1.]], dtype=float32)
-        >>> x[1:2,1:] = 3
+        >>> x[1:2, 1:] = 3
         >>> x.asnumpy()
         array([[ 1.,  2.,  1.],
                [ 1.,  3.,  3.]], dtype=float32)
-        >>> x[1:,0:2] = mx.nd.zeros((1,2))
+        >>> x[1:, 0:2] = mx.nd.zeros((1, 2))
         >>> x.asnumpy()
         array([[ 1.,  2.,  1.],
                [ 0.,  0.,  3.]], dtype=float32)
-        >>> x[1,2] = 4
+        >>> x[1, 2] = 4
         >>> x.asnumpy()
         array([[ 1.,  2.,  1.],
                [ 0.,  0.,  4.]], dtype=float32)
@@ -464,7 +458,6 @@ fixed-size items.
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]], dtype=float32)
         """
-        # Kohr
         key = _indexing_key_expand_implicit_axes(key, self.shape)
         slc_key = tuple(idx for idx in key if idx is not None)
 
@@ -479,11 +472,12 @@ fixed-size items.
                 'too many indices ({}) for array with {} dimensions'
                 ''.format(len(slc_key), self.ndim)
             )
+
         indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
         if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
             self._set_nd_basic_indexing(slc_key, value)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-            self._set_nd_advanced_indexing(slc_key, value)
+            self._set_nd_advanced_indexing(key, value)
         else:
             raise ValueError(
                 'Indexing NDArray with index {} of type {} is not supported'
@@ -497,9 +491,7 @@ fixed-size items.
         Returns a sliced view of this array if the elements fetched are contiguous in memory;
         otherwise, returns a newly created NDArray.
         This functions supports advanced indexing defined in the following reference with
-        some restrictions. # TODO: deleted by Kohr
-
-        Returns the subarray ``self[key]``. # TODO: added by Kohr
+        some restrictions. 
 
         For basic indexing, i.e., if ``key`` consists only of integers,
         ``slice``, ``Ellipsis`` (``...``) and ``None``, a mutable view is
@@ -510,7 +502,7 @@ fixed-size items.
         This functions supports advanced indexing as defined in `the NumPy
         advanced indexing documentation
         <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
-        with the restriction that boolean array indexing is not supported.  # TODO: boolean array indexing...?
+        with the restriction that boolean array indexing is not supported.
 
         Parameters
         ----------
@@ -532,16 +524,20 @@ fixed-size items.
         >>> x[:, :-1].asnumpy()
         array([[0., 1.],
                [3., 4.]], dtype=float32)
+
         If fewer indices are given, they are automatically supplemented by an
         appropriate number of ``slice(None)`` ("``:``") to the right. For
         instance, a single integer indexes along the first axis:
+
         >>> x = mx.nd.arange(0, 6).reshape((2, 3))
         >>> x[0].asnumpy()
         array([0., 1., 2.], dtype=float32)
         >>> x[1:].asnumpy()
         array([[3., 4., 5.]], dtype=float32)
+
         To omit a range of axes that should be kept as-is, an `Ellipsis`
         ("``...``") can be used:
+
         >>> x = mx.nd.arange(0, 16).reshape((2, 2, 2, 2))
         >>> x[0, ..., 1].asnumpy()
         array([[1., 3.],
@@ -549,17 +545,21 @@ fixed-size items.
         >>> x[0, :, :, 1].asnumpy()  # equivalent
         array([[1., 3.],
                [5., 7.]], dtype=float32)
+
         New axes of length 1 can be created by inserting ``None``
         (`numpy.newaxis`) in the index:
+
         >>> x = mx.nd.arange(0, 6).reshape((2, 3))
         >>> x[None, :, :].asnumpy()
         array([[[0., 1., 2.],
                 [3., 4., 5.]]], dtype=float32)
         >>> x[None, :, :].shape
         (1, 2, 3)
+
         If the indexed portion of the array is contiguous in memory, no data
         is copied. Instead, a shared-memory view of the original array is
         returned, and changes to that view affect the original array:
+
         >>> x = mx.nd.arange(0, 8).reshape((2, 2, 2))
         >>> y = x[0]  # contiguous
         >>> y.asnumpy()
@@ -595,9 +595,11 @@ fixed-size items.
         <BLANKLINE>
                [[4., 5.],
                 [6., 7.]]], dtype=float32)
+
         If the indexing key contains `list`, `numpy.ndarray` or `NDArray`
         objects, advanced indexing is triggered, which always returns a
         copy:
+
         >>> x = mx.nd.arange(0, 8).reshape((2, 2, 2))
         >>> x[[0, 1]].asnumpy()
         array([[[0., 1.],
@@ -630,14 +632,15 @@ fixed-size items.
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
             return self._get_nd_advanced_indexing(key)
         else:
-            raise RuntimeError  # TODO: why change to RuntimeError? 
+            raise RuntimeError
 
-    def _prepare_value_nd(self, value, new_axes, bcast_shape):
+    def _prepare_value_nd(self, value, new_axes, bcast_shape, squeeze_axes=None):
         """Return a broadcast `NDArray` with same context and dtype as ``self``.
         Before broadcasting, ``new_axes`` of length 1 will be added to
         ``value``. This is done in contrast to blindly reshaping based on
         ``bcast_shape``, since the latter would silently ignore wrongly shaped
         ``value`` arrays, e.g. ``nd.zeros((2, 3))[:, :1] = nd.ones(2)``.
+        ``squeeze_axes`` is used in advanced indexing when there is None in indices.
         """
         if isinstance(value, numeric_types):
             value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
@@ -652,8 +655,13 @@ fixed-size items.
             except:
                 raise TypeError('{} does not support assignment with non-array-like '
                                 'object {} of type {}'.format(self.__class__, value, type(value)))
+        
+        # For advanced indexing setitem, if there is None in indices, we need to squeeze the assigned value_nd
+        # since None is also ignored in slicing the original array. 
+        if squeeze_axes and value_nd.ndim > len(bcast_shape):
+            value_nd = value_nd.squeeze(axis=tuple(squeeze_axes))
 
-        # First reshape `value_nd` to a new shape that incorporates existing
+        # Reshape `value_nd` to a new shape that incorporates existing
         # axes, new axes and broadcasting axes in the right way.
         tmp_shape = _shape_for_bcast(
             value_nd.shape, target_ndim=len(bcast_shape), new_axes=new_axes
@@ -668,7 +676,6 @@ fixed-size items.
     @staticmethod
     def _basic_indexing_key_to_begin_end_step(idcs, shape, keep_none=True):
         """Map a tuple of ``slice`` and ``None`` (ignored) to begin, end, step tuples."""
-        # TODO(xinyi): unnecessary code? In basic indexing idcs has already been processed. 
         idcs = [idx for idx in idcs if idx is not None]
         idcs = [idx if isinstance(idx, py_slice) else _int_to_slice(idx)
                 for idx in idcs]
@@ -699,9 +706,11 @@ fixed-size items.
     @staticmethod
     def _new_axes_after_basic_indexing(axes, key_nd):
         """Return indices of ``axes`` after slicing with ``key_nd``.
+
         This function is used to calculate the positions where new axes should
         end up after indexing, taking into account the removal of axes by
         integer indexing.
+
         The ``key_nd`` sequence should contain slices and integers only, no
         ``None`` entries.
         """
@@ -714,24 +723,54 @@ fixed-size items.
         oob_offsets = [ax - len(key_nd) for ax in axes_out_of_bounds]
         axes_after += tuple(cum_steps[-1] + offset for offset in oob_offsets)
         return axes_after
+    
+    @staticmethod
+    def _new_axes_after_advanced_indexing(axes, adv_axs_nd, ndim, bcast_adv_ndim, adv_are_adjacent):
+        """
+        Return indices of ``axes`` after slicing with ``key_nd``.
+        This function is used to calculate the positions where new axes should
+        end up after indexing, taking into account the removal of axes by
+        integer indexing.
+        The ``key_nd`` sequence should contain slices and lists only, no
+        ``None`` entries.
+        """
+        adv_axs_set = set(adv_axs_nd)
+        if not adv_are_adjacent:
+            steps = [bcast_adv_ndim] + [0 if ax in adv_axs_set else 1 for ax in range(ndim)]
+        else:
+            steps = [0] + [0 if ax in adv_axs_set else 1 for ax in range(ndim)]
+        cum_steps = np.cumsum(steps)
+        axes_in_bounds = [ax for ax in axes if ax < len(cum_steps)]
+        axes_out_of_bounds = [ax for ax in axes if ax >= len(cum_steps)]
+        axes_after = []
+        added_axes_count = 0
+        for ax in axes_in_bounds:
+            axes_after.append(cum_steps[ax] + added_axes_count)
+            added_axes_count += 1
+        oob_offsets = [ax - len(cum_steps) for ax in axes_out_of_bounds]
+        for offset in oob_offsets:
+            axes_after.append(cum_steps[-1] + offset + added_axes_count)
+            added_axes_count += 1
+        return axes_after
 
     # pylint: disable=invalid-name
     @staticmethod
     def _basic_indexing_slice_is_contiguous(slc_key, shape):
         """Whether indexing with the given key results in a contiguous array.
+
         The rule is: From right to left, if in an axis, a slice produces a
         proper subset, no later axis can produce a proper subset or use
         a step different from 1.
+
         The ``slc_key`` sequence must have the same length as ``shape`` and
         only contain `slice` objects.
         """
         assert len(slc_key) == len(shape)
         subset = False
         for idx, n in zip(reversed(slc_key), reversed(shape)):
-            # n: the length in the dimension
             start, stop, step = idx.indices(n)
             if step > 0:
-                num = int(np.ceil(max(stop - start, 0) / step))  # num to be returned
+                num = int(np.ceil(max(stop - start, 0) / step))
             else:
                 num = int(np.ceil(min(stop - start, 0) / step))
 
@@ -775,7 +814,6 @@ fixed-size items.
         return flat_begin, flat_end + 1
     # pylint: enable=invalid-name
 
-    
     def _set_nd_basic_indexing(self, key, value):
         """This function indexes ``self`` with a tuple of ``slice`` objects only."""
         for idx in key:
@@ -816,7 +854,6 @@ fixed-size items.
                     value.copyto(self)
 
             elif isinstance(value, numeric_types):
-                # _internal._full(
                 self._full(value)
 
             elif isinstance(value, (np.ndarray, np.generic)):
@@ -828,7 +865,7 @@ fixed-size items.
                 if isinstance(value, np.generic) or value.shape != self.shape:
                     value = np.broadcast_to(value, self.shape)
                 self._sync_copyfrom(value)
-                # bug here
+
             else:
                 # Other array-like
                 value_nd = self._prepare_value_nd(
@@ -926,11 +963,13 @@ fixed-size items.
         if final_shape == []:
             # Override for single element indexing
             final_shape = [1]
+
         return sliced.reshape(final_shape)
 
     @staticmethod
     def _advanced_index_to_array(idx, ax_len, ctx):
         """Convert ``idx`` to `NDArray` for advanced indexing.
+
         The ``ax_len`` is used to convert `slice` objects to integer arrays.
         """
         idx_dtype = 'int32'
@@ -956,15 +995,18 @@ fixed-size items.
     @staticmethod
     def _broadcast_advanced_indices(arrays, block_axes):
         """Broadcast arrays according to position in the sequence.
+
         Here, "according to position" means that an array of dimension 1
         (which is the case for all except ``block_axes``) will have shape
         ``(1, ..., 1, N, 1, ..., 1)``, where ``N`` is the length, and the
         position of ``N`` in the shape is the same as the position of the
         array in the ``arrays`` sequence, plus extra dimensions of the
         advanced block if it is left of the array.
+
         The arrays at ``block_axes`` are the advanced indices. They are assumed to
         be ready for mutual broadcasting to produce the advanced indexing block.
         It is further assumed that the numbers in ``block_axes`` are consecutive.
+
         The return value is a tuple containing the arrays with broadcast shapes.
         """
         block_shape = _broadcast_shapes([arrays[ax] for ax in block_axes])
@@ -999,6 +1041,7 @@ fixed-size items.
     @staticmethod
     def _drop_slice_none_at_end(key):
         """Remove ``slice(None)`` at the end of a key.
+
         This is used for efficiency in advanced indexing, to avoid generating
         ``arange(n)`` arrays for these axes. The `gather_nd` and `scatter_nd`
         handle implicit full trailing axes automatically.
@@ -1034,7 +1077,7 @@ fixed-size items.
         adv_axs = [ax for ax, idx in enumerate(key) if _is_advanced_index(idx)]
         adv_axs_nd = [ax for ax, idx in enumerate(key_nd) if _is_advanced_index(idx)]
         adv_idcs_are_adjacent = bool(np.all(np.diff(adv_axs) == 1))
-        nonadv_axs_nd = [ax for ax in range(ndim) if ax not in adv_axs_nd]  
+        nonadv_axs_nd = [ax for ax in range(ndim) if ax not in adv_axs_nd]
         adv_idcs_nd = [key_nd[ax] for ax in adv_axs_nd]
         idcs_short = self._drop_slice_none_at_end(key_nd)
         dropped_axs = list(range(len(idcs_short), ndim))
@@ -1078,6 +1121,14 @@ fixed-size items.
         bcast_idcs_permut_short = self._broadcast_advanced_indices(
             converted_idcs_short, block_axes=block_axs_nd
         )
+
+        # Get the ndim of advanced indexing subspace
+        converted_advanced_idcs = [
+            self._advanced_index_to_array(idx, ax_len, self.context)
+            for idx, ax_len in zip(adv_idcs_nd, [self.shape[ax] for ax in adv_axs_nd])
+        ]
+        bcast_advanced_shape = _broadcast_shapes(converted_advanced_idcs)
+        
         # Undo the permutation to restore the original order
         bcast_idcs_short = [
             bcast_idcs_permut_short[ax]
@@ -1085,46 +1136,36 @@ fixed-size items.
             if axs_nd_permut[ax] not in dropped_axs
         ]
 
+        # Calculate where the newaxes are inserted after advanced indexing
+        none_axes = [ax for ax in range(len(key)) if key[ax] is None]
+        new_axes_positions = self._new_axes_after_advanced_indexing(none_axes, adv_axs_nd, len(key_nd), \
+                                                                    len(bcast_advanced_shape), adv_idcs_are_adjacent)
+
         # if any array is numpy.ndarray, stack in numpy ndarray class. 
         for idcs in bcast_idcs_short:
             if type(idcs) != NDArray:
-                 return bcast_idcs_short
-    
-        return op.stack(*bcast_idcs_short)
+                 return bcast_idcs_short, new_axes_positions
 
-        # # TODO(xinyge): check here
-        # bcast_idcs = op.stack(*bcast_idcs_short)
-        # none_axes = [ax for ax in range(len(key)) if key[ax] is None]
-        # for ax in none_axes:
-        #     bcast_idcs.insert(ax, 1)
-        # return op.stack(*bcast_indcs)
+        return op.stack(*bcast_idcs_short), new_axes_positions
 
     def _set_nd_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
-        indices = self._get_index_nd(key)  # 不OK
-        vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)  # oK
-        value_nd = self._prepare_value_nd(value, new_axes=[], bcast_shape=vshape)
+        indices, new_axes = self._get_index_nd(key)
+        vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)
+        value_nd = self._prepare_value_nd(value, new_axes=[], bcast_shape=vshape, squeeze_axes=new_axes)
         self._scatter_set_nd(value_nd, indices)
 
     def _get_nd_advanced_indexing(self, key):
         """Get item when key is a tuple of any objects of the following types:
         NDArray, np.ndarray, list, tuple, slice, and integer."""
-        # TODO(xinyi): check this part
-        # print("key for slicing:", self._get_index_nd(key))
-        # temp_key = nd.array([[[1, 1], [2, 2]], [[3 ,4], [3, 4]], 1, 1, [[3, 3], [4, 4]]])
-        # print(temp_key)
-        sliced = op.gather_nd(self, self._get_index_nd(key))
-        # sliced = op.gather_nd(self, self._get_index_nd(key))
+        slc_key, new_axes = self._get_index_nd(key)
+        sliced = op.gather_nd(self, slc_key)
         
         # Reshape due to `None` entries in `key`.
-        # none_axes = [ax for ax in range(len(key)) if key[ax] is None]
-        # final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
-        # for ax in none_axes:  # pylint: disable=invalid-name
-        #     final_shape.insert(ax, 1)
-        # # print("none_axes:", none_axes)
-        # # print(final_shape)
-        return sliced
-
+        final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
+        for ax in new_axes:  # pylint: disable=invalid-name
+            final_shape.insert(ax, 1)
+        return sliced.reshape(final_shape)
 
     def _sync_copyfrom(self, source_array):
         """Performs a synchronized copy from the `source_array` to the current array.
@@ -1162,7 +1203,6 @@ fixed-size items.
             self.handle,
             source_array.ctypes.data_as(ctypes.c_void_p),
             ctypes.c_size_t(source_array.size)))
-
 
     def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.
@@ -2691,6 +2731,7 @@ def _int_to_slice(idx):
 
 def _shape_for_bcast(shape, target_ndim, new_axes):
     """Return shape with added axes for broadcasting in ``target_ndim`` dimensions.
+
     If ``shape`` is shorter than ``target_ndim``, fixed ``1`` entries are inserted
     into the returned shape, in locations indexed by ``new_axes``. The rest is
     filled from the back with ``shape`` while possible.
@@ -2716,6 +2757,7 @@ def _shape_for_bcast(shape, target_ndim, new_axes):
 
 def _is_advanced_index(idx):
     """Return whether ``idx`` is an advanced index (array-like or integer).
+
     Note that in contrast to basic indexing, integers are considered advanced
     indices in the context of advanced indexing as they participate in
     broadcasting.
@@ -2831,11 +2873,14 @@ def _get_broadcast_shape(shape1, shape2):
         i -= 1
     return tuple(shape)
 
+
 def _broadcast_shapes(seq):
     """Return the broadcast shape of all advanced indices in ``seq``.
+
     All entries are assumed to have a ``shape`` property.
     """
     return reduce(_get_broadcast_shape, [x.shape for x in seq], ())
+
 
 def onehot_encode(indices, out):
     """One-hot encoding indices into matrix out.

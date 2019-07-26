@@ -1338,6 +1338,7 @@ def test_basic_indexing_is_contiguous():
 @with_seed()
 def test_ndarray_indexing():
     def test_getitem(np_array, index, is_scalar=False):
+        # print("raw index:", index)
         """`is_scalar` indicates whether we should expect a scalar for the result.
         If so, the indexed array of NDArray should call asscalar to compare
         with numpy's indexed array."""
@@ -1364,6 +1365,7 @@ def test_ndarray_indexing():
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
     def test_setitem(np_array, index, is_scalar):
+        print("index:", index)
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
                 np_array[np_index] = np_value
@@ -1371,11 +1373,14 @@ def test_ndarray_indexing():
                 np_array[np_index] = mx_value.asnumpy()
             else:
                 np_array[np_index] = mx_value
+            
             try:
                 mx_array[mx_index] = mx_value
             except Exception as e:
                 print('Failed with index = {}, value.shape = {}'.format(mx_index, mx_value.shape))
                 raise e
+            # print("np:", np_array)
+            # print("mxnet:", mx_array)
             assert same(np_array, mx_array.asnumpy())
 
         np_index = index
@@ -1563,16 +1568,16 @@ def test_ndarray_indexing():
                   ((slice(2), Ellipsis, None, 0), False),
                   (None, False),
                   ((1, None, -2, 3, -4), False),
-                #   (([1, 2], slice(3, 5), None, None, [3, 4]), False),
-                #   ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
-                #   ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
-                #   ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
+                  (([1, 2], slice(3, 5), None, None, [3, 4]), False),
+                  ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
+                  ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
+                  ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
     ]
     for index in index_list:
         test_getitem(np_array, index[0], index[1])
-        # test_setitem(np_array, index[0], index[1])
-        # test_getitem_autograd(np_array, index[0])
-        # test_setitem_autograd(np_array, index[0])
+        test_setitem(np_array, index[0], index[1])
+        test_getitem_autograd(np_array, index[0])
+        test_setitem_autograd(np_array, index[0])
 
 
 def test_assign_float_value_to_ndarray():

@@ -461,7 +461,6 @@ def test_np_transpose():
             else:
                 axis = [i for i in range(ndim)]
                 axes.append(tuple(axis))
-                random.shuffle(axis)
                 axes.append(tuple(axis))
             for axis in axes:
                 np_out = _np.transpose(np_data, axes=axis)
@@ -1637,9 +1636,9 @@ def test_np_indexing():
             mx_indexed_array = mx_indexed_array.asnumpy()
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
         end = time.time()
-        print("All calculation:", end - start)
-        print("Actual calculation:", end2 - start2)
-        print("Numpy calculation:", end3 - start3)
+        # print("All calculation:", end - start)
+        # print("Actual calculation:", end2 - start2)
+        # print("Numpy calculation:", end3 - start3)
 
     def test_setitem(np_array, index, is_scalar=False):
         """
@@ -1703,6 +1702,37 @@ def test_np_indexing():
                 assert_same(np_array, np_index, mx_array, index,
                             [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
 
+    def test_getitem_autograd(np_array, index):
+        """
+        np_array: native numpy array.
+        """
+        x = np.array(np_array, dtype=np_array.dtype)
+        x.attach_grad()
+        with mx.autograd.record():
+            y = x[index]
+        if not isinstance(y, np.ndarray):
+            return
+        y.backward()
+        value = np.ones_like(y)
+        x_grad = np.zeros_like(x)
+        x_grad[index] = value
+        assert same(x_grad.asnumpy(), x.grad.asnumpy())
+
+    def test_setitem_autograd(np_array, index):
+        x = np.array(np_array, dtype=np_array.dtype)
+        if not isinstance(x[index], np.ndarray):
+            return
+        out_shape = x[index].shape
+        y = np.array(_np.random.uniform(size=out_shape))
+        y.attach_grad()
+        try:
+            with mx.autograd.record():
+                x[index] = y
+                # `a[None] = v` is equivalent to `a[...] = v` which doesn't raise
+                if index is not None:
+                    assert False, 'failed with index = {}'.format(index)  # should not reach here
+        except mx.base.MXNetError as err:
+            assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
 
 
     shape = (8, 16, 9, 9)
@@ -1780,10 +1810,10 @@ def test_np_indexing():
                 (None, False),
                 ((1, None, -2, 3, -4), False),
                 # Advanced indexing
-                # (([1, 2], slice(3, 5), None, None, [3, 4]), False), # These test cases are not passed!!
-                # ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
-                # ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
-                # ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
+                (([1, 2], slice(3, 5), None, None, [3, 4]), False), # These test cases are not passed!!
+                ((slice(None), slice(3, 5), None, None, [2, 3], [3, 4]), False),
+                ((slice(None), slice(3, 5), None, [2, 3], None, [3, 4]), False),
+                ((None, slice(None), slice(3, 5), [2, 3], None, [3, 4]), False),
                 ([1], False), ([1, 2], False), ([2, 1, 3], False), ([7, 5, 0, 3, 6, 2, 1], False),
                 (np.array([6, 3], dtype=np.int32), False), # debug here
                 (np.array([[3, 4], [0, 6]], dtype=np.int32), False),
@@ -1823,9 +1853,11 @@ def test_np_indexing():
     ]
 
     for index in index_list:
-        print(index)
+        print("Testing index:", index)
         test_getitem(np_array, index[0], index[1])
         test_setitem(np_array, index[0], index[1])
+        test_getitem_autograd(np_array, index[0])
+        test_setitem_autograd(np_array, index[0])
 
     # Test empyt tensor
     # test_getitem(np.array(3), 0, True)
