@@ -32,5 +32,9 @@ TEST(Graph_dump, basic) {
   auto x_mul_w = MakeNode("dot", "x_mul_w", {x, w});
   vector<NodeEntry> outputs = {x_mul_w};
   string graph_dump = GraphDump(outputs);
-  cout << graph_dump << endl;
+  string expected_graph_dump = R"x(digraph G {
+  "x" -> "dot x_mul_w"
+  "w" -> "dot x_mul_w"
+})x";
+  EXPECT_EQ(graph_dump, expected_graph_dump);
 }
