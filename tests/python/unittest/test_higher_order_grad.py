@@ -24,68 +24,86 @@ from common import with_seed
 
 @with_seed()
 def test_sin():
+    def sin(x):
+        return nd.sin(x)
+
     def grad_grad_op(x):
         return -nd.sin(x)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-        check_second_order_unary(array, nd.sin, grad_grad_op)
+        check_second_order_unary(array, sin, grad_grad_op)
 
 
 @with_seed()
 def test_cos():
+    def cos(x):
+        return nd.cos(x)
+
     def grad_grad_op(x):
         return -nd.cos(x)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-        check_second_order_unary(array, nd.cos, grad_grad_op)
+        check_second_order_unary(array, cos, grad_grad_op)
 
 
 @with_seed()
 def test_relu():
+    def relu(x):
+        return nd.relu(x)
+
     def grad_grad_op(x):
         return nd.zeros_like(x)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-        check_second_order_unary(array, nd.relu, grad_grad_op)
+        check_second_order_unary(array, relu, grad_grad_op)
 
 
 @with_seed()
 def test_log():
+    def log(x):
+        return nd.log(x)
+
     def grad_grad_op(x):
         return -1/(x**2)
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-        check_second_order_unary(array, nd.log, grad_grad_op)
+        check_second_order_unary(array, log, grad_grad_op)
 
 
 @with_seed()
 def test_log2():
+    def log2(x):
+        return nd.log2(x)
+
     def grad_grad_op(x):
         return -1/((x**2) * math.log(2))
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-        check_second_order_unary(array, nd.log2, grad_grad_op)
+        check_second_order_unary(array, log2, grad_grad_op)
 
 
 @with_seed()
 def test_log10():
+    def log10(x):
+        return nd.log10(x)
+
     def grad_grad_op(x):
         return -1/((x**2) * math.log(10))
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-        check_second_order_unary(array, nd.log10, grad_grad_op)
+        check_second_order_unary(array, log10, grad_grad_op)
 
 
 @with_seed()
