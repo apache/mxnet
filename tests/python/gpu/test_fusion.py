@@ -104,13 +104,16 @@ def check_unary_ops():
             'gamma',
             'gammaln',
             'erf',
-            'erfinv',
             'negative',
             ]
+
+    def announce_check(op_name):
+        print("Checking fusion of " + op_name)
+
     arr = mx.random.uniform(shape=rand_shape_2d())
     a = mx.sym.Variable('a')
     for op_name in unary_ops:
-        print("Checking fusion of " + op_name)
+        announce_check(op_name)
         op = getattr(mx.sym, op_name)
         sym = op(a)
         check_fused_symbol(sym, a=arr)
@@ -119,26 +122,38 @@ def check_unary_ops():
 
     # arccosh needs input to be >= 1
     arr2 = arr + 1
+    announce_check('arccosh')
     check_fused_symbol(mx.sym.arccosh(a), a=arr2)
+
+    # erfinv needs -1 < input < 1, but we avoid the limits of this range where the slope nears +inf.
+    arr2 = (arr - 0.5) * 1.99
+    announce_check('erfinv')
+    check_fused_symbol(mx.sym.erfinv(a), a=arr2)
 
     # Activation requires act_type attribute
     for act_type in ['relu', 'sigmoid', 'tanh', 'softrelu', 'softsign']:
+        announce_check("Activation(act_type='{}')".format(act_type))
         check_fused_symbol(mx.sym.Activation(a, act_type=act_type), a=arr)
 
     # Cast requires dtype
     for dtype in ['float16', 'float32', 'float64', 'int32']:
+        announce_check("Cast(dtype='{}')".format(dtype))
         check_fused_symbol(mx.sym.Cast(a, dtype=dtype), a=arr)
 
     # reshape requires shape
+    announce_check('reshape')
     check_fused_symbol(mx.sym.reshape(a, shape=(-1,)), a=arr)
 
     # expand_dims requires axis
+    announce_check('expand_dims')
     check_fused_symbol(mx.sym.expand_dims(a, axis=1), a=arr)
 
     # clip requires a_min, a_max
+    announce_check('clip')
     check_fused_symbol(mx.sym.clip(a, a_min=0.3, a_max=0.7), a=arr)
 
     # smooth_l1 requires a scalar
+    announce_check('smooth_l1')
     check_fused_symbol(mx.sym.smooth_l1(a, scalar=0.3), a=arr)
 
 def check_binary_ops():
