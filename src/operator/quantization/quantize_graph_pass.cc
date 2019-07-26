@@ -37,6 +37,17 @@ using nnvm::NodePtr;
 using nnvm::NodeEntry;
 using nnvm::Graph;
 
+inline size_t GetNumOutputs(NodePtr node){
+  // Get NumOutputs, check if current node has NumVisibleOutputs function, if yes, return num_visible_outputs
+  size_t num_outputs = node->num_outputs();
+  static const auto& num_visible_outputs_attr = nnvm::Op::GetAttr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs");
+  auto num_visible_output_func = num_visible_outputs_attr.get(node->op(), nullptr);
+  if (num_visible_output_func != nullptr) {
+    num_outputs = num_visible_output_func(node->attrs);
+  }
+  return num_outputs;
+}
+
 NodePtr CreateNode(std::string op_name, std::string node_name) {
   NodePtr node = Node::Create();
   node->attrs.name = node_name;
@@ -223,7 +234,7 @@ Graph QuantizeGraph(Graph &&src) {
           // calculate min/max index from mirror node) based on assumption that
           // there is only 1min and 1max output from mirror node (which is
           // currently true)
-          size_t num_outputs = mirror_node->num_outputs() - 2;
+          size_t num_outputs = GetNumOutputs(mirror_node) - 2;
           min_index = num_outputs + 2 * e.index;
           max_index = num_outputs + 2 * e.index + 1;
         } else {
@@ -276,7 +287,7 @@ Graph QuantizeGraph(Graph &&src) {
           // calculate min/max index from mirror node) based on assumption that
           // there is only 1 min and 1 max output from mirror node (which is
           // currently true)
-          size_t num_outputs = mirror_node->num_outputs() - 2;
+          size_t num_outputs = GetNumOutputs(mirror_node) - 2;
           uint32_t min_index = num_outputs + 2 * e.index;
           uint32_t max_index = num_outputs + 2 * e.index + 1;
           NodePtr dequantize_node = CreateNode("_contrib_dequantize",
@@ -309,7 +320,7 @@ Graph QuantizeGraph(Graph &&src) {
       // calculate min/max index from mirror node) based on assumption that
       // there is only 1 min and 1 max output from mirror node (which is
       // currently true)
-      size_t num_outputs = e.node->num_outputs();
+      size_t num_outputs = GetNumOutputs(e.node);
       uint32_t min_index = num_outputs + 2 * e.index;
       uint32_t max_index = num_outputs + 2 * e.index + 1;
 
@@ -402,6 +413,30 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
           LOG(WARNING) << "Calibration statistics indicates that node `" << node->attrs.name
                        << "` has negative input, consider use `auto` or `int8` as out_type";
         }
+      }
+    }
+    else if (node->op() == Op::Get("_contrib_quantized_batch_norm")) {
+      auto quantized_op_idx = node->inputs[0].index;
+      const std::string prefix = "quantized_";
+      std::string out_data_name = node->attrs.name.substr(prefix.size());
+      if (node->op()) {
+        auto list_output_names_func = flist_outputs.get(node->op(), nullptr);
+        // We want to get the pre-calculated min_range and max_range from the calibration table for
+        // out_data. Here we create the output data name same as its constructed in
+        // GraphExecutor::ExecuteMonCallback.
+        if (list_output_names_func != nullptr) {
+          std::vector<std::string> names = list_output_names_func(node->attrs);
+          out_data_name += "_" + names[quantized_op_idx];
+        } else {
+          out_data_name += "_" + std::to_string(quantized_op_idx);
+        }
+      }
+
+      const auto calib_table_iter = calib_table.find(out_data_name);
+      if (calib_table_iter != calib_table.end()) {
+        node->attrs.dict["min_calib_range"] = std::to_string(calib_table_iter->second.first);
+        node->attrs.dict["max_calib_range"] = std::to_string(calib_table_iter->second.second);
+        node->op()->attr_parser(&(node->attrs));
       }
     }
   });
