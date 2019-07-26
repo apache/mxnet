@@ -38,6 +38,10 @@ def load(path):
     if not os.path.exists(path):
         print('load path "%s" does NOT exist' % path)
         return
+    #check if path is an absolute path
+    if not os.path.isabs(path):
+        print('load path "%s" is not an absolute path' % path)
+        return
     #check if path is to a library file
     _, file_ext = os.path.splitext(path)
     if not file_ext in ['.so', '.dll']:

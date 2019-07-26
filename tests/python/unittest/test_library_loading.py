@@ -26,4 +26,5 @@ def test_library_loading():
         lib = 'mylib.dll'
 
     fname = mx.test_utils.download('https://mxnet-demo-models.s3.amazonaws.com/lib_binary/'+lib)
+    fname = os.path.abspath(fname)
     mx.library.load(fname)

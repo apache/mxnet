@@ -43,17 +43,18 @@ void* load_lib(const char* path) {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   handle = LoadLibrary(path);
   if (!handle) {
+    // Retrieve the system error message for the last-error code
     char *lpMsgBuf;
-    unsigned long dw = GetLastError();
+    uint32_t dw = GetLastError();
     FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL,
         dw,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        lpMsgBuf,
-        0, NULL );
+        reinterpret_cast<char*>(&lpMsgBuf),
+        0, NULL);
     LOG(FATAL) << "Error loading library: '" << path << "'\n" << lpMsgBuf;
     LocalFree(lpMsgBuf);
     return nullptr;
