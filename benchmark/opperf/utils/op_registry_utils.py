@@ -251,10 +251,9 @@ def get_all_optimizer_operators():
      -------
      {"operator_name": {"has_backward", "nd_op_handle", "params"}}
      """
-    optimizer_ops = ['mp_sgd_update', 'signum_update',
-     'rmspropalex_update', 'ftml_update', 'rmsprop_update', 'sgd_mom_update', 'signsgd_update',
-     'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
-     'adam_update']
+    optimizer_ops = ['mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
+                     'sgd_mom_update', 'signsgd_update', 'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
+                     'adam_update']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()

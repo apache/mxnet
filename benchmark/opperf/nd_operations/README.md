@@ -22,11 +22,13 @@
 0. LogisticRegressionOutput
 1. broadcast_axes
 2. ravel_multi_index
+3. multi_sgd_mom_update
 4. smooth_l1
 5. scatter_nd
 6. reshape
 7. one_hot
 8. linalg_potri
+10. multi_sgd_update
 12. Convolution_v1
 13. repeat
 14. Custom
@@ -76,6 +78,7 @@
 71. slice_axis
 72. stack
 74. khatri_rao
+75. multi_mp_sgd_update
 76. linalg_sumlogdiag
 77. broadcast_to
 78. IdentityAttachKLSparseReg
@@ -84,6 +87,7 @@
 82. uniform
 83. InstanceNorm
 84. expand_dims
+85. multi_mp_sgd_mom_update
 86. reverse
 87. add_n
 88. clip

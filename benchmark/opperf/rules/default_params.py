@@ -140,7 +140,7 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "t" : DEFAULT_T,
                    "rescale_grad" : DEFAULT_RESCALE_GRAD,
                    "clip_grad" : DEFAULT_CLIP_GRADIENT,
-                   "lazy_update" : DEFAULT_LAZY_UPDATE
+                   "lazy_update" : DEFAULT_LAZY_UPDATE,
                    "data_4d": DEFAULT_DATA_4d,
                    "dim1": DEFAULT_DIM_1,
                    "dim2": DEFAULT_DIM_2,

@@ -22,15 +22,11 @@ from benchmark.opperf.utils.op_registry_utils import get_all_optimizer_operators
 """Performance benchmark tests for MXNet Neural Network Optimizer Update Operators.
 
 1. Stochastic Gradient Descent (SGD)
-    1.1 multi_sgd_mom_update
-    1.2 mp_sgd_update
-    1.3 multi_sgd_update
-    1.4 sgd_mom_update
-    1.5 signsgd_update
-    1.6 mp_sgd_mom_update
-    1.7 multi_mp_sgd_update
-    1.8 multi_mp_sgd_mom_update
-    1.9 sgd_update
+    1.1 mp_sgd_update
+    1.2 sgd_mom_update
+    1.3 signsgd_update
+    1.4 mp_sgd_mom_update
+    1.5 sgd_update
 3. signum_update
 4. rmspropalex_update
 5. ftml_update
