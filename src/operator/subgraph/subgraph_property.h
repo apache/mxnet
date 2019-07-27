@@ -331,6 +331,15 @@ class SubgraphProperty {
     return it != attrs_.end();
   }
   /*!
+   * \brief Remove attr if the attr exists.
+   */
+  void RemoveAttr(const std::string& name) {
+    auto it = attrs_.find(name);
+    if (it != attrs_.end()) {
+      attrs_.erase(it);
+    }
+  }
+  /*!
    * \brief Get the property type.
    */
   SgPropertyType GetPropertyType() const { return type_; }
@@ -382,6 +391,16 @@ class SubgraphBackend {
   bool HasAttr(const std::string& name) const {
     auto it = attrs_.find(name);
     return it != attrs_.end();
+  }
+
+  /*!
+   * \brief Remove attr if the attr exists.
+   */
+  void RemoveAttr(const std::string& name) {
+    auto it = attrs_.find(name);
+    if (it != attrs_.end()) {
+      attrs_.erase(it);
+    }
   }
 
   SubgraphPropertyPtr& RegisterSubgraphProperty(const SubgraphPropertyPtr prop) {
