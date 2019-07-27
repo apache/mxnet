@@ -27,12 +27,12 @@ from benchmark.opperf.utils.op_registry_utils import get_all_optimizer_operators
     1.3 signsgd_update
     1.4 mp_sgd_mom_update
     1.5 sgd_update
-3. signum_update
-4. rmspropalex_update
-5. ftml_update
-6. rmsprop_update
-7. ftrl_update
-8. adam_update
+2. signum_update
+3. rmspropalex_update
+4. ftml_update
+5. rmsprop_update
+6. ftrl_update
+7. adam_update
 """
 
 
