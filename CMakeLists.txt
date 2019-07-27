@@ -277,6 +277,16 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 if(USE_CUDA)
   find_package(CUDA REQUIRED)
   add_definitions(-DMSHADOW_USE_CUDA=1)
+  # This fixes an incompatability between the CMake version provided with Ubuntu 18.04
+  # and CUDA > 9.1. CUDA 9.2 deprecated the cublas_device variable but applications
+  # built using CMake 3.12.3 and below still look for this variable. Since the
+  # cublas_device_LIBRARY and cublas_LIBRARY are usually identical, this replaces
+  # the deprecated variable with the value of the supported variable.
+  if(${CUDA_VERSION} VERSION_GREATER "9.1" AND ${CMAKE_VERSION} VERSION_LESS "3.12.3")
+    unset(CUDA_cublas_device_LIBRARY CACHE)
+    set(CUDA_cublas_device_LIBRARY ${CUDA_cublas_LIBRARY})
+    set(CUDA_CUBLAS_LIBRARIES ${CUDA_cublas_LIBRARY})
+  endif()
   if(FIRST_CUDA AND (NOT USE_OLDCMAKECUDA))
     if(NOT CUDA_TOOLSET)
       set(CUDA_TOOLSET "${CUDA_VERSION_STRING}")
