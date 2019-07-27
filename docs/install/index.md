@@ -119,20 +119,17 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="pip">
 <div class="v1-4-1">
 
-MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
-
 ```
 $ pip install mxnet
 ```
 
+MKL-DNN enabled pip packages are optimized for Intel hardware. You can find performance numbers in the <a href="http://mxnet.io/faq/perf.html#intel-cpu">MXNet tuning guide</a>.
+
+```
+$ pip install mxnet-mkl
+```
+
 </div> <!-- End of v1-4-1 -->
-<div class="v1-4-0">
-
-```
-$ pip install mxnet==1.4.0
-```
-
-</div> <!-- End of v1-4-0 -->
 <div class="v1-3-1">
 
 ```
@@ -285,13 +282,13 @@ To build from source, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu inst
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-4-0">
+<div class="v1-4-1">
 
 ```
 $ pip install mxnet-cu92
 ```
 
-</div> <!-- End of v1-4-0 -->
+</div> <!-- End of v1-4-1 -->
 <div class="v1-3-1">
 
 ```
@@ -599,12 +596,12 @@ Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-perl">Perl
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-4-0">
+<div class="v1-4-1">
 
 ```
 $ pip install mxnet
 ```
-</div> <!-- End of v1-4-0 -->
+</div> <!-- End of v1-4-1 -->
 <div class="v1-3-1">
 
 ```
@@ -892,13 +889,13 @@ For more installation options, refer to the <a href="osx_setup.html">MXNet macOS
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-4-0">
+<div class="v1-4-1">
 
 ```
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-4-0 -->
+</div> <!-- End of v1-4-1 -->
 <div class="v1-3-1">
 
 ```
@@ -1023,13 +1020,13 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-4-0">
+<div class="v1-4-1">
 
 ```
 $ pip install mxnet-cu92
 ```
 
-</div> <!-- End of v1-4-0 -->
+</div> <!-- End of v1-4-1 -->
 <div class="v1-3-1">
 
 ```
