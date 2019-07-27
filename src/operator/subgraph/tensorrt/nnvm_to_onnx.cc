@@ -54,7 +54,7 @@ namespace nnvm_to_onnx {
 
 std::string ConvertNnvmGraphToOnnx(
     const nnvm::Graph& g,
-    const std::unordered_map<std::string, NDArray>* const params_map) {
+    std::unordered_map<std::string, NDArray>* params_map) {
 
   static std::atomic_ulong subgraph_count = { 0 };
 
@@ -88,8 +88,21 @@ std::string ConvertNnvmGraphToOnnx(
   auto placeholder_shapes = GetPlaceholderShapes(shape_inputs, ig);
   auto placeholder_dtypes = GetPlaceholderDTypes(dtype_inputs, ig);
   auto output_lookup = GetOutputLookup(ig);
-  uint32_t current_input = 0;
 
+  for (uint32_t node_idx = 0; node_idx < ig.num_nodes(); ++node_idx) {
+      const IndexedGraph::Node& node = ig[node_idx];
+      const nnvm::Node* source = node.source;
+      // If this is a op
+      if (!source->is_variable()) {
+        auto mightNeedPreprocessNode = preprocess_map.find(source->op()->name);
+        // if this op is defined in preprocess_map
+        if (mightNeedPreprocessNode != preprocess_map.end()) {
+          mightNeedPreprocessNode->second(source->attrs, source->inputs, params_map);
+        }
+      }
+  }
+
+  uint32_t current_input = 0;
   // Can't do a foreach over IndexedGraph since it doesn't implement begin(), etc.
   for (uint32_t node_idx = 0; node_idx < ig.num_nodes(); ++node_idx) {
     const IndexedGraph::Node& node = ig[node_idx];
@@ -640,6 +653,18 @@ void ConvertDropout(NodeProto* node_proto, const NodeAttrs& attrs,
                     const nnvm::IndexedGraph& /*ig*/,
                     const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   node_proto->set_op_type("Dropout");
+}
+
+void PreprocessBatchNorm(const NodeAttrs &attrs,
+                         const std::vector<nnvm::NodeEntry> &inputs,
+                         std::unordered_map<std::string, NDArray> *params_map) {
+  const auto& param = nnvm::get<op::BatchNormParam>(attrs.parsed);
+  if (param.fix_gamma) {
+    // if mxnet is specify fix_gamma, we will need to preprocess the params map
+    // to convert the gamma associate with this batch norm layer to 1.
+    std::string gammaNodeName = inputs[batchnorm::kGamma].node->attrs.name;
+    (*params_map)[gammaNodeName] = 1.0f;
+  }
 }
 
 }  // namespace nnvm_to_onnx

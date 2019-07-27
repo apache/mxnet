@@ -272,7 +272,7 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
               << " instead of: " << max_batch_size;
     max_batch_size = in_shape[0][0];
   }
-  const auto& params_map = node_param.params_map;
+  std::unordered_map<std::string, NDArray> params_map = node_param.params_map;
   const auto& inputs_to_idx = node_param.inputs_to_idx;
   const auto& outputs_to_idx = node_param.outputs_to_idx;
   const auto& idx_g = graph.indexed_graph();
