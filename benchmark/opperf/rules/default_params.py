@@ -34,6 +34,7 @@ DEFAULT_RHS = [[(1024, 1024), (10000, 10), (10000, 1)]]
 
 # For operators like - random_uniform, random_normal etc..
 DEFAULT_SHAPE = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_SAMPLE = [(2,)]
 DEFAULT_LOW = [0]
 DEFAULT_HIGH = [5]
 DEFAULT_K = [1]
@@ -73,6 +74,7 @@ DEFAULT_BLOCK_SIZE = [2, 5]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
+                   "sample": DEFAULT_SAMPLE,
                    "lhs": DEFAULT_LHS,
                    "rhs": DEFAULT_RHS,
                    "shape": DEFAULT_SHAPE,
@@ -101,6 +103,6 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
 # given as NDArray and translate users inputs such as a shape tuple, Numpy Array or
 # a list to MXNet NDArray. This is just a convenience added so benchmark utility users
 # can just say shape of the tensor, and we automatically create Tensors.
-PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp",
+PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
                           "low", "high", "weight", "bias", "moving_mean", "moving_var"]
