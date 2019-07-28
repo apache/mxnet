@@ -39,6 +39,7 @@ from benchmark.opperf.nd_operations.nn_activation_operators import run_activatio
 from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operators_benchmarks, \
     run_convolution_operators_benchmarks, run_transpose_convolution_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_operators_benchmarks
+from benchmark.opperf.nd_operations.nn_optimizer_operators import run_optimizer_operators_benchmarks
 from benchmark.opperf.nd_operations.array_rearrange import run_rearrange_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
@@ -96,6 +97,8 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32'):
     # Run all Convolution operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_convolution_operators_benchmarks(ctx=ctx, dtype=dtype))
 
+    # Run all Optimizer operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_optimizer_operators_benchmarks(ctx=ctx, dtype=dtype))
     # Run all Transpose Convolution operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_transpose_convolution_operators_benchmarks(ctx=ctx, dtype=dtype))
 

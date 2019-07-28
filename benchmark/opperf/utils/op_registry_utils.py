@@ -244,6 +244,27 @@ def get_all_reduction_operators():
     return reduction_mx_operators
 
 
+def get_all_optimizer_operators():
+    """Gets all Optimizer operators registered with MXNet.
+
+     Returns
+     -------
+     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+     """
+    optimizer_ops = ['mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
+                     'sgd_mom_update', 'signsgd_update', 'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
+                     'adam_update']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Optimizer operators
+    optimizer_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+         if op_name in optimizer_ops and op_name not in unique_ops:
+             optimizer_mx_operators[op_name] = mx_operators[op_name]
+    return optimizer_mx_operators
+
 def get_all_sorting_searching_operators():
     """Gets all Sorting and Searching operators registered with MXNet.
 
