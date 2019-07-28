@@ -1046,8 +1046,10 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend_name,
   for (auto property : subgraph_prop_list) {
     nnvm::Graph g = Symbol2Graph(*s);
     property->SetAttr("graph", g);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(property));
+    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
     g = ApplyPass(std::move(g), "BuildSubgraph");
+    property->RemoveAttr("graph");
+    g.attrs.erase("subgraph_property");
     s->outputs = g.outputs;
   }
   *ret_sym_handle = s;
