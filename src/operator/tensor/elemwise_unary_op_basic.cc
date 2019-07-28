@@ -177,7 +177,8 @@ NNVM_REGISTER_OP(_backward_hard_sigmoid)
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-.set_attr<FCompute>("FCompute<cpu>", HardSigmoidBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", HardSigmoidBackward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // softsign
 MXNET_OPERATOR_REGISTER_UNARY(softsign)
@@ -194,7 +195,43 @@ The storage type of ``softsign`` output is always dense
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_softsign)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu,
-  unary_bwd<mshadow_op::softsign_grad> >);
+  unary_bwd<mshadow_op::softsign_grad> >)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // NodeEntry{n} : dL/dy * f'(x)
+      // n->inputs[0] : dL/dy
+      // n->inputs[1] : x (ElemwiseGradUseIn)
+      // ograds[0] : head_grads (dL/dx_grad)
+      // y = f(x) = softsign(x)
+      // f'(x) = dy/dx = 1/(1 + |x|)^2
+      // f''(x) = (-2/|x|) * softsign(x) * f'(x) = -2*x/(|x|*(1 + |x|)^3)
+      const std::unordered_map<std::string, std::string> neg_two = {{"scalar", "-2.0"}};
+      auto x = n->inputs[1];
+      auto dldy_mul_dydx = nnvm::NodeEntry{n};
+      auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
+                           {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
+      auto abs_x = MakeNode("abs", n->attrs.name + "_abs_x",
+                            {nnvm::NodeEntry{x}}, nullptr, &n);
+      auto r_abs_x = MakeNode("reciprocal", n->attrs.name + "_r_abs_x",
+                              {nnvm::NodeEntry{abs_x}}, nullptr, &n);
+      auto neg_two_r_abs_x = MakeNode("_mul_scalar", n->attrs.name + "_neg_two_r_abs_x",
+                                      {nnvm::NodeEntry{r_abs_x}}, &neg_two, &n);
+      auto softsign_x = MakeNode("softsign", n->attrs.name + "_softsign_x",
+                              {nnvm::NodeEntry{x}}, nullptr, &n);
+      auto softsign_mul_dydx = MakeNode("elemwise_mul", n->attrs.name + "_softsign_mul_dydx",
+                           {nnvm::NodeEntry{softsign_x}, dldy_mul_dydx}, nullptr, &n);
+      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_mid",
+                                    {nnvm::NodeEntry{softsign_mul_dydx},
+                                     nnvm::NodeEntry{neg_two_r_abs_x}},
+                                    nullptr, &n);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
+                                {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
+      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
+                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
+      return ret;
+  });
 
 // copy
 static void CopyEx(const nnvm::NodeAttrs& attrs,
