@@ -1413,11 +1413,17 @@ deploy_docs() {
     popd
 }
 
+build_setup() {
+    build_folder="docs/_build"
+    if [ ! -d $build_folder ]; then
+      mkdir $build_folder
+    fi
+}
 
 build_python_docs() {
     set -ex
     pushd .
-
+    build_setup
     export CC="ccache gcc"
     export CXX="ccache g++"
     # turning off warnings as errors for now
@@ -1433,7 +1439,7 @@ build_python_docs() {
 build_c_docs() {
     set -ex
     pushd .
-
+    build_setup
     make doxygen
     tar zcvf docs/_build/c-artifacts.tgz docs/doxygen/html
 
@@ -1444,7 +1450,7 @@ build_c_docs() {
 build_clojure_docs() {
     set -ex
     pushd .
-
+    build_setup
     clojure_path =  'contrib/clojure-package'
     clojure_doc_path ='contrib/clojure-package/target/doc'
     clojure_doc_artifact = 'docs/_build/artifacts-clojure.tgz'
@@ -1462,7 +1468,7 @@ build_clojure_docs() {
 build_julia_docs() {
     set -ex
     pushd .
-
+    build_setup
     julia_doc_path = 'julia/docs/site/'
     julia_doc_artifact = 'docs/_build/artifacts-julia.tgz'
 
@@ -1480,7 +1486,7 @@ build_julia_docs() {
 build_java_docs() {
     set -ex
     pushd .
-
+    build_setup
     # Build scala library
     publish_scala_build
 
@@ -1519,7 +1525,7 @@ build_java_docs() {
 build_scala_docs() {
     set -ex
     pushd .
-
+    build_setup
     # Build scala library
     publish_scala_build
 
@@ -1568,7 +1574,7 @@ build_scala_docs() {
 build_docs() {
     set -ex
     pushd .
-
+    build_setup
     # Setup environment for Julia docs
     export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'

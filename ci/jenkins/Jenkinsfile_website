@@ -37,13 +37,19 @@ core_logic: {
     custom_steps.compile_unix_cpu_openblas()
   ])
 
-  utils.parallel_stage('Deploy', [
+  utils.parallel_stage('1st Phase Docs', [
     custom_steps.docs_c(),
-    custom_steps.docs_python(),
     custom_steps.docs_scala(),
-    custom_steps.docs_java(),
-    custom_steps.docs_clojure(),
     custom_steps.docs_julia()
+  ])
+
+  utils.parallel_stage('2nd Phase Docs', [
+    custom_steps.docs_java(),
+    custom_steps.docs_clojure()
+  ])
+
+  utils.parallel_stage('3rd Phase Docs', [
+    custom_steps.docs_python()
   ])
 }
 ,
