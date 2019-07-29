@@ -916,6 +916,9 @@ def test_quantize_model_with_forward():
             if qdtype == 'int8' and is_test_for_mkldnn() and name in ['sym1', 'sym2', 'sym3']:
               print('skipped testing test_quantize_model_with_forward for mkldnn cpu int8 since it is not supported yet')
               continue
+            elif qdtype == 'int8' and is_test_for_gpu() and name in ['sym1']:
+              print('skipped testing test_quantize_model_with_forward for gpu int8 since it is not supported yet')
+              continue
 
             if lshape is None:
                 mod = Module(symbol=s, label_names=None)
