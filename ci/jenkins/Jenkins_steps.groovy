@@ -1389,7 +1389,6 @@ def docs_website() {
     }]
 }
 
-
 def docs_python() {
     return ['Python Docs': {
       node(NODE_LINUX_CPU) {
@@ -1397,13 +1396,7 @@ def docs_python() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
-
-            master_url = utils.get_jenkins_master_url()
-            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
-                sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-            } else {
-                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
-            }
+            archiveArtifacts 'docs/_build/artifacts/python-artifacts.tgz'
           }
         }
       }
@@ -1417,13 +1410,7 @@ def docs_c() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_c_docs', false)
-
-            master_url = utils.get_jenkins_master_url()
-            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
-                sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-            } else {
-                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
-            }
+            archiveArtifacts 'docs/_build/artifacts/c-artifacts.tgz'
           }
         }
       }
@@ -1437,13 +1424,7 @@ def docs_scala() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_scala_docs', false)
-
-            master_url = utils.get_jenkins_master_url()
-            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
-                sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-            } else {
-                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
-            }
+            archiveArtifacts 'docs/_build/artifacts/scala-artifacts.tgz'
           }
         }
       }

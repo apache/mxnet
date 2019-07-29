@@ -1423,6 +1423,8 @@ build_python_docs() {
     # make docs SPHINXOPTS=-W USE_MKLDNN=0
     make docs SPHINXOPTS= USE_MKLDNN=0
 
+    # need to add tar up artifacts
+
     popd
 }
 
@@ -1431,6 +1433,7 @@ build_c_docs() {
     pushd .
 
     make doxygen
+    tar zcvf docs/_build/c-artifacts.tgz docs/doxygen/html
 
     popd
 }
@@ -1440,10 +1443,41 @@ build_scala_docs() {
     set -ex
     pushd .
 
+    # Build scala library
     publish_scala_build
 
-    find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"
-    # need to get rest of process here
+    scala_path = 'scala-package'
+    docs_build_path = 'docs/_build/scala-docs'
+    artifacts_path = 'docs/_build/scala-package.tgz'
+
+    scala_doc_sources = `find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"`
+
+    jar_native = `find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
+    jar_macros = `find macros -name "*.jar" | tr "\\n" ":" `
+    jar_core = `find core -name "*.jar" | tr "\\n" ":" `
+    jar_infer = `find infer -name "*.jar" | tr "\\n" ":" `
+    scala_doc_classpath = $(jar_native):$(jar_macros):$(jar_core):$(jar_infer)
+
+    scala_ignore_errors = ''
+    legacy_ver = ".*1.2|1.3.*"
+    if [[ $_BUILD_VER =~ $legacy_ver ]]
+    then
+      # There are unresolvable errors on mxnet 1.2.x. We are ignoring those errors while aborting the ci on newer versions
+      echo "We will ignoring unresolvable errors on MXNet 1.2/1.3."
+      scala_ignore_errors = '; exit 0'
+    fi
+
+    pushd .
+    cd $(scala_path)
+    scaladoc $(scala_doc_sources) -classpath $(scala_doc_classpath) $(scala_ignore_errors)
+    popd
+
+    for doc_file in 'index', 'index.html', 'org', 'lib', 'index.js', 'package.html'; do
+        mv $(scala_path)/$(doc_file) $(docs_build_path)
+    done
+
+    tar -zcvf $(artifacts_path) $(docs_build_path)
+
     popd
 }
 
