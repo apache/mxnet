@@ -272,7 +272,7 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
               << " instead of: " << max_batch_size;
     max_batch_size = in_shape[0][0];
   }
-  const auto& params_map = node_param.params_map;
+  std::unordered_map<std::string, NDArray> params_map = node_param.params_map;
   const auto& inputs_to_idx = node_param.inputs_to_idx;
   const auto& outputs_to_idx = node_param.outputs_to_idx;
   const auto& idx_g = graph.indexed_graph();
@@ -328,6 +328,8 @@ NNVM_REGISTER_OP(_TensorRT)
     .set_attr<nnvm::FListOutputNames>("FListOutputNames", DefaultSubgraphOpListOutputs)
     .set_attr<FCreateOpState>("FCreateOpState", TRTCreateState)
     .set_attr<FInferStorageType>("FInferStorageType", TRTInferStorageType);
+
+MXNET_REGISTER_SUBGRAPH_BACKEND(TensorRT);
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(TensorRT, TensorrtProperty);
 }  // namespace op

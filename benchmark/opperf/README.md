@@ -75,7 +75,7 @@ For example, you want to run benchmarks for all NDArray Broadcast Binary Operato
 
 ```
 #!/usr/bin/python
-from benchmark.opperf.tensor_operations.binary_broadcast_operators import run_mx_binary_broadcast_operators_benchmarks
+from benchmark.opperf.nd_operations.binary_broadcast_operators import run_mx_binary_broadcast_operators_benchmarks
 
 # Run all Binary Broadcast operations benchmarks with default input values
 print(run_mx_binary_broadcast_operators_benchmarks())
