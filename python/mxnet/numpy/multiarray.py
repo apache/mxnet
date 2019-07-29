@@ -844,7 +844,7 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute size_array')
 
-    def expand_dims(self, *args, **kwargs):
+    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`expand_dims`.
 
         The arguments are the same as for :py:func:`expand_dims`, with
