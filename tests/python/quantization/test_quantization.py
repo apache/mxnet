@@ -606,6 +606,16 @@ def test_quantized_bn():
         return mean, var
 
     def check_quantized_bn(data_shape, qdtype):
+        if qdtype == 'uint8':
+            print('skipped testing quantize_bn for uint8 since it is not supported yet')
+            return
+        elif is_test_for_native_cpu():
+            print('skipped testing quantize_bn for native cpu since it is not supported yet')
+            return
+        elif is_test_for_gpu():
+            print('skipped testing quantize_bn for gpu since it is not supported yet')
+            return
+
         # qdtype = int8
         data_low = -127.0
         data_high = 127.0
