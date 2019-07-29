@@ -28,7 +28,7 @@ To demonstrate the Fit API, you will train an image classification model using t
 
 To complete this tutorial, you will need:
 
-- [MXNet](https://mxnet.incubator.apache.org/install/#overview) (The version of MXNet will be >= 1.5.0, you can use `pip install mxnet --pre` to get the latest pip package or build from source with master, refer to [MXNet installation](http://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Linux&language=Python&processor=CPU)
+- [MXNet](https://mxnet.incubator.apache.org/install/#overview) (The version of MXNet will be >= 1.5.0, you can use `pip install mxnet` to get 1.5.0 release pip package or build from source with master, refer to [MXNet installation](http://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Linux&language=Python&processor=CPU)
 - [Jupyter Notebook](https://jupyter.org/index.html) (For interactively running the provided .ipynb file)
 
 
@@ -50,7 +50,7 @@ ctx = [mx.gpu(i) for i in range(gpu_count)] if gpu_count > 0 else mx.cpu()
 [Fashion-MNIST](https://research.zalando.com/welcome/mission/research-projects/fashion-mnist/) dataset consists of fashion items divided into ten categories: t-shirt/top, trouser, pullover, dress, coat, sandal, shirt, sneaker, bag and ankle boot. 
 
 - It has 60,000 grayscale images of size 28 * 28 for training.  
-- It has 10,000 grayscale images os size 28 * 28 for testing/validation. 
+- It has 10,000 grayscale images of size 28 * 28 for testing/validation. 
 
 We will use the ```gluon.data.vision``` package to directly import the Fashion-MNIST dataset and perform pre-processing on it.
 

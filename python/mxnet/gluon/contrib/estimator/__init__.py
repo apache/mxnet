@@ -18,5 +18,4 @@
 # pylint: disable=wildcard-import
 """Gluon Estimator Module"""
 from . import  event_handler
-from .estimator import *
 from .event_handler import *
