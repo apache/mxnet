@@ -1494,7 +1494,6 @@ build_static_libmxnet() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
-    build_ccache_wrappers
     source tools/staticbuild/build.sh ${mxnet_variant} pip
     popd
 }
