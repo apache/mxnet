@@ -106,6 +106,7 @@ class FeatureExtractor {
     /*print out the features*/
     auto array = executor->outputs[0].Copy(Context(kCPU, 0));
     NDArray::WaitAll();
+    array = array.Reshape({2, 1024});
     for (int i = 0; i < 1024; ++i) {
       cout << array.At(0, i) << ",";
     }
