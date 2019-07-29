@@ -431,9 +431,9 @@ void FusedOp::CompileCode(const std::string &kernel_name) {
       nvrtcCreateProgram(&program,                                  // prog
                          &code_[0],                                 // buffer
                          (kernel_name + "_kernel.cu").c_str(),      // name
-                         0,                                         // numHeaders
+                         0,                                         // num headers
                          NULL,                                      // headers
-                         NULL));                                    // includeNames
+                         NULL));                                    // include names
   std::string gpu_arch = "--gpu-architecture=compute_" +
                          std::to_string(this->cc_major_) +
                          std::to_string(this->cc_minor_);
@@ -445,18 +445,18 @@ void FusedOp::CompileCode(const std::string &kernel_name) {
   NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
   nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                  3,        // numOptions
+                                                  3,        // num options
                                                   opts);    // options
   // Obtain compilation log from the program.
-  size_t logSize;
-  NVRTC_CALL(nvrtcGetProgramLogSize(program, &logSize));
-  std::string log(logSize, '\0');
+  size_t log_size;
+  NVRTC_CALL(nvrtcGetProgramLogSize(program, &log_size));
+  std::string log(log_size, '\0');
   NVRTC_CALL(nvrtcGetProgramLog(program, &log[0]));
   CHECK_EQ(compileResult, NVRTC_SUCCESS) << "NVRTC Compilation failed.\n" << log;
   // Obtain PTX from the program.
-  size_t ptxSize;
-  NVRTC_CALL(nvrtcGetPTXSize(program, &ptxSize));
-  ptx_.reserve(ptxSize);
+  size_t ptx_size;
+  NVRTC_CALL(nvrtcGetPTXSize(program, &ptx_size));
+  ptx_.reserve(ptx_size);
   NVRTC_CALL(nvrtcGetPTX(program, &ptx_[0]));
   const char *name;
   NVRTC_CALL(nvrtcGetLoweredName(program,
@@ -466,12 +466,12 @@ void FusedOp::CompileCode(const std::string &kernel_name) {
   // Destroy the program.
   NVRTC_CALL(nvrtcDestroyProgram(&program));
   int device;
-  CUdevice cuDevice;
+  CUdevice cu_device;
   CUcontext context;
   CUmodule module;
   CUDA_CALL(cudaGetDevice(&device));
-  CUDA_DRIVER_CALL(cuDeviceGet(&cuDevice, device));
-  CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cuDevice));
+  CUDA_DRIVER_CALL(cuDeviceGet(&cu_device, device));
+  CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cu_device));
   CUDA_DRIVER_CALL(cuModuleLoadData(&module, &ptx_[0]));
   CUDA_DRIVER_CALL(cuModuleGetFunction(&kernel_,
                                        module,
