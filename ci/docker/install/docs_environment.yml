@@ -1,0 +1,27 @@
+name: mxnet-docs
+channels:
+- pytorch
+dependencies:
+- conda>=4.6.13
+- pip
+- python
+- jupyter
+- sphinx
+- matplotlib
+- pandas
+- notebook
+- pytorch-cpu
+- torchvision-cpu
+- pip:
+  # using nbconvert master until v5.5 comes out
+  - git+https://github.com/jupyter/nbconvert@master
+  - nbsphinx>=0.4.2
+  - recommonmark
+  - notedown
+  - mxnet-cu92==1.5.0b20190101
+  - pypandoc
+  - breathe
+  - mock
+  - awscli
+  - git+https://github.com/rmk135/sphinxcontrib-disqus
+  - https://github.com/mli/mx-theme/tarball/master

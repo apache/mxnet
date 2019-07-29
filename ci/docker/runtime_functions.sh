@@ -1420,19 +1420,31 @@ build_setup() {
     fi
 }
 
+fetch_new_docs_repo() {
+   git clone https://github.com/mli/new-docs.git $1 || exit 0
+}
+
 build_python_docs() {
-    set -ex
-    pushd .
-    build_setup
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    # turning off warnings as errors for now
-    # make docs SPHINXOPTS=-W USE_MKLDNN=0
-    make docs SPHINXOPTS= USE_MKLDNN=0
+   set -ex
+   pushd .
 
-    # need to add tar up artifacts
+   python_doc_path ='docs_bui'
+   python_doc_artifact = 'docs/_build/artifacts-clojure.tgz'
 
-    popd
+   build_setup
+
+   repo="new_docs_python"
+   fetch_new_docs_repo $repo
+   cd $repo/python
+
+   conda activate mxnet-docs
+
+   rm -rf build/_build/
+   make html EVAL=0
+
+   tar zcvf docs/_build/python-artifacts.tgz build/_build/html
+
+   popd
 }
 
 
