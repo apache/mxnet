@@ -77,8 +77,8 @@ class EnumType:
 
 class Arg:
     typeDict = {'boolean':'bool',\
-        'boolean or None':'dmlc::optional<bool>',\
         'Shape(tuple)':'Shape',\
+        'Shape':'Shape',\
         'Symbol':'Symbol',\
         'NDArray':'Symbol',\
         'NDArray-or-Symbol':'Symbol',\
@@ -88,17 +88,13 @@ class Arg:
         'caffe-layer-parameter':'::caffe::LayerParameter',\
         'NDArray-or-Symbol[]':'const std::vector<Symbol>&',\
         'float':'mx_float',\
-        'float or None':'mx_float',\
         'real_t':'mx_float',\
         'int':'int',\
         'long':'int64_t',\
         'int (non-negative)': 'uint32_t',\
         'long (non-negative)': 'uint64_t',\
-        'int or None':'dmlc::optional<int>',\
         'long':'int64_t',\
         'double':'double',\
-        'double or None':'dmlc::optional<double>',\
-        'Shape or None':'dmlc::optional<Shape>',\
         'string':'const std::string&',\
         'ptr':'void*',\
         'tuple of <int>':'nnvm::Tuple<int>',\
@@ -107,13 +103,10 @@ class Arg:
         'tuple of <long (non-negative)>':'nnvm::Tuple<uint64_t>',\
         'tuple of <float>':'nnvm::Tuple<mx_float>',\
         'tuple of <double>':'nnvm::Tuple<double>',\
-        'tuple of <int> or None':'dmlc::optional<nnvm::Tuple<int> >',\
-        'tuple of <long> or None':'dmlc::optional<nnvm::Tuple<int64_t> >',\
-        'tuple of <int (non-negative)> or None':'dmlc::optional<nnvm::Tuple<uint32_t> >',\
-        'tuple of <long (non-negative)> or None':'dmlc::optional<nnvm::Tuple<uint64_t> >',\
-        'tuple of <float> or None':'dmlc::optional<nnvm::Tuple<float> >',\
-        'tuple of <double> or None':'dmlc::optional<nnvm::Tuple<double> >',\
         }
+    # add optional types
+    for k, v in list(typeDict.items()):
+        typeDict[k + ' or None'] = 'dmlc::optional<{}>'.format(v)
     name = ''
     type = ''
     description = ''
