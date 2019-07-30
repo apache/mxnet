@@ -252,7 +252,7 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
-ifeq ($(USE_BLAS), open)
+ifeq ($(USE_BLAS), openblas)
 	CFLAGS += -DMXNET_USE_BLAS_OPEN=1
 else ifeq ($(USE_BLAS), atlas)
 	CFLAGS += -DMXNET_USE_BLAS_ATLAS=1
