@@ -1436,7 +1436,7 @@ build_python_docs() {
    repo="new_docs_python"
    fetch_new_docs_repo $repo
    cd $repo/python
-
+   eval "$($HOME/miniconda/bin/conda shell.bash hook)"
    conda activate mxnet-docs
 
    rm -rf build/_build/
@@ -1460,7 +1460,7 @@ build_r_docs() {
    repo="new_docs_r"
    fetch_new_docs_repo $repo
    cd $repo/Rsite
-
+   eval "$($HOME/miniconda/bin/conda shell.bash hook)"
    conda activate mxnet-docs
 
    rm -rf build/_build/

@@ -31,7 +31,7 @@ apt-get install -y \
 # Can probably delete these and docs_requirements
 # pip3 install -r /work/docs_requirements
 # pip2 install -r /work/docs_requirements
-wget https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
+wget -q https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
 chmod +x Miniconda2-latest-Linux-x86_64.sh
 ./Miniconda2-latest-Linux-x86_64.sh -b -p $HOME/miniconda
 eval "$($HOME/miniconda/bin/conda shell.bash hook)"
