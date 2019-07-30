@@ -1391,6 +1391,21 @@ def docs_website() {
 }
 
 
+def compile_unix_lite() {
+    return ['CPU: MKL': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-lite') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu_lite', 'build_ubuntu_cpu_mkl', false)
+            utils.pack_lib('cpu', mx_lib, true)
+          }
+        }
+      }
+    }]
+}
+
+
 def docs_python() {
     return ['Python Docs': {
       node(NODE_LINUX_CPU) {
