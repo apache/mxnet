@@ -70,7 +70,7 @@ echo "Packing ${libs} into ${name}"
 for i in \$(echo ${libs} | sed -e 's/,/ /g'); do md5sum \$i; done
 return 0
 """
-  stash allowEmpty: true, includes: libs, name: name
+  stash includes: libs, name: name
 
   if (include_gcov_data) {
     // Store GCNO files that are required for GCOV to operate during runtime
