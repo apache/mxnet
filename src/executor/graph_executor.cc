@@ -1688,8 +1688,10 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, op::SubgraphPropertyP
   g = InferForwardAttrs(g, arg_shapes, arg_dtypes, arg_stypes, default_ctx, ctx_map, in_arg_ctxes,
                         aux_state_ctxes, true);
   subgraph_prop->SetAttr("graph", g);
-  g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(subgraph_prop));
+  g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(subgraph_prop);
   g = ApplyPass(std::move(g), "BuildSubgraph");
+  subgraph_prop->RemoveAttr("graph");
+  g.attrs.erase("subgraph_property");
   ret.outputs = g.outputs;
   return ret;
 }
