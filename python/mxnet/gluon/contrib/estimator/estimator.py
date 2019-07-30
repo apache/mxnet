@@ -25,6 +25,7 @@ import warnings
 from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler
 from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
 from ...data import DataLoader
+from ...loss import SoftmaxCrossEntropyLoss
 from ...loss import Loss as gluon_loss
 from ...trainer import Trainer
 from ...utils import split_and_load
@@ -184,8 +185,8 @@ class Estimator(object):
         """
         if any(not hasattr(self, attribute) for attribute in
                ['train_metrics', 'val_metrics']):
-            # Use default mx.metric.Accuracy() for gluon.loss.SoftmaxCrossEntropyLoss()
-            if not self.train_metrics and any([isinstance(l, gluon.loss.SoftmaxCrossEntropyLoss) for l in self.loss]):
+            # Use default mx.metric.Accuracy() for SoftmaxCrossEntropyLoss()
+            if not self.train_metrics and any([isinstance(l, SoftmaxCrossEntropyLoss) for l in self.loss]):
                 self.train_metrics = [Accuracy()]
             self.val_metrics = []
             for loss in self.loss:
