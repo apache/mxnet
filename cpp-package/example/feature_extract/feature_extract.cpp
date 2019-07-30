@@ -99,9 +99,17 @@ class FeatureExtractor {
     data.Slice(0, 1) -= mean_img;
     data.Slice(1, 2) -= mean_img;
     args_map["data"] = data;
-    /*bind the executor*/
-    executor = net.SimpleBind(global_ctx, args_map, map<string, NDArray>(),
-                              map<string, OpReqType>(), aux_map);
+    /*Singleton Pattern*/
+    if(!executor){
+        args_map["data"] = data;
+        /*bind the executor*/
+        executor = net.SimpleBind(global_ctx, args_map, map<string, NDArray>(),
+                                  map<string, OpReqType>(), aux_map);
+    }else{
+        /*update data*/
+        data.CopyTo(&(executor->arg_dict()["data"]));
+        NDArray::WaitAll();
+    }
     executor->Forward(false);
     /*print out the features*/
     auto array = executor->outputs[0].Copy(Context(kCPU, 0));
