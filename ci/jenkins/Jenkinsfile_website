@@ -52,7 +52,7 @@ core_logic: {
   //])
 
   utils.parallel_stage('Publish', [
-    build 'test-website-publish'
+      custom_steps.docs_publish()
 
   ])
 

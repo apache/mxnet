@@ -1515,6 +1515,18 @@ def docs_r() {
     }]
 }
 
+def docs_publish() {
+    return ['R Docs': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            build 'test-website-publish'
+          }
+        }
+      }
+    }]
+}
+    
 
 def misc_asan_cpu() {
     return ['CPU ASAN': {
