@@ -1399,6 +1399,7 @@ def compile_unix_lite() {
             utils.init_git()
             utils.docker_run('ubuntu_cpu_lite', 'build_ubuntu_cpu_docs', false)
             utils.pack_lib('cpu', mx_lib, false)
+            archiveArtifacts 'docs/_build/mxnet-artifact.tgz'
           }
         }
       }
@@ -1526,7 +1527,7 @@ def docs_publish() {
       }
     }]
 }
-    
+
 
 def misc_asan_cpu() {
     return ['CPU ASAN': {
