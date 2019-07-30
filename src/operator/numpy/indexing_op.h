@@ -74,7 +74,8 @@ inline bool NumpyTakeOpShape(const nnvm::NodeAttrs& attrs,
       param.axis.value() < arrshape.ndim())
       << "If axis is not None, axis should be in "\
       "the range of [-r, r-1] where r is the rank of input tensor";
-    const index_t actual_axis = param.axis.value() + ((param.axis.value() < 0) ? arrshape.ndim() : 0);
+    const index_t actual_axis = param.axis.value() +
+                                ((param.axis.value() < 0) ? arrshape.ndim() : 0);
     mxnet::TShape oshape(idxshape.ndim() + arrshape.ndim() - 1, -1);
     for (index_t i = 0; i < idxshape.ndim(); ++i) {
       oshape[i + actual_axis] = idxshape[i];
