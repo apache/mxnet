@@ -1313,7 +1313,7 @@ def take(a, indices, axis=None, mode='clip', out=None):
     - Only ndarray or scalar ndarray is accepted as valid input.
     - 'raise' mode is not supported.
     """
-    if mode != 'wrap' and mode != 'clip':
+    if mode not in ('wrap', 'clip'):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
     return _npi.take(a, indices, axis, mode, out)

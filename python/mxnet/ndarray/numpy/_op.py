@@ -667,7 +667,7 @@ def take(a, indices, axis=None, mode='clip', out=None):
     array([[4., 3.],
            [5., 7.]])
     """
-    if mode != 'wrap' and mode != 'clip':
+    if mode not in ('wrap', 'clip'):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
     return _npi.take(a, indices, axis, mode, out)
