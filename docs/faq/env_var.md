@@ -188,7 +188,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 
 ## Control the profiler
 
-When USE_PROFILER is enabled in Makefile or CMake, the following environments can be used to profile the application without changing code. Execution options may affect the granularity of profiling result. If you need profiling result of every operator, please set `MXNET_EXEC_BULK_EXEC_INFERENCE`, `MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN` and `MXNET_EXEC_BULK_EXEC_TRAIN` to 0.
+The following environments can be used to profile the application without changing code. Execution options may affect the granularity of profiling result. If you need profiling result of every operator, please set `MXNET_EXEC_BULK_EXEC_INFERENCE`, `MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN` and `MXNET_EXEC_BULK_EXEC_TRAIN` to 0.
 
 * MXNET_PROFILER_AUTOSTART
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -241,6 +241,16 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - 0(false) or 1(true) ```(default=0)```
 	- If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
 	- If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
+
+* MXNET_CUDA_LIB_CHECKING
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows various runtime checks of the cuda library version and associated warning messages.
+  - If set to '1', permits these checks (e.g. compile vs. link mismatch, old version no longer CI-tested)
+
+* MXNET_CUDNN_LIB_CHECKING
+  - 0(false) or 1(true) ```(default=1)```
+  - If set to '0', disallows various runtime checks of the cuDNN library version and associated warning messages.
+  - If set to '1', permits these checks (e.g. compile vs. link mismatch, old version no longer CI-tested)
 
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
@@ -297,9 +307,10 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
 
 * MXNET_SUBGRAPH_BACKEND
-  - Values: String ```(default="")```
+  - Values: String ```(default="MKLDNN")``` if MKLDNN is avaliable, otherwise ```(default="")```
   - This variable controls the subgraph partitioning in MXNet.
   - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+  - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
 
 * MXNET_SAFE_ACCUMULATION
   - Values: Values: 0(false) or 1(true) ```(default=0)```

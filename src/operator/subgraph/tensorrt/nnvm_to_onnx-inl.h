@@ -33,6 +33,8 @@
 
 #include <onnx/onnx_pb.h>
 
+#include <unordered_map>
+#include <vector>
 #include <string>
 
 namespace mxnet {
@@ -72,14 +74,11 @@ typedef void (*ConverterFunction)(NodeProto *node_proto,
                                   const nnvm::IndexedGraph &ig,
                                   const array_view<IndexedGraph::NodeEntry> &inputs);
 
-
 // Forward declarations
-void ConvertConvolution(
-                        NodeProto *node_proto,
+void ConvertConvolution(NodeProto *node_proto,
                         const NodeAttrs &attrs,
                         const nnvm::IndexedGraph &ig,
                         const array_view<IndexedGraph::NodeEntry> &inputs);
-
 
 void ConvertPooling(NodeProto *node_proto,
                     const NodeAttrs &attrs,
@@ -152,7 +151,7 @@ void ConvertPad(NodeProto* node_proto,
                 const array_view<IndexedGraph::NodeEntry> &inputs);
 
 std::string ConvertNnvmGraphToOnnx(const nnvm::Graph &g,
-    const std::unordered_map<std::string, NDArray>* const params_map);
+    std::unordered_map<std::string, NDArray>* params_map);
 
 static const std::unordered_map<std::string, ConverterFunction> converter_map = {
   {"Activation", ConvertActivation},
@@ -170,6 +169,18 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
   {"Pooling", ConvertPooling},
   {"relu", ConvertRelu},
   {"SoftmaxOutput", ConvertSoftmaxOutput}
+};
+
+typedef void (*PreprocessFunction)(const NodeAttrs &attrs,
+                                   const std::vector<nnvm::NodeEntry> &inputs,
+                                   std::unordered_map<std::string, NDArray> *params_map);
+
+void PreprocessBatchNorm(const NodeAttrs &attrs,
+                         const std::vector<nnvm::NodeEntry> &inputs,
+                         std::unordered_map<std::string, NDArray> *params_map);
+
+static const std::unordered_map<std::string, PreprocessFunction> preprocess_map = {
+  {"BatchNorm", PreprocessBatchNorm}
 };
 
 }  // namespace nnvm_to_onnx

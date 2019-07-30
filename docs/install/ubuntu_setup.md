@@ -310,25 +310,93 @@ Refer to the [Clojure setup guide](https://github.com/apache/incubator-mxnet/tre
 
 ### Install the MXNet Package for Julia
 
-The MXNet package for Julia is hosted in a separate repository, MXNet.jl, which is available on [GitHub](https://github.com/dmlc/MXNet.jl). To use Julia binding it with an existing libmxnet installation, set the ```MXNET_HOME``` environment variable by running the following command:
+#### Install Julia
+The package available through `apt-get` is old and not compatible with the latest version of MXNet.
+Fetch the latest version (1.0.3 at the time of this writing).
 
 ```bash
-    export MXNET_HOME=/<path to>/libmxnet
+wget -qO julia-10.tar.gz https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.3-linux-x86_64.tar.gz
 ```
 
-The path to the existing libmxnet installation should be the root directory of libmxnet. In other words, you should be able to find the ```libmxnet.so``` file at ```$MXNET_HOME/lib```. For example, if the root directory of libmxnet is ```~```, you would run the following command:
+Place the extracted files somewhere like a julia folder in your home dir.
 
 ```bash
-    export MXNET_HOME=/~/libmxnet
+mkdir ~/julia
+mv julia-10.tar.gz ~/julia
+cd ~/julia
+tar xvf julia-10.tar.gz
 ```
 
-You might want to add this command to your ```~/.bashrc``` file. If you do, you can install the Julia package in the Julia console using the following command:
-
-```julia
-    Pkg.add("MXNet")
+Test Julia.
+```bash
+cd julia-1.0.3/bin
+julia -e 'using InteractiveUtils; versioninfo()'
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](http://dmlc.ml/MXNet.jl/latest/user-guide/install/).
+If you're still getting the old version, remove it.
+```bash
+sudo apt remove julia
+```
+
+Update your PATH to have Julia's new location. Add this to your `.zshrc`, `.bashrc`, `.profile` or `.bash_profile`.
+```bash
+export PATH=~/julia/julia-1.0.3/bin:$PATH
+```
+
+Validate your PATH.
+```bash
+echo $PATH
+```
+
+Validate Julia works and is the expected version.
+```bash
+julia -e 'using InteractiveUtils; versioninfo()'
+```
+
+#### Setup Your MXNet-Julia Environment
+
+**For each of the following environment variables, add the commands to your `.zshrc`, `.bashrc`, `.profile` or `.bash_profile` to make them persist.**
+
+Create a `julia-depot` folder and environment variable.
+```bash
+mkdir julia-depot
+export JULIA_DEPOT_PATH=$HOME/julia/julia-depot
+```
+
+To use the Julia binding with an existing `libmxnet` installation, set the `MXNET_HOME` environment variable to the MXNet source root. For example:
+```bash
+export MXNET_HOME=$HOME/incubator-mxnet
+```
+
+Now set the `LD_LIBRARY_PATH` environment variable to where `libmxnet.so` is found. If you can't find it, you might have skipped the building MXNet step. Go back and [build MXNet](#build-the-shared-library) first. For example:
+```bash
+export LD_LIBRARY_PATH=$HOME/incubator-mxnet/lib:$LD_LIBRARY_PATH
+```
+
+Verify the location of `libjemalloc.so` and set the `LD_PRELOAD` environment variable.
+```bash
+export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so:$LD_PRELOAD
+```
+
+With all of these updates, here's an example of what you might want to have in your `.zshrc`, `.bashrc`, `.profile` or `.bash_profile`.
+
+```
+export PATH=$HOME/bin:$HOME/.local/bin:$HOME/julia/julia-1.0.3/bin:$PATH
+export JULIA_DEPOT_PATH=$HOME/julia/julia-depot
+export MXNET_HOME=$HOME/incubator-mxnet
+export LD_LIBRARY_PATH=$HOME/incubator-mxnet/lib:$LD_LIBRARY_PATH
+export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so:$LD_PRELOAD
+```
+
+Install MXNet with Julia:
+
+```bash
+julia --color=yes --project=./ -e \
+	  'using Pkg; \
+	   Pkg.develop(PackageSpec(name="MXNet", path = joinpath(ENV["MXNET_HOME"], "julia")))'
+```
+
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](../api/julia/site/).
 <hr>
 
 

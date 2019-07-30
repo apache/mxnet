@@ -142,6 +142,8 @@ def add_fit_args(parser):
     train.add_argument('--profile-server-suffix', type=str, default='',
                        help='profile server actions into a file with name like rank1_ followed by this suffix \
                              during distributed training')
+    train.add_argument('--use-imagenet-data-augmentation', type=int, default=0,
+                       help='enable data augmentation of ImageNet data, default disabled')
     return train
 
 
