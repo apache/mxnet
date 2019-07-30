@@ -1385,7 +1385,7 @@ def test_np_tile():
 
 
 @with_seed()
-@npx.use_np_shape
+@use_np
 def test_np_lcm():
     shapes = [
         ((3, 1), (3,)),
@@ -1399,7 +1399,7 @@ def test_np_lcm():
         ((5, 1), (5, 2))
     ]
 
-    @npx.use_np_shape
+    @use_np
     class TestLcm(HybridBlock):
         def __init__(self, ):
             super(TestLcm, self).__init__()
