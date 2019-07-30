@@ -31,7 +31,7 @@
 #include <dlfcn.h>
 #endif
 
-#include <stdio.h>
+#include <iostream>
 #include "lib_api.h"
 
 #define MXNET_VERSION 10500
@@ -47,25 +47,25 @@ int main(void) {
 #endif
 
   if (!handle) {
-    printf("Unable to load library\n");
+    std::cerr << "Unable to load library" << std::endl;
     return 1;
   }
 
   // get initialize function address from the library
-  initialize_t func;
+  initialize_t init_lib;
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  func = (initialize_t) GetProcAddress(handle, INITIALIZE_STR);
+  init_lib = (initialize_t) GetProcAddress(handle, MXLIB_INITIALIZE_STR);
 #else
-  func = (initialize_t) dlsym(handle, INITIALIZE_STR);
+  init_lib = (initialize_t) dlsym(handle, MXLIB_INITIALIZE_STR);
 #endif
 
-  if (!func) {
-    printf("Unable to get function 'intialize' from library\n");
+  if (!init_lib) {
+    std::cerr << "Unable to get function 'intialize' from library" << std::endl;
     return 1;
   }
 
   // Call the function.
-  (func)(MXNET_VERSION);
+  (init_lib)(MXNET_VERSION);
 
   // Deallocate memory.
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)

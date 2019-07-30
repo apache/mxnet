@@ -25,9 +25,12 @@
 #ifndef MXNET_LIB_API_H_
 #define MXNET_LIB_API_H_
 
-#include <cstdlib>
-
-#define INITIALIZE_STR "initialize"
+/*!
+ * \brief Following are the APIs implemented in the external library
+ * Each API has a #define string that is used to lookup the function in the library
+ * Followed by the function declaration
+ */
+#define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
 
 extern "C" {

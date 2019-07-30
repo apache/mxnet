@@ -99,7 +99,7 @@ int MXLoadLib(const char *path) {
   if (!lib)
     LOG(FATAL) << "Unable to load library";
 
-  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(INITIALIZE_STR));
+  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
   if (!initialize(static_cast<int>(MXNET_VERSION)))
     LOG(FATAL) << "Library failed to initialize";
   API_END();

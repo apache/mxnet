@@ -59,14 +59,14 @@ void win_err(char **err) {
  * \return handle a pointer for the loaded library, nullptr if loading unsuccessful
  */
 void* load_lib(const char* path) {
-  void *handle;
+  void *handle = nullptr;
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   handle = LoadLibrary(path);
   if (!handle) {
-    char *lpMsgBuf;
-    win_err(&lpMsgBuf);
-    LOG(FATAL) << "Error loading library: '" << path << "'\n" << lpMsgBuf;
-    LocalFree(lpMsgBuf);
+    char *err_msg = nullptr;
+    win_err(&err_msg);
+    LOG(FATAL) << "Error loading library: '" << path << "'\n" << err_msg;
+    LocalFree(err_msg);
     return nullptr;
   }
 #else
@@ -90,10 +90,10 @@ void get_sym(void* handle, void** func, char* name) {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   *func = GetProcAddress((HMODULE)handle, name);
   if (!(*func)) {
-    char *lpMsgBuf;
-    win_err(&lpMsgBuf);
-    LOG(FATAL) << "Error getting function '" << name << "' from library\n" << lpMsgBuf;
-    LocalFree(lpMsgBuf);
+    char *err_msg = nullptr;
+    win_err(&err_msg);
+    LOG(FATAL) << "Error getting function '" << name << "' from library\n" << err_msg;
+    LocalFree(err_msg);
   }
 #else
   *func = dlsym(handle, name);
