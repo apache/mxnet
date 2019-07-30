@@ -1456,10 +1456,10 @@ build_python_docs() {
    make html EVAL=0
    popd
 
-   doc_path='build/_build/html'
+   doc_path='build/_build'
    doc_artifact='docs/_build/python-artifacts.tgz'
    pushd $doc_path
-   tar zcvf $doc_artifact .
+   tar zcvf $doc_artifact html
 
    popd
 }
@@ -1479,12 +1479,12 @@ build_r_docs() {
     make html EVAL=0
     popd
 
-    doc_path="$repo/Rsite/build"
+    doc_path="$repo/Rsite"
     doc_artifact='r-artifacts.tgz'
     pushd $doc_path
-    tar zcvf $doc_artifact .
-
+    tar zcvf $doc_artifact build
     popd
+    mv $doc_path/$doc_artifact docs/_build/
 }
 
 
@@ -1494,10 +1494,10 @@ build_c_docs() {
 
     build_setup
     make doxygen
-    doc_path="docs/doxygen/html"
+    doc_path="docs/doxygen"
     doc_artifact="c-artifacts.tgz"
     pushd $doc_path
-    tar zcvf $doc_artifact .
+    tar zcvf $doc_artifact html
     popd
     mv $doc_path/$doc_artifact docs/_build/
 }
