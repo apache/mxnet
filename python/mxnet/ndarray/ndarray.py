@@ -32,6 +32,7 @@ import ctypes
 import warnings
 import operator
 from functools import reduce # pylint: disable=redefined-builtin
+import sys
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
@@ -132,7 +133,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
-    if Features().is_enabled('INT64_TENSOR_SIZE'):
+    if Features().is_enabled('INT64_TENSOR_SIZE') and sys.version_info[0] > 2:
         check_call(_LIB.MXNDArrayCreateExInt64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
@@ -1954,7 +1955,7 @@ fixed-size items.
         (2L, 3L, 4L)
         """
         ndim = mx_int()
-        if Features().is_enabled('INT64_TENSOR_SIZE'):
+        if Features().is_enabled('INT64_TENSOR_SIZE') and sys.version_info[0] > 2:
             pdata = ctypes.POINTER(mx_int64)()
             check_call(_LIB.MXNDArrayGetShapeExInt64(
                 self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))

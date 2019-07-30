@@ -29,7 +29,7 @@ from array import array
 import ctypes
 import warnings
 from numbers import Number
-
+import sys
 import numpy as _numpy
 
 from ..attribute import AttrScope
@@ -1186,7 +1186,7 @@ class Symbol(SymbolBase):
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
         complete = ctypes.c_int()
-        if Features().is_enabled('INT64_TENSOR_SIZE'):
+        if Features().is_enabled('INT64_TENSOR_SIZE') and sys.version_info[0] > 2:
             arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
